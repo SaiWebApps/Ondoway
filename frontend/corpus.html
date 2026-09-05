@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corpus — quality and coverage</title>
+<style>
+  :root {
+    --ink: #16233a;
+    --muted: #61708a;
+    --line: #dfe4ec;
+    --ground: #f7f8fa;
+    --card: #ffffff;
+    --brand: #2c6cc0;
+    --warn: #b4541f;
+    --bad: #a32b2b;
+    --good: #2e7d54;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px;
+    font: 14px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink); background: var(--ground);
+  }
+  header { display: flex; align-items: baseline; gap: 16px; margin-bottom: 24px; }
+  h1 { font-size: 20px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  select {
+    font: inherit; padding: 6px 10px; border: 1px solid var(--line);
+    border-radius: 6px; background: var(--card); color: var(--ink);
+  }
+  .sub { color: var(--muted); font-size: 13px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 18px 20px;
+  }
+  .card h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--muted); margin: 0 0 14px; font-weight: 600;
+  }
+  .big { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; }
+  .big small { font-size: 13px; font-weight: 400; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 4px 0; vertical-align: middle; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; width: 64px; }
+  td.k { color: var(--muted); white-space: nowrap; padding-right: 10px; }
+  td.track { width: 58%; }
+  .bar { height: 7px; border-radius: 4px; background: var(--brand); min-width: 3px; }
+  .bar.warn { background: var(--warn); }
+  .bar.bad { background: var(--bad); }
+  .note {
+    margin-top: 12px; padding: 10px 12px; border-radius: 8px;
+    background: #fdf3e8; color: var(--warn); font-size: 13px;
+  }
+  .note code { background: rgba(0,0,0,.06); padding: 1px 5px; border-radius: 4px; }
+  .matrix-wrap { overflow-x: auto; }
+  table.matrix { border-collapse: separate; border-spacing: 2px; font-size: 11px; }
+  table.matrix th {
+    font-weight: 500; color: var(--muted); text-align: left;
+    padding: 2px 6px 2px 0; white-space: nowrap;
+  }
+  table.matrix th.rot { writing-mode: vertical-rl; transform: rotate(180deg); height: 96px; }
+  table.matrix td.cell {
+    width: 20px; height: 20px; text-align: center; border-radius: 3px;
+    background: #eef1f6; color: var(--muted);
+  }
+  td.cell.zero { background: #fbe9e9; color: var(--bad); }
+  td.cell.some { background: #dce8f8; color: #1d4c8c; }
+  td.cell.many { background: var(--brand); color: #fff; font-weight: 600; }
+  .err { color: var(--bad); }
+  footer { margin-top: 22px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Corpus</h1>
+  <select id="city"></select>
+  <span class="sub" id="headline"></span>
+</header>
+
+<div id="body"></div>
+
+<footer>Read from <code>data/{city}/beats.json</code>, <code>poi-raw.json</code> and
+  <code>within_edges.json</code>. Nothing here reads the graph.</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function barRow(label, value, total, kind) {
+  const pct = total ? Math.round((value / total) * 100) : 0;
+  return `<tr><td class="k">${esc(label)}</td>
+    <td class="track"><div class="bar ${kind || ""}"
+      style="width:${Math.max(pct, value ? 2 : 0)}%"></div></td>
+    <td class="n">${value}</td></tr>`;
+}
+
+function quality(q) {
+  const t = q.total_beats;
+  const fc = Object.entries(q.fact_check)
+    .map(([k, v]) => barRow(k, v, t, k === "never-checked" || k === "disputed" ? "bad" : ""))
+    .join("");
+  const lc = Object.entries(q.length_class)
+    .map(([k, v]) => barRow(k, v, t, k === "not-classified" ? "warn" : "")).join("");
+  const vb = q.verbatim;
+  return `
+  <div class="card">
+    <h2>Fact-check</h2>
+    <div class="big">${t} <small>beats</small></div>
+    <table>${fc}</table>
+  </div>
+  <div class="card">
+    <h2>Length class &amp; size</h2>
+    <table>${lc}</table>
+    <p class="sub" style="margin:12px 0 0">median ${q.body_size.median_words}w ·
+      p90 ${q.body_size.p90_words}w · longest ${q.body_size.longest_words}w</p>
+  </div>
+  <div class="card">
+    <h2>Copied from source</h2>
+    <div class="big ${vb.flagged_pct > 50 ? "err" : ""}">${vb.flagged_pct}%
+      <small>${vb.flagged} of ${t} beats</small></div>
+    <p class="sub" style="margin:10px 0 0">At or above ${Math.round(vb.threshold * 100)}%
+      overlap of ${vb.shingle}-word shingles with their own source passage — copied,
+      not authored. Median beat sits at ${vb.median_ratio}.</p>
+  </div>`;
+}
+
+function coverage(c, city) {
+  const r = c.anchor_readiness;
+  let out = `
+  <div class="card">
+    <h2>Anchor-ready POIs</h2>
+    <div class="big">${r.ready} <small>of ${r.total_pois} — ${r.minimum_beats}+ beats</small></div>
+    <table>${barRow("ready", r.ready, r.total_pois)}
+      ${barRow("thin", r.total_pois - r.ready, r.total_pois, "warn")}</table>
+  </div>`;
+
+  if (!c.areas_mapped) {
+    out += `<div class="card"><h2>Areas</h2>
+      <div class="note">No areas generated for ${esc(city)}, so there is nothing to be thin
+      <em>in</em>. Run <code>make gen-within-edges CITY=${esc(city)}</code>.</div></div>`;
+    return out;
+  }
+
+  const thin = c.thin_areas.slice(0, 8).map((a) =>
+    `<tr><td class="k">${esc(a.area)}</td><td class="n">${a.ready}</td>
+     <td class="n" style="color:var(--warn)">${a.thin}</td></tr>`).join("");
+  out += `<div class="card"><h2>Thinnest areas</h2>
+    <table><tr><td class="k sub">area</td><td class="n sub">ready</td>
+      <td class="n sub">thin</td></tr>${thin}</table></div>`;
+
+  const lens = c.empty_lenses.slice(0, 10).map((l) =>
+    barRow(`${l.lens} (${l.beats} beats)`, l.empty_areas, l.total_areas,
+      l.empty_areas === l.total_areas ? "bad" : "warn")).join("");
+  out += `<div class="card"><h2>Areas missing a lens entirely</h2>
+    <table>${lens}</table></div>`;
+  return out;
+}
+
+function matrix(c) {
+  if (!c.areas_mapped) return "";
+  const lenses = Object.keys(c.lens_area_matrix);
+  const areas = Object.keys(c.lens_area_matrix[lenses[0]] || {});
+  const head = areas.map((a) => `<th class="rot">${esc(a)}</th>`).join("");
+  const rows = lenses.map((l) => {
+    const cells = areas.map((a) => {
+      const n = c.lens_area_matrix[l][a];
+      const cls = n === 0 ? "zero" : n < 5 ? "some" : "many";
+      return `<td class="cell ${cls}" title="${esc(l)} × ${esc(a)}: ${n}">${n || ""}</td>`;
+    }).join("");
+    return `<tr><th>${esc(l)}</th>${cells}</tr>`;
+  }).join("");
+  return `<div class="card" style="margin-top:16px">
+    <h2>Lens × area — every empty cell is a tour that cannot be built</h2>
+    <div class="matrix-wrap"><table class="matrix">
+      <tr><th></th>${head}</tr>${rows}</table></div></div>`;
+}
+
+async function load(city) {
+  $("body").innerHTML = `<p class="sub">Reading ${esc(city)}…</p>`;
+  const res = await fetch(`/api/corpus?city=${encodeURIComponent(city)}`);
+  const data = await res.json();
+  if (!res.ok) {
+    $("body").innerHTML = `<p class="err">${esc(data.error || "failed")}</p>`;
+    return;
+  }
+  if ($("city").options.length === 0) {
+    $("city").innerHTML = data.cities
+      .map((c) => `<option ${c === city ? "selected" : ""}>${esc(c)}</option>`).join("");
+  }
+  $("headline").textContent =
+    `${data.quality.total_beats} beats · ${data.coverage.anchor_readiness.ready} anchor-ready POIs`;
+  $("body").innerHTML =
+    `<div class="grid">${quality(data.quality)}${coverage(data.coverage, city)}</div>`
+    + matrix(data.coverage);
+}
+
+$("city").addEventListener("change", (e) => load(e.target.value));
+load(new URLSearchParams(location.search).get("city") || "paris");
+</script>
+</body>
+</html>

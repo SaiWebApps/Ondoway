@@ -1,6 +1,10 @@
-"""Lightweight HTTP API for the Ondoway Neo4j dashboard.
+"""Lightweight HTTP API for the Ondoway dashboards.
 
-Serves graph data as JSON and hosts the static frontend.
+Serves two reports and hosts the static frontend. `/api/status` answers about the
+graph and needs a driver; `/api/corpus` answers about a city's beat files and
+deliberately does not — a route that needed a database to describe a JSON file
+would be reading the wrong thing.
+
 No framework dependencies — uses stdlib http.server + json.
 """
 
@@ -10,7 +14,16 @@ import json
 import os
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
+from scripts.corpus_report import (
+    available_cities,
+    coverage_report,
+    load_city_areas,
+    load_city_beats,
+    load_city_pois,
+    quality_report,
+)
 from src.connection import create_driver, get_database
 from src.verify.counts import count_nodes_by_label, count_relationships_by_type, total_counts
 from src.verify.traversals import run_all_traversals
@@ -78,6 +91,27 @@ def _build_api_response(driver) -> dict[str, Any]:
     }
 
 
+def _corpus_payload(city_slug: str) -> dict[str, Any]:
+    """Both halves of one city's corpus report, read from files.
+
+    An unmapped city still answers: `coverage_report` marks `areas_mapped` false
+    and the page says which command generates them, rather than drawing an empty
+    grid that reads like full coverage.
+    """
+    beats = load_city_beats(city_slug)
+    pois = load_city_pois(city_slug)
+    try:
+        poi_to_area, area_names = load_city_areas(city_slug)
+    except FileNotFoundError:
+        poi_to_area, area_names = [], []
+    return {
+        "city": city_slug,
+        "cities": available_cities(),
+        "quality": quality_report(beats),
+        "coverage": coverage_report(beats, pois, poi_to_area, area_names),
+    }
+
+
 class DashboardHandler(SimpleHTTPRequestHandler):
     """Handle API routes and serve static files from frontend/."""
 
@@ -87,14 +121,27 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=FRONTEND_DIR, **kwargs)
 
     def do_GET(self):
-        if self.path == "/api/status":
+        route = urlparse(self.path)
+        if route.path == "/api/status":
             self._json_response(_build_api_response(self.driver))
+        elif route.path == "/api/corpus":
+            self._corpus_route(parse_qs(route.query).get("city", ["paris"])[0])
         else:
             super().do_GET()
 
-    def _json_response(self, data: dict) -> None:
+    def _corpus_route(self, city_slug: str) -> None:
+        """Answer for one city, or say which city could not be found."""
+        try:
+            self._json_response(_corpus_payload(city_slug))
+        except FileNotFoundError as exc:
+            self._json_response(
+                {"error": f"no corpus for city {city_slug!r}", "detail": str(exc)},
+                status=404,
+            )
+
+    def _json_response(self, data: dict, status: int = 200) -> None:
         body = json.dumps(data, default=str).encode()
-        self.send_response(200)
+        self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Access-Control-Allow-Origin", "*")

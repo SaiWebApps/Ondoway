@@ -254,6 +254,14 @@ def coverage_report(
     }
 
 
+def available_cities(*, data_dir: Path | None = None) -> list[str]:
+    """City slugs that have beats to report on, so no caller hardcodes the list."""
+    root = data_dir if data_dir is not None else _REPO_ROOT / "data"
+    if not root.is_dir():
+        return []
+    return sorted(d.name for d in root.iterdir() if (d / "beats.json").is_file())
+
+
 def load_city_pois(city_slug: str, *, data_dir: Path | None = None) -> list[dict]:
     """Read one city's poi-raw.json. Raises FileNotFoundError naming the path."""
     return _load_city_file(city_slug, "poi-raw.json", data_dir=data_dir)
