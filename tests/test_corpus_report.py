@@ -21,6 +21,7 @@ from scripts.corpus_report import (
     VERBATIM_THRESHOLD,
     anchor_readiness,
     coverage_report,
+    density_summary,
     fact_check_buckets,
     length_class_buckets,
     lens_area_matrix,
@@ -157,6 +158,46 @@ def test_coverage_says_a_city_is_unmapped_rather_than_reporting_zeroes() -> None
     assert "gen-within-edges" in rendered
     # The lens rows would otherwise read "absent from 0 of 0 areas", which is not a finding.
     assert "0 of 0 areas" not in rendered
+
+
+# ── Density: the map where there is one, the command where there is not ─────
+
+
+def test_density_panel_reports_absent_map_as_absent(tmp_path: Path) -> None:
+    """No map is a missing artifact, not a city with no density."""
+    (tmp_path / "london").mkdir()
+    summary = density_summary("london", data_dir=tmp_path)
+
+    assert summary["generated"] is False
+    # The panel must hand the owner the command, not a blank map.
+    assert summary["command"] == "make tourability CITY=london"
+
+
+def test_density_line_survives_a_city_with_no_areas() -> None:
+    """Areas and the density map are different artifacts; one missing must not hide the other."""
+    report = coverage_report([], [], poi_to_area=[], area_names=[])
+    report["density"] = {"generated": False, "command": "make tourability CITY=london"}
+
+    rendered = render_coverage("london", report)
+
+    assert "make gen-within-edges CITY=london" in rendered
+    assert "make tourability CITY=london" in rendered
+
+
+def test_density_summary_counts_the_status_mix() -> None:
+    """The panel summarises the 14MB artifact; it never ships it to the browser."""
+    city_dir = Path(__file__).resolve().parents[1] / "data" / "paris"
+    if not (city_dir / "tourability_map.json").is_file():
+        pytest.skip("paris tourability map not generated on this machine")
+
+    summary = density_summary("paris")
+
+    assert summary["generated"] is True
+    assert summary["cells"] == 11205
+    rt60 = next(b for b in summary["buckets"] if b["key"] == "60min_round_trip")
+    # Measured this session: 48 GREEN, 288 YELLOW, 10869 RED.
+    assert (rt60["green"], rt60["yellow"], rt60["red"]) == (48, 288, 10869)
+    assert summary["generated_at"].startswith("2026-04-30")
 
 
 def test_paris_area_join_covers_every_poi() -> None:

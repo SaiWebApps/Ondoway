@@ -67,6 +67,10 @@
   td.cell.zero { background: #fbe9e9; color: var(--bad); }
   td.cell.some { background: #dce8f8; color: #1d4c8c; }
   td.cell.many { background: var(--brand); color: #fff; font-weight: 600; }
+  .stack { display: flex; height: 7px; border-radius: 4px; overflow: hidden; background: #eef1f6; }
+  .seg.g { background: var(--good); }
+  .seg.y { background: #d9a441; }
+  .seg.r { background: var(--bad); }
   .err { color: var(--bad); }
   footer { margin-top: 22px; color: var(--muted); font-size: 12px; }
 </style>
@@ -158,6 +162,30 @@ function coverage(c, city) {
   return out;
 }
 
+function density(d) {
+  if (!d) return "";
+  if (!d.generated) {
+    return `<div class="card"><h2>Geographic density</h2>
+      <div class="note">No map generated. It is the one panel that asks the graph
+      rather than the files, so it has to be built per city.
+      Run <code>${esc(d.command)}</code>.</div></div>`;
+  }
+  const rows = d.buckets.map((b) => {
+    const total = b.green + b.yellow + b.red;
+    const seg = (n, cls) => n
+      ? `<span class="seg ${cls}" style="width:${(n / total) * 100}%"
+           title="${cls}: ${n}"></span>` : "";
+    return `<tr><td class="k">${esc(b.label)}</td>
+      <td class="track"><span class="stack">${seg(b.green, "g")}${seg(b.yellow, "y")}
+        ${seg(b.red, "r")}</span></td>
+      <td class="n">${b.green_pct}%</td></tr>`;
+  }).join("");
+  return `<div class="card"><h2>Geographic density — where a tour can start</h2>
+    <table>${rows}</table>
+    <p class="sub" style="margin:12px 0 0">${d.cells} cells at ${d.grid_resolution_m}m,
+      generated ${esc(d.generated_at.slice(0, 10))}. The % is GREEN starts.</p></div>`;
+}
+
 function matrix(c) {
   if (!c.areas_mapped) return "";
   const lenses = Object.keys(c.lens_area_matrix);
@@ -192,8 +220,8 @@ async function load(city) {
   $("headline").textContent =
     `${data.quality.total_beats} beats · ${data.coverage.anchor_readiness.ready} anchor-ready POIs`;
   $("body").innerHTML =
-    `<div class="grid">${quality(data.quality)}${coverage(data.coverage, city)}</div>`
-    + matrix(data.coverage);
+    `<div class="grid">${quality(data.quality)}${coverage(data.coverage, city)}`
+    + `${density(data.density)}</div>` + matrix(data.coverage);
 }
 
 $("city").addEventListener("change", (e) => load(e.target.value));

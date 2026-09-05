@@ -19,6 +19,7 @@ from urllib.parse import parse_qs, urlparse
 from scripts.corpus_report import (
     available_cities,
     coverage_report,
+    density_summary,
     load_city_areas,
     load_city_beats,
     load_city_pois,
@@ -109,6 +110,7 @@ def _corpus_payload(city_slug: str) -> dict[str, Any]:
         "cities": available_cities(),
         "quality": quality_report(beats),
         "coverage": coverage_report(beats, pois, poi_to_area, area_names),
+        "density": density_summary(city_slug),
     }
 
 

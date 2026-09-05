@@ -689,6 +689,10 @@ gen-within-edges: ## Regenerate one city's within_edges.json.
 	@$(PREFLIGHT) --label gen-within-edges $(PRE_PY)
 	@$(LOCAL_EXEC) uv run python scripts/generate_within_edges.py --slug "$(or $(CITY),paris)"
 
+tourability: ## Regenerate one city's tourability map. Asks the graph; ~5 minutes.
+	@$(PREFLIGHT) --label tourability $(PRE_LOCAL_GRAPH)
+	@$(LOCAL_EXEC) uv run python scripts/tourability_map.py --city-slug "$(or $(CITY),paris)"
+
 validate-beats: ## Validate one city's committed beats before upload.
 	@$(PREFLIGHT) --label validate-beats $(PRE_PY)
 	@$(LOCAL_EXEC) uv run python scripts/validate_beats.py data/$(or $(CITY),paris)/beats.json
