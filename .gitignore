@@ -297,6 +297,11 @@ data/paris_test/
 # Valhalla OSM extracts + built tiles (multi-GB, machine-local; make valhalla-build-tiles)
 valhalla/custom_files/
 
+# OSRM OSM extract + built routing graph. Same class as valhalla/custom_files/
+# above: 1.7GB, rebuilt from the extract on the machine that needs them, and
+# nothing that builds, tests or ships reads them from here.
+data/osrm/
+
 # Scratch tour artifacts (make tour-build / measure-governor output) — machine-local
 # reproduction output, never committed. Keeping them ignored removes the recurring
 # "git add -A sweeps the scratch corpus into a commit" trap.
@@ -359,3 +364,7 @@ graphify-out/
 # tracked anyway. They are resume markers and one-off reports, never input: a
 # fresh clone runs the pipeline identically without them.
 data/*/.*
+
+# Lane B re-author candidates: paid model output awaiting human review,
+# regenerable and large. The approved rewrites reach the repo through beats.json.
+data/*/reauthored.json
