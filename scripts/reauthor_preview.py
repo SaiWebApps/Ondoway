@@ -138,20 +138,23 @@ def worst_copied(beats: list[dict], limit: int = DEFAULT_LIMIT) -> list[dict[str
 
 
 def grounding_claims(beat: dict) -> tuple[str, ...]:
-    """What a rewrite of this beat must still entail.
+    """The fact set a rewrite is allowed to draw on: the source passage, then key_claims.
 
-    `key_claims` is the right answer where the extractor recorded it. London's
-    553 copied beats carry none, so the source passage is split into sentences
-    and used instead — the calibrated gate takes claims, and skipping the beats
-    that have none would exempt the entire city Lane B exists for.
+    The source passage leads because it is what the prompt licenses — "every fact
+    must come from the SOURCE" — and because `key_claims` is a lossy summary of
+    it. Measured: Bois de Vincennes' source says "the breezes are bracing" and its
+    single claim does not, and Rue Cler's source makes a Michelin comparison its
+    two claims omit. Grounding on claims alone refused both faithful rewrites for
+    covering material that was in the source all along.
+
+    `key_claims` is still appended: it carries framing the passage does not, such
+    as a claim marked as the author's observation rather than a fact.
     """
-    claims = tuple(c for c in (beat.get("key_claims") or []) if str(c).strip())
-    if claims:
-        return claims
     source = (beat.get("source_passage") or "").strip()
-    if not source:
-        return ()
-    return tuple(s.strip() for s in re.split(r"(?<=[.!?])\s+", source) if s.strip())
+    sentences = tuple(s.strip() for s in re.split(r"(?<=[.!?])\s+", source) if s.strip())
+    claims = tuple(str(c).strip() for c in (beat.get("key_claims") or []) if str(c).strip())
+    seen: set[str] = set()
+    return tuple(c for c in sentences + claims if not (c in seen or seen.add(c)))
 
 
 def render_preview(city_slug: str, rows: list[dict[str, Any]]) -> str:
@@ -171,6 +174,30 @@ def render_preview(city_slug: str, rows: list[dict[str, Any]]) -> str:
     return "\n".join(out)
 
 
+#: Abbreviations whose trailing period does not end a sentence. Guidebook prose is
+#: full of them — "No. 46", "St. Antoine" — and splitting there hands the gate a
+#: fragment that cannot entail, which reads as a refusal the writer never earned.
+_ABBREVIATIONS = ("No", "no", "St", "Ste", "Mt", "Ave", "Blvd", "Rd", "vs", "etc", "cf")
+
+_SENTENCE_SPLIT = re.compile(
+    r"(?<=[.!?])\s+(?=[A-Z\u00C0-\u00DC\u201C\"])"
+)
+
+
+def sentences(text: str) -> list[str]:
+    """Split a rewrite into the units the entailment gate was calibrated on."""
+    guarded = text.strip()
+    for abbr in _ABBREVIATIONS:
+        guarded = guarded.replace(f"{abbr}. ", f"{abbr}\u0000 ")
+    parts = _SENTENCE_SPLIT.split(guarded)
+    return [p.replace("\u0000", ".").strip() for p in parts if p.strip()]
+
+
+def _flat(text: str) -> str:
+    """Whitespace-collapsed but UNtruncated — the live output is read, not skimmed."""
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def _wrap(text: str, width: int = 88) -> str:
     """One-line-per-field with a hard cap, so two bodies stay comparable by eye."""
     flat = re.sub(r"\s+", " ", text).strip()
@@ -179,10 +206,20 @@ def _wrap(text: str, width: int = 88) -> str:
 
 def _reauthor_live(rows: list[dict[str, Any]]) -> str:
     """Re-author the sample and re-ground it. Paid; never writes to data/."""
-    from src.tour.anthropic_client import judge_client
+    from dotenv import load_dotenv
+
+    from src.tour.anthropic_client import compose_client
     from src.tour.verify import HaikuFaithfulnessChecker
 
-    client = judge_client()
+    # The credential lives in .env, as it does for the sibling paid script
+    # scripts/coverage_calibrate.py. Loaded here rather than at import time so the
+    # dry run stays free of any environment expectation at all.
+    load_dotenv()
+
+    # compose_client, not judge_client: the judge ceiling is 45s, sized for a
+    # one-token Haiku verdict, and this is an Opus write with adaptive thinking.
+    # It also retries zero times, which is what a paid authoring call wants.
+    client = compose_client()
     checker = HaikuFaithfulnessChecker()
     out: list[str] = []
     for row in rows:
@@ -193,16 +230,30 @@ def _reauthor_live(rows: list[dict[str, Any]]) -> str:
             getattr(b, "text", "") for b in (getattr(response, "content", []) or [])
         ).strip()
         copied_now = verbatim_ratio(rewritten, row["source_passage"])
-        entailed = checker.entails(row["claims"], rewritten) if row["claims"] else None
+        # The gate is one-call-per-SENTENCE by construction (see its docstring).
+        # Handing it a whole paragraph asks a strict checker one question about
+        # three clauses at once, and it answers NO on prose that traces fully.
+        ungrounded = [
+            sentence
+            for sentence in sentences(rewritten)
+            if not checker.entails(row["claims"], sentence)
+        ]
+        entailed = (not ungrounded) if row["claims"] else None
         out.append("")
-        out.append(f"  {row['beat_id']}  ·  {row['poi_name']}")
-        out.append(f"    BEFORE  {_wrap(row['script_body'])}  [{row['ratio'] * 100:.0f}% copied]")
-        out.append(f"    AFTER   {_wrap(rewritten)}  [{copied_now * 100:.0f}% copied]")
+        out.append(f"  {row['poi_name']}  ({row['beat_id']})")
+        out.append(f"    BEFORE [{row['ratio'] * 100:.0f}% copied]  {_flat(row['script_body'])}")
+        out.append(f"    AFTER  [{copied_now * 100:.0f}% copied]  {_flat(rewritten)}")
+        for claim in row["claims"]:
+            out.append(f"    CLAIM  {_flat(claim)}")
         if entailed is None:
             verdict = "unchecked (no claims to ground against)"
+        elif entailed:
+            verdict = "yes"
         else:
-            verdict = "yes" if entailed else "NO — this rewrite would be refused"
+            verdict = f"NO — {len(ungrounded)} sentence(s) not supported:"
         out.append(f"    GROUNDED {verdict}")
+        for sentence in ungrounded:
+            out.append(f"      ungrounded: {_flat(sentence)}")
     return "\n".join(out)
 
 

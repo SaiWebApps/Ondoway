@@ -19,6 +19,7 @@ from scripts.reauthor_preview import (
     is_excluded,
     reauthor_request,
     render_preview,
+    sentences,
     worst_copied,
 )
 
@@ -54,10 +55,24 @@ def test_worst_copied_honours_the_limit() -> None:
     assert len(worst_copied(beats, limit=3)) == 3
 
 
-def test_grounding_claims_prefer_the_beats_own_key_claims() -> None:
-    """Where the extractor recorded claims, those are what the rewrite must entail."""
-    beat = _beat("body", "source", key_claims=["Built in 1889.", "Meant to be temporary."])
-    assert grounding_claims(beat) == ("Built in 1889.", "Meant to be temporary.")
+def test_grounding_uses_the_source_passage_not_just_the_recorded_claims() -> None:
+    """key_claims is a lossy summary, and grounding on it alone refuses good rewrites.
+
+    Measured on the live sample: a rewrite that mentioned the bracing wind was
+    refused because the beat's single claim omitted it — though the source passage
+    says it plainly. The permitted fact set is the source, with claims appended.
+    """
+    beat = _beat(
+        "body",
+        "The breezes are bracing. Vincennes lies east and Boulogne west.",
+        key_claims=["Author's observation: they are the lungs of Paris"],
+    )
+    claims = grounding_claims(beat)
+
+    assert claims[0] == "The breezes are bracing."
+    assert "Vincennes lies east and Boulogne west." in claims
+    # The recorded claim survives — it carries framing the passage does not.
+    assert "Author's observation: they are the lungs of Paris" in claims
 
 
 def test_grounding_claims_fall_back_to_the_source_passage() -> None:
@@ -133,3 +148,16 @@ def test_preview_shows_the_body_against_its_source() -> None:
     assert "100%" in out
     # A dry preview never claims a rewrite happened.
     assert "would be re-authored" in out
+
+
+def test_sentence_split_does_not_break_on_guidebook_abbreviations() -> None:
+    """"No. 46" is an address, not the end of a sentence.
+
+    Splitting there hands the entailment gate a fragment that cannot possibly be
+    supported, which surfaces as a refusal the writer never earned.
+    """
+    text = "Cross rue du Faubourg St. Antoine and walk to No. 46, the restaurant. Then stop."
+    assert sentences(text) == [
+        "Cross rue du Faubourg St. Antoine and walk to No. 46, the restaurant.",
+        "Then stop.",
+    ]
