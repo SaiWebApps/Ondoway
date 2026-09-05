@@ -19,9 +19,14 @@ import pytest
 
 from scripts.corpus_report import (
     VERBATIM_THRESHOLD,
+    anchor_readiness,
+    coverage_report,
     fact_check_buckets,
     length_class_buckets,
+    lens_area_matrix,
+    poi_area_index,
     quality_report,
+    render_coverage,
     verbatim_ratio,
 )
 
@@ -91,3 +96,79 @@ def test_paris_quality_counts_match_the_file() -> None:
     assert report["fact_check"]["never-checked"] == 597
     # Measured this session with an 8-word shingle at a 0.70 threshold.
     assert report["verbatim"]["flagged"] == 246
+
+
+# ── Coverage: where the city is thin ────────────────────────────────────────
+
+
+def test_anchor_ready_counts_pois_with_three_beats() -> None:
+    """A POI anchors a tour at three beats, per density.ANCHOR_CANDIDATE_BEAT_COUNT_MIN."""
+    beats = [{"poi_name": "Ready"}] * 3 + [{"poi_name": "Thin"}] * 2
+    pois = [{"name": "Ready"}, {"name": "Thin"}, {"name": "Silent"}]
+
+    readiness = anchor_readiness(beats, pois)
+
+    assert readiness["ready"] == 1
+    assert readiness["total_pois"] == 3
+    # A POI with no beats at all is thin too — it is not simply absent.
+    assert {"Thin", "Silent"} == {p["poi_name"] for p in readiness["thin"]}
+
+
+def test_area_join_prefers_the_most_specific_non_city_area() -> None:
+    """A POI sits in its district and in the city; the district is the useful answer."""
+    rows = [
+        {"poi_name": "Musee Carnavalet", "area_name": "Paris", "area_type": "city"},
+        {
+            "poi_name": "Musee Carnavalet",
+            "area_name": "3rd Arrondissement",
+            "area_type": "district",
+        },
+    ]
+    assert poi_area_index(rows)["Musee Carnavalet"] == "3rd Arrondissement"
+
+
+def test_area_join_falls_back_to_city_when_that_is_all_there_is() -> None:
+    """A POI mapped only to the city still resolves; it is not dropped from coverage."""
+    rows = [{"poi_name": "Lone", "area_name": "Paris", "area_type": "city"}]
+    assert poi_area_index(rows)["Lone"] == "Paris"
+
+
+def test_lens_area_cell_is_zero_not_missing() -> None:
+    """An empty cell is the finding. A lens with no beats in an area reads 0, not absent."""
+    beats = [{"poi_name": "P", "lens": "dark_history"}]
+    matrix = lens_area_matrix(beats, {"P": "3rd Arrondissement"}, ["3rd Arrondissement"])
+
+    assert matrix["dark_history"]["3rd Arrondissement"] == 1
+    # street_art is a taggable lens with no beats here — the cell must exist and be 0.
+    assert matrix["street_art"]["3rd Arrondissement"] == 0
+
+
+def test_coverage_says_a_city_is_unmapped_rather_than_reporting_zeroes() -> None:
+    """London has no areas generated. That is a missing input, not a corpus with no gaps."""
+    report = coverage_report(
+        [{"poi_name": "Tower of London", "lens": "dark_history"}],
+        [{"name": "Tower of London"}],
+        poi_to_area=[],
+        area_names=[],
+    )
+    assert report["areas_mapped"] is False
+
+    rendered = render_coverage("london", report)
+    assert "gen-within-edges" in rendered
+    # The lens rows would otherwise read "absent from 0 of 0 areas", which is not a finding.
+    assert "0 of 0 areas" not in rendered
+
+
+def test_paris_area_join_covers_every_poi() -> None:
+    """Every POI carrying beats resolves to an area, or is a recorded orphan."""
+    city_dir = Path(__file__).resolve().parents[1] / "data" / "paris"
+    if not (city_dir / "within_edges.json").is_file():
+        pytest.skip("paris corpus not present on this machine")
+    edges = json.loads((city_dir / "within_edges.json").read_text(encoding="utf-8"))
+    beats = json.loads((city_dir / "beats.json").read_text(encoding="utf-8"))
+
+    index = poi_area_index(edges["poi_to_area"])
+    orphans = set(edges["_meta"].get("orphans") or [])
+    unresolved = {b["poi_name"] for b in beats if b["poi_name"] not in index} - orphans
+
+    assert unresolved == set()

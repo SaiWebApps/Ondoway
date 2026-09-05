@@ -28,6 +28,9 @@ from typing import Any
 
 from scripts.dedup_pairs import shingle_set
 from scripts.extract_validators import word_count
+from src.schema.definitions import TAGGABLE_LENSES
+from src.tour.density import ANCHOR_CANDIDATE_BEAT_COUNT_MIN
+from src.tour.selection import SPINE_AREA_TYPE_PRIORITY
 
 #: Shingle width for the copied-body test. Eight words is evidence of copying.
 VERBATIM_SHINGLE: int = 8
@@ -131,6 +134,183 @@ def load_city_beats(city_slug: str, *, data_dir: Path | None = None) -> list[dic
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def poi_area_index(poi_to_area: list[dict]) -> dict[str, str]:
+    """Map each POI to its most specific area.
+
+    A POI sits in several areas at once — its neighborhood, its district, and the
+    city. Coverage is only legible at the specific end, so the city is the answer
+    of last resort rather than the usual one. Ranking follows
+    `SPINE_AREA_TYPE_PRIORITY`, the order the tour engine already sorts areas by,
+    with an unknown type ranking last and ties broken alphabetically so the
+    report is stable between runs.
+    """
+    by_poi: dict[str, list[dict]] = {}
+    for row in poi_to_area:
+        by_poi.setdefault(row["poi_name"], []).append(row)
+
+    def rank(row: dict) -> tuple[int, str]:
+        area_type = row.get("area_type", "")
+        position = (
+            SPINE_AREA_TYPE_PRIORITY.index(area_type)
+            if area_type in SPINE_AREA_TYPE_PRIORITY
+            else len(SPINE_AREA_TYPE_PRIORITY)
+        )
+        return position, row.get("area_name", "")
+
+    return {poi: min(rows, key=rank)["area_name"] for poi, rows in by_poi.items()}
+
+
+def anchor_readiness(beats: list[dict], pois: list[dict]) -> dict[str, Any]:
+    """POIs carrying enough beats to hold a visitor still, and the ones that do not.
+
+    A POI anchors a tour at `ANCHOR_CANDIDATE_BEAT_COUNT_MIN` beats. A POI with no
+    beats at all is counted as thin rather than omitted: an absent POI is the most
+    thin a POI can be, and leaving it out would flatter the corpus.
+    """
+    per_poi = Counter(b.get("poi_name", "") for b in beats)
+    thin = [
+        {"poi_name": poi["name"], "beats": per_poi.get(poi["name"], 0)}
+        for poi in pois
+        if per_poi.get(poi["name"], 0) < ANCHOR_CANDIDATE_BEAT_COUNT_MIN
+    ]
+    thin.sort(key=lambda row: (row["beats"], row["poi_name"]))
+    return {
+        "ready": len(pois) - len(thin),
+        "total_pois": len(pois),
+        "minimum_beats": ANCHOR_CANDIDATE_BEAT_COUNT_MIN,
+        "thin": thin,
+    }
+
+
+def lens_area_matrix(
+    beats: list[dict], poi_area: dict[str, str], area_names: list[str]
+) -> dict[str, dict[str, int]]:
+    """Beats per (taggable lens, area), with every cell present.
+
+    The empty cell IS the finding — a lens absent from an area is the reason a
+    visitor asking for that interest there gets someone else's tour — so every
+    lens in `TAGGABLE_LENSES` is crossed with every area and a cell with no beats
+    reads 0 rather than going missing.
+    """
+    matrix = {lens: dict.fromkeys(area_names, 0) for lens in TAGGABLE_LENSES}
+    for beat in beats:
+        area = poi_area.get(beat.get("poi_name", ""))
+        lens = beat.get("lens", "")
+        if area is None or lens not in matrix or area not in matrix[lens]:
+            continue
+        matrix[lens][area] += 1
+    return matrix
+
+
+def empty_lens_rows(matrix: dict[str, dict[str, int]]) -> list[dict[str, Any]]:
+    """Lenses ranked by how many areas hold none of them — thinnest interest first."""
+    rows = [
+        {
+            "lens": lens,
+            "empty_areas": sum(1 for count in cells.values() if count == 0),
+            "total_areas": len(cells),
+            "beats": sum(cells.values()),
+        }
+        for lens, cells in matrix.items()
+    ]
+    rows.sort(key=lambda row: (-row["empty_areas"], row["lens"]))
+    return rows
+
+
+def thin_areas(
+    pois: list[dict], per_poi: Counter[str], poi_area: dict[str, str]
+) -> list[dict[str, Any]]:
+    """Areas ranked by how few of their POIs can anchor a tour."""
+    tally: dict[str, dict[str, int]] = {}
+    for poi in pois:
+        area = poi_area.get(poi["name"])
+        if area is None:
+            continue
+        cell = tally.setdefault(area, {"ready": 0, "thin": 0})
+        if per_poi.get(poi["name"], 0) >= ANCHOR_CANDIDATE_BEAT_COUNT_MIN:
+            cell["ready"] += 1
+        else:
+            cell["thin"] += 1
+    rows = [{"area": area, **cell} for area, cell in tally.items()]
+    rows.sort(key=lambda row: (row["ready"], -row["thin"]))
+    return rows
+
+
+def coverage_report(
+    beats: list[dict], pois: list[dict], poi_to_area: list[dict], area_names: list[str]
+) -> dict[str, Any]:
+    """The coverage half of the corpus report: where the city is thin."""
+    poi_area = poi_area_index(poi_to_area)
+    matrix = lens_area_matrix(beats, poi_area, area_names)
+    return {
+        # A city whose areas were never generated has no gaps to report — it has a
+        # missing input. Saying "absent from 0 of 0 areas" would read as coverage.
+        "areas_mapped": bool(area_names),
+        "anchor_readiness": anchor_readiness(beats, pois),
+        "thin_areas": thin_areas(pois, Counter(b.get("poi_name", "") for b in beats), poi_area),
+        "empty_lenses": empty_lens_rows(matrix),
+        "lens_area_matrix": matrix,
+        "unmapped_pois": sorted({p["name"] for p in pois if p["name"] not in poi_area}),
+    }
+
+
+def load_city_pois(city_slug: str, *, data_dir: Path | None = None) -> list[dict]:
+    """Read one city's poi-raw.json. Raises FileNotFoundError naming the path."""
+    return _load_city_file(city_slug, "poi-raw.json", data_dir=data_dir)
+
+
+def load_city_areas(
+    city_slug: str, *, data_dir: Path | None = None
+) -> tuple[list[dict], list[str]]:
+    """Read one city's POI-to-area edges and the area names they may resolve to."""
+    edges = _load_city_file(city_slug, "within_edges.json", data_dir=data_dir)
+    areas = _load_city_file(city_slug, "areas.json", data_dir=data_dir)
+    return edges["poi_to_area"], [a["name"] for a in areas]
+
+
+def _load_city_file(city_slug: str, name: str, *, data_dir: Path | None = None) -> Any:
+    root = data_dir if data_dir is not None else _REPO_ROOT / "data"
+    path = root / city_slug / name
+    if not path.is_file():
+        raise FileNotFoundError(f"no {name} for city {city_slug!r} at {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def render_coverage(city_slug: str, report: dict[str, Any]) -> str:
+    """The coverage half as text. An unmapped city is named as unmapped, not as empty."""
+    readiness = report["anchor_readiness"]
+    lines = [
+        f"{city_slug} — coverage",
+        f"  anchor-ready POIs   {readiness['ready']} of {readiness['total_pois']}  "
+        f"(>={readiness['minimum_beats']} beats)",
+    ]
+    if not report["areas_mapped"]:
+        lines.append(
+            f"  areas               none generated — run: make gen-within-edges CITY={city_slug}"
+        )
+        return "\n".join(lines)
+    label = "  thinnest areas    "
+    for row in report["thin_areas"][:3]:
+        lines.append(
+            f"{label}  {row['area']} — {row['ready']} anchor-ready, "
+            f"{row['thin']} POIs under {readiness['minimum_beats']} beats"
+        )
+        label = "                    "
+    label = "  empty lens cells  "
+    for row in report["empty_lenses"][:3]:
+        lines.append(
+            f"{label}  {row['lens']}: {row['beats']} beats, absent from "
+            f"{row['empty_areas']} of {row['total_areas']} areas"
+        )
+        label = "                    "
+    unmapped = report["unmapped_pois"]
+    if unmapped:
+        shown = ", ".join(unmapped[:5])
+        rest = f" (+{len(unmapped) - 5} more)" if len(unmapped) > 5 else ""
+        lines.append(f"  unmapped POIs       {len(unmapped)}: {shown}{rest}")
+    return "\n".join(lines)
+
+
 def _ordered(counts: Counter[str], preferred: tuple[str, ...]) -> dict[str, int]:
     """Counts in a stable reading order: known keys first, surprises after."""
     out = {key: counts[key] for key in preferred if counts[key]}
@@ -163,16 +343,30 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--city", default="paris", help="City slug under data/ (default paris).")
     parser.add_argument("--json", action="store_true", help="Emit the report as JSON.")
+    parser.add_argument(
+        "--coverage",
+        action="store_true",
+        help="Report where the city is thin instead of how good its beats are.",
+    )
     args = parser.parse_args(argv)
 
     try:
         beats = load_city_beats(args.city)
+        if args.coverage:
+            pois = load_city_pois(args.city)
+            poi_to_area, area_names = load_city_areas(args.city)
     except FileNotFoundError as exc:
         print(f"✗ {exc}")
         return 1
 
-    report = quality_report(beats)
-    print(json.dumps(report, indent=2) if args.json else _render(args.city, report))
+    if args.coverage:
+        report = coverage_report(beats, pois, poi_to_area, area_names)
+        rendered = render_coverage(args.city, report)
+    else:
+        report = quality_report(beats)
+        rendered = _render(args.city, report)
+
+    print(json.dumps(report, indent=2) if args.json else rendered)
     return 0
 
 
