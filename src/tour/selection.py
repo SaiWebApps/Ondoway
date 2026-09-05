@@ -6622,13 +6622,21 @@ def pick_spine_area(
     return min(votes.keys(), key=lambda a: _spine_tiebreak_key(a, votes, snapshot))
 
 
-def _type_rank(area: str, snapshot: CorpusSnapshot) -> int:
-    area_type = snapshot.area_types.get(area, "")
+def area_type_rank(area_type: str) -> int:
+    """Position of an area type in `SPINE_AREA_TYPE_PRIORITY`; unknown types rank last.
+
+    Smaller is more specific. Public because the corpus report ranks the same
+    types from the FILE store, where there is no snapshot to look them up in.
+    """
     return (
         SPINE_AREA_TYPE_PRIORITY.index(area_type)
         if area_type in SPINE_AREA_TYPE_PRIORITY
         else len(SPINE_AREA_TYPE_PRIORITY)
     )
+
+
+def _type_rank(area: str, snapshot: CorpusSnapshot) -> int:
+    return area_type_rank(snapshot.area_types.get(area, ""))
 
 
 def _spine_tiebreak_key(area: str, votes: Counter[str], snapshot: CorpusSnapshot) -> tuple:
@@ -6646,13 +6654,7 @@ def _rank_areas_by_specificity(areas: tuple[str, ...], snapshot: CorpusSnapshot)
     for a in areas:
         if _is_excluded(a, snapshot):
             continue
-        area_type = snapshot.area_types.get(a, "")
-        rank = (
-            SPINE_AREA_TYPE_PRIORITY.index(area_type)
-            if area_type in SPINE_AREA_TYPE_PRIORITY
-            else len(SPINE_AREA_TYPE_PRIORITY)
-        )
-        ranked.append((rank, a))
+        ranked.append((area_type_rank(snapshot.area_types.get(a, "")), a))
     ranked.sort()
     return [a for _, a in ranked]
 

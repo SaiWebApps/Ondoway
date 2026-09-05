@@ -27,10 +27,10 @@ from pathlib import Path
 from typing import Any
 
 from scripts.dedup_pairs import shingle_set
-from scripts.extract_validators import word_count
+from scripts.extract_validators import _CLASS_RANGES, word_count
 from src.schema.definitions import TAGGABLE_LENSES
 from src.tour.density import ANCHOR_CANDIDATE_BEAT_COUNT_MIN
-from src.tour.selection import SPINE_AREA_TYPE_PRIORITY
+from src.tour.selection import area_type_rank
 
 #: Shingle width for the copied-body test. Eight words is evidence of copying.
 VERBATIM_SHINGLE: int = 8
@@ -100,17 +100,54 @@ def body_size_summary(beats: list[dict]) -> dict[str, int]:
 
 def verbatim_summary(beats: list[dict]) -> dict[str, Any]:
     """How many beats were copied from their source, and how copied the corpus is."""
+    untraceable = [b for b in beats if not (b.get("source_passage") or "").strip()]
     ratios = [
         verbatim_ratio(b.get("script_body") or "", b.get("source_passage") or "")
         for b in beats
+        if (b.get("source_passage") or "").strip()
     ]
     flagged = sum(1 for r in ratios if r >= VERBATIM_THRESHOLD)
     return {
         "flagged": flagged,
+        "scoreable": len(ratios),
+        # A beat citing no source is not clean prose — it is a beat nothing can be
+        # said about, and it stays out of the denominator rather than diluting it.
+        "untraceable": len(untraceable),
         "flagged_pct": round(100 * flagged / len(ratios), 1) if ratios else 0.0,
         "median_ratio": round(statistics.median(ratios), 3) if ratios else 0.0,
         "threshold": VERBATIM_THRESHOLD,
         "shingle": VERBATIM_SHINGLE,
+    }
+
+
+def out_of_band(beats: list[dict]) -> dict[str, Any]:
+    """Beats whose body length contradicts the class they declare.
+
+    `beat_length_class` is a claim, not a measurement: the extractor writes it and
+    nothing downstream re-checks it. Every London beat declares `mid` (80-200
+    words) with a median body of 22, which reads as a cleanly classified corpus
+    unless the claim is tested against `_CLASS_RANGES`, the bands the repo
+    already defines for exactly this purpose.
+    """
+    classified = [b for b in beats if b.get("beat_length_class")]
+    offenders = []
+    for beat in classified:
+        low, high = _CLASS_RANGES.get(beat["beat_length_class"], (0, 10**9))
+        words = word_count(beat.get("script_body") or "")
+        if not low <= words <= high:
+            offenders.append(
+                {
+                    "beat_id": beat.get("beat_id", ""),
+                    "beat_length_class": beat["beat_length_class"],
+                    "words": words,
+                    "band": [low, high],
+                }
+            )
+    return {
+        "count": len(offenders),
+        "classified": len(classified),
+        "pct": round(100 * len(offenders) / len(classified), 1) if classified else 0.0,
+        "examples": offenders[:5],
     }
 
 
@@ -120,6 +157,7 @@ def quality_report(beats: list[dict]) -> dict[str, Any]:
         "total_beats": len(beats),
         "fact_check": fact_check_buckets(beats),
         "length_class": length_class_buckets(beats),
+        "out_of_band": out_of_band(beats),
         "body_size": body_size_summary(beats),
         "verbatim": verbatim_summary(beats),
     }
@@ -149,13 +187,7 @@ def poi_area_index(poi_to_area: list[dict]) -> dict[str, str]:
         by_poi.setdefault(row["poi_name"], []).append(row)
 
     def rank(row: dict) -> tuple[int, str]:
-        area_type = row.get("area_type", "")
-        position = (
-            SPINE_AREA_TYPE_PRIORITY.index(area_type)
-            if area_type in SPINE_AREA_TYPE_PRIORITY
-            else len(SPINE_AREA_TYPE_PRIORITY)
-        )
-        return position, row.get("area_name", "")
+        return area_type_rank(row.get("area_type", "")), row.get("area_name", "")
 
     return {poi: min(rows, key=rank)["area_name"] for poi, rows in by_poi.items()}
 
@@ -245,7 +277,11 @@ def coverage_report(
     return {
         # A city whose areas were never generated has no gaps to report — it has a
         # missing input. Saying "absent from 0 of 0 areas" would read as coverage.
-        "areas_mapped": bool(area_names),
+        # Two different failures with two different remedies: a city can have no
+        # area roster at all (areas.json empty), or a roster nobody has joined to
+        # its POIs yet. Only the second is what gen-within-edges fixes.
+        "areas_defined": bool(area_names),
+        "areas_mapped": bool(poi_area),
         "anchor_readiness": anchor_readiness(beats, pois),
         "thin_areas": thin_areas(pois, Counter(b.get("poi_name", "") for b in beats), poi_area),
         "empty_lenses": empty_lens_rows(matrix),
@@ -356,9 +392,16 @@ def render_coverage(city_slug: str, report: dict[str, Any]) -> str:
         f"(>={readiness['minimum_beats']} beats)",
     ]
     lines.extend(_density_lines(report.get("density")))
+    if not report["areas_defined"]:
+        lines.append(
+            f"  areas               none defined — data/{city_slug}/areas.json is empty; "
+            "the city needs an area roster before coverage can be reported"
+        )
+        return "\n".join(lines)
     if not report["areas_mapped"]:
         lines.append(
-            f"  areas               none generated — run: make gen-within-edges CITY={city_slug}"
+            f"  areas               defined but not joined to POIs — run: "
+            f"make gen-within-edges CITY={city_slug}"
         )
         return "\n".join(lines)
     label = "  thinnest areas    "
@@ -398,6 +441,11 @@ def _render(city_slug: str, report: dict[str, Any]) -> str:
     lines.append(f"  fact-check   {fc}")
     lc = "  ".join(f"{k} {v}" for k, v in report["length_class"].items())
     lines.append(f"  length       {lc}")
+    oob = report["out_of_band"]
+    lines.append(
+        f"  mislabelled  {oob['count']} of {oob['classified']} classified beats "
+        f"({oob['pct']}%) have a body outside the band their class declares"
+    )
     size = report["body_size"]
     lines.append(
         f"  body size    median {size['median_words']}w  "
@@ -405,9 +453,14 @@ def _render(city_slug: str, report: dict[str, Any]) -> str:
     )
     vb = report["verbatim"]
     lines.append(
-        f"  verbatim     {vb['flagged']} beats ({vb['flagged_pct']}%) are "
-        f">={int(vb['threshold'] * 100)}% copied from their source passage"
+        f"  verbatim     {vb['flagged']} of {vb['scoreable']} scoreable beats "
+        f"({vb['flagged_pct']}%) are >={int(vb['threshold'] * 100)}% copied from their source"
     )
+    if vb["untraceable"]:
+        lines.append(
+            f"  untraceable  {vb['untraceable']} beats cite no source at all — "
+            "they cannot be scored, and are not counted as clean"
+        )
     return "\n".join(lines)
 
 
