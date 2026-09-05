@@ -103,7 +103,8 @@ LINT_PATHS := src/ tests/ scripts/dev_env.py scripts/ensure_dev_data.py \
 	scripts/poi_body_places.py scripts/poi_place_judgements.py \
 	scripts/poi_queues.py scripts/poi_trigger_radius.py scripts/sync_poi_exports.py \
 	scripts/report_visit_durations.py scripts/tour_build.py scripts/dedup_review.py \
-	scripts/tour_batch_review.py scripts/lint_process_files.py
+	scripts/tour_batch_review.py scripts/lint_process_files.py \
+	scripts/corpus_report.py
 
 # Reports a missing credential or a wrong endpoint as a sentence. This was a bare
 # `assert` inside `python -c`, so the answer to "is my config right?" was a stack trace.
