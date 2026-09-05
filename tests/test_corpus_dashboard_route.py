@@ -68,6 +68,23 @@ def test_corpus_route_reports_an_unmapped_city_without_failing(dashboard_url: st
     assert json.loads(body)["coverage"]["areas_mapped"] is False
 
 
+def test_corpus_route_carries_the_pois_worth_fixing(dashboard_url: str) -> None:
+    """The screen's most actionable list must reach it, grouped by how thin each POI is.
+
+    A count tells the owner his corpus is thin; a name tells him what to go write.
+    Paris has 30 POIs with no beats at all, and they are the work queue.
+    """
+    status, body = _get(f"{dashboard_url}/api/corpus?city=paris")
+    assert status == 200
+    thin = json.loads(body)["coverage"]["anchor_readiness"]["thin"]
+
+    assert len(thin) == 207
+    zero = [row["poi_name"] for row in thin if row["beats"] == 0]
+    assert len(zero) == 30
+    # Sorted thinnest-first, so the queue is already in priority order.
+    assert thin[0]["beats"] == 0
+
+
 def test_corpus_route_rejects_an_unknown_city(dashboard_url: str) -> None:
     """A city with no files is a 404 naming the city — never a stack trace."""
     status, body = _get(f"{dashboard_url}/api/corpus?city=atlantis")

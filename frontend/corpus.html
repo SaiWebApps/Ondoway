@@ -64,9 +64,12 @@
     width: 20px; height: 20px; text-align: center; border-radius: 3px;
     background: #eef1f6; color: var(--muted);
   }
-  td.cell.zero { background: #fbe9e9; color: var(--bad); }
-  td.cell.some { background: #dce8f8; color: #1d4c8c; }
-  td.cell.many { background: var(--brand); color: #fff; font-weight: 600; }
+  /* These must out-rank `table.matrix td.cell` above, which is also two classes
+     but two elements deep — a bare `td.cell.zero` loses and every cell renders
+     the same grey, which silently kills the only signal this panel carries. */
+  table.matrix td.cell.zero { background: #f6d3d3; color: var(--bad); }
+  table.matrix td.cell.some { background: #dce8f8; color: #1d4c8c; }
+  table.matrix td.cell.many { background: var(--brand); color: #fff; font-weight: 600; }
   .stack { display: flex; height: 7px; border-radius: 4px; overflow: hidden; background: #eef1f6; }
   .seg.g { background: var(--good); }
   .seg.y { background: #d9a441; }
@@ -119,14 +122,20 @@ function quality(q) {
     <table>${lc}</table>
     <p class="sub" style="margin:12px 0 0">median ${q.body_size.median_words}w ·
       p90 ${q.body_size.p90_words}w · longest ${q.body_size.longest_words}w</p>
+    ${q.out_of_band.count ? `<div class="note"><strong>${q.out_of_band.count} of
+      ${q.out_of_band.classified}</strong> classified beats (${q.out_of_band.pct}%) have a
+      body outside the band their own class declares.</div>` : ""}
   </div>
   <div class="card">
     <h2>Copied from source</h2>
     <div class="big ${vb.flagged_pct > 50 ? "err" : ""}">${vb.flagged_pct}%
-      <small>${vb.flagged} of ${t} beats</small></div>
+      <small>${vb.flagged} of ${vb.scoreable} scoreable beats</small></div>
     <p class="sub" style="margin:10px 0 0">At or above ${Math.round(vb.threshold * 100)}%
       overlap of ${vb.shingle}-word shingles with their own source passage — copied,
       not authored. Median beat sits at ${vb.median_ratio}.</p>
+    ${vb.untraceable ? `<div class="note"><strong>${vb.untraceable} beats cite no source
+      at all.</strong> They cannot be scored either way, so they are not in the
+      ${vb.scoreable} above — and an untraceable beat is its own defect.</div>` : ""}
   </div>`;
 }
 
@@ -138,12 +147,22 @@ function coverage(c, city) {
     <div class="big">${r.ready} <small>of ${r.total_pois} — ${r.minimum_beats}+ beats</small></div>
     <table>${barRow("ready", r.ready, r.total_pois)}
       ${barRow("thin", r.total_pois - r.ready, r.total_pois, "warn")}</table>
+    ${thinList(r.thin)}
   </div>`;
 
+  if (!c.areas_defined) {
+    out += `<div class="card"><h2>Areas</h2>
+      <div class="note">No areas defined for ${esc(city)} — <code>data/${esc(city)}/areas.json</code>
+      is empty, so there is nothing to be thin <em>in</em>. The city needs an area roster
+      before coverage can be reported; the lens × area grid is hidden until it has one.</div>
+      </div>`;
+    return out;
+  }
   if (!c.areas_mapped) {
     out += `<div class="card"><h2>Areas</h2>
-      <div class="note">No areas generated for ${esc(city)}, so there is nothing to be thin
-      <em>in</em>. Run <code>make gen-within-edges CITY=${esc(city)}</code>.</div></div>`;
+      <div class="note">${esc(city)} has areas but they are not joined to its POIs yet.
+      Run <code>make gen-within-edges CITY=${esc(city)}</code>. The lens × area grid is
+      hidden until then.</div></div>`;
     return out;
   }
 
@@ -186,8 +205,23 @@ function density(d) {
       generated ${esc(d.generated_at.slice(0, 10))}. The % is GREEN starts.</p></div>`;
 }
 
+function thinList(thin) {
+  if (!thin || !thin.length) return "";
+  const bands = [[0, "no beats at all"], [1, "one beat"], [2, "two beats"]];
+  const blocks = bands.map(([n, label]) => {
+    const names = thin.filter((t) => t.beats === n).map((t) => t.poi_name);
+    if (!names.length) return "";
+    const shown = names.slice(0, 6).map(esc).join(", ");
+    const rest = names.length > 6 ? ` <span class="sub">+${names.length - 6} more</span>` : "";
+    return `<p style="margin:8px 0 0"><strong>${names.length}</strong>
+      <span class="sub">with ${label} —</span> ${shown}${rest}</p>`;
+  }).join("");
+  return `<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px">
+    <p class="sub" style="margin:0">Go write these:</p>${blocks}</div>`;
+}
+
 function matrix(c) {
-  if (!c.areas_mapped) return "";
+  if (!c.areas_defined || !c.areas_mapped) return "";
   const lenses = Object.keys(c.lens_area_matrix);
   const areas = Object.keys(c.lens_area_matrix[lenses[0]] || {});
   const head = areas.map((a) => `<th class="rot">${esc(a)}</th>`).join("");
