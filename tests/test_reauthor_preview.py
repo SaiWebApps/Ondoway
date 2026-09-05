@@ -12,7 +12,15 @@ from __future__ import annotations
 
 import pytest
 
-from scripts.reauthor_preview import grounding_claims, render_preview, worst_copied
+from scripts.reauthor_preview import (
+    EXCLUDED_CITIES,
+    REAUTHOR_MODEL,
+    grounding_claims,
+    is_excluded,
+    reauthor_request,
+    render_preview,
+    worst_copied,
+)
 
 
 def _beat(body: str, source: str, **extra: object) -> dict:
@@ -70,6 +78,47 @@ def test_grounding_claims_fall_back_to_the_source_passage() -> None:
 
 def test_grounding_claims_is_empty_when_there_is_nothing_to_ground_against() -> None:
     assert grounding_claims(_beat("body", "")) == ()
+
+
+def test_london_is_excluded_from_the_work() -> None:
+    """London is junk data, not a backlog. Nothing spends money rewriting it."""
+    assert "london" in EXCLUDED_CITIES
+    assert is_excluded("london") is True
+    assert is_excluded("paris") is False
+
+
+def test_the_writer_is_the_accurate_model_not_the_cheap_one() -> None:
+    """Accuracy is the requirement, and the whole backlog costs about $11 to rewrite.
+
+    The judge stays on Haiku deliberately: `HaikuFaithfulnessChecker` was calibrated
+    to zero fabricating acceptances on that model, and swapping it would throw the
+    calibration away. The writer and the judge are different jobs.
+    """
+    assert REAUTHOR_MODEL == "claude-opus-5"
+
+    from src.tour.verify import FAITHFULNESS_MODEL
+
+    assert FAITHFULNESS_MODEL != REAUTHOR_MODEL
+
+
+def test_the_request_sends_no_sampling_parameters() -> None:
+    """Opus 5 rejects temperature/top_p/top_k with a 400.
+
+    The re-author request is built here so the shape is pinned by a test rather
+    than discovered by a failed paid call.
+    """
+    request = reauthor_request(source="A source sentence.", body="A copied body.")
+
+    assert request["model"] == "claude-opus-5"
+    assert "temperature" not in request
+    assert "top_p" not in request
+    assert "top_k" not in request
+    # Adaptive thinking is on by default for this model; max_tokens must leave room
+    # for it or the rewrite truncates mid-sentence.
+    assert request["max_tokens"] >= 4000
+    prompt = request["messages"][0]["content"]
+    assert "A source sentence." in prompt
+    assert "A copied body." in prompt
 
 
 def test_preview_shows_the_body_against_its_source() -> None:

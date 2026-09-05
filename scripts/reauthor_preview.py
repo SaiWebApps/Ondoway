@@ -1,9 +1,9 @@
 """Show what Lane B would rewrite, before anything is rewritten.
 
-23% of the New York corpus and 99% of London's are bodies lifted out of their
-source rather than authored from it. Fixing that means rewriting roughly a
-thousand beats, which costs money and changes the corpus, so this exists to let
-the owner READ the work first: which beats, how copied, against what source.
+246 Paris beats and 278 New York ones are bodies lifted out of their source
+rather than authored from it. Fixing that costs money and changes the corpus, so
+this exists to let the owner READ the work first: which beats, how copied,
+against what source. London is excluded — see `EXCLUDED_CITIES`.
 
 **It never writes.** The dry run is free and touches no provider. `--live`
 re-authors a small sample and is gated on `ONDOWAY_DEMO_APPROVE=1`, the same
@@ -14,7 +14,7 @@ Re-grounding reuses `HaikuFaithfulnessChecker` (`src/tour/verify.py`), the gate
 calibrated to zero fabricating acceptances. The standard is explicit that a
 second entailment gate must not be built.
 
-Run as `uv run python scripts/reauthor_preview.py --city london`.
+Run as `uv run python scripts/reauthor_preview.py --city paris`.
 """
 
 from __future__ import annotations
@@ -33,6 +33,24 @@ from scripts.corpus_report import (
 
 #: How many beats a preview shows. A sample, never the backlog.
 DEFAULT_LIMIT = 5
+
+#: Cities whose beats are junk rather than a backlog. London was produced by the
+#: automated onboarding drafter, not the book pipeline: 561 single-sentence spans
+#: lifted verbatim from Wikipedia, every one tagged the same lens and the same
+#: length class, none fact-checked. Rewriting it would launder junk into
+#: plausible-sounding junk, so it is excluded from the work rather than queued.
+EXCLUDED_CITIES = frozenset({"london"})
+
+#: The model that WRITES. Accuracy and non-plagiarism are the requirement, and the
+#: whole remaining backlog costs about $11 to rewrite, so there is no cost argument
+#: for a weaker one. Note this is deliberately NOT the model that JUDGES: the
+#: entailment gate is calibrated on Haiku to zero fabricating acceptances, and
+#: moving it to another model would throw that calibration away.
+REAUTHOR_MODEL = "claude-opus-5"
+
+#: Adaptive thinking is on by default on this model and its tokens count against
+#: max_tokens, so a beat-sized ceiling would truncate the rewrite mid-sentence.
+REAUTHOR_MAX_TOKENS = 8000
 
 #: The house voice the rewrite must land in, quoted from
 #: `fixtures/tour-quality-standard/01-standard.md` §3 so the prompt and the
@@ -62,6 +80,32 @@ ORIGINAL (copied; do not reuse its wording):
 {body}
 
 Write the replacement body only. No preamble, no quotes around it."""
+
+
+def is_excluded(city_slug: str) -> bool:
+    """Whether this city's beats are junk that must not be rewritten."""
+    return city_slug.lower() in EXCLUDED_CITIES
+
+
+def reauthor_request(*, source: str, body: str) -> dict[str, Any]:
+    """The request that rewrites one beat, built here so a test can pin its shape.
+
+    Carries no `temperature`, `top_p` or `top_k`: sampling parameters are removed
+    on this model and sending one returns a 400, which would otherwise be
+    discovered by a failed paid call rather than by the suite.
+    """
+    return {
+        "model": REAUTHOR_MODEL,
+        "max_tokens": REAUTHOR_MAX_TOKENS,
+        "messages": [
+            {
+                "role": "user",
+                "content": _REAUTHOR_PROMPT.format(
+                    voice=_VOICE_RULES, source=source, body=body
+                ),
+            }
+        ],
+    }
 
 
 def worst_copied(beats: list[dict], limit: int = DEFAULT_LIMIT) -> list[dict[str, Any]]:
@@ -136,20 +180,14 @@ def _wrap(text: str, width: int = 88) -> str:
 def _reauthor_live(rows: list[dict[str, Any]]) -> str:
     """Re-author the sample and re-ground it. Paid; never writes to data/."""
     from src.tour.anthropic_client import judge_client
-    from src.tour.verify import FAITHFULNESS_MODEL, HaikuFaithfulnessChecker
+    from src.tour.verify import HaikuFaithfulnessChecker
 
     client = judge_client()
     checker = HaikuFaithfulnessChecker()
     out: list[str] = []
     for row in rows:
-        prompt = _REAUTHOR_PROMPT.format(
-            voice=_VOICE_RULES, source=row["source_passage"], body=row["script_body"]
-        )
         response = client.messages.create(
-            model=FAITHFULNESS_MODEL,
-            max_tokens=600,
-            temperature=1,
-            messages=[{"role": "user", "content": prompt}],
+            **reauthor_request(source=row["source_passage"], body=row["script_body"])
         )
         rewritten = "".join(
             getattr(b, "text", "") for b in (getattr(response, "content", []) or [])
@@ -178,6 +216,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Actually re-author the sample (paid). Needs ONDOWAY_DEMO_APPROVE=1.",
     )
     args = parser.parse_args(argv)
+
+    if is_excluded(args.city):
+        print(
+            f"✗ {args.city} is excluded: its beats are junk data, not a backlog. "
+            "Rewriting them would launder junk into plausible-sounding junk."
+        )
+        return 2
 
     try:
         beats = load_city_beats(args.city)
