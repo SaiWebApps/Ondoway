@@ -45,8 +45,8 @@ king s`, `on the left bank s quai de conti`, `nurse on v j day in 1945` (V-J),
 `4 000 years of jewish art` (a split thousands separator). All of those are under
 8 words to a human reader.
 
-**Honest count: 75–84 approvals carry an 8+ word run, depending on tokenization**
-(two independent implementations spanned 51–84 across thirteen variants). The
+**Honest count: 75–84 approvals carry an 8+ word run, depending on tokenization** —
+across two independent implementations the counts spanned 51 to 84. The
 contract here yields 81 and is the most blocking of the reasonable options, which is
 the safe direction to be wrong in — a wrongly blocked beat costs a person's minute.
 The whole spread moves the demoted count by about 4 records out of 384.
@@ -64,6 +64,12 @@ it is, and one of them exempted a real approval: a wall inscription reading "I l
 you", where the lift was the narration `the words … in 311 languages` around it.
 They are gone. Only acts of saying and named sources of words remain, which now
 blocks a genuine "a line from the Bible" as well — the safe direction again.
+
+The exemption is the only mechanism that disables Gate 1, so all 9 records it saves
+were read under the final cue list. Every one is a real person or document being
+quoted and named — Mme de Sévigné, Colette, Rodin's letter, Raskob, Sadowsky's
+statement on Corona — reached through `wrote`, `letter`, `called`, `asked`, `said`
+or `describing`. No exemption rests on a weak cue and none runs away.
 
 **What the 110 blocked runs are made of**: **63 are prose** and **47 are names and
 numbers**. An earlier draft said 51/57; `run_shape` was counting sentence-initial
@@ -138,7 +144,8 @@ are defects it never saw.
 The first two channels read 66% and 23–37% before the preposition-walk fix; that fix
 is why they moved, and it is the same fix that catches Chinatown. **One structural
 blind spot remains and will not close by tuning: the gate compares figures, so a
-spelled-out number is invisible to it.** The name channel's 90–97% is recall on the
+spelled-out number is invisible to it.** Decade shorthand (`the 1930s`) is invisible
+for the same reason — it is neither a plain figure nor an ordinal. The name channel's 90–97% is recall on the
 detector's own shape — the injector plants the two-token substitution the detector
 accepts — so it is not evidence about names renamed wholesale, which is an
 acknowledged miss.
