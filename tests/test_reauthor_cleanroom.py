@@ -37,6 +37,7 @@ from scripts.reauthor_cleanroom import (
     render_claims,
     shuffle_seed,
     shuffled_claims,
+    target_words,
 )
 
 _CLAIMS = [
@@ -67,7 +68,7 @@ def test_the_writer_request_contains_no_source_prose() -> None:
     for beat in _real_records():
         source = beat["source_passage"]
         payload = json.dumps(
-            cleanroom_request(claims=_CLAIMS, poi=beat.get("poi_name", ""), city="Paris")
+            cleanroom_request(claims=_CLAIMS, poi=beat.get("poi_name", ""), city="Paris", words=90)
         )
         assert source not in payload
         assert (beat.get("script_body") or "") not in payload
@@ -78,7 +79,7 @@ def test_the_writer_request_takes_no_parameter_that_could_carry_the_source() -> 
     """Structure, not vigilance: there is no argument to pass a passage through."""
     with pytest.raises(TypeError):
         cleanroom_request(  # type: ignore[call-arg]
-            claims=_CLAIMS, poi="Pont Neuf", city="Paris", source="the passage"
+            claims=_CLAIMS, poi="Pont Neuf", city="Paris", words=90, source="the passage"
         )
 
 
@@ -89,8 +90,8 @@ def test_the_decomposer_is_the_only_call_that_sees_the_source() -> None:
 
 def test_the_writer_is_told_it_has_nothing_else() -> None:
     """A writer that fills a gap from world knowledge is fabricating, not authoring."""
-    payload = json.dumps(cleanroom_request(claims=_CLAIMS, poi="Pont Neuf", city="Paris"))
-    assert "no other source" in payload
+    payload = json.dumps(cleanroom_request(claims=_CLAIMS, poi="Pont Neuf", city="Paris", words=90))
+    assert "Add nothing." in payload
 
 
 # ── the claim set that reaches it ────────────────────────────────────────────
@@ -256,7 +257,7 @@ def test_the_artifacts_never_collide_with_the_stage_0_input() -> None:
 
 def test_no_words_of_the_voice_rules_are_lost_to_formatting() -> None:
     """The voice comes from the quality standard; a truncated copy is a silent drift."""
-    payload = json.dumps(cleanroom_request(claims=_CLAIMS, poi="P", city="Paris"))
+    payload = json.dumps(cleanroom_request(claims=_CLAIMS, poi="P", city="Paris", words=90))
     assert "Say it; don't circle it" in json.loads(payload)["messages"][0]["content"]
     assert len(verbatim_words(json.loads(payload)["messages"][0]["content"])) > 100
 
@@ -268,3 +269,56 @@ def test_the_prompt_names_the_city_the_way_the_product_does() -> None:
     assert city_name("new_york") == "New York"
     assert city_name("paris") == "Paris"
     assert city_name("nowhere") == "nowhere"
+
+
+def test_the_rephrase_ask_names_the_claims_that_were_refused() -> None:
+    """A whole beat is worth more than one stubborn claim, and the threshold holds."""
+    from scripts.reauthor_cleanroom import rephrase_request
+
+    payload = json.dumps(
+        rephrase_request(source="A passage.", lifted=["on the eastern side of the Pont-Neuf"])
+    )
+    assert "on the eastern side of the Pont-Neuf" in payload
+    assert "eight consecutive words" in payload
+
+
+def test_the_rephrase_ask_still_shows_the_source() -> None:
+    """It is a decomposition, not a paraphrase of a claim in isolation."""
+    from scripts.reauthor_cleanroom import rephrase_request
+
+    assert "A passage." in json.dumps(rephrase_request(source="A passage.", lifted=["x"]))
+
+
+def test_the_length_target_comes_from_the_beat_being_replaced() -> None:
+    """Removing the old body removed the only anchor on length; one integer restores it."""
+    from scripts.reauthor_cleanroom import MIN_TARGET_WORDS, target_words
+
+    assert target_words(" ".join(["word"] * 94)) == 90
+    assert target_words("short") == MIN_TARGET_WORDS
+
+
+def test_the_length_target_carries_no_wording() -> None:
+    """An integer is not expression: the seam still holds with it in the request."""
+    for beat in _real_records():
+        payload = json.dumps(
+            cleanroom_request(
+                claims=_CLAIMS,
+                poi=beat.get("poi_name", ""),
+                city="Paris",
+                words=target_words(beat.get("script_body") or ""),
+            )
+        )
+        assert max_verbatim_run(payload, beat["source_passage"]) < VERBATIM_RUN_BLOCK
+
+
+def test_the_writer_may_not_hand_an_observation_to_an_invented_source() -> None:
+    """ "Some visitors find" fabricates a source for one writer's impression."""
+    payload = json.dumps(cleanroom_request(claims=_CLAIMS, poi="P", city="Paris", words=90))
+    assert "some visitors find" in payload
+    assert "invents a source" in payload
+
+
+def test_the_writer_may_not_invent_a_physical_detail() -> None:
+    """Freed from the old body, the first sample told listeners to look at a widening."""
+    payload = json.dumps(cleanroom_request(claims=_CLAIMS, poi="P", city="Paris", words=90))
+    assert "the roadway does not widen" in payload

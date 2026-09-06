@@ -81,6 +81,10 @@ MAX_TOKENS = 8000
 #: Concurrent calls, matching the pool the sibling paid scripts already use.
 DEFAULT_WORKERS = 8
 
+#: The shortest beat worth writing. A handful of very short copied bodies would
+#: otherwise ask for a length no sentence can land in.
+MIN_TARGET_WORDS = 40
+
 #: What a claim is marked as. Two kinds, not a taxonomy: `reauthor_preview`'s
 #: `grounding_claims` records two measured beats where the source carried the
 #: author's observation ("the breezes are bracing", a Michelin comparison) and the
@@ -114,16 +118,38 @@ PASSAGE:
 Reply with JSON only, no prose:
 {{"claims": [{{"claim": "...", "kind": "fact"}}]}}"""
 
+_REPHRASE_PROMPT = """These claims still repeat the passage's wording:
+
+{lifted}
+
+Rewrite the WHOLE claim set again, saying the same things in wording of your own. A
+claim that shares eight consecutive words with the passage is rejected, even when the
+words are an ordinary way to state the fact — find another way to say it.
+
+PASSAGE:
+{source}
+
+Reply with JSON only, no prose:
+{{"claims": [{{"claim": "...", "kind": "fact"}}]}}"""
+
 _WRITE_PROMPT = """Write the body of an audio-tour beat about {poi}, in {city}.
 
 Below is everything you know. It is an unordered set — the order means nothing, and
 you decide what to say first, what belongs together, and what closes. Say every claim
-marked "fact". Claims marked "observation" are the author's impression rather than a
-record, so use them as impressions or leave them out; never state one as established
-fact.
+marked "fact".
 
-You have no other source. Do not add a fact that is not below, however certain you are
-of it.
+Claims marked "observation" are one writer's impression, not a record. Offer one as
+something a person standing here may notice, or leave it out. Never state one as
+established fact, and never hand it to somebody else to say: "some visitors find",
+"people say", "it is often remarked" invents a source and is the worst thing you can do
+here. Do not say "I".
+
+Add nothing. Not a fact, and not a physical detail either — if the claims do not say
+the roadway widens, the roadway does not widen, and you cannot tell the listener to
+look at it. Never write "imagine" or "picture".
+
+Aim for about {words} words. This is spoken aloud between stops on a walk, and a beat
+that runs long eats the silence the tour is built around.
 
 House voice:
 {voice}
@@ -146,6 +172,28 @@ def decompose_request(*, source: str) -> dict[str, Any]:
         "model": PRODUCER_MODEL,
         "max_tokens": MAX_TOKENS,
         "messages": [{"role": "user", "content": _DECOMPOSE_PROMPT.format(source=source)}],
+    }
+
+
+def rephrase_request(*, source: str, lifted: list[str]) -> dict[str, Any]:
+    """The second and final ask, naming the claims that came back too close.
+
+    A whole beat is worth more than one stubborn claim. "On the eastern side of the
+    Pont-Neuf" is eight shared words and also the plainest way to state where a square
+    is, so refusing the beat outright would discard thirteen good claims to punish an
+    unavoidable locution. The threshold does not move — the decomposer is asked again.
+    """
+    return {
+        "model": PRODUCER_MODEL,
+        "max_tokens": MAX_TOKENS,
+        "messages": [
+            {
+                "role": "user",
+                "content": _REPHRASE_PROMPT.format(
+                    lifted="\n".join(f"- {c}" for c in lifted), source=source
+                ),
+            }
+        ],
     }
 
 
@@ -225,13 +273,21 @@ def render_claims(claims: list[dict[str, str]]) -> str:
     return "\n".join(f"- [{c['kind']}] {c['claim']}" for c in claims)
 
 
-def cleanroom_request(*, claims: list[dict[str, str]], poi: str, city: str) -> dict[str, Any]:
+def cleanroom_request(
+    *, claims: list[dict[str, str]], poi: str, city: str, words: int
+) -> dict[str, Any]:
     """The request that writes one body.
 
-    **This function is the clean room.** It takes claims, a place and a city, and
-    there is no parameter through which `source_passage` or the copied body could be
-    passed in. Nothing downstream can reintroduce them by accident, and a test reads
+    **This function is the clean room.** It takes claims, a place, a city and a length,
+    and there is no parameter through which `source_passage` or the copied body could
+    be passed in. Nothing downstream can reintroduce them by accident, and a test reads
     the rendered payload back to prove it for real records.
+
+    `words` is a single integer, and it is why the clean room is a room rather than a
+    vacuum. Removing the old body removed the only thing telling the writer how long a
+    beat is, and the first sample came back 1.8x longer — which eats the silence the
+    tour is built around and stale-dates every stored duration. A word count carries no
+    expression and no arrangement, so it crosses nothing the seam exists to stop.
     """
     return {
         "model": PRODUCER_MODEL,
@@ -244,10 +300,22 @@ def cleanroom_request(*, claims: list[dict[str, str]], poi: str, city: str) -> d
                     city=city or "the city",
                     voice=_VOICE_RULES,
                     claims=render_claims(claims),
+                    words=words,
                 ),
             }
         ],
     }
+
+
+def target_words(body_before: str) -> int:
+    """How long the new body should be, from how long the old one was.
+
+    The beat this replaces is the only honest statement of how much a listener is given
+    at this stop; `beat_length_class` is a claim the extractor wrote and nothing
+    re-checks, and Stage 0 found bodies outside their declared band. Rounded to the
+    nearest ten, because a writer handed 137 will try to hit 137.
+    """
+    return max(MIN_TARGET_WORDS, round(len(body_before.split()) / 10) * 10)
 
 
 def input_hash(claims: list[dict[str, str]]) -> str:
@@ -346,22 +414,42 @@ def _text_of(response: Any) -> str:
 
 
 def _decompose_one(beat: dict, client: Any) -> dict[str, Any]:
-    response = client.messages.create(
-        **decompose_request(source=(beat.get("source_passage") or "").strip())
-    )
+    """Decompose one passage, asking a second time when the gate refuses the first."""
+    source = (beat.get("source_passage") or "").strip()
+    response = client.messages.create(**decompose_request(source=source))
     claims = parse_claims(_text_of(response))
     if claims is None:
         record = claims_record(beat, claims=[])
         record["usable"] = False
         record["unreadable"] = True
+        record["attempts"] = 1
         return record
-    return claims_record(beat, claims=claims)
+
+    record = claims_record(beat, claims=claims)
+    record["attempts"] = 1
+    if record["usable"]:
+        return record
+
+    retried = client.messages.create(
+        **rephrase_request(source=source, lifted=record["lifted_claims"])
+    )
+    reworded = parse_claims(_text_of(retried))
+    if reworded is None:
+        return record
+    second = claims_record(beat, claims=reworded)
+    second["attempts"] = 2
+    return second
 
 
 def _write_one(entry: dict, bodies: dict[str, str], city: str, client: Any) -> dict[str, Any]:
     given = shuffled_claims(entry["claims"], entry["beat_id"])
     response = client.messages.create(
-        **cleanroom_request(claims=given, poi=entry.get("poi_name", ""), city=city)
+        **cleanroom_request(
+            claims=given,
+            poi=entry.get("poi_name", ""),
+            city=city,
+            words=target_words(bodies.get(entry["beat_id"], "")),
+        )
     )
     return cleanroom_record(
         entry,
@@ -474,9 +562,12 @@ def render_dry_run(beats: list[dict], city: str) -> str:
         else:
             given = shuffled_claims(stand_in, beat.get("beat_id", ""))
             out.append(
-                cleanroom_request(claims=given, poi=beat.get("poi_name", ""), city=city)[
-                    "messages"
-                ][0]["content"]
+                cleanroom_request(
+                    claims=given,
+                    poi=beat.get("poi_name", ""),
+                    city=city,
+                    words=target_words(beat.get("script_body") or ""),
+                )["messages"][0]["content"]
             )
         out.append("")
     return "\n".join(out)
