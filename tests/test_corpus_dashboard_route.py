@@ -104,3 +104,58 @@ def test_corpus_page_is_served(dashboard_url: str) -> None:
     status, body = _get(f"{dashboard_url}/corpus.html")
     assert status == 200
     assert b"corpus" in body.lower()
+
+
+# ── The re-author review surface ────────────────────────────────────────────
+
+
+def _post(url: str, payload: dict) -> tuple[int, bytes]:
+    body = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        url, data=body, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            return response.status, response.read()
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.read()
+
+
+def test_review_route_serves_candidates_most_doubted_first(dashboard_url: str) -> None:
+    """The queue the reviewer works through, in the order they should work it."""
+    status, body = _get(f"{dashboard_url}/api/reauthored?city=paris")
+    assert status == 200
+
+    payload = json.loads(body)
+    assert payload["summary"]["total"] == 524 - 278  # paris only
+    flags = [row["flags"] for row in payload["candidates"]]
+    assert flags == sorted(flags, reverse=True)
+    first = payload["candidates"][0]
+    # A reviewer cannot judge without all three texts on the row.
+    assert first["source_passage"] and first["body_before"] and first["body_after"]
+
+
+def test_review_route_names_the_reviewer_it_would_record(dashboard_url: str) -> None:
+    """The screen shows whose name goes on a decision before any is made."""
+    status, body = _get(f"{dashboard_url}/api/reauthored?city=paris")
+    assert status == 200
+    assert json.loads(body)["reviewer"].strip()
+
+
+def test_a_decision_is_refused_for_an_unknown_beat(dashboard_url: str) -> None:
+    """A bad id is a 404 naming it, never a traceback or a silent no-op."""
+    status, body = _post(
+        f"{dashboard_url}/api/reauthored/decision",
+        {"city": "paris", "beat_id": "not-a-real-beat", "decision": "approve"},
+    )
+    assert status == 404
+    assert "not-a-real-beat" in json.loads(body)["error"]
+
+
+def test_a_decision_is_refused_for_an_unknown_verdict(dashboard_url: str) -> None:
+    """Only approve and reject exist; anything else is a 400, not a fourth state."""
+    status, _ = _post(
+        f"{dashboard_url}/api/reauthored/decision",
+        {"city": "paris", "beat_id": "x", "decision": "looks-fine"},
+    )
+    assert status == 400

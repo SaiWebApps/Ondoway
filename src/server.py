@@ -25,6 +25,15 @@ from scripts.corpus_report import (
     load_city_pois,
     quality_report,
 )
+from scripts.reauthor_review import (
+    DECISIONS,
+    decision_summary,
+    load_candidates,
+    record_decision,
+    review_order,
+    reviewer_identity,
+    save_candidates,
+)
 from src.connection import create_driver, get_database
 from src.verify.counts import count_nodes_by_label, count_relationships_by_type, total_counts
 from src.verify.traversals import run_all_traversals
@@ -114,6 +123,17 @@ def _corpus_payload(city_slug: str) -> dict[str, Any]:
     }
 
 
+def _reauthored_payload(city_slug: str) -> dict[str, Any]:
+    """The review queue for one city: what still needs a person, doubted first."""
+    records = load_candidates(city_slug)
+    return {
+        "city": city_slug,
+        "reviewer": reviewer_identity(),
+        "summary": decision_summary(records),
+        "candidates": review_order(records),
+    }
+
+
 class DashboardHandler(SimpleHTTPRequestHandler):
     """Handle API routes and serve static files from frontend/."""
 
@@ -128,8 +148,51 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._json_response(_build_api_response(self.driver))
         elif route.path == "/api/corpus":
             self._corpus_route(parse_qs(route.query).get("city", ["paris"])[0])
+        elif route.path == "/api/reauthored":
+            city = parse_qs(route.query).get("city", ["paris"])[0]
+            self._json_response(_reauthored_payload(city))
         else:
             super().do_GET()
+
+    def do_POST(self):
+        """The one write this server accepts: a reviewer's verdict on one rewrite."""
+        if urlparse(self.path).path != "/api/reauthored/decision":
+            self._json_response({"error": "no such endpoint"}, status=404)
+            return
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            payload = json.loads(self.rfile.read(length) or b"{}")
+        except (ValueError, TypeError):
+            self._json_response({"error": "body must be JSON"}, status=400)
+            return
+        self._decision_route(payload)
+
+    def _decision_route(self, payload: dict) -> None:
+        city = payload.get("city") or "paris"
+        beat_id = payload.get("beat_id") or ""
+        decision = payload.get("decision") or ""
+        if decision not in DECISIONS:
+            self._json_response(
+                {"error": f"decision must be one of {list(DECISIONS)}"}, status=400
+            )
+            return
+
+        records = load_candidates(city)
+        try:
+            row = record_decision(
+                records, beat_id, decision, decided_by=reviewer_identity()
+            )
+        except KeyError:
+            self._json_response(
+                {"error": f"no candidate with beat_id {beat_id!r} in {city}"}, status=404
+            )
+            return
+        except ValueError as exc:
+            self._json_response({"error": str(exc)}, status=400)
+            return
+
+        save_candidates(city, records)
+        self._json_response({"decided": row, "summary": decision_summary(records)})
 
     def _corpus_route(self, city_slug: str) -> None:
         """Answer for one city, or say which city could not be found."""
