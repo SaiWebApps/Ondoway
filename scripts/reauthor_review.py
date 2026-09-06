@@ -107,30 +107,41 @@ def decision_summary(records: list[dict]) -> dict[str, int]:
     }
 
 
-def candidates_path(city_slug: str, *, data_dir: Path | None = None) -> Path:
+#: The candidate file each authoring path writes. Both are reviewed by the same queue
+#: because a candidate is a candidate: `review_order` ranks whatever it is handed by
+#: `flags`, and a clean-room body carries that field for exactly this reason.
+CANDIDATE_FILES = {
+    "rewrite": "reauthored.json",
+    "cleanroom": "reauthored-cleanroom.json",
+}
+
+
+def candidates_path(
+    city_slug: str, *, data_dir: Path | None = None, source: str = "rewrite"
+) -> Path:
     root = data_dir if data_dir is not None else _REPO_ROOT / "data"
-    return root / city_slug / "reauthored.json"
+    return root / city_slug / CANDIDATE_FILES[source]
 
 
-def load_candidates(city_slug: str, *, data_dir: Path | None = None) -> list[dict]:
+def load_candidates(
+    city_slug: str, *, data_dir: Path | None = None, source: str = "rewrite"
+) -> list[dict]:
     """Read a city's candidates, or an empty list when the run has not been made."""
-    path = candidates_path(city_slug, data_dir=data_dir)
+    path = candidates_path(city_slug, data_dir=data_dir, source=source)
     if not path.is_file():
         return []
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def save_candidates(
-    city_slug: str, records: list[dict], *, data_dir: Path | None = None
+    city_slug: str, records: list[dict], *, data_dir: Path | None = None, source: str = "rewrite"
 ) -> None:
     """Write candidates back atomically, so an interrupted save cannot truncate them.
 
     A staging file plus `os.replace` — the same shape `beats_io.commit` uses, kept
     separate because that helper validates beats and this file holds candidates.
     """
-    path = candidates_path(city_slug, data_dir=data_dir)
+    path = candidates_path(city_slug, data_dir=data_dir, source=source)
     staging = path.with_suffix(path.suffix + ".staging")
-    staging.write_text(
-        json.dumps(records, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
+    staging.write_text(json.dumps(records, indent=2, ensure_ascii=False), encoding="utf-8")
     os.replace(staging, path)

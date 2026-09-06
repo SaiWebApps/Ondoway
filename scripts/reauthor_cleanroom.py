@@ -796,9 +796,10 @@ def cleanroom_record(
     gates both need them. They were not in the writer's input, and the test that
     proves it reads `cleanroom_request`, never this record.
 
-    A body carries its own refusal, the way a claim set does. A written body that
-    breaks a voice rule is kept out of the corpus rather than counted in it, so the
-    beat keeps the copied body it already had and the defect is not ratcheted in.
+    A body that breaks a voice rule carries `flags` and reaches a person; it is not
+    refused. Refusing it would keep the copied guidebook body this stage exists to
+    replace — trading an unfixable derivation defect for a fixable voice one — and
+    `reauthor_review.review_order` already ranks a queue by that field.
     """
     source = entry.get("source_passage", "")
     problems = body_problems(body_after, given)
@@ -815,8 +816,8 @@ def cleanroom_record(
         "ratio_after": round(verbatim_ratio(body_after, source), 3),
         "run_after": max_verbatim_run(body_after, source),
         "body_problems": problems,
+        "flags": sum(len(lines) for lines in problems.values()),
         "scene_details": scene_details(body_after, given),
-        "usable": not any(problems.values()),
         "attempts": attempts,
         "decomposed_by": entry.get("model", ""),
         "written_by": PRODUCER_MODEL,
@@ -941,7 +942,7 @@ def _write_one(entry: dict, bodies: dict[str, str], city: str, client: Any) -> d
         given=given,
         body_after=_text_of(client.messages.create(**cleanroom_request(**ask))),
     )
-    if first["usable"]:
+    if not first["flags"]:
         return first
 
     retried = client.messages.create(
@@ -966,7 +967,7 @@ def _write_one(entry: dict, bodies: dict[str, str], city: str, client: Any) -> d
 
 def _body_problem_count(record: dict) -> int:
     """How many voice rules a written body broke, so the better of two drafts wins."""
-    return sum(len(lines) for lines in record.get("body_problems", {}).values())
+    return record.get("flags", 0)
 
 
 def _run(pool_size: int, work: list, task: Any, out: Path, records: list[dict]) -> None:
@@ -1014,7 +1015,7 @@ def regrade(records: list[dict]) -> list[dict]:
 def regrade_bodies(records: list[dict]) -> list[dict]:
     """Re-run the body gates over stored bodies, for the reason `regrade` re-runs the others.
 
-    A body graded before a gate existed would otherwise stay usable forever.
+    A body flagged before a gate existed would otherwise carry that gate's count forever.
     """
     out = []
     for record in records:
@@ -1024,8 +1025,8 @@ def regrade_bodies(records: list[dict]) -> list[dict]:
             {
                 **record,
                 "body_problems": problems,
+                "flags": sum(len(lines) for lines in problems.values()),
                 "scene_details": scene_details(body, given),
-                "usable": not any(problems.values()),
             }
         )
     return out
@@ -1083,14 +1084,9 @@ def _phase_write(city: str, limit: int, workers: int, client: Any) -> int:
             kept.append(record)
         else:
             stale += 1
-    # A body the gates now refuse is written again, not kept: shipping it would ratchet
-    # the defect in, and asserting a known count of it would hide the next one.
-    refused = [r for r in kept if not r.get("usable")]
-    records = [r for r in kept if r.get("usable")]
+    records = kept
     if stale:
         print(f"  {stale} stored bodies no longer match their claims and are rewritten")
-    if refused:
-        print(f"  {len(refused)} stored bodies break a voice rule and are written again")
     seen = {r["beat_id"] for r in records if r.get("beat_id")}
     pending = [c for c in claims if c["beat_id"] not in seen]
     if limit:
@@ -1108,22 +1104,23 @@ def _phase_write(city: str, limit: int, workers: int, client: Any) -> int:
         records,
     )
 
-    usable = [r for r in records if r.get("usable")]
-    still_lifted = sum(1 for r in usable if r.get("run_after", 0) >= VERBATIM_RUN_BLOCK)
+    still_lifted = sum(1 for r in records if r.get("run_after", 0) >= VERBATIM_RUN_BLOCK)
+    flagged = [r for r in records if r["flags"]]
 
     def broke(kind: str) -> int:
         return sum(1 for r in records if r["body_problems"][kind])
 
     print(
-        f"✓ {len(usable)} bodies in {out}, {len(records) - len(usable)} refused\n"
+        f"✓ {len(records)} bodies in {out}, {len(flagged)} flagged for a person\n"
         f"    {broke('first_person')} speak as a person, "
         f"{broke('apparatus')} carry the guidebook, "
-        f"{broke('stage_direction')} stage the listener\n"
+        f"{broke('stage_direction')} stage the listener, "
+        f"{broke('invented_impression')} offer an impression no claim holds\n"
         f"    {sum(1 for r in records if r.get('attempts', 1) > 1)} were asked a second time, "
         f"of which {sum(1 for r in records if r.get('second_ask_improved'))} came back better\n"
         f"  {still_lifted} still share an {VERBATIM_RUN_BLOCK}+ word run with a source "
         f"the writer never saw\n"
-        f"  {sum(1 for r in usable if r.get('scene_details'))} put a thing in front of the "
+        f"  {sum(1 for r in records if r.get('scene_details'))} put a thing in front of the "
         f"listener that no claim mentions — for review, not refused"
     )
     return 0

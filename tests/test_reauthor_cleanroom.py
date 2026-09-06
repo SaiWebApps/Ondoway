@@ -467,17 +467,6 @@ def _written_bodies() -> list[dict]:
     return out
 
 
-def _shipped_bodies() -> list[dict]:
-    """The bodies the STORED verdict would ship.
-
-    Read from the stored flag, never from a fresh regrade: recomputing the verdict and
-    then checking it against the same function proves nothing, and a body written into
-    the file as usable while breaking a rule would pass unseen. Reading what is stored
-    and checking it against the current gates is the disagreement worth catching.
-    """
-    return [r for r in _written_bodies() if r.get("usable", True)]
-
-
 def test_a_body_that_speaks_as_a_person_is_refused() -> None:
     """ "sit down for a moment before we go on" is a guide the listener does not have."""
     from scripts.reauthor_cleanroom import body_problems
@@ -576,39 +565,60 @@ def test_a_scene_the_claims_do_not_mention_is_flagged_not_refused() -> None:
         body_after="Cards are dealt on its benches and tables.",
     )
     assert record["scene_details"]
-    assert record["usable"] is True
+    assert record["flags"] == 0
 
 
-def test_a_refused_body_is_marked_unusable_not_shipped() -> None:
-    """A body carries its own refusal, the way a claim set does."""
+def test_a_body_that_breaks_a_rule_is_flagged_for_a_person_not_discarded() -> None:
+    """Refusing a body keeps the copied guidebook body this stage exists to replace —
+    an unfixable defect traded for a fixable one. It carries flags and reaches the queue
+    `reauthor_review.review_order` already ranks by that field."""
     from scripts.reauthor_cleanroom import cleanroom_record
+    from scripts.reauthor_review import review_order
 
-    record = cleanroom_record(
-        {"beat_id": "b", "poi_name": "P", "source_passage": "A square."},
-        body_before="old body here",
-        given=[{"claim": "The square was laid out in 1830.", "kind": "fact"}],
-        body_after="Stand here and we can look at the square together.",
-    )
-    assert record["usable"] is False
-    assert record["body_problems"]["first_person"]
+    def written(body: str, beat_id: str) -> dict:
+        return cleanroom_record(
+            {"beat_id": beat_id, "poi_name": "P", "source_passage": "A square."},
+            body_before="old body here",
+            given=[{"claim": "The square was laid out in 1830.", "kind": "fact"}],
+            body_after=body,
+        )
+
+    broken = written("Stand here and we can look at the square together.", "broken")
+    clean = written("The square was laid out in 1830.", "clean")
+    assert broken["flags"] > 0
+    assert broken["body_problems"]["first_person"]
+    assert clean["flags"] == 0
+    assert "usable" not in broken
+    assert [r["beat_id"] for r in review_order([clean, broken])] == ["broken", "clean"]
 
 
-def test_no_shipped_body_breaks_a_voice_rule() -> None:
-    """Read on the corpus rather than on a fixture: what ships is what the gates pass."""
+def test_the_review_queue_can_read_the_cleanroom_artifact() -> None:
+    """Routing to the queue is only real if the queue can open the file."""
+    from scripts.reauthor_review import candidates_path
+
+    assert candidates_path("paris", source="cleanroom").name == "reauthored-cleanroom.json"
+    assert candidates_path("paris").name == "reauthored.json"
+
+
+def test_every_stored_body_agrees_with_the_gates_as_they_stand() -> None:
+    """Read the STORED flags and check them against the current gates.
+
+    Recomputing a verdict and then checking it against the same function proves only
+    that a function agrees with itself. What is worth asserting is the disagreement
+    between what a body was graded as and what it would be graded as now, which is what
+    a gate gaining a member is supposed to surface.
+    """
     from scripts.reauthor_cleanroom import body_problems
 
-    shipped = _shipped_bodies()
-    offenders = [
-        (r["poi_name"], kind)
-        for r in shipped
-        for kind, lines in body_problems(r["body_after"], r["claims_given"]).items()
-        if lines
-    ]
-    assert not offenders, f"{len(offenders)} shipped bodies break a rule: {offenders[:5]}"
-    # The refusal is what makes the assertion above true, so a gate that refused nearly
-    # everything would satisfy it while producing no corpus. Both halves have to hold.
-    written = _written_bodies()
-    assert len(shipped) > len(written) * 0.8, f"{len(shipped)} of {len(written)} bodies survive"
+    disagree = []
+    for record in _written_bodies():
+        now = sum(
+            len(lines)
+            for lines in body_problems(record["body_after"], record["claims_given"]).values()
+        )
+        if record.get("flags") != now:
+            disagree.append((record["poi_name"], record.get("flags"), now))
+    assert not disagree, f"{len(disagree)} stored bodies disagree with the gates: {disagree[:5]}"
 
 
 def test_the_seam_holds_on_the_bodies_actually_written() -> None:
