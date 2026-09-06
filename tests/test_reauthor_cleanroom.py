@@ -430,3 +430,17 @@ def test_a_body_whose_claims_changed_is_not_kept() -> None:
     record = cleanroom_record(entry, body_before="old", given=given, body_after="new")
     reasked = [*_CLAIMS, {"claim": "A claim the second ask added.", "kind": "fact"}]
     assert record["claims_sha256"] != input_hash(shuffled_claims(reasked, "b"))
+
+
+def test_a_reverted_second_ask_is_still_recorded_as_having_happened() -> None:
+    """Otherwise a set re-asked and reverted looks identical to one never re-asked."""
+    from scripts.reauthor_cleanroom import _problem_count
+
+    first = {"lifted_claims": ["a"], "dangling_claims": [], "uncovered_sentences": []}
+    worse = {"lifted_claims": ["a"], "dangling_claims": ["b"], "uncovered_sentences": []}
+    kept = min((worse, first), key=_problem_count)
+    kept["second_ask"] = True
+    kept["second_ask_improved"] = kept is worse
+    assert kept is first
+    assert kept["second_ask"] is True
+    assert kept["second_ask_improved"] is False

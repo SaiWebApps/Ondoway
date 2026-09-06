@@ -521,7 +521,13 @@ def _decompose_one(beat: dict, client: Any) -> dict[str, Any]:
     second["attempts"] = 2
     # A second ask can come back worse. Keeping it unconditionally would let a retry
     # spend money to degrade a set, so the one with fewer problems wins.
-    return min((second, record), key=_problem_count)
+    kept = min((second, record), key=_problem_count)
+    # Recorded rather than inferred from `attempts`: a set that was re-asked and whose
+    # FIRST attempt won is indistinguishable from one never re-asked otherwise, and how
+    # often the second ask actually helps is the thing worth knowing about it.
+    kept["second_ask"] = True
+    kept["second_ask_improved"] = kept is second
+    return kept
 
 
 def _problem_count(record: dict) -> int:
@@ -585,6 +591,9 @@ def regrade(records: list[dict]) -> list[dict]:
             claims=record["claims"],
         )
         regraded["attempts"] = record.get("attempts", 1)
+        for field in ("second_ask", "second_ask_improved"):
+            if field in record:
+                regraded[field] = record[field]
         regraded["generated_at"] = record.get("generated_at", regraded["generated_at"])
         out.append(regraded)
     return out
@@ -615,7 +624,8 @@ def _phase_decompose(city: str, limit: int, workers: int, client: Any) -> int:
         f"{sum(1 for r in refused if r.get('lifted_claims'))} lifted, "
         f"{sum(1 for r in refused if r.get('dangling_claims'))} dangling, "
         f"{sum(1 for r in refused if r.get('uncovered_sentences'))} miss source content\n"
-        f"    {sum(1 for r in records if r.get('attempts') == 2)} needed a second ask"
+        f"    {sum(1 for r in records if r.get('second_ask'))} were asked a second time, "
+        f"of which {sum(1 for r in records if r.get('second_ask_improved'))} came back better"
     )
     return 0
 
