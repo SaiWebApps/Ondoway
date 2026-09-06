@@ -139,22 +139,33 @@ _FIRST_PERSON = {
 #: passage of walking directions puts the instruction IN the claims, and a body
 #: following them is doing as it was told; the same words with no claim behind them
 #: are the writer staging the listener.
-_STAGE_OPENINGS = {
-    "stand": "stand",
-    "sit": "sit",
-    "walk": "walk",
-    "turn": "turn",
-    "look": "look",
-    "pause": "paus",
-    "notice": "notic",
-    "stop": "stop",
-    "step": "step",
-    "imagine": "imagin",
-    "picture": "pictur",
-    "cross": "cross",
-    "follow": "follow",
-    "head": "head",
-}
+# fmt: off
+#: Imperative openings that put the listener somewhere, and the words a claim uses when
+#: it is the passage that put them there. A guidebook of walking directions states the
+#: instruction as fact, and a body following it reports the route rather than staging
+#: anybody — but the decomposer is told to reword, so the claim behind "Follow it" may
+#: say "continue along". The whole family licenses the whole family for that reason.
+_MOVEMENT = frozenset([
+    "stand", "stands", "standing", "stood", "sit", "sits", "sitting", "sat",
+    "walk", "walks", "walking", "walked", "turn", "turns", "turning", "turned",
+    "cross", "crosses", "crossing", "crossed", "follow", "follows", "following",
+    "followed", "head", "heads", "heading", "headed", "step", "steps", "stepping",
+    "stepped", "stop", "stops", "stopping", "stopped", "continue", "continues",
+    "continuing", "continued", "climb", "climbs", "enter", "enters", "leave",
+    "leaves", "pass", "passes", "route", "path", "left", "right", "along",
+])
+
+#: Imperative openings that direct attention or invent a mental picture. No claim
+#: licenses these: a passage states what is there, never what a listener should do
+#: about it.
+_ATTENTION = frozenset(["look", "notice", "pause", "imagine", "picture", "watch", "listen"])
+
+_STAGE_OPENINGS = sorted(
+    {w for w in _MOVEMENT if len(w) > 3} | _ATTENTION,
+    key=len,
+    reverse=True,
+)
+# fmt: on
 
 _STAGE_OPENING = re.compile(
     r"(?:\A|(?<=[.!?]\s)|(?<=[.!?]\s\s))\s*(" + "|".join(_STAGE_OPENINGS) + r")\b",
@@ -546,7 +557,7 @@ def first_person_sentences(body: str) -> list[str]:
             continue
         if any(qs <= start and end <= qe for qs, qe in quoted):
             continue
-        if word == "i" and _is_numeral_or_initial(body, start, end):
+        if not _reads_as_a_pronoun(body, word, start, end):
             continue
         hits.append((start, end))
     if not hits:
@@ -554,12 +565,28 @@ def first_person_sentences(body: str) -> list[str]:
     return _sentences_matching(body, lambda sentence: _covers(body, sentence, hits))
 
 
-def _is_numeral_or_initial(body: str, start: int, end: int) -> bool:
-    """Whether this `I` is part of a name rather than the pronoun."""
-    if body[end : end + 1] == ".":
-        return True
+def _reads_as_a_pronoun(body: str, word: str, start: int, end: int) -> bool:
+    """Whether a first-person word here is the pronoun rather than part of a name.
+
+    Every one of these words is also a name or an abbreviation somewhere — a US Coast
+    Guard cutter, the play All My Sons, Our Lady, Napoleon I, I. M. Pei. The pronoun is
+    written in lower case unless it opens a sentence, and a numeral or an initial never
+    is, so case and position settle it without a list of exceptions to maintain.
+    """
     before = body[:start].rstrip()
-    return bool(before) and before.split()[-1][:1].isupper()
+    opens_a_sentence = not before or before[-1] in ".!?:\u2014"
+    if word == "i":
+        if body[end : end + 1] == ".":
+            return False
+        return opens_a_sentence or not before.split()[-1][:1].isupper()
+    if body[start:end].islower():
+        return True
+    if not opens_a_sentence:
+        return False
+    # "Our Lady" opens a sentence in the same shape the pronoun does, and case alone
+    # cannot separate them. A name carries on into another capital; a pronoun does not.
+    following = body[end:].lstrip()
+    return not following[:1].isupper()
 
 
 def _covers(body: str, sentence: str, hits: list[tuple[int, int]]) -> bool:
@@ -583,11 +610,13 @@ def stage_directions(body: str, claims: list[dict[str, str]]) -> list[str]:
     follows them is reporting a fact about the route. The same opening with no claim
     behind it is the writer inventing what the listener is doing.
     """
-    said = " ".join(c.get("claim", "") for c in claims).lower()
+    said = {w for c in claims for w in verbatim_words(c.get("claim", ""))}
+    licensed = bool(said & _MOVEMENT)
     return _sentences_matching(
         body,
-        lambda s: any(
-            _STAGE_OPENINGS[m.group(1).lower()] not in said for m in _STAGE_OPENING.finditer(s)
+        lambda sentence: any(
+            m.group(1).lower() in _ATTENTION or not licensed
+            for m in _STAGE_OPENING.finditer(sentence)
         ),
     )
 

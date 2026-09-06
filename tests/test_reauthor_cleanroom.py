@@ -468,10 +468,14 @@ def _written_bodies() -> list[dict]:
 
 
 def _shipped_bodies() -> list[dict]:
-    """The bodies that would reach the corpus — a refused body is not one of them."""
-    from scripts.reauthor_cleanroom import regrade_bodies
+    """The bodies the STORED verdict would ship.
 
-    return [r for r in regrade_bodies(_written_bodies()) if r["usable"]]
+    Read from the stored flag, never from a fresh regrade: recomputing the verdict and
+    then checking it against the same function proves nothing, and a body written into
+    the file as usable while breaking a rule would pass unseen. Reading what is stored
+    and checking it against the current gates is the disagreement worth catching.
+    """
+    return [r for r in _written_bodies() if r.get("usable", True)]
 
 
 def test_a_body_that_speaks_as_a_person_is_refused() -> None:
@@ -508,12 +512,41 @@ def test_a_quoted_speaker_may_say_i() -> None:
 
 def test_an_imperative_a_claim_asked_for_is_kept() -> None:
     """A passage of walking directions puts the instruction in the claims, and a body
-    following them reports the route rather than staging the listener."""
+    following them reports the route rather than staging the listener. The decomposer
+    is told to reword, so the claim behind "Turn left" may say "continue along" — one
+    movement word in the set licenses the movement family, or the gate refuses a body
+    for obeying its own claims in different words."""
     from scripts.reauthor_cleanroom import stage_directions
 
-    directions = [{"claim": "From the gate you turn left into rue de Harlay.", "kind": "fact"}]
+    directions = [{"claim": "From the gate you continue along rue de Harlay.", "kind": "fact"}]
     assert stage_directions("Turn left into rue de Harlay.", directions) == []
-    assert stage_directions("Stand here long enough and the park shifts.", directions)
+    still = [{"claim": "The park was laid out in 1830.", "kind": "fact"}]
+    assert stage_directions("Stand here long enough and the park shifts.", still)
+
+
+def test_directing_attention_is_never_licensed() -> None:
+    """A passage states what is there, never what a listener should do about it, so no
+    claim can license "Look up" the way one licenses "Turn left"."""
+    from scripts.reauthor_cleanroom import stage_directions
+
+    directions = [{"claim": "From the gate you continue along rue de Harlay.", "kind": "fact"}]
+    assert stage_directions("Look up: the vault has a trapdoor.", directions)
+
+
+def test_a_name_that_looks_like_a_pronoun_is_not_first_person() -> None:
+    """Every first-person word is also a name somewhere — a US cutter, All My Sons,
+    Our Lady. Case and position separate them; a sentence-initial name carries on into
+    another capital and a pronoun does not."""
+    from scripts.reauthor_cleanroom import first_person_sentences
+
+    for body in (
+        "The Lilac is a US Coast Guard Cutter, open to board.",
+        "Arthur Miller wrote the play All My Sons here.",
+        "Our Lady of the Angels stands here.",
+    ):
+        assert first_person_sentences(body) == [], body
+    for body in ("We go on from here.", "He left Paris. I told him it would never stand."):
+        assert first_person_sentences(body), body
 
 
 def test_an_impression_is_refused_where_no_claim_holds_one() -> None:
