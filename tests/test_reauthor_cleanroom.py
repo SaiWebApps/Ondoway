@@ -26,6 +26,7 @@ from scripts.corpus_report import (
 from scripts.reauthor_cleanroom import (
     CLAIM_KINDS,
     PRODUCER_MODEL,
+    apparatus_claims,
     claims_record,
     cleanroom_record,
     cleanroom_request,
@@ -444,3 +445,180 @@ def test_a_reverted_second_ask_is_still_recorded_as_having_happened() -> None:
     assert kept is first
     assert kept["second_ask"] is True
     assert kept["second_ask_improved"] is False
+
+
+# ── what the pipeline PRODUCED, not what it was told ─────────────────────────
+#
+# The prompt-text assertions above prove an instruction was sent. They would all pass
+# against a model that ignored every one of them, which is how "0 first person" was
+# reported while four finished bodies said "before we go on". These read the output.
+
+
+def _written_bodies() -> list[dict]:
+    from scripts.reauthor_cleanroom import cleanroom_path
+
+    out = []
+    for city in ("paris", "new_york"):
+        path = cleanroom_path(city)
+        if path.is_file():
+            out += json.loads(path.read_text(encoding="utf-8"))
+    if not out:
+        pytest.skip("no regenerated bodies on disk to check")
+    return out
+
+
+def _shipped_bodies() -> list[dict]:
+    """The bodies that would reach the corpus — a refused body is not one of them."""
+    from scripts.reauthor_cleanroom import regrade_bodies
+
+    return [r for r in regrade_bodies(_written_bodies()) if r["usable"]]
+
+
+def test_a_body_that_speaks_as_a_person_is_refused() -> None:
+    """ "sit down for a moment before we go on" is a guide the listener does not have."""
+    from scripts.reauthor_cleanroom import body_problems
+
+    problems = body_problems(
+        "That's the stop: sit down for a moment before we go on.",
+        [{"claim": "There are benches.", "kind": "fact"}],
+    )
+    assert problems["first_person"]
+
+
+def test_a_roman_numeral_is_not_first_person() -> None:
+    """ "Napoleon I", "World War I" and "I. M. Pei" are names, and refusing them
+    would throw away correct bodies to catch a pronoun that is not there."""
+    from scripts.reauthor_cleanroom import first_person_sentences
+
+    for body in (
+        "The eagle was the symbol of Empire for Napoleon I and his nephew.",
+        "I. M. Pei received the commission for the pyramid.",
+        "By the peak of World War I the area had fallen out of fashion.",
+    ):
+        assert first_person_sentences(body) == [], body
+
+
+def test_a_quoted_speaker_may_say_i() -> None:
+    """A person quoted in a beat is entitled to the first person; the tour is not."""
+    from scripts.reauthor_cleanroom import first_person_sentences
+
+    quoted = 'Lamb recalled it plainly: "I told him it would stand."'
+    assert first_person_sentences(quoted) == []
+
+
+def test_an_imperative_a_claim_asked_for_is_kept() -> None:
+    """A passage of walking directions puts the instruction in the claims, and a body
+    following them reports the route rather than staging the listener."""
+    from scripts.reauthor_cleanroom import stage_directions
+
+    directions = [{"claim": "From the gate you turn left into rue de Harlay.", "kind": "fact"}]
+    assert stage_directions("Turn left into rue de Harlay.", directions) == []
+    assert stage_directions("Stand here long enough and the park shifts.", directions)
+
+
+def test_an_impression_is_refused_where_no_claim_holds_one() -> None:
+    """With no observation in the set there is no impression to offer."""
+    from scripts.reauthor_cleanroom import invented_impressions
+
+    facts = [{"claim": "The square was laid out in 1830.", "kind": "fact"}]
+    assert invented_impressions("You may find the square quiet.", facts)
+    seen = [*facts, {"claim": "The author finds the square quiet.", "kind": "observation"}]
+    assert invented_impressions("You may find the square quiet.", seen) == []
+
+
+def test_a_refused_body_is_marked_unusable_not_shipped() -> None:
+    """A body carries its own refusal, the way a claim set does."""
+    from scripts.reauthor_cleanroom import cleanroom_record
+
+    record = cleanroom_record(
+        {"beat_id": "b", "poi_name": "P", "source_passage": "A square."},
+        body_before="old body here",
+        given=[{"claim": "The square was laid out in 1830.", "kind": "fact"}],
+        body_after="Stand here and we can look at the square together.",
+    )
+    assert record["usable"] is False
+    assert record["body_problems"]["first_person"]
+
+
+def test_no_shipped_body_breaks_a_voice_rule() -> None:
+    """Read on the corpus rather than on a fixture: what ships is what the gates pass."""
+    from scripts.reauthor_cleanroom import body_problems
+
+    shipped = _shipped_bodies()
+    offenders = [
+        (r["poi_name"], kind)
+        for r in shipped
+        for kind, lines in body_problems(r["body_after"], r["claims_given"]).items()
+        if lines
+    ]
+    assert not offenders, f"{len(offenders)} shipped bodies break a rule: {offenders[:5]}"
+    # The refusal is what makes the assertion above true, so a gate that refused nearly
+    # everything would satisfy it while producing no corpus. Both halves have to hold.
+    written = _written_bodies()
+    assert len(shipped) > len(written) * 0.8, f"{len(shipped)} of {len(written)} bodies survive"
+
+
+def test_the_seam_holds_on_the_bodies_actually_written() -> None:
+    """Rebuild the real writer payload from each stored record and measure it.
+
+    The synthetic-claims test above proves the prompt scaffolding is clean. This proves
+    the 453 payloads that were actually sent were.
+    """
+    from scripts.reauthor_cleanroom import city_name
+
+    for record in _written_bodies():
+        source = record.get("source_passage") or ""
+        payload = json.dumps(
+            cleanroom_request(
+                claims=record["claims_given"],
+                poi=record.get("poi_name", ""),
+                city=city_name("paris"),
+                words=target_words(record.get("body_before") or ""),
+            ),
+            ensure_ascii=False,
+        )
+        assert source not in payload
+        assert (record.get("body_before") or "") not in payload
+        assert max_verbatim_run(payload, source) < VERBATIM_RUN_BLOCK
+
+
+def test_every_written_body_is_bound_to_the_claims_it_carries() -> None:
+    for record in _written_bodies():
+        assert input_hash(record["claims_given"]) == record["claims_sha256"]
+
+
+def test_the_coverage_gates_recall_is_measured_not_assumed() -> None:
+    """A gate whose miss rate is unknown is the failure LEARNINGS #24 records."""
+    from scripts.reauthor_cleanroom import coverage_recall
+
+    sets = [
+        {
+            "usable": True,
+            "source_passage": (
+                "A bridge crosses the river. Pedlars sold books here. Acrobats performed."
+            ),
+            "claims": [
+                {"claim": "A bridge spans the river.", "kind": "fact"},
+                {"claim": "Pedlars sold books on the bridge.", "kind": "fact"},
+                {"claim": "Acrobats performed on the bridge.", "kind": "fact"},
+            ],
+        }
+    ]
+    result = coverage_recall(sets)
+    assert result["sets"] == 1
+    assert "one_claim_deleted_recall_pct" in result
+
+
+def test_a_claim_about_the_guidebook_is_refused() -> None:
+    """The listener has no guidebook, no page 139 and no step nine."""
+    from scripts.reauthor_cleanroom import apparatus_claims
+
+    assert apparatus_claims([{"claim": "Riverside Park is covered on page 139.", "kind": "fact"}])
+    assert apparatus_claims([{"claim": "The directions form step 9 of the walk.", "kind": "fact"}])
+    assert apparatus_claims([{"claim": "The author advises lingering here.", "kind": "fact"}])
+
+
+def test_a_claim_about_the_place_is_not_apparatus() -> None:
+    assert (
+        apparatus_claims([{"claim": "The bridge became a symbol of Paris.", "kind": "fact"}]) == []
+    )

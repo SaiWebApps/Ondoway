@@ -65,8 +65,10 @@ from scripts.corpus_report import (
     load_city_beats,
     max_verbatim_run,
     verbatim_ratio,
+    verbatim_word_spans,
 )
 from scripts.reauthor_preview import _VOICE_RULES, is_excluded
+from scripts.reauthor_triage import quoted_char_spans
 from src.city_registry import load_registry
 from src.tour.claim_dedup import (
     COVERAGE_MATCH_MIN,
@@ -99,6 +101,82 @@ MIN_TARGET_WORDS = 40
 #: a whole sentence is held to more.
 MIN_SENTENCE_TOKENS = 4
 
+#: Claims about the BOOK rather than the place. A guidebook passage carries its own
+#: apparatus — page numbers, numbered walk steps, "the author advises" — and the
+#: decomposer read that as fact because it is stated as fact. The writer, told to say
+#: every fact, then handed it to a listener who has no guidebook. The clean room keeps
+#: the source's prose out and had nothing to say about its furniture.
+_APPARATUS = re.compile(
+    r"\b(guidebook|guide ?book|this walk|the walk|walking tour|itinerary"
+    r"|step \d+|point [A-Z]|page \d+|pp?\. \d+|the author (advises|suggests|recommends|says)"
+    r"|numbered (entry|entries|point|step))\b",
+    re.I,
+)
+
+#: First-person words, checked outside quotations. A Roman numeral and an initial are
+#: written exactly like the pronoun ("Napoleon I", "I. M. Pei", "World War I"), so a bare
+#: `I` counts only where nothing around it makes it part of a name.
+_FIRST_PERSON = {
+    "i",
+    "i'm",
+    "i've",
+    "i'd",
+    "my",
+    "mine",
+    "me",
+    "we",
+    "we're",
+    "we've",
+    "we'd",
+    "us",
+    "our",
+    "ours",
+    "let's",
+}
+
+#: Sentence-opening imperatives, and the stem that shows a claim asked for one. A
+#: passage of walking directions puts the instruction IN the claims, and a body
+#: following them is doing as it was told; the same words with no claim behind them
+#: are the writer staging the listener.
+_STAGE_OPENINGS = {
+    "stand": "stand",
+    "sit": "sit",
+    "walk": "walk",
+    "turn": "turn",
+    "look": "look",
+    "pause": "paus",
+    "notice": "notic",
+    "stop": "stop",
+    "step": "step",
+    "imagine": "imagin",
+    "picture": "pictur",
+    "cross": "cross",
+    "follow": "follow",
+    "head": "head",
+}
+
+_STAGE_OPENING = re.compile(
+    r"(?:\A|(?<=[.!?]\s)|(?<=[.!?]\s\s))\s*(" + "|".join(_STAGE_OPENINGS) + r")\b",
+    re.I,
+)
+
+#: The house voice for offering an impression. It is the right way to say an observation
+#: the claims carry, and the only way to say one they do not.
+_IMPRESSION = re.compile(
+    r"\b(?:may (?:strike|read|feel|register|seem|notice|well|come)|you may|might strike"
+    r"|may catch|reads? less as|starts? to feel|feels? like)\b",
+    re.I,
+)
+
+#: A listing a listener cannot use. Opening hours, a phone number and a web address are
+#: the guidebook's practical furniture, and they reach the body through claims that
+#: state them as fact about the place.
+_LISTING = re.compile(
+    r"(?:\b\d{3}[-. ]\d{3}[-. ]?\d{4}\b|\b(?:www\.|https?://)\S+"
+    r"|\b[\w-]+\.(?:com|org|net|edu|us|fr|gov)\b)",
+    re.I,
+)
+
 #: Openings that point at a neighbouring claim. The set is shuffled before the writer
 #: sees it, so "That uprising alarmed the kings" has nothing to refer to by the time it
 #: is read. A demonstrative followed by a verb ("That is the oldest") is a complete
@@ -130,8 +208,22 @@ will not contain. That includes what the author observed rather than recorded �
 place feels, looks or smells, and comparisons the author drew — which you mark as an
 observation so it is not later written up as established fact.
 
+Where the passage says one thing happened because of, instead of, in return for or as
+a condition of another, that relation is itself a fact and belongs INSIDE a claim that
+names both sides of it. Splitting the two events into separate claims loses it: shuffled
+apart, "he offered to pay" and "he agreed to donate the profits" no longer say which
+offer the donation belonged to, and nothing downstream can tell that the passage said.
+The same holds for a claim that is only true within one arrangement, one period or one
+proposal — the claim names that arrangement itself.
+
 Use your own wording. Do not reuse the passage's phrasing: a claim that repeats eight
 words of the passage in a row is a lifted claim and will be rejected.
+
+The passage is a page from a guidebook and carries the book's own furniture: page
+numbers, numbered walk steps, "the author advises", directions phrased as instructions
+in a printed tour. None of that is a fact about the place, and the listener has no
+guidebook. Never write a claim about the book, its route, its pages or its author. Where
+such a sentence also states something about the place, keep that part only.
 
 kind is "fact" for anything checkable against the world, "observation" for the
 author's own impression, comparison or judgement.
@@ -154,6 +246,13 @@ PASSAGE:
 Reply with JSON only, no prose:
 {{"claims": [{{"claim": "...", "kind": "fact"}}]}}"""
 
+_BODY_REDO_PROMPT = """That draft breaks a rule. What is wrong with it:
+
+{problems}
+
+Write it again from the same claims. Everything else about the brief still holds."""
+
+
 _WRITE_PROMPT = """Write the body of an audio-tour beat about {poi}, in {city}.
 
 Below is everything you know. It is an unordered set — the order means nothing, and
@@ -166,9 +265,15 @@ established fact, and never hand it to somebody else to say: "some visitors find
 "people say", "it is often remarked" invents a source and is the worst thing you can do
 here. Do not say "I".
 
-Add nothing. Not a fact, and not a physical detail either — if the claims do not say
+Add nothing. Not a cause and not a sequence — if no claim says one thing led to,
+followed from or was a condition of another, they are separate things that happened, and
+you say them separately. Not a fact, and not a physical detail either — if the claims do not say
 the roadway widens, the roadway does not widen, and you cannot tell the listener to
-look at it. Never write "imagine" or "picture".
+look at it. Never write "imagine" or "picture", and never tell the listener to sit,
+stand, walk or take a minute unless a claim says so.
+
+Write as the tour, not as a person. Never say "I", and never say "we" or "us" — there is
+no guide walking beside the listener.
 
 Aim for about {words} words. This is spoken aloud between stops on a walk, and a beat
 that runs long eats the silence the tour is built around.
@@ -212,6 +317,13 @@ def redo_problems(record: dict) -> str:
             "These claims point at another claim. The set is SHUFFLED before anyone reads\n"
             "it, so each one must name its own subject:\n"
             + "\n".join(f"- {c}" for c in record["dangling_claims"])
+        )
+    if record.get("apparatus_claims"):
+        parts.append(
+            "These claims are about the guidebook, not about the place. The listener has\n"
+            "no guidebook and no page or step numbers. Drop them, and state any fact about\n"
+            "the place itself that they were wrapped around:\n"
+            + "\n".join(f"- {c}" for c in record["apparatus_claims"])
         )
     if record.get("uncovered_sentences"):
         parts.append(
@@ -282,13 +394,63 @@ def lifted_claims(claims: list[dict[str, str]], source: str) -> list[str]:
     ]
 
 
+def apparatus_claims(claims: list[dict[str, str]]) -> list[str]:
+    """Claims about the guidebook rather than about the place.
+
+    A listener has no guidebook, no page 139 and no step nine. These are facts about
+    the source document, true and useless, and voicing one tells a stranger about a
+    book they cannot open.
+    """
+    return [c["claim"] for c in claims if _APPARATUS.search(c["claim"])]
+
+
 def dangling_claims(claims: list[dict[str, str]]) -> list[str]:
     """Claims that point at a neighbour they will not have once the set is shuffled."""
     return [c["claim"] for c in claims if _ANAPHOR.match(c["claim"])]
 
 
+def coverage_recall(records: list[dict], *, seed: int = 11) -> dict[str, Any]:
+    """What share of planted deletions `uncovered_sentences` actually catches.
+
+    LEARNINGS #24: a gate scored on its own refusal rate measures leniency and nothing
+    else. This one was changed until refusals fell from 34% to 26% and that was briefly
+    reported as an improvement, which is the same error. The measurement that means
+    something is recall against known-missing content, and it is free: drop a claim from
+    a set the gate passes and ask whether the gate now objects.
+    """
+    rng = random.Random(seed)
+    usable = [r for r in records if r.get("usable") and len(r.get("claims") or []) > 2]
+    one_caught = whole_third_caught = 0
+    for record in usable:
+        claims, source = record["claims"], record["source_passage"]
+        without_one = [c for i, c in enumerate(claims) if i != rng.randrange(len(claims))]
+        if uncovered_sentences(without_one, source):
+            one_caught += 1
+        kept = rng.sample(claims, max(1, int(len(claims) * 0.7)))
+        if uncovered_sentences(kept, source):
+            whole_third_caught += 1
+    total = len(usable) or 1
+    return {
+        "sets": len(usable),
+        "one_claim_deleted_caught": one_caught,
+        "one_claim_deleted_recall_pct": round(100 * one_caught / total, 1),
+        "third_deleted_caught": whole_third_caught,
+        "third_deleted_recall_pct": round(100 * whole_third_caught / total, 1),
+    }
+
+
 def uncovered_sentences(claims: list[dict[str, str]], source: str) -> list[str]:
-    """Source sentences no claim carries — content that would leave the corpus silently.
+    """Source sentences the claim set does not carry — GROSS omission only.
+
+    **Measured, not assumed.** `coverage_recall` plants deletions in sets this gate
+    passes: it catches 12% of single dropped claims and 39% of a dropped third. It is a
+    detector of a passage that was barely decomposed at all — it caught Square Jean
+    XXIII, 4 claims from 213 words — and it is NOT a guarantee that nothing was lost.
+    Token overlap cannot see a missing proposition when the surviving claims share the
+    vocabulary, and no variant tried does better: best-1 reaches 21% recall at 13% false
+    refusals, and a claims-per-sentence floor reaches 3%. Omission is Stage 2's problem,
+    where claims are extracted from the source and from the output in calls that never
+    see each other's input and the two lists are diffed both ways.
 
     Omission is the decomposer's dangerous failure: a claim never written is a fact the
     finished body cannot contain, and nothing downstream can tell that apart from a
@@ -321,6 +483,7 @@ def claims_record(beat: dict, *, claims: list[dict[str, str]]) -> dict[str, Any]
     source = (beat.get("source_passage") or "").strip()
     lifted = lifted_claims(claims, source)
     dangling = dangling_claims(claims)
+    apparatus = apparatus_claims(claims)
     uncovered = uncovered_sentences(claims, source) if claims else []
     return {
         "beat_id": beat.get("beat_id", ""),
@@ -329,10 +492,107 @@ def claims_record(beat: dict, *, claims: list[dict[str, str]]) -> dict[str, Any]
         "claims": claims,
         "lifted_claims": lifted,
         "dangling_claims": dangling,
+        "apparatus_claims": apparatus,
         "uncovered_sentences": uncovered,
-        "usable": not (lifted or dangling or uncovered),
+        "usable": not (lifted or dangling or apparatus or uncovered),
         "model": PRODUCER_MODEL,
         "generated_at": datetime.now(UTC).isoformat(),
+    }
+
+
+# ── what refuses a written body ───────────────────────────────────
+
+
+def _sentences_matching(body: str, matches: Any) -> list[str]:
+    """The sentences a scan hit, so a re-ask names prose rather than a rule number."""
+    out: list[str] = []
+    for sentence in split_sentences(body):
+        if matches(sentence) and sentence not in out:
+            out.append(sentence.strip())
+    return out
+
+
+def first_person_sentences(body: str) -> list[str]:
+    """Sentences where the tour speaks as a person.
+
+    There is no guide walking beside the listener, so "before we go on" describes a
+    companion the product does not have. Quotations are exempt, because a person quoted
+    in a beat is entitled to say "I" — and so is a bare `I` with a name around it, which
+    is how "Napoleon I", "World War I" and "I. M. Pei" are written.
+    """
+    quoted = quoted_char_spans(body)
+    hits: list[tuple[int, int]] = []
+    for word, start, end in verbatim_word_spans(body):
+        if word not in _FIRST_PERSON:
+            continue
+        if any(qs <= start and end <= qe for qs, qe in quoted):
+            continue
+        if word == "i" and _is_numeral_or_initial(body, start, end):
+            continue
+        hits.append((start, end))
+    if not hits:
+        return []
+    return _sentences_matching(body, lambda sentence: _covers(body, sentence, hits))
+
+
+def _is_numeral_or_initial(body: str, start: int, end: int) -> bool:
+    """Whether this `I` is part of a name rather than the pronoun."""
+    if body[end : end + 1] == ".":
+        return True
+    before = body[:start].rstrip()
+    return bool(before) and before.split()[-1][:1].isupper()
+
+
+def _covers(body: str, sentence: str, hits: list[tuple[int, int]]) -> bool:
+    """Whether any hit falls inside this sentence's span of the body."""
+    start = body.find(sentence)
+    if start < 0:
+        return False
+    end = start + len(sentence)
+    return any(start <= hit_start and hit_end <= end for hit_start, hit_end in hits)
+
+
+def apparatus_sentences(body: str) -> list[str]:
+    """Sentences that hand the listener the guidebook's own furniture."""
+    return _sentences_matching(body, lambda s: bool(_APPARATUS.search(s) or _LISTING.search(s)))
+
+
+def stage_directions(body: str, claims: list[dict[str, str]]) -> list[str]:
+    """Imperatives no claim asked for.
+
+    A source of walking directions puts the instruction in the claims, and a body that
+    follows them is reporting a fact about the route. The same opening with no claim
+    behind it is the writer inventing what the listener is doing.
+    """
+    said = " ".join(c.get("claim", "") for c in claims).lower()
+    return _sentences_matching(
+        body,
+        lambda s: any(
+            _STAGE_OPENINGS[m.group(1).lower()] not in said for m in _STAGE_OPENING.finditer(s)
+        ),
+    )
+
+
+def invented_impressions(body: str, claims: list[dict[str, str]]) -> list[str]:
+    """Impressions offered to the listener where the claim set holds none.
+
+    An observation reaches a body as something a person standing here may notice. A set
+    with no observation in it gives the writer nothing to offer, so a hedged impression
+    in that body is the writer's own — the same defect as stating one as fact, wearing
+    the house voice.
+    """
+    if any(c.get("kind") == "observation" for c in claims):
+        return []
+    return _sentences_matching(body, lambda sentence: bool(_IMPRESSION.search(sentence)))
+
+
+def body_problems(body: str, claims: list[dict[str, str]]) -> dict[str, list[str]]:
+    """Every free refusal a written body can earn, keyed by what it broke."""
+    return {
+        "first_person": first_person_sentences(body),
+        "apparatus": apparatus_sentences(body),
+        "stage_direction": stage_directions(body, claims),
+        "invented_impression": invented_impressions(body, claims),
     }
 
 
@@ -390,6 +650,55 @@ def cleanroom_request(
     }
 
 
+def body_redo_request(
+    *, claims: list[dict[str, str]], poi: str, city: str, words: int, body: str, problems: str
+) -> dict[str, Any]:
+    """A second ask for a body that broke a voice rule.
+
+    The clean room holds through the retry: the only thing added to the first request
+    is the writer's OWN draft and the rule it broke. Naming a defect in prose the
+    writer wrote is not showing it the source, which is why a voice rule can be
+    corrected here and an eight-word run with the passage cannot.
+    """
+    base = cleanroom_request(claims=claims, poi=poi, city=city, words=words)
+    return {
+        **base,
+        "messages": [
+            base["messages"][0],
+            {"role": "assistant", "content": body},
+            {"role": "user", "content": _BODY_REDO_PROMPT.format(problems=problems)},
+        ],
+    }
+
+
+def body_redo_problems(problems: dict[str, list[str]]) -> str:
+    """What to tell the writer its draft got wrong, quoting the draft back to it."""
+    said = {
+        "first_person": (
+            "These speak as a person. There is no guide walking beside the listener, so\n"
+            'there is no "we" and no "I":'
+        ),
+        "apparatus": (
+            "These hand the listener the guidebook's own furniture — a page, a step, a\n"
+            "phone number, a web address. The listener has none of that:"
+        ),
+        "stage_direction": (
+            "These tell the listener what to do, and no claim says so. If the claims do not\n"
+            "say where the listener is standing or walking, you do not know:"
+        ),
+        "invented_impression": (
+            "These offer the listener an impression, and not one claim is marked as an\n"
+            "observation. There is no impression here to offer:"
+        ),
+    }
+    parts = [
+        said[kind] + "\n" + "\n".join(f"- {line}" for line in lines)
+        for kind, lines in problems.items()
+        if lines
+    ]
+    return "\n\n".join(parts)
+
+
 def target_words(body_before: str) -> int:
     """How long the new body should be, from how long the old one was.
 
@@ -411,15 +720,25 @@ def input_hash(claims: list[dict[str, str]]) -> str:
 
 
 def cleanroom_record(
-    entry: dict, *, body_before: str, given: list[dict[str, str]], body_after: str
+    entry: dict,
+    *,
+    body_before: str,
+    given: list[dict[str, str]],
+    body_after: str,
+    attempts: int = 1,
 ) -> dict[str, Any]:
     """One regenerated candidate, carrying what the writer was actually given.
 
     `source_passage` and `body_before` are stored because a reviewer and the Stage 0
     gates both need them. They were not in the writer's input, and the test that
     proves it reads `cleanroom_request`, never this record.
+
+    A body carries its own refusal, the way a claim set does. A written body that
+    breaks a voice rule is kept out of the corpus rather than counted in it, so the
+    beat keeps the copied body it already had and the defect is not ratcheted in.
     """
     source = entry.get("source_passage", "")
+    problems = body_problems(body_after, given)
     return {
         "beat_id": entry.get("beat_id", ""),
         "poi_name": entry.get("poi_name", ""),
@@ -432,6 +751,9 @@ def cleanroom_record(
         "ratio_before": round(verbatim_ratio(body_before, source), 3),
         "ratio_after": round(verbatim_ratio(body_after, source), 3),
         "run_after": max_verbatim_run(body_after, source),
+        "body_problems": problems,
+        "usable": not any(problems.values()),
+        "attempts": attempts,
         "decomposed_by": entry.get("model", ""),
         "written_by": PRODUCER_MODEL,
         "generated_at": datetime.now(UTC).isoformat(),
@@ -535,26 +857,52 @@ def _problem_count(record: dict) -> int:
     return (
         len(record.get("lifted_claims") or [])
         + len(record.get("dangling_claims") or [])
+        + len(record.get("apparatus_claims") or [])
         + len(record.get("uncovered_sentences") or [])
     )
 
 
 def _write_one(entry: dict, bodies: dict[str, str], city: str, client: Any) -> dict[str, Any]:
     given = shuffled_claims(entry["claims"], entry["beat_id"])
-    response = client.messages.create(
-        **cleanroom_request(
-            claims=given,
-            poi=entry.get("poi_name", ""),
-            city=city,
-            words=target_words(bodies.get(entry["beat_id"], "")),
+    body_before = bodies.get(entry["beat_id"], "")
+    ask = {
+        "claims": given,
+        "poi": entry.get("poi_name", ""),
+        "city": city,
+        "words": target_words(body_before),
+    }
+    first = cleanroom_record(
+        entry,
+        body_before=body_before,
+        given=given,
+        body_after=_text_of(client.messages.create(**cleanroom_request(**ask))),
+    )
+    if first["usable"]:
+        return first
+
+    retried = client.messages.create(
+        **body_redo_request(
+            **ask,
+            body=first["body_after"],
+            problems=body_redo_problems(first["body_problems"]),
         )
     )
-    return cleanroom_record(
+    second = cleanroom_record(
         entry,
-        body_before=bodies.get(entry["beat_id"], ""),
+        body_before=body_before,
         given=given,
-        body_after=_text_of(response),
+        body_after=_text_of(retried),
+        attempts=2,
     )
+    kept = min((second, first), key=_body_problem_count)
+    kept["attempts"] = 2
+    kept["second_ask_improved"] = _body_problem_count(second) < _body_problem_count(first)
+    return kept
+
+
+def _body_problem_count(record: dict) -> int:
+    """How many voice rules a written body broke, so the better of two drafts wins."""
+    return sum(len(lines) for lines in record.get("body_problems", {}).values())
 
 
 def _run(pool_size: int, work: list, task: Any, out: Path, records: list[dict]) -> None:
@@ -599,6 +947,18 @@ def regrade(records: list[dict]) -> list[dict]:
     return out
 
 
+def regrade_bodies(records: list[dict]) -> list[dict]:
+    """Re-run the body gates over stored bodies, for the reason `regrade` re-runs the others.
+
+    A body graded before a gate existed would otherwise stay usable forever.
+    """
+    out = []
+    for record in records:
+        problems = body_problems(record.get("body_after", ""), record.get("claims_given", []))
+        out.append({**record, "body_problems": problems, "usable": not any(problems.values())})
+    return out
+
+
 def _phase_decompose(city: str, limit: int, workers: int, client: Any) -> int:
     out = claims_path(city)
     records = regrade(load_json(out))
@@ -623,6 +983,7 @@ def _phase_decompose(city: str, limit: int, workers: int, client: Any) -> int:
         f"    {sum(1 for r in refused if r.get('unreadable'))} unreadable, "
         f"{sum(1 for r in refused if r.get('lifted_claims'))} lifted, "
         f"{sum(1 for r in refused if r.get('dangling_claims'))} dangling, "
+        f"{sum(1 for r in refused if r.get('apparatus_claims'))} about the guidebook, "
         f"{sum(1 for r in refused if r.get('uncovered_sentences'))} miss source content\n"
         f"    {sum(1 for r in records if r.get('second_ask'))} were asked a second time, "
         f"of which {sum(1 for r in records if r.get('second_ask_improved'))} came back better"
@@ -639,7 +1000,7 @@ def _phase_write(city: str, limit: int, workers: int, client: Any) -> int:
         return 1
 
     out = cleanroom_path(city)
-    records = load_json(out)
+    records = regrade_bodies(load_json(out))
     # A body is bound to the claim block it was written from. A second ask changes that
     # block, so a body written before it is prose nobody's current claims support — the
     # hash is what makes that visible instead of silently shipping the stale one.
@@ -650,9 +1011,14 @@ def _phase_write(city: str, limit: int, workers: int, client: Any) -> int:
             kept.append(record)
         else:
             stale += 1
-    records = kept
+    # A body the gates now refuse is written again, not kept: shipping it would ratchet
+    # the defect in, and asserting a known count of it would hide the next one.
+    refused = [r for r in kept if not r.get("usable")]
+    records = [r for r in kept if r.get("usable")]
     if stale:
         print(f"  {stale} stored bodies no longer match their claims and are rewritten")
+    if refused:
+        print(f"  {len(refused)} stored bodies break a voice rule and are written again")
     seen = {r["beat_id"] for r in records if r.get("beat_id")}
     pending = [c for c in claims if c["beat_id"] not in seen]
     if limit:
@@ -670,9 +1036,19 @@ def _phase_write(city: str, limit: int, workers: int, client: Any) -> int:
         records,
     )
 
-    still_lifted = sum(1 for r in records if r.get("run_after", 0) >= VERBATIM_RUN_BLOCK)
+    usable = [r for r in records if r.get("usable")]
+    still_lifted = sum(1 for r in usable if r.get("run_after", 0) >= VERBATIM_RUN_BLOCK)
+
+    def broke(kind: str) -> int:
+        return sum(1 for r in records if r["body_problems"][kind])
+
     print(
-        f"✓ {len(records)} bodies in {out}\n"
+        f"✓ {len(usable)} bodies in {out}, {len(records) - len(usable)} refused\n"
+        f"    {broke('first_person')} speak as a person, "
+        f"{broke('apparatus')} carry the guidebook, "
+        f"{broke('stage_direction')} stage the listener\n"
+        f"    {sum(1 for r in records if r.get('attempts', 1) > 1)} were asked a second time, "
+        f"of which {sum(1 for r in records if r.get('second_ask_improved'))} came back better\n"
         f"  {still_lifted} still share an {VERBATIM_RUN_BLOCK}+ word run with a source "
         f"the writer never saw"
     )
