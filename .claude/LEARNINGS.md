@@ -187,3 +187,63 @@ Five commands. Ten seconds. Non-negotiable.
 **Incident:** Two tracker rows in one run could not be flipped for reasons that had nothing to do with whether the work was done. One carried `make test` as its verification command: the tracker re-runs that command to verify a completion claim, so the box sat unflippable for hours while a cloud database — infrastructure that milestone never touched — refused the full bar. The other named a test that had only ever been *planned*: the name went into the row at planning time and was never written into the repo, so no run could ever satisfy it, and the row stayed `pending` long after the feature that satisfied it had shipped under different test names. In both cases the board lied about work that was finished and committed.
 
 **Rule:** An `issue-add --test-command` names the NARROWEST command that proves that milestone and that already runs — one test file, or one pytest node id. Never `make test` / `make audit`: the full bar answers "is the repo green", which is a different question from "is this milestone done", and it drags unrelated infrastructure into a completion claim. If the milestone's test lands under a different name than the plan guessed, re-point the row with `issue-set --id M{n} --test-command "…"` before claiming the step.
+
+---
+
+## 23. A model may never sit on the panel that judges its own output
+
+**Incident:** A re-author pipeline rewrote 524 copied beats with `claude-opus-5`, then
+verified them with a two-model panel of `claude-opus-5` and `claude-sonnet-5`, requiring
+both to find nothing before auto-approving. 384 beats were approved and reported to the
+owner as "verified by two independent models". The author was half the panel, so every
+approval rested on a model declining to flag its own work. The module's own docstring
+stated "one model checking its own work is not independence" eight lines above the
+constant that broke it. Three adversarial subagents found it independently; a one-line
+grep confirmed it.
+
+**Rule:** The set of judging models must exclude the model that produced the artifact —
+assert it in a test, because a constant defined in one file and a constant defined in
+another will drift. Two model names are not independence on their own: judges reading the
+same prompt with the same evidence share every blind spot the prompt writes in. Real
+independence needs information asymmetry between roles, such as extracting claims from
+source and from output in calls that never see each other's input. And a verdict that
+ships unread must store what the judges actually answered; a hard-coded `models` field and
+an empty `reason` are a claim that verification happened, not evidence of it.
+
+---
+
+## 24. Never tune a gate on its own escalation rate
+
+**Incident:** The same pipeline's verification prompt was hand-calibrated on 15 beats
+until escalation fell from 47% to 20%, and the 20% was reported as evidence the gate was
+now well-aimed. Escalation rate moves monotonically with leniency, so the tuning could not
+distinguish "fewer false alarms" from "blind to more defects", and with no held-out set it
+measured fit and nothing else. The design could not measure its own miss rate at all,
+because no beat with a known defect was ever put through it — which made "384 are clean"
+unfalsifiable.
+
+**Rule:** Calibrate a gate against a labelled set with known defects and score it on
+FALSE-NEGATIVE rate. Defect injection gives that ground truth almost free: take good
+outputs and plant a fabricated number, a deleted claim, a lifted phrase.
+`scripts/coverage_calibrate.py` is the bake-off method to copy. A rate you tuned toward is
+never evidence about the thing you tuned it on.
+
+---
+
+## 25. A metric the producer optimises against is not evidence about the producer
+
+**Incident:** Bodies copied from guidebooks were rewritten with an instruction to keep the
+same content and share none of the phrasing, then cleared by `verbatim_ratio` — the 8-word
+shingle overlap the instruction was effectively written against. Every rewrite scored
+under the threshold and this was reported as evidence the copying was retired. It was not:
+91% of rewrites with a multi-sentence source still followed the source's sentence order
+exactly, reproducing its selection and arrangement, which is the part copyright protects.
+Separately, 81 cleared rewrites contained an 8+ word verbatim run, because the ratio
+divides matched shingles by body length and a lifted clause inside a long body scores near
+zero.
+
+**Rule:** When a generator is told to satisfy a metric, that metric stops being evidence
+about the generator's output and becomes a description of its instructions. Evidence has
+to come from a check the generator was not aimed at — here, sentence-order alignment
+against the source, and a longest-run measure rather than a length-normalised ratio. State
+what a metric literally measures before quoting it as proof of anything broader.

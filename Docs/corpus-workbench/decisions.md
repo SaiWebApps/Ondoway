@@ -1,5 +1,9 @@
 # Corpus Workbench — pre-plan interview
 
+> **Start with [rebuild-brief.md](rebuild-brief.md).** It records the state of the
+> re-author work, what an adversarial panel refuted, and what to build next. It
+> supersedes I4 below and the review-queue design.
+
 Decisions taken in the grilling interview that precedes the implementation plan.
 Each entry states the decision that holds now and the code fact that forced it.
 
@@ -26,7 +30,12 @@ every publish, so a graph-side flip is undone by the next upload. The publisher 
 derives the status from the review record, so a re-publish converges the graph on the
 files (D3) rather than fighting them.
 
-**I4 — Lane B is a thin beat-level pass, not the tour composer.**
+**I4 — SUPERSEDED by [rebuild-brief.md](rebuild-brief.md).** The unit is right and the
+reasoning about the tour composer still holds, but feeding the writer the source prose
+preserves the source's order and selection in 91% of multi-sentence cases. The writer must
+receive a shuffled claim set instead.
+
+**I4 (as originally recorded) — Lane B is a thin beat-level pass, not the tour composer.**
 Its unit is `(source_passage -> beat body)`, which `ComposeRequest` is not: that model is
 tour-shaped (stops, slots, threads, doors) and its fields are sealed into
 `compose_input_sha256`, so changing it re-seals the frozen certification archive on its
