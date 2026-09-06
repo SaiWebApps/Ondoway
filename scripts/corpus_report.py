@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import statistics
 from collections import Counter
 from pathlib import Path
@@ -37,6 +38,18 @@ VERBATIM_SHINGLE: int = 8
 
 #: At or above this share of shared shingles, a body was copied rather than written.
 VERBATIM_THRESHOLD: float = 0.70
+
+#: A shared run of this many words is a lift. Same eight words as VERBATIM_SHINGLE,
+#: named separately because it gates a decision while the shingle width only sizes a
+#: ratio, and the two would otherwise be one constant serving two jobs.
+VERBATIM_RUN_BLOCK: int = 8
+
+#: The word contract for the run measure: digits and letters, case-folded, everything
+#: else a boundary. Punctuation, apostrophes and hyphens do not survive it, so
+#: "dog-barbers" is two words and "city's" is two. Deliberately looser than
+#: `shingle_set`'s whitespace split, which keeps punctuation glued to a word and so
+#: reads a lift as unshared whenever a comma moved.
+_VERBATIM_WORD = re.compile(r"[0-9a-z\u00c0-\u024f]+")
 
 #: The bucket a beat lands in when it carries no `fact_check` block at all —
 #: distinct from `unverified`, which is a check that ran and reached no verdict.
@@ -67,6 +80,73 @@ def verbatim_ratio(script_body: str, source_passage: str) -> float:
     if not source:
         return 0.0
     return len(body & source) / len(body)
+
+
+def verbatim_word_spans(text: str) -> list[tuple[str, int, int]]:
+    """Every word of `text` as `(word, start_char, end_char)`, case-folded.
+
+    Positions are kept because a caller has to ask where a matched run sits — inside
+    a quotation or out in the narration — and a bare word list cannot answer that.
+    """
+    return [(m.group(), m.start(), m.end()) for m in _VERBATIM_WORD.finditer(text.lower())]
+
+
+def verbatim_words(text: str) -> list[str]:
+    """The case-folded words of `text`, in order."""
+    return [word for word, _, _ in verbatim_word_spans(text)]
+
+
+def max_verbatim_run(script_body: str, source_passage: str) -> int:
+    """Length of the longest word run the body shares with its source passage.
+
+    This is the copying measure with a threshold behind it. `verbatim_ratio` divides
+    matched shingles by body length, so one lifted clause inside a long body scores
+    near zero — it describes how copied a whole body is, and answers nothing about
+    whether any sentence was lifted. The longest run answers exactly that and does not
+    move when the body around it grows.
+
+    Returns 0 when either side is empty.
+    """
+    return longest_shared_run(verbatim_words(script_body), verbatim_words(source_passage))
+
+
+def longest_shared_run(body_words: list[str], source_words: list[str]) -> int:
+    """Length of the longest contiguous run `body_words` shares with `source_words`.
+
+    Binary search on the run length: a shared run of length k implies one of length
+    k-1, so the property is monotone and log(n) k-gram set builds settle it.
+    """
+    return shared_run_at(body_words, source_words)[0]
+
+
+def shared_run_at(body_words: list[str], source_words: list[str]) -> tuple[int, int]:
+    """The longest shared run as `(length, first index in body_words)`.
+
+    Index is -1 when there is no shared run at all.
+    """
+    if not body_words or not source_words:
+        return 0, -1
+
+    def shares(k: int) -> bool:
+        source_grams = {tuple(source_words[i : i + k]) for i in range(len(source_words) - k + 1)}
+        return any(
+            tuple(body_words[i : i + k]) in source_grams for i in range(len(body_words) - k + 1)
+        )
+
+    low, high = 0, min(len(body_words), len(source_words))
+    while low < high:
+        mid = (low + high + 1) // 2
+        if shares(mid):
+            low = mid
+        else:
+            high = mid - 1
+    if low == 0:
+        return 0, -1
+    source_grams = {tuple(source_words[i : i + low]) for i in range(len(source_words) - low + 1)}
+    for i in range(len(body_words) - low + 1):
+        if tuple(body_words[i : i + low]) in source_grams:
+            return low, i
+    return low, -1
 
 
 def fact_check_buckets(beats: list[dict]) -> dict[str, int]:
