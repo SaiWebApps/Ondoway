@@ -592,12 +592,23 @@ def test_a_body_that_breaks_a_rule_is_flagged_for_a_person_not_discarded() -> No
     assert [r["beat_id"] for r in review_order([clean, broken])] == ["broken", "clean"]
 
 
-def test_the_review_queue_can_read_the_cleanroom_artifact() -> None:
-    """Routing to the queue is only real if the queue can open the file."""
-    from scripts.reauthor_review import candidates_path
+def test_the_review_route_serves_cleanroom_bodies_ranked_by_flag() -> None:
+    """Routing is only real when a person can open it.
 
-    assert candidates_path("paris", source="cleanroom").name == "reauthored-cleanroom.json"
-    assert candidates_path("paris").name == "reauthored.json"
+    A path helper taking a new argument proves nothing if no caller passes it, so this
+    reads the route the review page actually calls, and checks that what it shows is
+    what a gate flagged — a clean-room body carries no `verified` block, so the rewrite
+    path's escalation test would otherwise show every one of them.
+    """
+    from src.server import _reauthored_payload
+
+    payload = _reauthored_payload("paris", source="cleanroom")
+    if not payload["summary"]["total"]:
+        pytest.skip("no regenerated bodies on disk to serve")
+    assert payload["source"] == "cleanroom"
+    assert all(row["flags"] for row in payload["candidates"])
+    assert len(payload["candidates"]) < payload["summary"]["total"]
+    assert _reauthored_payload("paris")["source"] == "rewrite"
 
 
 def test_every_stored_body_agrees_with_the_gates_as_they_stand() -> None:

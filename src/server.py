@@ -26,6 +26,7 @@ from scripts.corpus_report import (
     quality_report,
 )
 from scripts.reauthor_review import (
+    CANDIDATE_FILES,
     DECISIONS,
     decision_summary,
     load_candidates,
@@ -123,15 +124,29 @@ def _corpus_payload(city_slug: str) -> dict[str, Any]:
     }
 
 
-def _reauthored_payload(city_slug: str, *, show_all: bool = False) -> dict[str, Any]:
-    """The review queue for one city.
+def _needs_a_person(record: dict, source: str) -> bool:
+    """Whether one candidate still has a question only a reviewer can answer."""
+    if source == "cleanroom":
+        return bool(record.get("flags"))
+    verified = record.get("verified") or {}
+    return verified.get("status") == "escalate" or not verified
+
+
+def _reauthored_payload(
+    city_slug: str, *, show_all: bool = False, source: str = "rewrite"
+) -> dict[str, Any]:
+    """The review queue for one city, from either authoring path.
 
     By default this is ONLY what the machine could not settle. The design's D1 is
     triage, not blanket verification, so a rewrite two independent models agree
     adds nothing and drops nothing does not consume a person's attention. Pass
     show=all to spot-check the auto-approved, which is worth doing periodically.
+
+    `source=cleanroom` reads the clean-room bodies instead. They are ranked by the
+    same `review_order` and decided through the same POST, because a candidate is a
+    candidate — and a clean-room body that carries a flag has nowhere else to go.
     """
-    records = load_candidates(city_slug)
+    records = load_candidates(city_slug, source=source)
     summary = decision_summary(records)
     summary["auto_approved"] = sum(
         1 for r in records if str(r.get("decided_by", "")).startswith("auto:")
@@ -143,17 +158,18 @@ def _reauthored_payload(city_slug: str, *, show_all: bool = False) -> dict[str, 
 
     shown = review_order(records)
     if not show_all:
-        shown = [
-            r
-            for r in shown
-            if (r.get("verified") or {}).get("status") == "escalate" or not r.get("verified")
-        ]
+        # The two artifacts are asked different questions. A rewrite carries a panel's
+        # verdict, so what needs a person is an escalation or a beat nothing judged. A
+        # clean-room body carries no verdict at all — the gates are what looked at it —
+        # so what needs a person is what a gate flagged.
+        shown = [r for r in shown if _needs_a_person(r, source)]
     return {
         "city": city_slug,
         "reviewer": reviewer_identity(),
         "summary": summary,
         "candidates": shown,
         "showing": "all" if show_all else "escalated",
+        "source": source,
     }
 
 
@@ -177,6 +193,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 _reauthored_payload(
                     query.get("city", ["paris"])[0],
                     show_all=query.get("show", [""])[0] == "all",
+                    source=query.get("source", ["rewrite"])[0],
                 )
             )
         else:
@@ -200,16 +217,18 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         beat_id = payload.get("beat_id") or ""
         decision = payload.get("decision") or ""
         if decision not in DECISIONS:
-            self._json_response(
-                {"error": f"decision must be one of {list(DECISIONS)}"}, status=400
-            )
+            self._json_response({"error": f"decision must be one of {list(DECISIONS)}"}, status=400)
             return
 
-        records = load_candidates(city)
-        try:
-            row = record_decision(
-                records, beat_id, decision, decided_by=reviewer_identity()
+        source = payload.get("source") or "rewrite"
+        if source not in CANDIDATE_FILES:
+            self._json_response(
+                {"error": f"source must be one of {list(CANDIDATE_FILES)}"}, status=400
             )
+            return
+        records = load_candidates(city, source=source)
+        try:
+            row = record_decision(records, beat_id, decision, decided_by=reviewer_identity())
         except KeyError:
             self._json_response(
                 {"error": f"no candidate with beat_id {beat_id!r} in {city}"}, status=404
@@ -219,7 +238,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._json_response({"error": str(exc)}, status=400)
             return
 
-        save_candidates(city, records)
+        save_candidates(city, records, source=source)
         self._json_response({"decided": row, "summary": decision_summary(records)})
 
     def _corpus_route(self, city_slug: str) -> None:

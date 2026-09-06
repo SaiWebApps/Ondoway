@@ -11,9 +11,14 @@ check can tell you which parts are.** An acceptance read of 69 records found **4
 carrying statements the claims do not support, 23% materially** — invented benches at
 Columbus Park, invented boats at Flushing Meadows, "nothing marks the building" at 1040
 5th Avenue, "four musicians from Liverpool" with no support in the claims *or* the
-source. A check for content words absent from every claim flags **471 of 471 bodies**,
-so it ranks a review queue and gates nothing. Stage 2 is therefore a precondition for
-shipping, not the next item on a list.
+source.
+
+That read was of the corpus **before** the regeneration below, and nothing changed since
+targets that class, so the current bodies are not better on it — they are simply unread.
+That is a weaker position to ship from, not a stronger one. The free check for the class
+— content words in a body that no claim carried — flags **434 of the 449 bodies that now
+exist**, so it ranks a review queue and gates nothing. Stage 2 is therefore a
+precondition for shipping, not the next item on a list.
 
 ## The numbers
 
@@ -28,8 +33,10 @@ shipping, not the next item on a list.
 **449 of the 524 backlog were regenerated**, 86% of it. Across both cities: **11 bodies
 carry a flag**, 16% share an 8+ word run, length is 1.13× the body replaced as a median
 of per-record ratios, and **1.5% close on a hedged impression, down from 27%**. Bodies
-follow their source's sentence order **47%** of the time, against **91%** for the
-pipeline this replaces — the remainder is chronology the writer re-derived on its own,
+follow their source's sentence order **47%** of the time by this repo's
+`order_follows_source`, against **91%** for the pipeline this replaces on the same
+measure — an independent lexical alignment reads both ends higher, so the drop is the
+finding and the percentage is not — the remainder is chronology the writer re-derived on its own,
 which is the world's order rather than the guidebook's.
 
 None of those numbers say the output is good. They say what is left after every check
@@ -153,7 +160,12 @@ York bodies to false positives: "a **US** Coast Guard Cutter" and "Arthur Miller
 
 Bodies carry `flags`, and `reauthor_review.review_order` already ranks a queue by that
 field. Its candidate path named only the rewrite artifact, so routing there was a
-sentence and not a path; it now names either.
+sentence and not a path. `/api/reauthored?source=cleanroom` now serves the clean-room
+bodies to the same review page, ranked the same way and decided through the same POST,
+which writes back to the file the record came from. The two artifacts are asked different
+questions: a rewrite carries a panel's verdict, so a person sees an escalation or a beat
+nothing judged; a clean-room body carries no verdict, so a person sees what a gate
+flagged.
 
 A fifth measure is recorded and deliberately does **not** flag: things a body puts in
 front of the listener that no claim mentions. About a third of what it finds is the
