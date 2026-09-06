@@ -23,6 +23,7 @@ from scripts.reauthor_triage import (
     BLOCKED_CONFLICT,
     BLOCKED_RUN,
     CLEAR,
+    _content,
     attributed_quote_spans,
     name_conflicts,
     numeric_conflicts,
@@ -152,8 +153,10 @@ def test_a_number_the_source_answers_differently_is_a_conflict() -> None:
     source = "The RMS Titanic was headed to Pier 60 and the Carpathia brought survivors to Pier 54."
     before = "The RMS Titanic was headed to Pier 59 and the Carpathia brought survivors to Pier 54."
     found = numeric_conflicts(source, before)
-    assert [c["slot"] for c in found] == ["pier"]
-    assert found[0]["body_before"] == ["59"]
+    # One disagreement can surface under more than one naming word; what matters is
+    # that the figure the body asserts and the source denies is reported.
+    assert "pier" in [c["slot"] for c in found]
+    assert all(c["body_before"] == ["59"] for c in found)
 
 
 def test_a_trailing_unit_is_a_slot_too() -> None:
@@ -349,3 +352,33 @@ def test_a_scanning_error_in_the_source_still_conflicts() -> None:
     source = "The opera house was designed by Charles Gamier."
     before = "The opera house was designed by Charles Garnier."
     assert name_conflicts(source, before)
+
+
+def test_a_date_behind_a_preposition_is_still_compared() -> None:
+    """61% of the corpus's years sit as "in YYYY"; an adjacent-word rule sees none."""
+    assert numeric_conflicts("The theatre opened in 1934.", "The theatre opened in 1932.")
+
+
+def test_an_ordinal_century_is_a_figure() -> None:
+    """mid-18th against mid-19th moves a fact a hundred years; str.isdigit sees neither."""
+    source = "Chinatown was founded in the mid-18th century by immigrants."
+    before = "Chinatown was founded in the mid-19th century by immigrants."
+    assert numeric_conflicts(source, before)
+
+
+def test_an_ordinal_and_a_plain_number_are_different_values() -> None:
+    """Otherwise "18th" and the year 18 would be read as agreeing."""
+    assert numeric_slots("the 18th century")["century"] == {"18th"}
+
+
+def test_a_quotation_pointed_at_but_not_attributed_is_not_exempt() -> None:
+    """ "the words ..." names quoted text without saying whose it is."""
+    quote = "I love you"
+    body = f'A wall here carries the words "{quote}" in 311 languages for you to find.'
+    source = f'The wall carries the words "{quote}" in 311 languages for you to find.'
+    assert run_outside_quotation(body, source)["length"] >= VERBATIM_RUN_BLOCK
+
+
+def test_function_words_do_not_match_two_unrelated_sentences() -> None:
+    """A bag of stopwords must not count as content shared with a source sentence."""
+    assert _content("The one of the that it was") == set()

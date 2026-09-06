@@ -39,6 +39,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import unicodedata
 from typing import Any
 
 from scripts.corpus_report import (
@@ -51,6 +52,8 @@ from scripts.corpus_report import (
 )
 from scripts.reauthor_preview import EXCLUDED_CITIES
 from scripts.reauthor_review import load_candidates
+from src.tour.claim_dedup import _STOPWORDS as STOPWORDS
+from src.tour.generation import split_sentences
 
 #: Verdicts this triage assigns. `CLEAR` means both gates passed, which makes a
 #: rewrite eligible for verification — never verified.
@@ -74,14 +77,20 @@ _SINGLE_CLOSE = re.compile("(?<=[\\w\u00c0-\u024f.,!?;])'(?=$|[\\s)\u2014\u2013.
 #: Words that name who is being quoted. A quotation with none of these near it is
 #: a quotation attributed to nobody, which is exactly the shape of an unmarked
 #: lift, so it earns no exemption.
+#:
+#: Every entry is an act of saying or a named source of words. Pointers that merely
+#: introduce a phrase — "the words", "a line", "a sign reading" — are NOT here: they
+#: identify quoted text without saying whose it is, and admitting them exempted a wall
+#: inscription attributed to nobody. The cost is that a genuine "a line from the Bible"
+#: is now blocked and reaches a person, which is the safe direction to be wrong in.
 # fmt: off
 _ATTRIBUTION_CUES = frozenset([
     "wrote", "writes", "written", "write", "said", "says", "say", "saying", "told", "tells",
     "telling", "asked", "asks", "called", "calls", "calling", "recalled", "recalls",
     "described", "describes", "describing", "noted", "notes", "observed", "observes",
-    "remarked", "remarks", "quipped", "declared", "declares", "dubbed", "termed", "put",
-    "letter", "diary", "memoir", "inscription", "inscribed", "motto", "epitaph", "reads",
-    "reading", "according", "quoted", "quoting", "words", "line", "verse", "plaque", "sign"
+    "remarked", "remarks", "quipped", "declared", "declares", "dubbed", "termed",
+    "letter", "diary", "memoir", "inscription", "inscribed", "motto", "epitaph",
+    "quoted", "quoting",
 ])
 # fmt: on
 
@@ -89,28 +98,31 @@ _ATTRIBUTION_CUES = frozenset([
 #: paragraph: "she wrote:" leads a quote and "he told a friend" interrupts one.
 _ATTRIBUTION_WINDOW = 120
 
-#: Words too common to identify which fact a number belongs to. A number's
-#: neighbour is its slot key, and "the 1793" would collide with every other date
-#: in the passage, reporting a conflict wherever two dates merely differ.
-# fmt: off
-_SLOT_STOPWORDS = frozenset([
-    "the", "a", "an", "of", "in", "on", "at", "to", "and", "or", "but", "for", "from", "by",
-    "with", "as", "is", "was", "were", "are", "be", "been", "that", "this", "it", "its",
-    "his", "her", "their", "there", "here", "about", "over", "under", "until", "since",
-    "between", "during", "after", "before", "near", "around", "some", "only", "just", "he",
-    "she", "they", "we", "you", "i", "him", "them", "who", "whose", "which", "what", "when",
-    "where"
-])
-# fmt: on
+#: An ordinal figure. "the mid-18th century" carries a number that `str.isdigit`
+#: cannot see, and a source saying 18th where the body says 19th moves a fact by a
+#: hundred years — the largest silent change found in this corpus.
+_ORDINAL = re.compile(r"\d+(?:st|nd|rd|th)$")
+
+#: How many uninformative words a slot key may be found behind. "opened in 1932"
+#: puts a preposition between the figure and the word that says which fact it is, so
+#: an adjacent-word-only rule is blind to the commonest date syntax in the corpus.
+#: Three is enough for "on the second of March" and short enough that a key stays in
+#: the same clause as its number.
+_SLOT_WALK = 3
 
 #: A capitalised word, which is what a proper name is made of. Digits are excluded
 #: deliberately: a figure is the numeric gate's business, and letting one into a name
 #: makes "July 27" and "July 27-29" a disagreement about a name.
 _NAME_TOKEN = re.compile("[A-Z\u00c0-\u00dc][\\w\u00c0-\u024f'\u2019-]*")
 
-#: Accents a scanned guidebook loses and a rewrite restores, folded away before two
-#: names are compared.
-_FOLD = str.maketrans("àáâãäåçèéêëìíîïñòóôõöùúûüýÿ", "aaaaaaceeeeiiiinooooouuuuyy")
+
+def fold(text: str) -> str:
+    """Strip accents, so a scan that lost them names the same thing the body does.
+
+    The repo's canonical folding, as `src/tour/beat_select._canonicalise_entity` and
+    `src/tour/validation` already use it: NFKD then drop what will not encode.
+    """
+    return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
 
 
 def quoted_char_spans(text: str) -> list[tuple[int, int]]:
@@ -205,8 +217,11 @@ def run_shape(run_text: str, body_after: str) -> str:
     words = run_text.split()
     if not words:
         return "none"
-    capitalised = {w.lower() for w in _NAME_TOKEN.findall(body_after)}
-    factual = sum(1 for w in words if w in capitalised or w.isdigit())
+    # proper_names, not a raw regex over the body: a bare `_NAME_TOKEN` scan admits
+    # every sentence-initial "The" and "In", which made any run containing "the" read
+    # as fact and understated the real lifts.
+    named = {fold(token) for name in proper_names(body_after) for token in name}
+    factual = sum(1 for w in words if fold(w) in named or w.isdigit())
     return "names-and-numbers" if factual * 2 >= len(words) else "prose"
 
 
@@ -223,17 +238,45 @@ def numeric_slots(text: str) -> dict[str, set[str]]:
     away, reporting a disagreement between two texts that agree.
     """
     slots: dict[str, set[str]] = {}
-    for sentence in sentences_of(re.sub(r"(?<=\d),(?=\d\d\d\b)", "", text)):
+    for sentence in split_sentences(re.sub(r"(?<=\d),(?=\d\d\d\b)", "", text)):
         words = verbatim_words(sentence)
         for index, word in enumerate(words):
-            if not word.isdigit():
+            if not _is_figure(word):
                 continue
-            previous = words[index - 1] if index else ""
-            following = words[index + 1] if index + 1 < len(words) else ""
-            for key in (previous, following):
-                if key and not key.isdigit() and key not in _SLOT_STOPWORDS:
-                    slots.setdefault(key, set()).add(word)
+            for key in _slot_keys(words, index):
+                slots.setdefault(key, set()).add(word)
     return slots
+
+
+def _is_figure(word: str) -> bool:
+    """Whether a word carries a quantity: a plain number or an ordinal.
+
+    An ordinal is stored under its own spelling, so "18th" and the year 18 are two
+    different values and cannot be read as agreeing.
+    """
+    return word.isdigit() or bool(_ORDINAL.match(word))
+
+
+def _slot_keys(words: list[str], index: int) -> list[str]:
+    """The nearest naming word on each side of `words[index]`, within `_SLOT_WALK`.
+
+    Walking rather than reading the adjacent word is what makes dates comparable:
+    "opened in 1932" hides its noun behind a preposition, and 61% of the corpus's
+    four-digit years sit in that shape. Other figures and words carrying no meaning
+    of their own are stepped over; the walk stops at the sentence edge.
+    """
+    keys = []
+    for step in (-1, 1):
+        position = index + step
+        for _ in range(_SLOT_WALK + 1):
+            if not 0 <= position < len(words):
+                break
+            word = words[position]
+            if not _is_figure(word) and word not in STOPWORDS:
+                keys.append(word)
+                break
+            position += step
+    return keys
 
 
 def numeric_conflicts(source_passage: str, body_before: str) -> list[dict[str, Any]]:
@@ -263,10 +306,10 @@ def proper_names(text: str) -> set[tuple[str, ...]]:
     by grammar, not because it names anything.
     """
     names: set[tuple[str, ...]] = set()
-    for sentence in re.split(r"(?<=[.!?;:])\s+", text.strip()):
+    for sentence in split_sentences(text):
         run = rf"(?:{_NAME_TOKEN.pattern})(?:\s+(?:{_NAME_TOKEN.pattern}))*"
         for match in re.finditer(run, sentence):
-            tokens = tuple(t.lower().translate(_FOLD) for t in match.group().split())
+            tokens = tuple(fold(t.lower()) for t in match.group().split())
             if match.start() == 0 and len(tokens) == 1:
                 continue
             names.add(tokens)
@@ -305,10 +348,16 @@ def name_conflicts(source_passage: str, body_before: str) -> list[dict[str, Any]
     return found
 
 
-def sentences_of(text: str) -> list[str]:
-    """Sentences, split on terminal punctuation followed by a capital."""
-    parts = re.split(r"(?<=[.!?])\s+(?=[\"“A-ZÀ-Ü])", text.strip())
-    return [p.strip() for p in parts if p.strip()]
+def _content(sentence: str) -> set[str]:
+    """The words of a sentence that carry its content.
+
+    Function words are dropped before two sentences are matched. Left in, they
+    inflate both sides of a Jaccard ratio and let a rewrite sentence match a source
+    sentence it shares nothing but "the" and "of" with, which manufactures apparent
+    reordering. Measured: keeping them reads 84% order-following, dropping them
+    reads 91% — the figure the brief reached by hand.
+    """
+    return {word for word in verbatim_words(sentence) if word not in STOPWORDS}
 
 
 def order_follows_source(source_passage: str, body_after: str) -> bool | None:
@@ -316,19 +365,22 @@ def order_follows_source(source_passage: str, body_after: str) -> bool | None:
 
     Each rewrite sentence is matched to the source sentence it shares most content
     words with; the rewrite follows the source when those indices never go
-    backwards. Reported, never gated: a rewrite that fixes this is a rewrite that
-    was never shown the source's order, which is an authoring change.
+    backwards. **The rate is method-sensitive** — an independent reimplementation
+    spanned 47% to 100% across defensible matching rules — so it is a signal about
+    the corpus, never a per-beat verdict. Reported, never gated: a rewrite that fixes
+    this is a rewrite that was never shown the source's order, which is an authoring
+    change.
 
     None when the source has fewer than three sentences or nothing matched — order
     is not a property a two-sentence passage has.
     """
-    source = sentences_of(source_passage)
+    source = split_sentences(source_passage)
     if len(source) < 3:
         return None
-    bags = [set(verbatim_words(s)) for s in source]
+    bags = [_content(s) for s in source]
     matched: list[int] = []
-    for sentence in sentences_of(body_after):
-        bag = set(verbatim_words(sentence))
+    for sentence in split_sentences(body_after):
+        bag = _content(sentence)
         if not bag:
             continue
         scores = [(len(bag & b) / len(bag | b), -i) for i, b in enumerate(bags) if b]
