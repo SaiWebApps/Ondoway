@@ -128,11 +128,17 @@ function quality(q) {
   </div>
   <div class="card">
     <h2>Copied from source</h2>
-    <div class="big ${vb.flagged_pct > 50 ? "err" : ""}">${vb.flagged_pct}%
-      <small>${vb.flagged} of ${vb.scoreable} scoreable beats</small></div>
-    <p class="sub" style="margin:10px 0 0">At or above ${Math.round(vb.threshold * 100)}%
-      overlap of ${vb.shingle}-word shingles with their own source passage — copied,
-      not authored. Median beat sits at ${vb.median_ratio}.</p>
+    <div class="big ${vb.run_blocked_pct > 50 ? "err" : ""}">${vb.run_blocked_pct}%
+      <small>${vb.run_blocked} of ${vb.scoreable} scoreable beats are lifted</small></div>
+    <p class="sub" style="margin:10px 0 0">Share a run of ${vb.run_block} or more
+      consecutive words with their own source passage, outside an attributed quotation.
+      This is the measure the review path blocks on. Median beat shares
+      ${vb.median_run} words.</p>
+    <p class="sub" style="margin:10px 0 0">By whole-body overlap — how copied a body is
+      rather than whether a sentence was lifted — ${vb.flagged} of ${vb.scoreable}
+      (${vb.flagged_pct}%) sit at or above ${Math.round(vb.threshold * 100)}% of their
+      ${vb.shingle}-word shingles, median ${vb.median_ratio}. That number describes the
+      corpus and does not gate: one lifted clause in a long body scores near zero.</p>
     ${vb.untraceable ? `<div class="note"><strong>${vb.untraceable} beats cite no source
       at all.</strong> They cannot be scored either way, so they are not in the
       ${vb.scoreable} above — and an untraceable beat is its own defect.</div>` : ""}

@@ -47,6 +47,14 @@ def test_verbatim_ratio_flags_a_copied_body() -> None:
     assert verbatim_ratio(_PASSAGE, _PASSAGE) >= VERBATIM_THRESHOLD
 
 
+def test_the_summary_reports_the_run_the_review_path_blocks_on() -> None:
+    """The ratio describes a corpus; the longest run decides a beat, and both ship."""
+    lifted = {"script_body": _PASSAGE, "source_passage": _PASSAGE}
+    summary = verbatim_summary([lifted])
+    assert summary["run_blocked"] == 1
+    assert summary["median_run"] >= summary["run_block"]
+
+
 def test_verbatim_ratio_ignores_a_rewritten_body() -> None:
     """Same facts, new sentences: below the threshold, so Lane B leaves it alone."""
     rewritten = (
@@ -112,8 +120,10 @@ def test_a_beat_with_no_source_is_untraceable_not_clean() -> None:
     """
     beats = [
         {"script_body": _PASSAGE, "source_passage": _PASSAGE},
-        {"script_body": "Wholly different prose about a wholly different place.",
-         "source_passage": _PASSAGE},
+        {
+            "script_body": "Wholly different prose about a wholly different place.",
+            "source_passage": _PASSAGE,
+        },
         {"script_body": "A beat that cites nothing at all.", "source_passage": ""},
     ]
     summary = verbatim_summary(beats)

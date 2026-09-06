@@ -64,11 +64,12 @@ from scripts.corpus_report import (
     VERBATIM_THRESHOLD,
     load_city_beats,
     max_verbatim_run,
+    quoted_char_spans,
     verbatim_ratio,
     verbatim_word_spans,
+    verbatim_words,
 )
 from scripts.reauthor_preview import _VOICE_RULES, is_excluded
-from scripts.reauthor_triage import quoted_char_spans
 from src.city_registry import load_registry
 from src.tour.claim_dedup import (
     COVERAGE_MATCH_MIN,
@@ -159,6 +160,22 @@ _STAGE_OPENING = re.compile(
     r"(?:\A|(?<=[.!?]\s)|(?<=[.!?]\s\s))\s*(" + "|".join(_STAGE_OPENINGS) + r")\b",
     re.I,
 )
+
+#: Concrete things a listener can see, and times of day. These are the words a body
+#: reaches for when it lands a beat on a scene rather than on a fact, and they are the
+#: ones a person standing there checks with their eyes. Ambiguous words are left out —
+#: "step" is usually a verb here and "line" is four different nouns.
+# fmt: off
+_SCENE_WORDS = frozenset([
+    "bench", "benches", "table", "tables", "chair", "chairs", "window", "windows",
+    "door", "doors", "gate", "gates", "railing", "railings", "path", "paths",
+    "lawn", "grass", "tree", "trees", "flower", "flowers", "fountain",
+    "cobbles", "cobblestones", "wood", "wooden", "stone", "brick", "bricks",
+    "iron", "glass", "marble", "boat", "boats", "bicycle", "bicycles",
+    "car", "cars", "bus", "buses", "crowd", "crowds", "queue",
+    "dusk", "dawn", "sunset", "sunrise", "tonight", "midnight", "moonlight",
+])
+# fmt: on
 
 #: The house voice for offering an impression. It is the right way to say an observation
 #: the claims carry, and the only way to say one they do not.
@@ -260,7 +277,9 @@ you decide what to say first, what belongs together, and what closes. Say every 
 marked "fact".
 
 Claims marked "observation" are one writer's impression, not a record. Offer one as
-something a person standing here may notice, or leave it out. Never state one as
+something a person standing here may notice, or leave it out. At most one of these in a
+beat, and never as the closing sentence: a listener walks past a dozen stops, and a
+dozen beats that all end by hedging an impression is one voice with one move. Never state one as
 established fact, and never hand it to somebody else to say: "some visitors find",
 "people say", "it is often remarked" invents a source and is the worst thing you can do
 here. Do not say "I".
@@ -586,6 +605,21 @@ def invented_impressions(body: str, claims: list[dict[str, str]]) -> list[str]:
     return _sentences_matching(body, lambda sentence: bool(_IMPRESSION.search(sentence)))
 
 
+def scene_details(body: str, claims: list[dict[str, str]]) -> list[str]:
+    """Things the body puts in front of the listener that no claim mentions.
+
+    A signal for review, NOT a refusal. Roughly a third of what it finds is the body
+    using a different word for something a claim does name — "lawn" for a named meadow,
+    "door" for a portal — and refusing those would trade a correct body for a different
+    one. The rest is scenery the writer supplied to land a beat, which is the class a
+    person standing at the place catches first and no free check can settle.
+    """
+    said = set()
+    for claim in claims:
+        said |= set(verbatim_words(claim.get("claim", "")))
+    return sorted({w for w in verbatim_words(body) if w in _SCENE_WORDS and w not in said})
+
+
 def body_problems(body: str, claims: list[dict[str, str]]) -> dict[str, list[str]]:
     """Every free refusal a written body can earn, keyed by what it broke."""
     return {
@@ -752,6 +786,7 @@ def cleanroom_record(
         "ratio_after": round(verbatim_ratio(body_after, source), 3),
         "run_after": max_verbatim_run(body_after, source),
         "body_problems": problems,
+        "scene_details": scene_details(body_after, given),
         "usable": not any(problems.values()),
         "attempts": attempts,
         "decomposed_by": entry.get("model", ""),
@@ -954,8 +989,16 @@ def regrade_bodies(records: list[dict]) -> list[dict]:
     """
     out = []
     for record in records:
-        problems = body_problems(record.get("body_after", ""), record.get("claims_given", []))
-        out.append({**record, "body_problems": problems, "usable": not any(problems.values())})
+        body, given = record.get("body_after", ""), record.get("claims_given", [])
+        problems = body_problems(body, given)
+        out.append(
+            {
+                **record,
+                "body_problems": problems,
+                "scene_details": scene_details(body, given),
+                "usable": not any(problems.values()),
+            }
+        )
     return out
 
 
@@ -1050,7 +1093,9 @@ def _phase_write(city: str, limit: int, workers: int, client: Any) -> int:
         f"    {sum(1 for r in records if r.get('attempts', 1) > 1)} were asked a second time, "
         f"of which {sum(1 for r in records if r.get('second_ask_improved'))} came back better\n"
         f"  {still_lifted} still share an {VERBATIM_RUN_BLOCK}+ word run with a source "
-        f"the writer never saw"
+        f"the writer never saw\n"
+        f"  {sum(1 for r in usable if r.get('scene_details'))} put a thing in front of the "
+        f"listener that no claim mentions — for review, not refused"
     )
     return 0
 

@@ -14,7 +14,10 @@ from __future__ import annotations
 
 from scripts.corpus_report import (
     VERBATIM_RUN_BLOCK,
+    attributed_quote_spans,
     max_verbatim_run,
+    quoted_char_spans,
+    run_outside_quotation,
     shared_run_at,
     verbatim_words,
 )
@@ -24,14 +27,11 @@ from scripts.reauthor_triage import (
     BLOCKED_RUN,
     CLEAR,
     _content,
-    attributed_quote_spans,
     name_conflicts,
     numeric_conflicts,
     numeric_slots,
     order_follows_source,
     proper_names,
-    quoted_char_spans,
-    run_outside_quotation,
     run_shape,
     summarise,
     triage,

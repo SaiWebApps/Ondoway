@@ -45,9 +45,8 @@ from typing import Any
 from scripts.corpus_report import (
     VERBATIM_RUN_BLOCK,
     max_verbatim_run,
-    shared_run_at,
+    run_outside_quotation,
     verbatim_ratio,
-    verbatim_word_spans,
     verbatim_words,
 )
 from scripts.reauthor_preview import EXCLUDED_CITIES
@@ -62,41 +61,6 @@ BLOCKED_RUN = "blocked-run"
 BLOCKED_CONFLICT = "blocked-conflict"
 BLOCKED_BOTH = "blocked-both"
 
-#: Quotation delimiters that a rewrite actually uses. Straight and curly doubles,
-#: guillemets, and curly singles. The straight apostrophe is handled separately:
-#: it is the same character as the possessive, so it needs a position test rather
-#: than a character test.
-_QUOTE_PAIRS = (('"', '"'), ("\u201c", "\u201d"), ("\u00ab", "\u00bb"), ("\u2018", "\u2019"))
-
-#: A straight single quote opens a quotation only at a boundary and before a word,
-#: and closes one only after a word and before a boundary. "Colette's" matches
-#: neither, so a possessive never opens a span that swallows the rest of a body.
-_SINGLE_OPEN = re.compile("(?:(?<=^)|(?<=[\\s(\u2014\u2013:,]))'(?=[\\w\u00c0-\u024f])")
-_SINGLE_CLOSE = re.compile("(?<=[\\w\u00c0-\u024f.,!?;])'(?=$|[\\s)\u2014\u2013.,;:!?])")
-
-#: Words that name who is being quoted. A quotation with none of these near it is
-#: a quotation attributed to nobody, which is exactly the shape of an unmarked
-#: lift, so it earns no exemption.
-#:
-#: Every entry is an act of saying or a named source of words. Pointers that merely
-#: introduce a phrase — "the words", "a line", "a sign reading" — are NOT here: they
-#: identify quoted text without saying whose it is, and admitting them exempted a wall
-#: inscription attributed to nobody. The cost is that a genuine "a line from the Bible"
-#: is now blocked and reaches a person, which is the safe direction to be wrong in.
-# fmt: off
-_ATTRIBUTION_CUES = frozenset([
-    "wrote", "writes", "written", "write", "said", "says", "say", "saying", "told", "tells",
-    "telling", "asked", "asks", "called", "calls", "calling", "recalled", "recalls",
-    "described", "describes", "describing", "noted", "notes", "observed", "observes",
-    "remarked", "remarks", "quipped", "declared", "declares", "dubbed", "termed",
-    "letter", "diary", "memoir", "inscription", "inscribed", "motto", "epitaph",
-    "quoted", "quoting",
-])
-# fmt: on
-
-#: How far either side of a quotation an attribution may sit. One clause, not a
-#: paragraph: "she wrote:" leads a quote and "he told a friend" interrupts one.
-_ATTRIBUTION_WINDOW = 120
 
 #: An ordinal figure. "the mid-18th century" carries a number that `str.isdigit`
 #: cannot see, and a source saying 18th where the body says 19th moves a fact by a
@@ -123,87 +87,6 @@ def fold(text: str) -> str:
     `src/tour/validation` already use it: NFKD then drop what will not encode.
     """
     return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
-
-
-def quoted_char_spans(text: str) -> list[tuple[int, int]]:
-    """Character ranges of `text` that sit inside a quotation, opener to closer.
-
-    Unpaired openers are dropped rather than run to the end of the body: a stray
-    quote mark must not exempt everything after it.
-    """
-    spans: list[tuple[int, int]] = []
-    for opener, closer in _QUOTE_PAIRS:
-        if opener == closer:
-            marks = [m.start() for m in re.finditer(re.escape(opener), text)]
-            spans.extend((marks[i], marks[i + 1]) for i in range(0, len(marks) - 1, 2))
-            continue
-        depth, start = 0, 0
-        for index, char in enumerate(text):
-            if char == opener and depth == 0:
-                depth, start = 1, index
-            elif char == closer and depth == 1:
-                spans.append((start, index))
-                depth = 0
-    opens = [m.start() for m in _SINGLE_OPEN.finditer(text)]
-    closes = [m.start() for m in _SINGLE_CLOSE.finditer(text)]
-    for start in opens:
-        following = [c for c in closes if c > start]
-        if following:
-            spans.append((start, following[0]))
-            closes = [c for c in closes if c > following[0]]
-    return sorted(spans)
-
-
-def is_attributed(text: str, span: tuple[int, int]) -> bool:
-    """Whether a quotation names who said it, within a clause of either end."""
-    start, end = span
-    window = (
-        text[max(0, start - _ATTRIBUTION_WINDOW) : start] + text[end : end + _ATTRIBUTION_WINDOW]
-    )
-    return any(word in _ATTRIBUTION_CUES for word in verbatim_words(window))
-
-
-def attributed_quote_spans(text: str) -> list[tuple[int, int]]:
-    """The quotations of `text` that name a speaker — the only exempt ones."""
-    return [span for span in quoted_char_spans(text) if is_attributed(text, span)]
-
-
-def unquoted_segments(text: str) -> list[list[str]]:
-    """`text` as word runs, cut wherever an attributed quotation removes words.
-
-    Cutting rather than deleting is what makes the gate read a quotation as a
-    boundary: a lift that resumes on the far side of a quote is two shorter runs,
-    and a genuine quotation split by "he told a friend" leaves only those four
-    words behind instead of one long apparent lift straddling both halves.
-    """
-    exempt = attributed_quote_spans(text)
-    segments: list[list[str]] = []
-    current: list[str] = []
-    for word, start, end in verbatim_word_spans(text):
-        if any(qs <= start and end <= qe for qs, qe in exempt):
-            if current:
-                segments.append(current)
-                current = []
-            continue
-        current.append(word)
-    if current:
-        segments.append(current)
-    return segments
-
-
-def run_outside_quotation(body_after: str, source_passage: str) -> dict[str, Any]:
-    """The longest run the rewrite shares with its source outside an attributed quote.
-
-    Returns the run's `length` and the `text` of the words that matched, so a
-    reader can see the lift rather than a number claiming there was one.
-    """
-    source_words = verbatim_words(source_passage)
-    best_length, best_words = 0, []
-    for segment in unquoted_segments(body_after):
-        length, index = shared_run_at(segment, source_words)
-        if length > best_length:
-            best_length, best_words = length, segment[index : index + length]
-    return {"length": best_length, "text": " ".join(best_words)}
 
 
 def run_shape(run_text: str, body_after: str) -> str:

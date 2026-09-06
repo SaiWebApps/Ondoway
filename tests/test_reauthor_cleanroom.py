@@ -526,6 +526,26 @@ def test_an_impression_is_refused_where_no_claim_holds_one() -> None:
     assert invented_impressions("You may find the square quiet.", seen) == []
 
 
+def test_a_scene_the_claims_do_not_mention_is_flagged_not_refused() -> None:
+    """Roughly a third of these are the body's own word for something a claim names,
+    so this reaches a reviewer rather than throwing a correct body away."""
+    from scripts.reauthor_cleanroom import cleanroom_record, scene_details
+
+    given = [{"claim": "People play card games outdoors in the park.", "kind": "fact"}]
+    assert scene_details("Cards are dealt on its benches and tables.", given) == [
+        "benches",
+        "tables",
+    ]
+    record = cleanroom_record(
+        {"beat_id": "b", "poi_name": "P", "source_passage": "A park."},
+        body_before="old body",
+        given=given,
+        body_after="Cards are dealt on its benches and tables.",
+    )
+    assert record["scene_details"]
+    assert record["usable"] is True
+
+
 def test_a_refused_body_is_marked_unusable_not_shipped() -> None:
     """A body carries its own refusal, the way a claim set does."""
     from scripts.reauthor_cleanroom import cleanroom_record

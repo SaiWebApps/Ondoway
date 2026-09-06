@@ -178,16 +178,176 @@ def body_size_summary(beats: list[dict]) -> dict[str, int]:
     }
 
 
+#: Quotation delimiters that a rewrite actually uses. Straight and curly doubles,
+#: guillemets, and curly singles. The straight apostrophe is handled separately:
+#: it is the same character as the possessive, so it needs a position test rather
+#: than a character test.
+_QUOTE_PAIRS = (('"', '"'), ("\u201c", "\u201d"), ("\u00ab", "\u00bb"), ("\u2018", "\u2019"))
+
+#: A straight single quote opens a quotation only at a boundary and before a word,
+#: and closes one only after a word and before a boundary. "Colette's" matches
+#: neither, so a possessive never opens a span that swallows the rest of a body.
+_SINGLE_OPEN = re.compile("(?:(?<=^)|(?<=[\\s(\u2014\u2013:,]))'(?=[\\w\u00c0-\u024f])")
+_SINGLE_CLOSE = re.compile("(?<=[\\w\u00c0-\u024f.,!?;])'(?=$|[\\s)\u2014\u2013.,;:!?])")
+
+_ATTRIBUTION_CUES = frozenset(
+    [
+        "wrote",
+        "writes",
+        "written",
+        "write",
+        "said",
+        "says",
+        "say",
+        "saying",
+        "told",
+        "tells",
+        "telling",
+        "asked",
+        "asks",
+        "called",
+        "calls",
+        "calling",
+        "recalled",
+        "recalls",
+        "described",
+        "describes",
+        "describing",
+        "noted",
+        "notes",
+        "observed",
+        "observes",
+        "remarked",
+        "remarks",
+        "quipped",
+        "declared",
+        "declares",
+        "dubbed",
+        "termed",
+        "letter",
+        "diary",
+        "memoir",
+        "inscription",
+        "inscribed",
+        "motto",
+        "epitaph",
+        "quoted",
+        "quoting",
+    ]
+)
+
+#: How far either side of a quotation an attribution may sit. One clause, not a
+#: paragraph: "she wrote:" leads a quote and "he told a friend" interrupts one.
+_ATTRIBUTION_WINDOW = 120
+
+
+def quoted_char_spans(text: str) -> list[tuple[int, int]]:
+    """Character ranges of `text` that sit inside a quotation, opener to closer.
+
+    Unpaired openers are dropped rather than run to the end of the body: a stray
+    quote mark must not exempt everything after it.
+    """
+    spans: list[tuple[int, int]] = []
+    for opener, closer in _QUOTE_PAIRS:
+        if opener == closer:
+            marks = [m.start() for m in re.finditer(re.escape(opener), text)]
+            spans.extend((marks[i], marks[i + 1]) for i in range(0, len(marks) - 1, 2))
+            continue
+        depth, start = 0, 0
+        for index, char in enumerate(text):
+            if char == opener and depth == 0:
+                depth, start = 1, index
+            elif char == closer and depth == 1:
+                spans.append((start, index))
+                depth = 0
+    opens = [m.start() for m in _SINGLE_OPEN.finditer(text)]
+    closes = [m.start() for m in _SINGLE_CLOSE.finditer(text)]
+    for start in opens:
+        following = [c for c in closes if c > start]
+        if following:
+            spans.append((start, following[0]))
+            closes = [c for c in closes if c > following[0]]
+    return sorted(spans)
+
+
+def is_attributed(text: str, span: tuple[int, int]) -> bool:
+    """Whether a quotation names who said it, within a clause of either end."""
+    start, end = span
+    window = (
+        text[max(0, start - _ATTRIBUTION_WINDOW) : start] + text[end : end + _ATTRIBUTION_WINDOW]
+    )
+    return any(word in _ATTRIBUTION_CUES for word in verbatim_words(window))
+
+
+def attributed_quote_spans(text: str) -> list[tuple[int, int]]:
+    """The quotations of `text` that name a speaker — the only exempt ones."""
+    return [span for span in quoted_char_spans(text) if is_attributed(text, span)]
+
+
+def unquoted_segments(text: str) -> list[list[str]]:
+    """`text` as word runs, cut wherever an attributed quotation removes words.
+
+    Cutting rather than deleting is what makes the gate read a quotation as a
+    boundary: a lift that resumes on the far side of a quote is two shorter runs,
+    and a genuine quotation split by "he told a friend" leaves only those four
+    words behind instead of one long apparent lift straddling both halves.
+    """
+    exempt = attributed_quote_spans(text)
+    segments: list[list[str]] = []
+    current: list[str] = []
+    for word, start, end in verbatim_word_spans(text):
+        if any(qs <= start and end <= qe for qs, qe in exempt):
+            if current:
+                segments.append(current)
+                current = []
+            continue
+        current.append(word)
+    if current:
+        segments.append(current)
+    return segments
+
+
+def run_outside_quotation(body_after: str, source_passage: str) -> dict[str, Any]:
+    """The longest run the rewrite shares with its source outside an attributed quote.
+
+    Returns the run's `length` and the `text` of the words that matched, so a
+    reader can see the lift rather than a number claiming there was one.
+    """
+    source_words = verbatim_words(source_passage)
+    best_length, best_words = 0, []
+    for segment in unquoted_segments(body_after):
+        length, index = shared_run_at(segment, source_words)
+        if length > best_length:
+            best_length, best_words = length, segment[index : index + length]
+    return {"length": best_length, "text": " ".join(best_words)}
+
+
 def verbatim_summary(beats: list[dict]) -> dict[str, Any]:
-    """How many beats were copied from their source, and how copied the corpus is."""
+    """How many beats were copied from their source, and how copied the corpus is.
+
+    Two measures, because they answer different questions and only one of them gates.
+    The RATIO says how copied a whole body is; it is reported because it describes the
+    corpus, and it is not a gate, because one lifted clause inside a long body scores
+    near zero under it. The longest RUN outside an attributed quotation says whether
+    any sentence was lifted at all, which is the question a reader is actually asking,
+    and it is the number the review path blocks on.
+    """
+    scoreable = [b for b in beats if (b.get("source_passage") or "").strip()]
     untraceable = [b for b in beats if not (b.get("source_passage") or "").strip()]
     ratios = [
-        verbatim_ratio(b.get("script_body") or "", b.get("source_passage") or "")
-        for b in beats
-        if (b.get("source_passage") or "").strip()
+        verbatim_ratio(b.get("script_body") or "", b.get("source_passage") or "") for b in scoreable
     ]
+    runs = [
+        run_outside_quotation(b.get("script_body") or "", b.get("source_passage") or "")["length"]
+        for b in scoreable
+    ]
+    blocked = sum(1 for r in runs if r >= VERBATIM_RUN_BLOCK)
     flagged = sum(1 for r in ratios if r >= VERBATIM_THRESHOLD)
     return {
+        "run_blocked": blocked,
+        "run_blocked_pct": round(100 * blocked / len(runs), 1) if runs else 0.0,
+        "median_run": int(statistics.median(runs)) if runs else 0,
+        "run_block": VERBATIM_RUN_BLOCK,
         "flagged": flagged,
         "scoreable": len(ratios),
         # A beat citing no source is not clean prose — it is a beat nothing can be
@@ -532,6 +692,11 @@ def _render(city_slug: str, report: dict[str, Any]) -> str:
         f"p90 {size['p90_words']}w  longest {size['longest_words']}w"
     )
     vb = report["verbatim"]
+    lines.append(
+        f"  lifted       {vb['run_blocked']} of {vb['scoreable']} scoreable beats "
+        f"({vb['run_blocked_pct']}%) share a {vb['run_block']}+ word run with their source "
+        f"outside an attributed quotation  (median run {vb['median_run']}w)"
+    )
     lines.append(
         f"  verbatim     {vb['flagged']} of {vb['scoreable']} scoreable beats "
         f"({vb['flagged_pct']}%) are >={int(vb['threshold'] * 100)}% copied from their source"
