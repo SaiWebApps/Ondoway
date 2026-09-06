@@ -123,14 +123,37 @@ def _corpus_payload(city_slug: str) -> dict[str, Any]:
     }
 
 
-def _reauthored_payload(city_slug: str) -> dict[str, Any]:
-    """The review queue for one city: what still needs a person, doubted first."""
+def _reauthored_payload(city_slug: str, *, show_all: bool = False) -> dict[str, Any]:
+    """The review queue for one city.
+
+    By default this is ONLY what the machine could not settle. The design's D1 is
+    triage, not blanket verification, so a rewrite two independent models agree
+    adds nothing and drops nothing does not consume a person's attention. Pass
+    show=all to spot-check the auto-approved, which is worth doing periodically.
+    """
     records = load_candidates(city_slug)
+    summary = decision_summary(records)
+    summary["auto_approved"] = sum(
+        1 for r in records if str(r.get("decided_by", "")).startswith("auto:")
+    )
+    summary["escalated"] = sum(
+        1 for r in records if (r.get("verified") or {}).get("status") == "escalate"
+    )
+    summary["unverified"] = sum(1 for r in records if not r.get("verified"))
+
+    shown = review_order(records)
+    if not show_all:
+        shown = [
+            r
+            for r in shown
+            if (r.get("verified") or {}).get("status") == "escalate" or not r.get("verified")
+        ]
     return {
         "city": city_slug,
         "reviewer": reviewer_identity(),
-        "summary": decision_summary(records),
-        "candidates": review_order(records),
+        "summary": summary,
+        "candidates": shown,
+        "showing": "all" if show_all else "escalated",
     }
 
 
@@ -149,8 +172,13 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         elif route.path == "/api/corpus":
             self._corpus_route(parse_qs(route.query).get("city", ["paris"])[0])
         elif route.path == "/api/reauthored":
-            city = parse_qs(route.query).get("city", ["paris"])[0]
-            self._json_response(_reauthored_payload(city))
+            query = parse_qs(route.query)
+            self._json_response(
+                _reauthored_payload(
+                    query.get("city", ["paris"])[0],
+                    show_all=query.get("show", [""])[0] == "all",
+                )
+            )
         else:
             super().do_GET()
 

@@ -159,3 +159,24 @@ def test_a_decision_is_refused_for_an_unknown_verdict(dashboard_url: str) -> Non
         {"city": "paris", "beat_id": "x", "decision": "looks-fine"},
     )
     assert status == 400
+
+
+def test_review_route_shows_only_what_needs_a_person(dashboard_url: str) -> None:
+    """The queue is the escalations, not the corpus. 384 of 524 were machine-settled."""
+    status, body = _get(f"{dashboard_url}/api/reauthored?city=paris")
+    assert status == 200
+    payload = json.loads(body)
+
+    assert payload["summary"]["auto_approved"] > 0
+    assert payload["summary"]["escalated"] == len(payload["candidates"])
+    # Every row a person sees carries the machine's reason for not settling it.
+    assert all(row["verified"]["reason"] for row in payload["candidates"])
+    assert len(payload["candidates"]) < payload["summary"]["total"]
+
+
+def test_review_route_can_still_show_everything(dashboard_url: str) -> None:
+    """Spot-checking the auto-approved is a legitimate thing to want."""
+    status, body = _get(f"{dashboard_url}/api/reauthored?city=paris&show=all")
+    payload = json.loads(body)
+    assert status == 200
+    assert len(payload["candidates"]) == payload["summary"]["total"]

@@ -83,17 +83,19 @@ let state = { city: "paris", candidates: [], summary: {}, reviewer: "" };
 
 function card(row) {
   const decided = row.decision;
+  const auto = String(row.decided_by || "").startsWith("auto:");
   const pill = decided
-    ? `<span class="pill done">${esc(decided)}d by ${esc(row.decided_by)}</span>`
-    : row.flags
-      ? `<span class="pill flag">${row.flags} doubted sentence${row.flags > 1 ? "s" : ""}</span>`
-      : `<span class="pill ok">nothing flagged</span>`;
+    ? `<span class="pill ${auto ? "ok" : "done"}">${esc(decided)}d ${
+        auto ? "by both models" : "by " + esc(row.decided_by)}</span>`
+    : `<span class="pill flag">needs you</span>`;
 
-  const doubts = (row.ungrounded || []).length
-    ? `<div class="doubt"><strong>The gate could not trace these to the source.</strong>
-         It over-refuses on rephrasing, so read them rather than trust it.
-         ${row.ungrounded.map((s) => `<p>— ${esc(s)}</p>`).join("")}</div>`
-    : "";
+  const v = row.verified || {};
+  const doubts = v.reason
+    ? `<div class="doubt"><strong>Two models checked this and could not settle it.</strong>
+         <p>${esc(v.reason)}</p></div>`
+    : !row.verified
+      ? `<div class="doubt">Not yet machine-verified.</div>`
+      : "";
 
   return `<div class="card ${decided ? "decided" : ""}" id="c-${esc(row.beat_id)}">
     <div class="head">
@@ -121,9 +123,11 @@ function card(row) {
 function render() {
   const s = state.summary;
   $("tally").innerHTML =
-    `<b>${s.undecided}</b> left to judge · <b>${s.approved}</b> approved ·
-     <b>${s.rejected}</b> rejected · ${s.total} candidates` +
-    (s.stale ? ` · <span class="err">${s.stale} approval(s) went stale</span>` : "");
+    `<b>${s.escalated ?? 0}</b> need you · <b>${s.auto_approved ?? 0}</b> settled by two models ·
+     <b>${s.rejected}</b> rejected · ${s.total} rewrites` +
+    (s.unverified ? ` · ${s.unverified} not yet verified` : "") +
+    (s.stale ? ` · <span class="err">${s.stale} approval(s) went stale</span>` : "") +
+    ` · <a href="?city=${encodeURIComponent(state.city)}&show=all">show all</a>`;
   $("who").textContent = `decisions recorded as ${state.reviewer}`;
   $("queue").innerHTML = state.candidates.map(card).join("");
 }
@@ -145,7 +149,9 @@ async function decide(beatId, decision) {
 async function load(city) {
   state.city = city;
   $("queue").innerHTML = `<p class="sub">Reading ${esc(city)}…</p>`;
-  const res = await fetch(`/api/reauthored?city=${encodeURIComponent(city)}`);
+  const showAll = new URLSearchParams(location.search).get("show") === "all";
+  const res = await fetch(`/api/reauthored?city=${encodeURIComponent(city)}`
+    + (showAll ? "&show=all" : ""));
   const data = await res.json();
   state = { ...state, ...data };
   if ($("city").options.length === 0) {
@@ -154,7 +160,7 @@ async function load(city) {
       .map((c) => `<option ${c === city ? "selected" : ""}>${esc(c)}</option>`).join("");
   }
   if (!state.candidates.length) {
-    $("queue").innerHTML = `<p class="sub">No candidates for ${esc(city)}. Generate them with
+    $("queue").innerHTML = `<p class="sub">Nothing needs you in ${esc(city)}. Generate or verify with
       <code>ONDOWAY_DEMO_APPROVE=1 uv run python scripts/reauthor_run.py --city ${esc(city)}</code>.</p>`;
     $("tally").textContent = "";
     return;
