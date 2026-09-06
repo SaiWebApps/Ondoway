@@ -421,3 +421,12 @@ def test_the_better_of_two_attempts_is_the_one_kept() -> None:
     worse = {"lifted_claims": [], "dangling_claims": ["b"], "uncovered_sentences": ["c"]}
     assert _problem_count(first) < _problem_count(worse)
     assert min((worse, first), key=_problem_count) is first
+
+
+def test_a_body_whose_claims_changed_is_not_kept() -> None:
+    """A second ask changes the claim block; the body written before it is stale."""
+    given = shuffled_claims(_CLAIMS, "b")
+    entry = {"beat_id": "b", "poi_name": "P", "source_passage": "S.", "model": "m"}
+    record = cleanroom_record(entry, body_before="old", given=given, body_after="new")
+    reasked = [*_CLAIMS, {"claim": "A claim the second ask added.", "kind": "fact"}]
+    assert record["claims_sha256"] != input_hash(shuffled_claims(reasked, "b"))

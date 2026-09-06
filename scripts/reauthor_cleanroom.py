@@ -621,13 +621,28 @@ def _phase_decompose(city: str, limit: int, workers: int, client: Any) -> int:
 
 
 def _phase_write(city: str, limit: int, workers: int, client: Any) -> int:
-    claims = [r for r in load_json(claims_path(city)) if r.get("usable")]
+    # Re-graded here too: a write run started without a decompose run would otherwise
+    # write from claim sets a current gate refuses.
+    claims = [r for r in regrade(load_json(claims_path(city))) if r.get("usable")]
     if not claims:
         print(f"✗ no usable claim sets for {city} — run --phase decompose first.")
         return 1
 
     out = cleanroom_path(city)
     records = load_json(out)
+    # A body is bound to the claim block it was written from. A second ask changes that
+    # block, so a body written before it is prose nobody's current claims support — the
+    # hash is what makes that visible instead of silently shipping the stale one.
+    fresh = {input_hash(shuffled_claims(c["claims"], c["beat_id"])): c["beat_id"] for c in claims}
+    kept, stale = [], 0
+    for record in records:
+        if fresh.get(record.get("claims_sha256", "")) == record.get("beat_id"):
+            kept.append(record)
+        else:
+            stale += 1
+    records = kept
+    if stale:
+        print(f"  {stale} stored bodies no longer match their claims and are rewritten")
     seen = {r["beat_id"] for r in records if r.get("beat_id")}
     pending = [c for c in claims if c["beat_id"] not in seen]
     if limit:
