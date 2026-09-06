@@ -122,12 +122,16 @@ function card(row) {
 
 function render() {
   const s = state.summary;
+  const clean = state.source === "cleanroom";
+  const link = (q) => `?city=${encodeURIComponent(state.city)}&source=${q}`;
   $("tally").innerHTML =
-    `<b>${s.escalated ?? 0}</b> need you · <b>${s.auto_approved ?? 0}</b> settled by two models ·
-     <b>${s.rejected}</b> rejected · ${s.total} rewrites` +
-    (s.unverified ? ` · ${s.unverified} not yet verified` : "") +
+    `<b>${s.needs_a_person ?? 0}</b> need you · <b>${s.rejected}</b> rejected ·
+     ${s.total} ${clean ? "clean-room bodies" : "rewrites"}` +
+    (clean ? "" : ` · <b>${s.auto_approved ?? 0}</b> settled by two models`) +
+    (!clean && s.unverified ? ` · ${s.unverified} not yet verified` : "") +
     (s.stale ? ` · <span class="err">${s.stale} approval(s) went stale</span>` : "") +
-    ` · <a href="?city=${encodeURIComponent(state.city)}&show=all">show all</a>`;
+    ` · <a href="${link(state.source)}&show=all">show all</a>` +
+    ` · <a href="${link(clean ? "rewrite" : "cleanroom")}">${clean ? "rewrites" : "clean-room bodies"}</a>`;
   $("who").textContent = `decisions recorded as ${state.reviewer}`;
   $("queue").innerHTML = state.candidates.map(card).join("");
 }
@@ -136,7 +140,7 @@ async function decide(beatId, decision) {
   const res = await fetch("/api/reauthored/decision", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ city: state.city, beat_id: beatId, decision }),
+    body: JSON.stringify({ city: state.city, beat_id: beatId, decision, source: state.source }),
   });
   const data = await res.json();
   if (!res.ok) { alert(data.error || "failed"); return; }
@@ -149,9 +153,11 @@ async function decide(beatId, decision) {
 async function load(city) {
   state.city = city;
   $("queue").innerHTML = `<p class="sub">Reading ${esc(city)}…</p>`;
-  const showAll = new URLSearchParams(location.search).get("show") === "all";
+  const params = new URLSearchParams(location.search);
+  const showAll = params.get("show") === "all";
+  state.source = params.get("source") === "cleanroom" ? "cleanroom" : "rewrite";
   const res = await fetch(`/api/reauthored?city=${encodeURIComponent(city)}`
-    + (showAll ? "&show=all" : ""));
+    + `&source=${state.source}` + (showAll ? "&show=all" : ""));
   const data = await res.json();
   state = { ...state, ...data };
   if ($("city").options.length === 0) {

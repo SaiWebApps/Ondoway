@@ -155,6 +155,10 @@ def _reauthored_payload(
         1 for r in records if (r.get("verified") or {}).get("status") == "escalate"
     )
     summary["unverified"] = sum(1 for r in records if not r.get("verified"))
+    # What the reviewer is actually being handed, whichever artifact this is. The
+    # tally cannot read `escalated` for both: a clean-room body has no panel verdict
+    # to escalate, and reporting zero there would say nobody is needed.
+    summary["needs_a_person"] = sum(1 for r in records if _needs_a_person(r, source))
 
     shown = review_order(records)
     if not show_all:
