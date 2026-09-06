@@ -52,6 +52,7 @@ import hashlib
 import json
 import os
 import random
+import re
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
@@ -67,6 +68,12 @@ from scripts.corpus_report import (
 )
 from scripts.reauthor_preview import _VOICE_RULES, is_excluded
 from src.city_registry import load_registry
+from src.tour.claim_dedup import (
+    COVERAGE_MATCH_MIN,
+    _overlap,
+    _signature,
+)
+from src.tour.generation import split_sentences
 
 #: The one model that PRODUCES, in both roles. Decomposing and writing with the same
 #: model costs Stage 2 one judge rather than two: a panel must exclude every model
@@ -84,6 +91,23 @@ DEFAULT_WORKERS = 8
 #: The shortest beat worth writing. A handful of very short copied bodies would
 #: otherwise ask for a length no sentence can land in.
 MIN_TARGET_WORDS = 40
+
+#: Salient words a source sentence needs before its absence means anything. Below this
+#: a "sentence" is a fragment — "Anything wiggling?" — that states no fact for a claim
+#: to carry, and reporting it as lost content buys a retry that can fix nothing.
+#: `claim_dedup`'s MIN_SHARED_TOKENS is 2, which is the floor for a CLAIM's signature;
+#: a whole sentence is held to more.
+MIN_SENTENCE_TOKENS = 4
+
+#: Openings that point at a neighbouring claim. The set is shuffled before the writer
+#: sees it, so "That uprising alarmed the kings" has nothing to refer to by the time it
+#: is read. A demonstrative followed by a verb ("That is the oldest") is a complete
+#: sentence and not an anaphor, so it is left alone.
+_ANAPHOR = re.compile(
+    r"^\s*(?:(?:He|She|It|They|Him|Her|Them|His|Their|Its)\b"
+    r"|(?:That|This|These|Those)\s+(?!is\b|are\b|was\b|were\b)\w"
+    r"|(?:Later|Also|Afterwards|Subsequently|The same)\b)"
+)
 
 #: What a claim is marked as. Two kinds, not a taxonomy: `reauthor_preview`'s
 #: `grounding_claims` records two measured beats where the source carried the
@@ -118,13 +142,11 @@ PASSAGE:
 Reply with JSON only, no prose:
 {{"claims": [{{"claim": "...", "kind": "fact"}}]}}"""
 
-_REPHRASE_PROMPT = """These claims still repeat the passage's wording:
+_REDO_PROMPT = """Your claim set was refused. What is wrong with it:
 
-{lifted}
+{problems}
 
-Rewrite the WHOLE claim set again, saying the same things in wording of your own. A
-claim that shares eight consecutive words with the passage is rejected, even when the
-words are an ordinary way to state the fact — find another way to say it.
+Decompose the passage again, from the start, fixing all of it.
 
 PASSAGE:
 {source}
@@ -175,13 +197,38 @@ def decompose_request(*, source: str) -> dict[str, Any]:
     }
 
 
-def rephrase_request(*, source: str, lifted: list[str]) -> dict[str, Any]:
-    """The second and final ask, naming the claims that came back too close.
+def redo_problems(record: dict) -> str:
+    """What to tell the decomposer its claim set got wrong, in its own terms."""
+    parts: list[str] = []
+    if record.get("lifted_claims"):
+        parts.append(
+            "These claims still repeat the passage's wording. A claim sharing eight\n"
+            "consecutive words with the passage is refused even when those words are an\n"
+            "ordinary way to state the fact — find another way to say it:\n"
+            + "\n".join(f"- {c}" for c in record["lifted_claims"])
+        )
+    if record.get("dangling_claims"):
+        parts.append(
+            "These claims point at another claim. The set is SHUFFLED before anyone reads\n"
+            "it, so each one must name its own subject:\n"
+            + "\n".join(f"- {c}" for c in record["dangling_claims"])
+        )
+    if record.get("uncovered_sentences"):
+        parts.append(
+            "Nothing in your claim set carries what these sentences say. Every one is a\n"
+            "fact that would leave the corpus silently:\n"
+            + "\n".join(f"- {s}" for s in record["uncovered_sentences"])
+        )
+    return "\n\n".join(parts)
+
+
+def redo_request(*, source: str, problems: str) -> dict[str, Any]:
+    """The second and final ask, naming exactly what the first set got wrong.
 
     A whole beat is worth more than one stubborn claim. "On the eastern side of the
     Pont-Neuf" is eight shared words and also the plainest way to state where a square
     is, so refusing the beat outright would discard thirteen good claims to punish an
-    unavoidable locution. The threshold does not move — the decomposer is asked again.
+    unavoidable locution. No threshold moves — the decomposer is asked again.
     """
     return {
         "model": PRODUCER_MODEL,
@@ -189,9 +236,7 @@ def rephrase_request(*, source: str, lifted: list[str]) -> dict[str, Any]:
         "messages": [
             {
                 "role": "user",
-                "content": _REPHRASE_PROMPT.format(
-                    lifted="\n".join(f"- {c}" for c in lifted), source=source
-                ),
+                "content": _REDO_PROMPT.format(problems=problems, source=source),
             }
         ],
     }
@@ -237,17 +282,55 @@ def lifted_claims(claims: list[dict[str, str]], source: str) -> list[str]:
     ]
 
 
+def dangling_claims(claims: list[dict[str, str]]) -> list[str]:
+    """Claims that point at a neighbour they will not have once the set is shuffled."""
+    return [c["claim"] for c in claims if _ANAPHOR.match(c["claim"])]
+
+
+def uncovered_sentences(claims: list[dict[str, str]], source: str) -> list[str]:
+    """Source sentences no claim carries — content that would leave the corpus silently.
+
+    Omission is the decomposer's dangerous failure: a claim never written is a fact the
+    finished body cannot contain, and nothing downstream can tell that apart from a
+    source that never said it. Measured with `claim_dedup`'s own coverage primitives at
+    `COVERAGE_MATCH_MIN`, the threshold that module already documents as catching gross
+    deletion while tolerating rewording. A sentence too short to have a signature is
+    skipped rather than reported, exactly as `claims_realized_by` skips such claims.
+
+    A sentence is checked against the UNION of the claims, never the best single one.
+    One sentence is deliberately split into several claims and each is deliberately
+    reworded, so "Located in room 13 on the first floor, open daily except Tues, 9:15"
+    is carried between four claims and matched by none of them alone.
+    """
+    covered: set[str] = set()
+    for claim in claims:
+        covered |= _signature(claim["claim"])
+    union = frozenset(covered)
+    missed = []
+    for sentence in split_sentences(source):
+        sig = _signature(sentence)
+        if len(sig) < MIN_SENTENCE_TOKENS:
+            continue
+        if _overlap(sig, union) < COVERAGE_MATCH_MIN:
+            missed.append(sentence)
+    return missed
+
+
 def claims_record(beat: dict, *, claims: list[dict[str, str]]) -> dict[str, Any]:
     """One beat's claim set, with what the free gate found in it."""
     source = (beat.get("source_passage") or "").strip()
     lifted = lifted_claims(claims, source)
+    dangling = dangling_claims(claims)
+    uncovered = uncovered_sentences(claims, source) if claims else []
     return {
         "beat_id": beat.get("beat_id", ""),
         "poi_name": beat.get("poi_name", ""),
         "source_passage": source,
         "claims": claims,
         "lifted_claims": lifted,
-        "usable": not lifted,
+        "dangling_claims": dangling,
+        "uncovered_sentences": uncovered,
+        "usable": not (lifted or dangling or uncovered),
         "model": PRODUCER_MODEL,
         "generated_at": datetime.now(UTC).isoformat(),
     }
@@ -430,15 +513,24 @@ def _decompose_one(beat: dict, client: Any) -> dict[str, Any]:
     if record["usable"]:
         return record
 
-    retried = client.messages.create(
-        **rephrase_request(source=source, lifted=record["lifted_claims"])
-    )
+    retried = client.messages.create(**redo_request(source=source, problems=redo_problems(record)))
     reworded = parse_claims(_text_of(retried))
     if reworded is None:
         return record
     second = claims_record(beat, claims=reworded)
     second["attempts"] = 2
-    return second
+    # A second ask can come back worse. Keeping it unconditionally would let a retry
+    # spend money to degrade a set, so the one with fewer problems wins.
+    return min((second, record), key=_problem_count)
+
+
+def _problem_count(record: dict) -> int:
+    """How much is wrong with a claim set, for choosing between two attempts."""
+    return (
+        len(record.get("lifted_claims") or [])
+        + len(record.get("dangling_claims") or [])
+        + len(record.get("uncovered_sentences") or [])
+    )
 
 
 def _write_one(entry: dict, bodies: dict[str, str], city: str, client: Any) -> dict[str, Any]:
@@ -471,11 +563,42 @@ def _run(pool_size: int, work: list, task: Any, out: Path, records: list[dict]) 
                 print(f"  {done}/{len(work)}")
 
 
+def regrade(records: list[dict]) -> list[dict]:
+    """Re-run the free gates over stored claim sets, so the gate is what decides.
+
+    `usable` is written when a set is bought, and the gates have gained members since
+    the first sets were. A stored flag would let a set graded by a weaker gate stay
+    usable forever, which is how a refuted check survives its own replacement. The
+    gates cost nothing, so they are re-run rather than trusted.
+    """
+    out = []
+    for record in records:
+        if not record.get("claims"):
+            out.append(record)
+            continue
+        regraded = claims_record(
+            {
+                "beat_id": record.get("beat_id", ""),
+                "poi_name": record.get("poi_name", ""),
+                "source_passage": record.get("source_passage", ""),
+            },
+            claims=record["claims"],
+        )
+        regraded["attempts"] = record.get("attempts", 1)
+        regraded["generated_at"] = record.get("generated_at", regraded["generated_at"])
+        out.append(regraded)
+    return out
+
+
 def _phase_decompose(city: str, limit: int, workers: int, client: Any) -> int:
     out = claims_path(city)
-    records = load_json(out)
-    seen = {r["beat_id"] for r in records if r.get("beat_id")}
-    pending = [b for b in copied_backlog(load_city_beats(city)) if b.get("beat_id") not in seen]
+    records = regrade(load_json(out))
+    save_json(out, records)
+    # A set the gates now refuse is bought again, not kept: the alternative is writing
+    # a beat from claims a current gate rejects.
+    settled = {r["beat_id"] for r in records if r.get("beat_id") and r.get("usable")}
+    records = [r for r in records if r.get("usable")]
+    pending = [b for b in copied_backlog(load_city_beats(city)) if b.get("beat_id") not in settled]
     if limit:
         pending = pending[:limit]
     print(f"{city}: {len(records)} claim sets already bought, {len(pending)} to decompose now.")
@@ -487,9 +610,12 @@ def _phase_decompose(city: str, limit: int, workers: int, client: Any) -> int:
     refused = [r for r in records if not r.get("usable")]
     print(
         f"✓ {len(records)} claim sets in {out}\n"
-        f"  {len(records) - len(refused)} usable, {len(refused)} refused "
-        f"({sum(1 for r in refused if r.get('unreadable'))} unreadable, "
-        f"{sum(1 for r in refused if r.get('lifted_claims'))} carry a lifted claim)"
+        f"  {len(records) - len(refused)} usable, {len(refused)} refused\n"
+        f"    {sum(1 for r in refused if r.get('unreadable'))} unreadable, "
+        f"{sum(1 for r in refused if r.get('lifted_claims'))} lifted, "
+        f"{sum(1 for r in refused if r.get('dangling_claims'))} dangling, "
+        f"{sum(1 for r in refused if r.get('uncovered_sentences'))} miss source content\n"
+        f"    {sum(1 for r in records if r.get('attempts') == 2)} needed a second ask"
     )
     return 0
 

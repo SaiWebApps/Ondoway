@@ -38,6 +38,7 @@ from scripts.reauthor_cleanroom import (
     shuffle_seed,
     shuffled_claims,
     target_words,
+    uncovered_sentences,
 )
 
 _CLAIMS = [
@@ -271,22 +272,66 @@ def test_the_prompt_names_the_city_the_way_the_product_does() -> None:
     assert city_name("nowhere") == "nowhere"
 
 
-def test_the_rephrase_ask_names_the_claims_that_were_refused() -> None:
-    """A whole beat is worth more than one stubborn claim, and the threshold holds."""
-    from scripts.reauthor_cleanroom import rephrase_request
+def test_the_second_ask_names_every_kind_of_problem() -> None:
+    """A whole beat is worth more than one bad claim, and no threshold moves."""
+    from scripts.reauthor_cleanroom import redo_problems
 
-    payload = json.dumps(
-        rephrase_request(source="A passage.", lifted=["on the eastern side of the Pont-Neuf"])
+    problems = redo_problems(
+        {
+            "lifted_claims": ["on the eastern side of the Pont-Neuf"],
+            "dangling_claims": ["That uprising alarmed the kings."],
+            "uncovered_sentences": ["He read French literature."],
+        }
     )
-    assert "on the eastern side of the Pont-Neuf" in payload
-    assert "eight consecutive words" in payload
+    assert "on the eastern side of the Pont-Neuf" in problems
+    assert "That uprising alarmed the kings." in problems
+    assert "He read French literature." in problems
 
 
-def test_the_rephrase_ask_still_shows_the_source() -> None:
+def test_the_second_ask_still_shows_the_source() -> None:
     """It is a decomposition, not a paraphrase of a claim in isolation."""
-    from scripts.reauthor_cleanroom import rephrase_request
+    from scripts.reauthor_cleanroom import redo_request
 
-    assert "A passage." in json.dumps(rephrase_request(source="A passage.", lifted=["x"]))
+    assert "A passage." in json.dumps(redo_request(source="A passage.", problems="x"))
+
+
+def test_a_claim_that_points_at_its_neighbour_is_refused() -> None:
+    """The set is shuffled, so "That uprising" has nothing left to refer to."""
+    from scripts.reauthor_cleanroom import dangling_claims
+
+    assert dangling_claims([{"claim": "That uprising alarmed the kings.", "kind": "fact"}])
+    assert dangling_claims([{"claim": "It was in 1794 that the doors opened.", "kind": "fact"}])
+
+
+def test_a_demonstrative_that_is_not_an_anaphor_passes() -> None:
+    """ "There is a Metro station" and "That is the oldest" name their own subjects."""
+    from scripts.reauthor_cleanroom import dangling_claims
+
+    assert (
+        dangling_claims([{"claim": "There is a Metro station called Pont Neuf.", "kind": "f"}])
+        == []
+    )
+    assert dangling_claims([{"claim": "That is the oldest bridge in Paris.", "kind": "fact"}]) == []
+
+
+def test_source_content_no_claim_carries_is_refused() -> None:
+    """Omission is the decomposer's dangerous failure: it looks like silence."""
+    source = (
+        "The gardens honour Pope John XXIII. He was the papal nuncio in Paris. "
+        "Parisians remember his long walks through the city with friends."
+    )
+    claims = [{"claim": "The gardens are a tribute to Pope John XXIII.", "kind": "fact"}]
+    missed = uncovered_sentences(claims, source)
+    assert any("long walks" in s for s in missed)
+
+
+def test_a_claim_set_that_carries_every_sentence_is_covered() -> None:
+    source = "The gardens honour Pope John XXIII. Parisians remember his long walks."
+    claims = [
+        {"claim": "The gardens are a tribute to Pope John XXIII.", "kind": "fact"},
+        {"claim": "Parisians recall the long walks John XXIII took.", "kind": "fact"},
+    ]
+    assert uncovered_sentences(claims, source) == []
 
 
 def test_the_length_target_comes_from_the_beat_being_replaced() -> None:
@@ -322,3 +367,57 @@ def test_the_writer_may_not_invent_a_physical_detail() -> None:
     """Freed from the old body, the first sample told listeners to look at a widening."""
     payload = json.dumps(cleanroom_request(claims=_CLAIMS, poi="P", city="Paris", words=90))
     assert "the roadway does not widen" in payload
+
+
+def test_a_sentence_split_across_several_claims_is_covered() -> None:
+    """The union, never the best single claim.
+
+    Real strings from `data/paris/claims.json`: one source sentence became three
+    claims, each carrying a third of it. The best single claim reaches 0.22 and the
+    union reaches 0.40, so taking the maximum refused a decomposition that lost
+    nothing — and that shape is exactly what the prompt asks the decomposer for.
+    """
+    from src.tour.claim_dedup import COVERAGE_MATCH_MIN, _overlap, _signature
+
+    source = (
+        "He is always shown indicating a wound on his leg, and with his companion, "
+        "a dog who brought him sustenance."
+    )
+    claims = [
+        {
+            "claim": "The patron saint of plague victims is invariably depicted pointing "
+            "out a wound on his leg.",
+            "kind": "fact",
+        },
+        {
+            "claim": "The patron saint of plague victims is invariably depicted "
+            "accompanied by a dog.",
+            "kind": "fact",
+        },
+        {
+            "claim": "The dog shown with the patron saint of plague victims is said to "
+            "have supplied the saint with food.",
+            "kind": "fact",
+        },
+    ]
+    sig = _signature(source)
+    assert max(_overlap(sig, _signature(c["claim"])) for c in claims) < COVERAGE_MATCH_MIN, (
+        "fixture must be one no single claim covers, or it proves nothing"
+    )
+    assert uncovered_sentences(claims, source) == []
+
+
+def test_a_fragment_is_not_reported_as_lost_content() -> None:
+    """ "Anything wiggling?" states no fact, so its absence buys a retry that fixes nothing."""
+    claims = [{"claim": "Fresh fish reaches Paris daily from Channel ports.", "kind": "fact"}]
+    assert uncovered_sentences(claims, "Anything wiggling?") == []
+
+
+def test_the_better_of_two_attempts_is_the_one_kept() -> None:
+    """A second ask can come back worse; paying for that and keeping it is the trap."""
+    from scripts.reauthor_cleanroom import _problem_count
+
+    first = {"lifted_claims": ["a"], "dangling_claims": [], "uncovered_sentences": []}
+    worse = {"lifted_claims": [], "dangling_claims": ["b"], "uncovered_sentences": ["c"]}
+    assert _problem_count(first) < _problem_count(worse)
+    assert min((worse, first), key=_problem_count) is first
