@@ -89,9 +89,11 @@ the same chunk's current beats. The gate changes extractor behaviour or it does 
 one chunk is what it costs to find out. Nothing else in this scope proceeds until that
 comparison is on paper.
 
-A pass means the re-extracted chunk's runs fall below the block with no loss of beat
-count or enrichment coverage. A fail means the prompt change is insufficient and the
-design needs the gate to feed a retry, which is a different scope.
+A pass means the re-extracted chunk's runs fall below the block while beat count, POI
+coverage and enrichment coverage hold. Two distinct failures are possible and they lead
+different places: runs that stay high mean the gate and prompt do not change extractor
+behaviour and the design is wrong; runs that fall while beat count collapses means the
+gates are over-tight and the corpus would shrink, which is the risk below.
 
 ## Out of scope
 
@@ -104,13 +106,35 @@ design needs the gate to feed a retry, which is a different scope.
 - **Whether re-extraction improves tour quality.** This scope restores traceability and
   removes copying. Whether the resulting beats make better tours is measured elsewhere.
 
-## What is not yet decided
+## Decided
 
-These need a human ruling before the batch runs, and each changes the work:
+**A gated beat is refused and re-asked once.** The extractor is told which beat copied
+and writes that one again. Unlike a downstream rewrite, naming the offending run costs
+nothing here: the extractor is holding the source already, so there is no seam to break.
+A beat that copies twice is dropped and named in the chunk report.
 
-- Whether the gate refuses a beat outright or refuses and re-asks the extractor once.
-- Whether a re-extracted chunk replaces its predecessor unconditionally, or only when it
-  produces at least as many beats.
-- Whether the fact-check verdicts already recorded on existing beats survive
-  re-extraction or are re-earned.
-- Whether the 56 orphans are worth the clean-room run at all, or are simply dropped.
+**A re-extracted chunk replaces its predecessor unconditionally.** The beats it replaces
+are copied, and a rule that keeps the old set when the new one is thinner keeps prose
+that cannot ship. The comparison is still made and reported per chunk — beat count, POI
+coverage, lens spread against the set it replaced — but it informs a person, it does not
+gate the write.
+
+**Fact-check verdicts do not transfer.** A verdict is bound to the text it was given for;
+`validate_beats` already enforces exactly that through `verified_body_hash`. Re-extracted
+beats land `unverified` and are re-earned by a `/fact-check` pass over the chunks that
+moved.
+
+**The 56 orphans are deleted.** They cannot be traced to a source, cannot be
+re-extracted, and carry copied text. Their POIs are covered by other beats.
+
+## The risk this scope carries
+
+The goal behind the corpus is MORE content, not less. Two gates now stand between the
+source and a beat — the source-span gate that caps length by available source sentences,
+and the verbatim gate added here — and both push the extractor toward writing less. If
+re-extraction is materially more conservative, this trades a copyright problem for a
+coverage one.
+
+The proof chunk measures it. If beat count or POI coverage drops hard on real text,
+re-extraction and new-book ingestion run in parallel rather than in sequence, and the
+gate design is revisited before the batch.
