@@ -46,11 +46,13 @@ from scripts.reauthor_cleanroom import (
     DEFAULT_WORKERS,
     MAX_TOKENS,
     PRODUCER_MODEL,
+    STOPWORDS,
     city_name,
     cleanroom_path,
     load_json,
     parse_claims,
     save_json,
+    verbatim_words,
 )
 from src.tour.anthropic_client import batch_review_client
 
@@ -79,8 +81,14 @@ Reply with JSON only, no prose:
 {{"claims": [{{"claim": "...", "kind": "fact"}}]}}"""
 
 
-_MATCH_PROMPT = """Below are the FACTS a writer was given, and the STATEMENTS someone
-found in the beat it wrote. For each statement, say which facts state it.
+_MATCH_PROMPT = """Both lists below are about {poi}, in {city}.
+
+Below are the FACTS a writer was given, and the STATEMENTS someone found in the beat it
+wrote. For each statement, say which facts state it.
+
+The facts often leave the place unnamed — "this location", "the city", "the church" —
+where the statements name it. That is the same subject, not a different one, and a
+statement is not unsupported merely for saying which place it is about.
 
 This is a matching task, not a judgement. Do not decide whether a statement is good,
 fair or reasonable — only whether the facts say it. Several facts may combine to state
@@ -103,7 +111,7 @@ Reply with JSON only, no prose:
 
 
 def match_request(
-    *, read_back: list[dict[str, str]], given: list[dict[str, str]]
+    *, read_back: list[dict[str, str]], given: list[dict[str, str]], poi: str, city: str
 ) -> dict[str, Any]:
     """The request that matches what a body says to what its writer was given.
 
@@ -121,6 +129,8 @@ def match_request(
             {
                 "role": "user",
                 "content": _MATCH_PROMPT.format(
+                    poi=poi or "this place",
+                    city=city or "the city",
                     given="\n".join(f"{i + 1}. {c.get('claim', '')}" for i, c in enumerate(given)),
                     statements="\n".join(
                         f"{i + 1}. {c.get('claim', '')}" for i, c in enumerate(read_back)
@@ -147,6 +157,10 @@ def parse_matches(text: str) -> dict[int, list[int]] | None:
     for row in rows:
         if not isinstance(row, dict) or not isinstance(row.get("statement"), int):
             continue
+        # A repeated statement number is two answers about one statement. Keeping the
+        # last is a silent choice between them that nothing downstream could see.
+        if row["statement"] in out:
+            return None
         facts = row.get("facts")
         out[row["statement"]] = (
             [n for n in facts if isinstance(n, int)] if isinstance(facts, list) else []
@@ -199,6 +213,32 @@ def unmatched_statements(read_back: list[dict[str, str]], matches: dict | None) 
     return sum(1 for i in range(1, len(read_back) + 1) if i not in matches)
 
 
+def unfaithful_statements(read_back: list[dict[str, str]], body: str) -> list[str]:
+    """Statements carrying salient words the body does not contain.
+
+    The blindness of the first call buys independence from the claim list. It buys
+    nothing about fidelity to the body, and nothing was checking that: a body saying
+    "anyone who has watched SoHo may recognise the pattern" came back as a statement
+    about "a familiar pattern of gentrification", and the matcher then reported a word
+    the writer never wrote as a thing the writer invented.
+
+    Reported beside the findings rather than removed from them, because a drifted
+    statement can still sit on a real invention, and a reader needs to know which of the
+    two texts they are being shown.
+    """
+    said = set(verbatim_words(body))
+    stems = {w[:5] for w in said if len(w) > 4}
+    out = []
+    for claim in read_back:
+        salient = {w for w in verbatim_words(claim.get("claim", "")) if w not in STOPWORDS}
+        # A statement is a paraphrase by design, so a tense or a plural is not drift:
+        # "recognise" for "recognised" is the same word doing the same job.
+        strange = {w for w in salient if w not in said and not (len(w) > 4 and w[:5] in stems)}
+        if strange:
+            out.append(claim.get("claim", ""))
+    return out
+
+
 def audit_record(
     record: dict,
     *,
@@ -216,6 +256,9 @@ def audit_record(
         "unreadable": read_back is None or matches is None,
         "matches": {str(k): v for k, v in (matches or {}).items()},
         "unanswered_statements": unmatched_statements(read_back or [], matches),
+        "unfaithful_statements": unfaithful_statements(
+            read_back or [], record.get("body_after", "")
+        ),
         "unsupported_claims": unsupported,
         "unsupported_count": len(unsupported),
         "written_by": record.get("written_by", ""),
@@ -248,6 +291,12 @@ def summarise(verdicts: list[dict]) -> dict[str, Any]:
     return {
         "audited": len(audited),
         "unreadable": len(verdicts) - len(audited),
+        # Both of these are ways a run can look clean without having checked anything,
+        # so they sit in the headline rather than only on the records.
+        "statements_never_answered_about": sum(v.get("unanswered_statements", 0) for v in audited),
+        "bodies_whose_statements_drifted_from_the_body": sum(
+            1 for v in audited if v.get("unfaithful_statements")
+        ),
         "bodies_carrying_an_unsupported_claim": len(carrying),
         "pct": round(100 * len(carrying) / len(audited), 1) if audited else 0.0,
         "unsupported_claims": sum(v["unsupported_count"] for v in carrying),
@@ -303,7 +352,12 @@ def _audit_body(record: dict, city: str, client: Any) -> dict[str, Any]:
     matches = parse_matches(
         _text_of(
             client.messages.create(
-                **match_request(read_back=read_back, given=record.get("claims_given") or [])
+                **match_request(
+                    read_back=read_back,
+                    given=record.get("claims_given") or [],
+                    poi=record.get("poi_name", ""),
+                    city=city,
+                )
             )
         )
     )

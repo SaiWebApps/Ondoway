@@ -52,10 +52,64 @@ def test_the_extraction_cannot_see_what_the_writer_was_given() -> None:
 
 def test_the_matcher_is_asked_which_fact_not_whether_it_is_supported() -> None:
     """A yes/no question has an agreeable answer; a numbered list has a checkable one."""
-    rendered = match_request(read_back=_READ_BACK, given=_GIVEN)["messages"][0]["content"]
+    rendered = match_request(
+        read_back=_READ_BACK, given=_GIVEN, poi="Palais Garnier", city="Paris"
+    )["messages"][0]["content"]
     assert "1. The staircase is faced with coloured marble." in rendered
     assert "1. The main stairway is faced with a large quantity of coloured marble." in rendered
     assert "matching task, not a judgement" in rendered
+
+
+def test_the_matcher_is_told_which_place_the_two_lists_are_about() -> None:
+    """The extraction is told the place; the matcher must be told it too.
+
+    The decomposer routinely leaves the subject unnamed — "this location", "the city",
+    "the church" — where a statement read out of the body names it. A matcher that does
+    not know they are the same place can never match those, and reports the writer for
+    saying which place its beat is about. That asymmetry was the single largest source
+    of false findings.
+    """
+    rendered = match_request(
+        read_back=_READ_BACK, given=_GIVEN, poi="Palais Garnier", city="Paris"
+    )["messages"][0]["content"]
+    assert "Palais Garnier" in rendered
+    assert "Paris" in rendered
+    assert "not a different one" in rendered
+
+
+def test_a_statement_the_body_does_not_contain_is_the_readers_to_know_about() -> None:
+    """The first call's blindness buys independence from the claims, not fidelity.
+
+    A body saying "anyone who has watched SoHo may recognise the pattern" came back as a
+    statement about "a familiar pattern of gentrification", and the matcher then
+    reported a word the writer never wrote as something the writer invented.
+    """
+    from scripts.reauthor_audit import unfaithful_statements
+
+    body = "Anyone who has watched SoHo may recognise the pattern."
+    assert unfaithful_statements([{"claim": "A familiar pattern of gentrification."}], body)
+    kept = [{"claim": "The pattern is one anyone who has watched SoHo may recognise."}]
+    assert unfaithful_statements(kept, body) == []
+
+
+def test_two_answers_about_one_statement_make_the_reply_unreadable() -> None:
+    """Keeping the last is a silent choice between them that nothing could see."""
+    assert (
+        parse_matches('{"matches":[{"statement":1,"facts":[2]},{"statement":1,"facts":[]}]}')
+        is None
+    )
+
+
+def test_the_summary_reports_the_two_ways_a_run_can_look_clean_for_nothing() -> None:
+    """A matcher that answered about nothing, and statements that are not the body's."""
+    verdict = audit_record(
+        {"beat_id": "b", "body_after": "A square laid out in 1830."},
+        read_back=[{"claim": "The square was laid out in 1907.", "kind": "fact"}],
+        matches={},
+    )
+    found = summarise([verdict])
+    assert found["statements_never_answered_about"] == 1
+    assert found["bodies_whose_statements_drifted_from_the_body"] == 1
 
 
 def test_the_judge_is_not_the_model_that_wrote_what_it_judges() -> None:
