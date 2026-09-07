@@ -25,6 +25,7 @@ from scripts.corpus_report import (
     load_city_pois,
     quality_report,
 )
+from scripts.reauthor_cleanroom import city_name, unsupported_words
 from scripts.reauthor_review import (
     CANDIDATE_FILES,
     DECISIONS,
@@ -161,6 +162,14 @@ def _reauthored_payload(
     summary["needs_a_person"] = sum(1 for r in records if _needs_a_person(r, source))
 
     shown = review_order(records)
+    if source == "cleanroom":
+        for row in shown:
+            row["unsupported_words"] = unsupported_words(
+                row.get("body_after") or "",
+                row.get("claims_given") or [],
+                poi=row.get("poi_name") or "",
+                city=city_name(city_slug),
+            )
     if not show_all:
         # The two artifacts are asked different questions. A rewrite carries a panel's
         # verdict, so what needs a person is an escalation or a beat nothing judged. A

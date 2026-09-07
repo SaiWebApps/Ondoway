@@ -52,6 +52,17 @@
     border-radius: 6px; font-size: 13.5px; color: var(--warn);
   }
   .doubt p { margin: 4px 0 0; }
+  .claims { margin-top: 12px; }
+  .claims ul { margin: 5px 0 0; padding-left: 18px; font-size: 13.5px; }
+  .claims li { margin: 2px 0; }
+  .claims .kind {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--muted); margin-right: 5px;
+  }
+  mark.unsupported {
+    background: #fdf3e8; border-bottom: 1px solid var(--warn);
+    color: inherit; padding: 0 1px; border-radius: 2px;
+  }
   .actions { margin-top: 14px; display: flex; gap: 8px; align-items: center; }
   button {
     font: inherit; font-size: 14px; padding: 6px 16px; border-radius: 7px;
@@ -81,6 +92,27 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
 
 let state = { city: "paris", candidates: [], summary: {}, reviewer: "" };
 
+// A clean-room body is written from CLAIMS, not from the passage, so the claims are
+// what a reviewer has to read it against. Words carried by no claim are marked — most
+// are ordinary rewording, and the one that is not is the reason to mark any of them.
+function markUnsupported(row) {
+  const words = row.unsupported_words || [];
+  if (!words.length) return esc(row.body_after);
+  const set = new Set(words);
+  return esc(row.body_after).replace(/[\p{L}\p{N}]+/gu, (w) =>
+    set.has(w.toLowerCase()) ? `<mark class="unsupported">${w}</mark>` : w);
+}
+
+function claimsBlock(row) {
+  const claims = row.claims_given || [];
+  if (!claims.length) return "";
+  const marked = (row.unsupported_words || []).length;
+  return `<div class="claims"><h3>Everything the writer was given${
+    marked ? ` — ${marked} word${marked === 1 ? "" : "s"} in the body come from none of it` : ""
+  }</h3><ul>${claims.map((c) =>
+    `<li><span class="kind">${esc(c.kind || "fact")}</span>${esc(c.claim)}</li>`).join("")}</ul></div>`;
+}
+
 function card(row) {
   const decided = row.decision;
   const auto = String(row.decided_by || "").startsWith("auto:");
@@ -106,9 +138,11 @@ function card(row) {
     </div>
     <div class="texts">
       <div><h3>Before — lifted from the book</h3><div class="before">${esc(row.body_before)}</div></div>
-      <div><h3>After — rewritten</h3><div>${esc(row.body_after)}</div></div>
+      <div><h3>After — rewritten</h3><div>${markUnsupported(row)}</div></div>
     </div>
-    <div class="source"><strong>Source:</strong> ${esc(row.source_passage)}</div>
+    ${claimsBlock(row)}
+    <div class="source"><strong>Source — the writer never saw this:</strong>
+      ${esc(row.source_passage)}</div>
     ${doubts}
     <div class="actions">
       <button class="approve" onclick="decide('${esc(row.beat_id)}','approve')"

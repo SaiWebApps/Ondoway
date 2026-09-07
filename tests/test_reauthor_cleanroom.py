@@ -548,6 +548,43 @@ def test_an_impression_is_refused_where_no_claim_holds_one() -> None:
     assert invented_impressions("You may find the square quiet.", seen) == []
 
 
+def test_a_reviewer_is_shown_the_words_no_claim_carried() -> None:
+    """The reading aid, on the record that motivated it.
+
+    A body written from claims cannot be judged against the source passage, because the
+    writer never saw it. It is judged against the claims — and no reviewer holds a dozen
+    of those in their head while reading a paragraph. "A profusion of coloured marble"
+    became "reds, greens, whites", which is checkable and was not being checked.
+    """
+    from scripts.reauthor_cleanroom import unsupported_words
+
+    claims = [
+        {"claim": "The main stairway is faced with a large quantity of coloured marble."},
+        {"claim": "The author regards the main stairway as grandiose in appearance."},
+    ]
+    body = (
+        "The Palais Garnier's grand staircase is faced with coloured marble in "
+        "quantity \u2014 reds, greens, whites."
+    )
+    marked = unsupported_words(body, claims, poi="Palais Garnier", city="Paris")
+    assert {"reds", "greens", "whites"} <= set(marked)
+    # The place it is about, and a word a claim carries in another form, are not invention.
+    assert "garnier" not in marked
+    assert "stairway" not in marked and "staircase" not in marked
+
+
+def test_the_review_payload_marks_those_words_for_the_page() -> None:
+    """A helper nothing calls is not a reading aid."""
+    from src.server import _reauthored_payload
+
+    payload = _reauthored_payload("paris", source="cleanroom", show_all=True)
+    if not payload["candidates"]:
+        pytest.skip("no regenerated bodies on disk to serve")
+    assert all("unsupported_words" in row for row in payload["candidates"])
+    assert all(row.get("claims_given") for row in payload["candidates"])
+    assert "unsupported_words" not in _reauthored_payload("paris", show_all=True)["candidates"][0]
+
+
 def test_a_scene_the_claims_do_not_mention_is_flagged_not_refused() -> None:
     """Roughly a third of these are the body's own word for something a claim names,
     so this reaches a reviewer rather than throwing a correct body away."""

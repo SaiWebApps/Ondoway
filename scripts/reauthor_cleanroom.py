@@ -72,6 +72,9 @@ from scripts.corpus_report import (
 from scripts.reauthor_preview import _VOICE_RULES, is_excluded
 from src.city_registry import load_registry
 from src.tour.claim_dedup import (
+    _STOPWORDS as STOPWORDS,
+)
+from src.tour.claim_dedup import (
     COVERAGE_MATCH_MIN,
     _overlap,
     _signature,
@@ -634,19 +637,46 @@ def invented_impressions(body: str, claims: list[dict[str, str]]) -> list[str]:
     return _sentences_matching(body, lambda sentence: bool(_IMPRESSION.search(sentence)))
 
 
-def scene_details(body: str, claims: list[dict[str, str]]) -> list[str]:
-    """Things the body puts in front of the listener that no claim mentions.
+def unsupported_words(
+    body: str, claims: list[dict[str, str]], *, poi: str = "", city: str = ""
+) -> list[str]:
+    """Content words in a body that no claim it was given carried.
 
-    A signal for review, NOT a refusal. Roughly a third of what it finds is the body
-    using a different word for something a claim does name — "lawn" for a named meadow,
-    "door" for a portal — and refusing those would trade a correct body for a different
-    one. The rest is scenery the writer supplied to land a beat, which is the class a
-    person standing at the place catches first and no free check can settle.
+    This is a READING AID, not a check. Nearly every body has some — a writer told to
+    say a fact in its own words must reach for words the claim did not use — so the
+    count means nothing and the list means a great deal: it is where "a profusion of
+    coloured marble" became "reds, greens, whites". A reviewer cannot hold a dozen
+    claims in their head while reading a paragraph, and this is the part of that job a
+    computer can do.
+
+    A word is not counted when a claim carries something it plainly came from, so a
+    plural, a tense or a suffix does not read as invention, nor is the name of the place
+    the beat is about.
     """
-    said = set()
-    for claim in claims:
-        said |= set(verbatim_words(claim.get("claim", "")))
-    return sorted({w for w in verbatim_words(body) if w in _SCENE_WORDS and w not in said})
+    said = {w for c in claims for w in verbatim_words(c.get("claim", ""))}
+    # The place and the city are in the writer's request, so naming them is not
+    # invention even when no claim happens to repeat the name.
+    said |= set(verbatim_words(poi)) | set(verbatim_words(city))
+    stems = {w[:5] for w in said if len(w) > 4}
+    seen, out = set(), []
+    for word in verbatim_words(body):
+        if word in said or word in STOPWORDS or word in seen or len(word) < 4:
+            continue
+        if word.isdigit() or (len(word) > 4 and word[:5] in stems):
+            continue
+        seen.add(word)
+        out.append(word)
+    return out
+
+
+def scene_details(body: str, claims: list[dict[str, str]]) -> list[str]:
+    """The unsupported words that name a thing a listener can see, or a time of day.
+
+    The narrow slice of `unsupported_words` worth recording on the record itself: these
+    are what a person standing at the place checks with their eyes, so an invented one
+    is caught by the listener rather than by a reader.
+    """
+    return sorted(set(unsupported_words(body, claims)) & _SCENE_WORDS)
 
 
 def body_problems(body: str, claims: list[dict[str, str]]) -> dict[str, list[str]]:
