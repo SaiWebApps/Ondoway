@@ -61,8 +61,9 @@ Re-extraction rather than rewriting, for three reasons:
    precisely so the hard refuse in `/unified-beat-extract` can be satisfied, and
    `/pipeline-batch` drives chunks in parallel with resume state.
 
-The clean-room re-author pipeline (`scripts/reauthor_cleanroom.py`) stops being the
-remedy and becomes the fallback for the 56 orphans, which is the right size for it.
+The clean-room re-author pipeline (`scripts/reauthor_cleanroom.py`) is not the remedy
+here and is not used by this scope. The 56 beats it would have been the fallback for are
+deleted instead.
 
 ## The changes
 
@@ -99,8 +100,6 @@ gates are over-tight and the corpus would shrink, which is the risk below.
 
 - **London.** 98% lifted, no books on disk to re-extract from, already excluded from the
   re-author work. It is deleted rather than repaired, in its own change.
-- **The 56 orphans.** They keep their copied bodies until the clean-room fallback runs on
-  them, and they stay counted as copied until then.
 - **General website ingestion.** Wikipedia is pinned and re-extractable; arbitrary web
   pages have no ingestion path today and adding one is separate work.
 - **Whether re-extraction improves tour quality.** This scope restores traceability and
