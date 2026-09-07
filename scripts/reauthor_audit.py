@@ -52,7 +52,7 @@ from scripts.reauthor_cleanroom import (
     parse_claims,
     save_json,
 )
-from src.tour.anthropic_client import certification_judge_client
+from src.tour.anthropic_client import batch_review_client
 
 #: The auditing model. It must not be `PRODUCER_MODEL`, and the check that it is not
 #: reads the producer from each record rather than trusting this constant.
@@ -271,7 +271,20 @@ def _text_of(response: Any) -> str:
 
 
 def _audit_one(record: dict, city: str, client: Any) -> dict[str, Any]:
-    """Read the body blind, then match what it says to what its writer was given."""
+    """Read the body blind, then match what it says to what its writer was given.
+
+    A call that fails is one unreadable record, never a dead run: 449 records is long
+    enough that something times out, and an exception escaping into `pool.map` throws
+    away every record still in flight behind it.
+    """
+    try:
+        return _audit_body(record, city, client)
+    except Exception as exc:
+        print(f"  ! {record.get('poi_name', '')}: {type(exc).__name__}")
+        return audit_record(record, read_back=None, matches=None)
+
+
+def _audit_body(record: dict, city: str, client: Any) -> dict[str, Any]:
     read_back = parse_claims(
         _text_of(
             client.messages.create(
@@ -326,7 +339,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     load_dotenv()
-    client = certification_judge_client()
+    client = batch_review_client()
     city = city_name(args.city)
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         for verdict in pool.map(lambda r: _audit_one(r, city, client), pending):

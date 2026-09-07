@@ -60,6 +60,12 @@ COMPOSE_MAX_RETRIES: int = int(os.getenv("ONDOWAY_COMPOSE_MAX_RETRIES", "0"))
 # stream when this absolute deadline expires.
 COMPOSE_ABSOLUTE_DEADLINE_S: float = float(os.getenv("ONDOWAY_COMPOSE_ABSOLUTE_DEADLINE_S", "600"))
 
+#: Offline batch review (the corpus audit). Nothing is waiting on this call, so it is
+#: bounded generously and retried: a batch of hundreds meets a slow response eventually,
+#: and the interactive budgets turn that into a dead run rather than a slow one.
+BATCH_REVIEW_TIMEOUT_S: float = float(os.getenv("ONDOWAY_BATCH_REVIEW_TIMEOUT_S", "300"))
+BATCH_REVIEW_MAX_RETRIES: int = int(os.getenv("ONDOWAY_BATCH_REVIEW_MAX_RETRIES", "3"))
+
 # Certification calls are physical-attempt-budgeted before they reach the SDK.
 # An SDK retry would evade that ledger, so the certification path always uses zero.
 CERTIFICATION_MAX_RETRIES: int = 0
@@ -95,6 +101,15 @@ def _build(timeout_s: float | None, max_retries: int) -> Any:
 def judge_client() -> Any:
     """A bounded client for Haiku judge/verify calls."""
     return _build(JUDGE_TIMEOUT_S, JUDGE_MAX_RETRIES)
+
+
+def batch_review_client() -> Any:
+    """A bounded client for offline review of a whole corpus.
+
+    Not the judge client: that one is sized for a person waiting on a workbench, and a
+    45-second ceiling with no retry ends a 449-record run on the first slow response.
+    """
+    return _build(BATCH_REVIEW_TIMEOUT_S, BATCH_REVIEW_MAX_RETRIES)
 
 
 def compose_client() -> Any:
