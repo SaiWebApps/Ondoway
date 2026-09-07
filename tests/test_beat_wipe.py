@@ -262,3 +262,29 @@ def test_wipe_cli_invocation(env):
     assert result.returncode == 0, result.stdout + result.stderr
     assert "dry-run" in result.stdout
     assert "plan: remove 2 beat(s)" in result.stdout
+
+
+def test_a_book_slug_written_either_way_finds_its_beats() -> None:
+    """Two slug conventions live in the corpus and the wipe has to match both.
+
+    The migration derived `around_and_about_paris` from a title; the extractor wrote
+    `lonely-planet-new-york-city` from a directory name. Every New York beat carries
+    the dashed form. Comparing on one convention matched nothing for those 1,687
+    beats and printed "already clean" — a no-op indistinguishable from success, on
+    the tool the whole re-extraction depends on.
+    """
+    from scripts.wipe_beats import find_matching_beats, same_book
+
+    assert same_book("lonely-planet-new-york-city", "lonely_planet_new_york_city")
+    assert same_book("around_and_about_paris", "around-and-about-paris")
+    assert not same_book("lonely-planet-new-york-city", "big-onion-ten-historic-tours")
+
+    beats = [
+        {"beat_id": "a", "book_slug": "lonely-planet-new-york-city", "source_chunk_slug": "c7"},
+        {"beat_id": "b", "book_slug": "around_and_about_paris", "source_chunk_slug": "c7"},
+        {"beat_id": "c", "book_slug": "lonely-planet-new-york-city", "source_chunk_slug": "c8"},
+    ]
+    for written_as in ("lonely-planet-new-york-city", "lonely_planet_new_york_city"):
+        kept, removed = find_matching_beats(beats, written_as, "c7")
+        assert [b["beat_id"] for b in removed] == ["a"], written_as
+        assert len(kept) == 2

@@ -31,8 +31,10 @@ Semantics:
 
 CLI normalization:
 - `book_slug` positional accepts `{city}/{book-slug}` or just
-  `{book-slug}`. Dashes are replaced with underscores to match the
-  canonical form stored on each beat's `book_slug` field.
+  `{book-slug}`, in either convention. Beats carry two — `around_and_about_paris`
+  from the title-derived migration and `lonely-planet-new-york-city` from the
+  extractor — and both sides are compared on a canonical form, so a slug typed
+  either way finds its beats.
 - The city prefix, when present, drives the default data paths.
 """
 
@@ -49,15 +51,31 @@ from typing import Any
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from scripts.beats_io import BeatValidationError, commit  # noqa: E402
+from scripts.beats_io import BeatValidationError, commit
 
 LEGACY_AMBIGUOUS = "legacy_ambiguous"
 
 
 def normalize_book_slug(arg: str) -> str:
-    """Strip leading `{city}/` and convert dashes to underscores."""
-    tail = arg.split("/", 1)[1] if "/" in arg else arg
-    return tail.replace("-", "_")
+    """Strip a leading `{city}/`, leaving the book slug as the caller wrote it."""
+    return arg.split("/", 1)[1] if "/" in arg else arg
+
+
+def same_book(a: str, b: str) -> bool:
+    """Whether two book slugs name the same book.
+
+    Two conventions are in the corpus: `around_and_about_paris` from the migration
+    that derived slugs from titles, and `lonely-planet-new-york-city` from the
+    extractor that wrote them from directory names. Every New York beat uses the
+    dashed form and 457 Paris beats do. Comparing on one convention silently matched
+    nothing for those and printed "already clean" — a no-op that reads as success and
+    leaves the caller believing a chunk was wiped.
+    """
+    return _canonical(a) == _canonical(b)
+
+
+def _canonical(slug: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", (slug or "").lower()).strip("_")
 
 
 def derive_city(arg: str) -> str | None:
@@ -78,7 +96,7 @@ def find_matching_beats(
     for beat in beats:
         source_chunk = beat.get("source_chunk_slug", "")
         if (
-            beat.get("book_slug") == book_slug
+            same_book(beat.get("book_slug", ""), book_slug)
             and source_chunk == chunk_slug
             and source_chunk != LEGACY_AMBIGUOUS
         ):
@@ -88,16 +106,14 @@ def find_matching_beats(
     return kept, removed
 
 
-def remove_chunk_from_log(
-    log: dict, book_slug: str, chunk_slug: str
-) -> tuple[dict, dict | None]:
+def remove_chunk_from_log(log: dict, book_slug: str, chunk_slug: str) -> tuple[dict, dict | None]:
     """Return (updated_log, removed_entry_or_None). Non-destructive on input."""
     # Deep-ish copy via json round-trip — safe for this small dict
     # and avoids accidentally mutating the caller's copy.
     updated: dict[str, Any] = json.loads(json.dumps(log))
     removed_entry: dict | None = None
     for book in updated.get("books_processed", []):
-        if slugify_title(book.get("book_title", "")) != book_slug:
+        if not same_book(slugify_title(book.get("book_title", "")), book_slug):
             continue
         chunks = book.get("chunks_processed", [])
         for i, entry in enumerate(chunks):
@@ -125,7 +141,9 @@ def main(argv: list[str]) -> int:
         "book_slug",
         help="{city}/{book-slug} (e.g. paris/around-and-about-paris) or just {book-slug}",
     )
-    parser.add_argument("--chunk", required=True, help="chunk slug (e.g. chunk-15-5th-arr-val-de-grace)")
+    parser.add_argument(
+        "--chunk", required=True, help="chunk slug (e.g. chunk-15-5th-arr-val-de-grace)"
+    )
     parser.add_argument("--beats-path", help="override default data/{city}/beats.json")
     parser.add_argument("--log-path", help="override default data/{city}/book-log.json")
     parser.add_argument(
@@ -180,8 +198,9 @@ def main(argv: list[str]) -> int:
     # BP-8 audit — sanity-check the selection filter really skipped
     # legacy_ambiguous beats for this book_slug + chunk pair.
     ambiguous_survivors = [
-        b for b in kept
-        if b.get("book_slug") == book_slug
+        b
+        for b in kept
+        if same_book(b.get("book_slug", ""), book_slug)
         and b.get("source_chunk_slug") == LEGACY_AMBIGUOUS
     ]
 
