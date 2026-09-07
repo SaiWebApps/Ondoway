@@ -1,547 +1,1522 @@
 {
- "frommers-nyc-2024": {
-  "chunk-03": {
-   "beats_extracted": 43,
-   "pois_touched": 28,
-   "processed_at": "2026-06-14"
-  },
-  "chunk-09": {
-   "beats_extracted": 45,
-   "pois_touched": 19,
-   "processed_at": "2026-06-14"
-  },
-  "chunk-10": {
-   "beats_extracted": 25,
-   "pois_touched": 11,
-   "processed_at": "2026-06-14"
-  },
-  "chunk-11": {
-   "beats_extracted": 43,
-   "pois_touched": 14,
-   "processed_at": "2026-06-14"
-  },
-  "chunk-01": {
-   "beats_extracted": 13,
-   "pois_touched": 13,
-   "processed_at": "2026-06-14"
-  },
-  "chunk-02": {
-   "beats_extracted": 34,
-   "pois_touched": 25,
-   "processed_at": "2026-06-14"
-  },
-  "chunk-04": {
-   "beats_extracted": 63,
-   "pois_touched": 27,
-   "processed_at": "2026-06-14"
-  },
-  "chunk-05": {
-   "beats_extracted": 24,
-   "pois_touched": 9,
-   "processed_at": "2026-06-14"
-  },
-  "chunk-06": {
-   "beats_extracted": 15,
-   "pois_touched": 7,
-   "processed_at": "2026-06-14"
-  },
-  "chunk-07": {
-   "beats_extracted": 44,
-   "pois_touched": 21,
-   "processed_at": "2026-06-14"
-  },
-  "chunk-08": {
-   "beats_extracted": 39,
-   "pois_touched": 26,
-   "processed_at": "2026-06-14"
-  },
-  "chunk-12": {
-   "beats_extracted": 18,
-   "pois_touched": 12,
-   "processed_at": "2026-06-14"
-  }
- },
- "lonely-planet-new-york-city": {
-  "chunk-01": {
-   "beats_extracted": 37,
-   "pois_touched": 20,
-   "processed_at": "2026-06-15"
-  },
-  "chunk-02": {
-   "beats_extracted": 30,
-   "pois_touched": 17,
-   "processed_at": "2026-06-15"
-  },
-  "chunk-03": {
-   "beats_extracted": 26,
-   "pois_touched": 8,
-   "processed_at": "2026-06-15"
-  },
-  "chunk-04": {
-   "beats_extracted": 48,
-   "pois_touched": 27,
-   "processed_at": "2026-06-15"
-  },
-  "chunk-05": {
-   "beats_extracted": 18,
-   "pois_touched": 7,
-   "processed_at": "2026-06-15"
-  },
-  "chunk-06": {
-   "beats_extracted": 56,
-   "pois_touched": 20,
-   "processed_at": "2026-06-15"
-  },
-  "chunk-07": {
-   "beats_extracted": 24,
-   "pois_touched": 11,
-   "processed_at": "2026-06-15"
-  },
-  "chunk-08": {
-   "beats_extracted": 34,
-   "pois_touched": 21,
-   "processed_at": "2026-06-15"
-  },
-  "chunk-09": {
-   "beats_extracted": 29,
-   "pois_touched": 17,
-   "processed_at": "2026-06-15"
-  },
-  "chunk-10": {
-   "beats_extracted": 65,
-   "pois_touched": 38,
-   "processed_at": "2026-06-15"
-  },
-  "chunk-11": {
-   "beats_extracted": 27,
-   "pois_touched": 13,
-   "processed_at": "2026-06-15"
-  },
-  "chunk-12": {
-   "beats_extracted": 32,
-   "pois_touched": 21,
-   "processed_at": "2026-06-15"
-  },
-  "chunk-13": {
-   "beats_extracted": 24,
-   "pois_touched": 17,
-   "processed_at": "2026-06-15"
-  },
-  "chunk-14": {
-   "beats_extracted": 32,
-   "pois_touched": 28,
-   "processed_at": "2026-06-15"
-  },
-  "chunk-15": {
-   "beats_extracted": 20,
-   "pois_touched": 17,
-   "processed_at": "2026-06-15"
-  }
- },
- "moon-nyc-walks": {
-  "chunk-01": {
-   "beats_extracted": 18,
-   "pois_touched": 18,
-   "processed_at": "2026-06-16"
-  },
-  "chunk-02": {
-   "beats_extracted": 19,
-   "pois_touched": 17,
-   "processed_at": "2026-06-16"
-  },
-  "chunk-03": {
-   "beats_extracted": 21,
-   "pois_touched": 20,
-   "processed_at": "2026-06-16"
-  },
-  "chunk-04": {
-   "beats_extracted": 23,
-   "pois_touched": 23,
-   "processed_at": "2026-06-16"
-  },
-  "chunk-05": {
-   "beats_extracted": 20,
-   "pois_touched": 17,
-   "processed_at": "2026-06-16"
-  },
-  "chunk-06": {
-   "beats_extracted": 13,
-   "pois_touched": 11,
-   "processed_at": "2026-06-16"
-  },
-  "chunk-07": {
-   "beats_extracted": 12,
-   "pois_touched": 12,
-   "processed_at": "2026-06-16"
-  }
- },
- "national-geographic-walking-nyc": {
-  "chunk-01": {
-   "beats_extracted": 31,
-   "pois_touched": 18,
-   "new_pois": 2,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-02": {
-   "beats_extracted": 33,
-   "pois_touched": 18,
-   "new_pois": 11,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-03": {
-   "beats_extracted": 28,
-   "pois_touched": 11,
-   "new_pois": 0,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-04": {
-   "beats_extracted": 26,
-   "pois_touched": 10,
-   "new_pois": 1,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-05": {
-   "beats_extracted": 27,
-   "pois_touched": 9,
-   "new_pois": 1,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-06": {
-   "beats_extracted": 17,
-   "pois_touched": 4,
-   "new_pois": 0,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-07": {
-   "beats_extracted": 22,
-   "pois_touched": 9,
-   "new_pois": 3,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-08": {
-   "beats_extracted": 23,
-   "pois_touched": 9,
-   "new_pois": 0,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-09": {
-   "beats_extracted": 25,
-   "pois_touched": 9,
-   "new_pois": 1,
-   "processed_at": "2026-06-17"
-  }
- },
- "big-onion-ten-historic-tours": {
-  "chunk-01": {
-   "beats_extracted": 50,
-   "pois_touched": 16,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-02": {
-   "beats_extracted": 55,
-   "pois_touched": 21,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-03": {
-   "beats_extracted": 34,
-   "pois_touched": 10,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-04": {
-   "beats_extracted": 54,
-   "pois_touched": 7,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-05": {
-   "beats_extracted": 45,
-   "pois_touched": 11,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-06": {
-   "beats_extracted": 36,
-   "pois_touched": 12,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-07": {
-   "beats_extracted": 33,
-   "pois_touched": 23,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-08": {
-   "beats_extracted": 38,
-   "pois_touched": 10,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-09": {
-   "beats_extracted": 37,
-   "pois_touched": 1,
-   "processed_at": "2026-06-17"
-  },
-  "chunk-10": {
-   "beats_extracted": 49,
-   "pois_touched": 27,
-   "processed_at": "2026-06-17"
-  }
- },
- "books_processed": [
-  {
-   "book_title": "Wikipedia",
-   "author": "Wikipedia contributors",
-   "chunks_processed": [
+  "city": "new_york",
+  "books_processed": [
     {
-     "chunk": "yankee_stadium-rev-1358311733",
-     "processed_at": "2026-06-18T20:05:39+00:00",
-     "beats_extracted": 11,
-     "pois_touched": [
-      "Yankee Stadium"
-     ]
+      "book_title": "The Big Onion Guide to New York City: Ten Historic Tours",
+      "author": "Seth I. Kamil and Eric Wakin",
+      "book_slug": "big-onion-ten-historic-tours",
+      "chunks_processed": [
+        {
+          "chunk": "chunk-01-wall-street",
+          "beats_extracted": 50,
+          "pois_touched": [
+            "1 Wall Street",
+            "40 Wall Street",
+            "9/11 Memorial and Museum",
+            "Bowling Green Park",
+            "Delmonico's",
+            "Federal Hall",
+            "Federal Reserve Bank of New York",
+            "Fraunces Tavern",
+            "Goldman Sachs Building",
+            "Hanover Square",
+            "National Museum of the American Indian",
+            "New York Stock Exchange",
+            "The Woolworth Building",
+            "Trinity Church",
+            "Wall Street",
+            "Zuccotti Park"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-02-lower-east-side",
+          "beats_extracted": 55,
+          "pois_touched": [
+            "Beth Hamedrash Hagadol",
+            "Bowery Savings Bank Building",
+            "Chatham Square",
+            "Chinatown",
+            "Church of the Transfiguration",
+            "Columbus Park",
+            "Di Palo's Fine Foods",
+            "Educational Alliance",
+            "First Shearith Israel Graveyard",
+            "Forward Building",
+            "Henry Street Settlement",
+            "Little Italy",
+            "Lower East Side",
+            "Manhattan Bridge",
+            "Mulberry Street",
+            "Museum at Eldridge Street",
+            "Sara Delano Roosevelt Park",
+            "Seward Park",
+            "St. Mary's Church",
+            "Straus Square",
+            "The Bowery"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-03-greenwich-village",
+          "beats_extracted": 34,
+          "pois_touched": [
+            "130 MacDougal Street",
+            "23 Fifth Avenue",
+            "Bleecker Street",
+            "Greenwich Village",
+            "Julius'",
+            "Lesbian and Gay Community Services Center",
+            "Minetta Street",
+            "Sheridan Square",
+            "Stonewall Inn",
+            "Washington Square Park"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-04-four-squares",
+          "beats_extracted": 53,
+          "pois_touched": [
+            "Brotherhood Synagogue",
+            "Gramercy Park",
+            "National Arts Club",
+            "St. George's Episcopal Church",
+            "Stuyvesant Square",
+            "The Players Club",
+            "Union Square"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-05-brooklyn-bridge",
+          "beats_extracted": 45,
+          "pois_touched": [
+            "Brooklyn Borough Hall",
+            "Brooklyn Bridge",
+            "Brooklyn Heights",
+            "Brooklyn Heights Promenade",
+            "Center for Brooklyn History",
+            "City Hall",
+            "Columbia Heights",
+            "Montague Street",
+            "Plymouth Church",
+            "St. George Hotel",
+            "Willow Street"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-06-central-park",
+          "beats_extracted": 36,
+          "pois_touched": [
+            "Belvedere Castle",
+            "Bethesda Terrace",
+            "Bow Bridge",
+            "Central Park",
+            "Cleopatra's Needle",
+            "Maine Monument",
+            "Metropolitan Museum of Art",
+            "Naumburg Bandshell",
+            "Sheep Meadow",
+            "The Carousel",
+            "The Great Lawn",
+            "The Ramble"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-07-upper-east-side",
+          "beats_extracted": 33,
+          "pois_touched": [
+            "Asia Society",
+            "Central Park",
+            "Colony Club",
+            "Copacabana (10 East 60th Street site)",
+            "Edith and Ernesto Fabbri House",
+            "Fifth Avenue (apartment houses, 63rd Street)",
+            "Fifth Avenue Synagogue",
+            "Frick Collection",
+            "Grand Army Plaza (Manhattan)",
+            "Grolier Club",
+            "Harmonie Club",
+            "Knickerbocker Club",
+            "Madison Avenue",
+            "Metropolitan Club",
+            "Park Avenue Armory",
+            "Plaza Hotel",
+            "Richard Morris Hunt Memorial",
+            "Roosevelt House",
+            "Temple Emanu-El",
+            "The Pierre",
+            "Union Club",
+            "Whitney Museum of American Art",
+            "Wildenstein Gallery"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-08-historic-harlem",
+          "beats_extracted": 38,
+          "pois_touched": [
+            "Abyssinian Baptist Church",
+            "Apollo Theater",
+            "Blumstein's Department Store",
+            "City College of New York",
+            "Harlem",
+            "Harlem YMCA",
+            "Hotel Theresa",
+            "Schomburg Center for Research in Black Culture",
+            "St. Nicholas Historic District",
+            "Sugar Hill"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-09-green-wood-cemetery",
+          "beats_extracted": 37,
+          "pois_touched": [
+            "Green-Wood Cemetery"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-10-other-boroughs",
+          "beats_extracted": 49,
+          "pois_touched": [
+            "Brighton Beach",
+            "Brooklyn",
+            "Brooklyn Museum",
+            "Coney Island",
+            "Curtis High School",
+            "Edgar Allan Poe Cottage",
+            "Ellis Island National Museum of Immigration",
+            "Fort Wadsworth",
+            "Friends Meeting House (Flushing)",
+            "Garibaldi-Meucci Museum",
+            "Hall of Fame for Great Americans",
+            "Historic Richmond Town",
+            "Jacques Marchais Museum of Tibetan Art",
+            "John Bowne House",
+            "Louis Armstrong House Museum",
+            "Prospect Park",
+            "Queens",
+            "Sailors' Snug Harbor",
+            "Staten Island Borough Hall",
+            "Staten Island Ferry",
+            "Statue of Liberty",
+            "The Bronx",
+            "The Crimson Beech",
+            "Verrazzano-Narrows Bridge",
+            "Wave Hill",
+            "Weeksville Heritage Center",
+            "Yankee Stadium"
+          ],
+          "processed_at": "2026-06-17"
+        }
+      ]
     },
     {
-     "chunk": "carnegie_hall-rev-1352216015",
-     "processed_at": "2026-06-18T20:06:00+00:00",
-     "beats_extracted": 11,
-     "pois_touched": [
-      "Carnegie Hall"
-     ]
+      "book_title": "Frommer's New York City 2024",
+      "author": "Pauline Frommer",
+      "book_slug": "frommers-nyc-2024",
+      "chunks_processed": [
+        {
+          "chunk": "chunk-01-ch01-best-of-nyc",
+          "beats_extracted": 13,
+          "pois_touched": [
+            "Brooklyn Bridge",
+            "Brooklyn Heights",
+            "Cathedral of St. John the Divine",
+            "Central Park",
+            "Chrysler Building",
+            "Coney Island",
+            "Domino Park",
+            "Grand Central Terminal",
+            "PDT",
+            "Prospect Park",
+            "Roosevelt Island Tram",
+            "The High Line",
+            "The Public Theater"
+          ],
+          "processed_at": "2026-06-14"
+        },
+        {
+          "chunk": "chunk-02-ch02-neighborhoods-in-brief",
+          "beats_extracted": 34,
+          "pois_touched": [
+            "Brighton Beach",
+            "Brooklyn",
+            "Brooklyn Heights",
+            "Chelsea",
+            "Chinatown",
+            "Financial District",
+            "Flatiron District",
+            "Gramercy Park",
+            "Greenwich Village",
+            "Harlem",
+            "Hudson Yards",
+            "Little Italy",
+            "Lower East Side",
+            "Manhattan",
+            "Meatpacking District",
+            "Midtown East",
+            "Midtown West",
+            "Park Slope",
+            "Queens",
+            "SoHo",
+            "Staten Island",
+            "The Bronx",
+            "Upper East Side",
+            "Upper West Side",
+            "Williamsburg"
+          ],
+          "processed_at": "2026-06-14"
+        },
+        {
+          "chunk": "chunk-03-ch05-top-sights-downtown",
+          "beats_extracted": 43,
+          "pois_touched": [
+            "9/11 Memorial and Museum",
+            "African Burial Ground National Monument",
+            "Brooklyn Bridge",
+            "Ellis Island National Museum of Immigration",
+            "Federal Reserve Bank of New York",
+            "Hall des Lumières",
+            "International Center of Photography",
+            "Jackie Robinson Museum",
+            "Leslie-Lohman Museum of Art",
+            "Merchant's House Museum",
+            "Mmuseumm",
+            "Museum at Eldridge Street",
+            "Museum of Chinese in America",
+            "Museum of Jewish Heritage",
+            "National Museum of the American Indian",
+            "New Museum of Contemporary Art",
+            "New York Stock Exchange",
+            "Old St. Patrick's Cathedral",
+            "One World Observatory",
+            "Skyscraper Museum",
+            "South Street Seaport Museum",
+            "St. Paul's Chapel",
+            "Staten Island Ferry",
+            "Statue of Liberty",
+            "The Tenement Museum",
+            "The Woolworth Building",
+            "Trinity Church",
+            "Whitney Museum of American Art"
+          ],
+          "processed_at": "2026-06-14"
+        },
+        {
+          "chunk": "chunk-04-ch05-midtown",
+          "beats_extracted": 61,
+          "pois_touched": [
+            "Artechouse",
+            "Chelsea Gallery District",
+            "Chrysler Building",
+            "Empire State Building",
+            "Flatiron Building",
+            "Fotografiska",
+            "Grand Central Terminal",
+            "Hudson Yards",
+            "Intrepid Sea, Air & Space Museum",
+            "Museum of Broadway",
+            "Museum of Modern Art",
+            "Museum of Sex",
+            "Museum of the Dog",
+            "New York Public Library",
+            "Radio City Music Hall",
+            "Rise NY",
+            "Rockefeller Center",
+            "St. Patrick's Cathedral",
+            "Summit One Vanderbilt",
+            "The Edge",
+            "The Morgan Library & Museum",
+            "The Museum at FIT",
+            "The Shed",
+            "Times Square",
+            "United Nations",
+            "Vessel"
+          ],
+          "processed_at": "2026-06-14"
+        },
+        {
+          "chunk": "chunk-05-ch05-uptown",
+          "beats_extracted": 24,
+          "pois_touched": [
+            "American Folk Art Museum",
+            "American Museum of Natural History",
+            "Cooper Hewitt National Design Museum",
+            "Frick Collection",
+            "Metropolitan Museum of Art",
+            "Museum of the City of New York",
+            "Neue Galerie New York",
+            "Solomon R. Guggenheim Museum",
+            "The Jewish Museum"
+          ],
+          "processed_at": "2026-06-14"
+        },
+        {
+          "chunk": "chunk-06-ch05-especially-for-kids",
+          "beats_extracted": 15,
+          "pois_touched": [
+            "American Museum of Natural History",
+            "Cathedral of St. John the Divine",
+            "El Museo del Barrio",
+            "Morris-Jumel Mansion",
+            "Museum of Arts and Design",
+            "New-York Historical Society",
+            "The Cloisters"
+          ],
+          "processed_at": "2026-06-14"
+        },
+        {
+          "chunk": "chunk-07-ch05-outer-boroughs",
+          "beats_extracted": 44,
+          "pois_touched": [
+            "Bronx Zoo",
+            "Brooklyn Botanic Garden",
+            "Brooklyn Children's Museum",
+            "Brooklyn Museum",
+            "Brooklyn Navy Yard",
+            "Children's Museum of Manhattan",
+            "City Reliquary",
+            "Coney Island",
+            "Green-Wood Cemetery",
+            "Industry City",
+            "Isamu Noguchi Garden Museum",
+            "Louis Armstrong House Museum",
+            "Museum of the Moving Image",
+            "National Museum of Mathematics",
+            "New York Aquarium",
+            "New York Botanical Garden",
+            "New York City Fire Museum",
+            "New York Hall of Science",
+            "New York Transit Museum",
+            "P.S. 1 Contemporary Art Center",
+            "Queens Museum"
+          ],
+          "processed_at": "2026-06-14"
+        },
+        {
+          "chunk": "chunk-08-ch05-parks-and-gardens",
+          "beats_extracted": 39,
+          "pois_touched": [
+            "Battery Park",
+            "Belvedere Castle",
+            "Bethesda Terrace",
+            "Brooklyn Bridge Park",
+            "Bryant Park",
+            "Central Park",
+            "Central Park Zoo",
+            "Cleopatra's Needle",
+            "Conservatory Garden",
+            "Conservatory Water",
+            "Domino Park",
+            "Governors Island",
+            "Hudson River Park",
+            "Little Island",
+            "Prospect Park",
+            "Riverside Park",
+            "Sheep Meadow",
+            "Strawberry Fields",
+            "The Carousel",
+            "The Dairy",
+            "The High Line",
+            "The Little Red Lighthouse",
+            "Tompkins Square Park",
+            "Union Square",
+            "Washington Square Park",
+            "Wollman Rink"
+          ],
+          "processed_at": "2026-06-14"
+        },
+        {
+          "chunk": "chunk-09-ch07-walking-tour-1-historic-lower-manhattan",
+          "beats_extracted": 45,
+          "pois_touched": [
+            "1 Wall Street",
+            "40 Wall Street",
+            "9/11 Memorial and Museum",
+            "Battery Park",
+            "Bowling Green Park",
+            "Canyon of Heroes",
+            "Castle Clinton",
+            "Federal Hall",
+            "Fraunces Tavern",
+            "Goldman Sachs Building",
+            "Hanover Square",
+            "Large Flagpole",
+            "Mill Lane",
+            "National Museum of the American Indian",
+            "New York Stock Exchange",
+            "Stone Street",
+            "Trinity Church",
+            "Wall Street",
+            "Zuccotti Park"
+          ],
+          "processed_at": "2026-06-14"
+        },
+        {
+          "chunk": "chunk-10-ch07-walking-tour-2-harlem",
+          "beats_extracted": 25,
+          "pois_touched": [
+            "4-16 W. 122nd St.",
+            "55 W. 125th St.",
+            "Apollo Theater",
+            "Blumstein's Department Store",
+            "Collyer Park",
+            "Corner of Adam Clayton Powell Jr. Boulevard and 125th Street",
+            "Hale House",
+            "Harlem",
+            "Langston Hughes House",
+            "Marcus Garvey Park",
+            "Mt. Olivet Baptist Church"
+          ],
+          "processed_at": "2026-06-14"
+        },
+        {
+          "chunk": "chunk-11-ch07-walking-tour-3-greenwich-village",
+          "beats_extracted": 43,
+          "pois_touched": [
+            "130 MacDougal Street",
+            "22 Washington Square North",
+            "29 Washington Place",
+            "Bleecker Street",
+            "Caffe Reggio",
+            "Judson Memorial Church",
+            "Minetta Street",
+            "Minetta Tavern",
+            "New York University School of Law",
+            "One If by Land, Two If by Sea",
+            "Provincetown Playhouse",
+            "Stonewall Inn",
+            "Washington Square North",
+            "Washington Square Park"
+          ],
+          "processed_at": "2026-06-14"
+        },
+        {
+          "chunk": "chunk-12-ch08-music-theater-landmark-venues",
+          "beats_extracted": 18,
+          "pois_touched": [
+            "Apollo Theater",
+            "Bargemusic",
+            "Beacon Theatre",
+            "Brooklyn Academy of Music",
+            "Carnegie Hall",
+            "City Center",
+            "David H. Koch Theater",
+            "Joe's Pub",
+            "Joyce Theater",
+            "Lincoln Center",
+            "Metropolitan Opera House",
+            "Park Avenue Armory"
+          ],
+          "processed_at": "2026-06-14"
+        }
+      ]
     },
     {
-     "chunk": "radio_city_music_hall-rev-1356664344",
-     "processed_at": "2026-06-18T20:06:20+00:00",
-     "beats_extracted": 13,
-     "pois_touched": [
-      "Radio City Music Hall"
-     ]
+      "book_title": "Lonely Planet New York City",
+      "author": "Ali Lemer et al.",
+      "book_slug": "lonely-planet-new-york-city",
+      "chunks_processed": [
+        {
+          "chunk": "chunk-01-lower-manhattan-financial-district",
+          "beats_extracted": 37,
+          "pois_touched": [
+            "9/11 Memorial and Museum",
+            "African Burial Ground National Monument",
+            "Battery Park",
+            "Bowling Green Park",
+            "City Hall",
+            "Ellis Island National Museum of Immigration",
+            "Federal Hall",
+            "Fraunces Tavern",
+            "Governors Island",
+            "Museum of Jewish Heritage",
+            "National Museum of the American Indian",
+            "New York Stock Exchange",
+            "One World Observatory",
+            "Pier 17",
+            "Skyscraper Museum",
+            "St. Paul's Chapel",
+            "Statue of Liberty",
+            "The Woolworth Building",
+            "Trinity Church",
+            "USCGC Lilac"
+          ],
+          "processed_at": "2026-06-15"
+        },
+        {
+          "chunk": "chunk-02-soho-chinatown",
+          "beats_extracted": 30,
+          "pois_touched": [
+            "Artists Space",
+            "Broken Kilometer",
+            "Chinatown",
+            "Columbus Park",
+            "Donald Judd Home Studio",
+            "Drawing Center",
+            "Eastern States Buddhist Temple",
+            "Leslie-Lohman Museum of Art",
+            "Little Italy",
+            "Mahayana Temple",
+            "Merchant's House Museum",
+            "Mulberry Street",
+            "Museum of Chinese in America",
+            "New York City Fire Museum",
+            "New York Earth Room",
+            "Nom Wah Tea Parlor",
+            "SoHo"
+          ],
+          "processed_at": "2026-06-15"
+        },
+        {
+          "chunk": "chunk-03-east-village-lower-east-side",
+          "beats_extracted": 26,
+          "pois_touched": [
+            "Alphabet City Community Gardens",
+            "Astor Place",
+            "East River Park",
+            "Museum at Eldridge Street",
+            "New Museum of Contemporary Art",
+            "St Marks Place",
+            "The Tenement Museum",
+            "Tompkins Square Park"
+          ],
+          "processed_at": "2026-06-15"
+        },
+        {
+          "chunk": "chunk-04-west-village-chelsea-meatpacking",
+          "beats_extracted": 46,
+          "pois_touched": [
+            "66 Perry Street",
+            "Abingdon Square",
+            "Artechouse",
+            "Blue Note",
+            "Chelsea",
+            "Chelsea Hotel",
+            "Cherry Lane Theatre",
+            "Christopher Park",
+            "Comedy Cellar",
+            "Gagosian",
+            "General Theological Seminary",
+            "Grace Church",
+            "Greenwich Village",
+            "Hudson River Park",
+            "Jefferson Market Library",
+            "Meatpacking District",
+            "New York University",
+            "Pace Gallery",
+            "Pier 45",
+            "Salmagundi Club",
+            "Sheridan Square",
+            "The High Line",
+            "Washington Square Park",
+            "White Columns",
+            "Whitney Museum of American Art"
+          ],
+          "processed_at": "2026-06-15"
+        },
+        {
+          "chunk": "chunk-05-union-square-flatiron-gramercy",
+          "beats_extracted": 17,
+          "pois_touched": [
+            "Flatiron Building",
+            "Gramercy Park",
+            "Madison Square Park",
+            "Metropolitan Life Tower",
+            "National Arts Club",
+            "Theodore Roosevelt Birthplace",
+            "Union Square"
+          ],
+          "processed_at": "2026-06-15"
+        },
+        {
+          "chunk": "chunk-06-midtown",
+          "beats_extracted": 55,
+          "pois_touched": [
+            "Bryant Park",
+            "Chrysler Building",
+            "Empire State Building",
+            "Grand Central Terminal",
+            "Intrepid Sea, Air & Space Museum",
+            "Midtown East",
+            "Midtown West",
+            "Museum of Arts and Design",
+            "Museum of Modern Art",
+            "New York Public Library",
+            "Radio City Music Hall",
+            "Rockefeller Center",
+            "Roosevelt Island Tram",
+            "St. Patrick's Cathedral",
+            "The Edge",
+            "The Morgan Library & Museum",
+            "The Museum at FIT",
+            "Times Square",
+            "United Nations",
+            "Vessel"
+          ],
+          "processed_at": "2026-06-15"
+        },
+        {
+          "chunk": "chunk-07-upper-east-side",
+          "beats_extracted": 24,
+          "pois_touched": [
+            "Asia Society",
+            "Cooper Hewitt National Design Museum",
+            "Frick Collection",
+            "Gracie Mansion",
+            "Metropolitan Museum of Art",
+            "Museum of the City of New York",
+            "Neue Galerie New York",
+            "Solomon R. Guggenheim Museum",
+            "Temple Emanu-El",
+            "The Jewish Museum",
+            "Upper East Side"
+          ],
+          "processed_at": "2026-06-15"
+        },
+        {
+          "chunk": "chunk-08-upper-west-side-central-park",
+          "beats_extracted": 34,
+          "pois_touched": [
+            "American Folk Art Museum",
+            "American Museum of Natural History",
+            "Belvedere Castle",
+            "Bethesda Terrace",
+            "Central Park",
+            "Central Park Zoo",
+            "Children's Museum of Manhattan",
+            "Conservatory Garden",
+            "Conservatory Water",
+            "Dakota Building",
+            "Delacorte Theater",
+            "Jacqueline Kennedy Onassis Reservoir",
+            "Lincoln Center",
+            "New-York Historical Society",
+            "Nicholas Roerich Museum",
+            "Riverside Park",
+            "Straus Park",
+            "Strawberry Fields",
+            "The Great Lawn",
+            "The Ramble",
+            "Upper West Side"
+          ],
+          "processed_at": "2026-06-15"
+        },
+        {
+          "chunk": "chunk-09-harlem-upper-manhattan",
+          "beats_extracted": 29,
+          "pois_touched": [
+            "555 Edgecombe Avenue",
+            "Abyssinian Baptist Church",
+            "Apollo Theater",
+            "Cathedral of St. John the Divine",
+            "Columbia University",
+            "El Museo del Barrio",
+            "General Ulysses S Grant National Memorial",
+            "Hamilton Grange",
+            "Hamilton Heights Historic District",
+            "Harlem",
+            "Inwood Hill Park",
+            "Morris-Jumel Mansion",
+            "Riverside Church",
+            "Schomburg Center for Research in Black Culture",
+            "Studio Museum in Harlem",
+            "Sylvan Terrace",
+            "The Cloisters"
+          ],
+          "processed_at": "2026-06-15"
+        },
+        {
+          "chunk": "chunk-10-brooklyn",
+          "beats_extracted": 64,
+          "pois_touched": [
+            "BRIC House",
+            "Brighton Beach",
+            "Brooklyn",
+            "Brooklyn Botanic Garden",
+            "Brooklyn Brewery",
+            "Brooklyn Bridge",
+            "Brooklyn Bridge Park",
+            "Brooklyn Children's Museum",
+            "Brooklyn Heights",
+            "Brooklyn Heights Promenade",
+            "Brooklyn Museum",
+            "Brooklyn Navy Yard",
+            "Bushwick Collective",
+            "Center for Brooklyn History",
+            "City Reliquary",
+            "Coffey Park",
+            "Coney Art Walls",
+            "Coney Island",
+            "East River State Park",
+            "Empire Stores",
+            "Fort Greene Park",
+            "Fulton Ferry Landing",
+            "Green-Wood Cemetery",
+            "Invisible Dog",
+            "Jane's Carousel",
+            "McCarren Park",
+            "Museum of Contemporary African Diasporan Arts",
+            "New York Transit Museum",
+            "Park Slope",
+            "Plymouth Church",
+            "Prospect Park",
+            "Red Hook Winery",
+            "Sunset Park",
+            "Weeksville Heritage Center",
+            "Williamsburg",
+            "Williamsburg Bridge",
+            "Wyckoff House Museum"
+          ],
+          "processed_at": "2026-06-15"
+        },
+        {
+          "chunk": "chunk-11-queens",
+          "beats_extracted": 27,
+          "pois_touched": [
+            "Flushing Meadows Corona Park",
+            "Gantry Plaza State Park",
+            "Isamu Noguchi Garden Museum",
+            "Louis Armstrong House Museum",
+            "Museum of the Moving Image",
+            "New York Hall of Science",
+            "P.S. 1 Contemporary Art Center",
+            "Queens",
+            "Queens County Farm Museum",
+            "Queens Museum",
+            "Rockaway Beach",
+            "SculptureCenter",
+            "Socrates Sculpture Park"
+          ],
+          "processed_at": "2026-06-15"
+        },
+        {
+          "chunk": "chunk-12-understand-history",
+          "beats_extracted": 32,
+          "pois_touched": [
+            "9/11 Memorial and Museum",
+            "Bowling Green Park",
+            "Brooklyn",
+            "Brooklyn Bridge",
+            "Castle Clinton",
+            "Central Park",
+            "Chinatown",
+            "Coney Island",
+            "Financial District",
+            "Greenwich Village",
+            "Hanover Square",
+            "Harlem",
+            "Lower East Side",
+            "Manhattan",
+            "New York Stock Exchange",
+            "SoHo",
+            "Staten Island",
+            "Stone Street",
+            "The Bronx",
+            "The Tenement Museum",
+            "Times Square"
+          ],
+          "processed_at": "2026-06-15"
+        },
+        {
+          "chunk": "chunk-13-understand-nyc-table-arts-scene",
+          "beats_extracted": 24,
+          "pois_touched": [
+            "Brooklyn Academy of Music",
+            "Brooklyn Navy Yard",
+            "Chelsea Gallery District",
+            "Coney Island",
+            "Financial District",
+            "Flatiron Building",
+            "Junior's Restaurant",
+            "Langston Hughes House",
+            "Lincoln Center",
+            "Little Italy",
+            "Lower East Side",
+            "New Museum of Contemporary Art",
+            "New York Public Library",
+            "SoHo",
+            "Times Square",
+            "Village Vanguard",
+            "Williamsburg"
+          ],
+          "processed_at": "2026-06-15"
+        },
+        {
+          "chunk": "chunk-14-understand-city-skyline-queer-city",
+          "beats_extracted": 32,
+          "pois_touched": [
+            "130 MacDougal Street",
+            "Bleecker Street",
+            "Brooklyn Bridge",
+            "Christopher Park",
+            "Chrysler Building",
+            "Empire State Building",
+            "Federal Hall",
+            "Grand Central Terminal",
+            "Greenwich Village",
+            "Harlem",
+            "Merchant's House Museum",
+            "Metropolitan Museum of Art",
+            "Morris-Jumel Mansion",
+            "New York Public Library",
+            "New York Stock Exchange",
+            "One World Observatory",
+            "Solomon R. Guggenheim Museum",
+            "St. Patrick's Cathedral",
+            "St. Paul's Chapel",
+            "Stonewall Inn",
+            "The Edge",
+            "The Public Theater",
+            "The Shed",
+            "The Woolworth Building",
+            "Trinity Church",
+            "United Nations",
+            "Vessel",
+            "Whitney Museum of American Art"
+          ],
+          "processed_at": "2026-06-15"
+        },
+        {
+          "chunk": "chunk-15-understand-nyc-on-screen",
+          "beats_extracted": 20,
+          "pois_touched": [
+            "Battery Park",
+            "Brooklyn Bridge",
+            "Bryant Park",
+            "Central Park",
+            "Dakota Building",
+            "Empire State Building",
+            "Grand Central Terminal",
+            "Kaufman Astoria Studios",
+            "Lincoln Center",
+            "Museum of the Moving Image",
+            "New York Public Library",
+            "Rockefeller Center",
+            "Silvercup Studios",
+            "Staten Island Ferry",
+            "Steiner Studios",
+            "Times Square",
+            "Tom's Restaurant"
+          ],
+          "processed_at": "2026-06-15"
+        }
+      ]
     },
     {
-     "chunk": "bronx_zoo-rev-1359901384",
-     "processed_at": "2026-06-18T20:07:00+00:00",
-     "beats_extracted": 14,
-     "pois_touched": [
-      "Bronx Zoo"
-     ]
+      "book_title": "Moon New York City Walks",
+      "author": "Moon Travel Guides",
+      "book_slug": "moon-nyc-walks",
+      "chunks_processed": [
+        {
+          "chunk": "chunk-01-walk1-dumbo-wallst-chinatown-les",
+          "beats_extracted": 18,
+          "pois_touched": [
+            "9/11 Memorial and Museum",
+            "Brooklyn Bridge",
+            "Castle Clinton",
+            "Chinatown",
+            "City Hall",
+            "Columbus Park",
+            "Federal Hall",
+            "Financial District",
+            "Fraunces Tavern",
+            "Jane's Carousel",
+            "Lower East Side",
+            "Municipal Building",
+            "National Museum of the American Indian",
+            "St. Paul's Chapel",
+            "Staten Island Ferry",
+            "Stone Street",
+            "The Tenement Museum",
+            "Trinity Church"
+          ],
+          "processed_at": "2026-06-16"
+        },
+        {
+          "chunk": "chunk-02-walk2-nolita-soho-westvillage-highline",
+          "beats_extracted": 19,
+          "pois_touched": [
+            "105 Mercer Street",
+            "66 Perry Street",
+            "Bookmarc",
+            "Bowery Mural",
+            "Chelsea Market",
+            "Greene Street",
+            "Greenwich Village",
+            "Italian American Museum",
+            "Magnolia Bakery",
+            "Meatpacking District",
+            "New Museum of Contemporary Art",
+            "NoLIta",
+            "Singer Building",
+            "SoHo",
+            "Stonewall Inn",
+            "The High Line",
+            "Whitney Museum of American Art"
+          ],
+          "processed_at": "2026-06-16"
+        },
+        {
+          "chunk": "chunk-03-walk3-times-square-union-square",
+          "beats_extracted": 21,
+          "pois_touched": [
+            "21 Club",
+            "Bryant Park",
+            "Chrysler Building",
+            "Empire State Building",
+            "Flatiron Building",
+            "Gramercy Park",
+            "Grand Central Terminal",
+            "International Center of Photography",
+            "Museum of Arts and Design",
+            "Museum of Modern Art",
+            "New York Public Library",
+            "Paley Center for Media",
+            "Plaza Hotel",
+            "Radio City Music Hall",
+            "Rockefeller Center",
+            "St. Patrick's Cathedral",
+            "The Morgan Library & Museum",
+            "Theodore Roosevelt Birthplace",
+            "Times Square",
+            "Union Square Greenmarket"
+          ],
+          "processed_at": "2026-06-16"
+        },
+        {
+          "chunk": "chunk-04-walk4-upper-east-side-central-park",
+          "beats_extracted": 23,
+          "pois_touched": [
+            "1040 5th Avenue",
+            "726 Madison Avenue",
+            "Bethesda Terrace",
+            "Café Carlyle",
+            "Central Park Zoo",
+            "Cooper Hewitt National Design Museum",
+            "Creel and Gow",
+            "Edith and Ernesto Fabbri House",
+            "Frick Collection",
+            "Heckscher Ballfields",
+            "Knickerbocker Club",
+            "Metropolitan Club",
+            "Metropolitan Museum of Art",
+            "Naumburg Bandshell",
+            "Neue Galerie New York",
+            "Park Avenue Armory",
+            "Roosevelt House",
+            "Solomon R. Guggenheim Museum",
+            "The Bar Room",
+            "The Jewish Museum",
+            "The Pierre",
+            "West side of Park Avenue, from 68th to 69th streets",
+            "Wollman Rink"
+          ],
+          "processed_at": "2026-06-16"
+        },
+        {
+          "chunk": "chunk-05-walk5-upper-west-side-harlem",
+          "beats_extracted": 20,
+          "pois_touched": [
+            "American Museum of Natural History",
+            "Apollo Theater",
+            "Astor Row",
+            "Aylsmere apartments",
+            "Cathedral of St. John the Divine",
+            "Columbia University",
+            "Dakota Building",
+            "General Ulysses S Grant National Memorial",
+            "Harlem",
+            "National Jazz Museum in Harlem",
+            "Nicholas Roerich Museum",
+            "Riverside Church",
+            "Riverside Park",
+            "Strawberry Fields",
+            "Studio Museum in Harlem",
+            "Tom's Restaurant",
+            "Upper West Side"
+          ],
+          "processed_at": "2026-06-16"
+        },
+        {
+          "chunk": "chunk-06-walk6-williamsburg",
+          "beats_extracted": 13,
+          "pois_touched": [
+            "Brooklyn Brewery",
+            "City Reliquary",
+            "East River State Park",
+            "Filthy Rich Barbershop",
+            "Partners Coffee",
+            "Republic of Booza",
+            "The Gutter",
+            "The Knitting Factory",
+            "Williamsburg",
+            "Williamsburg Art & Historical Center",
+            "Williamsburg Bridge"
+          ],
+          "processed_at": "2026-06-16"
+        },
+        {
+          "chunk": "chunk-07-with-more-time",
+          "beats_extracted": 12,
+          "pois_touched": [
+            "Brooklyn Heights Promenade",
+            "Brooklyn Museum",
+            "Coney Island",
+            "Governors Island",
+            "Hudson River Park",
+            "Manhattan Beach",
+            "Prospect Park",
+            "Rockaway Beach",
+            "The Cloisters",
+            "The Museum at FIT",
+            "United Nations",
+            "Wyckoff House Museum"
+          ],
+          "processed_at": "2026-06-16"
+        }
+      ]
     },
     {
-     "chunk": "hudson_yards-rev-1358623241",
-     "processed_at": "2026-06-18T20:08:00+00:00",
-     "beats_extracted": 12,
-     "pois_touched": [
-      "Hudson Yards"
-     ]
+      "book_title": "National Geographic Walking New York (2nd Edition)",
+      "author": "Katherine Cancila",
+      "book_slug": "national-geographic-walking-nyc",
+      "chunks_processed": [
+        {
+          "chunk": "chunk-01-lower-manhattan",
+          "beats_extracted": 31,
+          "pois_touched": [
+            "9/11 Memorial and Museum",
+            "Battery Park",
+            "Chinatown",
+            "Ellis Island National Museum of Immigration",
+            "Federal Hall",
+            "Federal Reserve Bank of New York",
+            "Financial District",
+            "Fraunces Tavern",
+            "Little Italy",
+            "Lower East Side",
+            "Museum of American Finance",
+            "Museum of Chinese in America",
+            "National Museum of the American Indian",
+            "NoLIta",
+            "One World Observatory",
+            "SoHo",
+            "South Street Seaport Museum",
+            "St. Paul's Chapel",
+            "Statue of Liberty",
+            "Trinity Church",
+            "Wall Street"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-02-the-villages",
+          "beats_extracted": 33,
+          "pois_touched": [
+            "Blue Note",
+            "Caffe Reggio",
+            "Café Wha?",
+            "Cherry Lane Theatre",
+            "Greenwich Village",
+            "Kettle of Fish",
+            "Meatpacking District",
+            "Merchant's House Museum",
+            "Minetta Tavern",
+            "Patchin Place",
+            "Smalls Jazz Club",
+            "St Marks Place",
+            "St. Mark's Church in-the-Bowery",
+            "Stonewall Inn",
+            "The Bitter End",
+            "The Duplex",
+            "The High Line",
+            "The Stone",
+            "Tompkins Square Park",
+            "Union Square",
+            "Village Vanguard",
+            "Washington Square Park",
+            "White Horse Tavern",
+            "Whitney Museum of American Art"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-03-midtown-south",
+          "beats_extracted": 26,
+          "pois_touched": [
+            "Bryant Park",
+            "Chelsea Hotel",
+            "Empire State Building",
+            "Flatiron Building",
+            "Gramercy Park",
+            "Madison Square Park",
+            "National Arts Club",
+            "New York Public Library",
+            "The Morgan Library & Museum",
+            "Theodore Roosevelt Birthplace"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-04-midtown-north",
+          "beats_extracted": 26,
+          "pois_touched": [
+            "Bryant Park",
+            "Chrysler Building",
+            "Grand Central Terminal",
+            "Intrepid Sea, Air & Space Museum",
+            "Madame Tussauds New York",
+            "Museum of Modern Art",
+            "Radio City Music Hall",
+            "Rockefeller Center",
+            "St. Patrick's Cathedral",
+            "Times Square",
+            "United Nations"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-05-upper-east-side",
+          "beats_extracted": 27,
+          "pois_touched": [
+            "Asia Society",
+            "Carl Schurz Park",
+            "Frick Collection",
+            "Gracie Mansion",
+            "Metropolitan Museum of Art",
+            "Museum of the City of New York",
+            "Solomon R. Guggenheim Museum",
+            "The Jewish Museum",
+            "Upper East Side"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-06-central-park",
+          "beats_extracted": 17,
+          "pois_touched": [
+            "Belvedere Castle",
+            "Central Park",
+            "Central Park Zoo",
+            "Conservatory Garden",
+            "Strawberry Fields"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-07-upper-west-side",
+          "beats_extracted": 22,
+          "pois_touched": [
+            "American Folk Art Museum",
+            "American Museum of Natural History",
+            "Citarella",
+            "Dakota Building",
+            "Lincoln Center",
+            "New-York Historical Society",
+            "Riverside Park",
+            "Time Warner Center",
+            "Upper West Side",
+            "Zabar's"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-08-the-heights-harlem",
+          "beats_extracted": 23,
+          "pois_touched": [
+            "Abyssinian Baptist Church",
+            "Apollo Theater",
+            "Cathedral of St. John the Divine",
+            "El Museo del Barrio",
+            "General Ulysses S Grant National Memorial",
+            "Harlem",
+            "Morris-Jumel Mansion",
+            "National Jazz Museum in Harlem",
+            "Studio Museum in Harlem",
+            "The Cloisters"
+          ],
+          "processed_at": "2026-06-17"
+        },
+        {
+          "chunk": "chunk-09-brooklyn",
+          "beats_extracted": 25,
+          "pois_touched": [
+            "Brooklyn",
+            "Brooklyn Botanic Garden",
+            "Brooklyn Bridge",
+            "Brooklyn Heights",
+            "Brooklyn Heights Promenade",
+            "Brooklyn Museum",
+            "Brooklyn Public Library",
+            "Center for Brooklyn History",
+            "Park Slope",
+            "Prospect Park"
+          ],
+          "processed_at": "2026-06-17"
+        }
+      ]
     },
     {
-     "chunk": "hudson_river_park-rev-1359497815",
-     "processed_at": "2026-06-18T20:08:30+00:00",
-     "beats_extracted": 14,
-     "pois_touched": [
-      "Hudson River Park"
-     ]
-    },
-    {
-     "chunk": "chelsea_market-rev-1356162084",
-     "processed_at": "2026-06-18T21:22:16+00:00",
-     "beats_extracted": 8,
-     "pois_touched": [
-      "Chelsea Market"
-     ]
-    },
-    {
-     "chunk": "historic_richmond_town-rev-1356598490",
-     "processed_at": "2026-06-18T21:22:16+00:00",
-     "beats_extracted": 8,
-     "pois_touched": [
-      "Historic Richmond Town"
-     ]
-    },
-    {
-     "chunk": "village_vanguard-rev-1353654115",
-     "processed_at": "2026-06-18T21:22:19+00:00",
-     "beats_extracted": 9,
-     "pois_touched": [
-      "Village Vanguard"
-     ]
-    },
-    {
-     "chunk": "wollman_rink-rev-1359619109",
-     "processed_at": "2026-06-18T21:22:35+00:00",
-     "beats_extracted": 9,
-     "pois_touched": [
-      "Wollman Rink"
-     ]
-    },
-    {
-     "chunk": "henry_street_settlement-rev-1358400822",
-     "processed_at": "2026-06-18T21:22:16+00:00",
-     "beats_extracted": 9,
-     "pois_touched": [
-      "Henry Street Settlement"
-     ]
-    },
-    {
-     "chunk": "strawberry_fields-rev-1349450082",
-     "processed_at": "2026-06-18T21:22:37+00:00",
-     "beats_extracted": 9,
-     "pois_touched": [
-      "Strawberry Fields"
-     ]
-    },
-    {
-     "chunk": "hotel_theresa-rev-1351397157",
-     "processed_at": "2026-06-18T21:22:17+00:00",
-     "beats_extracted": 11,
-     "pois_touched": [
-      "Hotel Theresa"
-     ]
-    },
-    {
-     "chunk": "flatiron_district-rev-1344159462",
-     "processed_at": "2026-06-18T21:22:35+00:00",
-     "beats_extracted": 9,
-     "pois_touched": [
-      "Flatiron District"
-     ]
-    },
-    {
-     "chunk": "verrazzano_narrows_bridge-rev-1356095408",
-     "processed_at": "2026-06-18T21:22:19+00:00",
-     "beats_extracted": 10,
-     "pois_touched": [
-      "Verrazzano-Narrows Bridge"
-     ]
-    },
-    {
-     "chunk": "metropolitan_opera_house-rev-1345381404",
-     "processed_at": "2026-06-18T21:22:36+00:00",
-     "beats_extracted": 10,
-     "pois_touched": [
-      "Metropolitan Opera House"
-     ]
-    },
-    {
-     "chunk": "sheep_meadow-rev-1345264269",
-     "processed_at": "2026-06-18T21:22:36+00:00",
-     "beats_extracted": 10,
-     "pois_touched": [
-      "Sheep Meadow"
-     ]
-    },
-    {
-     "chunk": "studio_museum_in_harlem-rev-1359969766",
-     "processed_at": "2026-06-18T21:22:37+00:00",
-     "beats_extracted": 10,
-     "pois_touched": [
-      "Studio Museum in Harlem"
-     ]
-    },
-    {
-     "chunk": "beacon_theatre-rev-1345095013",
-     "processed_at": "2026-06-18T21:22:15+00:00",
-     "beats_extracted": 11,
-     "pois_touched": [
-      "Beacon Theatre"
-     ]
-    },
-    {
-     "chunk": "manhattan_bridge-rev-1358974534",
-     "processed_at": "2026-06-18T21:22:17+00:00",
-     "beats_extracted": 10,
-     "pois_touched": [
-      "Manhattan Bridge"
-     ]
-    },
-    {
-     "chunk": "plaza_hotel-rev-1351357196",
-     "processed_at": "2026-06-18T21:22:18+00:00",
-     "beats_extracted": 15,
-     "pois_touched": [
-      "Plaza Hotel"
-     ]
-    },
-    {
-     "chunk": "sailors_snug_harbor-rev-1359387380",
-     "processed_at": "2026-06-18T21:22:19+00:00",
-     "beats_extracted": 13,
-     "pois_touched": [
-      "Sailors' Snug Harbor"
-     ]
-    },
-    {
-     "chunk": "flushing_meadows_corona_park-rev-1358195034",
-     "processed_at": "2026-06-18T21:22:36+00:00",
-     "beats_extracted": 8,
-     "pois_touched": [
-      "Flushing Meadows Corona Park"
-     ]
-    },
-    {
-     "chunk": "rockaway_beach-rev-1341573502",
-     "processed_at": "2026-06-18T21:22:36+00:00",
-     "beats_extracted": 12,
-     "pois_touched": [
-      "Rockaway Beach"
-     ]
-    },
-    {
-     "chunk": "little_island-rev-1355194959",
-     "processed_at": "2026-06-18T21:25:53+00:00",
-     "beats_extracted": 11,
-     "pois_touched": [
-      "Little Island"
-     ]
-    },
-    {
-     "chunk": "wave_hill-rev-1359146230",
-     "processed_at": "2026-06-18T21:25:53+00:00",
-     "beats_extracted": 6,
-     "pois_touched": [
-      "Wave Hill"
-     ]
-    },
-    {
-     "chunk": "chelsea-rev-1357748470",
-     "processed_at": "2026-06-18T21:22:37+00:00",
-     "beats_extracted": 9,
-     "pois_touched": [
-      "Chelsea"
-     ]
-    },
-    {
-     "chunk": "friends_meeting_house_flushing-rev-1348805367",
-     "processed_at": "2026-06-18T21:25:53+00:00",
-     "beats_extracted": 8,
-     "pois_touched": [
-      "Friends Meeting House (Flushing)"
-     ]
-    },
-    {
-     "chunk": "manhattan-rev-1359944961",
-     "processed_at": "2026-06-18T21:22:38+00:00",
-     "beats_extracted": 11,
-     "pois_touched": [
-      "Manhattan"
-     ]
-    },
-    {
-     "chunk": "midtown_east-rev-1359539359",
-     "processed_at": "2026-06-18T21:22:38+00:00",
-     "beats_extracted": 8,
-     "pois_touched": [
-      "Midtown East"
-     ]
-    },
-    {
-     "chunk": "midtown_west-rev-1357146949",
-     "processed_at": "2026-06-18T21:25:54+00:00",
-     "beats_extracted": 9,
-     "pois_touched": [
-      "Midtown West"
-     ]
+      "book_title": "Wikipedia",
+      "author": "",
+      "book_slug": "wikipedia",
+      "chunks_processed": [
+        {
+          "chunk": "beacon_theatre-rev-1345095013",
+          "beats_extracted": 11,
+          "pois_touched": [
+            "Beacon Theatre"
+          ],
+          "processed_at": "2026-06-18T21:22:15+00:00"
+        },
+        {
+          "chunk": "bronx_zoo-rev-1359901384",
+          "beats_extracted": 14,
+          "pois_touched": [
+            "Bronx Zoo"
+          ],
+          "processed_at": "2026-06-18T20:07:00+00:00"
+        },
+        {
+          "chunk": "carnegie_hall-rev-1352216015",
+          "beats_extracted": 11,
+          "pois_touched": [
+            "Carnegie Hall"
+          ],
+          "processed_at": "2026-06-18T20:06:00+00:00"
+        },
+        {
+          "chunk": "chelsea-rev-1357748470",
+          "beats_extracted": 9,
+          "pois_touched": [
+            "Chelsea"
+          ],
+          "processed_at": "2026-06-18T21:22:37+00:00"
+        },
+        {
+          "chunk": "chelsea_market-rev-1356162084",
+          "beats_extracted": 8,
+          "pois_touched": [
+            "Chelsea Market"
+          ],
+          "processed_at": "2026-06-18T21:22:16+00:00"
+        },
+        {
+          "chunk": "flatiron_district-rev-1344159462",
+          "beats_extracted": 9,
+          "pois_touched": [
+            "Flatiron District"
+          ],
+          "processed_at": "2026-06-18T21:22:35+00:00"
+        },
+        {
+          "chunk": "flushing_meadows_corona_park-rev-1358195034",
+          "beats_extracted": 8,
+          "pois_touched": [
+            "Flushing Meadows Corona Park"
+          ],
+          "processed_at": "2026-06-18T21:22:36+00:00"
+        },
+        {
+          "chunk": "friends_meeting_house_flushing-rev-1348805367",
+          "beats_extracted": 8,
+          "pois_touched": [
+            "Friends Meeting House (Flushing)"
+          ],
+          "processed_at": "2026-06-18T21:25:53+00:00"
+        },
+        {
+          "chunk": "henry_street_settlement-rev-1358400822",
+          "beats_extracted": 9,
+          "pois_touched": [
+            "Henry Street Settlement"
+          ],
+          "processed_at": "2026-06-18T21:22:16+00:00"
+        },
+        {
+          "chunk": "historic_richmond_town-rev-1356598490",
+          "beats_extracted": 8,
+          "pois_touched": [
+            "Historic Richmond Town"
+          ],
+          "processed_at": "2026-06-18T21:22:16+00:00"
+        },
+        {
+          "chunk": "hotel_theresa-rev-1351397157",
+          "beats_extracted": 11,
+          "pois_touched": [
+            "Hotel Theresa"
+          ],
+          "processed_at": "2026-06-18T21:22:17+00:00"
+        },
+        {
+          "chunk": "hudson_river_park-rev-1359497815",
+          "beats_extracted": 14,
+          "pois_touched": [
+            "Hudson River Park"
+          ],
+          "processed_at": "2026-06-18T20:08:30+00:00"
+        },
+        {
+          "chunk": "hudson_yards-rev-1358623241",
+          "beats_extracted": 12,
+          "pois_touched": [
+            "Hudson Yards"
+          ],
+          "processed_at": "2026-06-18T20:08:00+00:00"
+        },
+        {
+          "chunk": "little_island-rev-1355194959",
+          "beats_extracted": 11,
+          "pois_touched": [
+            "Little Island"
+          ],
+          "processed_at": "2026-06-18T21:25:53+00:00"
+        },
+        {
+          "chunk": "manhattan-rev-1359944961",
+          "beats_extracted": 11,
+          "pois_touched": [
+            "Manhattan"
+          ],
+          "processed_at": "2026-06-18T21:22:38+00:00"
+        },
+        {
+          "chunk": "manhattan_bridge-rev-1358974534",
+          "beats_extracted": 10,
+          "pois_touched": [
+            "Manhattan Bridge"
+          ],
+          "processed_at": "2026-06-18T21:22:17+00:00"
+        },
+        {
+          "chunk": "metropolitan_opera_house-rev-1345381404",
+          "beats_extracted": 10,
+          "pois_touched": [
+            "Metropolitan Opera House"
+          ],
+          "processed_at": "2026-06-18T21:22:36+00:00"
+        },
+        {
+          "chunk": "midtown_east-rev-1359539359",
+          "beats_extracted": 8,
+          "pois_touched": [
+            "Midtown East"
+          ],
+          "processed_at": "2026-06-18T21:22:38+00:00"
+        },
+        {
+          "chunk": "midtown_west-rev-1357146949",
+          "beats_extracted": 9,
+          "pois_touched": [
+            "Midtown West"
+          ],
+          "processed_at": "2026-06-18T21:25:54+00:00"
+        },
+        {
+          "chunk": "plaza_hotel-rev-1351357196",
+          "beats_extracted": 15,
+          "pois_touched": [
+            "Plaza Hotel"
+          ],
+          "processed_at": "2026-06-18T21:22:18+00:00"
+        },
+        {
+          "chunk": "radio_city_music_hall-rev-1356664344",
+          "beats_extracted": 13,
+          "pois_touched": [
+            "Radio City Music Hall"
+          ],
+          "processed_at": "2026-06-18T20:06:20+00:00"
+        },
+        {
+          "chunk": "rockaway_beach-rev-1341573502",
+          "beats_extracted": 12,
+          "pois_touched": [
+            "Rockaway Beach"
+          ],
+          "processed_at": "2026-06-18T21:22:36+00:00"
+        },
+        {
+          "chunk": "sailors_snug_harbor-rev-1359387380",
+          "beats_extracted": 13,
+          "pois_touched": [
+            "Sailors' Snug Harbor"
+          ],
+          "processed_at": "2026-06-18T21:22:19+00:00"
+        },
+        {
+          "chunk": "sheep_meadow-rev-1345264269",
+          "beats_extracted": 10,
+          "pois_touched": [
+            "Sheep Meadow"
+          ],
+          "processed_at": "2026-06-18T21:22:36+00:00"
+        },
+        {
+          "chunk": "strawberry_fields-rev-1349450082",
+          "beats_extracted": 9,
+          "pois_touched": [
+            "Strawberry Fields"
+          ],
+          "processed_at": "2026-06-18T21:22:37+00:00"
+        },
+        {
+          "chunk": "studio_museum_in_harlem-rev-1359969766",
+          "beats_extracted": 10,
+          "pois_touched": [
+            "Studio Museum in Harlem"
+          ],
+          "processed_at": "2026-06-18T21:22:37+00:00"
+        },
+        {
+          "chunk": "verrazzano_narrows_bridge-rev-1356095408",
+          "beats_extracted": 10,
+          "pois_touched": [
+            "Verrazzano-Narrows Bridge"
+          ],
+          "processed_at": "2026-06-18T21:22:19+00:00"
+        },
+        {
+          "chunk": "village_vanguard-rev-1353654115",
+          "beats_extracted": 9,
+          "pois_touched": [
+            "Village Vanguard"
+          ],
+          "processed_at": "2026-06-18T21:22:19+00:00"
+        },
+        {
+          "chunk": "wave_hill-rev-1359146230",
+          "beats_extracted": 6,
+          "pois_touched": [
+            "Wave Hill"
+          ],
+          "processed_at": "2026-06-18T21:25:53+00:00"
+        },
+        {
+          "chunk": "wollman_rink-rev-1359619109",
+          "beats_extracted": 9,
+          "pois_touched": [
+            "Wollman Rink"
+          ],
+          "processed_at": "2026-06-18T21:22:35+00:00"
+        },
+        {
+          "chunk": "yankee_stadium-rev-1358311733",
+          "beats_extracted": 11,
+          "pois_touched": [
+            "Yankee Stadium"
+          ],
+          "processed_at": "2026-06-18T20:05:39+00:00"
+        }
+      ]
     }
-   ]
-  },
-  {
-   "book_title": "New York: The Movie Lover's Guide",
-   "author": "Richard Alleman",
-   "chunks_processed": 12
-  }
- ]
+  ]
 }
