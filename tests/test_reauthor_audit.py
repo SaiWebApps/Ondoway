@@ -31,8 +31,8 @@ _GIVEN = [
     {"claim": "The author regards the main stairway as grandiose.", "kind": "observation"},
 ]
 _READ_BACK = [
-    {"claim": "The staircase is faced with coloured marble.", "kind": "assertion"},
-    {"claim": "The marble includes red colouring.", "kind": "assertion"},
+    {"claim": "The staircase is faced with coloured marble.", "kind": "fact"},
+    {"claim": "The marble includes red colouring.", "kind": "fact"},
 ]
 
 

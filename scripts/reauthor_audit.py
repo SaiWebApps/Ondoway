@@ -65,7 +65,9 @@ things: a colour, a material, a number, a time of day, a direction, what a perso
 said to be doing. Those are the assertions that carry the most and get read past.
 
 An impression the text offers rather than asserts — "you may find it grand" — is a claim
-too. Mark it as an impression. Everything else is an assertion.
+too. Mark that one "observation". Mark everything else "fact". Those two words only:
+anything else is read as a fact, and an invented impression then reads as an invented
+fact, which is a different and worse thing.
 
 Do not judge the text, do not say whether it is good, and do not leave anything out
 because it seems obvious.
@@ -74,7 +76,7 @@ BEAT (about {poi}, in {city}):
 {body}
 
 Reply with JSON only, no prose:
-{{"claims": [{{"claim": "...", "kind": "assertion"}}]}}"""
+{{"claims": [{{"claim": "...", "kind": "fact"}}]}}"""
 
 
 _MATCH_PROMPT = """Below are the FACTS a writer was given, and the STATEMENTS someone
@@ -184,7 +186,7 @@ def unsupported_claims(
     if matches is None:
         return []
     return [
-        {"claim": claim.get("claim", ""), "kind": claim.get("kind", "assertion")}
+        {"claim": claim.get("claim", ""), "kind": claim.get("kind", "fact")}
         for index, claim in enumerate(read_back, start=1)
         if index in matches and not matches[index]
     ]
