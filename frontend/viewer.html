@@ -133,7 +133,15 @@
 </div>
 
 <script>
-const API = 'http://localhost:8000/api/v1';
+// ── API base URL ──
+// Port-configurable via ?apiPort= (default 8000), the same reader
+// review.html and onboard.html carry, so a lane's viewer points at that
+// lane's own API instead of whatever holds :8000.
+const API = (() => {
+  const raw = new URLSearchParams(location.search).get('apiPort');
+  const port = raw && /^\d{2,5}$/.test(raw) ? raw : '8000';
+  return `http://localhost:${port}/api/v1`;
+})();
 
 // State
 let map = null;

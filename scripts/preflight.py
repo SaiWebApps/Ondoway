@@ -61,9 +61,23 @@ MIN_COLIMA_MEMORY_BYTES = 8 * 1024**3
 COLIMA_MEMORY_GIB = 8
 COLIMA_CPUS = 4
 
-# Ports this project's own servers bind: the API/workbench, the workbench test
-# shard's managed server, the dashboard, and the Flutter web dev server.
-SERVER_PORTS = (3000, 8000, 8001, 8080)
+# Ports this project's own servers bind, per lane: the API/workbench, the
+# dashboard, and the Flutter web dev server. The Makefile derives the same
+# numbers from LANE=; tests/test_preflight.py pins the table disjoint from
+# every shared service (Valhalla :8002, the tracker dashboards :8010-:8019,
+# the Bolt ports).
+LANE_SERVER_PORTS = {
+    "": {"api": 8000, "dashboard": 8080, "flutter_web": 3000},
+    "2": {"api": 8020, "dashboard": 8082, "flutter_web": 3002},
+    "3": {"api": 8030, "dashboard": 8083, "flutter_web": 3003},
+    "4": {"api": 8040, "dashboard": 8084, "flutter_web": 3004},
+}
+
+# Every server port, flat: the lane table above plus the workbench test
+# shard's managed server (:8001).
+SERVER_PORTS = tuple(
+    sorted({8001} | {port for lane in LANE_SERVER_PORTS.values() for port in lane.values()})
+)
 
 DAEMON_WAIT_SECONDS = 180
 DATABASE_WAIT_SECONDS = 180
@@ -965,7 +979,9 @@ def _serves_this_project(port: int, *, graph_port: int = DEV_GRAPH_PORT) -> bool
     return f":{graph_port}" in str(body.get("neo4j_uri", ""))
 
 
-def _probe_port(port: int, *, reuse_ok: bool = False) -> Callable[[], Probe]:
+def _probe_port(
+    port: int, *, reuse_ok: bool = False, graph_port: int = DEV_GRAPH_PORT
+) -> Callable[[], Probe]:
     """`reuse_ok` is opt-in, and only `workbench` opts in.
 
     An occupied port that answers our health check is fine for the workbench,
@@ -973,6 +989,10 @@ def _probe_port(port: int, *, reuse_ok: bool = False) -> Callable[[], Probe]:
     port, so treating "something of ours is already there" as satisfied certified
     a port that cannot be bound -- and the failure then surfaced late, which is
     exactly what declaring the port up front was meant to prevent.
+
+    ``graph_port`` is the dev graph a reusable server must be connected to --
+    each lane's own, so a lane 4 workbench can never satisfy itself with a
+    server reading another lane's corpus.
     """
 
     def probe() -> Probe:
@@ -981,7 +1001,7 @@ def _probe_port(port: int, *, reuse_ok: bool = False) -> Callable[[], Probe]:
             return Probe(False, f"could not determine what is using port {port}")
         if not holders:
             return Probe(True, f"port {port} is free")
-        if reuse_ok and _serves_this_project(port):
+        if reuse_ok and _serves_this_project(port, graph_port=graph_port):
             return Probe(True, f"port {port} already serving this project")
         first = holders[0]
         summary = first.command.split()[0] if first.command else "unknown"
@@ -991,13 +1011,15 @@ def _probe_port(port: int, *, reuse_ok: bool = False) -> Callable[[], Probe]:
     return probe
 
 
-def _repair_port(port: int, *, reuse_ok: bool = False) -> Callable[[], Probe]:
+def _repair_port(
+    port: int, *, reuse_ok: bool = False, graph_port: int = DEV_GRAPH_PORT
+) -> Callable[[], Probe]:
     def repair() -> Probe:
         holders = _port_listeners(port)
         if holders == UNKNOWN:
             return Probe(False, f"could not determine what is using port {port}")
         if not holders:
-            return _probe_port(port, reuse_ok=reuse_ok)()
+            return _probe_port(port, reuse_ok=reuse_ok, graph_port=graph_port)()
         strangers = [h for h in holders if not _is_our_server(h.command)]
         if strangers:
             held = strangers[0]
@@ -1073,7 +1095,7 @@ def _repair_port(port: int, *, reuse_ok: bool = False) -> Callable[[], Probe]:
                 if still == UNKNOWN or still:
                     pids = ", ".join(str(h.pid) for h in remaining)
                     return Probe(False, f"port {port} still held after stopping PID(s) {pids}")
-        return _probe_port(port, reuse_ok=reuse_ok)()
+        return _probe_port(port, reuse_ok=reuse_ok, graph_port=graph_port)()
 
     return repair
 
@@ -1392,16 +1414,22 @@ def _build_registry() -> dict:
             )
         )
     # The workbench reuses a healthy API rather than restarting it, so for that
-    # one target an occupied-but-ours port is satisfied.
-    add(
-        Requirement(
-            name="port-8000-reusable",
-            summary="TCP port 8000 (reusable)",
-            probe=_probe_port(8000, reuse_ok=True),
-            repair=_repair_port(8000, reuse_ok=True),
-            instruction="free port 8000:  lsof -tiTCP:8000 -sTCP:LISTEN | xargs kill",
+    # one target an occupied-but-ours port is satisfied -- one reusable row per
+    # lane, each expecting THAT lane's dev graph behind the server it reuses.
+    for lane, ports in LANE_SERVER_PORTS.items():
+        api_port = ports["api"]
+        lane_dev = DATABASE_BY_KEY[f"dev{lane}"].port
+        add(
+            Requirement(
+                name=f"port-{api_port}-reusable",
+                summary=f"TCP port {api_port} (reusable)",
+                probe=_probe_port(api_port, reuse_ok=True, graph_port=lane_dev),
+                repair=_repair_port(api_port, reuse_ok=True, graph_port=lane_dev),
+                instruction=(
+                    f"free port {api_port}:  lsof -tiTCP:{api_port} -sTCP:LISTEN | xargs kill"
+                ),
+            )
         )
-    )
 
     add(
         Requirement(

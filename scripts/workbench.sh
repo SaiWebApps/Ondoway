@@ -1,23 +1,27 @@
 #!/usr/bin/env bash
-# Run the editorial workbench: start the graph API on the DEV graph (port 8000),
+# Run the editorial workbench: start the graph API on this lane's DEV graph,
 # wait for /api/v1/healthz, then open frontend/review.html pointed at it.
 #
 # review.html reads ?apiPort= (default 8000) and builds
 # http://localhost:<port>/api/v1 — so a plain file:// open works. We open it
-# with ?apiPort=8000 explicitly for clarity.
+# with the lane's port explicitly.
 set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PORT=8000
+# The lane's own API port (`make workbench` exports it; 8000 on the main lane).
+# Per-lane ports are what keep two sandboxes' workbenches blind to each other:
+# a reuse probe on this port can only ever find this lane's server.
+PORT="${ONDOWAY_API_PORT:-8000}"
 HEALTH="http://localhost:${PORT}/api/v1/healthz"
 PAGE="file://${ROOT}/frontend/review.html?apiPort=${PORT}"
+LOG="/tmp/ondoway-workbench-api-${PORT}.log"
 
 # Same NO_PROXY prefix as `make api` — hard-won fix, keep in sync.
 NP="api.resend.com,resend.com,www.googleapis.com,googleapis.com,api.anthropic.com,anthropic.com,api.github.com,github.com"
 
 echo "==> Workbench: starting graph API on the DEV graph (port ${PORT})..."
 
-# If something already answers healthz on 8000, reuse it. Otherwise start one.
+# If something already answers healthz on this lane's port, reuse it. Otherwise start one.
 if curl -fs --max-time 2 "$HEALTH" >/dev/null 2>&1; then
   echo "    API already healthy on :${PORT} — reusing it."
   API_PID=""
@@ -77,9 +81,9 @@ else
     TTS_FALLBACK=elevenlabs \
     ONBOARD_PROVIDER=anthropic \
     NO_PROXY="$NP" no_proxy="$NP" ONDOWAY_ALLOW_INSECURE_AUTH_SECRETS=1 \
-    uv run uvicorn src.api.app:app --host 127.0.0.1 --port ${PORT} >/tmp/ondoway-workbench-api.log 2>&1 &
+    uv run uvicorn src.api.app:app --host 127.0.0.1 --port ${PORT} >"${LOG}" 2>&1 &
   API_PID=$!
-  echo "    API PID ${API_PID} (log: /tmp/ondoway-workbench-api.log)"
+  echo "    API PID ${API_PID} (log: ${LOG})"
 fi
 
 echo "==> Waiting for ${HEALTH} ..."
@@ -91,7 +95,7 @@ done
 
 if [ "$ok" -ne 1 ]; then
   echo "ERROR: API did not become healthy on :${PORT} within 30s." >&2
-  echo "       Check the log: /tmp/ondoway-workbench-api.log" >&2
+  echo "       Check the log: ${LOG}" >&2
   echo "       Common cause: dev Neo4j not up (make db-up) or port ${PORT} busy." >&2
   exit 1
 fi
@@ -107,7 +111,7 @@ else
 fi
 
 echo ""
-echo "Workbench is live. The API is on http://localhost:${PORT} (dev graph 7687)."
+echo "Workbench is live. The API is on http://localhost:${PORT} (this lane's dev graph)."
 if [ -n "$API_PID" ]; then
   echo "Stop the API when done:  kill ${API_PID}   (or: lsof -tiTCP:${PORT} -sTCP:LISTEN | xargs kill)"
 fi

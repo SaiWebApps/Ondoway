@@ -472,7 +472,7 @@ def test_a_port_already_serving_this_project_counts_as_satisfied(monkeypatch):
         "_port_listeners",
         lambda port: [preflight.PortHolder(7, f"{preflight.ROOT}/ uvicorn src.api.app:app")],
     )
-    monkeypatch.setattr(preflight, "_serves_this_project", lambda port: True)
+    monkeypatch.setattr(preflight, "_serves_this_project", lambda port, **kwargs: True)
     assert preflight._probe_port(8000, reuse_ok=True)().ok is True, "workbench must reuse"
     assert preflight._probe_port(8000)().ok is False, (
         "a target that BINDS the port must not treat an occupied port as satisfied"
@@ -640,6 +640,28 @@ def test_live_corpus_ports_track_the_lane_dev_graphs():
     )
 
 
+def test_lane_ports_are_disjoint_and_registered():
+    """Every port a lane binds is unique across lanes, avoids the shared
+    services (Valhalla :8002, the tracker dashboards :8010-:8019, every Bolt
+    port), and is a registered requirement — plus each lane's API port carries
+    a reusable row, so `make workbench LANE=n` can reuse only a server on its
+    own lane's port and graph."""
+    table = preflight.LANE_SERVER_PORTS
+    assert set(table) == {"", "2", "3", "4"}, "one row per lane, main included"
+    all_ports = [port for lane in table.values() for port in lane.values()]
+    assert len(all_ports) == len(set(all_ports)), f"lane ports collide: {sorted(all_ports)}"
+    reserved = {8002} | set(range(8010, 8020)) | {spec.port for spec in preflight.DATABASES}
+    clashes = set(all_ports) & reserved
+    assert not clashes, f"lane ports collide with shared services: {sorted(clashes)}"
+    for port in all_ports:
+        assert f"port-{port}" in preflight.REGISTRY, f"port-{port} is not a requirement"
+    for lane, ports in table.items():
+        name = f"port-{ports['api']}-reusable"
+        assert name in preflight.REGISTRY, (
+            f"lane {lane or 'main'} has no reusable API-port requirement {name}"
+        )
+
+
 def test_db_up_resolves_every_database_not_just_the_default():
     """Only DB=dev was ever exercised; DB=test and DB=workbench went unchecked."""
     text = MAKEFILE.read_text(encoding="utf-8")
@@ -700,7 +722,7 @@ def _stub_port_repair(monkeypatch, calls_until_free):
 
     monkeypatch.setattr(preflight, "_port_listeners", listeners)
     monkeypatch.setattr(preflight, "_responding", lambda port, **k: False)
-    monkeypatch.setattr(preflight, "_serves_this_project", lambda port: False)
+    monkeypatch.setattr(preflight, "_serves_this_project", lambda port, **kwargs: False)
     monkeypatch.setattr(
         preflight,
         "_run",

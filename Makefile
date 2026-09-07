@@ -47,11 +47,19 @@ TEST_PROFILE ?= test
 DEV_DB ?= dev
 DEV_PROFILE ?= local
 WORKBENCH_PROFILE ?= workbench
+API_PORT ?= 8000
+DASHBOARD_PORT ?= 8080
+FLUTTER_WEB_PORT ?= 3000
 ifneq ($(LANE),)
 TEST_PROFILE := test$(LANE)
 DEV_DB := dev$(LANE)
 DEV_PROFILE := local$(LANE)
 WORKBENCH_PROFILE := workbench$(LANE)
+# The same numbers scripts/preflight.py's LANE_SERVER_PORTS publishes; the
+# disjointness test there is the drift guard between these two spellings.
+API_PORT := 80$(LANE)0
+DASHBOARD_PORT := 808$(LANE)
+FLUTTER_WEB_PORT := 300$(LANE)
 endif
 export ONDOWAY_LANE := $(LANE)
 
@@ -87,8 +95,8 @@ SKIP_PYC_SCRUB ?=
 
 # Reusable prerequisite sets.  A target names one of these, or spells its own list.
 PRE_PY := uv python-deps
-PRE_LOCAL_GRAPH := uv python-deps db-dev dev-data
-PRE_TOUR := uv python-deps db-dev dev-data valhalla
+PRE_LOCAL_GRAPH := uv python-deps db-$(DEV_DB) dev-data
+PRE_TOUR := uv python-deps db-$(DEV_DB) dev-data valhalla
 PRE_PYTEST := uv python-deps db-$(TEST_PROFILE) db-$(DEV_DB) dev-data valhalla
 PRE_FLUTTER := flutter flutter-deps
 # The full union `make test` will need, checked once up front so a missing Render
@@ -596,21 +604,21 @@ valhalla-build-tiles: ## Download Paris and New York OSM extracts for tile build
 ##@ RUN
 
 api: ## Start the local API with dev data and fresh Render provider credentials.
-	@$(PREFLIGHT) --label api $(PRE_TOUR) render-key port-8000
+	@$(PREFLIGHT) --label api $(PRE_TOUR) render-key port-$(API_PORT)
 	@$(RENDER_LOCAL_EXEC) env NO_PROXY="$(NO_PROXY_LIST)" no_proxy="$(NO_PROXY_LIST)" \
-		uv run uvicorn src.api.app:app --host 127.0.0.1 --port 8000 --reload
+		uv run uvicorn src.api.app:app --host 127.0.0.1 --port $(API_PORT) --reload
 
 workbench: ## Start the local editorial workbench with dev data and fresh Render credentials.
-	@$(PREFLIGHT) --label workbench $(PRE_TOUR) render-key port-8000-reusable
-	@$(RENDER_LOCAL_EXEC) bash scripts/workbench.sh
+	@$(PREFLIGHT) --label workbench $(PRE_TOUR) render-key port-$(API_PORT)-reusable
+	@$(RENDER_LOCAL_EXEC) env ONDOWAY_API_PORT=$(API_PORT) bash scripts/workbench.sh
 
 dashboard: ## Start the local dashboard with the validated dev profile.
-	@$(PREFLIGHT) --label dashboard $(PRE_LOCAL_GRAPH) port-8080
-	@$(LOCAL_EXEC) uv run python -m src.server
+	@$(PREFLIGHT) --label dashboard $(PRE_LOCAL_GRAPH) port-$(DASHBOARD_PORT)
+	@$(LOCAL_EXEC) env DASHBOARD_PORT=$(DASHBOARD_PORT) uv run python -m src.server
 
-flutter-web: ## Run the Flutter web app on port 3000.
-	@$(PREFLIGHT) --label flutter-web $(PRE_FLUTTER) port-3000
-	cd mobile && flutter run -d chrome --web-port=3000
+flutter-web: ## Run the Flutter web app on its lane's web port.
+	@$(PREFLIGHT) --label flutter-web $(PRE_FLUTTER) port-$(FLUTTER_WEB_PORT)
+	cd mobile && flutter run -d chrome --web-port=$(FLUTTER_WEB_PORT)
 
 # Pick a simulator that exists on THIS machine: a booted one if there is one,
 # else the newest available iPhone. Override with `make flutter-ios SIM=<udid>`.
@@ -623,7 +631,7 @@ print(next(iter(b or i or [""])))' 2>/dev/null
 SIM_TARGET = $(if $(filter command line,$(origin SIM)),$(SIM),$(shell $(SIM_PICK)))
 
 flutter-ios: ## Run the Flutter app in an iOS simulator with a local API.
-	@$(PREFLIGHT) --label flutter-ios $(PRE_TOUR) render-key port-8000 $(PRE_FLUTTER) xcode cocoapods
+	@$(PREFLIGHT) --label flutter-ios $(PRE_TOUR) render-key port-$(API_PORT) $(PRE_FLUTTER) xcode cocoapods
 	@test -n "$(SIM_TARGET)" || { \
 		echo "ERROR: no iOS simulator found on this machine." >&2; \
 		echo "       Open Xcode > Settings > Components and install a simulator runtime," >&2; \
@@ -632,14 +640,15 @@ flutter-ios: ## Run the Flutter app in an iOS simulator with a local API.
 	@xcrun simctl boot "$(SIM_TARGET)" 2>/dev/null || true
 	@open -a Simulator 2>/dev/null || true
 	@$(RENDER_LOCAL_EXEC) env NO_PROXY="$(NO_PROXY_LIST)" no_proxy="$(NO_PROXY_LIST)" \
-		uv run uvicorn src.api.app:app --host 127.0.0.1 --port 8000 &
+		uv run uvicorn src.api.app:app --host 127.0.0.1 --port $(API_PORT) &
 	@for i in $$(seq 1 30); do \
-		curl -fs --noproxy '*' --max-time 2 http://127.0.0.1:8000/api/v1/healthz >/dev/null 2>&1 && break; \
+		curl -fs --noproxy '*' --max-time 2 http://127.0.0.1:$(API_PORT)/api/v1/healthz >/dev/null 2>&1 && break; \
 		sleep 1; \
 	done; \
-	curl -fs --noproxy '*' --max-time 2 http://127.0.0.1:8000/api/v1/healthz >/dev/null 2>&1 || \
-		{ echo "ERROR: the API did not become healthy on :8000 within 30s." >&2; exit 1; }
-	cd mobile && flutter run -d "$(SIM_TARGET)"
+	curl -fs --noproxy '*' --max-time 2 http://127.0.0.1:$(API_PORT)/api/v1/healthz >/dev/null 2>&1 || \
+		{ echo "ERROR: the API did not become healthy on :$(API_PORT) within 30s." >&2; exit 1; }
+	cd mobile && flutter run -d "$(SIM_TARGET)" \
+		--dart-define=API_BASE_URL=http://localhost:$(API_PORT)/api/v1
 
 flutter-device: ## Run the Flutter app on a physical device against production.
 	@$(PREFLIGHT) --label flutter-device $(PRE_FLUTTER) xcode cocoapods
