@@ -303,7 +303,9 @@ workbench page. Not "tests pass": *it works*, visibly. For tier 2+ work,
 run `Agent(subagent_type:'acceptance')` on the produced artifact — told
 which personas the goal serves, so it judges as those people and not as a
 generic critic — and `Agent(subagent_type:'qa')` for the undo test on the
-new tests, SEQUENTIALLY, and post their verdicts as sprint notes.
+new tests, CONCURRENTLY: both are read-only judges, each returns its findings
+to the sprint-leader, and the sprint-leader alone writes them onward. Post
+their verdicts as sprint notes.
 
 **Findings are fuel.** Every actionable acceptance or QA finding is promoted
 to a tracker row — never a UI chip, never prose alone — walked at Phase 2
@@ -321,6 +323,41 @@ fired, and when it was the budget, the honest gap — what the personas still
 experience that the goal's sentence forbids.
 
 ---
+
+## Multi-track mode
+
+A phase whose stories share no code path runs as concurrent TRACKS, one per
+sandbox — `docs/adr/0002-independent-tracks-build-in-isolated-sandboxes.md`
+is the decision record. Multi-track changes the run's mechanics in exactly
+the ways below; everything else in this file applies per track, unchanged.
+
+- **One planning session for the set.** Phases 1–4 run once and produce every
+  track's milestones, ONE conflict map naming an owner per shared file
+  region (in `plan.md`), and a per-track budget. "go" is given once for the
+  set; after it, a track never idles waiting for human input that is not a
+  pause-budget item.
+- **A sandbox is an explicit worktree plus its own lane.** Created with
+  `git worktree add <path> -b <branch>` — never a harness-managed worktree —
+  then `uv sync` and `codegraph init` inside it. `LANE=` selects its graphs
+  and ports. The infra milestones that create a lane land on main BEFORE the
+  worktree is cut, so every sandbox is born already isolated.
+- **Ledgers are per checkout.** A completion claim re-runs its test in the
+  checkout that made it, so each track records its rows in its own
+  `.claude/ledger/tracker.db` and serves its own dashboard (main :8010,
+  lane N :801N). `plan.md` and `assets.md` are placed in each checkout's run
+  dir at launch, and the conflict map binds every track identically.
+- **Only the main checkout runs the definitive bar.** `make test` and
+  `make audit` always run the canonical set and consume lanes 2 and 3 as
+  shards. A sandbox runs `make lint`, its milestones' narrow tests and
+  `make test-file LANE=<n>`; it never runs xdist against the canonical
+  shards, never starts or stops Valhalla, never deploys, and never touches
+  another lane's ports or graphs.
+- **Exit is an end-merge.** The track owning the phase gate merges to main
+  first; the others rebase onto it; ONE full bar and ONE adversarial panel
+  on merged main are the set's exit. Each track's own story still closes
+  through its per-cycle floor before its merge.
+- **No intra-track pipelining.** Milestones inside a track stay serial; the
+  parallelism lives BETWEEN sandboxes, where the isolation is physical.
 
 ## The pause budget, and the per-cycle floor
 
@@ -342,7 +379,9 @@ fewer checks:
 - **Adversarial plan review before building** — the reviewer attacks the
   predicted artifacts, not the milestone names, and its objections are
   resolved in the plan before the first test is written.
-- Red-first tests, the QA undo pass, and SEQUENTIAL verdict agents.
+- Red-first tests, the QA undo pass, and both verdict agents — concurrent,
+  because each only reads; the sprint-leader is the one writer of their
+  findings.
 - The full bar once per cycle.
 - **A skeptic pass over the previous cycle's claims after every context
   compaction, and every third cycle regardless** — whichever comes first; a
@@ -360,9 +399,10 @@ read-only.
 
 - **One writer at a time.** Concurrent access to a shared mutable asset is
   forbidden. Two parties needing the same asset run sequentially; the
-  manifest row names the order and the handoff state. QA and acceptance
-  never run concurrently for the same reason — even their *findings* are a
-  shared asset.
+  manifest row names the order and the handoff state. Findings are such an
+  asset: verdict agents RETURN theirs and the sprint-leader alone writes
+  them to the tracker — which is exactly what makes concurrent read-only
+  verdict agents safe.
 - **Agents never delete.** Every spawned-agent prompt carries: "Delete
   nothing, anywhere — including files you believe are scratch. Report
   deletion candidates in your findings instead." Deletion is executed only
