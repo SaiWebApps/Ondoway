@@ -663,24 +663,6 @@
           "processed_at": "2026-06-15"
         },
         {
-          "chunk": "chunk-07-upper-east-side",
-          "beats_extracted": 24,
-          "pois_touched": [
-            "Asia Society",
-            "Cooper Hewitt National Design Museum",
-            "Frick Collection",
-            "Gracie Mansion",
-            "Metropolitan Museum of Art",
-            "Museum of the City of New York",
-            "Neue Galerie New York",
-            "Solomon R. Guggenheim Museum",
-            "Temple Emanu-El",
-            "The Jewish Museum",
-            "Upper East Side"
-          ],
-          "processed_at": "2026-06-15"
-        },
-        {
           "chunk": "chunk-08-upper-west-side-central-park",
           "beats_extracted": 34,
           "pois_touched": [
@@ -906,6 +888,31 @@
             "Tom's Restaurant"
           ],
           "processed_at": "2026-06-15"
+        },
+        {
+          "chunk": "chunk-07-upper-east-side",
+          "processed_at": "2026-09-07T22:15:02+00:00",
+          "beats_extracted": 42,
+          "pois_touched": [
+            "Asia Society",
+            "Carl Schurz Park",
+            "Central Park",
+            "Cooper Hewitt National Design Museum",
+            "Frick Collection",
+            "Gracie Mansion",
+            "Madison Avenue",
+            "Metropolitan Museum of Art",
+            "Museum of the City of New York",
+            "Neue Galerie New York",
+            "Solomon R. Guggenheim Museum",
+            "Temple Emanu-El",
+            "The Jewish Museum",
+            "Upper East Side"
+          ],
+          "pois_created": [],
+          "pois_mentioned_no_content": [
+            "Met Breuer"
+          ]
         }
       ]
     },
