@@ -107,7 +107,8 @@ LINT_PATHS := src/ tests/ scripts/dev_env.py scripts/ensure_dev_data.py \
 	scripts/corpus_report.py scripts/reauthor_preview.py \
 	scripts/reauthor_run.py scripts/reauthor_review.py \
 	scripts/reauthor_verify.py scripts/reauthor_triage.py \
-	scripts/reauthor_triage_calibrate.py scripts/reauthor_cleanroom.py
+	scripts/reauthor_triage_calibrate.py scripts/reauthor_cleanroom.py \
+	scripts/reauthor_audit.py
 
 # Reports a missing credential or a wrong endpoint as a sentence. This was a bare
 # `assert` inside `python -c`, so the answer to "is my config right?" was a stack trace.
