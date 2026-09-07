@@ -1,8 +1,9 @@
 """Safe access to the populated local dev graph from pytest shards.
 
-Pytest's destructive fixtures use ``NEO4J_*`` and are hard-pinned to port
-7688.  Live-corpus tests use this separate prefix and can only open localhost
-port 7687, so neither environment can silently fall through to Aura.
+Pytest's destructive fixtures use ``NEO4J_*`` and are wipe-allowlisted to the
+test-graph ports.  Live-corpus tests use this separate prefix and can only
+open a localhost DEV graph — one of the lane dev ports below — so neither
+environment can silently fall through to Aura.
 """
 
 from __future__ import annotations
@@ -12,6 +13,12 @@ from urllib.parse import urlparse
 
 from neo4j import GraphDatabase
 from neo4j.exceptions import AuthError, ServiceUnavailable
+
+#: The localhost dev graphs a live-corpus test may open: one per lane, the
+#: same ports scripts/preflight.py's lane table publishes for its dev rows.
+#: tests/test_preflight.py pins the two sets against each other, so a new
+#: lane that forgets this file fails there by name.
+DEV_GRAPH_PORTS: frozenset[int] = frozenset({7687, 7692, 7693, 7696})
 
 
 def dev_graph_environment() -> dict[str, str]:
@@ -49,13 +56,18 @@ def assert_walk_was_routed(route, *, golden: str) -> None:
 
 
 def open_dev_driver():
-    """Return a verified localhost:7687 driver, or ``None`` when unavailable."""
+    """Return a verified localhost dev-graph driver, or ``None`` when unavailable.
+
+    The port must be one of the lane dev graphs — the profile the Make target
+    executes under supplies it, so a lane's live-corpus tests read that lane's
+    own corpus and nothing here can ever address Aura.
+    """
     env = dev_graph_environment()
     uri = env["NEO4J_URI"]
     parsed = urlparse(uri)
     if (
         parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
-        or parsed.port != 7687
+        or parsed.port not in DEV_GRAPH_PORTS
         or not env["NEO4J_USER"]
         or not env["NEO4J_PASSWORD"]
         or env["NEO4J_DATABASE"] != "neo4j"

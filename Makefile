@@ -45,19 +45,21 @@ PREFLIGHT := python3 scripts/preflight.py
 LANE ?=
 TEST_PROFILE ?= test
 DEV_DB ?= dev
+DEV_PROFILE ?= local
 WORKBENCH_PROFILE ?= workbench
 ifneq ($(LANE),)
 TEST_PROFILE := test$(LANE)
 DEV_DB := dev$(LANE)
+DEV_PROFILE := local$(LANE)
 WORKBENCH_PROFILE := workbench$(LANE)
 endif
 export ONDOWAY_LANE := $(LANE)
 
 ENV_EXEC := uv run python scripts/dev_env.py exec
-LOCAL_EXEC := $(ENV_EXEC) --profile local --
+LOCAL_EXEC := $(ENV_EXEC) --profile $(DEV_PROFILE) --
 TEST_EXEC := $(ENV_EXEC) --profile $(TEST_PROFILE) --
 WORKBENCH_EXEC := $(ENV_EXEC) --profile $(WORKBENCH_PROFILE) --
-RENDER_LOCAL_EXEC := $(ENV_EXEC) --profile local --render --
+RENDER_LOCAL_EXEC := $(ENV_EXEC) --profile $(DEV_PROFILE) --render --
 RENDER_TEST_EXEC := $(ENV_EXEC) --profile test --render --
 CLOUD_EXEC := $(ENV_EXEC) --profile cloud --render --
 NO_PROXY_LIST := api.resend.com,resend.com,www.googleapis.com,googleapis.com,api.anthropic.com,anthropic.com,api.github.com,github.com
@@ -120,7 +122,8 @@ TARGET ?= local
 # Every local graph, plus how its compose service and volume are derived from the
 # name. Spelled once so a new lane is one compose service and one preflight row,
 # never an edit to four copies of the same list down in the DATABASE targets.
-LOCAL_DBS := dev test workbench dev2 test2 workbench2 dev3 test3 workbench3
+LOCAL_DBS := dev test workbench dev2 test2 workbench2 dev3 test3 workbench3 \
+	dev4 test4 workbench4
 db_service = $(if $(filter dev,$(1)),neo4j,neo4j-$(1))
 db_volume = ondoway_$(subst -,_,$(call db_service,$(1)))_data
 check_db = @echo " $(LOCAL_DBS) " | grep -q " $(DB) " || \

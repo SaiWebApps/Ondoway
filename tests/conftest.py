@@ -175,13 +175,13 @@ def _money_guard_no_live_compose(request, monkeypatch):
 # Ports the conftest is allowed to wipe. Update this if your local test
 # instance runs on a different port. Dev/production must NEVER be in here.
 #
-# 7690 and 7691 are the per-worktree pytest graphs (docker-compose.yml,
-# `make test-file TEST_PROFILE=test2`). They are dedicated, disposable and
+# 7690, 7691 and 7697 are the per-worktree pytest graphs (docker-compose.yml,
+# `make test-file LANE=2`). They are dedicated, disposable and
 # identical in role to 7688 — one per concurrent worktree, precisely so that
 # this module-scoped wipe cannot destroy a sibling agent's fixtures. Dev
 # (7687), workbench (7689) and Aura stay out: the workbench suite asserts exact
 # state on 7689 and would be broken by a wipe it did not perform.
-_TEST_PORT_ALLOWLIST: set[int] = {7688, 7690, 7691}
+_TEST_PORT_ALLOWLIST: set[int] = {7688, 7690, 7691, 7697}
 
 
 def _assert_test_port() -> None:
@@ -305,8 +305,8 @@ def _acquire_lane_lock() -> None:
         _lane_lock_file = None
         raise RuntimeError(
             f"Another test session is already using the test database on port {port}. "
-            f"Use LANE=2 or LANE=3 for concurrent runs, or wait for the other session "
-            f"to finish."
+            f"Use LANE=2, LANE=3 or LANE=4 for concurrent runs, or wait for the other "
+            f"session to finish."
         ) from exc
 
 

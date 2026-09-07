@@ -130,6 +130,11 @@ DATABASES = (
     DatabaseSpec("dev3", "local3", "neo4j-dev3", "ondoway-neo4j-dev3", 7693),
     DatabaseSpec("test3", "test3", "neo4j-test3", "ondoway-neo4j-test3", 7691),
     DatabaseSpec("workbench3", "workbench3", "neo4j-workbench3", "ondoway-neo4j-workbench3", 7695),
+    # Lane 4 is the multi-track sandbox lane (docs/adr/0002): the lane a second
+    # worktree owns outright, never consumed as a shard by the definitive bar.
+    DatabaseSpec("dev4", "local4", "neo4j-dev4", "ondoway-neo4j-dev4", 7696),
+    DatabaseSpec("test4", "test4", "neo4j-test4", "ondoway-neo4j-test4", 7697),
+    DatabaseSpec("workbench4", "workbench4", "neo4j-workbench4", "ondoway-neo4j-workbench4", 7698),
 )
 DATABASE_BY_KEY = {spec.key: spec for spec in DATABASES}
 

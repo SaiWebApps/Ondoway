@@ -199,6 +199,54 @@ services:
       <<: *neo4j-health
       test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "ondoway_workbench3_2026", "RETURN 1"]
 
+  # ── lane 4 (the multi-track sandbox lane, docs/adr/0002) ──────────────────
+  # Owned outright by a second worktree; the definitive bar never consumes it
+  # as a shard, so a sandbox session's fixtures cannot collide with the bar's.
+  neo4j-dev4:
+    <<: *neo4j
+    container_name: ondoway-neo4j-dev4
+    ports:
+      - "7483:7474"  # HTTP browser (lane 4 dev)
+      - "7696:7687"  # Bolt protocol (lane 4 dev)
+    environment:
+      <<: [*neo4j-env, *neo4j-heap-corpus]
+      NEO4J_AUTH: neo4j/ondoway_dev4_2026
+    volumes:
+      - neo4j_dev4_data:/data
+    healthcheck:
+      <<: *neo4j-health
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "ondoway_dev4_2026", "RETURN 1"]
+
+  neo4j-test4:
+    <<: *neo4j
+    container_name: ondoway-neo4j-test4
+    ports:
+      - "7484:7474"  # HTTP browser (lane 4 pytest)
+      - "7697:7687"  # Bolt protocol (lane 4 pytest)
+    environment:
+      <<: [*neo4j-env, *neo4j-heap-corpus]
+      NEO4J_AUTH: neo4j/ondoway_test4_2026
+    volumes:
+      - neo4j_test4_data:/data
+    healthcheck:
+      <<: *neo4j-health
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "ondoway_test4_2026", "RETURN 1"]
+
+  neo4j-workbench4:
+    <<: *neo4j
+    container_name: ondoway-neo4j-workbench4
+    ports:
+      - "7485:7474"  # HTTP browser (lane 4 workbench)
+      - "7698:7687"  # Bolt protocol (lane 4 workbench)
+    environment:
+      <<: [*neo4j-env, *neo4j-heap-small]
+      NEO4J_AUTH: neo4j/ondoway_workbench4_2026
+    volumes:
+      - neo4j_workbench4_data:/data
+    healthcheck:
+      <<: *neo4j-health
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "ondoway_workbench4_2026", "RETURN 1"]
+
   # M1 routing engine, shared by every lane. Never started by the db-* targets
   # (they are service-scoped); use `make valhalla-up`. First start builds tiles
   # from any .osm.pbf in ./valhalla/custom_files (`make valhalla-build-tiles`
@@ -236,3 +284,6 @@ volumes:
   neo4j_dev3_data:
   neo4j_test3_data:
   neo4j_workbench3_data:
+  neo4j_dev4_data:
+  neo4j_test4_data:
+  neo4j_workbench4_data:

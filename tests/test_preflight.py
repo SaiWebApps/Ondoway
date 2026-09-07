@@ -587,6 +587,59 @@ REQUIRED_IN_SETS = {
 }
 
 
+def test_lane4_is_a_complete_lane():
+    """A lane is complete when preflight, compose and the committed profiles all
+    carry its three graphs — dev, test and workbench. Lane 4 is the sandbox lane
+    multi-track runs hand to a second worktree (docs/adr/0002), so a missing
+    half here is a sandbox that silently reads someone else's data.
+    The spec/profile/compose agreement itself is guarded by the drift tests
+    above; this pins the lane's existence and its pytest port's place in the
+    wipe allowlist.
+    """
+    for key in ("dev4", "test4", "workbench4"):
+        assert key in preflight.DATABASE_BY_KEY, f"lane 4 has no {key} DatabaseSpec"
+    from tests.conftest import _TEST_PORT_ALLOWLIST
+
+    test4_port = preflight.DATABASE_BY_KEY["test4"].port
+    assert test4_port in _TEST_PORT_ALLOWLIST, (
+        f"lane 4's pytest graph (:{test4_port}) is not wipe-allowlisted, so its "
+        "destructive fixtures refuse to run"
+    )
+
+
+def test_the_dev_half_of_a_lane_is_lane_aware():
+    """`make api LANE=4` must serve lane 4's dev graph, never the canonical one.
+
+    The lane block rewrites the test and workbench profile names but the dev
+    exec used to stay a literal `--profile local`, so a lane target preflighted
+    and seeded its own dev graph and then served :7687. The dev profile now
+    derives from the lane like its two siblings.
+    """
+    text = MAKEFILE.read_text(encoding="utf-8")
+    assert "DEV_PROFILE := local$(LANE)" in text, (
+        "the lane block does not derive a dev profile from LANE="
+    )
+    assert "--profile local --" not in text, (
+        "an exec line still hardcodes the canonical dev profile; it would serve "
+        ":7687 from any lane"
+    )
+
+
+def test_live_corpus_ports_track_the_lane_dev_graphs():
+    """tests/live_graph.py may open exactly the localhost dev graphs the lane
+    table defines — no more (Aura stays unreachable), no fewer (a lane's
+    live-corpus tests must reach that lane's own dev graph)."""
+    from tests.live_graph import DEV_GRAPH_PORTS
+
+    lane_dev_ports = {
+        spec.port for spec in preflight.DATABASES if spec.key.startswith("dev") or spec.key == "dev"
+    }
+    assert lane_dev_ports == DEV_GRAPH_PORTS, (
+        f"live_graph admits {sorted(DEV_GRAPH_PORTS)} but the lane table defines "
+        f"{sorted(lane_dev_ports)} — the two have drifted"
+    )
+
+
 def test_db_up_resolves_every_database_not_just_the_default():
     """Only DB=dev was ever exercised; DB=test and DB=workbench went unchecked."""
     text = MAKEFILE.read_text(encoding="utf-8")
