@@ -679,6 +679,22 @@ def _makefile_variable(name: str) -> str:
     raise AssertionError(f"the Makefile defines no {name}")
 
 
+def _makefile_default(name: str) -> str:
+    """Read one ``NAME ?= value`` overridable default out of the Makefile.
+
+    Only a literal right-hand side is taken (no ``$(`` in the value), the same
+    rule ``scripts/preflight.py`` applies when it expands the ``PRE_*`` sets —
+    so this can never start a substitution chain.
+    """
+    for line in MAKEFILE.read_text().splitlines():
+        stripped = line.strip()
+        if stripped.startswith(f"{name} ?=") or stripped.startswith(f"{name}?="):
+            value = stripped.split("?=", 1)[1].strip()
+            assert "$(" not in value, f"{name}'s default is not a literal: {value!r}"
+            return value
+    raise AssertionError(f"the Makefile defines no {name} ?= default")
+
+
 def _workbench_profile_name() -> str:
     """Which committed profile ``make workbench`` overlays, read off the Makefile.
 
@@ -687,6 +703,11 @@ def _workbench_profile_name() -> str:
     profile), so it OVERRIDES production's own values. A guard that reads only
     ``scripts/workbench.sh`` is reading the second-highest-precedence source and
     calling it the environment.
+
+    The exec wrapper names its profile through the lane mechanism
+    (``--profile $(DEV_PROFILE)``), so a variable token resolves through the
+    Makefile's own ``?=`` default — the main lane, which is the one the
+    workbench parity claim is about.
     """
     lines = MAKEFILE.read_text().splitlines()
     for index, line in enumerate(lines):
@@ -706,7 +727,10 @@ def _workbench_profile_name() -> str:
             tokens = _makefile_variable(exec_var).split()
             for position, token in enumerate(tokens):
                 if token == "--profile":
-                    return tokens[position + 1]
+                    profile = tokens[position + 1]
+                    if profile.startswith("$(") and profile.endswith(")"):
+                        return _makefile_default(profile[2:-1])
+                    return profile
             raise AssertionError(f"{exec_var} names no --profile")
     raise AssertionError("the Makefile has no `workbench:` target")
 
