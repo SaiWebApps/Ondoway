@@ -100,8 +100,8 @@ def test_two_answers_about_one_statement_make_the_reply_unreadable() -> None:
     )
 
 
-def test_the_summary_reports_the_two_ways_a_run_can_look_clean_for_nothing() -> None:
-    """A matcher that answered about nothing, and statements that are not the body's."""
+def test_the_summary_reports_a_matcher_that_answered_about_nothing() -> None:
+    """A run where nothing was matched looks exactly like a run where nothing was wrong."""
     verdict = audit_record(
         {"beat_id": "b", "body_after": "A square laid out in 1830."},
         read_back=[{"claim": "The square was laid out in 1907.", "kind": "fact"}],
@@ -109,7 +109,11 @@ def test_the_summary_reports_the_two_ways_a_run_can_look_clean_for_nothing() -> 
     )
     found = summarise([verdict])
     assert found["statements_never_answered_about"] == 1
-    assert found["bodies_whose_statements_drifted_from_the_body"] == 1
+    assert found["bodies_carrying_an_unsupported_claim"] == 0
+    # Drift is on the record and never in the summary: it cannot tell a reworded
+    # statement from an invented one, so a count of it across a corpus says nothing.
+    assert verdict["unfaithful_statements"]
+    assert not any("drift" in key for key in found)
 
 
 def test_the_judge_is_not_the_model_that_wrote_what_it_judges() -> None:

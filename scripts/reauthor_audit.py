@@ -222,9 +222,11 @@ def unfaithful_statements(read_back: list[dict[str, str]], body: str) -> list[st
     about "a familiar pattern of gentrification", and the matcher then reported a word
     the writer never wrote as a thing the writer invented.
 
-    Reported beside the findings rather than removed from them, because a drifted
-    statement can still sit on a real invention, and a reader needs to know which of the
-    two texts they are being shown.
+    Kept on the record and OUT of the summary, because it does not separate drift from
+    ordinary rewording and a corpus-level count of it is meaningless: a statement is a
+    paraphrase by design, 41% carry some word the body does not, and the median such
+    statement is a quarter strange. It tells a reader which of two texts they are
+    looking at while they read one finding. It measures nothing about a corpus.
     """
     said = set(verbatim_words(body))
     stems = {w[:5] for w in said if len(w) > 4}
@@ -291,12 +293,9 @@ def summarise(verdicts: list[dict]) -> dict[str, Any]:
     return {
         "audited": len(audited),
         "unreadable": len(verdicts) - len(audited),
-        # Both of these are ways a run can look clean without having checked anything,
-        # so they sit in the headline rather than only on the records.
+        # A run where the matcher answered about nothing looks exactly like a clean one,
+        # so this sits in the headline rather than only on the records.
         "statements_never_answered_about": sum(v.get("unanswered_statements", 0) for v in audited),
-        "bodies_whose_statements_drifted_from_the_body": sum(
-            1 for v in audited if v.get("unfaithful_statements")
-        ),
         "bodies_carrying_an_unsupported_claim": len(carrying),
         "pct": round(100 * len(carrying) / len(audited), 1) if audited else 0.0,
         "unsupported_claims": sum(v["unsupported_count"] for v in carrying),
