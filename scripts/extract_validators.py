@@ -31,6 +31,8 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Any
 
+from scripts.verbatim import VERBATIM_RUN_BLOCK, run_outside_quotation
+
 # ─── B12 source-span gate ────────────────────────────────────────────────
 
 # A "factual sentence" boundary is a period/question/exclamation OR a
@@ -69,9 +71,9 @@ def count_source_sentences(source_passage: str) -> int:
 def source_span_gate(source_passage: str) -> str:
     """Return the maximum allowed `beat_length_class` for a given source span.
 
-    - ≤2 source sentences → 'seasoning' (with 'micro' implicit fallback)
-    - 3–5 source sentences → 'mid'
-    - 6+ source sentences   → 'anchor' (anchor in play; mid still legal)
+    - 2 or fewer source sentences -> 'seasoning' (with 'micro' implicit fallback)
+    - 3-5 source sentences -> 'mid'
+    - 6+ source sentences -> 'anchor' (anchor in play; mid still legal)
     """
     n = count_source_sentences(source_passage)
     if n <= 2:
@@ -138,19 +140,62 @@ def _normalize(s: str) -> str:
 # Concrete-claim extractors — patterns that imply a specific verifiable fact.
 _YEAR_RE = re.compile(r"\b(1[0-9]{3}|20[0-9]{2})\b")
 _PROPER_NOUN_RE = re.compile(
-    r"\b(?:[A-ZÀ-Ý][a-zà-ÿ'’\-]+(?:\s+(?:de|of|du|des|le|la|les|von|van|d['’]))?\s+)+[A-ZÀ-Ý][a-zà-ÿ'’\-]+\b"
+    # The curly apostrophe is data — French names carry it — so it is escaped rather
+    # than typed, which is how the rest of this repo writes one inside a pattern.
+    r"\b(?:[A-Z\u00c0-\u00dd][a-z\u00e0-\u00ff'\u2019\-]+"
+    r"(?:\s+(?:de|of|du|des|le|la|les|von|van|d['\u2019]))?\s+)+"
+    r"[A-Z\u00c0-\u00dd][a-z\u00e0-\u00ff'\u2019\-]+\b"
 )
 # Sentence-start function words that get capitalized but are not entity-like.
 # Stripping these from the start of a candidate kills the "In April" / "Once
 # Guillaumot" / "Through 1777" / "When the Rue d'Enfer" false positives without
 # losing real entity capture.
 _SENTENCE_START_FUNCTION_WORDS = {
-    "the", "in", "on", "at", "by", "to", "from", "of", "for", "with",
-    "once", "now", "then", "after", "before", "through", "when", "while",
-    "as", "since", "until", "during", "after", "by", "having", "this",
-    "that", "those", "these", "a", "an", "next", "later", "earlier",
-    "above", "below", "outside", "inside", "behind", "beside", "between",
-    "but", "and", "or", "yet", "so", "however",
+    "the",
+    "in",
+    "on",
+    "at",
+    "by",
+    "to",
+    "from",
+    "of",
+    "for",
+    "with",
+    "once",
+    "now",
+    "then",
+    "after",
+    "before",
+    "through",
+    "when",
+    "while",
+    "as",
+    "since",
+    "until",
+    "during",
+    "having",
+    "this",
+    "that",
+    "those",
+    "these",
+    "a",
+    "an",
+    "next",
+    "later",
+    "earlier",
+    "above",
+    "below",
+    "outside",
+    "inside",
+    "behind",
+    "beside",
+    "between",
+    "but",
+    "and",
+    "or",
+    "yet",
+    "so",
+    "however",
 }
 # Imported-context red flags — phrases that frequently arrive from world
 # knowledge, not the source. Curated from the 2026-05-01 chunk-13 audit.
@@ -252,7 +297,9 @@ def _fold_for_match(s: str) -> str:
     that get embedded around named entities (e.g. Robb's `the 'Excavation'
     team`). Used only for the substring-in-source check, never for emission."""
     s = _DIALECT_FOLD_RE.sub(
-        lambda m: {"ised": "ized", "izing": "izing", "isation": "ization", "ising": "izing"}[m.group()],
+        lambda m: {"ised": "ized", "izing": "izing", "isation": "ization", "ising": "izing"}[
+            m.group()
+        ],
         s,
     )
     return _QUOTE_STRIP_RE.sub("", s)
@@ -359,6 +406,25 @@ def source_grounding_gate(source_passage: str, chunk_text: str) -> tuple[int, li
     return len(fragments), ungrounded
 
 
+# ─── Copying gate ────────────────────────────────────────────────────────
+# The fabrication probe asks whether a beat says more than its source. This asks
+# whether it says the same thing in the same words. They are different defects and
+# a beat can carry either alone: prose lifted whole is perfectly faithful.
+
+
+def copying_gate(script_body: str, source_passage: str) -> tuple[int, str]:
+    """The longest run this body shares with its source, and the words of it.
+
+    Measured outside attributed quotation, so a beat that quotes a named speaker and
+    says who said it is not blocked for the quote. A quotation attributed to nobody
+    is not exempt — that is what an unmarked lift looks like.
+
+    Returns `(length, text)` so a refusal can show the run rather than assert one.
+    """
+    found = run_outside_quotation(script_body or "", source_passage or "")
+    return found["length"], found["text"]
+
+
 # ─── Orchestration ────────────────────────────────────────────────────────
 
 
@@ -369,6 +435,11 @@ class BeatVerdict:
     warnings: list[str] = field(default_factory=list)
     suggested_class: str | None = None
     fabrication: FabricationVerdict | None = None
+    #: The longest run shared with the source outside quotation, on every beat —
+    #: recorded whether or not it crossed the block, so a chunk can report its
+    #: distribution rather than only its failures.
+    copied_run: int = 0
+    copied_text: str = ""
 
 
 def validate_beat(beat: dict, chunk_text: str) -> BeatVerdict:
@@ -389,7 +460,7 @@ def validate_beat(beat: dict, chunk_text: str) -> BeatVerdict:
     if rank.index(declared) > rank.index(span_max):
         errors.append(
             f"B12 violation: beat_length_class={declared!r} exceeds source-span ceiling "
-            f"of {span_max!r} ({count_source_sentences(beat.get('source_passage',''))} "
+            f"of {span_max!r} ({count_source_sentences(beat.get('source_passage', ''))} "
             f"source sentences). Re-class down or cite more source."
         )
 
@@ -417,6 +488,18 @@ def validate_beat(beat: dict, chunk_text: str) -> BeatVerdict:
             f"{_CLASS_RANGES.get(declared)}. Suggested re-class: {suggested!r}."
         )
 
+    # Copying gate. An error, not a warning: a lifted beat is not a beat that needs
+    # a note on it, it is one that cannot ship. The extractor is holding the source,
+    # so naming the run it must not reuse costs nothing and is what the retry needs.
+    run_len, run_text = copying_gate(beat.get("script_body", ""), beat.get("source_passage", ""))
+    if run_len >= VERBATIM_RUN_BLOCK:
+        errors.append(
+            f"copying violation: {run_len} consecutive words shared with the source "
+            f"outside an attributed quotation (block is {VERBATIM_RUN_BLOCK}). "
+            f"Write the fact in your own sentence, or attribute and quote it. "
+            f"The run: {run_text!r}"
+        )
+
     # Fabrication probe
     fab = fabrication_probe(
         script_body=beat.get("script_body", ""),
@@ -440,4 +523,6 @@ def validate_beat(beat: dict, chunk_text: str) -> BeatVerdict:
         warnings=warnings,
         suggested_class=suggested if not in_range else None,
         fabrication=fab if fab.has_fabrication else None,
+        copied_run=run_len,
+        copied_text=run_text,
     )

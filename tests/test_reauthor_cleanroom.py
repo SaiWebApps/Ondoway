@@ -18,10 +18,7 @@ from pathlib import Path
 import pytest
 
 from scripts.corpus_report import (
-    VERBATIM_RUN_BLOCK,
     load_city_beats,
-    max_verbatim_run,
-    verbatim_words,
 )
 from scripts.reauthor_cleanroom import (
     CLAIM_KINDS,
@@ -40,6 +37,11 @@ from scripts.reauthor_cleanroom import (
     shuffled_claims,
     target_words,
     uncovered_sentences,
+)
+from scripts.verbatim import (
+    VERBATIM_RUN_BLOCK,
+    max_verbatim_run,
+    verbatim_words,
 )
 
 _CLAIMS = [

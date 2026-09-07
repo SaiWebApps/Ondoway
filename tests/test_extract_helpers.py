@@ -119,8 +119,12 @@ def test_make_beat_fills_required_fields_with_defaults():
 
 def test_make_beat_imported_context_path():
     ctx = BookContext(
-        book_title="X", author="Y", book_slug="x",
-        chunk_slug="c", chapter="ch", page="1",
+        book_title="X",
+        author="Y",
+        book_slug="x",
+        chunk_slug="c",
+        chapter="ch",
+        page="1",
     )
     beat = make_beat(
         ctx=ctx,
@@ -215,14 +219,14 @@ def test_source_span_gate_thresholds(src, expected):
 @pytest.mark.parametrize(
     "wc,cls,in_range",
     [
-        (50, "seasoning", True),    # 20-80
-        (15, "micro", True),        # 0-20
-        (150, "mid", True),         # 80-200
-        (300, "anchor", True),      # 200-400
-        (85, "seasoning", False),   # over → mid
-        (70, "mid", False),         # under → seasoning
-        (190, "anchor", False),     # under → mid
-        (5, "seasoning", False),    # under → micro
+        (50, "seasoning", True),  # 20-80
+        (15, "micro", True),  # 0-20
+        (150, "mid", True),  # 80-200
+        (300, "anchor", True),  # 200-400
+        (85, "seasoning", False),  # over → mid
+        (70, "mid", False),  # under → seasoning
+        (190, "anchor", False),  # under → mid
+        (5, "seasoning", False),  # under → micro
     ],
 )
 def test_check_length_class(wc, cls, in_range):
@@ -416,8 +420,7 @@ def _minimal_beat(**overrides):
         "lens": "war_conflict",
         "script_body": "x " * 100,
         "source_passage": (
-            "First sentence here. Second one too. Third one as well. "
-            "Fourth one. Fifth one."
+            "First sentence here. Second one too. Third one as well. Fourth one. Fifth one."
         ),
         "beat_length_class": "mid",
         "physical_cues": [],
@@ -512,8 +515,7 @@ def test_validate_beat_grounding_tolerates_single_broken_fragment():
         script_body="x " * 40,
     )
     chunk = (
-        "The arch was built between 1806 and 1808 by Napoleon. "
-        "It stands at the Place du Carrousel."
+        "The arch was built between 1806 and 1808 by Napoleon. It stands at the Place du Carrousel."
     )
     verdict = validate_beat(beat, chunk_text=chunk)
     assert verdict.ok
@@ -609,8 +611,7 @@ def test_audit_chunk_flags_self_flag_failures():
 
 def test_audit_chunk_extractor_state_ratio_and_ceiling():
     beats = [
-        _audit_beat(beat_id=f"b{i}", state="imported_context", flagged=["x"])
-        for i in range(5)
+        _audit_beat(beat_id=f"b{i}", state="imported_context", flagged=["x"]) for i in range(5)
     ] + [_audit_beat(beat_id="b6", state="clean")]
     poi_index = {"Eiffel Tower": {"importance_tier": 5, "poi_role": "stop"}}
     report = audit_chunk(
@@ -629,7 +630,7 @@ def test_audit_chunk_new_coverage_against_live_corpus():
     beats = [
         _audit_beat(beat_id="b1", poi="Eiffel Tower", lens="war_conflict"),  # already in live
         _audit_beat(beat_id="b2", poi="Eiffel Tower", lens="dark_history"),  # new combo
-        _audit_beat(beat_id="b3", poi="New Place", new_poi=True),            # new POI
+        _audit_beat(beat_id="b3", poi="New Place", new_poi=True),  # new POI
     ]
     live_beats = [{"poi_name": "Eiffel Tower", "lens": "war_conflict"}]
     poi_index = {"Eiffel Tower": {"importance_tier": 5, "poi_role": "stop"}}
@@ -657,3 +658,110 @@ def test_audit_chunk_length_class_out_of_range():
     )
     assert len(report["length_class_distribution"]["out_of_range"]) == 1
     assert report["length_class_distribution"]["out_of_range"][0]["beat_id"] == "b1"
+
+
+# ─── B13 copying gate ────────────────────────────────────────────────────
+
+
+def test_a_body_that_reuses_the_source_sentence_is_an_error() -> None:
+    """The defect the corpus was built out of: 78% of Paris beats shared an 8+ word
+    run with the book they came from, because the prompt asked for the source's own
+    language and nothing measured whether it got it."""
+    from scripts.extract_validators import validate_beat
+
+    chunk = (
+        "The bridge soon became symbolic of the city itself, drawing large crowds "
+        "every day of the week."
+    )
+    verdict = validate_beat(
+        {
+            "script_body": "The bridge soon became symbolic of the city itself, drawing crowds.",
+            "source_passage": chunk,
+            "beat_length_class": "seasoning",
+        },
+        chunk,
+    )
+    assert not verdict.ok
+    assert any("copying violation" in e for e in verdict.errors)
+    assert verdict.copied_run >= 8
+
+
+def test_the_same_fact_in_the_extractors_own_words_passes() -> None:
+    """The gate blocks reused expression, not the fact. A beat carrying the same
+    specificity in different sentences is the output this pipeline wants."""
+    from scripts.extract_validators import validate_beat
+
+    chunk = (
+        "The bridge soon became symbolic of the city itself, drawing large crowds "
+        "every day of the week."
+    )
+    verdict = validate_beat(
+        {
+            "script_body": "Crowds came daily, and the span turned into a shorthand for Paris.",
+            "source_passage": chunk,
+            "beat_length_class": "seasoning",
+        },
+        chunk,
+    )
+    assert verdict.ok
+    assert verdict.copied_run < 8
+
+
+def test_an_attributed_quotation_is_exempt_and_an_unattributed_one_is_not() -> None:
+    """Quoting a named speaker and saying who they are is not copying the book that
+    also quoted them. A quotation attributed to nobody is what an unmarked lift looks
+    like, so it earns no exemption."""
+    from scripts.extract_validators import copying_gate
+
+    chunk = "The bridge soon became symbolic of the city itself, drawing large crowds."
+    quoted = (
+        'As Hugo wrote, "the bridge soon became symbolic of the city itself, drawing large crowds".'
+    )
+    bare = '"The bridge soon became symbolic of the city itself, drawing large crowds."'
+    assert copying_gate(quoted, chunk)[0] < 8
+    assert copying_gate(bare, chunk)[0] >= 8
+
+
+def test_the_gate_names_the_run_so_a_rewrite_has_something_to_avoid() -> None:
+    """A refusal that only says "you copied" cannot be acted on. The extractor still
+    holds the source, so showing the run costs nothing and is what the retry needs."""
+    from scripts.extract_validators import validate_beat
+
+    chunk = "The bridge soon became symbolic of the city itself, drawing large crowds."
+    verdict = validate_beat(
+        {"script_body": chunk, "source_passage": chunk, "beat_length_class": "seasoning"},
+        chunk,
+    )
+    assert "symbolic of the city itself" in verdict.copied_text
+    assert verdict.copied_text in [e.split("The run: ")[-1].strip("'\"") for e in verdict.errors]
+
+
+def test_a_chunk_report_carries_the_run_distribution_not_only_the_failures() -> None:
+    """A chunk sitting just under the block is one book away from crossing it, and a
+    count of zero blocked says nothing about that."""
+    from scripts.audit_extraction import audit_chunk
+
+    chunk = "The bridge soon became symbolic of the city itself, drawing large crowds."
+    beats = [
+        {
+            "beat_id": "a",
+            "poi_name": "P",
+            "lens": "l",
+            "script_body": "The bridge soon became symbolic of the city itself, drawing crowds.",
+            "source_passage": chunk,
+            "beat_length_class": "seasoning",
+        },
+        {
+            "beat_id": "b",
+            "poi_name": "P",
+            "lens": "l",
+            "script_body": "Crowds came daily and the span became a shorthand.",
+            "source_passage": chunk,
+            "beat_length_class": "seasoning",
+        },
+    ]
+    audit = audit_chunk(beats=beats, chunk_text=chunk, poi_index={})["copying_audit"]
+    assert audit["blocked"] == 1
+    assert audit["blocked_beats"][0]["beat_id"] == "a"
+    assert audit["longest_run"] >= 8
+    assert "median_run" in audit and "median_ratio" in audit

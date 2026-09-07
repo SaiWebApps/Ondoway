@@ -31,13 +31,19 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from scripts.corpus_report import VERBATIM_THRESHOLD, load_city_beats, verbatim_ratio
+from scripts.corpus_report import (
+    load_city_beats,
+)
 from scripts.reauthor_preview import (
     REAUTHOR_MODEL,
     grounding_claims,
     is_excluded,
     reauthor_request,
     sentences,
+)
+from scripts.verbatim import (
+    VERBATIM_THRESHOLD,
+    verbatim_ratio,
 )
 
 #: Concurrent writers. Matches the pool `scripts/coverage_calibrate.py` already

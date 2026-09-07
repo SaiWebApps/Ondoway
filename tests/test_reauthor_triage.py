@@ -12,15 +12,6 @@ visible, and one nobody can later mistake for coverage.
 
 from __future__ import annotations
 
-from scripts.corpus_report import (
-    VERBATIM_RUN_BLOCK,
-    attributed_quote_spans,
-    max_verbatim_run,
-    quoted_char_spans,
-    run_outside_quotation,
-    shared_run_at,
-    verbatim_words,
-)
 from scripts.reauthor_triage import (
     BLOCKED_BOTH,
     BLOCKED_CONFLICT,
@@ -35,6 +26,15 @@ from scripts.reauthor_triage import (
     run_shape,
     summarise,
     triage,
+)
+from scripts.verbatim import (
+    VERBATIM_RUN_BLOCK,
+    attributed_quote_spans,
+    max_verbatim_run,
+    quoted_char_spans,
+    run_outside_quotation,
+    shared_run_at,
+    verbatim_words,
 )
 
 _LIFT = "the bridge soon became symbolic of the city itself drawing large crowds"

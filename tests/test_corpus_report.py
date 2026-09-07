@@ -19,7 +19,6 @@ from pathlib import Path
 import pytest
 
 from scripts.corpus_report import (
-    VERBATIM_THRESHOLD,
     anchor_readiness,
     coverage_report,
     density_summary,
@@ -31,8 +30,11 @@ from scripts.corpus_report import (
     quality_report,
     render_coverage,
     thin_areas,
-    verbatim_ratio,
     verbatim_summary,
+)
+from scripts.verbatim import (
+    VERBATIM_THRESHOLD,
+    verbatim_ratio,
 )
 
 _PASSAGE = (

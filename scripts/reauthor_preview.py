@@ -26,8 +26,10 @@ import sys
 from typing import Any
 
 from scripts.corpus_report import (
-    VERBATIM_THRESHOLD,
     load_city_beats,
+)
+from scripts.verbatim import (
+    VERBATIM_THRESHOLD,
     verbatim_ratio,
 )
 
@@ -100,9 +102,7 @@ def reauthor_request(*, source: str, body: str) -> dict[str, Any]:
         "messages": [
             {
                 "role": "user",
-                "content": _REAUTHOR_PROMPT.format(
-                    voice=_VOICE_RULES, source=source, body=body
-                ),
+                "content": _REAUTHOR_PROMPT.format(voice=_VOICE_RULES, source=source, body=body),
             }
         ],
     }
@@ -179,9 +179,7 @@ def render_preview(city_slug: str, rows: list[dict[str, Any]]) -> str:
 #: fragment that cannot entail, which reads as a refusal the writer never earned.
 _ABBREVIATIONS = ("No", "no", "St", "Ste", "Mt", "Ave", "Blvd", "Rd", "vs", "etc", "cf")
 
-_SENTENCE_SPLIT = re.compile(
-    r"(?<=[.!?])\s+(?=[A-Z\u00C0-\u00DC\u201C\"])"
-)
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z\u00C0-\u00DC\u201C\"])")
 
 
 def sentences(text: str) -> list[str]:

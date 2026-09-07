@@ -60,16 +60,18 @@ from pathlib import Path
 from typing import Any
 
 from scripts.corpus_report import (
+    load_city_beats,
+)
+from scripts.reauthor_preview import _VOICE_RULES, is_excluded
+from scripts.verbatim import (
     VERBATIM_RUN_BLOCK,
     VERBATIM_THRESHOLD,
-    load_city_beats,
     max_verbatim_run,
     quoted_char_spans,
     verbatim_ratio,
     verbatim_word_spans,
     verbatim_words,
 )
-from scripts.reauthor_preview import _VOICE_RULES, is_excluded
 from src.city_registry import load_registry
 from src.tour.claim_dedup import (
     _STOPWORDS as STOPWORDS,

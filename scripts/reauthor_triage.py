@@ -42,15 +42,15 @@ import re
 import unicodedata
 from typing import Any
 
-from scripts.corpus_report import (
+from scripts.reauthor_preview import EXCLUDED_CITIES
+from scripts.reauthor_review import load_candidates
+from scripts.verbatim import (
     VERBATIM_RUN_BLOCK,
     max_verbatim_run,
     run_outside_quotation,
     verbatim_ratio,
     verbatim_words,
 )
-from scripts.reauthor_preview import EXCLUDED_CITIES
-from scripts.reauthor_review import load_candidates
 from src.tour.claim_dedup import _STOPWORDS as STOPWORDS
 from src.tour.generation import split_sentences
 

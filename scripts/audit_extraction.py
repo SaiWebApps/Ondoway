@@ -22,10 +22,12 @@ from collections import Counter
 from typing import Any
 
 from scripts.extract_validators import (
+    _CLASS_RANGES,
+    copying_gate,
     fabrication_probe,
     word_count,
-    _CLASS_RANGES,
 )
+from scripts.verbatim import VERBATIM_RUN_BLOCK, verbatim_ratio
 
 
 def audit_chunk(
@@ -84,6 +86,7 @@ def audit_chunk(
         "structural_beat_types": _structural_beat_types(beats),
         "extractor_state_summary": _extractor_state_summary(beats),
         "fabrication_audit": _fabrication_audit(beats, chunk_text),
+        "copying_audit": _copying_audit(beats),
         "yield_per_1k_words": (n / src_words * 1000) if src_words else 0.0,
     }
     if live_beats is not None:
@@ -111,9 +114,7 @@ def _poi_matching(beats: list[dict], poi_index: dict[str, dict]) -> dict[str, An
     unmatched = [
         b["poi_name"]
         for b in beats
-        if not b.get("new_poi")
-        and not b.get("parent_poi")
-        and b["poi_name"] not in poi_index
+        if not b.get("new_poi") and not b.get("parent_poi") and b["poi_name"] not in poi_index
     ]
     return {
         "existing_count": len(existing),
@@ -204,8 +205,7 @@ def _establishing_coverage(
         if not meta or meta.get("poi_role") != "stop":
             continue
         in_run = any(
-            b["poi_name"] == poi and b.get("narrative_function") == "establishing"
-            for b in beats
+            b["poi_name"] == poi and b.get("narrative_function") == "establishing" for b in beats
         )
         in_live = (
             any(
@@ -219,18 +219,12 @@ def _establishing_coverage(
     return {"with_establishing": sorted(has), "missing_establishing": sorted(needs)}
 
 
-def _sensory_anchor_consistency(
-    beats: list[dict], poi_index: dict[str, dict]
-) -> dict[str, Any]:
+def _sensory_anchor_consistency(beats: list[dict], poi_index: dict[str, dict]) -> dict[str, Any]:
     sa_no_cues = [
-        b.get("beat_id")
-        for b in beats
-        if b.get("sensory_anchor") and not b.get("physical_cues")
+        b.get("beat_id") for b in beats if b.get("sensory_anchor") and not b.get("physical_cues")
     ]
     cues_no_sa = [
-        b.get("beat_id")
-        for b in beats
-        if not b.get("sensory_anchor") and b.get("physical_cues")
+        b.get("beat_id") for b in beats if not b.get("sensory_anchor") and b.get("physical_cues")
     ]
     tier3_empty: list[str] = []
     for b in beats:
@@ -244,9 +238,7 @@ def _sensory_anchor_consistency(
     }
 
 
-def _sub_location_coverage(
-    beats: list[dict], poi_index: dict[str, dict]
-) -> dict[str, Any]:
+def _sub_location_coverage(beats: list[dict], poi_index: dict[str, dict]) -> dict[str, Any]:
     by_poi: dict[str, set[str]] = {}
     populated = 0
     for b in beats:
@@ -288,14 +280,10 @@ def _foreign_phrase_preservation(beats: list[dict]) -> dict[str, Any]:
             if phrase and phrase not in distinct:
                 distinct[phrase] = gloss
             if phrase and phrase not in body:
-                inconsistent.append(
-                    {"beat_id": b.get("beat_id"), "phrase": phrase}
-                )
+                inconsistent.append({"beat_id": b.get("beat_id"), "phrase": phrase})
     return {
         "distinct_count": len(distinct),
-        "first_20": [
-            {"phrase": p, "gloss": g} for p, g in list(distinct.items())[:20]
-        ],
+        "first_20": [{"phrase": p, "gloss": g} for p, g in list(distinct.items())[:20]],
         "inconsistent_with_script_body": inconsistent,
     }
 
@@ -315,10 +303,51 @@ def _extractor_state_summary(beats: list[dict]) -> dict[str, Any]:
         "imported_context_ratio": imported / n,
         "over_40pct_ceiling": (imported / n) > 0.4,
         "missing_extractor_state": [
-            b.get("beat_id")
-            for b in beats
-            if "extractor_state" not in b.get("fact_check", {})
+            b.get("beat_id") for b in beats if "extractor_state" not in b.get("fact_check", {})
         ],
+    }
+
+
+def _copying_audit(beats: list[dict]) -> dict[str, Any]:
+    """How much of this chunk's prose came out of the book word for word.
+
+    The distribution, not only the failures. A chunk sitting just under the block is
+    a chunk about to go over it on the next book, and a count of zero blocked says
+    nothing about that. `verbatim_ratio` is reported beside the run and gates
+    nothing: it describes how copied a whole body is, and scores one lifted clause
+    in a long body near zero, which is how a corpus reached 78% lifted while that
+    number read 17%.
+    """
+    rows = []
+    for beat in beats:
+        run = copying_gate(beat.get("script_body", ""), beat.get("source_passage", ""))
+        rows.append(
+            {
+                "beat_id": beat.get("beat_id", ""),
+                "run": run[0],
+                "text": run[1],
+                "ratio": round(
+                    verbatim_ratio(
+                        beat.get("script_body", "") or "", beat.get("source_passage", "") or ""
+                    ),
+                    3,
+                ),
+            }
+        )
+    over = [r for r in rows if r["run"] >= VERBATIM_RUN_BLOCK]
+    runs = sorted(r["run"] for r in rows)
+    return {
+        "block_at": VERBATIM_RUN_BLOCK,
+        "blocked": len(over),
+        "blocked_beats": [
+            {"beat_id": r["beat_id"], "run": r["run"], "text": r["text"]} for r in over
+        ],
+        "median_run": runs[len(runs) // 2] if runs else 0,
+        "longest_run": runs[-1] if runs else 0,
+        "runs_within_two_of_the_block": sum(
+            1 for r in runs if VERBATIM_RUN_BLOCK - 2 <= r < VERBATIM_RUN_BLOCK
+        ),
+        "median_ratio": (sorted(r["ratio"] for r in rows)[len(rows) // 2] if rows else 0.0),
     }
 
 
@@ -345,8 +374,7 @@ def _fabrication_audit(beats: list[dict], chunk_text: str) -> dict[str, Any]:
                     "beat_id": b.get("beat_id"),
                     "unsourced_in_body": verdict.unsourced_claims,
                     "unsourced_in_cues": [
-                        {"cue_index": idx, "claim": c}
-                        for idx, c in verdict.cue_unsourced
+                        {"cue_index": idx, "claim": c} for idx, c in verdict.cue_unsourced
                     ],
                 }
             )
@@ -380,9 +408,7 @@ def _new_coverage(beats: list[dict], live_beats: list[dict]) -> dict[str, Any]:
     new_combos: list[dict] = []
     for b in beats:
         if b.get("new_poi"):
-            new_combos.append(
-                {"reason": "new_poi", "poi": b["poi_name"], "lens": b.get("lens")}
-            )
+            new_combos.append({"reason": "new_poi", "poi": b["poi_name"], "lens": b.get("lens")})
             continue
         combo = (b.get("poi_name", ""), b.get("lens", ""))
         if combo not in live_combos:
