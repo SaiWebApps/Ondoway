@@ -1,0 +1,103 @@
+{
+  "book_title": "New York: The Movie Lover's Guide — The Ultimate Insider Tour of Movie New York",
+  "author": "Richard Alleman",
+  "source_file": "New York  the movie lovers guide  the ultimate insider tour of movie New York (Alleman, Richard etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+  "city": "new_york",
+  "total_pages": 509,
+  "chunked_at": "2026-06-18",
+  "extraction_note": "Neighborhood-organized movie-location guidebook (revised ed., 2005). Chunked at the natural chapter level: 13 borough/neighborhood chapters, each a numbered walking itinerary of film/TV locations, studios, movie palaces, and star residences with addresses and movie titles+years. Front matter (title, copyright, dedication, Introduction) and back matter (Index, Photo Credits) excluded. PDF extracts cleanly via pdftotext with digits intact (NO Expert/PUA-font issue). A numbered map precedes each chapter; its OCR'd labels appear as scattered short fragments at chapter starts — .cleaned.txt strips sparse map-label runs via scripts/strip_pdf_artifacts.py.",
+  "total_chunks": 13,
+  "chunks": [
+    {
+      "chunk_number": 1,
+      "filename": "chunk-01-new-jersey.txt",
+      "section_title": "New Jersey: In the Beginning",
+      "page_range": "1-30",
+      "line_count": 1409
+    },
+    {
+      "chunk_number": 2,
+      "filename": "chunk-02-midtown-manhattan.txt",
+      "section_title": "Midtown Manhattan: Archetypal NYC",
+      "page_range": "31-94",
+      "line_count": 3203
+    },
+    {
+      "chunk_number": 3,
+      "filename": "chunk-03-broadway.txt",
+      "section_title": "Broadway: That's Entertainment!",
+      "page_range": "95-146",
+      "line_count": 2625
+    },
+    {
+      "chunk_number": 4,
+      "filename": "chunk-04-upper-east-side.txt",
+      "section_title": "The Upper East Side: Beverly Hills East",
+      "page_range": "147-208",
+      "line_count": 3330
+    },
+    {
+      "chunk_number": 5,
+      "filename": "chunk-05-union-square-gramercy-chelsea.txt",
+      "section_title": "Union Square/Gramercy Park/Chelsea: From Biograph to Law & Order",
+      "page_range": "209-242",
+      "line_count": 1650
+    },
+    {
+      "chunk_number": 6,
+      "filename": "chunk-06-greenwich-village.txt",
+      "section_title": "Greenwich Village: The Big Back Lot",
+      "page_range": "243-278",
+      "line_count": 1785
+    },
+    {
+      "chunk_number": 7,
+      "filename": "chunk-07-soho-tribeca-nolita.txt",
+      "section_title": "SoHo/TriBeCa/NoLita: The “New” New York",
+      "page_range": "279-296",
+      "line_count": 870
+    },
+    {
+      "chunk_number": 8,
+      "filename": "chunk-08-lower-manhattan-staten-island.txt",
+      "section_title": "Lower Manhattan/Staten Island: Old New York",
+      "page_range": "297-324",
+      "line_count": 1427
+    },
+    {
+      "chunk_number": 9,
+      "filename": "chunk-09-upper-west-side.txt",
+      "section_title": "The Upper West Side: Rebel Territory",
+      "page_range": "325-362",
+      "line_count": 1883
+    },
+    {
+      "chunk_number": 10,
+      "filename": "chunk-10-harlem-washington-heights.txt",
+      "section_title": "Harlem/Washington Heights: Uptown Renaissance",
+      "page_range": "363-388",
+      "line_count": 1158
+    },
+    {
+      "chunk_number": 11,
+      "filename": "chunk-11-brooklyn.txt",
+      "section_title": "Brooklyn: Hometown of the Stars",
+      "page_range": "389-432",
+      "line_count": 2146
+    },
+    {
+      "chunk_number": 12,
+      "filename": "chunk-12-queens.txt",
+      "section_title": "Queens: The Return of the Movies",
+      "page_range": "433-458",
+      "line_count": 1293
+    },
+    {
+      "chunk_number": 13,
+      "filename": "chunk-13-bronx-and-beyond.txt",
+      "section_title": "The Bronx and Beyond: Final Stops",
+      "page_range": "459-486",
+      "line_count": 1901
+    }
+  ]
+}

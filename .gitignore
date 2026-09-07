@@ -367,4 +367,17 @@ data/*/.*
 
 # Lane B re-author candidates: paid model output awaiting human review,
 # regenerable and large. The approved rewrites reach the repo through beats.json.
+# The clean-room siblings are the same kind of thing — decomposed claims, the
+# bodies written from them, and the audit verdicts over those bodies. All three
+# are bought from a model, regenerable from the corpus and the scripts, and
+# nothing downstream reads them: what ships reaches beats.json through review.
 data/*/reauthored.json
+data/*/reauthored-cleanroom.json
+data/*/reauthored-audit.json
+data/*/claims.json
+
+# Hand-made snapshots taken before a destructive pipeline step. They are a
+# person's undo button for one afternoon, not corpus history — git already
+# carries that for every tracked file.
+data/*/*.bak-*.json
+data/*/*.archived-*.json
