@@ -392,6 +392,8 @@ def test_the_weekly_predicate_refuses_every_side_door() -> None:
         "Fr-Sa 20:00-26:00",
         "mo-su 10:00-18:00; dec 25 off",
         "Mo-Su 09:00-18:00; ph off",
+        "Tu,Th-Sa 21:00\u201301:00",
+        "Mo-Su 10:00-18:00; august off",
     )
     for tag in beyond:
         assert not fits(tag), f"a weekly table cannot say {tag!r}"

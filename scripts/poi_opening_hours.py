@@ -395,7 +395,10 @@ _BEYOND_WEEKLY_RE = re.compile(
     r"|sunrise|sunset|dawn|dusk"
     r"|\["  # nth-weekday-of-month selectors: Su[1], Sa[1,3], Su[-1]
     r"|\|\|"  # fallback rules
-    r"|\d\+",  # open-ended times: "10:00+"
+    r"|\d\+"  # open-ended times: "10:00+"
+    r"|[\u2013\u2014]"  # en/em dashes: not OSM syntax, and they hide a span
+    r"|\b(?:january|february|march|april|june|july|august"
+    r"|september|october|november|december)\b",  # full month names
     re.IGNORECASE,
 )
 

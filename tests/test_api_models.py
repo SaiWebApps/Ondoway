@@ -16,8 +16,19 @@ from src.api.models.nodes import (
 
 
 class TestNodeLabel:
-    def test_has_eight_labels(self):
-        assert len(NodeLabel) == 8
+    def test_has_nine_labels(self):
+        assert len(NodeLabel) == 9
+
+    def test_every_constrained_label_is_addressable(self):
+        """The drift guard the family split exposed: a label that carries a
+        unique constraint is a real node kind the API must be able to
+        address — a constraint without an enum member makes its endpoints
+        an unconditional 422."""
+        from src.schema.definitions import UNIQUE_CONSTRAINTS
+
+        constrained = {c.label for c in UNIQUE_CONSTRAINTS}
+        addressable = {label.value for label in NodeLabel}
+        assert constrained <= addressable, constrained - addressable
 
     def test_all_expected_labels_present(self):
         expected = {
@@ -28,6 +39,7 @@ class TestNodeLabel:
             "ItineraryItem",
             "POI",
             "NarrativeBeat",
+            "Family",
             "Area",
         }
         assert {label.value for label in NodeLabel} == expected

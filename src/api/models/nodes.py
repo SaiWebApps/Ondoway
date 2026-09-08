@@ -74,6 +74,7 @@ class NodeLabel(StrEnum):
     POI = "POI"
     NarrativeBeat = "NarrativeBeat"
     Area = "Area"
+    Family = "Family"
 
 
 class NodeResponse(BaseModel):
@@ -107,6 +108,12 @@ class ProfileCreate(BaseModel):
 class LensCreate(BaseModel):
     name: str = Field(max_length=500)
     display_label: str = Field(max_length=500)
+
+
+class FamilyCreate(BaseModel):
+    """A persistent group of profiles; the name is the group's own choice."""
+
+    name: str = Field(default="", max_length=500)
 
 
 class TripCreate(BaseModel):
@@ -354,6 +361,7 @@ CREATE_MODELS: dict[NodeLabel, type[BaseModel]] = {
     NodeLabel.POI: POICreate,
     NodeLabel.NarrativeBeat: NarrativeBeatCreate,
     NodeLabel.Area: AreaCreate,
+    NodeLabel.Family: FamilyCreate,
 }
 
 
