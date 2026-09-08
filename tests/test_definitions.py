@@ -12,8 +12,8 @@ from src.schema.definitions import (
 
 class TestUniqueConstraints:
     def test_count_matches_schema_v3(self):
-        """Schema_v3 §3 defines 10 unique constraints (incl. Area)."""
-        assert len(UNIQUE_CONSTRAINTS) == 10
+        """Schema_v3 §3 plus the family group: 11 unique constraints."""
+        assert len(UNIQUE_CONSTRAINTS) == 11
 
     def test_constraint_names_are_unique(self):
         names = [c.name for c in UNIQUE_CONSTRAINTS]
@@ -48,9 +48,10 @@ class TestIndexes:
 
 
 class TestRelationships:
-    def test_twelve_relationship_types(self):
-        """Schema_v3 §4 defines exactly 12 relationships (incl. WITHIN)."""
-        assert len(RELATIONSHIP_TYPES) == 12
+    def test_fourteen_relationship_types(self):
+        """Schema_v3 §4 plus the family group (MEMBER_OF, DAY_OF): 14
+        relationships."""
+        assert len(RELATIONSHIP_TYPES) == 14
 
     def test_all_expected_types_present(self):
         expected = {
@@ -66,6 +67,8 @@ class TestRelationships:
             "TAGGED_WITH",
             "IS_PARENT_OF",
             "WITHIN",
+            "MEMBER_OF",
+            "DAY_OF",
         }
         assert set(RELATIONSHIP_TYPES) == expected
 
