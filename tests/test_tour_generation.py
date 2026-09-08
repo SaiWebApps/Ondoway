@@ -2096,11 +2096,11 @@ def test_a_closed_start_not_in_the_day_is_named_first():
     )
 
 
-def test_a_closed_start_yields_to_the_first_stops_own_closure_line():
-    """When stop 0 itself is clock-closed, its own acknowledgment holds the
-    first-stationary slot and the off-route start line stands down — one
-    closure sentence opens the day, never two stacked. The screen channel
-    still carries both exclusions."""
+def test_a_closed_start_speaks_before_the_first_stops_own_closure_line():
+    """When stop 0 is ALSO clock-closed, two shut doors are two facts, each
+    said once: the walker is standing at the start's door, so its line comes
+    first; the closed stop 0 is "just ahead" and its own line follows.
+    Suppressing either is the lie by omission M18 exists to forbid."""
     from src.tour.contract import ClockExclusion
 
     poi = _poi("p1", "Pantheon")
@@ -2123,8 +2123,14 @@ def test_a_closed_start_yields_to_the_first_stops_own_closure_line():
     )
     script = generate(seq, route, _input(), glue_client=MockGlueClient())
     texts = [s.text for s in script.script if s.stop_idx == 0]
-    assert texts[1] == "Pantheon is closed today, so we'll take it in from out here."
-    assert not any("right here at the start" in s.text for s in script.script)
+    assert texts[0] == "Settle in."
+    assert texts[1] == (
+        "Musee d'Orsay, right here at the start, is closed today, "
+        "so the walk goes on without it."
+    ), texts[:4]
+    assert texts[2] == "Pantheon is closed today, so we'll take it in from out here."
+    assert sum("right here at the start" in s.text for s in script.script) == 1
+    assert sum("Pantheon is closed today" in s.text for s in script.script) == 1
 
 
 def test_a_dropped_only_invitation_beat_is_not_reported_as_voiced():

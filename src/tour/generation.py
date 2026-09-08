@@ -464,14 +464,18 @@ def generate(
             beat_sequence, route, client, tour_input=tour_input, stop_idx=0
         )
         # A closed start not in the day (at_start, off-route) is named in the
-        # same slot — unless stop 0's own closure line already holds it.
-        opening = closure_lines.get(0) or _closed_start_line(route)
-        if opening is not None:
+        # same slot, FIRST — the walker is standing at that door; a closed
+        # stop 0 is "just ahead" and its own line follows. Two shut doors are
+        # two facts, each said once.
+        openings = [
+            s for s in (_closed_start_line(route), closure_lines.get(0)) if s is not None
+        ]
+        if openings:
             # After the "Settle in." breath, before anything about the place.
             cold_open_sents = (
-                [cold_open_sents[0], opening, *cold_open_sents[1:]]
+                [cold_open_sents[0], *openings, *cold_open_sents[1:]]
                 if cold_open_sents
-                else [opening]
+                else openings
             )
         sentences.extend(cold_open_sents)
         consumed_beat_ids |= consumed_in_cold_open
@@ -1425,9 +1429,9 @@ def _closed_start_line(route: Route) -> Sentence | None:
     """The acknowledgment for a shut place AT the walk's start that is NOT in
     the day (``ClockExclusion.at_start`` set by selection from coordinates,
     poi_id off-route — an on-route closure already gets its stop's own line).
-    The caller fills stop 0's first-stationary slot with it only when no
-    on-route closure line holds that slot: one closure sentence opens the day,
-    never two stacked, and the screen channel still carries every exclusion."""
+    The caller speaks it as the day's first line about any place, ahead of a
+    closed stop 0's own line when both are true: the walker is standing at
+    THIS door, and two shut doors are two facts, each said once."""
     on_route = {poi.id for poi in route.pois}
     for excl in route.clock_exclusions:
         if excl.at_start and excl.poi_id not in on_route:
