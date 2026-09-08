@@ -723,6 +723,17 @@
         "radius_m": 45.0,
         "indoor": false,
         "basis": "The Carrousel garden fills the eastern end between the Arc du Carrousel and the Tuileries proper; a person stands on its lawns under the arch's sightline, four hundred metres east of the mid-garden pin."
+      },
+      {
+        "label": "The octagonal basin",
+        "sub_locations": [
+          "octagonal-pond"
+        ],
+        "lat": 48.86466,
+        "lng": 2.32233,
+        "radius_m": 30.0,
+        "indoor": false,
+        "basis": "The Grand Bassin Octogonal fills the western end just inside the Place de la Concorde gates; a person stands at its rim with Le Silence and the basin's edge in front of them, nearly four hundred metres west of the garden pin."
       }
     ],
     "gated": true,
