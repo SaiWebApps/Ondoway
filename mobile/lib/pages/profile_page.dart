@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:ondoway/services/auth_service.dart';
+import 'package:ondoway/services/family_service.dart';
 import 'package:ondoway/services/lens_service.dart';
 import 'package:ondoway/services/profile_service.dart';
+import 'package:ondoway/widgets/family_section.dart';
 import 'package:ondoway/widgets/feedback_overlay.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -14,6 +16,10 @@ class ProfilePage extends StatelessWidget {
     final auth = context.watch<AuthService>();
     final profile = context.watch<ProfileService>();
     final lensService = context.watch<LensService>();
+    final familyService = context.watch<FamilyService>();
+
+    Future<String?> refreshBearer() async =>
+        (await auth.refreshSession()) ? auth.accessToken : null;
 
     final selectedLensNames = lensService.allLenses
         .where((l) => profile.selectedLensIds.contains(l.id))
@@ -98,6 +104,23 @@ class ProfilePage extends StatelessWidget {
             ),
           const SizedBox(height: 32),
           const Divider(height: 32),
+          FamilySection(
+            families: familyService.families,
+            isLoaded: familyService.isLoaded,
+            onCreate: () async {
+              await familyService.createFamily(
+                auth.accessToken!,
+                refresh: refreshBearer,
+              );
+            },
+            onInvite: (familyId) => familyService.createInvite(
+              familyId,
+              auth.accessToken!,
+              refresh: refreshBearer,
+            ),
+          ),
+          const SizedBox(height: 32),
+          const Divider(height: 32),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text('Appearance', style: Theme.of(context).textTheme.titleMedium),
@@ -128,6 +151,7 @@ class ProfilePage extends StatelessWidget {
               onPressed: () {
                 auth.logout();
                 profile.reset();
+                familyService.reset();
                 context.go('/login');
               },
               icon: const Icon(Icons.logout),

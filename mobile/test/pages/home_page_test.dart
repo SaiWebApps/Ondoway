@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:ondoway/pages/profile_page.dart';
 import 'package:ondoway/services/auth_service.dart';
+import 'package:ondoway/services/family_service.dart';
 import 'package:ondoway/services/lens_service.dart';
 import 'package:ondoway/services/profile_service.dart';
 import 'package:http/http.dart' as http;
@@ -14,6 +15,7 @@ Widget _wrapProfilePage({
   required AuthService authService,
   ProfileService? profileService,
   LensService? lensService,
+  FamilyService? familyService,
 }) {
   final client = MockClient((r) async => http.Response('', 200));
   return MaterialApp(
@@ -26,6 +28,9 @@ Widget _wrapProfilePage({
           ),
           ChangeNotifierProvider<LensService>.value(
             value: lensService ?? LensService(httpClient: client),
+          ),
+          ChangeNotifierProvider<FamilyService>.value(
+            value: familyService ?? FamilyService(httpClient: client),
           ),
         ],
         child: const ProfilePage(),
@@ -224,6 +229,11 @@ void main() {
     });
 
     testWidgets('shows theme toggle with system selected by default', (tester) async {
+      // The Appearance block sits below the family section now; give the
+      // ListView room so its children actually build (the logout-test rule).
+      await tester.binding.setSurfaceSize(const Size(800, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
       final authService = AuthService(
         storage: FakeSecureStorage(),
         httpClient: MockClient((r) async => http.Response('', 200)),
@@ -240,6 +250,9 @@ void main() {
     });
 
     testWidgets('theme toggle reflects stored preference', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
       final mockClient = MockClient((request) async {
         if (request.url.path.contains('verify')) {
           return http.Response(
@@ -296,6 +309,9 @@ void main() {
     });
 
     testWidgets('tapping light segment triggers update', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
       String? capturedBody;
       final mockClient = MockClient((request) async {
         if (request.url.path.contains('verify')) {

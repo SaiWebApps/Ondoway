@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:ondoway/models/trip.dart';
 import 'package:ondoway/pages/callback_page.dart';
 import 'package:ondoway/pages/explore_page.dart';
+import 'package:ondoway/pages/join_family_page.dart';
 import 'package:ondoway/pages/lens_selection_page.dart';
 import 'package:ondoway/pages/login_page.dart';
 import 'package:ondoway/pages/profile_page.dart';
@@ -163,6 +164,16 @@ GoRouter createRouter(
         builder: (context, state) {
           final token = state.uri.queryParameters['token'] ?? '';
           return CallbackPage(token: token);
+        },
+      ),
+      // The family invite deep link (rides /auth/* — the app's registered
+      // universal-link space). NOT exempt from the auth guard above: joining
+      // needs a signed-in profile, so an unauthenticated tap lands on /login.
+      GoRoute(
+        path: '/auth/join-family',
+        builder: (context, state) {
+          final token = state.uri.queryParameters['token'] ?? '';
+          return JoinFamilyPage(token: token);
         },
       ),
       GoRoute(

@@ -29,6 +29,10 @@ dependencies:
   # the phone must be unlocked and the app opened to stop a voice in your ear.
   just_audio_background: ^0.0.1-beta.17
   path_provider: ^2.1.0
+  # The family invite renders as a QR beside the shareable link (docs/adr/0005:
+  # "the QR serves the family standing in the same room"). Pure-Dart renderer —
+  # no platform channel, no new .swift file.
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
