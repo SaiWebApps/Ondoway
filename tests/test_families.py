@@ -21,13 +21,15 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api.app import create_app
-from src.api.auth.config import JWT_ALGORITHM, MAGIC_LINK_SECRET_KEY
+from src.api.auth.config import JWT_ALGORITHM, JWT_SECRET_KEY, MAGIC_LINK_SECRET_KEY
 from src.api.auth.tokens import (
     INVITE_TOKEN_EXPIRE_DAYS,
     TokenError,
     create_access_token,
     create_invite_token,
     verify_invite_token,
+    verify_magic_token,
+    verify_token,
 )
 from tests.conftest import needs_neo4j
 
@@ -93,6 +95,53 @@ class TestInviteToken:
     def test_wrong_type_refused(self):
         with pytest.raises(TokenError):
             verify_invite_token(create_access_token("user-1", "a@b.test"))
+
+    def test_invite_refused_as_access_and_refresh_by_type_alone(self):
+        """The TYPE claim refuses cross-use on its own, not just the secret
+        split: an invite-typed payload signed with the BEARER secret still
+        fails the access and refresh verifiers."""
+        now = datetime.now(UTC)
+        invite_on_bearer_secret = jwt.encode(
+            {
+                "family_id": "fam-1",
+                "sub": "user-1",
+                "type": "invite",
+                "iat": now,
+                "exp": now + timedelta(days=7),
+            },
+            JWT_SECRET_KEY,
+            algorithm=JWT_ALGORITHM,
+        )
+        with pytest.raises(TokenError):
+            verify_token(invite_on_bearer_secret, "access")
+        with pytest.raises(TokenError):
+            verify_token(invite_on_bearer_secret, "refresh")
+
+    def test_invite_refused_as_magic_link(self):
+        """A real invite token shares the magic link's SECRET, so the secret
+        split cannot refuse it there — and it must still be refused."""
+        with pytest.raises(TokenError):
+            verify_magic_token(create_invite_token("fam-1", "user-1"))
+
+    def test_invite_refused_as_magic_link_by_type_alone(self):
+        """The TYPE claim carries the refusal on its own: an invite-typed
+        token on the magic secret WITH an email claim (so the missing-email
+        fallback cannot save the day) still fails the magic verifier."""
+        now = datetime.now(UTC)
+        invite_with_email = jwt.encode(
+            {
+                "family_id": "fam-1",
+                "sub": "user-1",
+                "email": "a@b.test",
+                "type": "invite",
+                "iat": now,
+                "exp": now + timedelta(days=7),
+            },
+            MAGIC_LINK_SECRET_KEY,
+            algorithm=JWT_ALGORITHM,
+        )
+        with pytest.raises(TokenError):
+            verify_magic_token(invite_with_email)
 
     def test_garbage_refused(self):
         with pytest.raises(TokenError):
@@ -232,7 +281,7 @@ class TestFamilyFlow:
             headers=_bearer("p10-families-stranger", "stranger@example.test"),
         )
         # The stranger user does not even exist on the graph -> 401 from auth;
-        # an EXISTING user outside the family gets 404. Plant one to prove it.
+        # an EXISTING authenticated non-member's 404 is pinned below.
         assert with_stranger.status_code == 401
         resp = client.post(
             "/api/v1/families/invite",
@@ -240,6 +289,36 @@ class TestFamilyFlow:
             headers=_bearer(FIONA_USER_ID, FIONA_EMAIL),
         )
         assert resp.status_code == 404
+
+    def test_an_existing_non_member_cannot_mint_an_invite(
+        self, client, graph, family_id
+    ):
+        """Invite minting requires MEMBERSHIP, not just authentication: a real,
+        authenticated user with a real profile who is simply not in the family
+        gets the same 404 as if the family did not exist."""
+        uid = "p10-families-test-user-outsider"
+        email = "p10-families-outsider@example.test"
+        pid = "p10-families-test-profile-outsider"
+        with graph.session() as s:
+            s.run("MERGE (u:User {id: $uid}) SET u.email = $email", uid=uid, email=email)
+            s.run(
+                "MERGE (p:Profile {id: $pid}) "
+                "SET p.display_name = 'Outsider', p.created_at = datetime() "
+                "WITH p MATCH (u:User {id: $uid}) MERGE (u)-[:HAS_PROFILE]->(p)",
+                pid=pid,
+                uid=uid,
+            )
+        try:
+            resp = client.post(
+                "/api/v1/families/invite",
+                json={"family_id": family_id},
+                headers=_bearer(uid, email),
+            )
+            assert resp.status_code == 404, resp.text
+        finally:
+            with graph.session() as s:
+                s.run("MATCH (p:Profile {id: $pid}) DETACH DELETE p", pid=pid)
+                s.run("MATCH (u:User {id: $uid}) DETACH DELETE u", uid=uid)
 
 
 # ── M2.2: a crewed trip is readable by its crew; writes keep one captain ─────
@@ -564,6 +643,57 @@ class TestJoinLateCrewsTheExistingDays:
         assert self_crewed == 0
 
 
+# ── Foreign profile ids are never confirmed ──────────────────────────────────
+
+
+@needs_neo4j
+class TestForeignProfileIsNeverConfirmed:
+    """POST /families and /families/join take an optional profile_id — which of
+    the CALLER's profiles acts. A profile id the caller does not own is 404,
+    indistinguishable from one that does not exist, and nothing is written."""
+
+    @pytest.fixture()
+    def fionas_family(self, graph):
+        family_id = "p10-families-foreign-guard-family"
+        with graph.session() as s:
+            s.run(
+                "MERGE (f:Family {id: $fid}) SET f.created_at = datetime() "
+                "WITH f MATCH (p:Profile {id: $pid}) MERGE (p)-[:MEMBER_OF]->(f)",
+                fid=family_id,
+                pid=FIONA_PROFILE_ID,
+            )
+        yield family_id
+        with graph.session() as s:
+            s.run("MATCH (f:Family {id: $fid}) DETACH DELETE f", fid=family_id)
+
+    def test_create_family_with_a_foreign_profile_is_404(self, client):
+        resp = client.post(
+            "/api/v1/families",
+            json={"name": "Not yours", "profile_id": DEV_PROFILE_ID},
+            headers=_bearer(FIONA_USER_ID, FIONA_EMAIL),
+        )
+        assert resp.status_code == 404, resp.text
+
+    def test_join_with_a_foreign_profile_is_404_and_writes_nothing(
+        self, client, graph, fionas_family
+    ):
+        token = create_invite_token(fionas_family, FIONA_USER_ID)
+        resp = client.post(
+            "/api/v1/families/join",
+            json={"token": token, "profile_id": FIONA_PROFILE_ID},
+            headers=_bearer(DEV_USER_ID, DEV_EMAIL),
+        )
+        assert resp.status_code == 404, resp.text
+        with graph.session() as s:
+            joined = s.run(
+                "MATCH (p:Profile {id: $pid})-[:MEMBER_OF]->(f:Family {id: $fid}) "
+                "RETURN count(*) AS n",
+                pid=DEV_PROFILE_ID,
+                fid=fionas_family,
+            ).single()["n"]
+        assert joined == 0
+
+
 # ── M2.2: the profile stops collapsing ───────────────────────────────────────
 
 
@@ -583,6 +713,32 @@ class TestProfiles:
         resp = client.get("/api/v1/profile", headers=_bearer(FIONA_USER_ID, FIONA_EMAIL))
         assert resp.status_code == 200, resp.text
         assert resp.json()["profile_id"] == "p10-families-fiona-second"
+
+    def test_get_profile_tie_breaks_equal_created_at_on_id(self, client, graph):
+        """Two profiles created in the SAME instant: created_at DESC ties, so
+        the id tie-break (ascending) decides — deterministically, every call."""
+        uid = "p10-families-tiebreak-user"
+        email = "p10-families-tiebreak@example.test"
+        pids = ["p10-families-tiebreak-b", "p10-families-tiebreak-a"]
+        with graph.session() as s:
+            s.run("MERGE (u:User {id: $uid}) SET u.email = $email", uid=uid, email=email)
+            for pid in pids:
+                s.run(
+                    "MERGE (p:Profile {id: $pid}) "
+                    "SET p.display_name = $pid, "
+                    "    p.created_at = datetime('2026-09-01T12:00:00Z') "
+                    "WITH p MATCH (u:User {id: $uid}) MERGE (u)-[:HAS_PROFILE]->(p)",
+                    pid=pid,
+                    uid=uid,
+                )
+        try:
+            resp = client.get("/api/v1/profile", headers=_bearer(uid, email))
+            assert resp.status_code == 200, resp.text
+            assert resp.json()["profile_id"] == "p10-families-tiebreak-a"
+        finally:
+            with graph.session() as s:
+                s.run("MATCH (p:Profile) WHERE p.id IN $pids DETACH DELETE p", pids=pids)
+                s.run("MATCH (u:User {id: $uid}) DETACH DELETE u", uid=uid)
 
     def test_get_profiles_lists_every_profile(self, client):
         resp = client.get("/api/v1/profiles", headers=_bearer(FIONA_USER_ID, FIONA_EMAIL))

@@ -197,12 +197,17 @@ def test_crew_replan_is_refused_typed(clients, family_day):
 
 @needs_neo4j
 def test_a_deleted_trip_is_gone_for_the_crew_too(clients, family_day, live_neo4j):
-    """When the captain's trip is deleted, the crew's read is a plain 404 —
-    the shared day does not outlive the day. (Deletion is a graph operation:
-    no product delete endpoint exists; this trace removes the trip the way the
-    persona traces clear their own artifacts.) Runs LAST — it destroys the
-    day the other assertions read."""
+    """The TRANSITION is the claim: the crew reads the shared day (200 — the
+    family read-widening, the half a non-family build fails), and after the
+    trip is deleted the same read is a plain 404 — the shared day does not
+    outlive the day. (Deletion is a graph operation: no product delete
+    endpoint exists; this trace removes the trip the way the persona traces
+    clear their own artifacts.) Runs LAST — it destroys the day the other
+    assertions read."""
     _captain, crew = clients
+    before = crew.get(f"/api/v1/trips/{family_day.trip_id}/session")
+    assert before.status_code == 200, before.text
+
     with live_neo4j.session() as s:
         s.run(
             "MATCH (t:Trip {id: $tid}) "
