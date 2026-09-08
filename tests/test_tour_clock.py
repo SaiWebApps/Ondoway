@@ -500,9 +500,137 @@ def test_a_closure_is_disclosed_in_plain_words_and_spoken_by_its_source():
 
     # Map hours assert the closure and nothing more.
     assert from_map == "closed all day Wednesday", from_map
-    # A guess says we guessed, in words a person reads; no source is no better.
-    assert "could not confirm" in guessed, guessed
-    assert "could not confirm" in sourceless, sourceless
+    # A guess puts the doubt FIRST, in words a person reads; no source is no better.
+    assert guessed == "we think it is closed all day Wednesday, but we could not confirm that"
+    assert sourceless == guessed
+
+
+# --- a guess may say closed, but never removes a place (Docs/adr/0006 rule 4) --
+
+
+def _guessed_closed_museum(**updates):
+    """The Tuesday-closed museum on GUESSED hours with nothing to stand outside
+    for (typical_duration_min 0) — the one shape the map rule removes."""
+    return _tuesday_closed_museum().model_copy(
+        update={"opening_hours_source": "guess", **updates}
+    )
+
+
+def test_a_guess_may_say_closed_but_never_removes_a_place():
+    """A guess is a guess: the day says the door is probably shut and keeps
+    the place from the outside, even with nothing priced for the pavement —
+    only MAP hours may take a place out of the day. The exclusion record
+    carries ``guessed`` so every voice can hedge from the field, never from
+    the sentence's words."""
+    from src.tour.selection import select_route
+
+    museum = _guessed_closed_museum()
+    tuesday = select_route(_clock_request(_TUESDAY_10AM), _clock_corpus(museum))
+
+    assert museum.id in {p.id for p in tuesday.pois}, "a guess removed a place from the day"
+    (said,) = [e for e in tuesday.clock_exclusions if e.poi_id == museum.id]
+    assert said.kept_outside is True and said.guessed is True and said.all_day is True
+    assert said.reason == "we think it is closed all day Tuesday, but we could not confirm that"
+
+    from_map = _tuesday_closed_museum_with_an_exterior()
+    kept = select_route(_clock_request(_TUESDAY_10AM), _clock_corpus(from_map))
+    (plain,) = [e for e in kept.clock_exclusions if e.poi_id == from_map.id]
+    assert plain.guessed is False and plain.reason == "closed all day Tuesday"
+
+
+def test_a_guessed_pin_closed_by_its_guess_is_demoted_not_refused():
+    """A pin on guessed hours that say closed is never refused: the visitor
+    built the day around it and the guess may be wrong, so the place is
+    seated from the outside and the day says why."""
+    from src.tour.selection import select_route
+
+    museum = _guessed_closed_museum()
+    route = select_route(
+        _clock_request(_TUESDAY_10AM).model_copy(update={"pinned_poi_ids": (museum.id,)}),
+        _clock_corpus(museum),
+    )
+    assert museum.id in {p.id for p in route.pois}
+    (said,) = [e for e in route.clock_exclusions if e.poi_id == museum.id]
+    assert said.kept_outside is True and said.guessed is True
+
+
+def test_the_voice_hedges_a_guessed_closure_and_states_a_map_one():
+    """What the walker HEARS at a shut door follows the same field: map hours
+    say it plainly; a guess says we think so and could not confirm it. The
+    start-of-walk lines carry the same hedge."""
+    from src.tour.contract import ClockExclusion, Route, TransitSegment
+    from src.tour.generation import _closed_start_line, _closure_opening_lines
+
+    museum = _tuesday_closed_museum()
+    off_route = ClockExclusion(
+        poi_id="crypte", name="La Crypte", reason="we think it is closed all day Tuesday, but "
+        "we could not confirm that", kept_outside=False, all_day=True, at_start=True, guessed=True,
+    )
+    route = Route(
+        pois=(museum,),
+        transits=(TransitSegment(from_poi_id=None, to_poi_id=museum.id, distance_m=0,
+                                 walk_seconds=0),),
+        total_walk_distance_m=0.0,
+        total_walk_seconds=0,
+        clock_exclusions=(
+            ClockExclusion(
+                poi_id=museum.id, name=museum.name, reason="we think it is closed all day "
+                "Tuesday, but we could not confirm that", kept_outside=True, all_day=True,
+                guessed=True,
+            ),
+            off_route,
+        ),
+    )
+    (line,) = _closure_opening_lines(route).values()
+    assert line.text == (
+        "We think Musée Fermé le Mardi is closed today, but we could not confirm that, "
+        "so we'll take it in from out here."
+    ), line.text
+    start = _closed_start_line(route)
+    assert start is not None and start.text == (
+        "We think La Crypte, right here at the start, is closed today, but we could not "
+        "confirm that, so the walk goes on without it."
+    ), start.text
+
+    plain = route.model_copy(
+        update={
+            "clock_exclusions": tuple(
+                e.model_copy(update={"guessed": False, "reason": "closed all day Tuesday"})
+                for e in route.clock_exclusions
+            )
+        }
+    )
+    (line,) = _closure_opening_lines(plain).values()
+    assert line.text == "Musée Fermé le Mardi is closed today, so we'll take it in from out here."
+
+
+def test_the_writer_is_told_a_guessed_shut_door_is_a_guess():
+    """The premium writer's door instruction keeps the hedge for a guessed
+    door: it may not state the closure as a fact."""
+    from src.tour.authoring import _door_state
+    from src.tour.contract import ClockExclusion, Route, TransitSegment
+
+    museum = _tuesday_closed_museum()
+
+    def route_with(guessed: bool) -> Route:
+        return Route(
+            pois=(museum,),
+            transits=(TransitSegment(from_poi_id=None, to_poi_id=museum.id, distance_m=0,
+                                     walk_seconds=0),),
+            total_walk_distance_m=0.0,
+            total_walk_seconds=0,
+            visit_goes_inside={museum.id: False},
+            clock_exclusions=(
+                ClockExclusion(poi_id=museum.id, name=museum.name, reason="closed",
+                               kept_outside=True, guessed=guessed),
+            ),
+        )
+
+    hedged = _door_state(route_with(True), 0)
+    assert "we think" in hedged and "could not confirm" in hedged, hedged
+    assert "plainly" not in hedged
+    plain = _door_state(route_with(False), 0)
+    assert "plainly" in plain and "could not confirm" not in plain, plain
 
 
 # --- the library reads the map's text: seasons, holidays, and what it cannot read
@@ -591,16 +719,30 @@ def test_closed_all_day_reads_the_whole_calendar_day_from_the_text():
     assert not _closed_all_day("Mo-Su 10:00-18:00; PH off", bastille, country="US")
 
 
-def test_a_partly_open_window_names_the_hours_it_was_open():
-    """A door shut for the whole visit on a day it opens at other hours says
-    when it IS open, so the walker can come back; a door shut all day says so."""
+def test_a_partly_open_window_says_what_the_walker_can_do_with_the_door():
+    """A door shut for the whole visit on a day it opens at other hours names
+    what the walker can DO: before it opens, WHEN it opens; after it has shut,
+    FROM when; between two spans, the spans. Never the visit window dressed
+    up as the door's own schedule."""
     import datetime as dt
 
     from src.tour.selection import _clock_exclusion_reason
 
-    early = dt.datetime(2026, 8, 10, 19, 0)  # Monday evening, after 18:00
-    reason = _clock_exclusion_reason(_CLOSED_TUESDAY_HOURS, "map", early, 60, country="FR")
-    assert reason == "closed Monday 19:00-20:00 (open 09:00-18:00)", reason
+    late = dt.datetime(2026, 8, 10, 19, 0)  # Monday evening, after 18:00
+    assert _clock_exclusion_reason(
+        _CLOSED_TUESDAY_HOURS, "map", late, 60, country="FR"
+    ) == "closed Monday from 18:00"
+    early = dt.datetime(2026, 8, 10, 7, 0)  # Monday morning, before 09:00
+    assert _clock_exclusion_reason(
+        _CLOSED_TUESDAY_HOURS, "map", early, 60, country="FR"
+    ) == "opens at 09:00 on Monday"
+    assert _clock_exclusion_reason(
+        _CLOSED_TUESDAY_HOURS, "guess", early, 60, country="FR"
+    ) == "we think it opens at 09:00 on Monday, but we could not confirm that"
+    lunch = dt.datetime(2026, 8, 10, 12, 30)
+    assert _clock_exclusion_reason(
+        "Mo 09:00-12:00,14:00-18:00", "map", lunch, 60, country="FR"
+    ) == "closed Monday 12:30-13:30 (open 09:00-12:00, 14:00-18:00)"
 
 
 # --- the door is checked at each stop's own ARRIVAL window --------------------
@@ -711,11 +853,17 @@ def test_a_dateless_day_never_consults_the_arrival_clock():
 # padded day beats no day (refill is Phase 11's).
 
 
-def _seam_poi(pid: str, typical: int):
+def _seam_poi(pid: str, typical: int, source: str = "map"):
+    """A door on MAP hours by default — the drop rule may only ever drop a
+    door the map says is shut; the double below decides shut-or-not."""
     from tests.test_tour_selection import PDV, _poi
 
     return _poi(pid, tier=5, lat=PDV[0], lng=PDV[1], areas=("Paris",), beat_count=5).model_copy(
-        update={"typical_duration_min": typical}
+        update={
+            "typical_duration_min": typical,
+            "opening_hours": "Mo-Su 10:00-18:00",
+            "opening_hours_source": source,
+        }
     )
 
 
@@ -796,6 +944,16 @@ def test_a_dead_door_at_arrival_leaves_the_day_and_says_so():
     assert said[0].poi_id == "dead-door"
     assert said[0].kept_outside is False
     assert "closed" in said[0].reason
+
+
+def test_a_dead_door_on_guessed_hours_is_never_dropped():
+    """Docs/adr/0006 rule 4 at the drop seam: a shut door with nothing outside
+    leaves the day only when the MAP says it is shut. On a guess the place
+    stays — demoted upstream — because the guess may be wrong."""
+    a, guessed = _seam_poi("a", 12), _seam_poi("guessed-door", 0, source="guess")
+    kept, _arrivals, said = _run_drop([a, guessed], dead_ids={"guessed-door"})
+    assert [p.id for p in kept] == ["a", "guessed-door"]
+    assert said == []
 
 
 def test_a_dead_door_with_an_exterior_keeps_todays_demotion():

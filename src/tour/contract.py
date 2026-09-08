@@ -787,6 +787,12 @@ class ClockExclusion(BaseModel):
     #: from the reason's words — and additive: False keeps every existing
     #: exclusion byte-identical.
     at_start: bool = False
+    #: Whether the closure rests on GUESSED hours (Docs/adr/0006): any source
+    #: but the map. Every voice hedges from this field — "we think", "could
+    #: not confirm" — never from the reason's words, and a guessed closure
+    #: never removes a place from the day. Additive: False keeps every
+    #: existing exclusion byte-identical.
+    guessed: bool = False
 
 
 class PromiseShape(BaseModel):

@@ -425,7 +425,9 @@ def test_a_closure_note_only_promises_the_outside_of_a_place_that_is_on_the_rout
         _wire_day(market, square, clock_exclusions=exclusions), _dial_body()
     )
     assert "Marche Bastille — closed all day Wednesday — we will see it from the outside" in notes
-    assert "Lapin Agile — closed all day Wednesday, so it is not in your day" in notes
+    # Kept in the pool from the outside and simply not chosen: the closure did
+    # not remove it, so the trailer must not say it did.
+    assert "Lapin Agile — closed all day Wednesday, and it is not in this day" in notes
     assert "Crypte — closed all day Wednesday, so it is not in your day" in notes
     assert not any("Lapin Agile" in n and "outside" in n for n in notes), (
         "a place that is not on the route was promised from the outside"
@@ -433,10 +435,14 @@ def test_a_closure_note_only_promises_the_outside_of_a_place_that_is_on_the_rout
 
 
 def test_the_could_not_confirm_note_keys_on_the_hours_source():
-    """The doubt sentence names exactly the on-route doors whose hours are a
+    """The doubt sentences name exactly the on-route doors whose hours are a
     guess, or carry no source at all (Docs/adr/0006). Map hours escape the
     doubt — the map is the top source and is spoken plainly — and an ungated
     stop was never in question. Nothing doubted, no sentence at all.
+
+    On a DATED day each guess is spoken with the time we think the door
+    opens, read from the guess for that day; a dateless day has no day to
+    read, so the guesses are named together.
 
     UNDO TEST: key the list on `opening_hours is not None` alone -> the map
     stop is named as doubted -> RED.
@@ -448,15 +454,29 @@ def test_the_could_not_confirm_note_keys_on_the_hours_source():
         update={"opening_hours": hours, "opening_hours_source": "map"}
     )
     guessed = _poi("Chapelle Douteuse", lat=PDV[0] + 0.001, lng=PDV[1]).model_copy(
-        update={"opening_hours": hours, "opening_hours_source": "guess"}
+        update={"opening_hours": "Mo-Su 10:00-18:00", "opening_hours_source": "guess"}
     )
     sourceless = _poi("Crypte Sans Source", lat=PDV[0] + 0.003, lng=PDV[1]).model_copy(
         update={"opening_hours": hours, "opening_hours_source": None}
     )
+    always = _poi("Parc Ouvert", lat=PDV[0] + 0.004, lng=PDV[1]).model_copy(
+        update={"opening_hours": "24/7", "opening_hours_source": "guess"}
+    )
     street = _poi("Place des Vosges", lat=PDV[0] + 0.002, lng=PDV[1])  # ungated
 
-    notes = _preview_day_notes(_wire_day(from_map, guessed, sourceless, street), _dial_body())
-    (note,) = [n for n in notes if "confirm" in n]
+    dated = _preview_day_notes(
+        _wire_day(from_map, guessed, sourceless, always, street),
+        _dial_body(start_datetime="2026-08-11T10:00:00"),
+    )
+    doubted = [n for n in dated if "confirm" in n]
+    assert doubted == [
+        "We think Chapelle Douteuse opens at 10:00, but we could not confirm that.",
+        "We think Crypte Sans Source opens at 09:00, but we could not confirm that.",
+        "We think Parc Ouvert is open all day, but we could not confirm that.",
+    ], doubted
+
+    dateless = _preview_day_notes(_wire_day(from_map, guessed, sourceless, street), _dial_body())
+    (note,) = [n for n in dateless if "confirm" in n]
     assert note == (
         "We could not confirm opening times for Chapelle Douteuse, Crypte Sans Source."
     ), note
@@ -488,8 +508,8 @@ def test_a_doubted_door_is_doubted_once_on_the_notes_channel():
         clock_exclusions=(
             ClockExclusion(
                 poi_id=closed_doubted.id, name=closed_doubted.name,
-                reason="closed all day Wednesday, though we could not confirm its hours",
-                kept_outside=True,
+                reason="we think it is closed all day Wednesday, but we could not confirm that",
+                kept_outside=True, guessed=True,
             ),
         ),
     )

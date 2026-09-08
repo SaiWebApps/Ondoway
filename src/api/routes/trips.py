@@ -53,6 +53,7 @@ from src.api.models.trips import (
     TripPreviewStop,
     TripPreviewTourability,
 )
+from src.city_registry import country_code
 from src.tour.beat_select import select_vignette_beats
 from src.tour.candidate_eligibility import (
     CandidateRejection,
@@ -128,6 +129,7 @@ from src.tour.selection import (
     build_poi_extra_narration,
     end_b_sentinel_from_id,
     expanded_interest_lenses,
+    hours_notes,
     load_paris_corpus,
     pick_spine_area,
     planned_audio_by_poi,
@@ -2743,6 +2745,12 @@ def _preview_day_notes(route, body) -> list[str]:
                 # A disclosure about a stop that STAYED (the after-dusk finish):
                 # the planner's sentence is already the whole story.
                 notes.append(f"{ex.name} — {ex.reason}")
+        elif ex.kept_outside:
+            # The closure did NOT remove this place — it stayed in the pool
+            # from the outside and the day simply went elsewhere — so the
+            # trailer states the absence without claiming the closure caused
+            # it (a guessed closure never removes a place, Docs/adr/0006).
+            notes.append(f"{ex.name} — {ex.reason}, and it is not in this day")
         else:
             notes.append(f"{ex.name} — {ex.reason}, so it is not in your day")
 
@@ -2781,28 +2789,18 @@ def _preview_day_notes(route, body) -> list[str]:
         else:
             notes.append(f"{rule}; no waits in this day.")
 
-    # A kept-closed door's exclusion line above already carries the doubt
-    # clause when its hours are a guess (the one hedging function composes
-    # every closure reason), so listing it again is the same ignorance said
-    # twice. Keyed on the kept_outside FIELD, never on the reason's words.
-    # Map hours are the top source and carry no doubt (Docs/adr/0006).
-    doubt_carried = {e.poi_id for e in route.clock_exclusions if e.kept_outside}
-    doubted = [
-        p.name
-        for p in route.pois
-        if p.opening_hours is not None
-        and p.opening_hours_source != "map"
-        and p.id not in doubt_carried
-    ]
-    if doubted:
-        notes.append("We could not confirm opening times for " + ", ".join(doubted) + ".")
-    # A DOOR with no hours at all is the least-known kind and gets its own
-    # sentence (Docs/adr/0006: unknown hours fail open WITH that disclosure).
-    # Distinct from the could-not-confirm list, which is about hours somebody
-    # wrote down.
-    no_record = [p.name for p in route.pois if p.gated is True and p.opening_hours is None]
-    if no_record:
-        notes.append("No opening times on record for " + ", ".join(no_record) + ".")
+    # The doors' hours by source (Docs/adr/0006) — the ONE writer the harness
+    # prints too, so the screen and the breakdown never disagree. A guess on a
+    # DATED day is spoken with the time we think it opens, read from the guess
+    # for that day in the city's own country.
+    dated = body.start_datetime is not None
+    notes.extend(
+        hours_notes(
+            route,
+            datetime.fromisoformat(body.start_datetime) if dated else None,
+            country_code(body.city_slug) if dated else None,
+        )
+    )
     return notes
 
 

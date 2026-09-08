@@ -26,6 +26,7 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from src.city_registry import country_code
 from src.connection import create_driver
 from src.tour.beat_select import select_vignette_beats
 from src.tour.compose_gate import build_full_verifier
@@ -41,6 +42,8 @@ from src.tour.selection import (
     VALHALLA_MAX_CONTOUR_MINUTES,
     CertificationPlanningInfeasibleError,
     build_poi_beat_plans_capped,
+    hours_are_guessed,
+    hours_notes,
     load_paris_corpus,
     reach_envelope_searched,
     select_route,
@@ -316,8 +319,8 @@ def _print_breakdown(
     POI's own capacity numbers — a pre-promise value: the planner has not
     shaped this stop, and the fallback reports what today's planner actually
     committed to rather than pretending a promise exists. On a dated run the
-    table is followed by Aiko's honesty line, ``hours unverified for N of the
-    M gated stops on this route`` (plan deviation ii).
+    table is followed by Aiko's honesty line, ``hours: N from the map, M
+    guessed, K unknown of L doors on this route`` (plan deviation ii).
     """
     radius_m, iso_minutes = reach_envelope_searched(tour_input)
     absent = "— no route was produced, so this cannot be measured"
@@ -550,28 +553,29 @@ def _print_breakdown(
             )
         # AIKO'S HONESTY LINE (plan S3.1 deviation ii; design §6: clock-native
         # planning is "a promise without hours under it"): on a dated run, say
-        # how many of the gated stops rest on hours that are not the map's.
-        # GATED = a DOOR — `gated is True`, or hours on record (hours imply a
-        # door on a legacy row). COUNTED = every door whose source is not
-        # "map": a guess, no source, or no hours at all (Docs/adr/0006: the
-        # map is the one source spoken plainly; unknown hours fail open WITH
-        # that disclosure). Printed even at 0 so a clean run SAYS it is clean;
-        # omitted on undated runs (no clock, no gate) and when no stop on the
-        # route has a door.
+        # where the doors' hours come from (Docs/adr/0006). DOORS = `gated is
+        # True`, or hours on record (hours imply a door on a legacy row); from
+        # the map = source "map"; guessed = hours from any other source;
+        # unknown = a door with no hours at all. Printed whenever the route
+        # has a door so a clean run SAYS it is clean; omitted on undated runs
+        # (no clock, no gate).
         if start_dt is not None:
-            gated = [
+            doors = [
                 p for p in route.pois
                 if p.gated is True or p.opening_hours is not None
             ]
-            if gated:
-                unverified = sum(
-                    1 for p in gated
-                    if p.opening_hours_source != "map" or p.opening_hours is None
-                )
+            if doors:
+                from_map = sum(1 for p in doors if p.opening_hours_source == "map")
+                guessed = sum(1 for p in doors if hours_are_guessed(p))
+                unknown = sum(1 for p in doors if p.opening_hours is None)
                 print(
-                    f"  hours unverified for {unverified} of the {len(gated)} "
-                    "gated stops on this route"
+                    f"  hours: {from_map} from the map, {guessed} guessed, {unknown} unknown "
+                    f"of {len(doors)} doors on this route"
                 )
+                # The sentences a traveller reads on the wire, from the one
+                # writer the wire uses, so the breakdown and the screen agree.
+                for note in hours_notes(route, start_dt, country_code(tour_input.city_slug)):
+                    print(f"    • {note}")
     print("  ───────────────────────────────────────────────────────────")
 
 

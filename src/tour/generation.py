@@ -1377,11 +1377,14 @@ def _build_stop_close(
 #: "at the moment" stays for a partial closure, true whether the door opens
 #: later or already shut. No weekday, no clock time — the glue invention scan
 #: licenses neither, and the schedule detail stays on the day's notes channel.
+#: ``{lead}`` and ``{hedge}`` are the guess's doubt (`ClockExclusion.guessed`,
+#: Docs/adr/0006): empty for map hours; "We think " before the fact and ", but
+#: we could not confirm that" after it for a guess, so the doubt is heard first.
 CLOSED_STOP_LINE_TEMPLATE: str = (
-    "{name} is closed at the moment, so we'll take it in from out here."
+    "{lead}{name} is closed at the moment{hedge}, so we'll take it in from out here."
 )
 CLOSED_ALL_DAY_LINE_TEMPLATE: str = (
-    "{name} is closed today, so we'll take it in from out here."
+    "{lead}{name} is closed today{hedge}, so we'll take it in from out here."
 )
 #: The closed START, when the shut place is NOT in the day at all
 #: (``ClockExclusion.at_start`` with an off-route poi_id): the walker stands
@@ -1389,11 +1392,11 @@ CLOSED_ALL_DAY_LINE_TEMPLATE: str = (
 #: lie by omission — they can SEE it. Same today/at-the-moment honesty split
 #: as the stop templates, same no-weekday/no-clock-time discipline.
 CLOSED_START_LINE_TEMPLATE: str = (
-    "{name}, right here at the start, is closed at the moment, "
+    "{lead}{name}, right here at the start, is closed at the moment{hedge}, "
     "so the walk goes on without it."
 )
 CLOSED_START_ALL_DAY_LINE_TEMPLATE: str = (
-    "{name}, right here at the start, is closed today, "
+    "{lead}{name}, right here at the start, is closed today{hedge}, "
     "so the walk goes on without it."
 )
 #: The KEPT closed start, seated later than stop 0: the walker is standing at
@@ -1402,11 +1405,26 @@ CLOSED_START_ALL_DAY_LINE_TEMPLATE: str = (
 #: a promise to a place the walker never reaches is a small shut door). Its
 #: own stop speaks the full acknowledgment on arrival.
 CLOSED_START_KEPT_LINE_TEMPLATE: str = (
-    "{name}, right here at the start, is closed at the moment."
+    "{lead}{name}, right here at the start, is closed at the moment{hedge}."
 )
 CLOSED_START_KEPT_ALL_DAY_LINE_TEMPLATE: str = (
-    "{name}, right here at the start, is closed today."
+    "{lead}{name}, right here at the start, is closed today{hedge}."
 )
+#: The guess's doubt, spoken (Docs/adr/0006): the same words the exclusion
+#: line carries, so the ear and the screen agree.
+GUESSED_CLOSURE_LEAD: str = "We think "
+GUESSED_CLOSURE_HEDGE: str = ", but we could not confirm that"
+
+
+def _closure_line(template: str, excl: ClockExclusion, name: str) -> str:
+    """One closure template filled for one exclusion: the name, and the
+    lead and hedge iff the closure rests on guessed hours."""
+    guessed = excl.guessed
+    return template.format(
+        lead=GUESSED_CLOSURE_LEAD if guessed else "",
+        name=name,
+        hedge=GUESSED_CLOSURE_HEDGE if guessed else "",
+    )
 
 
 def _closure_opening_lines(route: Route) -> dict[int, Sentence]:
@@ -1423,11 +1441,13 @@ def _closure_opening_lines(route: Route) -> dict[int, Sentence]:
         return {}
     return {
         idx: Sentence(
-            text=(
+            text=_closure_line(
                 CLOSED_ALL_DAY_LINE_TEMPLATE
                 if closed[poi.id].all_day
-                else CLOSED_STOP_LINE_TEMPLATE
-            ).format(name=poi.name),
+                else CLOSED_STOP_LINE_TEMPLATE,
+                closed[poi.id],
+                poi.name,
+            ),
             source_id=GLUE_STAGING,
             source_type="glue",
             stop_idx=idx,
@@ -1461,11 +1481,13 @@ def _closed_start_line(route: Route) -> Sentence | None:
             # ever named, while a kept door's own stop still speaks the
             # full acknowledgment on arrival.
             return Sentence(
-                text=(
+                text=_closure_line(
                     CLOSED_START_ALL_DAY_LINE_TEMPLATE
                     if excl.all_day
-                    else CLOSED_START_LINE_TEMPLATE
-                ).format(name=excl.name),
+                    else CLOSED_START_LINE_TEMPLATE,
+                    excl,
+                    excl.name,
+                ),
                 source_id=GLUE_STAGING,
                 source_type="glue",
                 stop_idx=0,
@@ -1474,11 +1496,13 @@ def _closed_start_line(route: Route) -> Sentence | None:
             kept_later = excl
     if kept_later is not None:
         return Sentence(
-            text=(
+            text=_closure_line(
                 CLOSED_START_KEPT_ALL_DAY_LINE_TEMPLATE
                 if kept_later.all_day
-                else CLOSED_START_KEPT_LINE_TEMPLATE
-            ).format(name=kept_later.name),
+                else CLOSED_START_KEPT_LINE_TEMPLATE,
+                kept_later,
+                kept_later.name,
+            ),
             source_id=GLUE_STAGING,
             source_type="glue",
             stop_idx=0,

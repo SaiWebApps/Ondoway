@@ -740,20 +740,33 @@ def _door_state(route: Route, stop_index: int) -> str:
     """The writer's door instruction for one stop — "" when the door is open
     or nobody priced one (`visit_goes_inside` empty or True: the identity).
 
-    Two different truths get two different sentences, keyed the way the wire
-    keys them (`ClockExclusion.kept_outside`): a door the CLOCK voided may be
-    said plainly to be closed today; a stop outside-only because the day has
-    no time for its interior is NOT closed, and calling it closed would be the
-    checkable lie the interior_did_not_fit rule exists to prevent. Neither
-    sentence hands the writer a weekday, an hour or a number — the glue
-    invention scan licenses none of those, and the honest line needs none.
+    Three different truths get three different sentences, keyed the way the
+    wire keys them (`ClockExclusion.kept_outside` and `.guessed`): a door the
+    CLOCK voided on MAP hours may be said plainly to be closed today; one
+    voided on GUESSED hours (Docs/adr/0006) keeps its hedge — the writer may
+    say we think it is closed and could not confirm that, never state it; a
+    stop outside-only because the day has no time for its interior is NOT
+    closed, and calling it closed would be the checkable lie the
+    interior_did_not_fit rule exists to prevent. No sentence hands the writer
+    a weekday, an hour or a number — the glue invention scan licenses none of
+    those, and the honest line needs none.
     """
     if stop_index >= len(route.pois):
         return ""
     poi = route.pois[stop_index]
     if route.visit_goes_inside.get(poi.id) is not False:
         return ""
-    if any(e.poi_id == poi.id and e.kept_outside for e in route.clock_exclusions):
+    shut = next((e for e in route.clock_exclusions if e.poi_id == poi.id and e.kept_outside), None)
+    if shut is not None and shut.guessed:
+        return (
+            "This stop's door is probably shut while the walker is here — our hours "
+            "for it are a GUESS we could not confirm — so the visit stays on the "
+            "OUTSIDE. Never invite the listener through the door — no 'step inside', "
+            "'go in', 'enter'. If you mention the closure, keep the hedge exactly: "
+            "'we think' it is closed and we 'could not confirm' that; never state it "
+            "as a fact. Stage the exterior."
+        )
+    if shut is not None:
         return (
             "This stop's door is shut while the walker is here: the visit stays "
             "on the OUTSIDE. Never invite the listener through the door — no "

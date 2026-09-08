@@ -899,6 +899,17 @@ _CLOCK_DAY_NAMES = (
 HOURS_SOURCE_MAP = "map"
 
 
+def hours_are_guessed(poi: POI) -> bool:
+    """Whether a place's hours are a GUESS (Docs/adr/0006): hours on record
+    from any source but the map. A place with no hours has nothing to guess."""
+    return poi.opening_hours is not None and poi.opening_hours_source != HOURS_SOURCE_MAP
+
+
+#: The doubt a guessed closure carries, in the words a person reads; the
+#: sentence opens with "we think", so the doubt is heard before the fact.
+GUESSED_CLOSURE_DOUBT = ", but we could not confirm that"
+
+
 def _readable_hours(text: str | None, country: str) -> OpeningHours | None:
     """The map's text as the library reads it in ``country``, or None when the
     hours are UNKNOWN: no text, text the library cannot parse, or text carrying
@@ -959,38 +970,47 @@ def _clock_exclusion_reason(
     # The days the window covers, and the hours the place IS open on them,
     # so a walker shut out at 19:00 learns to come back at 09:00.
     closed_day_names: list[str] = []
-    open_spans_seen: list[str] = []
+    open_spans: list[tuple[datetime, datetime]] = []
     cursor = start
     while cursor < end:
         midnight = datetime.combine(cursor.date(), time.min)
         next_midnight = midnight + timedelta(days=1)
         closed_day_names.append(_CLOCK_DAY_NAMES[cursor.weekday()])
-        open_spans_seen.extend(
-            f"{span_from.strftime('%H:%M')}-{span_to.strftime('%H:%M')}"
+        open_spans.extend(
+            (span_from, span_to)
             for span_from, span_to, state, _comment in hours.intervals(midnight, next_midnight)
             if str(state) == "open"
         )
         cursor = next_midnight
 
     # PLAIN LANGUAGE (W4.2 panel, Paulo's wording rulings; design deviation v).
-    # A person reads this sentence, so it carries no provenance tag. The doubt
-    # is said in words, by SOURCE (Docs/adr/0006): map hours state the closure
-    # plainly; a guess, or hours with no source, say we could not confirm them.
-    doubt = "" if source == HOURS_SOURCE_MAP else ", though we could not confirm its hours"
+    # A person reads this sentence, so it carries no provenance tag, and a
+    # partial closure names what the walker can DO with it — when the door
+    # opens, or from when it is shut — never the visit window as if it were
+    # the door's own schedule.
     if len(closed_day_names) == 1:
         day = closed_day_names[0]
-        if open_spans_seen:
-            detail = (
-                f"closed {day} {start.strftime('%H:%M')}-{end.strftime('%H:%M')} "
-                f"(open {', '.join(open_spans_seen)})"
-            )
-        else:
+        if not open_spans:
             detail = f"closed all day {day}"
+        elif all(span_from >= end for span_from, _span_to in open_spans):
+            detail = f"opens at {min(open_spans)[0].strftime('%H:%M')} on {day}"
+        elif all(span_to <= start for _span_from, span_to in open_spans):
+            detail = f"closed {day} from {max(span_to for _f, span_to in open_spans):%H:%M}"
+        else:
+            spans = ", ".join(f"{a:%H:%M}-{b:%H:%M}" for a, b in open_spans)
+            detail = f"closed {day} {start:%H:%M}-{end:%H:%M} (open {spans})"
     else:
         detail = (
             f"closed for the whole of your visit ({closed_day_names[0]}-{closed_day_names[-1]})"
         )
-    return detail + doubt
+    # The doubt is said in words, by SOURCE (Docs/adr/0006): map hours state
+    # the closure plainly; a guess, or hours with no source, put the doubt
+    # FIRST and the fact second, so a person never reads a fact and then a
+    # retraction.
+    if source == HOURS_SOURCE_MAP:
+        return detail
+    verb = "" if detail.startswith("opens") else "is "
+    return f"we think it {verb}{detail}{GUESSED_CLOSURE_DOUBT}"
 
 
 def _closed_all_day(opening_hours: str | None, day: datetime, *, country: str) -> bool:
@@ -1004,6 +1024,52 @@ def _closed_all_day(opening_hours: str | None, day: datetime, *, country: str) -
         return False
     midnight = datetime.combine(day.date(), time.min)
     return _closed_throughout(hours, midnight, midnight + timedelta(days=1)) is True
+
+
+def hours_notes(route: Route, day: datetime | None, country: str | None) -> list[str]:
+    """The day's plain sentences about doors whose hours are not the map's
+    (Docs/adr/0006), ONE writer for every surface: a guess on a dated day is
+    spoken with the time we think it opens; a guess on a dateless day, or one
+    the library finds shut that day, is named as unconfirmed; a door with no
+    hours at all is named as having none on record. A kept-closed guess
+    already carries its doubt on its own exclusion line, so it is not named
+    twice — keyed on the ``kept_outside`` field, never on the line's words."""
+    doubt_carried = {e.poi_id for e in route.clock_exclusions if e.kept_outside}
+    doubted = [p for p in route.pois if hours_are_guessed(p) and p.id not in doubt_carried]
+    notes: list[str] = []
+    if doubted and day is not None and country is not None:
+        for p in doubted:
+            opens = hours_first_opening(p.opening_hours, day, country=country)
+            if opens is None:
+                notes.append(f"We could not confirm opening times for {p.name}.")
+            elif opens == "00:00":
+                notes.append(f"We think {p.name} is open all day, but we could not confirm that.")
+            else:
+                notes.append(f"We think {p.name} opens at {opens}, but we could not confirm that.")
+    elif doubted:
+        names = ", ".join(p.name for p in doubted)
+        notes.append(f"We could not confirm opening times for {names}.")
+    no_record = [p.name for p in route.pois if p.gated is True and p.opening_hours is None]
+    if no_record:
+        notes.append("No opening times on record for " + ", ".join(no_record) + ".")
+    return notes
+
+
+def hours_first_opening(opening_hours: str | None, day: datetime, *, country: str) -> str | None:
+    """When the door first opens on ``day``'s calendar day, as ``"HH:MM"`` —
+    what a guess is spoken WITH ("we think it opens at 10:00"). ``"00:00"``
+    means open from the start of the day; None means unknown hours, or no
+    open minute that day (a closure the exclusion line already carries)."""
+    hours = _readable_hours(opening_hours, country)
+    if hours is None:
+        return None
+    midnight = datetime.combine(day.date(), time.min)
+    for span_from, _span_to, state, _comment in hours.intervals(
+        midnight, midnight + timedelta(days=1)
+    ):
+        if str(state) == "open":
+            return span_from.strftime("%H:%M")
+    return None
 
 
 #: The at-the-start footprint floor: a place whose own ``trigger_radius`` is
@@ -2880,7 +2946,11 @@ def _select_route_once(
                 # Montmartre). "seated outside only" was already ruled out by the
                 # W4.2 panel: "seated" is the engine's word, and on a MARKET it read
                 # as tables outside a shut market.
-                kept_outside = poi.typical_duration_min > 0
+                # A GUESS MAY SAY CLOSED BUT NEVER REMOVES A PLACE (Docs/adr/0006
+                # rule 4): only the map's hours may take a place out of the
+                # day; a guessed closure keeps it from the outside, hedged.
+                guessed = hours_are_guessed(poi)
+                kept_outside = poi.typical_duration_min > 0 or guessed
                 if kept_outside:
                     closed_today_ids.add(poi.id)
                 clock_exclusions.append(
@@ -2891,6 +2961,7 @@ def _select_route_once(
                         kept_outside=kept_outside,
                         all_day=_closed_all_day(poi.opening_hours, clock_start, country=country),
                         at_start=_at_walk_start(poi, start_lat, start_lng),
+                        guessed=guessed,
                     )
                 )
                 if not kept_outside:
@@ -3199,9 +3270,12 @@ def _select_route_once(
                     f"Pinned place '{pin.name}' is not reachable on foot within a "
                     f"{input.duration_min}-min walk of this start.",
                 )
+            # A pin on GUESSED hours is never refused for its guess (Docs/adr/0006
+            # rule 4): the pool rule above kept it from the outside, hedged.
             if (
                 clock_start is not None
                 and pin.opening_hours is not None
+                and not hours_are_guessed(pin)
                 and pin.id not in closed_today_ids
                 and _clock_exclusion_reason(
                     pin.opening_hours,
@@ -4070,6 +4144,7 @@ def _select_route_once(
                     # construction not all-day; read the hours anyway so a
                     # data edit cannot desynchronise the two claims.
                     all_day=_closed_all_day(poi.opening_hours, clock, country=country),
+                    guessed=hours_are_guessed(poi),
                 )
             )
     # C9 governor exempt identity — record which POIs are EXEMPT from the per-stop
@@ -5171,11 +5246,14 @@ def _drop_dead_doors(
     padded day beats no day, and refilling is Phase 11's.
     """
     while True:
+        # Only a door the MAP says is shut can leave the day (Docs/adr/0006
+        # rule 4): a guessed closure keeps its place, demoted upstream.
         dead_ids = {
             poi.id
             for poi, hour, _seconds, clock in final_arrivals
             if poi.id not in undroppable
             and poi.typical_duration_min == 0
+            and not hours_are_guessed(poi)
             and arrival_door_reason(poi, hour, clock) is not None
         }
         if not dead_ids:

@@ -422,15 +422,14 @@ def _hours_route() -> Route:
     return _route([from_map, guessed, sourceless, unknown_door, ungated])
 
 
-def test_dated_run_prints_hours_unverified_line_with_right_counts(capsys):
-    """A dated run says how many of its doors rest on hours that are not the
-    map's: gated = a DOOR (`gated=True`, or hours on record — hours imply a
-    door on a legacy row); counted = every door whose source is not "map"
-    (a guess, no source, or no hours at all — Docs/adr/0006: the map is the
-    one source spoken plainly). Aiko's finding (design §6): clock-native
-    planning is a promise without hours under it, so the harness must SAY
-    when the hours under it are a guess — or absent.
-    UNDO: key the count on the hours text -> Notre-Dame leaves both numbers -> RED.
+def test_dated_run_prints_the_hours_by_source_line(capsys):
+    """A dated run says where its doors' hours come from (Docs/adr/0006):
+    doors = `gated=True`, or hours on record (hours imply a door on a legacy
+    row); from the map = source "map"; guessed = hours with any other source,
+    or none; unknown = a door with no hours at all. Aiko's finding (design
+    §6): clock-native planning is a promise without hours under it, so the
+    harness must SAY what the hours under it are.
+    UNDO: key the door count on the hours text -> Notre-Dame leaves the numbers -> RED.
     """
     tour_build = _tour_build()
     route = _hours_route()
@@ -441,7 +440,14 @@ def test_dated_run_prints_hours_unverified_line_with_right_counts(capsys):
         script=_script_for(route),
     )
     out = capsys.readouterr().out
-    assert "hours unverified for 3 of the 4 gated stops on this route" in out
+    assert "hours: 1 from the map, 2 guessed, 1 unknown of 4 doors on this route" in out
+    assert "unverified" not in out
+    # The traveller's own sentences, from the one writer the wire uses: the
+    # guessed doors are shut on this Tuesday (their guess says Monday only), so
+    # they are named as unconfirmed; the door with no hours is named as such.
+    assert "    • We could not confirm opening times for Musee de Cluny." in out
+    assert "    • We could not confirm opening times for Conciergerie." in out
+    assert "    • No opening times on record for Notre-Dame Cathedral." in out
 
 
 def test_undated_run_prints_no_hours_line(capsys):
@@ -454,7 +460,7 @@ def test_undated_run_prints_no_hours_line(capsys):
         route=route,
         script=_script_for(route),
     )
-    assert "hours unverified" not in capsys.readouterr().out
+    assert "from the map" not in capsys.readouterr().out
 
 
 # =============================================================================
