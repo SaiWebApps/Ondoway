@@ -9,10 +9,11 @@ citations into a gate:
 - every `path:N` or `path:N-M` names a file that exists (a bare basename such
   as `trips.py:2182` must resolve to exactly one tracked file);
 - a bare `:N` or `:N-M` inherits the last file cited earlier in the same
-  paragraph, and fails when there is none;
+  paragraph — with or without a line number — and fails when there is none;
 - the cited range lies inside the file;
-- when the same plan line names symbols in backticks (`select_route`), at
-  least one of them appears inside the cited lines;
+- the backticked symbol nearest before a citation on the same plan line
+  (`select_route` (`src/x.py:12-40`)) appears inside the cited lines, or
+  the cited lines sit inside that symbol's own definition;
 - no guess word survives: TBD, likely, probably, "verify later", assuming.
 
 Run bare — `python3 .claude/ledger/plan_check.py .claude/runs/<run>/plan.md` —
@@ -27,12 +28,18 @@ import subprocess
 import sys
 from pathlib import Path
 
-FILE_REF_RE = re.compile(
-    r"`?(?P<path>[A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:py|dart|html|js|ts|yaml|yml|toml|json|md|txt))"
-    r":(?P<start>\d+)(?:-(?P<end>\d+))?`?"
+_PATH = (
+    r"(?P<path>\.?[A-Za-z0-9_][A-Za-z0-9_./-]*"
+    r"\.(?:py|dart|html|js|ts|yaml|yml|toml|json|md|txt|sh)"
+    r"|(?:[A-Za-z0-9_./-]*/)?(?:Makefile|Dockerfile))"
 )
+FILE_REF_RE = re.compile(r"`?" + _PATH + r":(?P<start>\d+)(?:-(?P<end>\d+))?`?")
+#: A backticked path with no line number still names the paragraph's file, so a
+#: bare `:N` after it has somewhere to resolve.
+BARE_PATH_RE = re.compile(r"`" + _PATH + r"`")
 BARE_REF_RE = re.compile(r"`:(?P<start>\d+)(?:-(?P<end>\d+))?`")
 SYMBOL_RE = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)`")
+DEF_RE = re.compile(r"^(?P<indent>\s*)(?:async\s+)?(?:def|class)\s+(?P<name>[A-Za-z_]\w*)\b")
 GUESS_RE = re.compile(r"\b(TBD|likely|probably|verify later|assuming)\b", re.IGNORECASE)
 FENCE = "```"
 
@@ -60,6 +67,31 @@ def _line_count(root: Path, rel: str, cache: dict[str, list[str]]) -> list[str]:
     return cache[rel]
 
 
+def _symbol_holds(symbol: str, lines: list[str], start: int, end: int) -> bool:
+    """The symbol appears inside the cited lines, or the cited lines lie inside
+    the symbol's own definition (a range in a function's body cites that
+    function). A range inside some OTHER definition never counts."""
+    cited = "\n".join(lines[start - 1 : end])
+    if re.search(rf"\b{re.escape(symbol)}\b", cited):
+        return True
+    owner: tuple[int, int] | None = None  # (line, indent) of the enclosing def
+    for lineno in range(start - 1, 0, -1):
+        m = DEF_RE.match(lines[lineno - 1])
+        if m is None:
+            continue
+        indent = len(m.group("indent"))
+        if owner is None or indent < owner[1]:
+            if m.group("name") == symbol:
+                return not any(
+                    (d := DEF_RE.match(lines[i - 1])) and len(d.group("indent")) <= indent
+                    for i in range(lineno + 1, end + 1)
+                )
+            owner = (lineno, indent)
+            if indent == 0:
+                break
+    return False
+
+
 def check_plan(plan: Path, root: Path) -> list[str]:
     tracked = tracked_files(root)
     cache: dict[str, list[str]] = {}
@@ -79,14 +111,26 @@ def check_plan(plan: Path, root: Path) -> list[str]:
             failures.append(
                 f"{plan}:{lineno}: guess word {match.group(1)!r} — resolve it against the code"
             )
-        refs: list[tuple[str | None, int, int]] = []
+        # (file, start, end, position-in-line): the position pairs a citation
+        # with the backticked symbol nearest BEFORE it — "`select_route`
+        # (`src/x.py:12-40`)" — so a wrapped bullet never checks one clause's
+        # symbol against the next clause's lines.
+        refs: list[tuple[str, int, int, int]] = []
         for m in FILE_REF_RE.finditer(line):
             rel, err = resolve(m.group("path"), root, tracked)
             if err:
                 failures.append(f"{plan}:{lineno}: {err}")
                 continue
             last_file = rel
-            refs.append((rel, int(m.group("start")), int(m.group("end") or m.group("start"))))
+            refs.append(
+                (rel, int(m.group("start")), int(m.group("end") or m.group("start")), m.start())
+            )
+        for m in BARE_PATH_RE.finditer(line):
+            rel, err = resolve(m.group("path"), root, tracked)
+            if err:
+                failures.append(f"{plan}:{lineno}: {err}")
+            else:
+                last_file = rel
         for m in BARE_REF_RE.finditer(line):
             if last_file is None:
                 failures.append(
@@ -94,11 +138,12 @@ def check_plan(plan: Path, root: Path) -> list[str]:
                     "in this paragraph"
                 )
                 continue
-            refs.append((last_file, int(m.group("start")), int(m.group("end") or m.group("start"))))
-        symbols = [s for s in SYMBOL_RE.findall(line) if "." not in s]
-        for rel, start, end in refs:
-            if rel is None:
-                continue
+            start, end = int(m.group("start")), int(m.group("end") or m.group("start"))
+            refs.append((last_file, start, end, m.start()))
+        symbol_at = [
+            (s.start(), s.group(1)) for s in SYMBOL_RE.finditer(line) if "." not in s.group(1)
+        ]
+        for rel, start, end, pos in refs:
             lines = _line_count(root, rel, cache)
             if start < 1 or end < start or end > len(lines):
                 failures.append(
@@ -106,13 +151,13 @@ def check_plan(plan: Path, root: Path) -> list[str]:
                     f"({len(lines)} lines)"
                 )
                 continue
-            if symbols:
-                cited = "\n".join(lines[start - 1 : end])
-                if not any(re.search(rf"\b{re.escape(s)}\b", cited) for s in symbols):
-                    failures.append(
-                        f"{plan}:{lineno}: none of {symbols} appears at {rel}:{start}-{end} "
-                        "— stale or guessed citation"
-                    )
+            before = [name for at, name in symbol_at if at < pos]
+            symbol = before[-1] if before else None
+            if symbol is not None and not _symbol_holds(symbol, lines, start, end):
+                failures.append(
+                    f"{plan}:{lineno}: `{symbol}` is not at {rel}:{start}-{end} "
+                    "— stale or guessed citation"
+                )
     return failures
 
 
