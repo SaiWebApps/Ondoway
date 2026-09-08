@@ -44,7 +44,13 @@ These are coding rules, not a process. They bind every file under `src/`, `mobil
    cycles, no ladder of ceremonial re-verification between steps. Run the full suite
    (`make test`, or `make audit` for lint plus suite) once when the milestone is done.
 
-8. **Comments and rules are written in the present tense.** A comment, rule file, or agent
+8. **The owner reads plain words.** Anything written for the owner — a report, a
+   question, a status update — uses everyday words and short sentences: no project
+   jargon, no codenames, no internal shorthand, one idea per sentence. If a term
+   would need explaining, explain it or don't use it. Every reply to the owner is
+   rewritten by the editor agent before it is shown; skipping the editor is a defect.
+
+9. **Comments and rules are written in the present tense.** A comment, rule file, or agent
    definition states the constraint that holds now — never the incident that motivated it.
    No dates, no owner quotes, no session stories, no "this exists because X once did Y".
    Incidents belong in git history and `.claude/LEARNINGS.md`; a constraint that cannot be
