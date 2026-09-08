@@ -3118,6 +3118,7 @@ def list_trips(
             trip_id=t["trip_id"],
             trip_name=t["trip_name"],
             profile_id=t["profile_id"],
+            captained=t["captained"],
             total_stops=t["total_stops"],
             total_duration_min=t["total_duration_min"],
             anchor_count=t["anchor_count"],

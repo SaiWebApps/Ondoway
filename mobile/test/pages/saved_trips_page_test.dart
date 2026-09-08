@@ -91,11 +91,13 @@ MockClient _devWorld(Future<http.Response> Function(http.Request) onTrips) {
 Map<String, dynamic> _serverTripJson({
   String id = 'trip-crewed',
   String name = "Fiona's shared day",
+  bool captained = false,
 }) =>
     {
       'trip_id': id,
       'trip_name': name,
-      'profile_id': 'p-fiona',
+      'profile_id': 'p-dev',
+      'captained': captained,
       'total_stops': 1,
       'total_duration_min': 60,
       'anchor_count': 0,
@@ -270,6 +272,82 @@ void main() {
       expect(requestedProfileId, 'p-dev');
       expect(find.text("Fiona's shared day"), findsOneWidget);
       expect(find.text('No saved trips yet'), findsNothing);
+    });
+
+    testWidgets(
+        'a shared day is labeled and never swipe-deletable; an own day keeps '
+        'the swipe', (tester) async {
+      final client = _devWorld((request) async {
+        return http.Response(
+          jsonEncode([
+            _serverTripJson(),
+            _serverTripJson(id: 'trip-own', name: 'My own day', captained: true),
+          ]),
+          200,
+        );
+      });
+      final (auth, profile) = await _signedInDev(client);
+      final trips = TripService(httpClient: client);
+
+      await tester.pumpWidget(_buildTestWidget(
+        tripService: trips,
+        profileService: profile,
+        authService: auth,
+      ));
+      await tester.pumpAndSettle();
+
+      // The shared row says whose it is and offers no delete swipe; the
+      // captained row keeps the Dismissible.
+      expect(find.text('Shared with you'), findsOneWidget);
+      expect(find.byType(Dismissible), findsOneWidget);
+      final dismissible =
+          tester.widget<Dismissible>(find.byType(Dismissible));
+      expect(dismissible.key, const Key('trip-own'));
+
+      // Swiping the shared row opens no delete dialog and removes nothing.
+      await tester.drag(find.text("Fiona's shared day"), const Offset(-500, 0));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.text("Fiona's shared day"), findsOneWidget);
+    });
+
+    testWidgets(
+        'pull-to-refresh re-fetches the server list — a day the captain '
+        'planned after the first look appears without an app restart',
+        (tester) async {
+      var tripCalls = 0;
+      final client = _devWorld((request) async {
+        tripCalls++;
+        if (tripCalls == 1) {
+          return http.Response(jsonEncode([]), 200);
+        }
+        return http.Response(jsonEncode([_serverTripJson()]), 200);
+      });
+      final (auth, profile) = await _signedInDev(client);
+      final trips = TripService(httpClient: client);
+
+      await tester.pumpWidget(_buildTestWidget(
+        tripService: trips,
+        profileService: profile,
+        authService: auth,
+      ));
+      await tester.pumpAndSettle();
+
+      // First look: the captain has not planned yet — the tab is empty.
+      expect(tripCalls, 1);
+      expect(find.text('No saved trips yet'), findsOneWidget);
+
+      // Pull down on the EMPTY state: the list re-fetches and the shared day
+      // is there — no app restart.
+      await tester.fling(
+        find.text('No saved trips yet'),
+        const Offset(0, 400),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(tripCalls, 2);
+      expect(find.text("Fiona's shared day"), findsOneWidget);
     });
 
     testWidgets('a failed server fetch shows a plain retryable error line',

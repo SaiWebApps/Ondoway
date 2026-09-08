@@ -407,6 +407,12 @@ class GeneratedTrip {
   final String tripId;
   final String tripName;
   final String profileId;
+  // Whether the viewer's profile CAPTAINS this trip. profileId above is the
+  // caller's own (GET /trips stamps the requesting profile on every row), so
+  // it cannot tell an own day from one shared by the family — this flag, from
+  // the relationship the server matched, is what the screens label with.
+  // Defaults true: a locally generated trip is always the viewer's own.
+  final bool captained;
   final int totalStops;
   final int totalDurationMin;
   final int anchorCount;
@@ -424,6 +430,7 @@ class GeneratedTrip {
     required this.tripId,
     required this.tripName,
     required this.profileId,
+    this.captained = true,
     required this.totalStops,
     required this.totalDurationMin,
     required this.anchorCount,
@@ -440,6 +447,8 @@ class GeneratedTrip {
       tripId: json['trip_id'] as String,
       tripName: json['trip_name'] as String,
       profileId: json['profile_id'] as String,
+      // An older server sends no flag; every trip was the viewer's own then.
+      captained: json['captained'] as bool? ?? true,
       totalStops: json['total_stops'] as int,
       totalDurationMin: json['total_duration_min'] as int,
       anchorCount: json['anchor_count'] as int,
@@ -462,6 +471,7 @@ class GeneratedTrip {
         'trip_id': tripId,
         'trip_name': tripName,
         'profile_id': profileId,
+        'captained': captained,
         'total_stops': totalStops,
         'total_duration_min': totalDurationMin,
         'anchor_count': anchorCount,

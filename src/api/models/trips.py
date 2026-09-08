@@ -292,6 +292,12 @@ class TripGenerateResponse(BaseModel):
     trip_id: str
     trip_name: str
     profile_id: str
+    #: Whether the CALLER's profile captains this trip. profile_id above is the
+    #: caller's own profile (the one the request named), never the captain's —
+    #: this flag, derived from the relationship the row was matched through, is
+    #: how a client tells its own day from one shared with it (crew, ADR 0005).
+    #: Defaults True: generate answers only ever describe the caller's own trip.
+    captained: bool = True
     total_stops: int
     total_duration_min: int
     anchor_count: int = Field(description="Number of gravity-5 POIs")

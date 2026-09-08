@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:ondoway/models/trip.dart';
 import 'package:ondoway/services/auth_service.dart';
 import 'package:ondoway/services/profile_service.dart';
 import 'package:ondoway/services/trip_service.dart';
@@ -79,113 +80,156 @@ class _SavedTripsPageState extends State<SavedTripsPage> {
       );
     }
 
+    // The list is the server's (a family co-member plans days this phone never
+    // generated), so it is refreshable in place: the pull re-fetches, on the
+    // empty state too — a crew member who looked before the captain planned
+    // must not need an app restart.
     return SafeArea(
-      child: trips.isEmpty
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.luggage_outlined,
-                      size: 64,
-                      color: colorScheme.onSurfaceVariant,
+      child: RefreshIndicator(
+        onRefresh: _fetchFromServer,
+        child: trips.isEmpty
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 96,
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No saved trips yet',
-                      style: textTheme.titleLarge?.copyWith(
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Generate a trip from the Explore tab to get started.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: trips.length,
-              itemBuilder: (context, index) {
-                final trip = trips[index];
-                return Dismissible(
-                  key: Key(trip.tripId),
-                  direction: DismissDirection.endToStart,
-                  confirmDismiss: (direction) async {
-                    return await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Delete trip?'),
-                        content: Text(
-                          'Remove "${trip.tripName}" from your saved trips?',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(false),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(true),
-                            child: const Text('Delete'),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  onDismissed: (_) => tripService.deleteTrip(trip.tripId),
-                  background: Container(
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 24),
-                    decoration: BoxDecoration(
-                      color: colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.delete,
-                      color: colorScheme.onErrorContainer,
-                    ),
-                  ),
-                  child: Card(
-                    margin: const EdgeInsets.symmetric(vertical: 6),
-                    child: ListTile(
-                      onTap: () => context.push('/trip/${trip.tripId}'),
-                      leading: CircleAvatar(
-                        backgroundColor: colorScheme.primaryContainer,
-                        child: Icon(
-                          Icons.map_outlined,
-                          color: colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                      title: Text(
-                        trip.tripName,
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                      subtitle: Text(
-                        '${trip.totalStops} stops • ${trip.totalDurationMin} min',
-                        style: textTheme.bodySmall?.copyWith(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.luggage_outlined,
+                          size: 64,
                           color: colorScheme.onSurfaceVariant,
                         ),
-                      ),
-                      trailing: Icon(
-                        Icons.chevron_right,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No saved trips yet',
+                          style: textTheme.titleLarge?.copyWith(
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Generate a trip from the Explore tab to get started.',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
                   ),
-                );
-              },
+                ],
+              )
+            : ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                itemCount: trips.length,
+                itemBuilder: (context, index) {
+                  final trip = trips[index];
+                  final card = _tripCard(trip, colorScheme, textTheme);
+                  // A day shared with the viewer is not theirs to swipe away
+                  // (the swipe was local-only anyway — the server row returns
+                  // on the next fetch); only an own day keeps the Dismissible.
+                  if (!trip.captained) return card;
+                  return Dismissible(
+                    key: Key(trip.tripId),
+                    direction: DismissDirection.endToStart,
+                    confirmDismiss: (direction) async {
+                      return await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Delete trip?'),
+                          content: Text(
+                            'Remove "${trip.tripName}" from your saved trips?',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: const Text('Delete'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    onDismissed: (_) => tripService.deleteTrip(trip.tripId),
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 24),
+                      decoration: BoxDecoration(
+                        color: colorScheme.errorContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.delete,
+                        color: colorScheme.onErrorContainer,
+                      ),
+                    ),
+                    child: card,
+                  );
+                },
+              ),
+      ),
+    );
+  }
+
+  Widget _tripCard(
+    GeneratedTrip trip,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      child: ListTile(
+        onTap: () => context.push('/trip/${trip.tripId}'),
+        leading: CircleAvatar(
+          backgroundColor: colorScheme.primaryContainer,
+          child: Icon(
+            trip.captained ? Icons.map_outlined : Icons.group_outlined,
+            color: colorScheme.onPrimaryContainer,
+          ),
+        ),
+        title: Text(
+          trip.tripName,
+          style: textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${trip.totalStops} stops • ${trip.totalDurationMin} min',
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
+            if (!trip.captained)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  'Shared with you',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ),
     );
   }
 }

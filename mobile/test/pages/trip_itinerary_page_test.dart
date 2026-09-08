@@ -85,11 +85,13 @@ GeneratedTrip _sampleTrip({
   String id = 'trip-1',
   String name = 'Paris Day Trip',
   List<String> degradationNotices = const [],
+  bool captained = true,
 }) {
   return GeneratedTrip(
     tripId: id,
     tripName: name,
     profileId: 'profile-1',
+    captained: captained,
     totalStops: 7,
     totalDurationMin: 90,
     anchorCount: 1,
@@ -439,6 +441,43 @@ void main() {
       // State.dispose(), which cancels it. A leftover pending Timer keeps the
       // test isolate alive and intermittently hangs flutter_tools finalize.
       await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('the eyebrow says whose day it is', (tester) async {
+      // A signed-out AuthService is enough: the shared-day probe needs the
+      // provider present, and with no token it leaves the page alone.
+      final auth = AuthService(
+        storage: _FakeSecureStorage(),
+        httpClient: MockClient((r) async => http.Response('', 200)),
+      );
+
+      // A day the viewer captains keeps YOUR TOUR…
+      tripService.saveTrip(_sampleTrip());
+      await tester.pumpWidget(_buildTestWidget(
+        tripService: tripService,
+        audioService: audioService,
+        authService: auth,
+        tripId: 'trip-1',
+      ));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('YOUR TOUR'), findsOneWidget);
+      expect(find.text('SHARED TOUR'), findsNothing);
+
+      // …and a day shared with the viewer never claims to be theirs.
+      tripService.saveTrip(
+        _sampleTrip(id: 'trip-shared', name: "Fiona's day", captained: false),
+      );
+      await tester.pumpWidget(_buildTestWidget(
+        tripService: tripService,
+        audioService: audioService,
+        authService: auth,
+        tripId: 'trip-shared',
+      ));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('SHARED TOUR'), findsOneWidget);
+      expect(find.text('YOUR TOUR'), findsNothing);
     });
 
     testWidgets('shows anchor indicator for importance_tier 5', (tester) async {
@@ -845,6 +884,99 @@ void main() {
         expect(find.text('Confirm & Prepare'), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox());
+      });
+
+      testWidgets(
+          'an uncomposed shared day waits for the captain — no confirm '
+          'button, no compose call', (tester) async {
+        var composeCalls = 0;
+        final mockClient = MockClient((request) async {
+          if (request.url.path.endsWith('/trips/trip-shared/session') &&
+              request.method == 'GET') {
+            return noSessionYet();
+          }
+          if (request.url.path.contains('/compose')) {
+            composeCalls++;
+            return http.Response('{}', 403);
+          }
+          return http.Response('', 200);
+        });
+
+        final service = TripService(httpClient: mockClient);
+        final audio = AudioService(httpClient: mockClient);
+        service.saveTrip(
+          _sampleTrip(
+            id: 'trip-shared',
+            name: "Fiona's day",
+            captained: false,
+          ),
+        );
+        final auth = await authedAuthService();
+
+        await pumpTripPage(
+          tester,
+          tripService: service,
+          audioService: audio,
+          authService: auth,
+          tripId: 'trip-shared',
+        );
+        // A third pump for the post-frame session probe's setState.
+        await tester.pump();
+
+        // The honest waiting state, keyed on the captained flag: crew cannot
+        // write the day, so no action that can only 403 is offered.
+        expect(
+          find.text('Ask the captain to confirm this day.'),
+          findsOneWidget,
+        );
+        expect(find.text('Confirm & Prepare'), findsNothing);
+        expect(composeCalls, 0);
+      });
+
+      testWidgets(
+          'a composed shared day keeps the prepare door — crew readies the '
+          'audio it can read', (tester) async {
+        final mockClient = MockClient((request) async {
+          if (request.url.path.endsWith('/trips/trip-shared/session') &&
+              request.method == 'GET') {
+            return http.Response(
+              jsonEncode({
+                'trip_id': 'trip-shared',
+                'plan_version': 1,
+                'stops': [],
+                'retime_tolerance_seconds': 120,
+              }),
+              200,
+            );
+          }
+          return http.Response('', 200);
+        });
+
+        final service = TripService(httpClient: mockClient);
+        final audio = AudioService(httpClient: mockClient);
+        service.saveTrip(
+          _sampleTrip(
+            id: 'trip-shared',
+            name: "Fiona's day",
+            captained: false,
+          ),
+        );
+        final auth = await authedAuthService();
+
+        await pumpTripPage(
+          tester,
+          tripService: service,
+          audioService: audio,
+          authService: auth,
+          tripId: 'trip-shared',
+        );
+        await tester.pump();
+
+        expect(find.text('Confirm & Prepare'), findsOneWidget);
+        expect(
+          find.text('Ask the captain to confirm this day.'),
+          findsNothing,
+        );
       });
 
       testWidgets(

@@ -442,6 +442,24 @@ class TestCrewReadsCaptainWrites:
         assert resp.status_code == 200, resp.text
         assert crewed_trip in [t["trip_id"] for t in resp.json()]
 
+    def test_trip_list_says_whose_day_each_row_is(self, client, crewed_trip):
+        """Each row carries `captained` — the relationship the row was matched
+        through — so the phone can label a shared day. The existing
+        `profile_id` field keeps its meaning (the CALLER's profile) and is not
+        how ownership is told."""
+        for uid, email, pid, expected in (
+            (FIONA_USER_ID, FIONA_EMAIL, FIONA_PROFILE_ID, True),
+            (DEV_USER_ID, DEV_EMAIL, DEV_PROFILE_ID, False),
+        ):
+            resp = client.get(
+                f"/api/v1/trips?profile_id={pid}", headers=_bearer(uid, email)
+            )
+            assert resp.status_code == 200, resp.text
+            rows = {t["trip_id"]: t for t in resp.json()}
+            assert crewed_trip in rows
+            assert rows[crewed_trip]["captained"] is expected, rows[crewed_trip]
+            assert rows[crewed_trip]["profile_id"] == pid
+
 
 @needs_neo4j
 class TestCrewDerivedAtCreation:

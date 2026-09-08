@@ -76,10 +76,40 @@ class _TripItineraryContentState extends State<_TripItineraryContent> {
   /// Tracks which stops have had their audio URL resolved.
   late List<ItineraryStop> _stops;
 
+  /// A shared (non-captained) day the captain has not composed yet: the crew
+  /// cannot write it, so the confirm action becomes an honest waiting state
+  /// instead of a button that can only 403. Keyed on the trip's captained
+  /// flag; set by the session probe below.
+  bool _awaitingCaptain = false;
+
   @override
   void initState() {
     super.initState();
     _stops = List.of(widget.trip.stops);
+    if (!widget.trip.captained) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _probeSharedDay());
+    }
+  }
+
+  /// Whether the shared day is composed yet — GET /trips/{id}/session, the
+  /// read crew is allowed. `no_session_yet` means the captain has not
+  /// confirmed; anything else (composed, offline) leaves the prepare door as
+  /// it is — a composed day's prepare flow is a crew-readable path.
+  Future<void> _probeSharedDay() async {
+    final tripService = context.read<TripService>();
+    final accessToken = context.read<AuthService>().accessToken;
+    if (accessToken == null) return;
+    try {
+      await tripService.fetchSession(widget.trip.tripId, accessToken);
+    } on NoSessionYetException {
+      if (mounted) setState(() => _awaitingCaptain = true);
+      return;
+    } catch (_) {
+      // Offline or a plain failure: nothing to key the waiting state on.
+    }
+    if (mounted && _awaitingCaptain) {
+      setState(() => _awaitingCaptain = false);
+    }
   }
 
   @override
@@ -336,7 +366,9 @@ class _TripItineraryContentState extends State<_TripItineraryContent> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('YOUR TOUR',
+            // The eyebrow says whose day this is: the viewer's own, or one a
+            // family co-member planned and shared (the captained flag).
+            Text(widget.trip.captained ? 'YOUR TOUR' : 'SHARED TOUR',
                 style: TextStyle(
                     fontFamily: 'Space Mono',
                     color: c.accent,
@@ -536,6 +568,18 @@ class _TripItineraryContentState extends State<_TripItineraryContent> {
         label: const Text('Start Tour'),
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
+      );
+    }
+
+    // A shared day the captain has not composed: the honest waiting state —
+    // the crew is offered no action that can only 403.
+    if (_awaitingCaptain) {
+      return FloatingActionButton.extended(
+        onPressed: null,
+        icon: const Icon(Icons.hourglass_empty),
+        label: const Text('Ask the captain to confirm this day.'),
+        backgroundColor: colorScheme.surfaceContainerHighest,
+        foregroundColor: colorScheme.onSurfaceVariant,
       );
     }
 

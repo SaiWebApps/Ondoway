@@ -434,15 +434,18 @@ def list_trips_for_profile(
         return None  # type: ignore[return-value]
 
     # Every trip this profile can READ: the days it captains and the days it
-    # crews (the family's shared days — ADR 0005). DISTINCT because a profile
-    # could hold both edges to one trip.
+    # crews (the family's shared days — ADR 0005). One row per trip even when
+    # the profile holds both edges; `captained` says WHICH relationship the row
+    # was matched through, so a client can tell its own day from a shared one.
     trips_query = """
-        MATCH (p:Profile {id: $pid})-[:IS_CAPTAIN_OF|IS_CREW_OF]->(t:Trip)
-        RETURN DISTINCT t.id AS trip_id,
+        MATCH (p:Profile {id: $pid})-[r:IS_CAPTAIN_OF|IS_CREW_OF]->(t:Trip)
+        WITH t, collect(DISTINCT type(r)) AS roles
+        RETURN t.id AS trip_id,
                t.name AS trip_name,
                t.start_date AS start_date,
                t.end_date AS end_date,
                t.status AS status,
+               'IS_CAPTAIN_OF' IN roles AS captained,
                t.created_at AS _created_at
         ORDER BY _created_at DESC
     """
@@ -527,6 +530,7 @@ def list_trips_for_profile(
                 "trip_id": trip["trip_id"],
                 "trip_name": trip["trip_name"],
                 "profile_id": profile_id,
+                "captained": trip["captained"],
                 "total_stops": len(stops),
                 "total_duration_min": total_duration,
                 "anchor_count": anchor_count,
