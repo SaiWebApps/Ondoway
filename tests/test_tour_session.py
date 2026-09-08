@@ -846,3 +846,189 @@ def test_a_keep_constrained_tail_spends_its_whole_walking_budget():
         f"the keep must be seated — walk {pace_corrected_walk_seconds(metres)}s "
         f"against budget {budget}s; got {[p.id for p in tail.pois]}"
     )
+
+
+# ---------------------------------------------------------------------------
+# M6 — a guessed stop yields a door_closed entry naming an open map place
+# ---------------------------------------------------------------------------
+
+
+def test_a_guessed_stop_yields_a_door_closed_entry_naming_an_open_map_place():
+    """Docs/adr/0006 rule 4, M6: every story stop whose hours are a GUESS
+    carries a ``door_closed`` entry in the contingency set. The entry names a
+    STANDBY — a map-sourced place open at arrival — as the alternate the walker
+    can carry to if the door turns out to be shut. The question is one sentence
+    with keep first (default_arm="keep"); the standby is a NEW stop so
+    authoring_units > 0.
+
+    UNDO: remove the door_closed loop from build_contingency_set -> RED.
+    """
+    from src.tour.contingency import BANNED_WORDS, build_contingency_set
+    from src.tour.contract import ReplanContext
+    from src.tour.selection import select_route
+
+    # A corpus with one guessed stop on the day and one map-sourced standby
+    # candidate NOT on the day. The guessed stop is high-tier and on-path so
+    # the planner picks it; the standby is low-tier and off-path so the base
+    # route ignores it but a tail from the guessed stop's position can reach it.
+    stand_map = _stand(_at(PDV, 150.0, 20.0, "stand-map", tier=5, beat_count=5), 14)
+    stand_guess = _interior(
+        _at(PDV, 320.0, 60.0, "stand-guess", tier=5, beat_count=5),
+        outside_min=5,
+        inside_min=7,
+    )
+    stand_guess = stand_guess.model_copy(
+        update={
+            "opening_hours": "Mo-Su 09:00-18:00",
+            "opening_hours_source": "guess",
+            "place_category": "museum",
+        }
+    )
+    bench = _bench(_at(PDV, 460.0, 80.0, "bench-m6"), 10)
+    stand_end = _stand(_at(PDV, 620.0, 90.0, "stand-end", tier=5, beat_count=5), 20)
+    end = _at(PDV, 1500.0, 95.0, "end-m6")
+
+    # A standby candidate: map-sourced, open wide, low-tier and off the base
+    # route's bearing so it is NOT picked for the base day.
+    standby = _stand(_at(PDV, 400.0, 70.0, "standby-open", tier=3, beat_count=3), 10)
+    standby = standby.model_copy(
+        update={
+            "opening_hours": "Mo-Su 06:00-22:00",
+            "opening_hours_source": "map",
+        }
+    )
+
+    snap = _snap([stand_map, stand_guess, bench, stand_end, standby])
+    request = TourInput(
+        start=PDV,
+        end=(end.lat, end.lng),
+        duration_min=110,
+        city_slug="paris",
+        round_trip=False,
+        start_datetime="2026-08-19T14:00",
+        end_hardness="wall",
+        rest_cadence_minutes=6,
+    )
+    base = select_route(request, snap)
+    ids = [p.id for p in base.pois]
+    assert stand_guess.id in ids, f"premise: guessed stop must be on the day; got {ids}"
+    assert "standby-open" not in ids, f"premise: standby must NOT be on base day; got {ids}"
+    assert base.visit_goes_inside.get(stand_guess.id), (
+        f"premise: stand_guess must go inside; visit_goes_inside={base.visit_goes_inside}"
+    )
+
+    protected = ReplanContext(protected_poi_ids=(bench.id,))
+    cset = build_contingency_set(base, request, snap, routing_client=None, person=protected)
+
+    kinds = {}
+    for entry in cset.entries:
+        kinds.setdefault(entry.trigger["kind"], []).append(entry)
+
+    # A door_closed entry exists for the guessed stop.
+    assert "door_closed" in kinds, f"no door_closed entry; kinds present: {list(kinds.keys())}"
+    dc = [e for e in kinds["door_closed"] if e.trigger["stop_id"] == stand_guess.id]
+    assert dc, f"no door_closed for {stand_guess.id}"
+    entry = dc[0]
+
+    # The alternate names a map-sourced place (the standby).
+    assert entry.alternate_stop_ids, "no alternate — no standby offered"
+    planned = {p.id for p in base.pois}
+    new_ids = set(entry.alternate_stop_ids) - planned
+    assert new_ids, "the alternate should name a NEW stop (the standby)"
+
+    # The standby counts toward authoring_units.
+    assert cset.authoring_units > 0, "the standby is a new stop — authoring spend > 0"
+
+    # The question is one sentence, keep first, no banned words.
+    assert entry.question is not None, "door_closed must carry the ONE question"
+    assert entry.default_arm == "keep", f"default must be keep; got {entry.default_arm}"
+    assert entry.question.count("?") == 1 and ". " not in entry.question, (
+        f"one sentence, maximum: {entry.question!r}"
+    )
+    lowered = entry.question.lower()
+    for word in BANNED_WORDS:
+        assert word not in lowered, f"banned word {word!r} in {entry.question!r}"
+
+
+def test_a_nearer_shut_standby_is_skipped_for_the_farther_open_one():
+    """M6 openness pre-filter: a map-sourced candidate NEARER to the guessed stop
+    but CLOSED at arrival is never offered — the chooser picks the farther open one.
+    UNDO: remove the _clock_exclusion_reason filter from the min() generator -> RED
+    (the nearer shut candidate wins by distance).
+    """
+    from src.tour.contingency import build_contingency_set
+    from src.tour.contract import ReplanContext
+    from src.tour.selection import select_route
+
+    stand_map = _stand(_at(PDV, 150.0, 20.0, "stand-map", tier=5, beat_count=5), 14)
+    stand_guess = _interior(
+        _at(PDV, 320.0, 60.0, "stand-guess2", tier=5, beat_count=5),
+        outside_min=5,
+        inside_min=7,
+    )
+    stand_guess = stand_guess.model_copy(
+        update={
+            "opening_hours": "Mo-Su 09:00-18:00",
+            "opening_hours_source": "guess",
+            "place_category": "museum",
+        }
+    )
+    bench = _bench(_at(PDV, 460.0, 80.0, "bench-m6b"), 10)
+    stand_end = _stand(_at(PDV, 620.0, 90.0, "stand-end2", tier=5, beat_count=5), 20)
+    end = _at(PDV, 1500.0, 95.0, "end-m6b")
+
+    # NEARER candidate — closed at 14:24 (Mo-Su 06:00-09:00), tier 1 so the
+    # base planner ignores it but the door_closed chooser still sees it.
+    shut_near = _stand(
+        _at(PDV, 350.0, 65.0, "shut-near", tier=1, beat_count=1), 10
+    )
+    shut_near = shut_near.model_copy(
+        update={
+            "opening_hours": "Mo-Su 06:00-09:00",
+            "opening_hours_source": "map",
+        }
+    )
+    # FARTHER candidate — open at 14:24, same low tier.
+    open_far = _stand(
+        _at(PDV, 400.0, 70.0, "open-far", tier=1, beat_count=1), 10
+    )
+    open_far = open_far.model_copy(
+        update={
+            "opening_hours": "Mo-Su 06:00-22:00",
+            "opening_hours_source": "map",
+        }
+    )
+
+    snap = _snap([stand_map, stand_guess, bench, stand_end, shut_near, open_far])
+    request = TourInput(
+        start=PDV,
+        end=(end.lat, end.lng),
+        duration_min=110,
+        city_slug="paris",
+        round_trip=False,
+        start_datetime="2026-08-19T14:00",
+        end_hardness="wall",
+        rest_cadence_minutes=6,
+    )
+    base = select_route(request, snap)
+    ids = [p.id for p in base.pois]
+    assert stand_guess.id in ids, f"premise: guessed stop on day; got {ids}"
+    assert "shut-near" not in ids and "open-far" not in ids, (
+        f"premise: neither candidate on day; {ids}"
+    )
+
+    cset = build_contingency_set(
+        base, request, snap, routing_client=None,
+        person=ReplanContext(protected_poi_ids=(bench.id,)),
+    )
+    dc = [e for e in cset.entries if e.trigger.get("kind") == "door_closed"
+          and e.trigger["stop_id"] == stand_guess.id]
+    assert dc, "no door_closed entry for the guessed stop"
+    entry = dc[0]
+    # The shut candidate must NOT appear — the open one must.
+    assert "open-far" in entry.alternate_stop_ids, (
+        f"the farther open candidate must be the standby; got {entry.alternate_stop_ids}"
+    )
+    assert "shut-near" not in entry.alternate_stop_ids, (
+        f"the nearer shut candidate must be skipped; got {entry.alternate_stop_ids}"
+    )

@@ -13,9 +13,9 @@ ledger.md, "LOCKED RULINGS", 2026-08-18) shapes the set:
 
 - R1.1 wrap-up from EVERY stop, floor zero, one leg home a legal answer (11/11).
 - R1.2 a skip for every stop; its answer never adds a building or new narration
-  (every entry's pool is the PLANNED day — structural, so the alternate-authoring
-  spend is zero by construction; `ContingencySet.authoring_units` says so before
-  anything is billed — W5.1 (d)).
+  (every skip entry's pool is the PLANNED day — structural, so a skip's authoring
+  spend is zero; `ContingencySet.authoring_units` prints the total before billing).
+  A door_closed entry (M6) names a standby NOT on the day — that IS authoring spend.
 - R1.3 late bands at 10 / 20 / 30-40 minutes for days with a finish clock; OPEN days
   band by wall-clock MINUTES LEFT (Fiona & Dev); nothing under 10 opens the set.
 - R1.4 early bands 10-20 / 20-40 LENGTHEN what is there (the freed minutes granted
@@ -35,6 +35,8 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
+from src.city_registry import country_code
+
 from .contract import POI, ReplanContext, Route, TourInput
 
 # A story stop this close to where the person said the day begins or ends IS that
@@ -44,7 +46,13 @@ from .contract import POI, ReplanContext, Route, TourInput
 from .placement import OWN_PLACE_RADIUS_M
 from .premium_tour import plan_premium_tour
 from .routing import haversine_m, leg_walk_seconds
-from .selection import _walk_arrivals, grant_freed_seconds
+from .selection import (
+    HOURS_SOURCE_MAP,
+    _clock_exclusion_reason,
+    _walk_arrivals,
+    grant_freed_seconds,
+    hours_are_guessed,
+)
 from .visit_time import listened_seconds, stop_seconds, visit_ceiling_seconds
 
 #: Words the panel ruled fail plain language ON SCREEN AND ALOUD (W4.2 Paulo; W5.2 R2.2:
@@ -743,6 +751,67 @@ def build_contingency_set(
             at_risk=at_risk or poi.id,
             screen_text=(q if q else screen_for(tail, late_clock, next_name=poi.name)),
             clock=late_clock,
+        )
+
+    # M6 — DOOR CLOSED: every story stop whose hours are a GUESS and whose visit
+    # goes inside carries a standby — a map-sourced place not on the day, open at
+    # arrival (pre-filtered by _clock_exclusion_reason, THE one definition), nearest
+    # to the closed door. The planner force-seats it (protected_poi_ids, not the R1.5
+    # "person asked" meaning — at_risk names the guessed stop explicitly) alongside
+    # the remaining stops in a tail that skips the guessed stop.
+    planned_set = set(planned_ids)
+    country = country_code(tour_input.city_slug)
+    for k, poi, arrival, _departure in story:
+        if not hours_are_guessed(poi):
+            continue
+        if not route.visit_goes_inside.get(poi.id, False):
+            continue
+        if arrival is None:
+            continue
+        position = (poi.lat, poi.lng)
+        best_standby = min(
+            (
+                c
+                for c in snapshot.pois
+                if c.id not in planned_set
+                and c.opening_hours_source == HOURS_SOURCE_MAP
+                and _is_story_stop(c)
+                and _clock_exclusion_reason(
+                    c.opening_hours, c.opening_hours_source, arrival, 1, country=country
+                )
+                is None
+            ),
+            key=lambda c: haversine_m(position[0], position[1], c.lat, c.lng),
+            default=None,
+        )
+        if best_standby is None:
+            continue
+        after = tuple(planned_ids[k + 1 :])
+        left = _minutes_left(planned_end, arrival) or (
+            sum(visit_of(p) for p in route.pois[k + 1 :]) // 60 + 30
+        )
+        keep = (*after, best_standby.id)
+        ctx = ctx_from(k, keep=keep, visited=tuple(planned_ids[: k + 1]))
+        ctx = ctx.model_copy(
+            update={"protected_poi_ids": (*ctx.protected_poi_ids, best_standby.id)}
+        )
+        alt = replan(
+            _tail_input(tour_input, position=position, clock=arrival, minutes=left),
+            ctx,
+        )
+        if alt is None or best_standby.id not in {p.id for p in alt.pois}:
+            continue
+        q = f"{poi.name} might be closed — carry to {best_standby.name} instead?"
+        add(
+            {"kind": "door_closed", "stop_id": poi.id},
+            k,
+            tail=None,
+            question=q,
+            default_arm="keep",
+            alt=alt,
+            at_risk=poi.id,
+            screen_text=q,
+            clock=arrival,
         )
 
     return ContingencySet(
