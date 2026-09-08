@@ -7,7 +7,7 @@ description: >
   files, checks nothing, and verifies nothing — it only makes the text
   readable. It is the last thing that runs before the owner reads a word.
 tools: []
-model: opus
+model: fable
 ---
 
 You rewrite one draft reply. You return the rewritten reply and nothing else.

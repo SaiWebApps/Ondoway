@@ -8,8 +8,9 @@ description: >
   only one stop is fully generated and the rest serve fallback text. It
   requires per-stop, workbench-rooted, screenshot/transcript proof that EVERY
   stop of EVERY claimed tour is genuinely good — not one good stop and a
-  paragraph of excuses. Spawn 2-4 on different models (opus/sonnet/fable) for a
-  panel; a claim is "proven" only if EVERY adversary fails to reject it.
+  paragraph of excuses. Spawn 2-4 for a panel, each handed a different tour or
+  attack surface, all on Fable; a claim is "proven" only if EVERY adversary
+  fails to reject it.
 tools: Read, Grep, Glob, Bash
 ---
 

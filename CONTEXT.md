@@ -46,3 +46,40 @@ A mid-walk re-cut of the day: the same places kept and re-ordered, no new
 audio owed. Every kept line is re-checked where it now lands; a line that is
 no longer true is dropped — silence over wrongness — its script rewritten at
 once and its audio caught up in the background.
+
+## Doors and hours
+
+**Door**:
+A place the walker must enter to get its value — a museum, a church, a
+walled garden, a market hall. A place with a door has hours; a street, a
+bridge or an open square has none.
+_Avoid_: gated (code word for the same thing)
+
+**Hours source**:
+Where a place's hours came from. Exactly one of three: the map, a guess, or
+unknown. The source decides how the hours are spoken; nothing else does.
+_Avoid_: verified, official, confirmed, tier, corroborated
+
+**Map hours**:
+Hours copied as-is from OpenStreetMap, the top level of trust. Spoken
+plainly, with no hedge.
+_Avoid_: dubious, unverified, moderate confidence
+
+**Guess**:
+Hours a model produced without a map entry to copy. Spoken as a guess. A
+guess may say a place is closed but may never remove it from a day.
+
+**Unknown**:
+A door whose hours nobody holds. Never a reason to drop the place; the walker
+hears that we could not confirm its hours.
+
+**Closed report**:
+A walker's mid-walk tap saying a door is shut. It replans that day and marks
+the place's guess as contradicted for the next walker. One report never
+rewrites hours.
+
+**Standby**:
+A backup place chosen, and its audio made, when a day is composed — one per
+guessed stop. Offered as a one-sentence question when a closed report lands.
+A standby always has map hours saying it is open on arrival.
+_Avoid_: refill (adding places for any other reason, which is later work)

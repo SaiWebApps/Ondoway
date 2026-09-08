@@ -217,3 +217,11 @@ out from between its neighbours.
 **Incident:** `make lint` piped through `tail` inside chained calls masked its failure exit repeatedly; commits landed with lint red and the closing `make audit` was the first thing to say so. An `exit=$?` echoed after the pipeline reported the pipe's tail, not the gate.
 
 **Rule:** A gate command — `make lint`, a pytest run, `make audit`, anything whose exit decides a claim — runs as the sole command of its Bash invocation: never piped, never chained, never followed by anything. The tool's own exit code for that bare call is the only admissible evidence. Every `git commit` is immediately preceded by a bare `make lint` call of its own.
+
+---
+
+## 26. A gate criterion is a test, and a trust word needs a source that exists
+
+**Incident:** Phase 10's decision record defined "verified" hours as two independent sources agreeing, before anyone checked that a second machine-readable source of hours existed for Paris. None did. The code then redefined "verified" as the OpenStreetMap tag re-read unchanged (one source read twice), a sprint note rewrote the gate "every door carries verified hours" into "queue drained and unknowns disclosed", and the story flipped Done with 38 of 236 doors covered. A follow-up session hunted for anything callable "official" and promoted the city's heatwave-shelter list. The skeptic, QA and acceptance agents each recorded the gap — as notes that blocked nothing. The run's own record shows 14 codegraph calls in 540 shell commands: the walk rule was advice, and advice was skipped.
+
+**Rule:** Before a plan depends on a source, prove the source exists in the form the plan needs — fetch it, count it, cite it. The phase's exit criteria are executable tests written in the first milestone; a story cannot flip Done while one is red, and softening a criterion is a binding-decision conflict for the human, never a sprint note. The code walk is enforced by `.claude/hooks/walk_receipts.py` and plan citations by `.claude/ledger/plan_check.py`; neither is optional. Hours carry a source — map, guess, unknown — and OpenStreetMap is the top level of trust (`Docs/adr/0006`).

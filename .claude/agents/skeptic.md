@@ -2,8 +2,8 @@
 name: skeptic
 description: >
   Hostile interrogator for milestone claims. Spawn a PANEL of these (2-4,
-  ideally on different models via the Agent tool's model parameter:
-  opus/sonnet/fable) when a claim warrants adversarial verification:
+  each handed a different attack surface, all on Fable) when a claim
+  warrants adversarial verification:
   before committing a fix for a user-reported bug, before telling the user
   something is proven, and after any long autonomous stretch. Each
   skeptic's ONLY success condition is finding a real flaw; unanimous

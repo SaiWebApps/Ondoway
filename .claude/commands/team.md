@@ -76,6 +76,15 @@ Then walk:
    never just the file you walked; the caller you didn't list is the
    mid-implementation surprise.
 
+   **The walk is enforced, not requested.** A hook
+   (`.claude/hooks/walk_receipts.py`, wired in `.claude/settings.json`)
+   refuses any Edit or Write to an existing file under `src/`, `scripts/`,
+   `tests/`, `mobile/lib/`, `mobile/test/` or `frontend/` that this session
+   has not read whole — a `Read` with no offset or limit, `codegraph node
+   --file <path>`, or a bare `cat <path>`. In-place shell writes to those
+   paths (`sed -i`, `>` redirects, `tee`) are refused outright. The refusal
+   names the command to run; run it and retry.
+
 4. **Simulate inputs through the path — all the way to the user's surface.**
    Pick 2–3 concrete inputs (a real POI, a real tour request, a
    thin/degraded case) and trace each one function by function using the
@@ -146,7 +155,10 @@ Every milestone section must contain, in this order:
 guess. Scan your own plan for `TBD`, `likely`, `should`, `probably`, `verify
 later`, `assuming` — any of these means Phase 2 isn't finished; go back and
 resolve it against the running code. Every factual claim about this repo in
-the plan carries a `file:line` you actually read this session. And **one
+the plan carries a `file:line` you actually read this session, written with
+the FULL repo-relative path (`src/api/routes/trips.py:2182`, never
+`trips.py:2182` — four files share that basename); a bare `` `:N` `` may
+follow only inside the same paragraph as its file. And **one
 mechanism per extension point**: an "or", "either", or "whichever" between
 design alternatives means you haven't decided, and an undecided seam is
 exactly where mid-implementation surprises come from — decide now, against
@@ -157,6 +169,35 @@ Two completeness checks, done yourself:
 - A milestone that doesn't trace to the Phase 1 goal → cut it.
 - A part of the goal covered by no milestone → gap: add a milestone or move it
   explicitly out of scope.
+
+**Then the citation gate, run bare:**
+
+```
+python3 .claude/ledger/plan_check.py .claude/runs/{YYYY-MM-DD}-{slug}/plan.md
+```
+
+It fails on any `file:line` that names no tracked file or an ambiguous
+basename, any range past the file's end, any backticked symbol absent from
+the lines it is cited at, and any guess word. A plan is not presented until
+that bare call exits 0 — a citation the checker cannot resolve is a line
+number nobody read.
+
+**The gate is a set of tests, and the FIRST milestone writes them.** The
+phase's exit criteria — the sentences the human will judge the phase by —
+are translated into executable tests before anything else is built: red at
+M1, green only when the phase is genuinely done. They are recorded as the
+story's criteria in the tracker and named in the plan. A story cannot flip
+to Done while one of them is red. A gate criterion is never reinterpreted
+in a sprint note; softening one ("verified" becoming "disclosed") is a
+binding-decision conflict and reaches the human through the pause budget.
+Deployment to production, with the dev/prod parity check failing hard when
+stale, is a milestone INSIDE the phase — never a follow-up.
+
+**Which model runs the run.** Planning, building and every judging seat —
+judge, editor, QA, skeptic, acceptance, the exit panel — run on Fable. If
+the session finds itself on another model, it stops before planning or
+building, says so in one line, and waits; it does not continue on the
+weaker model and does not spend the budget on it.
 
 # Phase 4 — alignment check, record, present, and WAIT
 
@@ -315,9 +356,11 @@ a finding that conflicts with a binding decision or exceeds the goal line —
 and that is an escalation to the human, never a drawer. A finding parked
 anywhere else is a deferral wearing a costume.
 
-**The run has exactly two exits.** (1) A PANEL — 2–3 adversarial agents on
-different models (skeptic / tour-adversary / acceptance) — unanimously
-judges the goal's personas served; one agent's SHIP is not the bar. (2) The
+**The run has exactly two exits.** (1) A PANEL — 2–3 adversarial agents in
+different seats (skeptic / tour-adversary / acceptance), all on Fable —
+unanimously judges the goal's personas served; one agent's SHIP is not the
+bar. Diversity comes from the seats' different questions, never from a
+weaker model. (2) The
 budget named at "go" exhausts first. The exit report states which one
 fired, and when it was the budget, the honest gap — what the personas still
 experience that the goal's sentence forbids.
@@ -431,7 +474,12 @@ read-only.
 - **Extend, never duplicate** (CLAUDE.md invariant 1). Every milestone names
   its extension point and the search that cleared it.
 - **No guesses survive Phase 3.** Unknowns are resolved by running things
-  now, never deferred.
+  now, never deferred. The citation gate (`plan_check.py`) and the walk
+  hook (`walk_receipts.py`) make the first two rules mechanical; a plan or
+  an edit that reaches the human without them is a defect in the run.
+- **The exit criteria are tests, written first.** A story is Done when its
+  gate tests are green, never when a note says so; a softened criterion is
+  an escalation, not an amendment.
 - **The plan never changes silently.** After "go", any divergence stops the
   line, is re-walked, and lands as a written plan amendment with a sprint
   note; product-behaviour and existing-test amendments cite the binding

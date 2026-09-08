@@ -1,3 +1,7 @@
+---
+status: superseded by ADR-0006
+---
+
 # Opening hours are verified by a tiered ladder with a permanent human floor
 
 Whether a place has a door is its own field: `gated` is explicit, and hours
