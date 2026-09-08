@@ -552,15 +552,16 @@ def _print_breakdown(
         # planning is "a promise without a table under it" until the hours
         # data exists): on a dated run, say how many of the gated stops rest
         # on unaudited hours. GATED = a non-None opening_hours table.
-        # UNVERIFIED = opening_hours_source missing or "ai" — the AI-only
-        # value in the exact vocabulary scripts/poi_opening_hours.py writes
-        # ("osm" | "ai" | null). Printed even at 0 unverified so a clean run
-        # SAYS it is clean; omitted on undated runs (no clock, no gate) and
-        # when no stop on the route is gated.
+        # UNVERIFIED = no `opening_hours_verified` record — the ladder
+        # (Docs/adr/0003) is the one trust signal, so a human-confirmed AI
+        # table counts trusted and an unreviewed transcription does not
+        # self-certify. Printed even at 0 unverified so a clean run SAYS it
+        # is clean; omitted on undated runs (no clock, no gate) and when no
+        # stop on the route is gated.
         if start_dt is not None:
             gated = [p for p in route.pois if p.opening_hours is not None]
             if gated:
-                unverified = sum(1 for p in gated if p.opening_hours_source in (None, "ai"))
+                unverified = sum(1 for p in gated if p.opening_hours_verified is None)
                 print(
                     f"  hours unverified for {unverified} of the {len(gated)} "
                     "gated stops on this route"

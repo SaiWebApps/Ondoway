@@ -401,11 +401,16 @@ def test_queue_column_prints_minutes_and_dash(capsys):
 
 
 def _hours_route() -> Route:
-    """Four stops: gated-and-OSM-verified, gated-by-AI, gated-with-no-source,
-    and not gated at all -> M=3 gated, N=2 unverified."""
+    """Four stops: a VERIFIED AI table (the ladder's review confirmed it — the
+    discriminator of the verified-is-the-one-trust-signal rule, Docs/adr/0003),
+    an unreviewed AI table, an unsourced table, and not gated at all
+    -> M=3 gated, N=2 unverified."""
     verified = _poi(
-        "poi-osm", "Musee d'Orsay",
-        opening_hours=_GATED_TABLE, opening_hours_source="osm",
+        "poi-verified", "Musee d'Orsay",
+        opening_hours=_GATED_TABLE, opening_hours_source="ai",
+        opening_hours_verified=(
+            '{"tier": 2, "approver": "owner", "evidence": "reviewed", "at": "2026-09-07"}'
+        ),
     )
     ai_judged = _poi(
         "poi-ai", "Musee de Cluny",
@@ -421,9 +426,10 @@ def _hours_route() -> Route:
 
 def test_dated_run_prints_hours_unverified_line_with_right_counts(capsys):
     """A dated run says how much of its gate data is on the record's word
-    alone: gated = a non-None opening_hours table; unverified = the table's
-    source is missing or is the AI-only value ("ai") — the exact vocabulary
-    scripts/poi_opening_hours.py writes ("osm" | "ai" | null). Aiko's finding
+    alone: gated = a non-None opening_hours table; unverified = no
+    `opening_hours_verified` record — the ladder (Docs/adr/0003) is the one
+    trust signal, so a human-confirmed AI table counts trusted and an
+    unreviewed OSM transcription does not self-certify. Aiko's finding
     (design §6): clock-native planning is a promise without a table under it,
     so the harness must SAY when the table under it is unaudited."""
     tour_build = _tour_build()

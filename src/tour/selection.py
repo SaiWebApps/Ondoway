@@ -894,7 +894,7 @@ _CLOCK_DAY_NAMES = (
 
 def _clock_exclusion_reason(
     opening_hours_json: str,
-    source: str | None,
+    verified: str | None,
     start: datetime,
     duration_min: int,
 ) -> str | None:
@@ -953,8 +953,11 @@ def _clock_exclusion_reason(
     # A person reads this sentence, so it carries no provenance tag: "(hours: OSM)"
     # was ruled a failure of plain language. The DOUBT that tag encoded is not
     # dropped — it is said in words, so the reader learns we are unsure without
-    # having to decode a label. A verified table simply states the closure.
-    doubt = "" if (source or "").lower() == "osm" else ", though we could not confirm its hours"
+    # having to decode a label. THE one trust signal is the ladder's verified
+    # record (Docs/adr/0003): a verified table simply states the closure —
+    # whoever transcribed it — and a table nobody verified says we are unsure,
+    # an unreviewed OSM tag included.
+    doubt = "" if verified else ", though we could not confirm its hours"
     if len(closed_day_names) == 1:
         day = closed_day_names[0]
         if open_windows_seen:
@@ -2648,7 +2651,7 @@ def _select_route_once(
             return None  # nothing behind the door to void
         window_min = max(1, math.ceil(shape_total_seconds(open_shape) / 60))
         return _clock_exclusion_reason(
-            cand.opening_hours, cand.opening_hours_source, arrival_clock, window_min
+            cand.opening_hours, cand.opening_hours_verified, arrival_clock, window_min
         )
 
     def shape_visit(
@@ -2819,7 +2822,7 @@ def _select_route_once(
             # no filtering — the safe direction and the identity default.
             clock_reason = _clock_exclusion_reason(
                 poi.opening_hours,
-                poi.opening_hours_source,
+                poi.opening_hours_verified,
                 clock_start,
                 input.duration_min,
             )
@@ -3144,7 +3147,7 @@ def _select_route_once(
                 and pin.id not in closed_today_ids
                 and _clock_exclusion_reason(
                     pin.opening_hours,
-                    pin.opening_hours_source,
+                    pin.opening_hours_verified,
                     clock_start,
                     input.duration_min,
                 )

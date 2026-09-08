@@ -514,8 +514,9 @@ def test_a_closure_is_disclosed_in_plain_words_and_keeps_its_doubt():
     })
     wednesday = dt.datetime(2026, 8, 12, 10, 0)
 
-    verified = _clock_exclusion_reason(closed_wed, "osm", wednesday, 180)
-    guessed = _clock_exclusion_reason(closed_wed, "ai", wednesday, 180)
+    trust = '{"tier": 2, "approver": "owner", "evidence": "reviewed", "at": "2026-09-07"}'
+    verified = _clock_exclusion_reason(closed_wed, trust, wednesday, 180)
+    guessed = _clock_exclusion_reason(closed_wed, None, wednesday, 180)
     unsourced = _clock_exclusion_reason(closed_wed, None, wednesday, 180)
 
     for sentence in (verified, guessed, unsourced):

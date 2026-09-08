@@ -2757,7 +2757,7 @@ def _preview_day_notes(route, body) -> list[str]:
     unverified = [
         p.name
         for p in route.pois
-        if p.opening_hours is not None and p.opening_hours_source in (None, "ai")
+        if p.opening_hours is not None and p.opening_hours_verified is None
     ]
     if unverified:
         notes.append("We could not confirm opening times for " + ", ".join(unverified) + ".")
