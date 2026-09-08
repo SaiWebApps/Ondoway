@@ -598,6 +598,12 @@ def main(argv: list[str] | None = None) -> int:
             approver=args.approver or "",
             list_only=args.list_queue,
         )
+        if args.list_queue:
+            # "Render the review queue and decide nothing" — nothing decided
+            # means nothing WRITTEN: the corroboration computed on the way to
+            # the queue stays in memory, and the file stays byte-identical.
+            print("\nQueue listed. Nothing decided, nothing written.")
+            return 0
         if args.dry_run:
             print("\nDry run. Nothing written.")
             return 0

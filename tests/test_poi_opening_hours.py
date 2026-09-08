@@ -331,6 +331,33 @@ def test_the_review_queue_orders_conflicts_then_gravity() -> None:
     assert [p["name"] for p in queue] == ["Conflicted", "The Marquee", "A Small Place"]
 
 
+def test_the_list_queue_renders_and_writes_nothing(tmp_path, monkeypatch) -> None:
+    """--list-queue's own help text: "render the review queue and decide
+    nothing". Nothing decided means nothing WRITTEN either — the corroboration
+    results computed on the way to the queue stay in memory, and the data file
+    is byte-identical after the run. The fixture's live tag agrees with the
+    quoted one, so a writing run WOULD stamp a tier-0 record — the exact
+    mutation a listing must not commit."""
+    import scripts.poi_opening_hours as mod
+
+    city_dir = tmp_path / "data" / "paris"
+    city_dir.mkdir(parents=True)
+    poi_file = city_dir / "poi-raw.json"
+    poi_file.write_text(json.dumps([_gated_row("Agree Museum")], indent=2) + "\n")
+    before = poi_file.read_text()
+
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    monkeypatch.setattr(mod, "fetch_osm_hours", lambda bbox: [])
+    monkeypatch.setattr(
+        mod, "match_osm", lambda pois, elements: {"Agree Museum": "Mo-Su 09:00-18:00"}
+    )
+
+    assert mod.main(["--verify", "--list-queue"]) == 0
+    assert poi_file.read_text() == before, (
+        "a listing run wrote the data file — LIST must decide nothing"
+    )
+
+
 def test_hop_1_the_corpus_query_asks_the_graph_for_the_trust_fields() -> None:
     """HOP 1 for the trust half — a property absent from the RETURN list
     reaches nothing downstream, with no error."""
