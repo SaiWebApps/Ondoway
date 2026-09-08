@@ -6,7 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ondoway/models/trip.dart';
 import 'package:ondoway/pages/tour_walk_page.dart';
+import 'package:ondoway/services/auth_service.dart';
 import 'package:ondoway/services/tour_playback_service.dart';
+import 'package:ondoway/services/trip_service.dart';
 import 'package:provider/provider.dart';
 
 import '../services/mocks/mock_audio_service.dart';
@@ -115,6 +117,66 @@ Widget _routerHarness({
       ChangeNotifierProvider<LocationProvider>.value(value: loc),
       ChangeNotifierProvider<AudioProvider>.value(value: audio),
       ChangeNotifierProvider<TourPlaybackService>.value(value: engine),
+    ],
+    child: MaterialApp.router(routerConfig: router),
+  );
+}
+
+class _FixedTokenAuthService extends AuthService {
+  final String? _fixedToken;
+  _FixedTokenAuthService(this._fixedToken);
+  @override
+  String? get accessToken => _fixedToken;
+}
+
+class _MockTripService extends TripService {
+  SessionPlan? replanResult;
+  String? capturedClosedStopId;
+
+  @override
+  Future<SessionPlan> replanSession(
+    String tripId,
+    String accessToken, {
+    required double lat,
+    required double lng,
+    required int wallElapsedSeconds,
+    required int tourElapsedSeconds,
+    double? observedPace,
+    double? listeningRate,
+    int nextStopIndex = 0,
+    String? phoneNextStopHhmm,
+    String? closedStopId,
+  }) async {
+    capturedClosedStopId = closedStopId;
+    return replanResult!;
+  }
+}
+
+Widget _closedDoorHarness({
+  required MockLocationService loc,
+  required MockAudioService audio,
+  required TourPlaybackService engine,
+  required AuthService auth,
+  required TripService tripService,
+}) {
+  final router = GoRouter(
+    initialLocation: '/walk',
+    routes: [
+      GoRoute(path: '/walk', builder: (_, _) => TourWalkPage(trip: _walkSeed)),
+      GoRoute(
+        path: '/saved-trips',
+        builder: (_, _) =>
+            const Scaffold(body: Center(child: Text('Saved Trips'))),
+      ),
+    ],
+  );
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider<LocationProvider>.value(value: loc),
+      ChangeNotifierProvider<AudioProvider>.value(value: audio),
+      ChangeNotifierProvider<TourPlaybackService>.value(value: engine),
+      ChangeNotifierProvider<AuthService>.value(value: auth),
+      ChangeNotifierProvider<TripService>.value(value: tripService),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -562,6 +624,179 @@ void main() {
     expect(find.text('Preparing your walk…'), findsOneWidget);
     expect(find.byKey(const Key('session-head-back')), findsOneWidget);
     expect(find.byKey(const Key('session-question')), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('the closed-door button shows at a door stop and hides at a non-door stop',
+      (tester) async {
+    final gps = MockLocationService();
+    final audio = MockAudioService();
+    final service =
+        TourPlaybackService(locationService: gps, audioService: audio);
+    final stops = [
+      ItineraryStop(
+        sortOrder: 0,
+        stopId: 'item-0',
+        poiId: 'poi-0',
+        poiName: 'Musée Carnavalet',
+        lat: _base,
+        lng: 2.35,
+        beatId: 'beat-0',
+        lensName: 'history',
+        lensDisplay: 'History',
+        durationMin: 5,
+        importanceTier: 3,
+        startTime: '',
+        audioUrl: 'https://cdn.example.com/0.mp3',
+        audioDurationSec: 100,
+        dwellSeconds: 300,
+        trigger: const StopTrigger(radiusM: 40, door: true),
+      ),
+      _sessionStop(1, lat: _base + 300 * _degPerMeterLat),
+    ];
+    await service.startTour(stops);
+    service.holdSession(SessionPlan(
+      tripId: 'trip-1',
+      planVersion: 1,
+      stops: stops,
+      retimeToleranceSeconds: 180,
+      dayStartHhmm: '09:00',
+    ));
+
+    await tester.pumpWidget(
+        _routerHarness(loc: gps, audio: audio, engine: service));
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.byKey(const Key('session-closed-report')), findsOneWidget,
+        reason: 'a door stop shows the closed-report button');
+
+    service.skipToStop(1);
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.byKey(const Key('session-closed-report')), findsNothing,
+        reason: 'a non-door stop hides the closed-report button');
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('tapping the closed-door button sends the stop poiId to replanSession',
+      (tester) async {
+    final gps = MockLocationService();
+    final audio = MockAudioService();
+    final service =
+        TourPlaybackService(locationService: gps, audioService: audio);
+    final doorStop = ItineraryStop(
+      sortOrder: 0,
+      stopId: 'item-0',
+      poiId: 'musee-carnavalet',
+      poiName: 'Musée Carnavalet',
+      lat: _base,
+      lng: 2.35,
+      beatId: 'beat-0',
+      lensName: 'history',
+      lensDisplay: 'History',
+      durationMin: 5,
+      importanceTier: 3,
+      startTime: '',
+      audioUrl: 'https://cdn.example.com/0.mp3',
+      audioDurationSec: 100,
+      dwellSeconds: 300,
+      trigger: const StopTrigger(radiusM: 40, door: true),
+    );
+    final nextStop = _sessionStop(1, lat: _base + 300 * _degPerMeterLat);
+    await service.startTour([doorStop, nextStop]);
+    service.holdSession(SessionPlan(
+      tripId: 'trip-1',
+      planVersion: 1,
+      stops: [doorStop, nextStop],
+      retimeToleranceSeconds: 180,
+      dayStartHhmm: '09:00',
+    ));
+
+    final auth = _FixedTokenAuthService('tok');
+    final trips = _MockTripService()
+      ..replanResult = SessionPlan(
+        tripId: 'trip-1',
+        planVersion: 2,
+        stops: [nextStop],
+        retimeToleranceSeconds: 180,
+        dayStartHhmm: '09:00',
+      );
+
+    await tester.pumpWidget(_closedDoorHarness(
+      loc: gps,
+      audio: audio,
+      engine: service,
+      auth: auth,
+      tripService: trips,
+    ));
+    await tester.pump(const Duration(milliseconds: 350));
+
+    await tester.tap(find.byKey(const Key('session-closed-report')));
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(trips.capturedClosedStopId, 'musee-carnavalet');
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('after a closed-door replan the shut stop leaves plannedStops',
+      (tester) async {
+    final gps = MockLocationService();
+    final audio = MockAudioService();
+    final service =
+        TourPlaybackService(locationService: gps, audioService: audio);
+    final doorStop = ItineraryStop(
+      sortOrder: 0,
+      stopId: 'item-0',
+      poiId: 'musee-closed',
+      poiName: 'Closed Museum',
+      lat: _base,
+      lng: 2.35,
+      beatId: 'beat-0',
+      lensName: 'history',
+      lensDisplay: 'History',
+      durationMin: 5,
+      importanceTier: 3,
+      startTime: '',
+      audioUrl: 'https://cdn.example.com/0.mp3',
+      audioDurationSec: 100,
+      dwellSeconds: 300,
+      trigger: const StopTrigger(radiusM: 40, door: true),
+    );
+    final nextStop = _sessionStop(1, lat: _base + 300 * _degPerMeterLat);
+    await service.startTour([doorStop, nextStop]);
+    service.holdSession(SessionPlan(
+      tripId: 'trip-1',
+      planVersion: 1,
+      stops: [doorStop, nextStop],
+      retimeToleranceSeconds: 180,
+      dayStartHhmm: '09:00',
+    ));
+
+    final auth = _FixedTokenAuthService('tok');
+    final trips = _MockTripService()
+      ..replanResult = SessionPlan(
+        tripId: 'trip-1',
+        planVersion: 2,
+        stops: [nextStop],
+        retimeToleranceSeconds: 180,
+        dayStartHhmm: '09:00',
+      );
+
+    await tester.pumpWidget(_closedDoorHarness(
+      loc: gps,
+      audio: audio,
+      engine: service,
+      auth: auth,
+      tripService: trips,
+    ));
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(service.plannedStops.length, 2);
+
+    await tester.tap(find.byKey(const Key('session-closed-report')));
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(service.plannedStops.length, 1);
+    expect(service.plannedStops.first.poiId, 'poi-1');
     await tester.pumpWidget(const SizedBox());
   });
 }

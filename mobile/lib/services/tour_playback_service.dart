@@ -1576,11 +1576,38 @@ class TourPlaybackService extends ChangeNotifier {
   /// current plan and its contingency set so it can act offline, only from
   /// what it already holds). Replaces the held session on every new version.
   void holdSession(SessionPlan session) {
+    final prevVersion = _session?.planVersion;
     _session = session;
     _selected = null;
     _pendingQuestion = null;
     _screenText = null;
     _compareClockWithServer(session);
+    if (prevVersion != null &&
+        session.planVersion > prevVersion &&
+        _stops.isNotEmpty) {
+      final keepCount = max(0, _currentStopIndex);
+      final remainingPois = {
+        for (var i = keepCount; i < _stops.length; i++) _stops[i].poiId,
+      };
+      final sessionPois = session.stops.map((s) => s.poiId).toSet();
+      if (!setEquals(remainingPois, sessionPois)) {
+        final done = _stops.take(keepCount).toList();
+        final byPoi = {for (final s in _planned) s.poiId: s};
+        final newRemaining = <ItineraryStop>[];
+        for (final stop in session.stops) {
+          final held = byPoi[stop.poiId];
+          if (held != null &&
+              !done.contains(held) &&
+              !newRemaining.contains(held)) {
+            newRemaining.add(held);
+          }
+        }
+        _stops = List.unmodifiable([...done, ...newRemaining]);
+        if (_currentStopIndex >= _stops.length) {
+          _currentStopIndex = max(0, _stops.length - 1);
+        }
+      }
+    }
     // THE PROMISE TIER ON THE LIVE PATH (W5.14): a live replan that could not
     // keep everything the person asked for within the clock carries the ONE
     // question as an entry of kind "live" — applied at once (its default in

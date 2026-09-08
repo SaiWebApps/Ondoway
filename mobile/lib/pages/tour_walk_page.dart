@@ -692,34 +692,82 @@ class _WalkControls extends StatelessWidget {
     }
   }
 
+  Future<void> _reportClosed(BuildContext context) async {
+    final stop = engine.currentStop;
+    if (stop == null) return;
+    final token = context.read<AuthService>().accessToken;
+    final tripService = context.read<TripService>();
+    final tripId = engine.session?.tripId;
+    if (token == null || tripId == null) return;
+    try {
+      final session = await tripService.replanSession(
+        tripId,
+        token,
+        lat: stop.lat,
+        lng: stop.lng,
+        wallElapsedSeconds: engine.wallElapsedSeconds,
+        tourElapsedSeconds: engine.tourElapsedSeconds,
+        observedPace: engine.observedPace,
+        listeningRate: engine.listeningRate,
+        nextStopIndex: engine.currentStopIndex,
+        phoneNextStopHhmm: engine.phoneNextStopHhmm,
+        closedStopId: stop.poiId,
+      );
+      engine.holdSession(session);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not report — try again.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final showClosed = engine.currentStop?.trigger?.door == true;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
           Dims.spaceMd, 0, Dims.spaceMd, Dims.spaceMd),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              key: const Key('session-pause'),
-              onPressed:
-                  engine.isPaused ? engine.resumeTour : engine.pauseTour,
-              icon: Icon(engine.isPaused ? Icons.play_arrow : Icons.pause),
-              label: Text(engine.isPaused ? 'Carry on' : 'Pause'),
+          if (showClosed)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Dims.spaceSm),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  key: const Key('session-closed-report'),
+                  onPressed: () => _reportClosed(context),
+                  icon: const Icon(Icons.door_front_door_outlined),
+                  label: const Text("It's closed"),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(width: Dims.spaceSm),
-          Expanded(
-            child: FilledButton.tonalIcon(
-              key: const Key('session-head-back'),
-              onPressed: () => _headBackNow(context),
-              icon: const Icon(Icons.home_outlined),
-              // On an open walk there is no "back" (W6.2 R8, Fiona & Dev: "the
-              // button is misnamed — call it Wrap up").
-              label: Text(engine.session?.finishLat == null
-                  ? 'Wrap up'
-                  : 'Head back now'),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const Key('session-pause'),
+                  onPressed:
+                      engine.isPaused ? engine.resumeTour : engine.pauseTour,
+                  icon: Icon(engine.isPaused ? Icons.play_arrow : Icons.pause),
+                  label: Text(engine.isPaused ? 'Carry on' : 'Pause'),
+                ),
+              ),
+              const SizedBox(width: Dims.spaceSm),
+              Expanded(
+                child: FilledButton.tonalIcon(
+                  key: const Key('session-head-back'),
+                  onPressed: () => _headBackNow(context),
+                  icon: const Icon(Icons.home_outlined),
+                  label: Text(engine.session?.finishLat == null
+                      ? 'Wrap up'
+                      : 'Head back now'),
+                ),
+              ),
+            ],
           ),
         ],
       ),

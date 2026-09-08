@@ -267,6 +267,7 @@ class TripService extends ChangeNotifier {
     double? listeningRate,
     int nextStopIndex = 0,
     String? phoneNextStopHhmm,
+    String? closedStopId,
   }) async {
     final response = await _httpClient.post(
       Uri.parse('$baseUrl/trips/$tripId/session/replan'),
@@ -283,6 +284,7 @@ class TripService extends ChangeNotifier {
         'listening_rate': ?listeningRate,
         'next_stop_index': nextStopIndex,
         'phone_next_stop_hhmm': ?phoneNextStopHhmm,
+        'closed_stop_id': ?closedStopId,
       }),
     );
     if (response.statusCode == 200) {
