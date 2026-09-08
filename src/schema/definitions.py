@@ -46,6 +46,7 @@ UNIQUE_CONSTRAINTS: list[UniqueConstraint] = [
     UniqueConstraint("Lens", "id"),
     UniqueConstraint("Lens", "name"),
     UniqueConstraint("Area", "id"),
+    UniqueConstraint("Family", "id"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -61,13 +62,14 @@ INDEXES: list[Index] = [
 ]
 
 # ---------------------------------------------------------------------------
-# Relationship types — Schema_v3 §4 (all 11)
+# Relationship types — Schema_v3 §4
 # ---------------------------------------------------------------------------
 
 RELATIONSHIP_TYPES: list[str] = [
     "HAS_PROFILE",
     "IS_CAPTAIN_OF",
     "IS_CREW_OF",
+    "MEMBER_OF",
     "PREFERS_LENS",
     "HAS_STOP",
     "ASSIGNED_TO",
@@ -99,6 +101,7 @@ RELATIONSHIP_SCHEMAS: dict[str, list[RelPropertyDef]] = {
     "HAS_PROFILE": [],
     "IS_CAPTAIN_OF": [],
     "IS_CREW_OF": [],
+    "MEMBER_OF": [],
     "PREFERS_LENS": [
         RelPropertyDef("weight", "float", required=False, default=1.0),
     ],

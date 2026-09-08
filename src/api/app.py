@@ -14,7 +14,18 @@ from neo4j.exceptions import ServiceUnavailable
 
 from src.api.auth.routes import router as auth_router
 from src.api.dependencies import close_driver, get_resume_coordinator, init_driver
-from src.api.routes import audio, edges, feedback, graph, nodes, onboard, product, schema, trips
+from src.api.routes import (
+    audio,
+    edges,
+    families,
+    feedback,
+    graph,
+    nodes,
+    onboard,
+    product,
+    schema,
+    trips,
+)
 
 
 def _workbench_api_enabled() -> bool:
@@ -162,6 +173,7 @@ def create_app() -> FastAPI:
     # call these; audio/trips carry their own compose/VERIFY gates).
     app.include_router(audio.router, prefix="/api/v1")
     app.include_router(trips.router, prefix="/api/v1")
+    app.include_router(families.router, prefix="/api/v1")
     app.include_router(feedback.router, prefix="/api/v1")
     # Public read-only product surface (lens taxonomy, user profile): the
     # mobile client's read path. Mounted here — outside the

@@ -1,4 +1,5 @@
-"""Seed test User and Profile nodes with HAS_PROFILE + PREFERS_LENS relationships."""
+"""Seed test User and Profile nodes with HAS_PROFILE + PREFERS_LENS
+relationships, and the family the two profiles share (MEMBER_OF)."""
 
 from __future__ import annotations
 
@@ -29,7 +30,26 @@ MATCH (l:Lens {name: $lens_name})
 MERGE (p)-[:PREFERS_LENS]->(l)
 """
 
+_MERGE_FAMILY = """
+MERGE (f:Family {id: $family_id})
+SET f.name = $name,
+    f.created_at = coalesce(f.created_at, datetime())
+"""
+
+_MERGE_MEMBER_OF = """
+MATCH (p:Profile {display_name: $profile_name})
+MATCH (f:Family {id: $family_id})
+MERGE (p)-[:MEMBER_OF]->(f)
+"""
+
 TEST_USER_EMAIL = "testuser@ondoway.app"
+
+#: The seeded family both profiles share (docs/adr/0005: a family is a
+#: persistent group of PROFILES — Mom and Kid are two profiles of one user,
+#: and a couple is a family of two). A fixed id keeps the MERGE idempotent
+#: under the Family unique-id constraint.
+FAMILY_ID = "seed-family-mom-kid"
+FAMILY_NAME = "The Testersons"
 
 PROFILES: list[dict] = [
     {
@@ -60,8 +80,16 @@ def _link_lens(tx, profile_name: str, lens_name: str) -> None:
     tx.run(_MERGE_PREFERS_LENS, profile_name=profile_name, lens_name=lens_name)
 
 
+def _create_family(tx) -> None:
+    tx.run(_MERGE_FAMILY, family_id=FAMILY_ID, name=FAMILY_NAME)
+
+
+def _join_family(tx, profile_name: str) -> None:
+    tx.run(_MERGE_MEMBER_OF, profile_name=profile_name, family_id=FAMILY_ID)
+
+
 def seed_users(driver: Driver) -> dict[str, int]:
-    """Seed test user, profiles, and lens preferences. Returns counts."""
+    """Seed test user, profiles, lens preferences, and their family. Returns counts."""
     with driver.session(database=get_database()) as session:
         session.execute_write(_create_user, TEST_USER_EMAIL)
 
@@ -70,4 +98,8 @@ def seed_users(driver: Driver) -> dict[str, int]:
             for lens_name in profile["lenses"]:
                 session.execute_write(_link_lens, profile["display_name"], lens_name)
 
-    return {"users": 1, "profiles": len(PROFILES)}
+        session.execute_write(_create_family)
+        for profile in PROFILES:
+            session.execute_write(_join_family, profile["display_name"])
+
+    return {"users": 1, "profiles": len(PROFILES), "families": 1}

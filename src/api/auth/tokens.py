@@ -1,4 +1,5 @@
-"""JWT token creation and verification for access, refresh, and magic link tokens."""
+"""JWT token creation and verification for access, refresh, magic link, and
+family invite tokens."""
 
 from __future__ import annotations
 
@@ -57,6 +58,50 @@ def create_magic_token(email: str) -> str:
         "exp": now + timedelta(minutes=MAGIC_LINK_EXPIRE_MINUTES),
     }
     return jwt.encode(payload, MAGIC_LINK_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+
+#: How long a family invite link stays usable. A shareable link travels over
+#: any channel (docs/adr/0005) and may sit in a chat for days before it is
+#: tapped, so it lives longer than a magic link — but it still expires, because
+#: an invite is a standing door into a family's shared days.
+INVITE_TOKEN_EXPIRE_DAYS: int = 7
+
+
+def create_invite_token(family_id: str, inviter_user_id: str) -> str:
+    """Mint a family invite token: the magic pair's mould, typed "invite".
+
+    Signed with MAGIC_LINK_SECRET_KEY (like the magic link, and unlike the
+    bearer pair) so a leaked invite can never be replayed against the access
+    verifier even if a type check is ever missed.
+    """
+    now = datetime.now(UTC)
+    payload = {
+        "family_id": family_id,
+        "sub": inviter_user_id,
+        "type": "invite",
+        "iat": now,
+        "exp": now + timedelta(days=INVITE_TOKEN_EXPIRE_DAYS),
+    }
+    return jwt.encode(payload, MAGIC_LINK_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+
+def verify_invite_token(token: str) -> dict:
+    """Verify a family invite token and return its payload ({family_id, sub, …}).
+
+    Raises TokenError on expiry, tampering, wrong type, or a missing family_id.
+    """
+    try:
+        payload = jwt.decode(token, MAGIC_LINK_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError as exc:
+        raise TokenError("Invite has expired") from exc
+    except jwt.InvalidTokenError as exc:
+        raise TokenError(f"Invalid invite: {exc}") from exc
+
+    if payload.get("type") != "invite":
+        raise TokenError(f"Wrong token type: expected 'invite', got {payload.get('type')!r}")
+    if not payload.get("family_id"):
+        raise TokenError("Invite token missing family_id")
+    return payload
 
 
 def verify_token(token: str, expected_type: str) -> dict:
