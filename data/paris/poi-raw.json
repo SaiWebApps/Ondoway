@@ -288,6 +288,19 @@
         "radius_m": 25.0,
         "indoor": true,
         "basis": "The underground mall runs beneath the courtyard; a person inside it stands under the inverted glass skylight where the corpus's fashion-show and entrance beats belong. Indoor: offered on the screen, the tap plays it — GPS decides nothing under the ground."
+      },
+      {
+        "label": "The Cour Carrée",
+        "sub_locations": [
+          "cour-carree",
+          "cour-carree-west",
+          "cour-carree-southwest"
+        ],
+        "lat": 48.8606,
+        "lng": 2.3372,
+        "radius_m": 60.0,
+        "indoor": false,
+        "basis": "A person stands in the western half of the great square courtyard, the palace's four façades rising on every side; the Cour Carrée chapters are told looking at them from inside the square, not from the pyramid court beyond the Pavillon de l'Horloge."
       }
     ]
   },

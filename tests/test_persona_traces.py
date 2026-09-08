@@ -686,3 +686,17 @@ def test_a_lensed_day_serves_the_subject_it_was_asked_for(served, live_neo4j):
                 f"{stop['lens_name']!r} — a subject nobody asked for"
             )
     assert labels_checked, "no lensed label was checked — the clause would pass vacuously"
+
+
+@needs_neo4j
+def test_aikos_rainy_tuesday_serves(client):
+    """Phase 10's gate, red-first: 07-rainy-tuesday.md step 6 is the failure this
+    phase exists to close ("Walks to a museum she wanted to see and finds it
+    shut. It is Tuesday."). Aiko's day must SERVE — and while it is refused, the
+    assertion message below is the diagnosis: the named gate and the wire's own
+    refusal detail, read off one trace instead of eleven.
+
+    UNDO: revert the Phase 10 hours work -> her day refuses again -> RED.
+    """
+    trace = build_trace(client, "aiko")
+    assert trace.served, f"aiko refused at {trace.refused_at}: {trace.refusal}"
