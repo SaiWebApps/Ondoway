@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:ondoway/services/family_service.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 /// The profile page's "Your family" block (docs/adr/0005): the members of the
 /// caller's family, a create button while there is none, and an invite that
@@ -184,6 +186,24 @@ class FamilyInviteDialog extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 8),
+          // A ~250-char URL is for SENDING, not selecting: the share sheet
+          // reaches every channel the phone has, and Copy covers the rest.
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton.icon(
+                onPressed: () => _copyLink(context),
+                icon: const Icon(Icons.copy, size: 18),
+                label: const Text('Copy'),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: () => _shareLink(context),
+                icon: const Icon(Icons.ios_share, size: 18),
+                label: const Text('Share'),
+              ),
+            ],
+          ),
           const Text(
             'The link works for 7 days.',
             style: TextStyle(color: Colors.grey, fontSize: 12),
@@ -198,5 +218,24 @@ class FamilyInviteDialog extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _copyLink(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: invite.inviteUrl));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Link copied')));
+    }
+  }
+
+  Future<void> _shareLink(BuildContext context) async {
+    // The iPad's share sheet is a popover and needs an anchor rectangle;
+    // everywhere else the origin is simply ignored.
+    final box = context.findRenderObject() as RenderBox?;
+    await SharePlus.instance.share(ShareParams(
+      uri: Uri.parse(invite.inviteUrl),
+      sharePositionOrigin:
+          box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+    ));
   }
 }

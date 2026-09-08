@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ondoway/services/family_service.dart';
 import 'package:ondoway/theme/theme.dart';
@@ -83,6 +84,66 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(QrImageView), findsOneWidget);
+  });
+
+  Future<void> pumpAndOpenInviteDialog(WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_host(FamilySection(
+      families: const [_familyOfTwo],
+      isLoaded: true,
+      onCreate: () async {},
+      onRetry: () async {},
+      onInvite: (_) async => const FamilyInvite(
+        inviteUrl: 'http://localhost:3000/auth/join-family?token=abc',
+        expiresAt: '2026-09-14T00:00:00+00:00',
+      ),
+    )));
+    await tester.tap(find.text('Invite'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('the invite dialog copies the link to the clipboard',
+      (tester) async {
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') {
+        copied = (call.arguments as Map<dynamic, dynamic>)['text'] as String?;
+      }
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, null));
+
+    await pumpAndOpenInviteDialog(tester);
+    await tester.tap(find.text('Copy'));
+    await tester.pump();
+
+    expect(copied, 'http://localhost:3000/auth/join-family?token=abc');
+  });
+
+  testWidgets('the invite rides the platform share sheet', (tester) async {
+    const shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
+    final shareCalls = <MethodCall>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        shareChannel, (call) async {
+      shareCalls.add(call);
+      return '';
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(shareChannel, null));
+
+    await pumpAndOpenInviteDialog(tester);
+    await tester.tap(find.text('Share'));
+    await tester.pump();
+
+    expect(shareCalls, hasLength(1));
+    expect(shareCalls.single.method, 'share');
+    expect(
+      (shareCalls.single.arguments as Map<dynamic, dynamic>)['uri'],
+      'http://localhost:3000/auth/join-family?token=abc',
+    );
   });
 
   testWidgets('still loading (no error) shows the loading line', (tester) async {

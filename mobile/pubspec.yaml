@@ -33,6 +33,9 @@ dependencies:
   # "the QR serves the family standing in the same room"). Pure-Dart renderer —
   # no platform channel, no new .swift file.
   qr_flutter: ^4.1.0
+  # The invite link rides the platform share sheet — a ~250-char URL is for
+  # sending, not selecting. The Flutter-community standard share plugin.
+  share_plus: ^12.0.1
 
 dev_dependencies:
   flutter_test:
