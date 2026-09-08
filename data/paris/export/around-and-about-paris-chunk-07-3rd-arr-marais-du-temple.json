@@ -172,52 +172,9 @@
       "is_new_poi": true
     },
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "tue": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "wed": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "thu": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "fri": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "sun": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated public garden with closing bells; OSM tag \"sunrise-sunset\" transcribed to an approximate daylight window as a fixed clock is required.",
+    "opening_hours": "sunrise-sunset",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: sunrise-sunset.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Public garden with lawns, mature trees, a pond and rockery to walk round and read the Templar history, about 20 minutes; nothing to enter.",
@@ -231,8 +188,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A free public garden entered through an open gate with no ticket or bag check, so there is no line to price.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Place des Vosges",
@@ -370,8 +326,7 @@
         "basis": "The fenced garden inside the arcades is where the corpus sends a person to find a bench near the children's play area and watch; you stand or sit among the lawns and fountains, not under the arcades. Thirty metres round the centre covers the benches and fountains and stops short of the arcade walks."
       }
     ],
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Musee Carnavalet",
@@ -483,46 +438,8 @@
     "latitude": 48.855076,
     "longitude": 2.361661,
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo off; Tu-Su 10:00-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A gated museum; hours follow the institution's published pattern of Tuesday-Sunday 10:00-18:00, closed Mondays.",
     "place_category": "museum",
     "visit_seconds_inside": 4200,
@@ -543,8 +460,7 @@
     ],
     "queue_basis": "The permanent collection is free so there is no ticket-purchase line, but a bag check at the mansion entrance forms a small moving queue at midday.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Musee Picasso",
@@ -655,46 +571,8 @@
     "latitude": 48.85987,
     "longitude": 2.362115,
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:30",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:30",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:30",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:30",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo off; Tu-Fr 10:30-18:00; Sa-Su 09:30-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A gated museum; hours follow the institution's published pattern of Tue-Fri 10:30-18:00 and weekends 09:30-18:00, closed Mondays.",
     "place_category": "museum",
     "visit_seconds_inside": 4200,
@@ -715,8 +593,7 @@
     ],
     "queue_basis": "Timed entry and a bag check at the mansion door keep the line to a minor wait even when the ticket gate is busy.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Marche des Enfants Rouges",
@@ -804,8 +681,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A covered public market with open entrances and no admission control, so visitors walk straight in and there is no line to enter.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Hotel de Soubise",
@@ -950,7 +826,6 @@
     ],
     "queue_basis": "The National Archives museum has a single ticket desk with a bag check that moves quickly, producing only a minor line at afternoon peak.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

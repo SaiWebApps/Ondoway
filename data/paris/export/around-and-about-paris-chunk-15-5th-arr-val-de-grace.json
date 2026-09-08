@@ -155,17 +155,9 @@
       }
     ],
     "poi_role": "walk_by_only",
-    "opening_hours": {
-      "mon": [],
-      "tue": [],
-      "wed": [],
-      "thu": [],
-      "fri": [],
-      "sat": [],
-      "sun": []
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated former abbey/military site; OSM tag 'closed' transcribed as closed every day.",
+    "opening_hours": "closed",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: closed.",
     "place_category": "church",
     "visit_seconds_inside": 1500,
     "visit_basis": "Royal abbey with a monumental Baroque facade and dome to view from the forecourt, and a church interior with Mignard's painted cupola open to visitors, roughly 25 min inside when accessible.",
@@ -179,12 +171,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A walk-by abbey church attached to a military hospital, viewed from the exterior with no general ticketed entry line to stand in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"closed\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   }
 ]

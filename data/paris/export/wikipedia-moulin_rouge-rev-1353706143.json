@@ -361,7 +361,6 @@
     "queue_peak_hours": [],
     "queue_basis": "This is a cabaret with timed evening show admission, not a walk-in attraction, so a daytime walking-tour stop views the facade from the open street with no line to stand in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

@@ -280,7 +280,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A freestanding triumphal arch in the open Tuileries axis with no interior and no ticket, so there is nothing to queue for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   }
 ]

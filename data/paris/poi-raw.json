@@ -66,51 +66,8 @@
     "typical_duration_min": 35,
     "visit_seconds_inside": 5400,
     "visit_basis": "The Champ de Mars and the space beneath the four piers absorb over half an hour of looking up and photographing; going up involves long security and lift queues plus two viewing levels and the summit, which would absorb well over two hours, capped at the 90-minute tour maximum.",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "tue": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 09:30-23:45",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Gated ticketed monument with elevator/stair access; hours follow the tower's own published year-round daily pattern (extended summer hours from mid-June).",
     "place_category": "other",
     "children_can_run": false,
@@ -209,46 +166,8 @@
     "typical_duration_min": 30,
     "visit_seconds_inside": 5400,
     "visit_basis": "The glass pyramid, the Cour Napoleon and the palace facades absorb half an hour outside; inside is the world's largest art museum with 35,000 works over several wings that would absorb a full day, capped at the 90-minute tour maximum plus a long security and ticket queue.",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "tue": [],
-      "wed": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:00",
-          "21:45"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo 09:00-18:00; Tu off; We-Th 09:00-18:00; Fr 09:00-21:45; Sa-Su 09:00-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Gated museum; hours from the Louvre's own published schedule, closed Tuesdays with late Friday opening.",
     "place_category": "museum",
     "children_can_run": false,
@@ -503,52 +422,9 @@
     "typical_duration_min": 20,
     "visit_seconds_inside": 2400,
     "visit_basis": "The arch, its relief sculptures and the Tomb of the Unknown Soldier viewed from the surrounding plaza absorb 20 minutes; climbing the 284 steps to the rooftop terrace with its view down the avenues takes about 40 minutes with the ticket queue.",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "22:30"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "22:30"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "22:30"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "22:30"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "22:30"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "22:30"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "22:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated rooftop terrace monument; transcribed from OSM tag \"Apr 2-Jan 31: Mo-Su 10:00-22:30; Apr 1,Sep 30: Mo-Su 10:00-23:00; Oct 1,Dec 31: Mo-Su 10:00-22:30; Jan 1,May 1,May 8,Jul 14,Nov 11,Dec 25: off\" using the dominant 10:00-22:30 window.",
+    "opening_hours": "Apr 02-Jan 31: Mo-Su 10:00-22:30; Apr 01,Sep 30: Mo-Su 10:00-23:00; Oct 01,Dec 31: Mo-Su 10:00-22:30; Jan 01,May 01,May 08,Jul 14,Nov 11,Dec 25: off",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Apr 02-Jan 31: Mo-Su 10:00-22:30; Apr 01,Sep 30: Mo-Su 10:00-23:00; Oct 01,Dec 31: Mo-Su 10:00-22:30; Jan 01,May 01,May 08,Jul 14,Nov 11,Dec 25: off.",
     "place_category": "monument",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -630,51 +506,8 @@
     "typical_duration_min": 25,
     "visit_seconds_inside": 1500,
     "visit_basis": "The hilltop terrace, the white domes seen up close and the sweeping city panorama absorb 25 minutes; the interior with its large apse mosaic and ambulatory takes around 25 minutes, entry being free without a ticket queue.",
-    "opening_hours": {
-      "mon": [
-        [
-          "06:30",
-          "22:30"
-        ]
-      ],
-      "tue": [
-        [
-          "06:30",
-          "22:30"
-        ]
-      ],
-      "wed": [
-        [
-          "06:30",
-          "22:30"
-        ]
-      ],
-      "thu": [
-        [
-          "06:30",
-          "22:30"
-        ]
-      ],
-      "fri": [
-        [
-          "06:30",
-          "22:30"
-        ]
-      ],
-      "sat": [
-        [
-          "06:30",
-          "22:30"
-        ]
-      ],
-      "sun": [
-        [
-          "06:30",
-          "22:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 06:30-22:30",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Gated basilica you enter; hours from the basilica's own published daily opening pattern.",
     "place_category": "church",
     "children_can_run": false,
@@ -752,47 +585,9 @@
     "typical_duration_min": 15,
     "visit_seconds_inside": 5400,
     "visit_basis": "The former railway station facade and riverside frontage give about 15 minutes outside; inside is a major Impressionist and Post-Impressionist collection over several floors that would absorb three hours, capped at the 90-minute tour maximum plus a ticket queue.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "21:45"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated museum; transcribed from OSM tag \"Tu-Su 09:30-18:00; Th 09:30-21:45\" with Monday closed by absence.",
+    "opening_hours": "Tu-Su 09:30-18:00; Th 09:30-21:45",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 09:30-18:00; Th 09:30-21:45.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -808,13 +603,7 @@
       ]
     ],
     "queue_basis": "Security screening and ticket checks at the single main entrance of the converted railway station form a substantial midday line, shortest at opening and late afternoon.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 09:30-18:00; Th 09:30-21:45\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Champs-Elysees",
@@ -961,51 +750,8 @@
     "typical_duration_min": 40,
     "visit_seconds_inside": null,
     "visit_basis": "A 25-hectare formal garden with the central basin, over 100 statues, the Medici Fountain and tree-lined walks; strolling and sitting absorbs 40 minutes, and it is an open garden with no interior to enter.",
-    "opening_hours": {
-      "mon": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "tue": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "wed": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "thu": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "fri": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "sat": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "sun": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 07:30-21:30",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Walled park with gates and closing bells; hours vary seasonally with sunrise/sunset, typical summer window given per the Senat's published schedule.",
     "place_category": "garden",
     "children_can_run": true,
@@ -1096,52 +842,9 @@
     "typical_duration_min": 15,
     "visit_seconds_inside": 3960,
     "visit_basis": "The modest facade and courtyard are seen in 15 minutes; inside is roughly 28 minutes of security and ticket queue plus 38 minutes under the two-storey glass, the upper chapel's 15 stained-glass windows being the whole point.",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated ticketed chapel; transcribed from OSM tag \"Jan-Mar 09:00-17:00; Apr-Sep 09:00-19:00; Oct-Dec 09:00-17:00\" using the current Apr-Sep 09:00-19:00 season.",
+    "opening_hours": "Jan-Mar 09:00-17:00; Apr-Sep 09:00-19:00; Oct-Dec 09:00-17:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Jan-Mar 09:00-17:00; Apr-Sep 09:00-19:00; Oct-Dec 09:00-17:00.",
     "place_category": "church",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -1157,8 +860,7 @@
       ]
     ],
     "queue_basis": "Airport-style security shared with the Palais de Justice plus a ticket check funnels visitors ahead of a small chapel, so the line runs long at midday and thins near opening and late afternoon.",
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Pantheon",
@@ -1224,52 +926,9 @@
     "typical_duration_min": 20,
     "visit_seconds_inside": 3000,
     "visit_basis": "The neoclassical portico, dome and the square before it absorb 20 minutes; inside is the vast nave with murals, the Foucault pendulum and the crypt of luminaries, taking around 45 minutes plus a short ticket queue.",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated ticketed mausoleum; transcribed from OSM tag \"Mo-Su 10:00-18:00; Apr 1-Sep 30: Mo-Su 10:00-18:30; Jan 1,May 1,Dec 25: off\" using the current Apr-Sep 10:00-18:30 season.",
+    "opening_hours": "Mo-Su 10:00-18:00; Apr 1-Sep 30: Mo-Su 10:00-18:30; Jan 1,May 1,Dec 25: off",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 10:00-18:00; Apr 1-Sep 30: Mo-Su 10:00-18:30; Jan 1,May 1,Dec 25: off.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": true,
@@ -1285,8 +944,7 @@
       ]
     ],
     "queue_basis": "A single ticket desk and bag check at the front portico creates a minor line at busy midday hours that clears quickly at opening or late in the day.",
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Palais Garnier",
@@ -1354,51 +1012,8 @@
     "typical_duration_min": 15,
     "visit_seconds_inside": 3600,
     "visit_basis": "The ornate Beaux-Arts facade and its sculpture absorb 15 minutes; inside the grand staircase, the mirrored foyers and the Chagall-ceilinged auditorium take around an hour with the ticket queue.",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 10:00-17:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Gated ticketed opera house with daytime self-guided visits; hours from the Opera's own published standard daily pattern (may close for matinees).",
     "place_category": "other",
     "children_can_run": false,
@@ -1480,46 +1095,8 @@
     "typical_duration_min": 20,
     "visit_seconds_inside": 5400,
     "visit_basis": "The exposed-pipe exterior and the sloping piazza where crowds gather absorb 20 minutes; inside is Europe's largest modern art collection plus the escalator facade views, which would absorb over two hours, capped at the 90-minute tour maximum.",
-    "opening_hours": {
-      "mon": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "tue": [],
-      "wed": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "thu": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "fri": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "sun": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo 11:00-21:00; Tu off; We-Su 11:00-21:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Gated museum; hours from the Centre's own published schedule, closed Tuesdays.",
     "place_category": "museum",
     "children_can_run": false,
@@ -1604,51 +1181,8 @@
     "typical_duration_min": 25,
     "visit_seconds_inside": 5400,
     "visit_basis": "The vast forecourt, the cannon line and the gilded dome seen from the esplanade absorb 25 minutes; inside are Napoleon's tomb beneath the dome and the huge Army Museum, which would absorb over two hours, capped at the 90-minute tour maximum plus a ticket queue.",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 10:00-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Gated museum and tomb complex; hours from the Army Museum's own published daily opening pattern.",
     "place_category": "museum",
     "children_can_run": false,
@@ -1910,47 +1444,9 @@
     "typical_duration_min": 20,
     "visit_seconds_inside": 5400,
     "visit_basis": "Monumental glass-roofed exhibition hall; the vast nave and staircases plus a major temporary exhibition would absorb well over two hours, capped at the 90-minute tour maximum, with a ticket queue included.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "22:30"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated exhibition hall; transcribed from OSM tag 'Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30' with Monday closed.",
+    "opening_hours": "Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30.",
     "place_category": "monument",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -1966,13 +1462,7 @@
       ]
     ],
     "queue_basis": "Entry to the exhibition hall runs through security bag checks and timed-ticket scanning at a controlled entrance, so the line builds midday during major shows; the numbers reflect a busy exhibition period and drop at opening.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Petit Palais",
@@ -2038,47 +1528,9 @@
     "typical_duration_min": 12,
     "visit_seconds_inside": 4200,
     "visit_basis": "Free Beaux-Arts fine-art museum with roughly a dozen galleries over two levels plus a hidden interior garden cafe; an engaged visit runs 60-70 min and entry is free so no long queue.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "Gated municipal museum; published City of Paris pattern is Tuesday-Sunday 10:00-18:00, closed Mondays.",
+    "opening_hours": "Tu-Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 10:00-18:00.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -2640,47 +2092,9 @@
     "typical_duration_min": 20,
     "visit_seconds_inside": null,
     "visit_basis": "Grand neo-Renaissance city hall facade fronting a large open plaza where you stand back to take in the statues and rooflines; interior open only for occasional booked exhibitions, not a normal visit.",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sun": []
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated building with ticketed exhibition access; transcribed from OSM tag 'Mo-Sa 10:00-19:00' with Sunday closed.",
+    "opening_hours": "Mo-Sa 10:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 10:00-19:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -2691,13 +2105,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "The City Hall interior is only open by occasional booked exhibition or event, so a walking-tour stop views the facade and forecourt from the open square with no line.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 10:00-19:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Place de la Bastille",
@@ -2843,52 +2251,9 @@
     "typical_duration_min": 40,
     "visit_seconds_inside": null,
     "visit_basis": "Large formal royal garden with long gravel allees, fountains, statues and terraces between the Louvre and Concorde; walking its length and pausing at the basins fills the better part of an hour, open-air throughout.",
-    "opening_hours": {
-      "mon": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "tue": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "wed": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "thu": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "fri": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "sun": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated garden with closing gates; transcribed from OSM tag 'Mo-Su 07:30-21:00'.",
+    "opening_hours": "Mo-Su 07:30-21:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 07:30-21:00.",
     "place_category": "garden",
     "children_can_run": true,
     "sit_and_talk": true,
@@ -2934,13 +2299,7 @@
         "basis": "The Grand Bassin Octogonal fills the western end just inside the Place de la Concorde gates; a person stands at its rim with Le Silence and the basin's edge in front of them, nearly four hundred metres west of the garden pin."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 07:30-21:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Conciergerie",
@@ -3008,52 +2367,9 @@
     "typical_duration_min": 12,
     "visit_seconds_inside": 3900,
     "visit_basis": "Medieval royal palace and Revolutionary prison; the vaulted Hall of the Men-at-Arms, the tribunal and Marie Antoinette's cell take around an hour plus a ticket queue.",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated ticketed monument; transcribed from OSM tag 'Mo-Su 09:30-18:00'.",
+    "opening_hours": "Mo-Su 09:30-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 09:30-18:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -3069,13 +2385,7 @@
       ]
     ],
     "queue_basis": "Entry to the medieval prison passes through a security bag-check and a single ticket desk at one narrow entrance, so a substantial line forms midday and thins near opening and late afternoon.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 09:30-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Assemblee Nationale",
@@ -3615,51 +2925,8 @@
     "typical_duration_min": 75,
     "visit_seconds_inside": null,
     "visit_basis": "Vast hillside cemetery with cobbled avenues and many famous graves to hunt down over a wide area; an outdoor walk with no building to enter.",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "08:30",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Fr 08:00-18:00; Sa 08:30-18:00; Su 09:00-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A gated walled cemetery with closing bells; hours follow the City of Paris's published summer pattern (opens 08:00 weekdays, 08:30 Sat, 09:00 Sun, closing 18:00).",
     "place_category": "other",
     "children_can_run": false,
@@ -3854,51 +3121,8 @@
     "typical_duration_min": 40,
     "visit_seconds_inside": null,
     "visit_basis": "Mid-size terraced cemetery with several notable graves along tree-lined paths; explored on foot outdoors with no interior.",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "08:30",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Fr 08:00-18:00; Sa 08:30-18:00; Su 09:00-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A gated walled cemetery with closing gates; hours follow the City of Paris's published summer pattern shared across municipal cemeteries.",
     "place_category": "other",
     "children_can_run": false,
@@ -3975,51 +3199,8 @@
     "typical_duration_min": 45,
     "visit_seconds_inside": null,
     "visit_basis": "Large flat gridded cemetery with numerous famous graves spread across its avenues; an outdoor walk, nothing to enter.",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "08:30",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Fr 08:00-18:00; Sa 08:30-18:00; Su 09:00-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A gated walled cemetery with closing gates; hours follow the City of Paris's published summer pattern shared across municipal cemeteries.",
     "place_category": "other",
     "children_can_run": false,
@@ -4098,46 +3279,8 @@
     "typical_duration_min": 5,
     "visit_seconds_inside": 4200,
     "visit_basis": "Two connected Marais mansions with dozens of rooms tracing Paris history plus courtyards; large free collection, typically 60-75 min with minimal queue.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo off; Tu-Su 10:00-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A gated museum; hours follow the institution's published pattern of Tuesday-Sunday 10:00-18:00, closed Mondays.",
     "place_category": "museum",
     "children_can_run": false,
@@ -4220,46 +3363,8 @@
     "typical_duration_min": 5,
     "visit_seconds_inside": 3000,
     "visit_basis": "Two oval rooms of Monet's Water Lilies murals plus a lower-floor Impressionist collection; roughly 35 min inside plus a 15-min ticket queue.",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "tue": [],
-      "wed": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo 09:00-18:00; Tu off; We-Su 09:00-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A gated museum; hours follow the institution's published pattern of 09:00-18:00, closed Tuesdays.",
     "place_category": "museum",
     "children_can_run": false,
@@ -4341,47 +3446,9 @@
     "typical_duration_min": 8,
     "visit_seconds_inside": 4200,
     "visit_basis": "Hotel Biron interior galleries plus a large formal sculpture garden with The Thinker and Gates of Hell; typically 55-65 min including a short queue.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated sculpture museum; transcribed from the OSM tag \"Tu-Su 10:00-18:30\", closed Mondays.",
+    "opening_hours": "Tu-Su 10:00-18:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 10:00-18:30.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": true,
@@ -4397,13 +3464,7 @@
       ]
     ],
     "queue_basis": "A single ticket desk and bag check at the Hotel Biron gate create a modest wait at peak hours that stays manageable.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:30\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Musee Picasso",
@@ -4469,46 +3530,8 @@
     "typical_duration_min": 5,
     "visit_seconds_inside": 4200,
     "visit_basis": "17th-century mansion over several floors with thousands of works shown in rotation; typically 60-70 min plus a short ticket queue.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:30",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:30",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:30",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:30",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo off; Tu-Fr 10:30-18:00; Sa-Su 09:30-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A gated museum; hours follow the institution's published pattern of Tue-Fri 10:30-18:00 and weekends 09:30-18:00, closed Mondays.",
     "place_category": "museum",
     "children_can_run": false,
@@ -4593,47 +3616,9 @@
     "typical_duration_min": 5,
     "visit_seconds_inside": 4200,
     "visit_basis": "Medieval museum over Gallo-Roman baths with the Lady and the Unicorn tapestries and stone remains; typically 60-70 min including a short queue.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "09:30",
-          "18:15"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "18:15"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "18:15"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "18:15"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "18:15"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "18:15"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated medieval-art museum; transcribed from the OSM tag \"Tu off; ... Tu-Su 09:30-18:15\", closed Mondays.",
+    "opening_hours": "Jan 1 off; May 1 off; Dec 25 off; Tu-Su 09:30-18:15",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Jan 1 off; May 1 off; Dec 25 off; Tu-Su 09:30-18:15.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": true,
@@ -4712,47 +3697,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 3600,
     "visit_basis": "Raw concrete 1937 building with huge changing contemporary-art halls; engaged visit around an hour depending on exhibitions.",
-    "opening_hours": {
-      "mon": [
-        [
-          "12:00",
-          "24:00"
-        ]
-      ],
-      "tue": [],
-      "wed": [
-        [
-          "12:00",
-          "24:00"
-        ]
-      ],
-      "thu": [
-        [
-          "12:00",
-          "24:00"
-        ]
-      ],
-      "fri": [
-        [
-          "12:00",
-          "24:00"
-        ]
-      ],
-      "sat": [
-        [
-          "12:00",
-          "24:00"
-        ]
-      ],
-      "sun": [
-        [
-          "12:00",
-          "24:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated contemporary art centre with ticketed entry; transcribed from OSM tag 'Mo-Su 12:00-24:00; Tu off; Jan 01 off; May 01 off; Dec 25 off; Dec 24 12:00- 18:00; Dec 31 12:00- 18:00' with Tuesday closed.",
+    "opening_hours": "Mo-Su 12:00-24:00; Tu off; Jan 01 off; May 01 off; Dec 25 off; Dec 24 12:00- 18:00; Dec 31 12:00- 18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 12:00-24:00; Tu off; Jan 01 off; May 01 off; Dec 25 off; Dec 24 12:00- 18:00; Dec 31 12:00- 18:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -4768,8 +3715,7 @@
       ]
     ],
     "queue_basis": "A ticket counter and light bag check at a very large contemporary art hall move quickly, and long opening hours spread arrivals so the line stays minor.",
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Memorial de la Shoah",
@@ -4837,47 +3783,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 3600,
     "visit_basis": "Wall of Names in the forecourt plus a crypt and permanent Holocaust exhibition with a security check; typically about an hour inside.",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "22:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "A gated Holocaust museum; hours follow the institution's published pattern of 10:00-18:00 (Thursday until 22:00), closed Saturdays.",
+    "opening_hours": "Su-Fr 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Su-Fr 10:00-18:00.",
     "place_category": "monument",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -5127,47 +4035,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 5400,
     "visit_basis": "Europe's largest science museum with a planetarium, submarine and IMAX; would absorb a half-day, capped at the 90-minute tour maximum.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated science museum; transcribed from the OSM tag \"Tu-Sa 10:00-18:00; Su 10:00-19:00\", closed Mondays.",
+    "opening_hours": "Tu-Sa 10:00-18:00; Su 10:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Sa 10:00-18:00; Su 10:00-19:00.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": true,
@@ -5183,13 +4053,7 @@
       ]
     ],
     "queue_basis": "A vast science museum with many ticket counters and multiple entrances spreads the load, so even a bag check at busy family hours yields only a modest wait.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Sa 10:00-18:00; Su 10:00-19:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Musee des Arts et Metiers",
@@ -5256,47 +4120,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 5400,
     "visit_basis": "Large science and technology museum with 80,000 objects across multiple galleries plus Foucault's pendulum in a medieval chapel; would absorb over two hours, capped at the 90-minute tour maximum; exterior is a plain converted priory worth a brief look.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated museum; transcribed from OSM tag 'Tu-Th 10:00-18:00; Fr 10:00-21:00; Sa-Su 10:00-18:00' (Monday closed).",
+    "opening_hours": "Tu-Th 10:00-18:00; Fr 10:00-21:00; Sa-Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Th 10:00-18:00; Fr 10:00-21:00; Sa-Su 10:00-18:00.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -5312,13 +4138,7 @@
       ]
     ],
     "queue_basis": "A mid-sized ticketed museum with a bag check and ticket desk that rarely backs up; the line is minor and moves, peaking only midday when school and tour groups arrive.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Th 10:00-18:00; Fr 10:00-21:00; Sa-Su 10:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Musee Pasteur",
@@ -5469,47 +4289,9 @@
     "typical_duration_min": 20,
     "visit_seconds_inside": 5400,
     "visit_basis": "Gehry building of twelve glass sails with rooftop terraces and rotating contemporary art galleries; the exterior and its Bois de Boulogne setting reward twenty minutes and the interior would absorb well over two hours, capped at 90 minutes.",
-    "opening_hours": {
-      "mon": [
-        [
-          "12:00",
-          "19:00"
-        ]
-      ],
-      "tue": [],
-      "wed": [
-        [
-          "12:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "12:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "12:00",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "11:00",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "11:00",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated art museum; transcribed from OSM tag 'Mo-Th 12:00-19:00; Tu off; Fr 12:00-21:00; Sa,Su 11:00-20:00'.",
+    "opening_hours": "Mo-Th 12:00-19:00; Tu off; Fr 12:00-21:00; Sa,Su 11:00-20:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Th 12:00-19:00; Tu off; Fr 12:00-21:00; Sa,Su 11:00-20:00.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -5525,13 +4307,7 @@
       ]
     ],
     "queue_basis": "A blockbuster contemporary museum in the Bois de Boulogne with security screening and ticket-gate checks funneling large crowds through a single entrance, backing up substantially on weekend and holiday afternoons in peak season.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Th 12:00-19:00; Tu off; Fr 12:00-21:00; Sa,Su 11:00-20:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Bibliotheque Francois Mitterrand",
@@ -5678,52 +4454,9 @@
     "typical_duration_min": 8,
     "visit_seconds_inside": 1200,
     "visit_basis": "Oldest church in Paris with a Romanesque tower and painted medieval nave; interior takes about 20 min, exterior square and cafe corner a few minutes more.",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "tue": [
-        [
-          "07:30",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "07:30",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "07:30",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "07:30",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "08:30",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated church you enter; transcribed from OSM tag 'Mo,Su 09:30-20:00; Tu-Fr 07:30-20:00; Sa 08:30-20:00'.",
+    "opening_hours": "Mo,Su 09:30-20:00; Tu-Fr 07:30-20:00; Sa 08:30-20:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo,Su 09:30-20:00; Tu-Fr 07:30-20:00; Sa 08:30-20:00.",
     "place_category": "church",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -5734,13 +4467,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An active parish church with an open door and free entry that visitors walk straight into, so there is no ticket desk or security to stand in.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo,Su 09:30-20:00; Tu-Fr 07:30-20:00; Sa 08:30-20:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Saint-Sulpice",
@@ -5806,52 +4533,9 @@
     "typical_duration_min": 8,
     "visit_seconds_inside": 1500,
     "visit_basis": "Huge Baroque church with Delacroix murals, the gnomon solar calendar and a monumental organ; interior of side chapels and nave takes about 25 min, with a large fountain square outside.",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "sat": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "sun": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated church you enter; transcribed from OSM tag '08:00-19:45' applied to all seven days.",
+    "opening_hours": "08:00-19:45",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 08:00-19:45.",
     "place_category": "church",
     "children_can_run": false,
     "sit_and_talk": true,
@@ -5862,13 +4546,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A large free-entry church you walk directly into through its main doors with no ticketing or security, so no queue forms before entering.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"08:00-19:45\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Saint-Etienne-du-Mont",
@@ -5932,60 +4610,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 1200,
     "visit_basis": "Church holding the last rood screen in Paris and the shrine of Sainte Genevieve; the carved interior takes about 20 min, the facade near the Pantheon a few minutes.",
-    "opening_hours": {
-      "mon": [
-        [
-          "06:30",
-          "19:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:45",
-          "19:45"
-        ]
-      ],
-      "wed": [
-        [
-          "08:45",
-          "22:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:45",
-          "19:45"
-        ]
-      ],
-      "fri": [
-        [
-          "08:45",
-          "19:45"
-        ]
-      ],
-      "sat": [
-        [
-          "08:45",
-          "12:00"
-        ],
-        [
-          "14:00",
-          "19:45"
-        ]
-      ],
-      "sun": [
-        [
-          "08:45",
-          "12:15"
-        ],
-        [
-          "14:30",
-          "19:45"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated church you enter; transcribed from OSM tag 'Mo 06:30-19:30; Tu-Fr 08:45-19:45; We 08:45-22:00; Sa 08:45-12:00,14:00-19:45; Su 08:45-12:15,14:30-19:45'.",
+    "opening_hours": "Mo 06:30-19:30; Tu-Fr 08:45-19:45; We 08:45-22:00; Sa 08:45-12:00,14:00-19:45; Su 08:45-12:15,14:30-19:45",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo 06:30-19:30; Tu-Fr 08:45-19:45; We 08:45-22:00; Sa 08:45-12:00,14:00-19:45; Su 08:45-12:15,14:30-19:45.",
     "place_category": "church",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -5996,13 +4623,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A free parish church with an open door and no admission control, so visitors enter without stopping and there is nothing to queue for.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo 06:30-19:30; Tu-Fr 08:45-19:45; We 08:45-22:00; Sa 08:45-12:00,14:00-19:45; Su 08:45-12:15,14:30-19:45\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Saint-Eustache",
@@ -6068,52 +4689,9 @@
     "typical_duration_min": 8,
     "visit_seconds_inside": 1500,
     "visit_basis": "Second-largest church in Paris, a Gothic-Renaissance hybrid with the country's largest organ and soaring vaults; interior takes about 25 min, exterior facing Les Halles a few minutes.",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:30",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "09:30",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated church you enter; transcribed from OSM tag 'Mo-Fr 09:30-19:00; Sa 10:00-19:00; Su 09:00-19:00'.",
+    "opening_hours": "Mo-Fr 09:30-19:00; Sa 10:00-19:00; Su 09:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Fr 09:30-19:00; Sa 10:00-19:00; Su 09:00-19:00.",
     "place_category": "church",
     "children_can_run": false,
     "sit_and_talk": true,
@@ -6124,13 +4702,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A large free-entry church near Les Halles with open doors and no ticket or security check, so entry is immediate and no line forms.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Fr 09:30-19:00; Sa 10:00-19:00; Su 09:00-19:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "La Madeleine",
@@ -6751,52 +5323,9 @@
     "typical_duration_min": 8,
     "visit_seconds_inside": 720,
     "visit_basis": "Small historic patisserie shopfront on Rue Montorgueil; a few minutes to admire the 1730 facade and painted interior decor, and inside a single ornate shop room with a display counter and a short service queue, roughly 10-15 min including browsing and buying.",
-    "opening_hours": {
-      "mon": [
-        [
-          "07:30",
-          "20:30"
-        ]
-      ],
-      "tue": [
-        [
-          "07:30",
-          "20:30"
-        ]
-      ],
-      "wed": [
-        [
-          "07:30",
-          "20:30"
-        ]
-      ],
-      "thu": [
-        [
-          "07:30",
-          "20:30"
-        ]
-      ],
-      "fri": [
-        [
-          "07:30",
-          "20:30"
-        ]
-      ],
-      "sat": [
-        [
-          "07:30",
-          "20:30"
-        ]
-      ],
-      "sun": [
-        [
-          "07:30",
-          "20:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "A patisserie shop entered through a door (gated); hours from the establishment's own published daily pattern of roughly 7:30-20:30, seven days a week.",
+    "opening_hours": "Mo-Fr 08:00-20:30; Su 08:00-20:00; PH closed",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Fr 08:00-20:30; Su 08:00-20:00; PH closed.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -6955,41 +5484,8 @@
     "typical_duration_min": 8,
     "visit_seconds_inside": 900,
     "visit_basis": "Famous ice cream parlour on Ile Saint-Louis; a few minutes at the corner shopfront, and inside a small salon or counter with a reliably long queue, so 15 min including waiting and choosing.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [],
-      "wed": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Tu off; We-Su 10:00-20:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "An ice cream parlour entered through a door (gated); the flagship's published pattern is Wednesday-Sunday, closed Monday and Tuesday.",
     "place_category": "other",
     "children_can_run": false,
@@ -7072,52 +5568,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 2100,
     "visit_basis": "Cramped multi-room English bookshop across from Notre-Dame; the facade and window are quick, but inside two floors of tightly packed stacks, reading nooks and the tumbleweed beds reward 30-40 min of genuine browsing.",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "11:00",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "11:00",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "A bookshop entered through a door (gated); hours from the shop's own published pattern of 10:00-20:00 weekdays and 11:00-20:00 weekends.",
+    "opening_hours": "Mo-Su 10:00-23:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 10:00-23:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -7200,9 +5653,9 @@
     "typical_duration_min": 5,
     "visit_seconds_inside": 2400,
     "visit_basis": "Ordinary Montmartre corner cafe made famous by the film Amelie; the exterior is a brief photo stop, but sitting inside among the Amelie memorabilia over a drink is the real visit, around 40 min.",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "Gated cafe with a door; hours not confidently known; left unfiltered.",
+    "opening_hours": "Mo-Fr 07:30-02:00; Sa-Su 08:00-02:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Fr 07:30-02:00; Sa-Su 08:00-02:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -7277,9 +5730,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 3000,
     "visit_basis": "Landmark 1887 Left Bank cafe with its mirrored Art Deco interior; the terrace facade is quick to appreciate, while sitting inside for the historic room and a coffee is the point, comfortably 45-50 min including service.",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "Gated cafe with a door; hours not confidently known; left unfiltered.",
+    "opening_hours": "Mo-Su 07:30-01:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 07:30-01:30.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -7361,52 +5814,9 @@
     "typical_duration_min": 8,
     "visit_seconds_inside": 2400,
     "visit_basis": "Small pink-painted corner restaurant in Montmartre known from Utrillo's paintings; the picturesque exterior draws several minutes of looking and photos, and a meal or drink in the little interior runs around 40 min.",
-    "opening_hours": {
-      "mon": [
-        [
-          "12:00",
-          "22:00"
-        ]
-      ],
-      "tue": [
-        [
-          "12:00",
-          "22:00"
-        ]
-      ],
-      "wed": [
-        [
-          "12:00",
-          "22:00"
-        ]
-      ],
-      "thu": [
-        [
-          "12:00",
-          "22:00"
-        ]
-      ],
-      "fri": [
-        [
-          "12:00",
-          "22:00"
-        ]
-      ],
-      "sat": [
-        [
-          "12:00",
-          "22:00"
-        ]
-      ],
-      "sun": [
-        [
-          "12:00",
-          "22:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "A restaurant entered through a door (gated); hours from its published daily service pattern of roughly midday to 22:00.",
+    "opening_hours": "Mo-Su 11:00-22:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 11:00-22:30.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -7489,52 +5899,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": null,
     "visit_basis": "Historic Montparnasse brasserie with literary brass plaques; as a walk-by the facade and terrace occupy a few minutes, and entering to dine is not a normal part of a tour stop.",
-    "opening_hours": {
-      "mon": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "tue": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "wed": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "thu": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "fri": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "sat": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "sun": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "A brasserie entered through a door (gated); hours from its published daily pattern of roughly midday to 23:00.",
+    "opening_hours": "Mo-Su 12:00-14:30,19:00-22:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 12:00-14:30,19:00-22:30.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -7843,52 +6210,9 @@
     "typical_duration_min": 55,
     "visit_seconds_inside": null,
     "visit_basis": "Large dramatic hillside park with a lake, cliffs, waterfall, grotto and a temple on a rocky island reached by a suspension bridge; walking the paths and climbing to the temple easily fills an hour, all outdoors.",
-    "opening_hours": {
-      "mon": [
-        [
-          "07:00",
-          "22:00"
-        ]
-      ],
-      "tue": [
-        [
-          "07:00",
-          "22:00"
-        ]
-      ],
-      "wed": [
-        [
-          "07:00",
-          "22:00"
-        ]
-      ],
-      "thu": [
-        [
-          "07:00",
-          "22:00"
-        ]
-      ],
-      "fri": [
-        [
-          "07:00",
-          "22:00"
-        ]
-      ],
-      "sat": [
-        [
-          "07:00",
-          "22:00"
-        ]
-      ],
-      "sun": [
-        [
-          "07:00",
-          "22:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated park with closing gates; transcribed from OSM tag \"Apr,Sep 07:00-21:00; Oct-Mar 07:00-20:00; May-Aug 07:00-22:00\" using the current summer (May-Aug) window.",
+    "opening_hours": "Apr,Sep 07:00-21:00; Oct-Mar 07:00-20:00; May-Aug 07:00-22:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Apr,Sep 07:00-21:00; Oct-Mar 07:00-20:00; May-Aug 07:00-22:00.",
     "place_category": "park",
     "children_can_run": true,
     "sit_and_talk": true,
@@ -7899,8 +6223,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A free public park with open gates you walk straight through — no ticket, no security, no line.",
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Bois de Vincennes",
@@ -8048,51 +6371,8 @@
     "typical_duration_min": 20,
     "visit_seconds_inside": 3600,
     "visit_basis": "Medieval royal fortress with a moat, the 52m keep and the Sainte-Chapelle; circling the ramparts and courtyard outside takes 20 min, and inside the keep's cells, chambers and the chapel with a ticket runs about an hour including entry.",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 10:00-17:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A monument entered by ticket (gated); hours from the château's published winter pattern of 10:00-17:00 daily (summer extends to 18:00).",
     "place_category": "other",
     "children_can_run": false,
@@ -8173,51 +6453,8 @@
     "typical_duration_min": 45,
     "visit_seconds_inside": null,
     "visit_basis": "Large formal botanical garden with tree-lined alleys, alpine and rose gardens and museum buildings along its edges; walking the full length and side gardens absorbs around 45 min, treated here as an open garden with its museums as separate entries.",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "sat": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "sun": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 08:00-17:30",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A walled botanical garden with closing times; hours reflect the garden's published winter pattern of roughly 08:00–17:30 daily, extending later in summer.",
     "place_category": "garden",
     "children_can_run": true,
@@ -8294,51 +6531,8 @@
     "typical_duration_min": 45,
     "visit_seconds_inside": null,
     "visit_basis": "Elevated linear park on a former railway viaduct running several kilometres; the whole experience is walking its length past planted gardens and rose arches, absorbing well over half an hour for an engaged walker, with nothing to enter.",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "17:30"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "17:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Fr 08:00-17:30; Sa-Su 09:00-17:30",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Gated elevated park with closing gates; City of Paris publishes winter hours opening 08:00 weekdays / 09:00 weekends and closing around dusk (~17:30 in winter), recorded as the current typical winter pattern.",
     "place_category": "other",
     "children_can_run": true,
@@ -9199,52 +7393,9 @@
     "typical_duration_min": 15,
     "visit_seconds_inside": 3600,
     "visit_basis": "Belle Epoque department store with a spectacular stained-glass dome and a free rooftop panorama terrace; an engaged visit takes in the dome galleries and climbs to the roof for views, around an hour inside, plus the exterior.",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "11:00",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "Gated department store; the flagship Haussmann store's own published pattern is 10:00-20:00 Monday-Saturday and 11:00-20:00 Sunday, recorded as the current typical pattern.",
+    "opening_hours": "Mo-Sa 09:30-20:30; Su 11:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 09:30-20:30; Su 11:00-19:00.",
     "place_category": "gallery",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -9723,47 +7874,9 @@
     "typical_duration_min": 8,
     "visit_seconds_inside": 3600,
     "visit_basis": "Modern WWII museum with exhibits plus the underground command bunker of Colonel Rol-Tanguy; the bunker descent and galleries take about an hour including a short queue.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated museum; transcribed from OSM tag 'Tu-Su,PH 10:00-18:00' (Monday closed).",
+    "opening_hours": "Tu-Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 10:00-18:00.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -9939,52 +8052,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 3600,
     "visit_basis": "Skyscraper with 56th-floor observation deck and roof terrace; lift queue plus time taking in the 360-degree Paris panorama runs about an hour.",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:30",
-          "23:30"
-        ]
-      ],
-      "tue": [
-        [
-          "09:30",
-          "23:30"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "23:30"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "23:30"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "23:30"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "23:30"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "23:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated observation deck with ticketed lift; transcribed from OSM tag 'Mo-Su 09:30-23:30'.",
+    "opening_hours": "Mo-Su 09:30-23:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 09:30-23:30.",
     "place_category": "monument",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -10000,13 +8070,7 @@
       ]
     ],
     "queue_basis": "Access to the observation deck funnels through security screening and a single bank of lifts, so a substantial line forms during the day and shortens near opening; sunset hours add pressure.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 09:30-23:30\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Arenes de Lutece",
@@ -10448,52 +8512,9 @@
     "typical_duration_min": 12,
     "visit_seconds_inside": 3000,
     "visit_basis": "Landmark department store with Art Nouveau glass-and-ironwork atrium and Art Deco facades; browsing the restored interior and peacock frieze takes about 50 min.",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated department store; transcribed from OSM tag 'Mo-Su 10:00-20:00'.",
+    "opening_hours": "Mo-Su 10:00-20:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 10:00-20:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -10509,13 +8530,7 @@
       ]
     ],
     "queue_basis": "A free-entry department store whose doors carry a bag check that can back up briefly at peak shopping hours but otherwise flows straight through.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 10:00-20:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Saint-Germain-l'Auxerrois",
@@ -10688,9 +8703,9 @@
     "typical_duration_min": 8,
     "visit_seconds_inside": null,
     "visit_basis": "Central bank in the 1635 Hôtel de la Vrillière; the gilded Galerie Dorée is rarely open to the public, so this is a facade viewed from the street.",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A working central bank whose interior galleries require special access; gated, hours not confidently known; left unfiltered.",
+    "opening_hours": "Mo-Th 09:00-12:00, 13:15-15:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Th 09:00-12:00, 13:15-15:30.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -11002,52 +9017,9 @@
     "city_name": "paris",
     "visit_seconds_inside": null,
     "visit_basis": "Public garden with lawns, mature trees, a pond and rockery to walk round and read the Templar history, about 20 minutes; nothing to enter.",
-    "opening_hours": {
-      "mon": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "tue": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "wed": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "thu": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "fri": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "sun": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated public garden with closing bells; OSM tag \"sunrise-sunset\" transcribed to an approximate daylight window as a fixed clock is required.",
+    "opening_hours": "sunrise-sunset",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: sunrise-sunset.",
     "place_category": "garden",
     "children_can_run": true,
     "sit_and_talk": true,
@@ -11058,8 +9030,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A free public garden entered through an open gate with no ticket or bag check, so there is no line to price.",
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Hotel de Soubise",
@@ -11179,9 +9150,9 @@
     "typical_duration_min": 15,
     "visit_seconds_inside": null,
     "visit_basis": "Covered arcade you walk through end to end, lined with stamp dealers, old shopfronts and restaurants to browse, about 15 minutes; it is itself the space, nothing separate to enter.",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A covered arcade with grilles that close, so gated, but its exact opening hours are not confidently known; left unfiltered.",
+    "opening_hours": "Mo-Su 06:00-00:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 06:00-00:00.",
     "place_category": "arcade",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -11467,9 +9438,9 @@
     "typical_duration_min": 10,
     "visit_seconds_inside": 3600,
     "visit_basis": "Long historic facade and entrance courtyard take ten minutes outside; inside are the restored Labrouste and Oval reading rooms plus a museum of treasures, roughly an hour with entry.",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A library entered through doors/security, so gated, but its exact hours are not confidently known; left unfiltered.",
+    "opening_hours": "Mo 14:00-19:30; Tu 09:00-20:00; We-Fr 09:00-19:30; Sa 09:00-18:30; Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo 14:00-19:30; Tu 09:00-20:00; We-Fr 09:00-19:30; Sa 09:00-18:30; Su 10:00-18:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -11544,47 +9515,9 @@
     "typical_duration_min": 15,
     "visit_seconds_inside": null,
     "visit_basis": "Elegant covered arcade with mosaic floors, glass roof and neoclassical shopfronts to walk slowly and browse, about 15 minutes; the arcade itself is the space.",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "wed": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "thu": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "fri": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "sat": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "sun": []
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated covered arcade with grilles; OSM tag \"Mo-Sa 08:30-20:30\" transcribed with Sunday closed.",
+    "opening_hours": "Mo-Sa 08:30-20:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 08:30-20:30.",
     "place_category": "arcade",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -11595,13 +9528,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A covered arcade open at both ends with no door or ticket; visitors stroll through with no queue.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 08:30-20:30\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Square Louvois",
@@ -12292,46 +10219,8 @@
     "typical_duration_min": 12,
     "visit_seconds_inside": null,
     "visit_basis": "Tall glass-roofed 19th-century covered arcade lined with small shops and ironwork; walked through its length looking up at the glazing and into windows, about 12 min, and the arcade itself is the sight rather than any one interior.",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "sun": []
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Sa 08:00-20:00; Su off",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A covered arcade with grilles that is gated; hours reflect the passage's own published typical daily gate schedule with Sunday closure.",
     "place_category": "arcade",
     "children_can_run": false,
@@ -13697,52 +11586,9 @@
     "typical_duration_min": 12,
     "visit_seconds_inside": 1200,
     "visit_basis": "Medieval fortress-mansion with turrets and a gated courtyard, one of the oldest civil buildings in Paris; the exterior and courtyard reward a full look, and the Forney library rooms inside take about 20 minutes.",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "19:50"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "19:50"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "19:50"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "19:50"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "19:50"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "19:50"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "19:50"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated fortress-mansion library, transcribed from its OSM tag 'Mo-Fr 08:00-19:50; Sa,Su 09:00-19:50'.",
+    "opening_hours": "Mo-Fr 08:00-19:50; Sa,Su 09:00-19:50",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Fr 08:00-19:50; Sa,Su 09:00-19:50.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": true,
@@ -13758,13 +11604,7 @@
       ]
     ],
     "queue_basis": "The building houses the Forney library with a single reception entrance rather than mass ticketing, so only a few people wait at busy hours.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Fr 08:00-19:50; Sa,Su 09:00-19:50\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Saint-Paul-Saint-Louis",
@@ -13927,52 +11767,9 @@
     "typical_duration_min": 8,
     "visit_seconds_inside": null,
     "visit_basis": "Renaissance mansion with a monumental pilastered courtyard facade housing the city's historical library; you view the courtyard from the entrance, interior is a working library rather than a visitor stop.",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "17:00"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "17:00"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "17:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "17:00"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "17:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "17:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "17:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A Renaissance mansion housing a library with controlled access, transcribed from its OSM tag 'Mo-Fr 08:00-17:00; Sa-Su 09:00-17:00'.",
+    "opening_hours": "Mo-Fr 08:00-17:00; Sa-Su 09:00-17:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Fr 08:00-17:00; Sa-Su 09:00-17:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -13983,13 +11780,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A Renaissance mansion seen from the street as a walk-by; its historical library is reached through open courtyard access rather than a queued entrance, so no line forms for the passer-by.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Fr 08:00-17:00; Sa-Su 09:00-17:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Synagogue de la rue Pavee",
@@ -14213,56 +12004,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 1000,
     "visit_basis": "Modest Baroque facade on a narrow street, then a single-nave church interior with a notable carved Flemish pulpit, absorbing roughly 15-18 minutes inside.",
-    "opening_hours": {
-      "mon": [
-        [
-          "17:00",
-          "19:30"
-        ]
-      ],
-      "tue": [
-        [
-          "15:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "15:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "15:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "15:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "15:00",
-          "19:30"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "12:00"
-        ],
-        [
-          "15:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A church you enter, hence gated; transcribed from OSM tag 'Mo 17:00-19:30; Tu-Fr 15:00-19:00; Sa 15:00-19:30; Su 10:00-12:00, 15:00-19:00'.",
+    "opening_hours": "Mo 17:00-19:30; Tu-Fr 15:00-19:00; Sa 15:00-19:30; Su 10:00-12:00, 15:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo 17:00-19:30; Tu-Fr 15:00-19:00; Sa 15:00-19:30; Su 10:00-12:00, 15:00-19:00.",
     "place_category": "church",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -14273,13 +12017,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door you walk straight through without any ticket desk or security line.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo 17:00-19:30; Tu-Fr 15:00-19:00; Sa 15:00-19:30; Su 10:00-12:00, 15:00-19:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "La Force Prison Site",
@@ -14380,47 +12118,9 @@
     "typical_duration_min": 5,
     "visit_seconds_inside": 2400,
     "visit_basis": "Reconstructed sculptor's studio of four glazed rooms packed with Brancusi's works arranged as he left them; a focused visit of about 35-40 minutes including entry.",
-    "opening_hours": {
-      "mon": [
-        [
-          "14:00",
-          "18:00"
-        ]
-      ],
-      "tue": [],
-      "wed": [
-        [
-          "14:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "14:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "14:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "14:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "14:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A museum studio you enter, hence gated; transcribed from OSM tag 'Mo,We,Th,Fr,Sa,Su 14:00-18:00' with Tuesday closed.",
+    "opening_hours": "Mo,We,Th,Fr,Sa,Su 14:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo,We,Th,Fr,Sa,Su 14:00-18:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -14436,13 +12136,7 @@
       ]
     ],
     "queue_basis": "A small free-admission studio with a single controlled entrance and light bag check that forms only a brief line at busy afternoon hours.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo,We,Th,Fr,Sa,Su 14:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Stravinsky Fountain",
@@ -14546,52 +12240,9 @@
     "typical_duration_min": 7,
     "visit_seconds_inside": 1200,
     "visit_basis": "Flamboyant Gothic facade to read from the street, then an interior with stained glass, organ and side chapels absorbing about 20 minutes.",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A church you enter, hence gated; transcribed from OSM tag '09:00-18:00' applied to every day.",
+    "opening_hours": "09:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 09:00-18:00.",
     "place_category": "church",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -14602,13 +12253,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A Gothic parish church with an open door you walk through without a ticket desk or security screening.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"09:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Rue de la Verrerie",
@@ -14711,47 +12356,9 @@
     "typical_duration_min": 5,
     "visit_seconds_inside": 3000,
     "visit_basis": "Large multi-floor department store with its famous basement hardware hall plus fashion and homeware floors to browse; an engaged wander of roughly 50 minutes inside.",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sun": []
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A department store with entrance doors, hence gated; transcribed from OSM tag 'Mo-Sa 10:00-19:00' with Sunday closed.",
+    "opening_hours": "Mo-Sa 10:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 10:00-19:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -14762,13 +12369,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A department store with wide open doors and multiple entrances that visitors walk straight into without a queue.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 10:00-19:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Eglise des Billettes",
@@ -15705,17 +13306,9 @@
     "typical_duration_min": 10,
     "visit_seconds_inside": 1500,
     "visit_basis": "Royal abbey with a monumental Baroque facade and dome to view from the forecourt, and a church interior with Mignard's painted cupola open to visitors, roughly 25 min inside when accessible.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [],
-      "wed": [],
-      "thu": [],
-      "fri": [],
-      "sat": [],
-      "sun": []
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated former abbey/military site; OSM tag 'closed' transcribed as closed every day.",
+    "opening_hours": "closed",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: closed.",
     "place_category": "church",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -15726,13 +13319,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A walk-by abbey church attached to a military hospital, viewed from the exterior with no general ticketed entry line to stand in.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"closed\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "College de France",
@@ -16012,9 +13599,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 1500,
     "visit_basis": "Library on Place du Pantheon whose Labrouste iron-framed reading room is the draw; entry needs a reader pass and check-in, so priced conservatively at around 25 min inside for those admitted.",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A library entered through a door with reader access rules; gated, hours not confidently known; left unfiltered.",
+    "opening_hours": "Mo-Sa 10:00-22:00 ; Jul28 - Aug16 off",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 10:00-22:00 ; Jul28 - Aug16 off.",
     "place_category": "church",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -16228,47 +13815,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 1100,
     "visit_basis": "Medieval parish church at the foot of rue Mouffetard; exterior is modest, interior has nave, side chapels and Jansenist history to absorb an engaged walk-through.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "09:00",
-          "19:30"
-        ]
-      ],
-      "wed": [
-        [
-          "09:00",
-          "19:30"
-        ]
-      ],
-      "thu": [
-        [
-          "09:00",
-          "19:30"
-        ]
-      ],
-      "fri": [
-        [
-          "09:00",
-          "19:30"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "19:30"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A church you enter, hence gated; transcribed from its OSM tag 'Tu-Sa 09:00-19:30; Su 09:00-20:00' with Monday closed.",
+    "opening_hours": "Tu-Sa 09:00-19:30; Su 09:00-20:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Sa 09:00-19:30; Su 09:00-20:00.",
     "place_category": "church",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -16279,13 +13828,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door and free entry; visitors walk straight in without any security screening or ticket desk.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Sa 09:00-19:30; Su 09:00-20:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Institut du Monde Arabe",
@@ -16415,9 +13958,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": null,
     "visit_basis": "Historic restaurant building on the quai; as a stop you view the exterior and the Notre-Dame vista from its street, dining is not part of a walking tour.",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A restaurant entered through its door and reservation; gated, hours not confidently known; left unfiltered.",
+    "opening_hours": "Tu-Sa 12:00-13:15, 19:00-21:15",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Sa 12:00-13:15, 19:00-21:15.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -16557,52 +14100,9 @@
     "typical_duration_min": 8,
     "visit_seconds_inside": 1500,
     "visit_basis": "13th-century Cistercian college with a restored Gothic vaulted nave and cellar now used for exhibitions; interior absorbs an unhurried look at the stone hall plus any show.",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "14:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A cultural center you enter, hence gated; transcribed from its OSM tag 'Mo-Sa 10:00-18:00; Su 14:00-18:00'.",
+    "opening_hours": "Mo-Sa 10:00-18:00; Su 14:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 10:00-18:00; Su 14:00-18:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -16618,13 +14118,7 @@
       ]
     ],
     "queue_basis": "A cultural center with a single reception desk and light bag check that moves quickly; the small afternoon flow to the Cistercian nave rarely holds more than a few people.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 10:00-18:00; Su 14:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Le Procope",
@@ -16681,9 +14175,9 @@
     "typical_duration_min": 5,
     "visit_seconds_inside": null,
     "visit_basis": "Oldest cafe in Paris on a narrow passage; walk-by only, you read the sign and take in the 17th-century frontage and its literary associations from the street.",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A restaurant entered through its door; gated, hours not confidently known; left unfiltered.",
+    "opening_hours": "12:00-24:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 12:00-24:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -16968,52 +14462,9 @@
     "typical_duration_min": 10,
     "visit_seconds_inside": 2400,
     "visit_basis": "Long neoclassical mint on quai de Conti with a coin museum inside; exterior riverfront facade plus museum galleries of coinage and minting to walk through.",
-    "opening_hours": {
-      "mon": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "11:00",
-          "22:00"
-        ]
-      ],
-      "fri": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A coin museum you enter, hence gated; transcribed from its OSM tag 'Mo-Su 11:00-19:00; Th 11:00-22:00' with holiday closures noted.",
+    "opening_hours": "Mo-Su 11:00-19:00; Th 11:00-22:00; Dec 25 off; Jan 01 off; May 01 off",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 11:00-19:00; Th 11:00-22:00; Dec 25 off; Jan 01 off; May 01 off.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -17590,9 +15041,9 @@
     "typical_duration_min": 5,
     "visit_seconds_inside": null,
     "visit_basis": "Historic brasserie frontage on a busy boulevard; a few minutes to look at the facade and interior through the glass, no interior visit priced.",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A brasserie you enter through a door; gated, hours not confidently known; left unfiltered.",
+    "opening_hours": "Mo-Su 09:00-02:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 09:00-02:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -18019,47 +15470,9 @@
     "typical_duration_min": 8,
     "visit_seconds_inside": 900,
     "visit_basis": "Covered market and small shopping arcade on a historic site; a short wander through the halls, roughly 15 min inside browsing stalls and shops.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "08:00",
-          "13:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated covered market hall; transcribed from OSM tag 'Tu-Sa 08:00-20:00, Su 08:00-13:30' (Monday closed).",
+    "opening_hours": "Tu-Sa 08:00-20:00, Su 08:00-13:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Sa 08:00-20:00, Su 08:00-13:30.",
     "place_category": "market",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -18070,13 +15483,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A covered market walked into freely through open doors with no ticket or security check.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Sa 08:00-20:00, Su 08:00-13:30\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Café de la Mairie",
@@ -18498,51 +15905,8 @@
     "typical_duration_min": 15,
     "visit_seconds_inside": null,
     "visit_basis": "Long ornamental grotto fountain with a reflecting basin and the Leda and Polyphemus sculptures; you walk the basin and sit, but there is no interior to enter.",
-    "opening_hours": {
-      "mon": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "tue": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "wed": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "thu": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "fri": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "sat": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "sun": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 07:30-21:30",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A fountain inside the gated Luxembourg Gardens, which close at nightfall by bells; hours vary seasonally and this reflects the current typical spring/summer pattern from the Sénat's published schedule.",
     "place_category": "monument",
     "children_can_run": false,
@@ -19034,47 +16398,9 @@
     "typical_duration_min": 5,
     "visit_seconds_inside": 2400,
     "visit_basis": "Small free studio-museum with sculptor's house, a few rooms and a garden of bronzes; compact collection absorbing roughly 40 min with little queue.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated city studio-museum; transcribed from its OSM tag \"Tu-Su 10:00-18:00\".",
+    "opening_hours": "Tu-Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 10:00-18:00.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -19090,13 +16416,7 @@
       ]
     ],
     "queue_basis": "A small free city studio-museum with one entrance and a bag check that can back up briefly in the afternoon, but the intimate size keeps any wait minor even though the group is only walking by.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Reid Hall",
@@ -19223,51 +16543,9 @@
     "typical_duration_min": 5,
     "visit_seconds_inside": null,
     "visit_basis": "Working art academy on a narrow street, viewed from its entrance and any open courtyard glimpse; not a general visitor interior.",
-    "opening_hours": {
-      "mon": [
-        [
-          "14:00",
-          "15:30"
-        ]
-      ],
-      "tue": [
-        [
-          "14:00",
-          "15:30"
-        ]
-      ],
-      "wed": [
-        [
-          "14:00",
-          "15:30"
-        ],
-        [
-          "19:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "14:00",
-          "15:30"
-        ]
-      ],
-      "fri": [
-        [
-          "14:00",
-          "15:30"
-        ]
-      ],
-      "sat": [
-        [
-          "13:30",
-          "14:30"
-        ]
-      ],
-      "sun": []
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated independent art academy; transcribed from its OSM tag \"Mo-Fr 14:00-15:30, We 19:00-20:00, Sa 13:30-14:30\".",
+    "opening_hours": "Mo-Fr 14:00-15:30, We 19:00-20:00, Sa 13:30-14:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Fr 14:00-15:30, We 19:00-20:00, Sa 13:30-14:30.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -19278,13 +16556,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working art academy viewed from the street; there is no ticketed entry or line.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Fr 14:00-15:30, We 19:00-20:00, Sa 13:30-14:30\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "26 Rue Vavin (Sauvage Building)",
@@ -19414,9 +16686,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 2700,
     "visit_basis": "Historic Montparnasse café-brasserie; the outside terrace and facade take a few minutes, while sitting inside for a drink or meal in the belle-epoque room absorbs around 45 min.",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A café is entered through a door so it is gated, but no hours tag is provided; gated, hours not confidently known; left unfiltered.",
+    "opening_hours": "Mo-Su 07:30-24:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 07:30-24:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -19699,52 +16971,9 @@
     "typical_duration_min": 8,
     "visit_seconds_inside": 3600,
     "visit_basis": "Grand 19th-century department store with a famous iron-and-glass atrium, escalator well and multiple floors including the Grande Epicerie food hall; an engaged wander through the architecture and displays fills an hour.",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "19:45"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "19:45"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "19:45"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "19:45"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "20:45"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "11:00",
-          "19:45"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "A department store behind doors; hours from Le Bon Marché's own published store pattern.",
+    "opening_hours": "Mo-We, Fr-Sa 10:00-20:00; Th 10:00-20:45; Su 11:00-20:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-We, Fr-Sa 10:00-20:00; Th 10:00-20:45; Su 11:00-20:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -19958,41 +17187,8 @@
     "typical_duration_min": 7,
     "visit_seconds_inside": 2400,
     "visit_basis": "Neoclassical Hôtel de Salm with a colonnaded facade facing the Seine; interior museum of medals, orders and honours across several rooms, a focused visit of around 40 minutes with little or no queue.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [],
-      "wed": [
-        [
-          "13:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "13:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "13:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "13:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "13:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Tu off; We-Su 13:00-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A ticketed museum in the Hôtel de Salm; hours from the museum's own published pattern (Wed–Sun afternoons).",
     "place_category": "museum",
     "children_can_run": false,
@@ -20943,52 +18139,9 @@
     "typical_duration_min": 20,
     "visit_seconds_inside": null,
     "visit_basis": "Triangular riverside pocket-park at the island's tip, seven meters below street level, with benches, trees and downstream views under Pont Neuf; you descend, walk to the point and stand looking at the river, nothing to enter.",
-    "opening_hours": {
-      "mon": [
-        [
-          "00:00",
-          "24:00"
-        ]
-      ],
-      "tue": [
-        [
-          "00:00",
-          "24:00"
-        ]
-      ],
-      "wed": [
-        [
-          "00:00",
-          "24:00"
-        ]
-      ],
-      "thu": [
-        [
-          "00:00",
-          "24:00"
-        ]
-      ],
-      "fri": [
-        [
-          "00:00",
-          "24:00"
-        ]
-      ],
-      "sat": [
-        [
-          "00:00",
-          "24:00"
-        ]
-      ],
-      "sun": [
-        [
-          "00:00",
-          "24:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated pocket-park with closing bells; OSM tag '24/7' transcribed faithfully.",
+    "opening_hours": "24/7",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 24/7.",
     "place_category": "garden",
     "children_can_run": false,
     "sit_and_talk": true,
@@ -20999,13 +18152,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open public pocket-park with a free open gate at the island's tip; visitors walk straight down the steps with no door, ticket, or screening.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"24/7\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Rue Saint-Honoré",
@@ -21255,42 +18402,9 @@
     "typical_duration_min": 15,
     "visit_seconds_inside": null,
     "visit_basis": "Lone 52-meter Flamboyant Gothic tower in a small garden square; you circle it and look up at the carving, and though it can be climbed on limited guided slots that is not a normal open interior, so the useful time is exterior.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated tower requiring ticketed climb; OSM tag 'May 15-Nov 15: We-Su 10:00-18:00' transcribed for its current seasonal open period, closed Mon-Tue.",
+    "opening_hours": "May 15-Nov 15: We-Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: May 15-Nov 15: We-Su 10:00-18:00.",
     "place_category": "monument",
     "children_can_run": false,
     "sit_and_talk": true,
@@ -21306,8 +18420,7 @@
       ]
     ],
     "queue_basis": "The tower opens only for small guided-climb groups by one narrow staircase, so a modest ticketed line forms at climb times but is otherwise brief; often the square around it has no line at all.",
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Rue de la Ferronnerie",
@@ -21712,47 +18825,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 4200,
     "visit_basis": "City museum of Asian art in a former banker's mansion holding around 15,000 objects; a focused visitor spends well over an hour across its galleries with a short free-entry queue.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated museum; OSM tag 'Tu-Su 10:00-18:00' transcribed, closed Monday.",
+    "opening_hours": "Tu-Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 10:00-18:00.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -21768,13 +18843,7 @@
       ]
     ],
     "queue_basis": "A small city museum with free permanent-collection entry through one door with a bag check; the line is minor at best and often nonexistent.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Cathédrale Saint-Alexandre-Nevsky",
@@ -22714,37 +19783,9 @@
     "typical_duration_min": 8,
     "visit_seconds_inside": 5400,
     "visit_basis": "Historic Montmartre cabaret; the painted rabbit sign and ivy-clad exterior take a few minutes, while an actual evening show inside runs well past two hours and is capped at the 90-minute tour maximum.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "21:00",
-          "23:59"
-        ]
-      ],
-      "wed": [],
-      "thu": [
-        [
-          "21:00",
-          "23:59"
-        ]
-      ],
-      "fri": [
-        [
-          "21:00",
-          "23:59"
-        ]
-      ],
-      "sat": [
-        [
-          "21:00",
-          "23:59"
-        ]
-      ],
-      "sun": []
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated cabaret; OSM tag 'Tu,Th-Sa 21:00-01:00' transcribed, with past-midnight windows capped at 23:59 to avoid a backwards window.",
+    "opening_hours": "Tu,Th-Sa 21:00-01:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu,Th-Sa 21:00-01:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -22760,8 +19801,7 @@
       ]
     ],
     "queue_basis": "A small cabaret admitted by a single door at the start of an evening show, so a brief cluster forms at doors-open time but there is no security screening or all-day line.",
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Musée Nissim de Camondo",
@@ -22834,42 +19874,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 4800,
     "visit_basis": "Petit-Trianon-style mansion of preserved 18th-century interiors over several floors with kitchens and private rooms; an engaged visit runs about 75-80 minutes plus a short entry queue.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [],
-      "wed": [
-        [
-          "10:00",
-          "17:30"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "17:30"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "17:30"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "17:30"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "17:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated museum; OSM tag 'We-Su 10:00-17:30' transcribed faithfully.",
+    "opening_hours": "We-Su 10:00-17:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: We-Su 10:00-17:30.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -22885,13 +19892,7 @@
       ]
     ],
     "queue_basis": "A small mansion museum with a single ticket desk and modest capacity, so a few people wait mid-day but the flow is never heavy enough for a substantial line.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"We-Su 10:00-17:30\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Musée Jacquemart-André",
@@ -24356,27 +21357,9 @@
     "typical_duration_min": 30,
     "visit_seconds_inside": null,
     "visit_basis": "One of the largest open-air food markets in Paris, stretching a long way down Boulevard Richard-Lenoir on market days; walking its full length past the stalls easily absorbs half an hour, all outdoors.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [],
-      "wed": [],
-      "thu": [
-        [
-          "07:00",
-          "14:30"
-        ]
-      ],
-      "fri": [],
-      "sat": [],
-      "sun": [
-        [
-          "07:00",
-          "14:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "An open-air market hall transcribed faithfully from its OSM tag 'Su,Th 07:00-14:30'.",
+    "opening_hours": "Su,Th 07:00-14:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Su,Th 07:00-14:30.",
     "place_category": "market",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -24387,13 +21370,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open-air street market walked into directly from the boulevard with no gate, ticket, or screening.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Su,Th 07:00-14:30\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Cour Damoye",
@@ -26267,47 +23244,9 @@
     "typical_duration_min": 8,
     "visit_seconds_inside": 5400,
     "visit_basis": "Contemporary-art museum inside a circular corn exchange, the Ando concrete rotunda under the glass dome plus galleries over several floors would absorb well over two hours; capped at the 90-minute tour maximum, exterior facade a few minutes.",
-    "opening_hours": {
-      "mon": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "tue": [],
-      "wed": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated contemporary-art museum; transcribed from OSM tag '11:00-19:00; Tu off; Fr 11:00-21:00; May 01 off' (public-holiday closure May 1 not expressible in weekly table).",
+    "opening_hours": "11:00-19:00; Tu off; Fr 11:00-21:00; May 01 off",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 11:00-19:00; Tu off; Fr 11:00-21:00; May 01 off.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -26323,8 +23262,7 @@
       ]
     ],
     "queue_basis": "A ticketed contemporary-art museum with a bag check and ticket scan at a single entrance under the dome; the line moves but bunches midday, so peak runs about 15 minutes and off-peak near opening only a few.",
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Arc de Triomphe du Carrousel",
@@ -27079,47 +24017,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 4200,
     "visit_basis": "Museum in sculptor Bourdelle's former studio and house with large plaster and bronze works, galleries and a sculpture garden, an engaged visit runs about 60-70 minutes; short exterior.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated municipal sculpture museum; transcribed from OSM tag 'Tu-Su 10:00-18:00'.",
+    "opening_hours": "Tu-Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 10:00-18:00.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -27135,13 +24035,7 @@
       ]
     ],
     "queue_basis": "A small sculpture museum in the artist's former studio with a modest reception desk and light bag check; free permanent collection keeps the line short, peaking to about 10 minutes midday and a few minutes otherwise.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Parc Georges-Brassens",
@@ -27183,52 +24077,9 @@
     "typical_duration_min": 25,
     "visit_seconds_inside": null,
     "visit_basis": "Large landscaped park with a pond, vineyard, garden of scents and former abattoir gateways, walked across and lingered in for over twenty minutes, open-air with nothing to enter.",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "17:45"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "17:45"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "17:45"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "17:45"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "17:45"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "17:45"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "17:45"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated public park with closing bells; transcribed from OSM tag base '08:00-17:45' with weekend late opening 'Sa,Su,PH 08:00-09:00 off', seasonal evening extensions not expressible in a fixed weekly table.",
+    "opening_hours": "08:00-17:45, Sa,Su,PH 08:00-09:00 off, Mar 01-Mar Su[-1] 17:45-19:00, Mar Su[-1]-Apr 30 17:45-20:30, May 01-Aug 31 17:45-21:30, Sep 01-Sep 30 17:45-20:30, Oct 01-Oct Su[-1] 17:45-19:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 08:00-17:45, Sa,Su,PH 08:00-09:00 off, Mar 01-Mar Su[-1] 17:45-19:00, Mar Su[-1]-Apr 30 17:45-20:30, May 01-Aug 31 17:45-21:30, Sep 01-Sep 30 17:45-20:30, Oct 01-Oct Su[-1] 17:45-19:30.",
     "place_category": "park",
     "children_can_run": true,
     "sit_and_talk": true,
@@ -27349,52 +24200,9 @@
     "typical_duration_min": 35,
     "visit_seconds_inside": null,
     "visit_basis": "Large English-style landscape park with a lake, lawns, sloping paths and cascades; walking between its features and pausing at the water absorbs over half an hour, and there is no building to enter.",
-    "opening_hours": {
-      "mon": [
-        [
-          "07:00",
-          "20:30"
-        ]
-      ],
-      "tue": [
-        [
-          "07:00",
-          "20:30"
-        ]
-      ],
-      "wed": [
-        [
-          "07:00",
-          "20:30"
-        ]
-      ],
-      "thu": [
-        [
-          "07:00",
-          "20:30"
-        ]
-      ],
-      "fri": [
-        [
-          "07:00",
-          "20:30"
-        ]
-      ],
-      "sat": [
-        [
-          "07:00",
-          "20:30"
-        ]
-      ],
-      "sun": [
-        [
-          "07:00",
-          "20:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated park with seasonal closing times; transcribed from the OSM tag whose current (September) window is 'Sep PH,Mo-Su 07:00-20:30' in the tag 'Sep PH,Mo-Su 07:00-20:30; Oct 01-Oct Su[-1] ... 07:00-19:30; ...; Jul-Aug ... 07:00-24:00'.",
+    "opening_hours": "Sep PH,Mo-Su 07:00-20:30; Oct 01-Oct Su[-1] PH,Mo-Su 07:00-19:30; Oct Su[-1]-Oct 31,Nov-Feb PH,Mo-Su 07:00-17:45; Mar 01-Mar Su[-1] PH,Mo-Su 07:00-19:00; Mar Su[-1]-Apr 30 PH,Mo-Su 07:00-20:30; May-Jun PH,Mo-Su 07:00-20:30; Jul-Aug PH,Mo-Su 07:00-24:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Sep PH,Mo-Su 07:00-20:30; Oct 01-Oct Su[-1] PH,Mo-Su 07:00-19:30; Oct Su[-1]-Oct 31,Nov-Feb PH,Mo-Su 07:00-17:45; Mar 01-Mar Su[-1] PH,Mo-Su 07:00-19:00; Mar Su[-1]-Apr 30 PH,Mo-Su 07:00-20:30; May-Jun PH,Mo-Su 07:00-20:30; Jul-Aug PH,Mo-Su 07:00-24:00.",
     "place_category": "park",
     "children_can_run": true,
     "sit_and_talk": true,
@@ -27502,52 +24310,9 @@
     "typical_duration_min": 45,
     "visit_seconds_inside": null,
     "visit_basis": "Large landscaped park within the Bois de Boulogne with a famous rose garden, ornamental waters, grottoes and a small château grounds; walking the paths and gardens easily absorbs three quarters of an hour outdoors.",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "tue": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A walled garden with closing bells, transcribed faithfully from its OSM tag 'Mo-Su 09:30-20:00'.",
+    "opening_hours": "Mo-Su 09:30-20:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 09:30-20:00.",
     "place_category": "park",
     "children_can_run": true,
     "sit_and_talk": true,
@@ -27563,13 +24328,7 @@
       ]
     ],
     "queue_basis": "This walled garden charges a small admission at a staffed gate, so a brief ticket-desk line can form on summer weekends but it moves quickly through the kiosk.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 09:30-20:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Maison de Balzac",
@@ -27611,47 +24370,9 @@
     "typical_duration_min": 10,
     "visit_seconds_inside": 2400,
     "visit_basis": "House-museum in the writer's former home with a terraced garden; interior of several small rooms with manuscripts, portraits and his study takes about 35-40 minutes, plus a short entry, and the garden and hillside setting add outside time.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated house-museum, transcribed faithfully from its OSM tag 'Tu-Su 10:00-18:00' with Monday closed.",
+    "opening_hours": "Tu-Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 10:00-18:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": true,
@@ -27667,13 +24388,7 @@
       ]
     ],
     "queue_basis": "A small writer's-house museum with a single reception desk; the free permanent collection means only a minor bag-check and desk line at busy midday hours.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Allée des Cygnes",
@@ -28167,47 +24882,9 @@
     "typical_duration_min": 10,
     "visit_seconds_inside": 3000,
     "visit_basis": "House-museum of the Romantic era set around a courtyard garden; the ground-floor rooms with George Sand memorabilia and upstairs paintings take about 45 minutes plus a short entry, and the leafy courtyard and café add outside time.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated museum, transcribed faithfully from its OSM tag 'Tu-Su 10:00-18:00, Mo off'.",
+    "opening_hours": "Tu-Su 10:00-18:00, Mo off",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 10:00-18:00, Mo off.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": true,
@@ -28223,13 +24900,7 @@
       ]
     ],
     "queue_basis": "A modest house-museum with a single reception desk and free permanent collection, so only a brief desk/bag-check line forms at busy midday hours.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:00, Mo off\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Square des Batignolles",
@@ -28490,52 +25161,9 @@
     "typical_duration_min": 12,
     "visit_seconds_inside": 4200,
     "visit_basis": "Interior museum in historic houses plus the Renoir gardens, several rooms of period paintings and rooms, roughly 50-60 min plus a short ticket queue; garden and courtyard add outside time.",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A ticketed museum; transcribed faithfully from its OSM tag \"10:00-19:00\" applied to all seven days.",
+    "opening_hours": "10:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 10:00-19:00.",
     "place_category": "museum",
     "children_can_run": false,
     "sit_and_talk": true,
@@ -28551,13 +25179,7 @@
       ]
     ],
     "queue_basis": "A small museum with a single ticket desk and no airport-style security, so a modest line forms at midday but stays minor at its worst.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"10:00-19:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Square Carpeaux",
@@ -28761,52 +25383,9 @@
     "typical_duration_min": 25,
     "visit_seconds_inside": null,
     "visit_basis": "The formal stepped garden below Sacré-Cœur, tiered lawns, a fountain and the panoramic view of Paris; you climb the terraces and stand at the belvedere, an open landscaped slope with nothing to enter.",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "21:30"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "21:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated garden below Sacré-Cœur; transcribed from its OSM tag with the current May 01-Aug 31 summer extension to 21:30 and the Sa/Su 09:00 open applied (\"08:00-17:45; PH,Sa,Su 08:00-09:00 off, ... May 01-Aug 31 17:45-21:30\").",
+    "opening_hours": "08:00-17:45; PH,Sa,Su 08:00-09:00 off, Mar 01-Mar Su[-1] 17:45-19:00, Oct 01-Oct Su[-1] 17:45-19:30, Mar Su[-1]-Apr 30,Sep 17:45-20:30, May 01-Aug 31 17:45-21:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 08:00-17:45; PH,Sa,Su 08:00-09:00 off, Mar 01-Mar Su[-1] 17:45-19:00, Oct 01-Oct Su[-1] 17:45-19:30, Mar Su[-1]-Apr 30,Sep 17:45-20:30, May 01-Aug 31 17:45-21:30.",
     "place_category": "garden",
     "children_can_run": false,
     "sit_and_talk": true,
@@ -29313,52 +25892,9 @@
     "typical_duration_min": 18,
     "visit_seconds_inside": null,
     "visit_basis": "Neighbourhood public garden with lawns, benches, a bandstand and playgrounds; you walk its paths and sit, absorbing around 18 min, with nothing to enter.",
-    "opening_hours": {
-      "mon": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "tue": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "wed": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "thu": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "fri": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "sun": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated municipal square with closing gates; OSM tag \"sunrise-sunset\" transcribed to an approximate daylight window of 06:00-21:00.",
+    "opening_hours": "sunrise-sunset",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: sunrise-sunset.",
     "place_category": "garden",
     "children_can_run": true,
     "sit_and_talk": true,
@@ -29369,8 +25905,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A public neighbourhood garden square with open gates and no ticket or bag check, so visitors walk straight in with no wait.",
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Square de la Roquette",
@@ -29466,47 +26001,9 @@
     "typical_duration_min": 12,
     "visit_seconds_inside": 1100,
     "visit_basis": "Large 19th-century Belleville church with a tall facade and steps; the exterior takes about 12 min, and the vast interior nave is a roughly 18-min walk-through.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "08:30",
-          "19:30"
-        ]
-      ],
-      "wed": [
-        [
-          "08:30",
-          "19:30"
-        ]
-      ],
-      "thu": [
-        [
-          "08:30",
-          "19:30"
-        ]
-      ],
-      "fri": [
-        [
-          "08:30",
-          "19:30"
-        ]
-      ],
-      "sat": [
-        [
-          "08:30",
-          "19:30"
-        ]
-      ],
-      "sun": [
-        [
-          "08:30",
-          "19:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated church one enters; OSM tag \"Tu-Su 08:30-19:30\" transcribed faithfully with Monday closed.",
+    "opening_hours": "Tu-Su 08:30-19:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 08:30-19:30.",
     "place_category": "church",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -29517,13 +26014,7 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A parish church in Ménilmontant with an open door you walk straight through, with no ticket desk or security screening, so there is no line.",
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 08:30-19:30\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "La Maison des Metallos",
@@ -29676,52 +26167,9 @@
     "typical_duration_min": 30,
     "visit_seconds_inside": null,
     "visit_basis": "Hillside park with terraced paths, vines and a panoramic terrace over Paris; climbing through it and taking in the view absorbs about 30 min, nothing to enter.",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated park with closing gates; OSM tag transcribed for the current typical pattern (\"Mo-Fr 08:00-19:00; Sa-Su 09:00-19:00\"), omitting the seasonal Mar27-Apr30 override outside the current window.",
+    "opening_hours": "Mo-Fr 08:00-19:00; Sa-Su 09:00-19:00; Mar 27-Apr 30 Mo-Su 09:00-20:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Fr 08:00-19:00; Sa-Su 09:00-19:00; Mar 27-Apr 30 Mo-Su 09:00-20:30.",
     "place_category": "park",
     "children_can_run": true,
     "sit_and_talk": true,
@@ -30066,52 +26514,9 @@
     "typical_duration_min": 25,
     "visit_seconds_inside": null,
     "visit_basis": "Rooftop park built over Montparnasse station with lawns, tennis courts, fountains and grasses; reaching it and walking the elevated deck absorbs about 25 min, nothing to enter.",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "21:30"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "21:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated rooftop garden with closing gates; OSM tag transcribed for the current May 1-Aug 31 08:00-21:30 pattern, with Sa/Su opening delayed to 09:00 per the \"Sa,Su,PH 08:00-09:00 closed\" rule.",
+    "opening_hours": "Oct 01-Oct Su[-1] 08:00-19:30; Oct Su[-1]-Feb 29 08:00-17:45; Mar 01-Mar Su[-1] 08:00-19:00; Mar Su[-1]-Apr 30,Sep 08:00-20:30; May 1-Aug 31 08:00-21:30; Sa,Su,PH 08:00-09:00 closed",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Oct 01-Oct Su[-1] 08:00-19:30; Oct Su[-1]-Feb 29 08:00-17:45; Mar 01-Mar Su[-1] 08:00-19:00; Mar Su[-1]-Apr 30,Sep 08:00-20:30; May 1-Aug 31 08:00-21:30; Sa,Su,PH 08:00-09:00 closed.",
     "place_category": "garden",
     "children_can_run": true,
     "sit_and_talk": true,
@@ -30223,9 +26628,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 1200,
     "visit_basis": "Historic English-language bookshop on rue de Rivoli with a classic wood-panelled storefront; the exterior is a few minutes and browsing the interior shelves absorbs about 20 min.",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A bookshop entered through a door; gated, hours not confidently known; left unfiltered.",
+    "opening_hours": "Mo-Sa 10:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 10:00-19:00.",
     "place_category": "other",
     "children_can_run": false,
     "sit_and_talk": false,
@@ -30897,47 +27302,9 @@
     "typical_duration_min": 6,
     "visit_seconds_inside": 1200,
     "visit_basis": "Stark underground memorial at the tip of Île de la Cité; you approach across the small garden above, then descend into the narrow crypt of 200,000 lights and inscriptions, a contemplative space taking about twenty minutes inside.",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated underground memorial with seasonal hours; transcribed from its OSM tag whose current (Apr-Sep) window is 'Avr - Sep, Mar-Dim 10:00-19:00' (Mardi-Dimanche, Monday closed) in the tag 'Oct - Mar, Mar-Dim 10:00-17:00; Avr - Sep, Mar-Dim 10:00-19:00'.",
+    "opening_hours": "Oct-Mar Tu-Su 10:00-17:00; Apr-Sep Tu-Su 10:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Oct-Mar Tu-Su 10:00-17:00; Apr-Sep Tu-Su 10:00-19:00.",
     "place_category": "monument",
     "children_can_run": false,
     "sit_and_talk": false,

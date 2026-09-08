@@ -74,52 +74,9 @@
       "source_chunk": "chunk-04-1st-arr-louvre-westwards"
     },
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated department store; transcribed from OSM tag 'Mo-Su 10:00-20:00'.",
+    "opening_hours": "Mo-Su 10:00-20:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 10:00-20:00.",
     "place_category": "other",
     "visit_seconds_inside": 3000,
     "visit_basis": "Landmark department store with Art Nouveau glass-and-ironwork atrium and Art Deco facades; browsing the restored interior and peacock frieze takes about 50 min.",
@@ -138,13 +95,7 @@
     ],
     "queue_basis": "A free-entry department store whose doors carry a bag check that can back up briefly at peak shopping hours but otherwise flows straight through.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 10:00-20:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Saint-Germain-l'Auxerrois",
@@ -239,8 +190,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working parish church with an open door you walk straight through without ticket or check, so there is no queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Galerie Vero-Dodat",
@@ -306,8 +256,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A covered shopping passage open to the street at both ends with no admission control, so there is nothing to wait in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Banque de France",
@@ -357,9 +306,9 @@
       "source_chunk": "chunk-04-1st-arr-louvre-westwards"
     },
     "poi_role": "walk_by_only",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A working central bank whose interior galleries require special access; gated, hours not confidently known; left unfiltered.",
+    "opening_hours": "Mo-Th 09:00-12:00, 13:15-15:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Th 09:00-12:00, 13:15-15:30.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Central bank in the 1635 Hôtel de la Vrillière; the gilded Galerie Dorée is rarely open to the public, so this is a facade viewed from the street.",
@@ -373,8 +322,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working central bank not open to walk-in visitors; passed only from the street outside, so there is no public entry line to price.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Place des Victoires",
@@ -465,8 +413,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A circular open square around a royal statue, freely entered from the surrounding streets with no gate or ticket, so there is no queue.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Palais-Royal",
@@ -623,8 +570,7 @@
         "basis": "The east gallery runs the garden's whole Valois side; its shopfront arcade is where the gallery's own beat stands a person, and the radius spans the colonnade without reaching the garden's centre lawn or the west side."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Comedie-Francaise",
@@ -696,8 +642,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working theatre entered on a ticket for a performance rather than by a walk-in queue; on a walking tour it is a facade you pass with no standing line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Hotel Le Meurice",
@@ -789,8 +734,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A luxury hotel with no public ticketed entry and no queue mechanism; visitors on a tour view it from the street, so there is nothing to stand in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Eglise Saint-Roch",
@@ -858,8 +802,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door and no ticket or security screening; worshippers and visitors walk straight in without stopping.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Place Vendome",
@@ -929,7 +872,6 @@
     "queue_peak_hours": [],
     "queue_basis": "An open public square walked into freely from surrounding streets with no gate or ticket, so there is no line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   }
 ]

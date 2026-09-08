@@ -70,8 +70,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A walk-by-only former stock exchange now used as an event venue; no public ticketed entry means there is no queue to price.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Grands Boulevards",
@@ -136,8 +135,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open promenade corridor with no door and no admission; there is nothing to stand in line for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Porte Saint-Denis",
@@ -229,8 +227,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A triumphal arch in the middle of a street, seen from the pavement; no interior and no line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Passage de la Trinite",
@@ -295,8 +292,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A covered passage you walk straight through with no gate or ticket; nothing to queue for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Passage du Grand-Cerf",
@@ -345,46 +341,8 @@
       "source_chunk": "chunk-05-2nd-arr-east-of-montmartre"
     },
     "poi_role": "walk_by_only",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "sun": []
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Sa 08:00-20:00; Su off",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A covered arcade with grilles that is gated; hours reflect the passage's own published typical daily gate schedule with Sunday closure.",
     "place_category": "arcade",
     "visit_seconds_inside": null,
@@ -399,8 +357,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open covered arcade entered freely from the street; no door check and no line to enter.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Tour Jean sans Peur",
@@ -512,8 +469,7 @@
     ],
     "queue_basis": "A small medieval tower museum with a single ticket desk that admits a trickle of visitors; the desk can hold a few people at busy afternoon hours but the modest interior draws no substantial line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Rue Montorgueil",
@@ -616,8 +572,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A pedestrian market street entered freely; the value is in the open air with no gate to pass.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Place du Caire",
@@ -686,8 +641,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open square viewed from the pavement; no interior and no admission means no queue.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Rue de Clery",
@@ -780,8 +734,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open historic street with no door or ticket; there is nothing to stand in line for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "35 Boulevard des Capucines",
@@ -848,8 +801,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A commemorative building facade seen from the street with no public entry; no queue to price.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Place de Louvois",
@@ -914,8 +866,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A small open square with a fountain, entered freely; no door and no line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Cafe du Croissant",
@@ -988,7 +939,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A working café passed on the street; there is no admission line, only ordinary café seating, so no entry queue to price.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   }
 ]

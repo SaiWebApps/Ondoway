@@ -107,8 +107,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working hospital, not a ticketed attraction; a tourist stops to look at the facade and courtyard from the street and never joins any admission line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Notre-Dame Cathedral",
@@ -405,8 +404,7 @@
         "basis": "Square Jean-XXIII is the strip you STAND in to look back along the flying buttresses; the view needs the length of the garden, not its gate. Fifty-five metres covers the walk without reaching the parvis (W7.11 defect 16)."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Rue Chanoinesse",
@@ -521,8 +519,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open medieval street with no interior and no gate, so nothing is ever queued for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Memorial des Martyrs de la Deportation",
@@ -565,47 +562,9 @@
       }
     ],
     "poi_role": "walk_by_only",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated underground memorial with seasonal hours; transcribed from its OSM tag whose current (Apr-Sep) window is 'Avr - Sep, Mar-Dim 10:00-19:00' (Mardi-Dimanche, Monday closed) in the tag 'Oct - Mar, Mar-Dim 10:00-17:00; Avr - Sep, Mar-Dim 10:00-19:00'.",
+    "opening_hours": "Oct-Mar Tu-Su 10:00-17:00; Apr-Sep Tu-Su 10:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Oct-Mar Tu-Su 10:00-17:00; Apr-Sep Tu-Su 10:00-19:00.",
     "place_category": "monument",
     "visit_seconds_inside": 1200,
     "visit_basis": "Stark underground memorial at the tip of Île de la Cité; you approach across the small garden above, then descend into the narrow crypt of 200,000 lights and inscriptions, a contemplative space taking about twenty minutes inside.",
@@ -624,8 +583,7 @@
     ],
     "queue_basis": "The memorial is free but entered by a narrow staircase that admits only a few visitors at once, so a small line can form at midday while it is otherwise walk-straight-in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Ile Saint-Louis",
@@ -790,8 +748,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A residential island of open streets and shopfronts with no controlled entrance, so nothing is queued before you walk onto it.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Berthillon",
@@ -833,41 +790,8 @@
       }
     ],
     "poi_role": "walk_by_only",
-    "opening_hours": {
-      "mon": [],
-      "tue": [],
-      "wed": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Tu off; We-Su 10:00-20:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "An ice cream parlour entered through a door (gated); the flagship's published pattern is Wednesday-Sunday, closed Monday and Tuesday.",
     "place_category": "other",
     "visit_seconds_inside": 900,
@@ -887,8 +811,7 @@
     ],
     "queue_basis": "A small ice-cream counter whose line is limited by one serving window, so afternoon and warm-season crowds form a real but bounded queue that shrinks to a few people off-peak; no security or ticket.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Pont-Marie",
@@ -949,8 +872,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A stone bridge with no door and no ticket: you simply walk across it in the open, so there is no line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Hotel de Lauzun",
@@ -1045,8 +967,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A walk-by private mansion closed to the general public except rare special events, so no ticket line exists on an ordinary day.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Hotel Lambert",
@@ -1139,8 +1060,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A private residence viewed only from the street; with no public admission there is no queue to price.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Quai de Bourbon",
@@ -1225,8 +1145,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open riverside quay with no door and no ticket; the whole experience is outdoors, so no line forms.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Crypte Archeologique de l'Ile de la Cite",
@@ -1287,8 +1206,7 @@
     ],
     "queue_basis": "A small municipal museum with a single ticket desk at the entrance; a modest queue can build midday when Notre-Dame crowds spill in, but it stays minor and moves quickly.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Saint-Louis-en-l'Ile Church",
@@ -1348,7 +1266,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A parish church with free open-door entry and no security screening, so visitors walk in directly without waiting in line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

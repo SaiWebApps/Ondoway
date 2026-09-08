@@ -317,7 +317,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A column standing on a traffic-island square, viewed from the open; the crypt is not routinely open to visitors, so there is no entry line to stand in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

@@ -242,52 +242,9 @@
       "source_chunk": "la_samaritaine-rev-1356503085",
       "source_book": "Wikipedia"
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated department store; transcribed from OSM tag 'Mo-Su 10:00-20:00'.",
+    "opening_hours": "Mo-Su 10:00-20:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 10:00-20:00.",
     "place_category": "other",
     "visit_seconds_inside": 3000,
     "visit_basis": "Landmark department store with Art Nouveau glass-and-ironwork atrium and Art Deco facades; browsing the restored interior and peacock frieze takes about 50 min.",
@@ -306,12 +263,6 @@
     ],
     "queue_basis": "A free-entry department store whose doors carry a bag check that can back up briefly at peak shopping hours but otherwise flows straight through.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 10:00-20:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   }
 ]

@@ -262,47 +262,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated city studio-museum; transcribed from its OSM tag \"Tu-Su 10:00-18:00\".",
+    "opening_hours": "Tu-Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 10:00-18:00.",
     "place_category": "museum",
     "visit_seconds_inside": 2400,
     "visit_basis": "Small free studio-museum with sculptor's house, a few rooms and a garden of bronzes; compact collection absorbing roughly 40 min with little queue.",
@@ -321,13 +283,7 @@
     ],
     "queue_basis": "A small free city studio-museum with one entrance and a bag check that can back up briefly in the afternoon, but the intimate size keeps any wait minor even though the group is only walking by.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Musee Bourdelle",
@@ -400,47 +356,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": true
     },
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated municipal sculpture museum; transcribed from OSM tag 'Tu-Su 10:00-18:00'.",
+    "opening_hours": "Tu-Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 10:00-18:00.",
     "place_category": "museum",
     "visit_seconds_inside": 4200,
     "visit_basis": "Museum in sculptor Bourdelle's former studio and house with large plaster and bronze works, galleries and a sculpture garden, an engaged visit runs about 60-70 minutes; short exterior.",
@@ -459,13 +377,7 @@
     ],
     "queue_basis": "A small sculpture museum in the artist's former studio with a modest reception desk and light bag check; free permanent collection keeps the line short, peaking to about 10 minutes midday and a few minutes otherwise.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "La Closerie des Lilas",
@@ -549,52 +461,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "tue": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "wed": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "thu": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "fri": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "sat": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "sun": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "A brasserie entered through a door (gated); hours from its published daily pattern of roughly midday to 23:00.",
+    "opening_hours": "Mo-Su 12:00-14:30,19:00-22:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 12:00-14:30,19:00-22:30.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Historic Montparnasse brasserie with literary brass plaques; as a walk-by the facade and terrace occupy a few minutes, and entering to dine is not a normal part of a tour stop.",
@@ -608,8 +477,7 @@
     "queue_peak_hours": [],
     "queue_basis": "Priced as a walk-by brasserie with no entry line — you pass its facade and plaques from the street, and any table wait is seating, not a queue to enter a monument.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Montparnasse Cemetery",
@@ -692,51 +560,8 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "08:30",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Fr 08:00-18:00; Sa 08:30-18:00; Su 09:00-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A gated walled cemetery with closing gates; hours follow the City of Paris's published summer pattern shared across municipal cemeteries.",
     "place_category": "other",
     "visit_seconds_inside": null,
@@ -751,8 +576,7 @@
     "queue_peak_hours": [],
     "queue_basis": "Free open gates and no entry control mean visitors pass straight in with no queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Parc Georges-Brassens",
@@ -1167,52 +991,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": true
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "17:45"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "17:45"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "17:45"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "17:45"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "17:45"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "17:45"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "17:45"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated public park with closing bells; transcribed from OSM tag base '08:00-17:45' with weekend late opening 'Sa,Su,PH 08:00-09:00 off', seasonal evening extensions not expressible in a fixed weekly table.",
+    "opening_hours": "08:00-17:45, Sa,Su,PH 08:00-09:00 off, Mar 01-Mar Su[-1] 17:45-19:00, Mar Su[-1]-Apr 30 17:45-20:30, May 01-Aug 31 17:45-21:30, Sep 01-Sep 30 17:45-20:30, Oct 01-Oct Su[-1] 17:45-19:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 08:00-17:45, Sa,Su,PH 08:00-09:00 off, Mar 01-Mar Su[-1] 17:45-19:00, Mar Su[-1]-Apr 30 17:45-20:30, May 01-Aug 31 17:45-21:30, Sep 01-Sep 30 17:45-20:30, Oct 01-Oct Su[-1] 17:45-19:30.",
     "place_category": "park",
     "visit_seconds_inside": null,
     "visit_basis": "Large landscaped park with a pond, vineyard, garden of scents and former abattoir gateways, walked across and lingered in for over twenty minutes, open-air with nothing to enter.",
@@ -1238,8 +1019,7 @@
         "basis": "The old horse market's pavilions stand just inside the rue des Morillons entrance at the park's north edge; the weekend book dealers set their tables under them, and a person stands beneath the iron roofs to look along the rows."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "La Ruche",
@@ -1275,8 +1055,7 @@
     "queue_peak_hours": [],
     "queue_basis": "This is an artists' residence complex viewed from the outside only on a walk-by; there is no public entrance line to stand in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Parc Montsouris",
@@ -1593,52 +1372,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": true
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "07:00",
-          "20:30"
-        ]
-      ],
-      "tue": [
-        [
-          "07:00",
-          "20:30"
-        ]
-      ],
-      "wed": [
-        [
-          "07:00",
-          "20:30"
-        ]
-      ],
-      "thu": [
-        [
-          "07:00",
-          "20:30"
-        ]
-      ],
-      "fri": [
-        [
-          "07:00",
-          "20:30"
-        ]
-      ],
-      "sat": [
-        [
-          "07:00",
-          "20:30"
-        ]
-      ],
-      "sun": [
-        [
-          "07:00",
-          "20:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated park with seasonal closing times; transcribed from the OSM tag whose current (September) window is 'Sep PH,Mo-Su 07:00-20:30' in the tag 'Sep PH,Mo-Su 07:00-20:30; Oct 01-Oct Su[-1] ... 07:00-19:30; ...; Jul-Aug ... 07:00-24:00'.",
+    "opening_hours": "Sep PH,Mo-Su 07:00-20:30; Oct 01-Oct Su[-1] PH,Mo-Su 07:00-19:30; Oct Su[-1]-Oct 31,Nov-Feb PH,Mo-Su 07:00-17:45; Mar 01-Mar Su[-1] PH,Mo-Su 07:00-19:00; Mar Su[-1]-Apr 30 PH,Mo-Su 07:00-20:30; May-Jun PH,Mo-Su 07:00-20:30; Jul-Aug PH,Mo-Su 07:00-24:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Sep PH,Mo-Su 07:00-20:30; Oct 01-Oct Su[-1] PH,Mo-Su 07:00-19:30; Oct Su[-1]-Oct 31,Nov-Feb PH,Mo-Su 07:00-17:45; Mar 01-Mar Su[-1] PH,Mo-Su 07:00-19:00; Mar Su[-1]-Apr 30 PH,Mo-Su 07:00-20:30; May-Jun PH,Mo-Su 07:00-20:30; Jul-Aug PH,Mo-Su 07:00-24:00.",
     "place_category": "park",
     "visit_seconds_inside": null,
     "visit_basis": "Large English-style landscape park with a lake, lawns, sloping paths and cascades; walking between its features and pausing at the water absorbs over half an hour, and there is no building to enter.",
@@ -1652,8 +1388,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A large public park with open gates you walk straight through — no ticket, no security, no line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Villa Santos-Dumont",
@@ -1743,8 +1478,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A private residential lane admired from the street; there is no door or ticket and thus no queue.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Butte-aux-Cailles",
@@ -1782,7 +1516,6 @@
     "queue_peak_hours": [],
     "queue_basis": "An open hilltop neighbourhood of cobbled streets and murals with no door or gate to enter, so there is nothing to queue for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   }
 ]

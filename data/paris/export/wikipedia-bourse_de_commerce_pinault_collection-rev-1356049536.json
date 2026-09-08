@@ -348,47 +348,9 @@
       "source_chunk": "bourse_de_commerce_pinault_collection-rev-1356049536",
       "source_book": "Wikipedia"
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "tue": [],
-      "wed": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated contemporary-art museum; transcribed from OSM tag '11:00-19:00; Tu off; Fr 11:00-21:00; May 01 off' (public-holiday closure May 1 not expressible in weekly table).",
+    "opening_hours": "11:00-19:00; Tu off; Fr 11:00-21:00; May 01 off",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 11:00-19:00; Tu off; Fr 11:00-21:00; May 01 off.",
     "place_category": "museum",
     "visit_seconds_inside": 5400,
     "visit_basis": "Contemporary-art museum inside a circular corn exchange, the Ando concrete rotunda under the glass dome plus galleries over several floors would absorb well over two hours; capped at the 90-minute tour maximum, exterior facade a few minutes.",
@@ -407,7 +369,6 @@
     ],
     "queue_basis": "A ticketed contemporary-art museum with a bag check and ticket scan at a single entrance under the dome; the line moves but bunches midday, so peak runs about 15 minutes and off-peak near opening only a few.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

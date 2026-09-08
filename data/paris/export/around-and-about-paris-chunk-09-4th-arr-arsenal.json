@@ -195,8 +195,7 @@
         "basis": "Square Jean-XXIII is the strip you STAND in to look back along the flying buttresses; the view needs the length of the garden, not its gate. Fifty-five metres covers the walk without reaching the parvis (W7.11 defect 16)."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Ile de la Cite",
@@ -257,8 +256,7 @@
     "queue_peak_hours": [],
     "queue_basis": "This is an open island of streets, bridges, and squares with no gated interior, so there is no line to enter it.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Ile Saint-Louis",
@@ -315,8 +313,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A residential island of open streets and shopfronts with no controlled entrance, so nothing is queued before you walk onto it.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Hotel de Ville",
@@ -527,47 +524,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sun": []
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated building with ticketed exhibition access; transcribed from OSM tag 'Mo-Sa 10:00-19:00' with Sunday closed.",
+    "opening_hours": "Mo-Sa 10:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 10:00-19:00.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Grand neo-Renaissance city hall facade fronting a large open plaza where you stand back to take in the statues and rooflines; interior open only for occasional booked exhibitions, not a normal visit.",
@@ -581,13 +540,7 @@
     "queue_peak_hours": [],
     "queue_basis": "The City Hall interior is only open by occasional booked exhibition or event, so a walking-tour stop views the facade and forecourt from the open square with no line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 10:00-19:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Place des Vosges",
@@ -748,8 +701,7 @@
         "basis": "The fenced garden inside the arcades is where the corpus sends a person to find a bench near the children's play area and watch; you stand or sit among the lawns and fountains, not under the arcades. Thirty metres round the centre covers the benches and fountains and stops short of the arcade walks."
       }
     ],
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Centre Pompidou",
@@ -822,46 +774,8 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "tue": [],
-      "wed": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "thu": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "fri": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "sun": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo 11:00-21:00; Tu off; We-Su 11:00-21:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Gated museum; hours from the Centre's own published schedule, closed Tuesdays.",
     "place_category": "museum",
     "visit_seconds_inside": 5400,
@@ -881,8 +795,7 @@
     ],
     "queue_basis": "Security screening and ticket gates at the entrance form a modest line at busy afternoon hours, short at opening and near closing.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Bibliotheque de l'Arsenal",
@@ -1090,8 +1003,7 @@
     ],
     "queue_basis": "A working historic library where entry means a reading-room reception or a small guided-visit desk rather than mass ticketing, so at most a few people wait ahead at busy afternoon hours.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Pavillon de l'Arsenal",
@@ -1158,7 +1070,6 @@
     ],
     "queue_basis": "A free urbanism exhibition hall with a single entrance and occasional bag check; a brief line can form on busy weekend afternoons but it clears quickly.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

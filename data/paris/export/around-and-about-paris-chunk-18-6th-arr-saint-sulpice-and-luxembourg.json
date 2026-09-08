@@ -267,52 +267,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "sat": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "sun": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated church you enter; transcribed from OSM tag '08:00-19:45' applied to all seven days.",
+    "opening_hours": "08:00-19:45",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 08:00-19:45.",
     "place_category": "church",
     "visit_seconds_inside": 1500,
     "visit_basis": "Huge Baroque church with Delacroix murals, the gnomon solar calendar and a monumental organ; interior of side chapels and nave takes about 25 min, with a large fountain square outside.",
@@ -326,13 +283,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A large free-entry church you walk directly into through its main doors with no ticketing or security, so no queue forms before entering.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"08:00-19:45\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Marché Saint-Germain",
@@ -440,47 +391,9 @@
       }
     ],
     "poi_role": "walk_by_only",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "08:00",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "08:00",
-          "13:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated covered market hall; transcribed from OSM tag 'Tu-Sa 08:00-20:00, Su 08:00-13:30' (Monday closed).",
+    "opening_hours": "Tu-Sa 08:00-20:00, Su 08:00-13:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Sa 08:00-20:00, Su 08:00-13:30.",
     "place_category": "market",
     "visit_seconds_inside": 900,
     "visit_basis": "Covered market and small shopping arcade on a historic site; a short wander through the halls, roughly 15 min inside browsing stalls and shops.",
@@ -494,13 +407,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A covered market walked into freely through open doors with no ticket or security check.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Sa 08:00-20:00, Su 08:00-13:30\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Café de la Mairie",
@@ -565,8 +472,7 @@
     "queue_peak_hours": [],
     "queue_basis": "Walked by only and in any case a café entered directly with no security or ticket gate; there is no queue before entering.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Palais du Luxembourg",
@@ -704,8 +610,7 @@
     ],
     "queue_basis": "As the seat of the French Senate, public access is limited and gated by security screening on booked-visit days, giving a modest controlled line rather than a mass tourist queue; without booking most tours only see the exterior and the surrounding gardens, which are free and unqueued.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Luxembourg Gardens",
@@ -847,51 +752,8 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "tue": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "wed": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "thu": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "fri": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "sat": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "sun": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 07:30-21:30",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Walled park with gates and closing bells; hours vary seasonally with sunrise/sunset, typical summer window given per the Senat's published schedule.",
     "place_category": "garden",
     "visit_seconds_inside": null,
@@ -918,8 +780,7 @@
         "basis": "The pear-and-apple orchard fills the garden's southwest corner where the beat itself places it, adjacent to the rue Auguste-Comte; a person stands among the rows there, three hundred and fifty metres from the garden pin."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Musée du Luxembourg",
@@ -989,8 +850,7 @@
     ],
     "queue_basis": "A small exhibition space in the orangery with a single ticket desk and a bag check; without a timed ticket a line forms during a popular show midday but stays minor at opening and late afternoon.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "27 Rue de Fleurus",
@@ -1055,8 +915,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A private apartment building marked only by a plaque and seen from the street; there is no public interior and no line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Rue Férou",
@@ -1122,8 +981,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open street you walk past; there is no door, ticket, or line of any kind.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Fontaine Médicis",
@@ -1180,51 +1038,8 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "tue": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "wed": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "thu": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "fri": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "sat": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "sun": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 07:30-21:30",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A fountain inside the gated Luxembourg Gardens, which close at nightfall by bells; hours vary seasonally and this reflects the current typical spring/summer pattern from the Sénat's published schedule.",
     "place_category": "monument",
     "visit_seconds_inside": null,
@@ -1239,7 +1054,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A fountain inside the freely-entered Luxembourg Gardens, viewed in the open with no gate or ticket to queue for.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

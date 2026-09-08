@@ -274,8 +274,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A small free public square entered through an open gate; there is no ticket or security and thus no queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Square Léopold-Achille",
@@ -370,8 +369,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A small free neighborhood garden with an open gate you walk straight into — no line to enter.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Clos des Blancs-Manteaux",
@@ -485,8 +483,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A small open community garden/green space with no ticket or controlled entry, so there is no queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Square du Temple",
@@ -920,52 +917,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "tue": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "wed": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "thu": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "fri": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ],
-      "sun": [
-        [
-          "06:00",
-          "21:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated public garden with closing bells; OSM tag \"sunrise-sunset\" transcribed to an approximate daylight window as a fixed clock is required.",
+    "opening_hours": "sunrise-sunset",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: sunrise-sunset.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Public garden with lawns, mature trees, a pond and rockery to walk round and read the Templar history, about 20 minutes; nothing to enter.",
@@ -979,8 +933,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A free public garden entered through an open gate with no ticket or bag check, so there is no line to price.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Marche des Enfants Rouges",
@@ -1070,8 +1023,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A covered public market with open entrances and no admission control, so visitors walk straight in and there is no line to enter.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Musee des Arts et Metiers",
@@ -1159,47 +1111,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated museum; transcribed from OSM tag 'Tu-Th 10:00-18:00; Fr 10:00-21:00; Sa-Su 10:00-18:00' (Monday closed).",
+    "opening_hours": "Tu-Th 10:00-18:00; Fr 10:00-21:00; Sa-Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Th 10:00-18:00; Fr 10:00-21:00; Sa-Su 10:00-18:00.",
     "place_category": "museum",
     "visit_seconds_inside": 5400,
     "visit_basis": "Large science and technology museum with 80,000 objects across multiple galleries plus Foucault's pendulum in a medieval chapel; would absorb over two hours, capped at the 90-minute tour maximum; exterior is a plain converted priory worth a brief look.",
@@ -1218,12 +1132,6 @@
     ],
     "queue_basis": "A mid-sized ticketed museum with a bag check and ticket desk that rarely backs up; the line is minor and moves, peaking only midday when school and tour groups arrive.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Th 10:00-18:00; Fr 10:00-21:00; Sa-Su 10:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   }
 ]

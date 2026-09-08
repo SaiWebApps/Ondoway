@@ -59,8 +59,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open street fountain with no interior and no door; the whole value stands in the open, so there is nothing to queue for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Église Saint-Pierre du Gros Caillou",
@@ -125,8 +124,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door and free entry walked straight into; no ticket desk or screening creates a line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Rue Cler",
@@ -186,8 +184,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A pedestrian market street with no door or gate; the whole experience is in the open air with nothing to enter.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Ecole Militaire",
@@ -252,8 +249,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working military academy closed to general public entry and viewed from the exterior; there is no visitor line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "UNESCO Headquarters Paris",
@@ -323,8 +319,7 @@
     ],
     "queue_basis": "Public access requires advance registration and passes an airport-style security check at the gate, but visitor volume is low, so the screening line stays minor even at its busiest.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Champ de Mars",
@@ -518,8 +513,7 @@
         "basis": "The long axis of lawn between the tree lines is where the Revolution's festivals were staged and where a person stands back to look at the tower framed by the park. Half the footprint: you take the lawn in from anywhere along its middle, not from one blade of grass."
       }
     ],
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Les Invalides",
@@ -775,51 +769,8 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 10:00-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Gated museum and tomb complex; hours from the Army Museum's own published daily opening pattern.",
     "place_category": "museum",
     "visit_seconds_inside": 5400,
@@ -839,8 +790,7 @@
     ],
     "queue_basis": "The wide complex has a ticket desk and light bag check for Napoleon's tomb and the Army Museum, producing only a minor midday line that clears early or late.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "29 Avenue Rapp",
@@ -903,8 +853,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An ornate apartment facade admired from the pavement with no public interior, so there is no queue to enter.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Eiffel Tower",
@@ -1002,51 +951,8 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "tue": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 09:30-23:45",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Gated ticketed monument with elevator/stair access; hours follow the tower's own published year-round daily pattern (extended summer hours from mid-June).",
     "place_category": "other",
     "visit_seconds_inside": 5400,
@@ -1078,7 +984,6 @@
         "basis": "The esplanade under the four feet is where the queues form and where a person stands to look straight up through the lattice; the corpus's queue and security lines are about this esplanade. Half the footprint, as a place you look at demands."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

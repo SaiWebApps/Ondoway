@@ -17,6 +17,7 @@ dependencies = [
     "google-auth>=2.29",
     "slowapi>=0.1.9",
     "email-validator>=2.1",
+    "opening-hours-py==2.1.4",
 ]
 
 [project.optional-dependencies]

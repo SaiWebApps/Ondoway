@@ -65,46 +65,8 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "tue": [],
-      "wed": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "thu": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "fri": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ],
-      "sun": [
-        [
-          "11:00",
-          "21:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo 11:00-21:00; Tu off; We-Su 11:00-21:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Gated museum; hours from the Centre's own published schedule, closed Tuesdays.",
     "place_category": "museum",
     "visit_seconds_inside": 5400,
@@ -124,8 +86,7 @@
     ],
     "queue_basis": "Security screening and ticket gates at the entrance form a modest line at busy afternoon hours, short at opening and near closing.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Atelier Brancusi",
@@ -169,47 +130,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "14:00",
-          "18:00"
-        ]
-      ],
-      "tue": [],
-      "wed": [
-        [
-          "14:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "14:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "14:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "14:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "14:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A museum studio you enter, hence gated; transcribed from OSM tag 'Mo,We,Th,Fr,Sa,Su 14:00-18:00' with Tuesday closed.",
+    "opening_hours": "Mo,We,Th,Fr,Sa,Su 14:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo,We,Th,Fr,Sa,Su 14:00-18:00.",
     "place_category": "other",
     "visit_seconds_inside": 2400,
     "visit_basis": "Reconstructed sculptor's studio of four glazed rooms packed with Brancusi's works arranged as he left them; a focused visit of about 35-40 minutes including entry.",
@@ -228,13 +151,7 @@
     ],
     "queue_basis": "A small free-admission studio with a single controlled entrance and light bag check that forms only a brief line at busy afternoon hours.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo,We,Th,Fr,Sa,Su 14:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Stravinsky Fountain",
@@ -297,8 +214,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open public fountain in a square with no door and no line to enter.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Eglise Saint-Merri",
@@ -386,52 +302,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A church you enter, hence gated; transcribed from OSM tag '09:00-18:00' applied to every day.",
+    "opening_hours": "09:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 09:00-18:00.",
     "place_category": "church",
     "visit_seconds_inside": 1200,
     "visit_basis": "Flamboyant Gothic facade to read from the street, then an interior with stained glass, organ and side chapels absorbing about 20 minutes.",
@@ -445,13 +318,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A Gothic parish church with an open door you walk through without a ticket desk or security screening.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"09:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Rue de la Verrerie",
@@ -511,8 +378,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open medieval street with no interior and no line to enter.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Hotel de Ville",
@@ -558,47 +424,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sun": []
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated building with ticketed exhibition access; transcribed from OSM tag 'Mo-Sa 10:00-19:00' with Sunday closed.",
+    "opening_hours": "Mo-Sa 10:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 10:00-19:00.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Grand neo-Renaissance city hall facade fronting a large open plaza where you stand back to take in the statues and rooflines; interior open only for occasional booked exhibitions, not a normal visit.",
@@ -612,13 +440,7 @@
     "queue_peak_hours": [],
     "queue_basis": "The City Hall interior is only open by occasional booked exhibition or event, so a walking-tour stop views the facade and forecourt from the open square with no line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 10:00-19:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "BHV (Bazar de l'Hotel de Ville)",
@@ -667,47 +489,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sun": []
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A department store with entrance doors, hence gated; transcribed from OSM tag 'Mo-Sa 10:00-19:00' with Sunday closed.",
+    "opening_hours": "Mo-Sa 10:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 10:00-19:00.",
     "place_category": "other",
     "visit_seconds_inside": 3000,
     "visit_basis": "Large multi-floor department store with its famous basement hardware hall plus fashion and homeware floors to browse; an engaged wander of roughly 50 minutes inside.",
@@ -721,13 +505,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A department store with wide open doors and multiple entrances that visitors walk straight into without a queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 10:00-19:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Eglise des Billettes",
@@ -810,8 +588,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A church with an open door you walk through without a ticket desk or security line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Fondation Azzedine Alaia",
@@ -866,8 +643,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A walk-by foundation viewed from the street; no public entry queue applies to this stop.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Half-Timbered Houses (Rue Francois-Miron)",
@@ -925,8 +701,7 @@
     "queue_peak_hours": [],
     "queue_basis": "Historic house facades viewed from the open street with no interior entry to queue for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Hotel de Beauvais",
@@ -1043,8 +818,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A mansion now housing administrative offices, seen as a walk-by from the street with no visitor entry line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Memorial de la Shoah",
@@ -1089,47 +863,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "22:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "A gated Holocaust museum; hours follow the institution's published pattern of 10:00-18:00 (Thursday until 22:00), closed Saturdays.",
+    "opening_hours": "Su-Fr 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Su-Fr 10:00-18:00.",
     "place_category": "monument",
     "visit_seconds_inside": 3600,
     "visit_basis": "Wall of Names in the forecourt plus a crypt and permanent Holocaust exhibition with a security check; typically about an hour inside.",
@@ -1148,8 +884,7 @@
     ],
     "queue_basis": "Entry is free but airport-style security screening at this memorial creates a real bag-check line that stays modest at busy hours.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Hotel Chalons de Luxembourg",
@@ -1209,8 +944,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A private Marais mansion viewed from the street as a walk-by; there is no public entry to queue for.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Eglise Saint-Gervais-Saint-Protais",
@@ -1353,8 +1087,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door and free entry: worshippers and visitors walk straight in with no ticket desk or security screening, so no line forms.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Hotel d'Aumont",
@@ -1416,7 +1149,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A walk-by mansion now housing administrative offices with no public interior visit, so there is no entry line to stand in on the street outside.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   }
 ]

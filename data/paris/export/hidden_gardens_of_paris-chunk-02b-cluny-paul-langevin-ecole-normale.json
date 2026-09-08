@@ -210,8 +210,7 @@
     "queue_peak_hours": [],
     "queue_basis": "The gardens are a free open enclosure entered directly from the street without ticket or screening, so no line forms to reach them.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Square Paul-Painleve",
@@ -305,8 +304,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open street-side square you walk into freely with no door or ticket, so no line exists.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Square Paul-Langevin",
@@ -543,8 +541,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A small open garden entered directly from the street with no ticket or screening, so there is nothing to queue for.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Jardin Carre",
@@ -644,8 +641,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A public courtyard garden reached through an open passage with no ticket, so no line forms.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Musee de Cluny",
@@ -730,47 +726,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "09:30",
-          "18:15"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "18:15"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "18:15"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "18:15"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "18:15"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "18:15"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated medieval-art museum; transcribed from the OSM tag \"Tu off; ... Tu-Su 09:30-18:15\", closed Mondays.",
+    "opening_hours": "Jan 1 off; May 1 off; Dec 25 off; Tu-Su 09:30-18:15",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Jan 1 off; May 1 off; Dec 25 off; Tu-Su 09:30-18:15.",
     "place_category": "museum",
     "visit_seconds_inside": 4200,
     "visit_basis": "Medieval museum over Gallo-Roman baths with the Lady and the Unicorn tapestries and stone remains; typically 60-70 min including a short queue.",
@@ -789,8 +747,7 @@
     ],
     "queue_basis": "A single ticket desk and bag check at this modest medieval museum produce a small moving line rather than a substantial one.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Ecole Normale Superieure",
@@ -1092,8 +1049,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working academic institution, not a ticketed attraction; the tour views it from the street with no public entry line to stand in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Montagne Sainte-Genevieve",
@@ -1187,7 +1143,6 @@
     "queue_peak_hours": [],
     "queue_basis": "This is a hill and its network of open streets in the Latin Quarter, with no door or ticket, so the whole value stands in the open with no queue.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   }
 ]

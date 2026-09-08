@@ -495,52 +495,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": true
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "tue": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A walled garden with closing bells, transcribed faithfully from its OSM tag 'Mo-Su 09:30-20:00'.",
+    "opening_hours": "Mo-Su 09:30-20:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 09:30-20:00.",
     "place_category": "park",
     "visit_seconds_inside": null,
     "visit_basis": "Large landscaped park within the Bois de Boulogne with a famous rose garden, ornamental waters, grottoes and a small château grounds; walking the paths and gardens easily absorbs three quarters of an hour outdoors.",
@@ -559,13 +516,7 @@
     ],
     "queue_basis": "This walled garden charges a small admission at a staffed gate, so a brief ticket-desk line can form on summer weekends but it moves quickly through the kiosk.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 09:30-20:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Maison de Balzac",
@@ -952,47 +903,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": true
     },
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated house-museum, transcribed faithfully from its OSM tag 'Tu-Su 10:00-18:00' with Monday closed.",
+    "opening_hours": "Tu-Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 10:00-18:00.",
     "place_category": "other",
     "visit_seconds_inside": 2400,
     "visit_basis": "House-museum in the writer's former home with a terraced garden; interior of several small rooms with manuscripts, portraits and his study takes about 35-40 minutes, plus a short entry, and the garden and hillside setting add outside time.",
@@ -1011,13 +924,7 @@
     ],
     "queue_basis": "A small writer's-house museum with a single reception desk; the free permanent collection means only a minor bag-check and desk line at busy midday hours.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Allée des Cygnes",
@@ -1134,8 +1041,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A narrow walkable island path in the Seine with open access at both ends — no door and no line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Trocadero",
@@ -1319,8 +1225,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open terrace and public gardens facing the Eiffel Tower with no gate or ticket, so visitors arrive freely without queuing.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Parc des Serres d'Auteuil",
@@ -1424,7 +1329,6 @@
     ],
     "queue_basis": "This botanical greenhouse garden has open park access but a controlled entrance to the historic glasshouses, producing only a short desk or bag-check line at peak midday.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

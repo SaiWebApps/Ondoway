@@ -66,8 +66,7 @@
     "queue_peak_hours": [],
     "queue_basis": "This is an open island of streets, bridges, and squares with no gated interior, so there is no line to enter it.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Jardin des Tuileries",
@@ -147,52 +146,9 @@
       "source_chunk": "chunk-01-1st-arr-overview-to-les-halles"
     },
     "poi_role": "setting",
-    "opening_hours": {
-      "mon": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "tue": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "wed": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "thu": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "fri": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "sun": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated garden with closing gates; transcribed from OSM tag 'Mo-Su 07:30-21:00'.",
+    "opening_hours": "Mo-Su 07:30-21:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 07:30-21:00.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Large formal royal garden with long gravel allees, fountains, statues and terraces between the Louvre and Concorde; walking its length and pausing at the basins fills the better part of an hour, open-air throughout.",
@@ -240,13 +196,7 @@
         "basis": "The Grand Bassin Octogonal fills the western end just inside the Place de la Concorde gates; a person stands at its rim with Le Silence and the basin's edge in front of them, nearly four hundred metres west of the garden pin."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 07:30-21:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Les Halles",
@@ -421,8 +371,7 @@
     "queue_peak_hours": [],
     "queue_basis": "The Forum des Halles is an open shopping centre with multiple free entrances and no admission control, so nobody waits to enter.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Louvre Museum",
@@ -722,46 +671,8 @@
       "source_chunk": "chunk-01-1st-arr-overview-to-les-halles"
     },
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "tue": [],
-      "wed": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:00",
-          "21:45"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo 09:00-18:00; Tu off; We-Th 09:00-18:00; Fr 09:00-21:45; Sa-Su 09:00-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Gated museum; hours from the Louvre's own published schedule, closed Tuesdays with late Friday opening.",
     "place_category": "museum",
     "visit_seconds_inside": 5400,
@@ -819,8 +730,7 @@
         "basis": "A person stands in the western half of the great square courtyard, the palace's four façades rising on every side; the Cour Carrée chapters are told looking at them from inside the square, not from the pyramid court beyond the Pavillon de l'Horloge."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Paris Catacombs",
@@ -892,8 +802,7 @@
     ],
     "queue_basis": "Occupancy underground is capped to a few hundred people at once, so entry moves at a trickle and the wall-standing wait can be twenty minutes or three hours with no reliable way to predict which, making any bound untrustworthy.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Pavillon de Flore",
@@ -958,8 +867,7 @@
     "queue_peak_hours": [],
     "queue_basis": "This is a walk-by-only wing of the Louvre Palace viewed from the street or riverside with no separate entrance, so there is nothing to queue for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Place Vendome",
@@ -1024,8 +932,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open public square walked into freely from surrounding streets with no gate or ticket, so there is no line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Saint-Eustache",
@@ -1183,52 +1090,9 @@
       "source_chunk": "chunk-01-1st-arr-overview-to-les-halles"
     },
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:30",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "09:30",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated church you enter; transcribed from OSM tag 'Mo-Fr 09:30-19:00; Sa 10:00-19:00; Su 09:00-19:00'.",
+    "opening_hours": "Mo-Fr 09:30-19:00; Sa 10:00-19:00; Su 09:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Fr 09:30-19:00; Sa 10:00-19:00; Su 09:00-19:00.",
     "place_category": "church",
     "visit_seconds_inside": 1500,
     "visit_basis": "Second-largest church in Paris, a Gothic-Renaissance hybrid with the country's largest organ and soaring vaults; interior takes about 25 min, exterior facing Les Halles a few minutes.",
@@ -1242,12 +1106,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A large free-entry church near Les Halles with open doors and no ticket or security check, so entry is immediate and no line forms.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Fr 09:30-19:00; Sa 10:00-19:00; Su 09:00-19:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   }
 ]

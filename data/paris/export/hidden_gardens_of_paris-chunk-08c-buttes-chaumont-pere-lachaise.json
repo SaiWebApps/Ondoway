@@ -384,52 +384,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "07:00",
-          "22:00"
-        ]
-      ],
-      "tue": [
-        [
-          "07:00",
-          "22:00"
-        ]
-      ],
-      "wed": [
-        [
-          "07:00",
-          "22:00"
-        ]
-      ],
-      "thu": [
-        [
-          "07:00",
-          "22:00"
-        ]
-      ],
-      "fri": [
-        [
-          "07:00",
-          "22:00"
-        ]
-      ],
-      "sat": [
-        [
-          "07:00",
-          "22:00"
-        ]
-      ],
-      "sun": [
-        [
-          "07:00",
-          "22:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated park with closing gates; transcribed from OSM tag \"Apr,Sep 07:00-21:00; Oct-Mar 07:00-20:00; May-Aug 07:00-22:00\" using the current summer (May-Aug) window.",
+    "opening_hours": "Apr,Sep 07:00-21:00; Oct-Mar 07:00-20:00; May-Aug 07:00-22:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Apr,Sep 07:00-21:00; Oct-Mar 07:00-20:00; May-Aug 07:00-22:00.",
     "place_category": "park",
     "visit_seconds_inside": null,
     "visit_basis": "Large dramatic hillside park with a lake, cliffs, waterfall, grotto and a temple on a rocky island reached by a suspension bridge; walking the paths and climbing to the temple easily fills an hour, all outdoors.",
@@ -443,8 +400,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A free public park with open gates you walk straight through — no ticket, no security, no line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Pere Lachaise Cemetery",
@@ -1034,51 +990,8 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "08:30",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Fr 08:00-18:00; Sa 08:30-18:00; Su 09:00-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A gated walled cemetery with closing bells; hours follow the City of Paris's published summer pattern (opens 08:00 weekdays, 08:30 Sat, 09:00 Sun, closing 18:00).",
     "place_category": "other",
     "visit_seconds_inside": null,
@@ -1209,8 +1122,7 @@
         "basis": "The Messina Pieta with its standing Virgin is in the divisions north-east of the crematorium; a person stands before the white marble group to see why the pose is unusual. Twenty-five metres is the plot and its path, clear of the columbarium forecourt."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Parc de la Villette",
@@ -1311,8 +1223,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A large open urban park with multiple unbarred entrances and no ticket or bag check, so there is no line to enter the grounds.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Parc de Belleville",
@@ -1408,52 +1319,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": true
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated park with closing gates; OSM tag transcribed for the current typical pattern (\"Mo-Fr 08:00-19:00; Sa-Su 09:00-19:00\"), omitting the seasonal Mar27-Apr30 override outside the current window.",
+    "opening_hours": "Mo-Fr 08:00-19:00; Sa-Su 09:00-19:00; Mar 27-Apr 30 Mo-Su 09:00-20:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Fr 08:00-19:00; Sa-Su 09:00-19:00; Mar 27-Apr 30 Mo-Su 09:00-20:30.",
     "place_category": "park",
     "visit_seconds_inside": null,
     "visit_basis": "Hillside park with terraced paths, vines and a panoramic terrace over Paris; climbing through it and taking in the view absorbs about 30 min, nothing to enter.",
@@ -1467,8 +1335,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A hillside public park entered freely through open gates with no admission or screening, so visitors walk straight in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Jardin Naturel",
@@ -1560,8 +1427,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A small public wild garden near Père-Lachaise entered through an open gate with no ticket or security check, so there is no queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Cemetery of Eglise Saint-Germain de Charonne",
@@ -1661,7 +1527,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A small parish churchyard cemetery entered freely from the street with no ticket desk or screening, so there is no line to stand in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

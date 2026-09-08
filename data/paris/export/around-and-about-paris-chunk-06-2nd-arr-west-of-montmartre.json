@@ -44,9 +44,9 @@
       "source_chunk": "chunk-06-2nd-arr-west-of-montmartre"
     },
     "poi_role": "stop",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A covered arcade with grilles that close, so gated, but its exact opening hours are not confidently known; left unfiltered.",
+    "opening_hours": "Mo-Su 06:00-00:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 06:00-00:00.",
     "place_category": "arcade",
     "visit_seconds_inside": null,
     "visit_basis": "Covered arcade you walk through end to end, lined with stamp dealers, old shopfronts and restaurants to browse, about 15 minutes; it is itself the space, nothing separate to enter.",
@@ -60,8 +60,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A covered public passage open at both ends with no door, ticket, or screening; you walk through freely.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Theatre des Varietes",
@@ -131,8 +130,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A performance theatre with no walk-in queue; entry is by show ticket and on a tour it is only viewed from the boulevard.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Place de la Bourse",
@@ -199,8 +197,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open public square with no gate or ticket; the whole value stands in the open with no line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Notre-Dame-des-Victoires",
@@ -295,8 +292,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A basilica with an open door and no ticket or security check, entered directly without stopping.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Bibliotheque Nationale de France - Richelieu",
@@ -372,9 +368,9 @@
       "source_chunk": "chunk-06-2nd-arr-west-of-montmartre"
     },
     "poi_role": "stop",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A library entered through doors/security, so gated, but its exact hours are not confidently known; left unfiltered.",
+    "opening_hours": "Mo 14:00-19:30; Tu 09:00-20:00; We-Fr 09:00-19:30; Sa 09:00-18:30; Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo 14:00-19:30; Tu 09:00-20:00; We-Fr 09:00-19:30; Sa 09:00-18:30; Su 10:00-18:00.",
     "place_category": "other",
     "visit_seconds_inside": 3600,
     "visit_basis": "Long historic facade and entrance courtyard take ten minutes outside; inside are the restored Labrouste and Oval reading rooms plus a museum of treasures, roughly an hour with entry.",
@@ -393,8 +389,7 @@
     ],
     "queue_basis": "Public access to the museum and gallery passes a reception and bag check that moves steadily, giving only a brief line at midday peak.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Galerie Vivienne",
@@ -443,47 +438,9 @@
       "source_chunk": "chunk-06-2nd-arr-west-of-montmartre"
     },
     "poi_role": "setting",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "wed": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "thu": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "fri": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "sat": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "sun": []
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated covered arcade with grilles; OSM tag \"Mo-Sa 08:30-20:30\" transcribed with Sunday closed.",
+    "opening_hours": "Mo-Sa 08:30-20:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 08:30-20:30.",
     "place_category": "arcade",
     "visit_seconds_inside": null,
     "visit_basis": "Elegant covered arcade with mosaic floors, glass roof and neoclassical shopfronts to walk slowly and browse, about 15 minutes; the arcade itself is the space.",
@@ -497,13 +454,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A covered arcade open at both ends with no door or ticket; visitors stroll through with no queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 08:30-20:30\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Square Louvois",
@@ -659,8 +610,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A small free public garden entered through an open gate with no ticket or check, so no line exists.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Passage Choiseul",
@@ -731,8 +681,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A covered public passage open at both ends with no door or ticket; you walk straight through.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Restaurant Drouant",
@@ -805,8 +754,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A restaurant with no public queue for entry; on a walking tour it is a facade passed by, with dining by reservation not a standing line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Harry's New York Bar",
@@ -875,8 +823,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A bar you walk into off the street with no ticket or security screening; any wait is for a seat inside, not a line to enter.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Rue de la Paix",
@@ -1030,7 +977,6 @@
     "queue_peak_hours": [],
     "queue_basis": "An open shopping street with no gate or ticket; the whole value stands in the open, so there is no line to enter.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   }
 ]

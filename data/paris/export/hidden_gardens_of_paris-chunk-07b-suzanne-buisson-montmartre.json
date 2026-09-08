@@ -319,8 +319,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A public neighborhood garden entered through an open gate with no ticket or screening, so no wait exists before entering.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Musée de Montmartre",
@@ -767,52 +766,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": true
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A ticketed museum; transcribed faithfully from its OSM tag \"10:00-19:00\" applied to all seven days.",
+    "opening_hours": "10:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 10:00-19:00.",
     "place_category": "museum",
     "visit_seconds_inside": 4200,
     "visit_basis": "Interior museum in historic houses plus the Renoir gardens, several rooms of period paintings and rooms, roughly 50-60 min plus a short ticket queue; garden and courtyard add outside time.",
@@ -831,13 +787,7 @@
     ],
     "queue_basis": "A small museum with a single ticket desk and no airport-style security, so a modest line forms at midday but stays minor at its worst.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"10:00-19:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Square Carpeaux",
@@ -1016,8 +966,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A public garden with an open gate and no ticket or check, so there is no line before entering.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Square Léon-Serpollet",
@@ -1120,8 +1069,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A public neighborhood garden entered freely through an open gate, so no queue exists.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Parc Turlure",
@@ -1233,8 +1181,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A public hillside park with open gates and no ticket or security, so there is nothing to wait in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Square Louise-Michel",
@@ -1329,52 +1276,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": true
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "21:30"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "21:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated garden below Sacré-Cœur; transcribed from its OSM tag with the current May 01-Aug 31 summer extension to 21:30 and the Sa/Su 09:00 open applied (\"08:00-17:45; PH,Sa,Su 08:00-09:00 off, ... May 01-Aug 31 17:45-21:30\").",
+    "opening_hours": "08:00-17:45; PH,Sa,Su 08:00-09:00 off, Mar 01-Mar Su[-1] 17:45-19:00, Oct 01-Oct Su[-1] 17:45-19:30, Mar Su[-1]-Apr 30,Sep 17:45-20:30, May 01-Aug 31 17:45-21:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 08:00-17:45; PH,Sa,Su 08:00-09:00 off, Mar 01-Mar Su[-1] 17:45-19:00, Oct 01-Oct Su[-1] 17:45-19:30, Mar Su[-1]-Apr 30,Sep 17:45-20:30, May 01-Aug 31 17:45-21:30.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "The formal stepped garden below Sacré-Cœur, tiered lawns, a fountain and the panoramic view of Paris; you climb the terraces and stand at the belvedere, an open landscaped slope with nothing to enter.",
@@ -1388,8 +1292,7 @@
     "queue_peak_hours": [],
     "queue_basis": "The open terraced garden below Sacré-Cœur is entered freely from the street with no gate or check, so no line exists.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Square des Abbesses",
@@ -1511,8 +1414,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A small public square-garden entered through an open gate with no ticket, so there is no queue to price.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Montmartre Cemetery",
@@ -1608,51 +1510,8 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "08:30",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Fr 08:00-18:00; Sa 08:30-18:00; Su 09:00-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A gated walled cemetery with closing gates; hours follow the City of Paris's published summer pattern shared across municipal cemeteries.",
     "place_category": "other",
     "visit_seconds_inside": null,
@@ -1667,8 +1526,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A free public cemetery entered through open gates with no ticketing or bag check, so there is no line to join.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Lapin Agile",
@@ -1694,37 +1552,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "21:00",
-          "23:59"
-        ]
-      ],
-      "wed": [],
-      "thu": [
-        [
-          "21:00",
-          "23:59"
-        ]
-      ],
-      "fri": [
-        [
-          "21:00",
-          "23:59"
-        ]
-      ],
-      "sat": [
-        [
-          "21:00",
-          "23:59"
-        ]
-      ],
-      "sun": []
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated cabaret; OSM tag 'Tu,Th-Sa 21:00-01:00' transcribed, with past-midnight windows capped at 23:59 to avoid a backwards window.",
+    "opening_hours": "Tu,Th-Sa 21:00-01:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu,Th-Sa 21:00-01:00.",
     "place_category": "other",
     "visit_seconds_inside": 5400,
     "visit_basis": "Historic Montmartre cabaret; the painted rabbit sign and ivy-clad exterior take a few minutes, while an actual evening show inside runs well past two hours and is capped at the 90-minute tour maximum.",
@@ -1743,7 +1573,6 @@
     ],
     "queue_basis": "A small cabaret admitted by a single door at the start of an evening show, so a brief cluster forms at doors-open time but there is no security screening or all-day line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

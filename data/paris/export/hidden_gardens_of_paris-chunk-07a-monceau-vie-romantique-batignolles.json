@@ -413,8 +413,7 @@
         "basis": "The Rotonde de Chartres gate on boulevard de Courcelles is the park's north entrance the beat seats its bench inside; a person stands at the wrought-iron and gold gates — the corpus's Musée Cernuschi record on the east edge calibrates the park's span from the west-side pin."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Musée Jacquemart-André",
@@ -511,8 +510,7 @@
     ],
     "queue_basis": "A popular mansion museum with a narrow entrance, bag check and ticket control feeding a limited-capacity house, so blockbuster exhibitions produce a real mid-day line that timed slots only partly relieve.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Musée de la Vie Romantique",
@@ -718,47 +716,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": true
     },
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated museum, transcribed faithfully from its OSM tag 'Tu-Su 10:00-18:00, Mo off'.",
+    "opening_hours": "Tu-Su 10:00-18:00, Mo off",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 10:00-18:00, Mo off.",
     "place_category": "museum",
     "visit_seconds_inside": 3000,
     "visit_basis": "House-museum of the Romantic era set around a courtyard garden; the ground-floor rooms with George Sand memorabilia and upstairs paintings take about 45 minutes plus a short entry, and the leafy courtyard and café add outside time.",
@@ -777,13 +737,7 @@
     ],
     "queue_basis": "A modest house-museum with a single reception desk and free permanent collection, so only a brief desk/bag-check line forms at busy midday hours.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:00, Mo off\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Square des Batignolles",
@@ -1113,8 +1067,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A public English-style garden with open gates you walk straight through — no admission and no queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Square d'Orléans",
@@ -1241,8 +1194,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A private residential courtyard-garden you walk into through an open gate with no ticket or security, so there is no line to price.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Cathédrale Saint-Alexandre-Nevsky",
@@ -1337,8 +1289,7 @@
     ],
     "queue_basis": "A working Orthodox cathedral with restricted visiting hours entered through one door; a small line can form only within its limited opening windows and is otherwise negligible.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Place Saint-Georges",
@@ -1374,7 +1325,6 @@
     "queue_peak_hours": [],
     "queue_basis": "An open public square with no door and no interior; the whole value stands in the open, so there is nothing to queue for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   }
 ]

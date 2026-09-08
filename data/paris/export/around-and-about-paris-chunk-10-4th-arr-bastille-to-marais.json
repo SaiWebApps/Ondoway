@@ -113,8 +113,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open traffic square with the July Column at its centre, entered from the surrounding streets with no door or ticket.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Temple du Marais",
@@ -208,8 +207,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working Protestant temple with an open door and free entry, walked straight into with no ticket desk or screening.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Hotel de Mayenne",
@@ -269,8 +267,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A private Marais mansion (now a school) viewed only from the street, with no public interior and therefore no queue.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Place des Vosges",
@@ -398,8 +395,7 @@
         "basis": "The fenced garden inside the arcades is where the corpus sends a person to find a bench near the children's play area and watch; you stand or sit among the lawns and fountains, not under the arcades. Thirty metres round the centre covers the benches and fountains and stops short of the arcade walks."
       }
     ],
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Musee Victor Hugo",
@@ -493,8 +489,7 @@
     ],
     "queue_basis": "A small apartment-museum on Place des Vosges with free permanent collection but one narrow entrance and a bag check, so a modest line forms midday when capacity throttles arrivals.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Hotel de Sully",
@@ -588,8 +583,7 @@
     ],
     "queue_basis": "Entry is through a courtyard and bookshop of the heritage centre with no mass ticketing, so only a brief wait at the single door forms at busy hours.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Hotel de Sens",
@@ -636,52 +630,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "19:50"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "19:50"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "19:50"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "19:50"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "19:50"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "19:50"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "19:50"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated fortress-mansion library, transcribed from its OSM tag 'Mo-Fr 08:00-19:50; Sa,Su 09:00-19:50'.",
+    "opening_hours": "Mo-Fr 08:00-19:50; Sa,Su 09:00-19:50",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Fr 08:00-19:50; Sa,Su 09:00-19:50.",
     "place_category": "other",
     "visit_seconds_inside": 1200,
     "visit_basis": "Medieval fortress-mansion with turrets and a gated courtyard, one of the oldest civil buildings in Paris; the exterior and courtyard reward a full look, and the Forney library rooms inside take about 20 minutes.",
@@ -700,13 +651,7 @@
     ],
     "queue_basis": "The building houses the Forney library with a single reception entrance rather than mass ticketing, so only a few people wait at busy hours.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Fr 08:00-19:50; Sa,Su 09:00-19:50\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Saint-Paul-Saint-Louis",
@@ -795,8 +740,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A Baroque church with an open door and free entry on rue Saint-Antoine, walked into without any ticket or security line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Village Saint-Paul",
@@ -854,8 +798,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open cluster of antique courtyards with multiple street passages and no gate or ticketing, so there is no line to enter.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Hotel Lamoignon",
@@ -906,52 +849,9 @@
       }
     ],
     "poi_role": "walk_by_only",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "17:00"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "17:00"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "17:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "17:00"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "17:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "17:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "17:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A Renaissance mansion housing a library with controlled access, transcribed from its OSM tag 'Mo-Fr 08:00-17:00; Sa-Su 09:00-17:00'.",
+    "opening_hours": "Mo-Fr 08:00-17:00; Sa-Su 09:00-17:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Fr 08:00-17:00; Sa-Su 09:00-17:00.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Renaissance mansion with a monumental pilastered courtyard facade housing the city's historical library; you view the courtyard from the entrance, interior is a working library rather than a visitor stop.",
@@ -965,13 +865,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A Renaissance mansion seen from the street as a walk-by; its historical library is reached through open courtyard access rather than a queued entrance, so no line forms for the passer-by.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Fr 08:00-17:00; Sa-Su 09:00-17:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Synagogue de la rue Pavee",
@@ -1035,8 +929,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A walk-by-only facade viewed from the street with no public entry to queue for.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Rue des Rosiers",
@@ -1125,8 +1018,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open street with no door and no line; its value is walked past in the open.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Hotel Amelot de Bisseuil",
@@ -1189,8 +1081,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A private mansion seen from the street as a walk-by; there is no visitor entry to queue for.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Notre-Dame-des-Blancs-Manteaux",
@@ -1233,56 +1124,9 @@
       }
     ],
     "poi_role": "walk_by_only",
-    "opening_hours": {
-      "mon": [
-        [
-          "17:00",
-          "19:30"
-        ]
-      ],
-      "tue": [
-        [
-          "15:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "15:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "15:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "15:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "15:00",
-          "19:30"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "12:00"
-        ],
-        [
-          "15:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A church you enter, hence gated; transcribed from OSM tag 'Mo 17:00-19:30; Tu-Fr 15:00-19:00; Sa 15:00-19:30; Su 10:00-12:00, 15:00-19:00'.",
+    "opening_hours": "Mo 17:00-19:30; Tu-Fr 15:00-19:00; Sa 15:00-19:30; Su 10:00-12:00, 15:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo 17:00-19:30; Tu-Fr 15:00-19:00; Sa 15:00-19:30; Su 10:00-12:00, 15:00-19:00.",
     "place_category": "church",
     "visit_seconds_inside": 1000,
     "visit_basis": "Modest Baroque facade on a narrow street, then a single-nave church interior with a notable carved Flemish pulpit, absorbing roughly 15-18 minutes inside.",
@@ -1296,13 +1140,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door you walk straight through without any ticket desk or security line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo 17:00-19:30; Tu-Fr 15:00-19:00; Sa 15:00-19:30; Su 10:00-12:00, 15:00-19:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "La Force Prison Site",
@@ -1361,7 +1199,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A demolished prison marked only by a street site with no interior and nothing to queue for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   }
 ]

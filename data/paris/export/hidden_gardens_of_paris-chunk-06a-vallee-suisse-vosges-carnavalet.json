@@ -230,8 +230,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A small landscaped ravine garden off the Champs-Élysées with open pathways and no ticketed entrance, so there is no queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Petit Palais",
@@ -327,47 +326,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "Gated municipal museum; published City of Paris pattern is Tuesday-Sunday 10:00-18:00, closed Mondays.",
+    "opening_hours": "Tu-Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 10:00-18:00.",
     "place_category": "museum",
     "visit_seconds_inside": 4200,
     "visit_basis": "Free Beaux-Arts fine-art museum with roughly a dozen galleries over two levels plus a hidden interior garden cafe; an engaged visit runs 60-70 min and entry is free so no long queue.",
@@ -386,8 +347,7 @@
     ],
     "queue_basis": "The permanent collection is free with no ticket desk, but a bag-check at the door creates a brief moving line at midday that clears quickly in the early morning and late afternoon.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Grand Palais",
@@ -409,47 +369,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "22:30"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated exhibition hall; transcribed from OSM tag 'Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30' with Monday closed.",
+    "opening_hours": "Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30.",
     "place_category": "monument",
     "visit_seconds_inside": 5400,
     "visit_basis": "Monumental glass-roofed exhibition hall; the vast nave and staircases plus a major temporary exhibition would absorb well over two hours, capped at the 90-minute tour maximum, with a ticket queue included.",
@@ -468,13 +390,7 @@
     ],
     "queue_basis": "Entry to the exhibition hall runs through security bag checks and timed-ticket scanning at a controlled entrance, so the line builds midday during major shows; the numbers reflect a busy exhibition period and drop at opening.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Champs-Elysees",
@@ -600,8 +516,7 @@
     "queue_peak_hours": [],
     "queue_basis": "This is an open public avenue with no door and no ticket, so there is nothing to stand in line for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Place des Vosges",
@@ -1093,8 +1008,7 @@
         "basis": "The fenced garden inside the arcades is where the corpus sends a person to find a bench near the children's play area and watch; you stand or sit among the lawns and fountains, not under the arcades. Thirty metres round the centre covers the benches and fountains and stops short of the arcade walks."
       }
     ],
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Jardin Saint-Gilles Grand Veneur",
@@ -1196,8 +1110,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A small free Marais garden entered through an open gate you walk straight through — no ticket, no line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Hotel de Sully",
@@ -1322,8 +1235,7 @@
     ],
     "queue_basis": "Entry is through a courtyard and bookshop of the heritage centre with no mass ticketing, so only a brief wait at the single door forms at busy hours.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Place du Marché Sainte-Catherine",
@@ -1424,8 +1336,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open Marais square entered freely from the surrounding streets with no gate or ticket.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Musee Carnavalet",
@@ -1775,46 +1686,8 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo off; Tu-Su 10:00-18:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A gated museum; hours follow the institution's published pattern of Tuesday-Sunday 10:00-18:00, closed Mondays.",
     "place_category": "museum",
     "visit_seconds_inside": 4200,
@@ -1834,8 +1707,7 @@
     ],
     "queue_basis": "The permanent collection is free so there is no ticket-purchase line, but a bag check at the mansion entrance forms a small moving queue at midday.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "La Tartine",
@@ -1941,7 +1813,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A café/eatery passed on the walk with no admission line; any wait is for a table, not a queue to enter.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

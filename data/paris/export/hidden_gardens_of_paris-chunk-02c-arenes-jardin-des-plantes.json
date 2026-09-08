@@ -334,8 +334,7 @@
     "queue_peak_hours": [],
     "queue_basis": "The Roman arena is a free public open space entered through an unstaffed passage with no ticket or check, so there is no line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Place de la Contrescarpe",
@@ -493,8 +492,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open public square with no door and no ticket; the whole value stands in the open air with nothing to wait for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Rue Mouffetard",
@@ -605,8 +603,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open market street with no door or ticket; the whole value is walked through in the open air, so there is no queue.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Eglise Saint-Medard",
@@ -629,47 +626,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "09:00",
-          "19:30"
-        ]
-      ],
-      "wed": [
-        [
-          "09:00",
-          "19:30"
-        ]
-      ],
-      "thu": [
-        [
-          "09:00",
-          "19:30"
-        ]
-      ],
-      "fri": [
-        [
-          "09:00",
-          "19:30"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "19:30"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A church you enter, hence gated; transcribed from its OSM tag 'Tu-Sa 09:00-19:30; Su 09:00-20:00' with Monday closed.",
+    "opening_hours": "Tu-Sa 09:00-19:30; Su 09:00-20:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Sa 09:00-19:30; Su 09:00-20:00.",
     "place_category": "church",
     "visit_seconds_inside": 1100,
     "visit_basis": "Medieval parish church at the foot of rue Mouffetard; exterior is modest, interior has nave, side chapels and Jansenist history to absorb an engaged walk-through.",
@@ -683,13 +642,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door and free entry; visitors walk straight in without any security screening or ticket desk.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Sa 09:00-19:30; Su 09:00-20:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Jardin des Plantes",
@@ -974,51 +927,8 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "sat": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "sun": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 08:00-17:30",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A walled botanical garden with closing times; hours reflect the garden's published winter pattern of roughly 08:00–17:30 daily, extending later in summer.",
     "place_category": "garden",
     "visit_seconds_inside": null,
@@ -1033,8 +943,7 @@
     "queue_peak_hours": [],
     "queue_basis": "The botanical garden itself has free open gates you walk through without stopping; the paid museum and zoo inside have their own desks, but entering the garden has no line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Jardin Alpin",
@@ -1073,8 +982,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An alpine section inside the free, open Jardin des Plantes reached by a tunnel with no separate ticket gate, so there is no queue to enter.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Grand Mosque of Paris",
@@ -1179,8 +1087,7 @@
     ],
     "queue_basis": "The visitor areas require a small paid ticket at a single desk that forms a modest, moving line, peaking on weekend afternoons when tourists and tea-salon visitors overlap.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Institut du Monde Arabe",
@@ -1291,8 +1198,7 @@
     "queue_peak_hours": [],
     "queue_basis": "This stop is walk-by only to see Nouvel's photo-sensitive facade from outside, so no interior entry line is priced.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Jardin Tino Rossi",
@@ -1395,8 +1301,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open quayside sculpture garden with no gate or ticket, so no line forms.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Librairie Michael Seksik",
@@ -1497,7 +1402,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A bookshop you walk into off the street with no admission control, so there is no entry line to price.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

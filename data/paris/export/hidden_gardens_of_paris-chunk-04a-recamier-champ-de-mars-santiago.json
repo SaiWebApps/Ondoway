@@ -413,8 +413,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open public square entered freely from the street with no ticket or door, so no line forms.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Square Santiago du Chili",
@@ -692,8 +691,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open public square with an open gate and no ticket, so there is nothing to queue for.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Champ de Mars",
@@ -1013,8 +1011,7 @@
         "basis": "The long axis of lawn between the tree lines is where the Revolution's festivals were staged and where a person stands back to look at the tower framed by the park. Half the footprint: you take the lawn in from anywhere along its middle, not from one blade of grass."
       }
     ],
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Eiffel Tower",
@@ -1168,51 +1165,8 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "tue": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 09:30-23:45",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Gated ticketed monument with elevator/stair access; hours follow the tower's own published year-round daily pattern (extended summer hours from mid-June).",
     "place_category": "other",
     "visit_seconds_inside": 5400,
@@ -1244,8 +1198,7 @@
         "basis": "The esplanade under the four feet is where the queues form and where a person stands to look straight up through the lattice; the corpus's queue and security lines are about this esplanade. Half the footprint, as a place you look at demands."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Théâtre du Vieux-Colombier",
@@ -1358,8 +1311,7 @@
     ],
     "queue_basis": "A working theatre where any wait is a ticket-check and bag glance clustered just before a performance, not a standing queue, so it peaks briefly around curtain time and is otherwise negligible.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Jardin Atlantique",
@@ -1595,52 +1547,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "21:30"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "21:30"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "21:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated rooftop garden with closing gates; OSM tag transcribed for the current May 1-Aug 31 08:00-21:30 pattern, with Sa/Su opening delayed to 09:00 per the \"Sa,Su,PH 08:00-09:00 closed\" rule.",
+    "opening_hours": "Oct 01-Oct Su[-1] 08:00-19:30; Oct Su[-1]-Feb 29 08:00-17:45; Mar 01-Mar Su[-1] 08:00-19:00; Mar Su[-1]-Apr 30,Sep 08:00-20:30; May 1-Aug 31 08:00-21:30; Sa,Su,PH 08:00-09:00 closed",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Oct 01-Oct Su[-1] 08:00-19:30; Oct Su[-1]-Feb 29 08:00-17:45; Mar 01-Mar Su[-1] 08:00-19:00; Mar Su[-1]-Apr 30,Sep 08:00-20:30; May 1-Aug 31 08:00-21:30; Sa,Su,PH 08:00-09:00 closed.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Rooftop park built over Montparnasse station with lawns, tennis courts, fountains and grasses; reaching it and walking the elevated deck absorbs about 25 min, nothing to enter.",
@@ -1654,7 +1563,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A public rooftop garden atop Gare Montparnasse entered freely via lift or stairs with no ticket or screening, so there is no line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

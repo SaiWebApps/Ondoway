@@ -322,52 +322,9 @@
       "source_chunk": "galeries_lafayette-rev-1355539443",
       "source_book": "Wikipedia"
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "11:00",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "Gated department store; the flagship Haussmann store's own published pattern is 10:00-20:00 Monday-Saturday and 11:00-20:00 Sunday, recorded as the current typical pattern.",
+    "opening_hours": "Mo-Sa 09:30-20:30; Su 11:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 09:30-20:30; Su 11:00-19:00.",
     "place_category": "gallery",
     "visit_seconds_inside": 3600,
     "visit_basis": "Belle Epoque department store with a spectacular stained-glass dome and a free rooftop panorama terrace; an engaged visit takes in the dome galleries and climbs to the roof for views, around an hour inside, plus the exterior.",
@@ -386,7 +343,6 @@
     ],
     "queue_basis": "A free-entry department store with open doors, but bag checks and the wait for the small rooftop-terrace elevator create a minor moving line at busy afternoon hours.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

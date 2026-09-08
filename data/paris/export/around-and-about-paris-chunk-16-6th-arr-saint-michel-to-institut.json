@@ -77,9 +77,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "Gated cafe with a door; hours not confidently known; left unfiltered.",
+    "opening_hours": "Mo-Su 07:30-01:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 07:30-01:30.",
     "place_category": "other",
     "visit_seconds_inside": 3000,
     "visit_basis": "Landmark 1887 Left Bank cafe with its mirrored Art Deco interior; the terrace facade is quick to appreciate, while sitting inside for the historic room and a coffee is the point, comfortably 45-50 min including service.",
@@ -98,8 +98,7 @@
     ],
     "queue_basis": "A famous cafe where a short wait for a table can form at peak lunch hours as the host seats people, but there is no ticket or security and off-peak you walk straight to a seat.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Saint-Germain-des-Pres",
@@ -255,52 +254,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "tue": [
-        [
-          "07:30",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "07:30",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "07:30",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "07:30",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "08:30",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated church you enter; transcribed from OSM tag 'Mo,Su 09:30-20:00; Tu-Fr 07:30-20:00; Sa 08:30-20:00'.",
+    "opening_hours": "Mo,Su 09:30-20:00; Tu-Fr 07:30-20:00; Sa 08:30-20:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo,Su 09:30-20:00; Tu-Fr 07:30-20:00; Sa 08:30-20:00.",
     "place_category": "church",
     "visit_seconds_inside": 1200,
     "visit_basis": "Oldest church in Paris with a Romanesque tower and painted medieval nave; interior takes about 20 min, exterior square and cafe corner a few minutes more.",
@@ -314,13 +270,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An active parish church with an open door and free entry that visitors walk straight into, so there is no ticket desk or security to stand in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo,Su 09:30-20:00; Tu-Fr 07:30-20:00; Sa 08:30-20:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Le Procope",
@@ -408,9 +358,9 @@
       }
     ],
     "poi_role": "walk_by_only",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A restaurant entered through its door; gated, hours not confidently known; left unfiltered.",
+    "opening_hours": "12:00-24:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 12:00-24:00.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Oldest cafe in Paris on a narrow passage; walk-by only, you read the sign and take in the 17th-century frontage and its literary associations from the street.",
@@ -424,8 +374,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A walk-by restaurant entered by reservation, not a ticketed sight, so there is no public queue to stand in outside.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Cour du Commerce-Saint-Andre",
@@ -612,8 +561,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open covered passage walked through freely from either end with no door or ticket, so no queue exists.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Fontaine Saint-Michel",
@@ -673,8 +621,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A monumental street fountain seen from the open square; there is no interior and no line of any kind.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Rue de l'Hirondelle",
@@ -737,8 +684,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A medieval public alley admired for its carved facade; an open street has no door and no line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Caveau de la Bolee",
@@ -802,8 +748,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A walk-by cellar cabaret seen from the alley, not a ticketed daytime entry, so no public queue is priced.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Cour de Rohan",
@@ -865,8 +810,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A set of hidden courtyards entered through a passage with no ticket or gate check, so there is nothing to wait in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Theatre de l'Odeon",
@@ -968,8 +912,7 @@
     "queue_peak_hours": [],
     "queue_basis": "Viewed only from outside as a neoclassical facade; there is no daytime visitor entry queue apart from ticketed performance times, which this walk-by does not use.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Institut de France",
@@ -1133,8 +1076,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working academy building admired from the quay as a domed facade; no general public entry line exists to price.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Hotel de la Monnaie",
@@ -1188,52 +1130,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "11:00",
-          "22:00"
-        ]
-      ],
-      "fri": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "11:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A coin museum you enter, hence gated; transcribed from its OSM tag 'Mo-Su 11:00-19:00; Th 11:00-22:00' with holiday closures noted.",
+    "opening_hours": "Mo-Su 11:00-19:00; Th 11:00-22:00; Dec 25 off; Jan 01 off; May 01 off",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 11:00-19:00; Th 11:00-22:00; Dec 25 off; Jan 01 off; May 01 off.",
     "place_category": "museum",
     "visit_seconds_inside": 2400,
     "visit_basis": "Long neoclassical mint on quai de Conti with a coin museum inside; exterior riverfront facade plus museum galleries of coinage and minting to walk through.",
@@ -1252,8 +1151,7 @@
     ],
     "queue_basis": "A modest coin museum with a single ticket desk and light bag check; the small visitor volume keeps any line brief even at midday.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Shakespeare and Company",
@@ -1305,52 +1203,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "11:00",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "11:00",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "A bookshop entered through a door (gated); hours from the shop's own published pattern of 10:00-20:00 weekdays and 11:00-20:00 weekends.",
+    "opening_hours": "Mo-Su 10:00-23:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 10:00-23:00.",
     "place_category": "other",
     "visit_seconds_inside": 2100,
     "visit_basis": "Cramped multi-room English bookshop across from Notre-Dame; the facade and window are quick, but inside two floors of tightly packed stacks, reading nooks and the tumbleweed beds reward 30-40 min of genuine browsing.",
@@ -1369,8 +1224,7 @@
     ],
     "queue_basis": "A tiny bookshop that caps how many people fit inside and meters entry through one narrow door, so a short line forms at midday tourist peaks but clears quickly at opening; no security screening.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Pont Neuf",
@@ -1457,7 +1311,6 @@
         "basis": "The bronze horseman stands on the terre-plein at the bridge's middle, directly above the steps down to the square du Vert-Galant — one standing position for both named spots, and a person looks at the statue from the platform around it."
       }
     ],
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   }
 ]

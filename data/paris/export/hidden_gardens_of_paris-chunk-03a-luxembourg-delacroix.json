@@ -395,51 +395,8 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "tue": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "wed": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "thu": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "fri": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "sat": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "sun": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 07:30-21:30",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Walled park with gates and closing bells; hours vary seasonally with sunrise/sunset, typical summer window given per the Senat's published schedule.",
     "place_category": "garden",
     "visit_seconds_inside": null,
@@ -466,8 +423,7 @@
         "basis": "The pear-and-apple orchard fills the garden's southwest corner where the beat itself places it, adjacent to the rue Auguste-Comte; a person stands among the rows there, three hundred and fifty metres from the garden pin."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Fontaine Médicis",
@@ -569,51 +525,8 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "tue": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "wed": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "thu": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "fri": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "sat": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ],
-      "sun": [
-        [
-          "07:30",
-          "21:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 07:30-21:30",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A fountain inside the gated Luxembourg Gardens, which close at nightfall by bells; hours vary seasonally and this reflects the current typical spring/summer pattern from the Sénat's published schedule.",
     "place_category": "monument",
     "visit_seconds_inside": null,
@@ -628,8 +541,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A fountain inside the freely-entered Luxembourg Gardens, viewed in the open with no gate or ticket to queue for.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Palais du Luxembourg",
@@ -796,8 +708,7 @@
     ],
     "queue_basis": "As the seat of the French Senate, public access is limited and gated by security screening on booked-visit days, giving a modest controlled line rather than a mass tourist queue; without booking most tours only see the exterior and the surrounding gardens, which are free and unqueued.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Musée Eugène Delacroix",
@@ -1149,8 +1060,7 @@
     ],
     "queue_basis": "A small apartment-and-studio museum with a single ticket desk and modest capacity, so a few visitors may briefly queue at midday but the line is minor and moves.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Place de Furstemberg",
@@ -1247,8 +1157,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open public square with no door and no gate; the Musée Delacroix on it has its own small desk, but the square itself is walked into freely with no line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Institut Catholique",
@@ -1415,8 +1324,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working university passed on the street as a walk-by with no public ticketed entry, so there is no visitor queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Ecole des Beaux-Arts",
@@ -1532,8 +1440,7 @@
     "queue_peak_hours": [],
     "queue_basis": "Walked by only; the art school's courtyard and street facade are viewed without any ticketed entry or line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "9 Quai Malaquais (George Sand)",
@@ -1632,8 +1539,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A private residential address viewed from the street with no interior to enter, so there is no queue.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Saint-Sulpice",
@@ -1721,52 +1627,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "sat": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "sun": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated church you enter; transcribed from OSM tag '08:00-19:45' applied to all seven days.",
+    "opening_hours": "08:00-19:45",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 08:00-19:45.",
     "place_category": "church",
     "visit_seconds_inside": 1500,
     "visit_basis": "Huge Baroque church with Delacroix murals, the gnomon solar calendar and a monumental organ; interior of side chapels and nave takes about 25 min, with a large fountain square outside.",
@@ -1780,13 +1643,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A large free-entry church you walk directly into through its main doors with no ticketing or security, so no queue forms before entering.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"08:00-19:45\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Saint-Germain-des-Pres",
@@ -1879,52 +1736,9 @@
     "longitude": 2.334518,
     "importance_tier": 3,
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "tue": [
-        [
-          "07:30",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "07:30",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "07:30",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "07:30",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "08:30",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated church you enter; transcribed from OSM tag 'Mo,Su 09:30-20:00; Tu-Fr 07:30-20:00; Sa 08:30-20:00'.",
+    "opening_hours": "Mo,Su 09:30-20:00; Tu-Fr 07:30-20:00; Sa 08:30-20:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo,Su 09:30-20:00; Tu-Fr 07:30-20:00; Sa 08:30-20:00.",
     "place_category": "church",
     "visit_seconds_inside": 1200,
     "visit_basis": "Oldest church in Paris with a Romanesque tower and painted medieval nave; interior takes about 20 min, exterior square and cafe corner a few minutes more.",
@@ -1939,12 +1753,6 @@
     "queue_peak_hours": [],
     "queue_basis": "An active parish church with an open door and free entry that visitors walk straight into, so there is no ticket desk or security to stand in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo,Su 09:30-20:00; Tu-Fr 07:30-20:00; Sa 08:30-20:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   }
 ]

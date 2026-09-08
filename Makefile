@@ -182,7 +182,7 @@ check_db = @echo " $(LOCAL_DBS) " | grep -q " $(DB) " || \
 	flutter-web flutter-ios flutter-device flutter-pub-get flutter-clean \
 	survey-area-candidates fix-area-radii backfill-provenance backfill-poi-role \
 	backfill-name-key wiki-fetch gen-within-edges validate-beats deploy prune-orphans \
-	fetch-boundary geocode-pois poi-visit-duration poi-opening-hours poi-hours-review \
+	fetch-boundary geocode-pois poi-visit-duration poi-opening-hours \
 	poi-place-category poi-visit-report poi-body-places poi-place-judgements \
 	poi-queues poi-trigger-radius sync-poi-exports tour-build \
 	measure-planned-audio measure-governor \
@@ -794,25 +794,15 @@ poi-visit-duration: ## Price POI visit time. Usage: make poi-visit-duration SLUG
 	@$(RENDER_LOCAL_EXEC) uv run python scripts/poi_visit_duration.py \
 		--slug "$(or $(SLUG),paris)"$(if $(LIMIT), --limit $(LIMIT),) $(ARGS)
 
-# Learns each POI's opening days and hours (redesign data row 6.1): one bulk
-# OSM/Overpass query where OSM has the place, an audited model pass otherwise.
-# Spends real model credits, so LIMIT= runs a subset and writes nothing —
-# exactly the poi-visit-duration pattern, including render-key for the
-# provider secrets.
+# Learns each door's opening hours (Docs/adr/0006): two OSM/Overpass queries
+# (the map comes first, refreshed every run), then a model pass for the doors
+# the map does not hold, answering in the map's own grammar. Spends real model
+# credits only for those, so LIMIT= runs a subset and writes nothing — the
+# poi-visit-duration pattern, including render-key for the provider secrets.
 poi-opening-hours: ## Learn POI opening hours. Usage: make poi-opening-hours SLUG=paris [LIMIT=10].
 	@$(PREFLIGHT) --label poi-opening-hours $(PRE_PY) render-key
 	@$(RENDER_LOCAL_EXEC) uv run python scripts/poi_opening_hours.py \
 		--slug "$(or $(SLUG),paris)"$(if $(LIMIT), --limit $(LIMIT),) $(ARGS)
-
-# The verification ladder's review session (Docs/adr/0003): tier-0
-# corroboration runs first (one Overpass query, $0, auto-demote on drift),
-# then the interactive queue — conflicts first, then gravity. APPROVER is
-# stamped onto every decision. LIST=1 renders the queue and decides nothing.
-poi-hours-review: ## Review POI opening hours. Usage: make poi-hours-review SLUG=paris APPROVER=<you> [LIST=1].
-	@$(PREFLIGHT) --label poi-hours-review $(PRE_PY)
-	@$(LOCAL_EXEC) uv run python scripts/poi_opening_hours.py \
-		--slug "$(or $(SLUG),paris)" --verify \
-		$(if $(filter 1,$(LIST)),--list-queue,--approver "$(APPROVER)") $(ARGS)
 
 # Deterministic, $0, re-runnable at will (redesign data row 6.7): no model, no
 # network, no credentials — name tokens, description and poi_role in, one of a

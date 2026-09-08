@@ -317,8 +317,7 @@
     ],
     "queue_basis": "The historic university is not a free walk-in; visitor access runs through a controlled entrance with ID and bag check, producing a modest line at midday that thins outside guided-visit windows.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Saint-Etienne-du-Mont",
@@ -421,60 +420,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "06:30",
-          "19:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:45",
-          "19:45"
-        ]
-      ],
-      "wed": [
-        [
-          "08:45",
-          "22:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:45",
-          "19:45"
-        ]
-      ],
-      "fri": [
-        [
-          "08:45",
-          "19:45"
-        ]
-      ],
-      "sat": [
-        [
-          "08:45",
-          "12:00"
-        ],
-        [
-          "14:00",
-          "19:45"
-        ]
-      ],
-      "sun": [
-        [
-          "08:45",
-          "12:15"
-        ],
-        [
-          "14:30",
-          "19:45"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated church you enter; transcribed from OSM tag 'Mo 06:30-19:30; Tu-Fr 08:45-19:45; We 08:45-22:00; Sa 08:45-12:00,14:00-19:45; Su 08:45-12:15,14:30-19:45'.",
+    "opening_hours": "Mo 06:30-19:30; Tu-Fr 08:45-19:45; We 08:45-22:00; Sa 08:45-12:00,14:00-19:45; Su 08:45-12:15,14:30-19:45",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo 06:30-19:30; Tu-Fr 08:45-19:45; We 08:45-22:00; Sa 08:45-12:00,14:00-19:45; Su 08:45-12:15,14:30-19:45.",
     "place_category": "church",
     "visit_seconds_inside": 1200,
     "visit_basis": "Church holding the last rood screen in Paris and the shrine of Sainte Genevieve; the carved interior takes about 20 min, the facade near the Pantheon a few minutes.",
@@ -488,13 +436,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A free parish church with an open door and no admission control, so visitors enter without stopping and there is nothing to queue for.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo 06:30-19:30; Tu-Fr 08:45-19:45; We 08:45-22:00; Sa 08:45-12:00,14:00-19:45; Su 08:45-12:15,14:30-19:45\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Lycee Henri IV",
@@ -557,8 +499,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working secondary school closed to casual visitors and seen only from the street or via rare booked tours, so there is no walk-up admission line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "College de France",
@@ -626,8 +567,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A research institution walked past from the street; its free public lectures involve no security or ticket line for a passing visitor.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Jardin des Plantes",
@@ -675,51 +615,8 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "sat": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "sun": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 08:00-17:30",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A walled botanical garden with closing times; hours reflect the garden's published winter pattern of roughly 08:00–17:30 daily, extending later in summer.",
     "place_category": "garden",
     "visit_seconds_inside": null,
@@ -734,8 +631,7 @@
     "queue_peak_hours": [],
     "queue_basis": "The botanical garden itself has free open gates you walk through without stopping; the paid museum and zoo inside have their own desks, but entering the garden has no line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Caveau de la Huchette",
@@ -861,8 +757,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A cellar jazz club with no daytime entry; it is only walked past on a tour, so there is no queue to price during the day.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Theatre de la Huchette",
@@ -930,8 +825,7 @@
     ],
     "queue_basis": "A tiny theatre where the only wait is at the box-office window before a performance; the small door and single desk make a brief line just before curtain, but there is no daytime queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Ecole Normale Superieure",
@@ -994,8 +888,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working academic institution, not a ticketed attraction; the tour views it from the street with no public entry line to stand in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Arenes de Lutece",
@@ -1058,7 +951,6 @@
     "queue_peak_hours": [],
     "queue_basis": "The Roman arena is a free public open space entered through an unstaffed passage with no ticket or check, so there is no line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

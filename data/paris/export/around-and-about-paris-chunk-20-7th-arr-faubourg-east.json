@@ -155,51 +155,8 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "tue": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "23:45"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 09:30-23:45",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Gated ticketed monument with elevator/stair access; hours follow the tower's own published year-round daily pattern (extended summer hours from mid-June).",
     "place_category": "other",
     "visit_seconds_inside": 5400,
@@ -231,8 +188,7 @@
         "basis": "The esplanade under the four feet is where the queues form and where a person stands to look straight up through the lattice; the corpus's queue and security lines are about this esplanade. Half the footprint, as a place you look at demands."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Quai Voltaire",
@@ -425,8 +381,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open riverside embankment with no door or admission; the whole value stands in the open.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Fontaine des Quatre Saisons",
@@ -491,8 +446,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A monumental wall fountain on a public street, viewed in the open with no gate or ticket.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Saint-Thomas-d'Aquin",
@@ -556,8 +510,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door you walk straight through; there is no ticket desk or security screening to queue for.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Le Bon Marché",
@@ -635,52 +588,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "19:45"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "19:45"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "19:45"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "19:45"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "20:45"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "11:00",
-          "19:45"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "A department store behind doors; hours from Le Bon Marché's own published store pattern.",
+    "opening_hours": "Mo-We, Fr-Sa 10:00-20:00; Th 10:00-20:45; Su 11:00-20:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-We, Fr-Sa 10:00-20:00; Th 10:00-20:45; Su 11:00-20:00.",
     "place_category": "other",
     "visit_seconds_inside": 3600,
     "visit_basis": "Grand 19th-century department store with a famous iron-and-glass atrium, escalator well and multiple floors including the Grande Epicerie food hall; an engaged wander through the architecture and displays fills an hour.",
@@ -694,8 +604,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A department store with wide free-entry doors and no ticket or security line to enter; any waiting happens at checkout tills inside, not at the threshold.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "La Pagode",
@@ -761,7 +670,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A neighbourhood cinema entered directly off the street; there is no standing queue to reach the building, only a box office for showtimes.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

@@ -343,47 +343,9 @@
       "source_chunk": "grand_palais-rev-1356164554",
       "source_book": "Wikipedia"
     },
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "22:30"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated exhibition hall; transcribed from OSM tag 'Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30' with Monday closed.",
+    "opening_hours": "Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30.",
     "place_category": "monument",
     "visit_seconds_inside": 5400,
     "visit_basis": "Monumental glass-roofed exhibition hall; the vast nave and staircases plus a major temporary exhibition would absorb well over two hours, capped at the 90-minute tour maximum, with a ticket queue included.",
@@ -402,12 +364,6 @@
     ],
     "queue_basis": "Entry to the exhibition hall runs through security bag checks and timed-ticket scanning at a controlled entrance, so the line builds midday during major shows; the numbers reflect a busy exhibition period and drop at opening.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   }
 ]

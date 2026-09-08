@@ -9,6 +9,7 @@ For every city it compares, against the profile injected by Make:
   - POIs        : name_key set (in-bbox, from poi-raw.json) vs POI nodes
   - footprints  : (name_key, trigger_radius, poi_role) vs the POI nodes' own
   - anchors     : (name_key, canonical anchors JSON) vs the POI nodes' own
+  - hours       : (name_key, gated, source, OpenStreetMap text) vs the POI nodes' own
   - beats       : beat_id set (uploadable AND linkable) vs POI-reachable beats
   - beat bodies : (beat_id, sha256 of normalized script_body) vs the graph's text
   - placement   : (beat_id, sub_location, trigger_address) vs the graph's own
@@ -112,21 +113,21 @@ def _expected(slug: str) -> dict:
         for p in in_poi
     }
 
-    def _canon_verified(raw) -> str | None:
-        if not isinstance(raw, dict) or not raw:
-            return None
-        return json.dumps(raw, ensure_ascii=False, sort_keys=True)
+    def _hours_text(raw) -> str | None:
+        return raw.strip() if isinstance(raw, str) and raw.strip() else None
 
-    # The trust half of the clock (Docs/adr/0003): the door verdict and the
-    # verification record. In the parity set so the upload hop is mechanically
+    # The door and its hours (Docs/adr/0006): the verdict, the source and the
+    # OpenStreetMap text. In the parity set so the upload hop is mechanically
     # enforced — a field that reaches poi-raw.json and never the graph turns
     # the lane's dev-data preflight red instead of silently serving days that
-    # hedge on hours a human already confirmed.
-    clock_trust = {
+    # speak hours the repo no longer holds. Compared on EVERY target: the
+    # owner's rule is that production carries the same hours as dev.
+    hours = {
         (
             canonical_name_key(p["name"]),
             p.get("gated") if isinstance(p.get("gated"), bool) else None,
-            _canon_verified(p.get("opening_hours_verified")),
+            p.get("opening_hours_source"),
+            _hours_text(p.get("opening_hours")),
         )
         for p in in_poi
     }
@@ -144,7 +145,7 @@ def _expected(slug: str) -> dict:
         "poi_keys": poi_keys,
         "footprints": footprints,
         "anchors": anchors,
-        "clock_trust": clock_trust,
+        "hours": hours,
         "beat_ids": linkable,
         "body_hashes": body_hashes,
         "placement": placement,
@@ -202,17 +203,16 @@ def _actual(session, slug: str) -> dict:
         )
         if r["k"]
     }
-    def _canon_verified_str(raw) -> str | None:
-        if not raw:
-            return None
-        return json.dumps(json.loads(raw), ensure_ascii=False, sort_keys=True)
+    def _text(raw) -> str | None:
+        return raw.strip() if isinstance(raw, str) and raw.strip() else None
 
-    clock_trust = {
-        (r["k"], r["g"], _canon_verified_str(r["v"]))
+    hours = {
+        (r["k"], r["g"], r["s"], _text(r["t"]))
         for r in q(
             "MATCH (p:POI {city_name:$city}) "
             "WHERE p.poi_role IS NULL OR p.poi_role <> 'body' "
-            "RETURN p.name_key AS k, p.gated AS g, p.opening_hours_verified AS v"
+            "RETURN p.name_key AS k, p.gated AS g, p.opening_hours_source AS s, "
+            "p.opening_hours AS t"
         )
         if r["k"]
     }
@@ -245,7 +245,7 @@ def _actual(session, slug: str) -> dict:
         "poi_keys": poi_keys,
         "footprints": footprints,
         "anchors": anchors,
-        "clock_trust": clock_trust,
+        "hours": hours,
         "beat_ids": beat_ids,
         "body_hashes": body_hashes,
         "placement": placement,
@@ -254,29 +254,21 @@ def _actual(session, slug: str) -> dict:
     }
 
 
-def _cmp(
-    label: str, exp: set, act: set, drift: list, sample=lambda x: x, *, warn_only=False
-) -> None:
-    """``warn_only`` (the cloud property lanes): the divergence is printed in
-    full but does not fail parity. The cloud graph legitimately LAGS the repo
-    between deliberate deploys, so a property behind on Aura is staleness on a
-    documented cadence, not silent drift — while an ID-set divergence is
-    corruption on any target and always fails."""
+def _cmp(label: str, exp: set, act: set, drift: list, sample=lambda x: x) -> None:
+    """Every lane fails parity on every target. Production carries the same
+    data as dev, or the deploy that makes it so has not happened yet — a lane
+    that merely warned let the cloud lag the repo for weeks without a red."""
     missing, extra = exp - act, act - exp
     if not (missing or extra):
         print(f"    [OK  ] {label}: repo={len(exp)} db={len(act)}")
         return
-    status = "STALE" if warn_only else "DRIFT"
-    print(f"    [{status}] {label}: repo={len(exp)} db={len(act)}", end="")
+    print(f"    [DRIFT] {label}: repo={len(exp)} db={len(act)}", end="")
     print(f"  (missing {len(missing)}, extra {len(extra)})")
     for m in sorted(missing, key=lambda x: str(sample(x)))[:5]:
         print(f"        - missing: {sample(m)}")
     for e in sorted(extra, key=lambda x: str(sample(x)))[:5]:
         print(f"        + extra:   {sample(e)}")
-    if warn_only:
-        print("        (cloud lags the repo until the next deliberate deploy)")
-    else:
-        drift.append(f"{label}: -{len(missing)}/+{len(extra)}")
+    drift.append(f"{label}: -{len(missing)}/+{len(extra)}")
 
 
 def main() -> int:
@@ -318,7 +310,6 @@ def main() -> int:
                 act["footprints"],
                 drift,
                 sample=lambda t: f"{t[0]} r={t[1]} role={t[2]}",
-                warn_only=not is_local,
             )
             _cmp(
                 "anchors (key, reviewed set)",
@@ -326,15 +317,13 @@ def main() -> int:
                 act["anchors"],
                 drift,
                 sample=lambda t: t[0],
-                warn_only=not is_local,
             )
             _cmp(
-                "clock trust (key, gated, verified)",
-                exp["clock_trust"],
-                act["clock_trust"],
+                "hours (key, gated, source, text)",
+                exp["hours"],
+                act["hours"],
                 drift,
-                sample=lambda t: f"{t[0]} gated={t[1]} verified={'yes' if t[2] else 'no'}",
-                warn_only=not is_local,
+                sample=lambda t: f"{t[0]} gated={t[1]} source={t[2]} hours={t[3]!r}",
             )
             _cmp("beats (beat_id)", exp["beat_ids"], act["beat_ids"], drift)
             _cmp(
@@ -343,7 +332,6 @@ def main() -> int:
                 act["body_hashes"],
                 drift,
                 sample=lambda t: t[0],
-                warn_only=not is_local,
             )
             _cmp(
                 "beat placement (id, sub, trigger)",
@@ -351,7 +339,6 @@ def main() -> int:
                 act["placement"],
                 drift,
                 sample=lambda t: t[0],
-                warn_only=not is_local,
             )
             _cmp("areas (name)", exp["area_names"], act["area_names"], drift)
             _cmp(

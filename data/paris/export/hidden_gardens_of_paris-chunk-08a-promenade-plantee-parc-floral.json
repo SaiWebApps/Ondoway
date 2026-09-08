@@ -226,51 +226,8 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "17:30"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "17:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Fr 08:00-17:30; Sa-Su 09:00-17:30",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "Gated elevated park with closing gates; City of Paris publishes winter hours opening 08:00 weekdays / 09:00 weekends and closing around dusk (~17:30 in winter), recorded as the current typical winter pattern.",
     "place_category": "other",
     "visit_seconds_inside": null,
@@ -285,8 +242,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open elevated park entered by ramps and staircases with no gate, ticket, or bag check, so there is no line to price.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Viaduc des Arts",
@@ -400,8 +356,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A row of street-level artisan shops beneath a viaduct, entered freely from the pavement with no single controlled door.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Bois de Vincennes",
@@ -555,8 +510,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A vast open public park with no enclosing gate to queue at; you simply walk in from any edge.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Chateau de Vincennes",
@@ -654,51 +608,8 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "17:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 10:00-17:00",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A monument entered by ticket (gated); hours from the château's published winter pattern of 10:00-17:00 daily (summer extends to 18:00).",
     "place_category": "other",
     "visit_seconds_inside": 3600,
@@ -718,8 +629,7 @@
     ],
     "queue_basis": "A ticketed medieval fortress with a single ticket desk and bag check that draws a modest midday line in summer, shrinking to a few people at opening; the monument is not high-volume enough for a substantial queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Bibliotheque Francois Mitterrand",
@@ -759,8 +669,7 @@
     "queue_peak_hours": [],
     "queue_basis": "The library's esplanade and glass-tower plaza are open public space you walk straight onto with no ticket or door, so there is no line to stand in before reaching the value of the stop.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Parc Floral",
@@ -927,8 +836,7 @@
     ],
     "queue_basis": "A public park that charges a small entry fee on event days handled at a ticket booth, so a brief line can form at midday but never a substantial one.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Jardin de Reuilly",
@@ -1020,8 +928,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A public garden entered freely through open gates with no ticket or security, so no wait exists.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Bistro du Peintre",
@@ -1181,8 +1088,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A street-front bistro walked past on the tour, not a ticketed interior, so there is no entry line to price.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Square Raoul Nordling",
@@ -1284,8 +1190,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A small public garden entered through an open gate with no ticket or check, so no queue exists.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Parc de Bercy",
@@ -1464,8 +1369,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A large public park with multiple open entrances and no ticket or security, so there is nothing to wait in before entering.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Cinematheque Française",
@@ -1577,8 +1481,7 @@
     ],
     "queue_basis": "A film archive and museum with a ticket desk and light bag check but no airport-style screening, so only a minor line forms before screenings and exhibitions.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Buddhist Temple Lac Daumesnil",
@@ -1670,8 +1573,7 @@
     "queue_peak_hours": [],
     "queue_basis": "This Buddhist temple pavilion by Lac Daumesnil in the Bois de Vincennes is entered through open grounds with no security screening or ticket gate, so there is no line to price.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Sainte-Chapelle",
@@ -1760,52 +1662,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated ticketed chapel; transcribed from OSM tag \"Jan-Mar 09:00-17:00; Apr-Sep 09:00-19:00; Oct-Dec 09:00-17:00\" using the current Apr-Sep 09:00-19:00 season.",
+    "opening_hours": "Jan-Mar 09:00-17:00; Apr-Sep 09:00-19:00; Oct-Dec 09:00-17:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Jan-Mar 09:00-17:00; Apr-Sep 09:00-19:00; Oct-Dec 09:00-17:00.",
     "place_category": "church",
     "visit_seconds_inside": 3960,
     "visit_basis": "The modest facade and courtyard are seen in 15 minutes; inside is roughly 28 minutes of security and ticket queue plus 38 minutes under the two-storey glass, the upper chapel's 15 stained-glass windows being the whole point.",
@@ -1824,7 +1683,6 @@
     ],
     "queue_basis": "Airport-style security shared with the Palais de Justice plus a ticket check funnels visitors ahead of a small chapel, so the line runs long at midday and thins near opening and late afternoon.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

@@ -1,30 +1,27 @@
-"""Structural guard on per-POI opening hours in `data/{city}/poi-raw.json`.
+"""Structural guard on per-door opening hours in `data/{city}/poi-raw.json`.
 
-Three fields say WHEN a place can be entered (redesign data row 6.1 — "Aiko's
-locked door, Rosemary's Tuesday", specs/2026-08-07-tour-algorithm-redesign):
+Four fields say whether a place has a door and when it can be entered
+(Docs/adr/0006; CONTEXT.md "Doors and hours"):
 
-  `opening_hours`         dict | None  Week table: all seven keys `mon`..`sun`,
-                                       each a list of ["HH:MM","HH:MM"] open
-                                       windows; [] = closed that whole day.
-                                       None = NOT GATED (a street, a square, a
-                                       bridge) — the same load-bearing null
-                                       `visit_seconds_inside` uses.
-  `opening_hours_source`  str | None   "osm" | "ai" when hours exist; None when
-                                       the place is not gated.
-  `opening_hours_basis`   str          One sentence arguing for the table (or
-                                       for the null), judgeable by someone who
-                                       has never been to the city.
+  `gated`                 bool         The door verdict.
+  `opening_hours`         str | None   OpenStreetMap `opening_hours` text, read
+                                       at planning time by the hours library.
+                                       None = no hours held.
+  `opening_hours_source`  str | None   "map" (the place's own tag) or "guess"
+                                       (a model wrote it); None with None hours.
+  `opening_hours_basis`   str          One sentence arguing for the value.
 
 WHAT THIS FILE CHECKS, AND WHAT IT DELIBERATELY DOES NOT. Every assertion is
-STRUCTURAL — shape, presence, window sanity. None is knowledge-based: nobody in
-this repo can adjudicate whether a particular museum really closes on Tuesday
-(`tests/test_poi_visit_duration.py` records the same rule, and its command doc
-forbids knowledge tests in writing). The basis sentence plus human review is the
-mechanism for wrong-but-well-formed tables; do not add a test asserting a
-particular POI's real hours.
+STRUCTURAL — shape, presence, grammar. None is knowledge-based: nobody in this
+repo can adjudicate whether a particular museum really closes on Tuesday
+(`tests/test_poi_visit_duration.py` records the same rule). Do not add a test
+asserting a particular POI's real hours.
 
-Mirrors `tests/test_poi_visit_duration.py` (whose header invites the sibling).
-Runs in milliseconds with no database.
+The PHASE GATE lives here too (the `test_gate_*` block): the sentences the
+phase is judged by, written before anything was built.
+
+Mirrors `tests/test_poi_visit_duration.py`. Runs in milliseconds with no
+database.
 """
 
 from __future__ import annotations
@@ -38,18 +35,19 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_ROOT = REPO_ROOT / "data"
 
-DAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-
 # Cities whose corpus has been through the opening-hours pass and must therefore
 # satisfy every data check below. Explicit allow-list, exactly like
 # CITIES_WITH_VISIT_CAPACITY in the sibling file: listing a city that has not
 # run the pass would make this file permanently red and train readers to ignore
-# it. EMPTY until the first pass runs (Phase 1's W1.8 adds "paris").
+# it.
 #
 # ADDING a slug here is the deliberate act of declaring "this city's hours are
 # in". REMOVING one to reach green is forbidden — it deletes the guard instead
 # of fixing the data.
 CITIES_WITH_OPENING_HOURS: tuple[str, ...] = ("paris",)
+
+#: The only vocabulary a door's hours may carry (CONTEXT.md "Hours source").
+HOURS_SOURCES = ("map", "guess")
 
 
 def _pois(city: str) -> list[dict]:
@@ -76,18 +74,23 @@ REMEDY = "Run the opening-hours pass: `make poi-opening-hours SLUG=<city>`."
 
 def test_every_poi_records_whether_it_is_gated() -> None:
     """Presence check #1 — the pass ran. Every POI carries the `opening_hours`
-    KEY (null is a legitimate value meaning "not gated"; a missing key means
-    the pass never reached this POI). On an unpriced corpus this is the check
-    that goes red, which is what stops the other bars reading vacuously green.
+    KEY (null is a legitimate value; a missing key means the pass never
+    reached this POI) and an explicit boolean `gated`. On an unpriced corpus
+    this is the check that goes red, which is what stops the other bars
+    reading vacuously green.
     """
     for city in CITIES_WITH_OPENING_HOURS:
-        offenders = [_name(p) for p in _pois(city) if "opening_hours" not in p]
+        offenders = [
+            f"{_name(p)}: gated={p.get('gated')!r}"
+            for p in _pois(city)
+            if "opening_hours" not in p or not isinstance(p.get("gated"), bool)
+        ]
         if offenders:
             _fail(city, "POI(s) the opening-hours pass never reached", offenders, REMEDY)
 
 
 def test_every_poi_explains_its_opening_hours() -> None:
-    """Presence check #2 — every table AND every null ships with the sentence
+    """Presence check #2 — every value AND every null ships with the sentence
     that argues for it. A bare null cannot be told from a shrug without it."""
     for city in CITIES_WITH_OPENING_HOURS:
         offenders = [
@@ -100,543 +103,6 @@ def test_every_poi_explains_its_opening_hours() -> None:
             _fail(city, "POI(s) whose opening hours carry no reasoning", offenders, REMEDY)
 
 
-def test_every_gated_poi_carries_a_source_and_a_basis() -> None:
-    """A non-null table must say where it came from ("osm" | "ai") and why.
-
-    The basis clause deliberately duplicates the presence check above: a guard
-    that goes quiet when its data disappears is not a guard
-    (`tests/test_poi_visit_duration.py` records the same duplication rule).
-    """
-    for city in CITIES_WITH_OPENING_HOURS:
-        offenders = []
-        for poi in _pois(city):
-            if poi.get("opening_hours") is None:
-                continue
-            source = poi.get("opening_hours_source")
-            basis = poi.get("opening_hours_basis")
-            if source not in ("osm", "ai"):
-                offenders.append(f"{_name(poi)}: opening_hours_source={source!r}")
-            if not isinstance(basis, str) or not basis.strip():
-                offenders.append(f"{_name(poi)}: opening_hours_basis={basis!r}")
-        if offenders:
-            _fail(city, "gated POI(s) with no source or no basis", offenders, REMEDY)
-
-
-def test_opening_tables_parse() -> None:
-    """Every non-null table has exactly the seven day keys and well-formed
-    ["HH:MM","HH:MM"] windows — the shape the clock filter (S1.6) parses."""
-    for city in CITIES_WITH_OPENING_HOURS:
-        offenders = []
-        for poi in _pois(city):
-            hours = poi.get("opening_hours")
-            if hours is None or "opening_hours" not in poi:
-                continue
-            if not isinstance(hours, dict) or set(hours) != set(DAY_KEYS):
-                offenders.append(
-                    f"{_name(poi)}: keys="
-                    f"{sorted(hours) if isinstance(hours, dict) else hours!r}"
-                )
-                continue
-            for day in DAY_KEYS:
-                windows = hours[day]
-                if not isinstance(windows, list):
-                    offenders.append(f"{_name(poi)}: {day} is not a list")
-                    continue
-                for window in windows:
-                    if (
-                        not isinstance(window, list)
-                        or len(window) != 2
-                        or not all(
-                            isinstance(t, str) and len(t) == 5 and t[2] == ":" for t in window
-                        )
-                    ):
-                        offenders.append(f"{_name(poi)}: {day} window {window!r}")
-        if offenders:
-            _fail(city, "POI(s) whose opening table does not parse", offenders, REMEDY)
-
-
-def test_no_zero_length_open_window() -> None:
-    """No open window may be zero-length or backwards: a window that ends when
-    it starts admits nobody, and the clock filter would read it as 'open'."""
-    for city in CITIES_WITH_OPENING_HOURS:
-        offenders = []
-        for poi in _pois(city):
-            hours = poi.get("opening_hours")
-            if not isinstance(hours, dict):
-                continue
-            for day, windows in hours.items():
-                if not isinstance(windows, list):
-                    continue
-                for window in windows:
-                    if (
-                        isinstance(window, list)
-                        and len(window) == 2
-                        and all(isinstance(t, str) for t in window)
-                        and window[0] >= window[1]
-                    ):
-                        offenders.append(f"{_name(poi)}: {day} {window!r}")
-        if offenders:
-            _fail(city, "POI(s) with a zero-length or backwards open window", offenders, REMEDY)
-
-
-# ---------------------------------------------------------------------------
-# The plumbing: the same three hops the visit-capacity fields travel, tested
-# ONE AT A TIME so a failure names the hop that ate the field
-# (`tests/test_poi_visit_duration.py` is the pattern). `place_category`
-# (data row 6.7) rides the identical plumbing and is asserted alongside.
-# ---------------------------------------------------------------------------
-
-CLOCK_FIELDS = (
-    "opening_hours",
-    "opening_hours_source",
-    "opening_hours_basis",
-    "place_category",
-)
-
-#: The trust half of the clock (Docs/adr/0003): whether the place has a door at
-#: all, and who verified its hours on what evidence. Ride the same three hops.
-TRUST_FIELDS = (
-    "gated",
-    "opening_hours_verified",
-)
-
-#: Cities whose corpus has been through the gated-verdict half of the pass and
-#: must therefore satisfy the presence checks below. Same allowlist discipline
-#: as CITIES_WITH_OPENING_HOURS above: empty until the pass runs; adding a slug
-#: is the deliberate declaration, removing one to reach green is forbidden.
-CITIES_WITH_GATED_VERDICTS: tuple[str, ...] = ("paris",)
-
-#: Cities whose hours REVIEW QUEUE has been drained by a human sitting: every
-#: gated, table-carrying POI carries `opening_hours_verified` (the gated
-#: places whose hours nobody can confirm stay honest nulls — fail-open with
-#: the spoken disclosure, per Docs/adr/0003). Same allowlist discipline:
-#: adding a slug is the deliberate declaration the sitting happened; the
-#: operator adds it after `make poi-hours-review` reports an empty queue.
-CITIES_WITH_DRAINED_HOURS_QUEUES: tuple[str, ...] = ()
-
-
-def test_a_drained_city_carries_a_verdict_on_every_table() -> None:
-    """The queue-drained guard — Phase 10's gate criterion, mechanized: in a
-    declared city, no gated table remains unreviewed."""
-    for city in CITIES_WITH_DRAINED_HOURS_QUEUES:
-        offenders = [
-            _name(p)
-            for p in _pois(city)
-            if p.get("gated") is True
-            and p.get("opening_hours") is not None
-            and p.get("opening_hours_verified") is None
-        ]
-        if offenders:
-            _fail(
-                city,
-                "gated table(s) still awaiting review in a drained-declared city",
-                offenders,
-                "Run the sitting: `make poi-hours-review SLUG=<city> APPROVER=<you>`.",
-            )
-
-
-def test_every_poi_records_a_gated_verdict() -> None:
-    """Presence check for the trust half — every POI in a declared city carries
-    an explicit boolean `gated`, ending the null-means-two-things overload."""
-    for city in CITIES_WITH_GATED_VERDICTS:
-        offenders = [
-            f"{_name(p)}: gated={p.get('gated')!r}"
-            for p in _pois(city)
-            if not isinstance(p.get("gated"), bool)
-        ]
-        if offenders:
-            _fail(city, "POI(s) with no boolean gated verdict", offenders, REMEDY)
-
-
-def test_a_verified_row_is_structurally_complete() -> None:
-    """`opening_hours_verified`, wherever it appears, carries the whole trust
-    record: tier (0-2), approver, evidence, at. A verified badge with no
-    inspectable trail is the thing the field exists to prevent."""
-    for city in CITIES_WITH_OPENING_HOURS:
-        offenders = []
-        for poi in _pois(city):
-            verified = poi.get("opening_hours_verified")
-            if verified is None:
-                continue
-            if not isinstance(verified, dict):
-                offenders.append(f"{_name(poi)}: opening_hours_verified={verified!r}")
-                continue
-            if verified.get("tier") not in (0, 1, 2):
-                offenders.append(f"{_name(poi)}: tier={verified.get('tier')!r}")
-            for key in ("approver", "evidence", "at"):
-                value = verified.get(key)
-                if not isinstance(value, str) or not value.strip():
-                    offenders.append(f"{_name(poi)}: {key}={value!r}")
-            if poi.get("opening_hours") is None:
-                offenders.append(f"{_name(poi)}: verified but carries no hours table")
-        if offenders:
-            _fail(city, "verified row(s) missing their trust record", offenders, REMEDY)
-
-
-def _gated_row(name: str, *, tier: int = 3, source: str = "osm", basis: str | None = None,
-               verified: dict | None = None) -> dict:
-    return {
-        "name": name,
-        "importance_tier": tier,
-        "gated": True,
-        "opening_hours": {d: [["09:00", "18:00"]] for d in DAY_KEYS},
-        "opening_hours_source": source,
-        "opening_hours_basis": basis
-        or 'Gated museum; transcribed from OSM tag "Mo-Su 09:00-18:00".',
-        "opening_hours_verified": verified,
-    }
-
-
-def test_tier0_corroboration_verifies_demotes_and_flags_conflicts() -> None:
-    """The ladder's deterministic rung: a live tag equal to the quoted one
-    tier-0-verifies; a differing live tag is a conflict AND demotes an already
-    verified row (the auto-demote rule); no live tag leaves the row queued."""
-    from scripts.poi_opening_hours import corroborate
-
-    agree = _gated_row("Agree Museum")
-    drifted = _gated_row(
-        "Drifted Museum",
-        verified={"tier": 2, "approver": "owner", "evidence": "x", "at": "2026-09-01"},
-    )
-    silent = _gated_row("Silent Chapel", source="ai",
-                        basis="Gated chapel; published pattern from the diocese site.")
-    live = {
-        "Agree Museum": "Mo-Su 09:00-18:00",
-        "Drifted Museum": "Mo-Su 10:00-17:00",
-    }
-    verified, conflicts, demoted = corroborate([agree, drifted, silent], live)
-    assert verified == ["Agree Museum"]
-    assert agree["opening_hours_verified"]["tier"] == 0
-    assert agree["opening_hours_verified"]["approver"] == "corroboration"
-    assert conflicts == ["Drifted Museum"]
-    assert demoted == ["Drifted Museum"]
-    assert drifted["opening_hours_verified"] is None, (
-        "a re-fetch that disagrees must demote — verified means currently believed true"
-    )
-    assert silent["opening_hours_verified"] is None, "no live tag decides nothing"
-
-
-def test_a_tag_beyond_the_weekly_table_never_tier0s_and_sheds_a_stale_badge() -> None:
-    """Tier-0 certifies one proposition: the flat 7-day table faithfully
-    carries the live tag. A tag with months, date rules, PH/SH or sun-times
-    says things no weekly table can encode, so "unchanged since
-    transcription" would certify the wrong claim — the walker gets a
-    verified badge over a table that flattens 'Dec 25: off' into open.
-    Such a row never tier-0s, a stale corroboration badge on it is shed on
-    sight (no network needed — the quoted tag alone decides), and a HUMAN
-    badge is untouched: a person judged the table, not the tag.
-
-    UNDO TEST: drop the eligibility gate in corroborate -> the seasonal row
-    verifies and the stale badge survives -> RED."""
-    from scripts.poi_opening_hours import corroborate
-
-    seasonal_basis = (
-        "Gated museum; transcribed from OSM tag "
-        '"Mo-Su 10:00-18:00; Jan 1,May 1,Dec 25: off".'
-    )
-    stale = _gated_row(
-        "Flattened Museum",
-        basis=seasonal_basis,
-        verified={"tier": 0, "approver": "corroboration", "evidence": "x", "at": "2026-09-01"},
-    )
-    fresh = _gated_row("Seasonal Chapel", basis=seasonal_basis)
-    human = _gated_row(
-        "Human-Judged Hall",
-        basis=seasonal_basis,
-        verified={"tier": 2, "approver": "owner", "evidence": "site", "at": "2026-09-01"},
-    )
-
-    live = {name: "Mo-Su 10:00-18:00; Jan 1,May 1,Dec 25: off"
-            for name in ("Flattened Museum", "Seasonal Chapel", "Human-Judged Hall")}
-    verified, _conflicts, demoted = corroborate([stale, fresh, human], live)
-
-    assert verified == [], "a beyond-weekly tag must never tier-0"
-    assert demoted == ["Flattened Museum"]
-    assert stale["opening_hours_verified"] is None
-    assert fresh["opening_hours_verified"] is None
-    assert human["opening_hours_verified"]["approver"] == "owner", (
-        "a human badge was shed by the machine — tier 2 is the person's call"
-    )
-    # No live tag at all: the stale badge is still shed — eligibility is a
-    # property of the quoted tag, not of the network.
-    stale2 = _gated_row(
-        "Offline Flattened",
-        basis=seasonal_basis,
-        verified={"tier": 0, "approver": "corroboration", "evidence": "x", "at": "2026-09-01"},
-    )
-    _v, _c, demoted2 = corroborate([stale2], {})
-    assert demoted2 == ["Offline Flattened"] and stale2["opening_hours_verified"] is None
-
-
-def test_the_weekly_predicate_refuses_every_side_door() -> None:
-    """The eligibility rule's edges, probed by the exit panel: nth-weekday
-    brackets, `||` fallback rules, open-ended `+` times, seasonal words,
-    lowercase variants, and a MIDNIGHT-CROSSING span (end at or before its
-    start) — the construct a per-day window list clips rather than carries —
-    all say more than the flat table can repeat. Plain weekday/time forms,
-    comma-joined rules, bare times, `24/7` and `closed` still fit."""
-    from scripts.poi_opening_hours import _tag_fits_a_weekly_table as fits
-
-    beyond = (
-        "Tu[1] off",
-        "Mo-Fr 09:00-17:00; Su[-1] off",
-        "summer: Mo-Su 09:00-20:00; winter: Mo-Su 10:00-17:00",
-        "Mo-Su 10:00+",
-        "Mo-Fr 08:00-12:00 || Sa 09:00-11:00",
-        "Tu,Th-Sa 21:00-01:00",
-        # The crossing is a CONSTRUCT, not a spelling: one-digit hours,
-        # whitespace inside the span, and spec-standard extended hours
-        # (26:00 = 02:00 next day) all denote the same clipped door.
-        "Tu,Th-Sa 21:00-1:00",
-        "Tu,Th-Sa 21:00- 01:00",
-        "Fr-Sa 20:00-26:00",
-        "mo-su 10:00-18:00; dec 25 off",
-        "Mo-Su 09:00-18:00; ph off",
-        "Tu,Th-Sa 21:00\u201301:00",
-        "Mo-Su 10:00-18:00; august off",
-    )
-    for tag in beyond:
-        assert not fits(tag), f"a weekly table cannot say {tag!r}"
-
-    weekly = (
-        "Mo-Su 09:00-18:00",
-        "24/7",
-        "Tu-Sa 08:00-20:00, Su 08:00-13:30",
-        "08:00-19:45",
-        "closed",
-        "Sa 08:45-12:00,14:00-19:45",
-        "Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30",
-        "Mo-Su 10:00-24:00",  # 24:00 is a legal end-of-day, not a crossing
-    )
-    for tag in weekly:
-        assert fits(tag), f"a weekly table says {tag!r} exactly"
-
-
-def test_every_corroboration_badge_quotes_a_tag_the_table_can_say() -> None:
-    """The shipped-data half of the rule above: every corroboration badge in
-    every hours-carrying city quotes a weekly-representable tag. A badge
-    whose own evidence cites 'Dec 25: off' above a table that says open is
-    self-refuting on inspection."""
-    from scripts.poi_opening_hours import _tag_fits_a_weekly_table
-
-    offenders: list[str] = []
-    for city in CITIES_WITH_GATED_VERDICTS:
-        for poi in _pois(city):
-            record = poi.get("opening_hours_verified")
-            if not isinstance(record, dict) or record.get("approver") != "corroboration":
-                continue
-            evidence = record.get("evidence", "")
-            match = re.search(r'"(.*)"', evidence)
-            tag = match.group(1) if match else ""
-            if not tag or not _tag_fits_a_weekly_table(tag):
-                offenders.append(f"{city}/{poi['name']}: {evidence!r}")
-    assert not offenders, (
-        "corroboration badge(s) certify tags the weekly table cannot say:\n  "
-        + "\n  ".join(offenders)
-    )
-
-
-def test_the_review_queue_orders_conflicts_then_gravity() -> None:
-    """The owner's minutes land where a wrong 'open' costs the most: conflicts
-    first, then importance_tier descending; verified rows are not queued."""
-    from scripts.poi_opening_hours import review_queue
-
-    small = _gated_row("A Small Place", tier=2)
-    marquee = _gated_row("The Marquee", tier=5)
-    conflicted = _gated_row("Conflicted", tier=1)
-    done = _gated_row(
-        "Already Verified",
-        verified={"tier": 0, "approver": "corroboration", "evidence": "x", "at": "2026-09-07"},
-    )
-    queue = review_queue([small, marquee, done, conflicted], ["Conflicted"])
-    assert [p["name"] for p in queue] == ["Conflicted", "The Marquee", "A Small Place"]
-
-
-def test_the_list_queue_renders_and_writes_nothing(tmp_path, monkeypatch) -> None:
-    """--list-queue's own help text: "render the review queue and decide
-    nothing". Nothing decided means nothing WRITTEN either — the corroboration
-    results computed on the way to the queue stay in memory, and the data file
-    is byte-identical after the run. The fixture's live tag agrees with the
-    quoted one, so a writing run WOULD stamp a tier-0 record — the exact
-    mutation a listing must not commit."""
-    import scripts.poi_opening_hours as mod
-
-    city_dir = tmp_path / "data" / "paris"
-    city_dir.mkdir(parents=True)
-    poi_file = city_dir / "poi-raw.json"
-    poi_file.write_text(json.dumps([_gated_row("Agree Museum")], indent=2) + "\n")
-    before = poi_file.read_text()
-
-    monkeypatch.setattr(mod, "ROOT", tmp_path)
-    monkeypatch.setattr(mod, "fetch_osm_hours", lambda bbox: [])
-    monkeypatch.setattr(
-        mod, "match_osm", lambda pois, elements: {"Agree Museum": "Mo-Su 09:00-18:00"}
-    )
-
-    assert mod.main(["--verify", "--list-queue"]) == 0
-    assert poi_file.read_text() == before, (
-        "a listing run wrote the data file — LIST must decide nothing"
-    )
-
-
-def test_hop_1_the_corpus_query_asks_the_graph_for_the_trust_fields() -> None:
-    """HOP 1 for the trust half — a property absent from the RETURN list
-    reaches nothing downstream, with no error."""
-    from src.tour.selection import LOAD_PARIS_POIS_CYPHER
-
-    for field in TRUST_FIELDS:
-        assert f"p.{field}" in LOAD_PARIS_POIS_CYPHER, (
-            f"HOP 1: the corpus query never asks the graph for `{field}`."
-        )
-
-
-def test_hop_2_the_snapshot_builder_carries_the_trust_fields_onto_the_poi() -> None:
-    """HOP 2/3 for the trust half — asserted on VALUES, since POI is
-    extra='ignore' and discards unknown keywords silently."""
-    from src.tour.selection import _snapshot_from_records
-
-    verified = '{"tier": 2, "approver": "owner", "evidence": "official site", "at": "2026-09-07"}'
-    record = {
-        "id": "musee-trust",
-        "name": "Musée Trust",
-        "tier": 4,
-        "poi_role": "stop",
-        "lat": 48.86,
-        "lng": 2.33,
-        "areas": [],
-        "gated": True,
-        "opening_hours_verified": verified,
-    }
-    poi = _snapshot_from_records([record], [], [], []).pois[0]
-    assert poi.gated is True, "HOP 2/3: the record carried gated but the POI does not"
-    assert poi.opening_hours_verified == verified, (
-        "HOP 2/3: the record carried opening_hours_verified but the POI does not"
-    )
-
-    bare = _snapshot_from_records(
-        [{**record, "id": "bare", "gated": None, "opening_hours_verified": None}], [], [], []
-    ).pois[0]
-    assert bare.gated is None, (
-        "a corpus the gated pass never reached must load as None (no claim), "
-        "never as False (a claim of no door)"
-    )
-    assert bare.opening_hours_verified is None
-
-
-def test_the_upload_carries_the_trust_fields_in_both_property_lists() -> None:
-    """The upload's two hardcoded property lists must both carry the trust
-    fields, or they reach the graph as nothing with no error — the exact hop
-    the S1 adversarial review caught missing from the plan."""
-    source = (REPO_ROOT / "scripts" / "upload_paris.py").read_text()
-    for field in TRUST_FIELDS:
-        assert f'"{field}"' in source, (
-            f"upload param dict never carries `{field}` — it will never reach the graph"
-        )
-        assert f"p.{field}" in source, (
-            f"upload Cypher SET list never writes `p.{field}`"
-        )
-
-
-def test_parity_compares_the_trust_fields() -> None:
-    """scripts/db_parity.py is the mechanical enforcement that the trust fields
-    really reach whichever graph is connected — the lane's dev-data preflight
-    runs it, so a missed upload hop turns the sandbox red instead of silently
-    serving unverified days."""
-    import importlib
-
-    parity = importlib.import_module("scripts.db_parity")
-    expected = parity._expected("paris")
-    assert "clock_trust" in expected, (
-        "db_parity's expected set no longer carries the clock-trust lane"
-    )
-    keys = {k for (k, _g, _v) in expected["clock_trust"]}
-    assert keys, "the clock-trust lane compared nothing — vacuous"
-
-
-def test_hop_1_the_corpus_query_asks_the_graph_for_the_clock_fields() -> None:
-    """HOP 1 — `LOAD_PARIS_POIS_CYPHER` returns ONLY what it names; a property
-    absent from its RETURN list reaches nothing downstream, with no error."""
-    from src.tour.selection import LOAD_PARIS_POIS_CYPHER
-
-    for field in CLOCK_FIELDS:
-        assert f"p.{field}" in LOAD_PARIS_POIS_CYPHER, (
-            f"HOP 1: the corpus query never asks the graph for `{field}`, so it can "
-            f"never reach the planner however well the rest of the chain works."
-        )
-
-
-def test_hop_2_the_snapshot_builder_carries_the_clock_fields_onto_the_poi() -> None:
-    """HOP 2/3 — `_snapshot_from_records` sets fields one by one, onto a `POI`
-    that declares them. `POI` is `extra="ignore"` (src/tour/contract.py), so an
-    unknown keyword is DISCARDED WITHOUT ERROR — which is why this asserts
-    VALUES on the built object, never merely that construction succeeded.
-
-    `opening_hours` arrives from the graph as a JSON-encoded STRING (the
-    `physical_cues` upload precedent); the string is what the POI carries.
-    """
-    from src.tour.selection import _snapshot_from_records
-
-    table = '{"mon": [["09:00", "18:00"]], "tue": [], "wed": [["09:00", "18:00"]], ' \
-        '"thu": [["09:00", "18:00"]], "fri": [["09:00", "18:00"]], ' \
-        '"sat": [["09:00", "18:00"]], "sun": [["09:00", "18:00"]]}'
-    record = {
-        "id": "musee-test",
-        "name": "Musée Test",
-        "tier": 4,
-        "poi_role": "stop",
-        "lat": 48.86,
-        "lng": 2.33,
-        "areas": [],
-        "opening_hours": table,
-        "opening_hours_source": "osm",
-        "opening_hours_basis": "Museum; OSM tag 'Mo,We-Su 09:00-18:00; Tu off'.",
-        "place_category": "museum",
-    }
-    poi = _snapshot_from_records([record], [], [], []).pois[0]
-
-    assert poi.opening_hours == table, (
-        "HOP 2/3: the record carried opening_hours but the POI does not. Either "
-        "_snapshot_from_records does not pass it, or POI does not declare it."
-    )
-    assert poi.opening_hours_source == "osm", (
-        "HOP 2/3: the record carried opening_hours_source but the POI does not."
-    )
-    assert poi.opening_hours_basis.startswith("Museum;"), (
-        "HOP 2/3: the record carried opening_hours_basis but the POI does not."
-    )
-    assert poi.place_category == "museum", (
-        "HOP 2/3: the record carried place_category but the POI does not."
-    )
-
-
-def test_hop_2_an_unpriced_record_lands_on_the_safe_defaults() -> None:
-    """A corpus written before the opening-hours pass must still load: every
-    field arrives as None from Neo4j and must land on None / None / "" / "" —
-    and None hours means NEVER CLOCK-EXCLUDED, which is the safe direction
-    (a place is included on a day it is closed, never excluded on a day it is
-    open)."""
-    from src.tour.selection import _snapshot_from_records
-
-    record = {
-        "id": "unpriced",
-        "name": "A place with no hours yet",
-        "tier": 3,
-        "poi_role": "stop",
-        "lat": 48.8566,
-        "lng": 2.3522,
-        "areas": [],
-        "opening_hours": None,
-        "opening_hours_source": None,
-        "opening_hours_basis": None,
-        "place_category": None,
-    }
-    poi = _snapshot_from_records([record], [], [], []).pois[0]
-    assert poi.opening_hours is None
-    assert poi.opening_hours_source is None
-    assert poi.opening_hours_basis == ""
-    assert poi.place_category == ""
-
-
 # ---------------------------------------------------------------------------
 # THE PHASE GATE (Docs/adr/0006): a door carries ONE hours source — map, guess,
 # or unknown — as OpenStreetMap text the library can read; no verified badge,
@@ -645,9 +111,6 @@ def test_hop_2_an_unpriced_record_lands_on_the_safe_defaults() -> None:
 # by, written before anything was built; the milestone row that carries them
 # cannot flip until every one is green.
 # ---------------------------------------------------------------------------
-
-#: The only vocabulary a door's hours may carry (CONTEXT.md "Hours source").
-HOURS_SOURCES = ("map", "guess")
 
 #: The heatwave shelter file's own words — the source the decision record
 #: forbids. Never a bare "heat": eight théâtres carry it.
@@ -771,11 +234,201 @@ def test_gate_parity_compares_hours_by_source_on_every_target() -> None:
     assert "warn_only" not in source, "a parity lane still merely warns on the cloud"
 
 
+# ---------------------------------------------------------------------------
+# The pass's own rules, on fixtures (no network, no model, no DB).
+# ---------------------------------------------------------------------------
+
+
+def test_only_text_the_library_reads_is_kept_and_a_comment_is_unknown() -> None:
+    from scripts.poi_opening_hours import readable_hours
+
+    orsay = "Tu-Su 09:30-18:00; Th 09:30-21:45"
+    assert readable_hours(orsay) == orsay
+    assert readable_hours("Mo-Su 10:00-18:00; Jan 1,May 1,Dec 25: off") is not None
+    assert readable_hours("24/7") == "24/7"
+    assert readable_hours('"Fermé pour travaux jusqu\'à novembre 2028"') is None
+    assert readable_hours('Mo-Su 10:00-18:00; "closed for renovation"') is None
+    assert readable_hours("Palais du Luxembourg Mo-Fr 08:00-19:00") is None
+    assert readable_hours(None) is None
+    assert readable_hours({"mon": []}) is None
+
+
+def test_the_scoped_classes_match_first_and_the_wide_net_needs_an_equal_name() -> None:
+    """A scoped element claims a door by containment (today's rule); the wide
+    set — every shop in the city — claims one only by an EQUAL name, so the
+    Luxembourg Gardens never take the Luxembourg Museum's hours and a café
+    named after the cathedral never claims the cathedral."""
+    from scripts.poi_opening_hours import match_osm
+
+    gardens = {"name": "Jardin du Luxembourg", "latitude": 48.8462, "longitude": 2.3372}
+    cathedral = {"name": "Notre-Dame Cathedral", "latitude": 48.8530, "longitude": 2.3499}
+    def element(name: str, lat: float, lng: float, hours: str) -> dict:
+        return {"name": name, "lat": lat, "lng": lng, "opening_hours": hours}
+
+    scoped = [element("Jardin du Luxembourg", 48.8463, 2.3371, "07:30-21:00")]
+    wide = [
+        element("Musée du Luxembourg", 48.8463, 2.3371, "10:30-19:00"),
+        element("Café Notre-Dame", 48.8531, 2.3498, "08:00-02:00"),
+        element("Notre Dame Cathedral", 48.8531, 2.3498, "08:00-19:00"),
+    ]
+    matched = match_osm([gardens, cathedral], scoped, wide)
+    assert matched == {
+        "Jardin du Luxembourg": "07:30-21:00",
+        "Notre-Dame Cathedral": "08:00-19:00",
+    }
+
+
+def test_the_map_writes_only_onto_doors_and_over_any_guess() -> None:
+    """The map's tag lands on a door (over any guess), never on a place with
+    no door; an unreadable tag leaves the door unknown."""
+    from scripts.poi_opening_hours import apply_map_hours
+
+    door = {"name": "Museum", "gated": True, "opening_hours": None, "opening_hours_source": None,
+            "opening_hours_basis": "gated, hours not confidently known; left unfiltered."}
+    guessed = {"name": "Chapel", "gated": True, "opening_hours": "Mo-Su 10:00-17:00",
+               "opening_hours_source": "guess", "opening_hours_basis": "a guess"}
+    square = {"name": "Square", "gated": False, "opening_hours": None, "opening_hours_source": None,
+              "opening_hours_basis": "open square"}
+    unreadable = {"name": "Works", "gated": True, "opening_hours": None,
+                  "opening_hours_source": None, "opening_hours_basis": "gated, unknown"}
+    counts = apply_map_hours(
+        [door, guessed, square, unreadable],
+        {
+            "Museum": "Tu-Su 10:00-18:00",
+            "Chapel": "Mo-Sa 09:00-12:00",
+            "Square": "24/7",
+            "Works": '"Fermé pour travaux"',
+        },
+    )
+    assert (door["opening_hours"], door["opening_hours_source"]) == ("Tu-Su 10:00-18:00", "map")
+    assert (guessed["opening_hours"], guessed["opening_hours_source"]) == (
+        "Mo-Sa 09:00-12:00", "map",
+    )
+    assert square["opening_hours"] is None and square["opening_hours_source"] is None
+    assert unreadable["opening_hours"] is None and unreadable["opening_hours_source"] is None
+    assert counts == {"map": 2, "unreadable": 1}
+
+
+def test_a_model_record_is_validated_through_the_library() -> None:
+    from scripts.poi_opening_hours import validate
+
+    good = {"gated": True, "opening_hours": "Mo-Su 09:00-18:00", "opening_hours_basis": "site"}
+    assert validate(good, name="x") is None
+    prose = {"gated": True, "opening_hours": "open most mornings", "opening_hours_basis": "site"}
+    assert "not OpenStreetMap text" in (validate(prose, name="x") or "")
+    ungated = {"gated": False, "opening_hours": "Mo-Su 09:00-18:00", "opening_hours_basis": "b"}
+    assert "gated=false" in (validate(ungated, name="x") or "")
+    verdict_only = {"gated": "yes"}
+    assert "explicit true/false" in (validate(verdict_only, name="x", gated_only=True) or "")
+
+
+# ---------------------------------------------------------------------------
+# The plumbing: the same three hops the visit-capacity fields travel, tested
+# ONE AT A TIME so a failure names the hop that ate the field
+# (`tests/test_poi_visit_duration.py` is the pattern). `place_category`
+# (data row 6.7) rides the identical plumbing and is asserted alongside.
+# ---------------------------------------------------------------------------
+
+CLOCK_FIELDS = (
+    "gated",
+    "opening_hours",
+    "opening_hours_source",
+    "opening_hours_basis",
+    "place_category",
+)
+
+
+def test_hop_1_the_corpus_query_asks_the_graph_for_the_clock_fields() -> None:
+    """HOP 1 — `LOAD_PARIS_POIS_CYPHER` returns ONLY what it names; a property
+    absent from its RETURN list reaches nothing downstream, with no error."""
+    from src.tour.selection import LOAD_PARIS_POIS_CYPHER
+
+    for field in CLOCK_FIELDS:
+        assert f"p.{field}" in LOAD_PARIS_POIS_CYPHER, (
+            f"HOP 1: the corpus query never asks the graph for `{field}`, so it can "
+            f"never reach the planner however well the rest of the chain works."
+        )
+
+
+def test_hop_2_the_snapshot_builder_carries_the_clock_fields_onto_the_poi() -> None:
+    """HOP 2/3 — `_snapshot_from_records` sets fields one by one, onto a `POI`
+    that declares them. `POI` is `extra="ignore"` (src/tour/contract.py), so an
+    unknown keyword is DISCARDED WITHOUT ERROR — which is why this asserts
+    VALUES on the built object, never merely that construction succeeded.
+
+    `opening_hours` arrives from the graph as the OpenStreetMap text the
+    upload wrote; the text is what the POI carries.
+    """
+    from src.tour.selection import _snapshot_from_records
+
+    text = "Mo,We-Su 09:00-18:00; Tu off"
+    record = {
+        "id": "musee-test",
+        "name": "Musée Test",
+        "tier": 4,
+        "poi_role": "stop",
+        "lat": 48.86,
+        "lng": 2.33,
+        "areas": [],
+        "gated": True,
+        "opening_hours": text,
+        "opening_hours_source": "map",
+        "opening_hours_basis": "Museum; the place's own OpenStreetMap tag.",
+        "place_category": "museum",
+    }
+    poi = _snapshot_from_records([record], [], [], []).pois[0]
+
+    assert poi.gated is True, "HOP 2/3: the record carried gated but the POI does not"
+    assert poi.opening_hours == text, (
+        "HOP 2/3: the record carried opening_hours but the POI does not. Either "
+        "_snapshot_from_records does not pass it, or POI does not declare it."
+    )
+    assert poi.opening_hours_source == "map", (
+        "HOP 2/3: the record carried opening_hours_source but the POI does not."
+    )
+    assert poi.opening_hours_basis.startswith("Museum;"), (
+        "HOP 2/3: the record carried opening_hours_basis but the POI does not."
+    )
+    assert poi.place_category == "museum", (
+        "HOP 2/3: the record carried place_category but the POI does not."
+    )
+
+
+def test_hop_2_an_unpriced_record_lands_on_the_safe_defaults() -> None:
+    """A corpus written before the opening-hours pass must still load: every
+    field arrives as None from Neo4j and must land on None / None / "" / "" —
+    None hours means NEVER CLOCK-EXCLUDED, the safe direction (a place is
+    included on a day it is closed, never excluded on a day it is open), and
+    a gated of None is NO CLAIM, never a claim of no door."""
+    from src.tour.selection import _snapshot_from_records
+
+    record = {
+        "id": "unpriced",
+        "name": "A place with no hours yet",
+        "tier": 3,
+        "poi_role": "stop",
+        "lat": 48.8566,
+        "lng": 2.3522,
+        "areas": [],
+        "gated": None,
+        "opening_hours": None,
+        "opening_hours_source": None,
+        "opening_hours_basis": None,
+        "place_category": None,
+    }
+    poi = _snapshot_from_records([record], [], [], []).pois[0]
+    assert poi.gated is None
+    assert poi.opening_hours is None
+    assert poi.opening_hours_source is None
+    assert poi.opening_hours_basis == ""
+    assert poi.place_category == ""
+
+
 def test_the_upload_carries_the_clock_fields_in_both_property_lists() -> None:
     """S1.4d's hop — `scripts/upload_paris.py` keeps TWO hardcoded property
     lists (the param dict and the Cypher SET list) whose own comment warns they
     must agree or a field silently never reaches the graph. Both must carry all
-    four clock fields (the `test_golden_diff_cli_reads_the_durable_key` genre:
+    the clock fields (the `test_golden_diff_cli_reads_the_durable_key` genre:
     read the script source, assert on both lists)."""
     source = (REPO_ROOT / "scripts" / "upload_paris.py").read_text()
     for field in CLOCK_FIELDS:

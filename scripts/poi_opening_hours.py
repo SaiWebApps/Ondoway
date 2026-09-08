@@ -1,4 +1,4 @@
-"""Learn each POI's opening days and hours — data row 6.1 behind /poi-opening-hours.
+"""Learn each door's opening hours — data row 6.1 behind /poi-opening-hours.
 
 WHY A SECOND SCRIPT AND NOT A FLAG ON THE CAPACITY PASS. One script answers one
 question (`scripts/poi_visit_duration.py`'s own header records the precedent):
@@ -10,31 +10,33 @@ round-trip guard) and `records_for_batch` (the one reader of a model reply — t
 fence strip, the parse and the alignment check) come straight from the capacity
 pass, so the two passes can never drift into different file conventions.
 
-WHAT IT PRODUCES, per POI in ``data/{slug}/poi-raw.json``:
+WHAT IT PRODUCES, per POI in ``data/{slug}/poi-raw.json`` (Docs/adr/0006):
 
-``opening_hours``         A week table — all seven keys ``mon``..``sun``, each a
-                          list of ``["HH:MM", "HH:MM"]`` open windows; ``[]``
-                          means closed that whole day (``{"tue": []}`` is
-                          Rosemary's Tuesday closure). ``null`` = NOT GATED — a
-                          street, a square, a bridge — the same load-bearing
-                          null ``visit_seconds_inside`` uses. Null is never a
-                          way to record "unknown hours for a gated place"; that
-                          case is ALSO null but its basis says so, because the
-                          safe direction is "never clock-excluded".
-``opening_hours_source``  ``"osm"`` when the table transcribes a live OSM
-                          ``opening_hours`` tag, ``"ai"`` when it is an audited
-                          model judgement. ``null`` when the hours are null.
-``opening_hours_basis``   The one-sentence argument, per the house style. For
-                          OSM rows it quotes the raw tag, so a reviewer can
-                          check the transcription without leaving the file.
+``gated``                 The door verdict: true when a door, gate or ticket
+                          line stands between the street and the experience;
+                          false when the whole value stands in the open.
+``opening_hours``         OpenStreetMap ``opening_hours`` TEXT, exactly as the
+                          map writes it ("Tu-Su 09:30-18:00; Th 09:30-21:45"),
+                          read at planning time by the ``opening_hours`` library
+                          so seasons, holidays and past-midnight rules survive.
+                          ``null`` = no hours held: a place with no door, or a
+                          door whose hours nobody holds (its basis says which).
+``opening_hours_source``  ``"map"`` when the text is the place's own OpenStreetMap
+                          tag, ``"guess"`` when a model wrote it. ``null`` with
+                          null hours. The source decides how the hours are
+                          SPOKEN; nothing else does.
+``opening_hours_basis``   The one-sentence argument, per the house style.
 
-SOURCE HIERARCHY (design 6.1: "OSM + audited AI pass"). One bulk Overpass query
-over the city registry's bbox pulls every named tourist-relevant element that
-carries ``opening_hours``; a POI within 150 m of a name-matching element gets
-that raw tag handed to the model WITH the instruction to transcribe it
-faithfully rather than judge. Everything else is an audited model pass. The
-matcher reuses ``src.tour.routing.haversine_m`` (the one distance definition)
-and the bbox comes from ``src.city_registry`` (the one bbox table).
+THE MAP COMES FIRST, AND A GUESS NEVER OVERRULES IT. Two Overpass pulls over the
+city registry's bbox: the SCOPED classes (tourism, historic, worship, market,
+park, garden — the payload stays in the hundreds) matched by name containment
+within 150 m, then EVERY named element carrying hours, matched only by an
+EQUAL normalised name within 150 m — the wide net needs the stricter match or a
+café claims the cathedral next door. A match is stored only for a DOOR, and only
+when the library reads it and it carries no quoted comment (a comment reads as
+OPEN to the library, so unknown is the honest answer). Every run refreshes the
+map rows; the model is asked only about doors the map does not hold, and it
+answers in the map's own grammar, validated through the same library.
 
 NETWORK. Overpass is on the ingest allowlist (``src/onboard/fetch.py``); this
 script calls ``assert_ingestable`` before fetching and then uses httpx directly,
@@ -42,9 +44,9 @@ the ``scripts/geocode_pois.py`` operator-script precedent — the fixture-mode
 knob in the guarded door exists so the TEST bar never touches the network, and
 this is operator tooling that must.
 
-SPEND. One model call per batch, so a full Paris pass is roughly
-370 / BATCH_SIZE calls plus one Overpass query. ``--limit`` prices a subset and
-writes nothing; that is the intended dry run before a full pass.
+SPEND. Two Overpass queries and one model call per batch of doors the map does
+not hold. ``--limit`` prices a subset and writes nothing; that is the intended
+dry run before a full pass.
 """
 
 from __future__ import annotations
@@ -67,21 +69,23 @@ from scripts.poi_visit_duration import (
 ROOT = Path(__file__).resolve().parent.parent
 
 #: POIs per model call. Same trade as the capacity pass: one bad batch is cheap
-#: to re-run, and a full pass stays ~25 calls.
+#: to re-run, and a full pass stays a handful of calls.
 DEFAULT_BATCH_SIZE: int = 15
 
-DAY_KEYS: tuple[str, ...] = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+#: The only vocabulary a door's hours may carry (CONTEXT.md "Hours source").
+SOURCE_MAP = "map"
+SOURCE_GUESS = "guess"
+HOURS_SOURCES: tuple[str, ...] = (SOURCE_MAP, SOURCE_GUESS)
 
 #: An OSM element may claim a POI only from closer than this. Wider and a
 #: café's hours attach to the cathedral next door; narrower and a way's
 #: computed centre misses its own forecourt.
 OSM_MATCH_RADIUS_M: float = 150.0
 
-#: Overpass returns only named, tourist-relevant elements carrying
-#: ``opening_hours`` — scoping by tag keeps the payload in the hundreds instead
-#: of every shop and restaurant in the city.
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
-OVERPASS_QUERY = """
+#: The SCOPED pull: named, tourist-relevant elements carrying hours — the
+#: payload stays in the hundreds, and name containment is safe inside it.
+OVERPASS_SCOPED_QUERY = """
 [out:json][timeout:120];
 (
   nwr["opening_hours"]["name"]["tourism"]({s},{w},{n},{e});
@@ -89,6 +93,13 @@ OVERPASS_QUERY = """
   nwr["opening_hours"]["name"]["amenity"~"^(place_of_worship|marketplace)$"]({s},{w},{n},{e});
   nwr["opening_hours"]["name"]["leisure"~"^(park|garden)$"]({s},{w},{n},{e});
 );
+out center tags;
+"""
+#: The WIDE pull: every named element carrying hours (tens of thousands in
+#: Paris). Matched by an EQUAL name only — see the header.
+OVERPASS_WIDE_QUERY = """
+[out:json][timeout:180];
+nwr["opening_hours"]["name"]({s},{w},{n},{e});
 out center tags;
 """
 
@@ -106,30 +117,25 @@ and that null is a real statement, never a shrug.
 
 IF A PLACE IS GATED BUT YOU DO NOT CONFIDENTLY KNOW ITS HOURS: return null AND
 say so in the basis ("gated, hours not confidently known; left unfiltered").
-A wrong table locks a visitor out of an open door; null merely leaves the
+A wrong answer locks a visitor out of an open door; null merely leaves the
 planner as trusting as it is today. Err toward null.
 
-WHEN A LINE BELOW CARRIES `osm_opening_hours`, that is the place's own live
-OpenStreetMap tag. TRANSCRIBE it into the week table faithfully — do not
-second-guess it, extend it, or blend it with your own knowledge. Your basis
-must quote the raw tag so a reviewer can check the transcription. If the tag is
-too mangled to transcribe, return null and quote it in the basis anyway.
-
-THE TABLE SHAPE, exactly:
-- an object with ALL SEVEN keys "mon","tue","wed","thu","fri","sat","sun";
-- each value a list of ["HH:MM","HH:MM"] open windows, 24-hour clock;
-- an empty list [] means CLOSED that whole day — {"tue": []} is a Tuesday
-  closure;
-- no zero-length or backwards window; split a lunch closure into two windows.
-- Where hours vary by season, record the CURRENT typical pattern and say so in
-  the basis.
+THE HOURS GRAMMAR, exactly: OpenStreetMap's `opening_hours` text, one string.
+- days are Mo Tu We Th Fr Sa Su, ranges with a dash, lists with commas;
+- rules are separated by "; " and a day with no hours is "off";
+- times are 24-hour HH:MM-HH:MM; a lunch closure is two spans joined by ",";
+- examples: "Mo-Su 09:30-23:45", "Tu-Su 10:00-18:00; Mo off",
+  "Mo-Fr 08:00-12:00,14:00-19:00; Sa 09:00-12:00; Su off";
+- NEVER a quoted comment, never prose, never "sunrise", never a season word
+  unless you are certain of the dated rule. Where hours vary by season,
+  record the CURRENT typical pattern and say so in the basis.
 
 FOR EACH PLACE RETURN: `name` (copied exactly), `gated` (true or false — the
 one distinction above, answered EXPLICITLY for every place, including the ones
-whose hours you do not know), `opening_hours` (table or null),
-`opening_hours_basis` (ONE sentence: what kind of place it is and where
-the hours came from — the OSM tag, the institution's own published pattern, or
-why it is not gated. Never "popular" or "usually open").
+whose hours you do not know), `opening_hours` (the string or null),
+`opening_hours_basis` (ONE sentence: what kind of place it is and where the
+hours came from — the institution's own published pattern — or why it is not
+gated. Never "popular" or "usually open").
 
 Return STRICT JSON only: an array, one object per place, same order, no prose,
 no markdown fence.
@@ -146,31 +152,41 @@ def _normalise(name: str) -> str:
 
 
 def _names_match(ours: str, theirs: str) -> bool:
+    """The SCOPED match: equal, or containment either way — guarded so a
+    four-letter fragment ("pont") cannot claim every bridge in the city."""
     a, b = _normalise(ours), _normalise(theirs)
     if not a or not b:
         return False
     if a == b:
         return True
-    # Containment either way, guarded so a four-letter fragment ("pont")
-    # cannot claim every bridge in the city.
     shorter, longer = (a, b) if len(a) <= len(b) else (b, a)
     return len(shorter) >= 5 and shorter in longer
 
 
-def fetch_osm_hours(bbox: tuple[float, float, float, float]) -> list[dict[str, Any]]:
+def _names_equal(ours: str, theirs: str) -> bool:
+    """The WIDE match: the normalised names are equal, nothing looser. Among
+    every shop and café in the city, containment is how the Luxembourg
+    Gardens take the Luxembourg Museum's hours."""
+    a, b = _normalise(ours), _normalise(theirs)
+    return bool(a) and a == b
+
+
+def fetch_osm_hours(
+    bbox: tuple[float, float, float, float], query: str = OVERPASS_SCOPED_QUERY
+) -> list[dict[str, Any]]:
     """One bulk Overpass pull: [{name, lat, lng, opening_hours}, ...].
 
     ``bbox`` is the registry's (min_lat, max_lat, min_lon, max_lon); Overpass
     wants (south, west, north, east). One retry, then abort — silently pricing
-    the whole city as "ai" because a network call failed would erase the better
-    source without anyone seeing it happen.
+    the whole city as guesses because a network call failed would erase the
+    better source without anyone seeing it happen.
     """
     from src.onboard.fetch import ONBOARD_USER_AGENT, assert_ingestable
 
     assert_ingestable(OVERPASS_URL)
     import httpx
 
-    query = OVERPASS_QUERY.format(s=bbox[0], w=bbox[2], n=bbox[1], e=bbox[3])
+    body = query.format(s=bbox[0], w=bbox[2], n=bbox[1], e=bbox[3])
     last_error: Exception | None = None
     for attempt in (1, 2):
         try:
@@ -178,8 +194,8 @@ def fetch_osm_hours(bbox: tuple[float, float, float, float]) -> list[dict[str, A
             # same one the guarded ingest door sends, for the same reason.
             resp = httpx.post(
                 OVERPASS_URL,
-                data={"data": query},
-                timeout=180,
+                data={"data": body},
+                timeout=240,
                 headers={"User-Agent": ONBOARD_USER_AGENT},
             )
             resp.raise_for_status()
@@ -191,7 +207,7 @@ def fetch_osm_hours(bbox: tuple[float, float, float, float]) -> list[dict[str, A
     else:
         raise SystemExit(
             f"✗ Overpass unreachable after 2 attempts ({last_error}); refusing to run "
-            "an all-AI pass that silently drops the OSM half of the source hierarchy."
+            "an all-guess pass that silently drops the map half of the source hierarchy."
         )
 
     elements: list[dict[str, Any]] = []
@@ -207,40 +223,72 @@ def fetch_osm_hours(bbox: tuple[float, float, float, float]) -> list[dict[str, A
     return elements
 
 
-def match_osm(
-    pois: list[dict[str, Any]], elements: list[dict[str, Any]]
-) -> dict[str, str]:
-    """POI name -> raw OSM opening_hours, for POIs with a close name-matching
-    element. Nearest match wins when several qualify."""
+def _nearest_match(
+    poi: dict[str, Any], elements: list[dict[str, Any]], names_fit
+) -> str | None:
     from src.tour.routing import haversine_m
 
+    lat, lng = poi.get("latitude"), poi.get("longitude")
+    if lat is None or lng is None:
+        return None
+    best: tuple[float, str] | None = None
+    for el in elements:
+        distance = haversine_m(float(lat), float(lng), el["lat"], el["lng"])
+        if distance > OSM_MATCH_RADIUS_M:
+            continue
+        if not names_fit(poi.get("name", ""), el["name"]):
+            continue
+        if best is None or distance < best[0]:
+            best = (distance, el["opening_hours"])
+    return None if best is None else best[1]
+
+
+def match_osm(
+    pois: list[dict[str, Any]],
+    scoped: list[dict[str, Any]],
+    wide: list[dict[str, Any]] | None = None,
+) -> dict[str, str]:
+    """POI name -> raw OpenStreetMap ``opening_hours`` text.
+
+    The scoped classes first, by containment (today's rule, unchanged); a POI
+    they leave unmatched is tried against the wide set by EQUAL name only.
+    Nearest wins when several qualify. The scope is the disambiguation: the
+    wide set holds every shop and restaurant in the city."""
     matched: dict[str, str] = {}
     for poi in pois:
-        lat, lng = poi.get("latitude"), poi.get("longitude")
-        if lat is None or lng is None:
-            continue
-        best: tuple[float, str] | None = None
-        for el in elements:
-            distance = haversine_m(float(lat), float(lng), el["lat"], el["lng"])
-            if distance > OSM_MATCH_RADIUS_M:
-                continue
-            if not _names_match(poi.get("name", ""), el["name"]):
-                continue
-            if best is None or distance < best[0]:
-                best = (distance, el["opening_hours"])
-        if best is not None:
-            matched[poi["name"]] = best[1]
+        tag = _nearest_match(poi, scoped, _names_match)
+        if tag is None and wide:
+            tag = _nearest_match(poi, wide, _names_equal)
+        if tag is not None:
+            matched[poi["name"]] = tag
     return matched
 
 
-def needs_values(poi: dict[str, Any], *, rescore: bool) -> bool:
-    """True when this POI still has to go through the pass.
+def readable_hours(text: object) -> str | None:
+    """The text as the map wrote it, when the planner can trust the library
+    to read it — else None (unknown, the honest answer). Refused: anything
+    that is not a string, a string carrying a quoted comment (the library
+    reads "closed for works" as OPEN with a note), and a string the library
+    cannot parse."""
+    if not isinstance(text, str) or not text.strip():
+        return None
+    stripped = text.strip()
+    if '"' in stripped:
+        return None
+    from opening_hours import OpeningHours
 
-    A POI missing the explicit `gated` verdict (Docs/adr/0003) needs the pass
-    even when its hours are already priced — the gated backfill is what ends
-    the null-means-two-things overload, and the write path below preserves an
-    existing hours table on such a row unless --rescore says otherwise.
-    """
+    try:
+        OpeningHours(stripped)
+    except Exception:  # the library's own ParserError, whatever it is named
+        return None
+    return stripped
+
+
+def needs_values(poi: dict[str, Any], *, rescore: bool) -> bool:
+    """True when this POI still has to go through the model pass.
+
+    A POI missing the explicit `gated` verdict needs the pass even when its
+    hours are already held. A door the map holds never does."""
     if rescore:
         return True
     if "opening_hours" not in poi:
@@ -250,21 +298,16 @@ def needs_values(poi: dict[str, Any], *, rescore: bool) -> bool:
     basis = poi.get("opening_hours_basis")
     if not (isinstance(basis, str) and basis.strip()):
         return True
-    return poi["opening_hours"] is not None and poi.get("opening_hours_source") not in (
-        "osm",
-        "ai",
-    )
+    return poi["opening_hours"] is not None and poi.get("opening_hours_source") not in HOURS_SOURCES
 
 
-def describe(poi: dict[str, Any], osm_hours: str | None) -> str:
+def describe(poi: dict[str, Any]) -> str:
     """One compact line per place for the prompt."""
     record = {
         "name": poi.get("name", ""),
         "description": poi.get("short_description", ""),
         "role": poi.get("poi_role", ""),
     }
-    if osm_hours is not None:
-        record["osm_opening_hours"] = osm_hours
     return json.dumps(record, ensure_ascii=False)
 
 
@@ -272,16 +315,16 @@ _TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 
 def validate(record: dict[str, Any], *, name: str, gated_only: bool = False) -> str | None:
-    """Structural check on one record. Returns an error string, or None.
+    """Structural check on one model record. Returns an error string, or None.
 
     Structural only, like the capacity pass: nobody reviewing this can check
     Paris facts, so these are the properties checkable without knowing the
     city — the same ones ``tests/test_poi_opening_hours.py`` asserts over the
     finished file.
 
-    ``gated_only``: the target POI already carries a table the write path
+    ``gated_only``: the target POI already carries hours the write path
     preserves, so the only thing this record contributes is the door verdict —
-    a sloppy table in the reply must not refuse the verdict it rides with.
+    a sloppy answer in the reply must not refuse the verdict it rides with.
     """
     if gated_only:
         if not isinstance(record.get("gated"), bool):
@@ -296,46 +339,25 @@ def validate(record: dict[str, Any], *, name: str, gated_only: bool = False) -> 
             "distinction that matters and must be an explicit true/false"
         )
     if not isinstance(basis, str) or not basis.strip():
-        return f"{name}: opening_hours_basis is empty — an unargued table is unauditable"
+        return f"{name}: opening_hours_basis is empty — an unargued answer is unauditable"
     if hours is not None and record["gated"] is False:
         return (
-            f"{name}: carries an hours table while gated=false — an ungated place "
-            "has no door for a table to describe"
+            f"{name}: carries hours while gated=false — an ungated place "
+            "has no door for hours to describe"
         )
     if hours is None:
         return None
-    if not isinstance(hours, dict) or set(hours) != set(DAY_KEYS):
-        return f"{name}: opening_hours must carry exactly the keys {list(DAY_KEYS)}"
-    for day in DAY_KEYS:
-        windows = hours[day]
-        if not isinstance(windows, list):
-            return f"{name}: {day} is not a list of windows"
-        for window in windows:
-            # "24:00" is a legitimate END-of-day close (Palais de Tokyo shuts
-            # at midnight; OSM writes it this way) but never a start.
-            if (
-                not isinstance(window, list)
-                or len(window) != 2
-                or not all(isinstance(t, str) for t in window)
-                or not _TIME_RE.match(window[0])
-                or not (_TIME_RE.match(window[1]) or window[1] == "24:00")
-            ):
-                return f"{name}: {day} window {window!r} is not ['HH:MM', 'HH:MM']"
-            if window[0] >= window[1]:
-                return (
-                    f"{name}: {day} window {window!r} is zero-length or backwards — "
-                    "an open window must end after it starts"
-                )
+    if readable_hours(hours) is None:
+        return (
+            f"{name}: opening_hours {hours!r} is not OpenStreetMap text the library reads "
+            "(or carries a quoted comment)"
+        )
     return None
 
 
-def price_batch(
-    client: Any, model: str, batch: list[dict[str, Any]], osm_by_name: dict[str, str]
-) -> list[dict[str, Any]]:
+def price_batch(client: Any, model: str, batch: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """One model call for one batch. Returns the parsed records, unvalidated."""
-    prompt = PROMPT_HEADER + "\n".join(
-        describe(p, osm_by_name.get(p.get("name", ""))) for p in batch
-    )
+    prompt = PROMPT_HEADER + "\n".join(describe(p) for p in batch)
     response = client.messages.create(
         model=model,
         max_tokens=8000,
@@ -345,246 +367,37 @@ def price_batch(
     return records_for_batch(text, batch)
 
 
-# ── the verification ladder (Docs/adr/0003) ────────────────────────────────
-#
-# "Verified" is inspectable per place, forever: a row's `opening_hours_verified`
-# records WHO or WHAT confirmed the table, at which TIER, on what EVIDENCE, and
-# WHEN. Three tiers:
-#   0 — corroboration: the live OSM tag still equals the tag the row's basis
-#       quotes, so the stored transcription describes today's published hours.
-#       Auto-passes with both observations recorded. Deterministic, $0.
-#   1 — a cited model judgement (the audited pass) — surfaces in the queue for
-#       the human's bulk approval rather than self-certifying at launch.
-#   2 — a human, through the interactive review below. The permanent floor:
-#       conflicts, low confidence, and the top-gravity places are reviewed one
-#       by one; the corroborated tail may be bulk-approved.
-# A re-fetch that DISAGREES with a verified row demotes it (the auto-demote
-# rule): the voice falls back to the could-not-confirm disclosure and the row
-# re-enters the queue at its tier.
-
-_OSM_TAG_IN_BASIS_RE = re.compile(r"OSM tag ['\"]([^'\"]+)['\"]")
-
-
-def _verified_record(tier: int, approver: str, evidence: str) -> dict[str, Any]:
-    from datetime import date
-
-    return {
-        "tier": tier,
-        "approver": approver,
-        "evidence": evidence,
-        "at": date.today().isoformat(),
-    }
-
-
-def quoted_osm_tag(poi: dict[str, Any]) -> str | None:
-    """The raw OSM tag an osm-sourced row's basis quotes, or None."""
-    if poi.get("opening_hours_source") != "osm":
-        return None
-    match = _OSM_TAG_IN_BASIS_RE.search(poi.get("opening_hours_basis") or "")
-    return match.group(1) if match else None
-
-
-#: Constructs a flat 7-day table cannot encode: month/season rules, date-keyed
-#: exceptions, public/school holidays, sun-relative times. A tag carrying any
-#: of these says more than the table can repeat, so "tag unchanged since
-#: transcription" would certify the wrong proposition — the badge must attest
-#: that the TABLE faithfully carries the tag, and here it structurally cannot.
-_BEYOND_WEEKLY_RE = re.compile(
-    r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|PH|SH|easter|week"
-    r"|summer|winter)\b"
-    r"|sunrise|sunset|dawn|dusk"
-    r"|\["  # nth-weekday-of-month selectors: Su[1], Sa[1,3], Su[-1]
-    r"|\|\|"  # fallback rules
-    r"|\d\+"  # open-ended times: "10:00+"
-    r"|[\u2013\u2014]"  # en/em dashes: not OSM syntax, and they hide a span
-    r"|\b(?:january|february|march|april|june|july|august"
-    r"|september|october|november|december)\b",  # full month names
-    re.IGNORECASE,
-)
-
-#: A span that crosses midnight is the one pure-weekday construct a per-day
-#: window list clips instead of carrying — and it is a CONSTRUCT, not a
-#: spelling: one-digit hours, whitespace around the dash, and the spec's
-#: extended-hours notation (26:00 = 02:00 next day) all denote it. The span
-#: is parsed as minutes and judged as one; 24:00 is a legal end-of-day.
-_TIME_SPAN_RE = re.compile(r"(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})")
-
-
-def _tag_fits_a_weekly_table(tag: str) -> bool:
-    """Whether a flat mon..sun table can faithfully say everything this OSM
-    tag says. Pure weekday/time rules fit; anything seasonal, dated, holiday-
-    keyed, sun-relative, nth-weekday, fallback-ruled, open-ended, or
-    midnight-crossing does not, and stays with the human queue."""
-    if _BEYOND_WEEKLY_RE.search(tag):
-        return False
-    for h1, m1, h2, m2 in _TIME_SPAN_RE.findall(tag):
-        start = int(h1) * 60 + int(m1)
-        end = int(h2) * 60 + int(m2)
-        if int(h1) >= 24 or end > 24 * 60:  # extended hours: 25:00, 26:00 …
-            return False
-        if end <= start:  # crosses midnight (or is empty)
-            return False
-    return True
-
-
-def corroborate(
-    pois: list[dict[str, Any]], live_tags: dict[str, str]
-) -> tuple[list[str], list[str], list[str]]:
-    """Tier-0 pass over gated, table-carrying, unverified rows.
-
-    Returns (verified_names, conflict_names, demoted_names): a row whose live
-    tag equals its quoted tag is tier-0 verified; one whose live tag DIFFERS is
-    a conflict for the queue — and if it was already verified, it is demoted on
-    the spot (the auto-demote rule). A row with no live tag is left for the
-    queue untouched.
-
-    A quoted tag the weekly table cannot faithfully carry
-    (``_tag_fits_a_weekly_table``) never tier-0s, whatever the live tag says,
-    and a stale corroboration badge on such a row is shed on sight — the
-    quoted tag alone decides, no network needed. A HUMAN badge (any other
-    approver) is never touched by the machine: a person judged the table.
-    """
-    verified: list[str] = []
-    conflicts: list[str] = []
-    demoted: list[str] = []
+def apply_map_hours(pois: list[dict[str, Any]], matched: dict[str, str]) -> dict[str, int]:
+    """Write the map's hours onto every DOOR the map holds — over any guess,
+    never onto a place with no door. A matched tag the library cannot read is
+    left unknown and counted. Returns the counts."""
+    counts = {"map": 0, "unreadable": 0}
     for poi in pois:
-        if poi.get("gated") is not True or poi.get("opening_hours") is None:
+        if poi.get("gated") is not True:
+            if poi.get("opening_hours") is not None:
+                poi["opening_hours"] = None
+                poi["opening_hours_source"] = None
             continue
-        quoted = quoted_osm_tag(poi)
-        if quoted is None:
+        tag = matched.get(poi.get("name", ""))
+        if tag is None:
             continue
-        if not _tag_fits_a_weekly_table(quoted):
-            record = poi.get("opening_hours_verified")
-            if isinstance(record, dict) and record.get("approver") == "corroboration":
-                poi["opening_hours_verified"] = None
-                demoted.append(poi["name"])
+        text = readable_hours(tag)
+        if text is None:
+            counts["unreadable"] += 1
             continue
-        live = live_tags.get(poi.get("name", ""))
-        if live is None:
-            continue
-        if live == quoted:
-            if poi.get("opening_hours_verified") is None:
-                poi["opening_hours_verified"] = _verified_record(
-                    0,
-                    "corroboration",
-                    f'OSM tag unchanged since transcription: "{live}"',
-                )
-                verified.append(poi["name"])
-        else:
-            conflicts.append(poi["name"])
-            if poi.get("opening_hours_verified") is not None:
-                poi["opening_hours_verified"] = None
-                demoted.append(poi["name"])
-    return verified, conflicts, demoted
+        poi["opening_hours"] = text
+        poi["opening_hours_source"] = SOURCE_MAP
+        poi["opening_hours_basis"] = f"Door; hours are the place's own OpenStreetMap tag: {text}."
+        counts["map"] += 1
+    return counts
 
 
-def review_queue(
-    pois: list[dict[str, Any]], conflicts: list[str]
-) -> list[dict[str, Any]]:
-    """The rows still owing a human decision, in review order: conflicts first,
-    then by gravity (importance_tier) descending, then name — the owner's
-    minutes land where a wrong "open" costs the most."""
-    conflict_set = set(conflicts)
-    pending = [
-        p
-        for p in pois
-        if p.get("gated") is True
-        and p.get("opening_hours") is not None
-        and p.get("opening_hours_verified") is None
-    ]
-    return sorted(
-        pending,
-        key=lambda p: (
-            p.get("name") not in conflict_set,
-            -(p.get("importance_tier") or 1),
-            p.get("name", ""),
-        ),
-    )
-
-
-def _render_row(poi: dict[str, Any], live_tag: str | None) -> str:
-    hours = poi.get("opening_hours") or {}
-    closed = ", ".join(d for d in DAY_KEYS if hours.get(d) == []) or "none"
-    lines = [
-        f"  {poi.get('name')}  (tier {poi.get('importance_tier')}, "
-        f"source {poi.get('opening_hours_source')})",
-        f"    closed days: {closed}",
-        f"    basis: {poi.get('opening_hours_basis')}",
-    ]
-    if live_tag is not None:
-        lines.append(f'    live OSM tag now: "{live_tag}"')
-    return "\n".join(lines)
-
-
-def run_review(
-    pois: list[dict[str, Any]],
-    live_tags: dict[str, str],
-    conflicts: list[str],
-    *,
-    approver: str,
-    list_only: bool,
-) -> int:
-    """The interactive tier-2 session (the beat_dedup approve-loop precedent).
-
-    ``list_only`` renders the queue and decides nothing — the demoable,
-    TTY-free view. Decisions: [a]ccept (tier 2), [n]ull the table (hours
-    genuinely unknowable; fail-open honesty), [s]kip, [b]ulk-accept every
-    remaining UNCONTESTED osm-sourced row (one confirmation, each row still
-    stamped with this approver), [q]uit. Returns the number decided.
-    """
-    queue = review_queue(pois, conflicts)
-    print(f"\n  {len(queue)} row(s) in the review queue (conflicts first).")
-    if list_only:
-        for poi in queue:
-            print()
-            print(_render_row(poi, live_tags.get(poi.get("name", ""))))
-        return 0
-    decided = 0
-    index = 0
-    while index < len(queue):
-        poi = queue[index]
-        print()
-        print(_render_row(poi, live_tags.get(poi.get("name", ""))))
-        answer = input("  [a]ccept  [n]ull  [s]kip  [b]ulk-osm  [q]uit > ").strip().lower()
-        if answer == "a":
-            poi["opening_hours_verified"] = _verified_record(
-                2, approver, "reviewed in the hours session"
-            )
-            decided += 1
-            index += 1
-        elif answer == "n":
-            poi["opening_hours"] = None
-            poi["opening_hours_source"] = None
-            poi["opening_hours_verified"] = None
-            poi["opening_hours_basis"] = (
-                "Gated, but the published hours could not be confirmed in review; "
-                "left unfiltered."
-            )
-            decided += 1
-            index += 1
-        elif answer == "b":
-            conflict_set = set(conflicts)
-            bulk = [
-                p
-                for p in queue[index:]
-                if p.get("opening_hours_source") == "osm"
-                and p.get("name") not in conflict_set
-            ]
-            confirm = input(f"  accept {len(bulk)} uncontested OSM rows? [y/N] > ")
-            if confirm.strip().lower() == "y":
-                for p in bulk:
-                    p["opening_hours_verified"] = _verified_record(
-                        2, approver, "bulk-accepted: OSM-sourced, uncontested"
-                    )
-                decided += len(bulk)
-                queue = [p for p in queue if p.get("opening_hours_verified") is None]
-                index = 0
-        elif answer == "q":
-            break
-        else:
-            index += 1
-    print(f"\n  {decided} row(s) decided this session.")
-    return decided
+def _coverage(pois: list[dict[str, Any]]) -> str:
+    doors = [p for p in pois if p.get("gated") is True]
+    by_map = sum(1 for p in doors if p.get("opening_hours_source") == SOURCE_MAP)
+    by_guess = sum(1 for p in doors if p.get("opening_hours_source") == SOURCE_GUESS)
+    unknown = sum(1 for p in doors if p.get("opening_hours") is None)
+    return f"{by_map} map, {by_guess} guess, {unknown} unknown of {len(doors)} doors"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -594,12 +407,12 @@ def main(argv: list[str] | None = None) -> int:
         "--limit",
         type=int,
         default=None,
-        help="Process only the first N unpriced POIs. The dry-run knob.",
+        help="Send only the first N unpriced doors to the model. The dry-run knob.",
     )
     parser.add_argument(
         "--rescore",
         action="store_true",
-        help="Re-run every POI, including ones already carrying hours.",
+        help="Re-ask the model about every POI, including ones already carrying hours.",
     )
     parser.add_argument(
         "--dry-run",
@@ -608,22 +421,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--model", default=DEFAULT_MODEL, help=f"Default: {DEFAULT_MODEL}")
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
-    parser.add_argument(
-        "--verify",
-        action="store_true",
-        help="Run the ladder instead of the pricing pass: tier-0 corroboration, "
-        "auto-demote on drift, then the review queue.",
-    )
-    parser.add_argument(
-        "--list-queue",
-        action="store_true",
-        help="With --verify: render the review queue and decide nothing.",
-    )
-    parser.add_argument(
-        "--approver",
-        default=None,
-        help="With --verify: who is deciding — stamped onto every tier-2 record.",
-    )
     args = parser.parse_args(argv)
 
     path = ROOT / "data" / args.slug / "poi-raw.json"
@@ -631,119 +428,73 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"✗ no POI file at {path}")
 
     pois, original = load_pois(path)
+    from src import city_registry
 
-    if args.verify:
-        from src import city_registry
+    bbox = city_registry.bbox_map()[args.slug]
+    print("  fetching OpenStreetMap hours (two Overpass queries) …", flush=True)
+    scoped = fetch_osm_hours(bbox, OVERPASS_SCOPED_QUERY)
+    wide = fetch_osm_hours(bbox, OVERPASS_WIDE_QUERY)
+    matched = match_osm(pois, scoped, wide)
+    counts = apply_map_hours(pois, matched)
+    print(
+        f"  the map holds {counts['map']} doors ({len(scoped)} scoped, {len(wide)} wide "
+        f"elements); {counts['unreadable']} unreadable tag(s) left unknown."
+    )
 
-        print("  fetching OSM opening_hours (one Overpass query) …", flush=True)
-        elements = fetch_osm_hours(city_registry.bbox_map()[args.slug])
-        live_tags = match_osm(pois, elements)
-        verified, conflicts, demoted = corroborate(pois, live_tags)
-        print(
-            f"  tier-0: {len(verified)} corroborated, {len(conflicts)} conflict(s), "
-            f"{len(demoted)} demoted."
-        )
-        if not args.list_queue and not args.approver:
-            raise SystemExit(
-                "✗ --verify needs --approver <name> for the review session "
-                "(or --list-queue to render the queue and decide nothing)."
-            )
-        run_review(
-            pois,
-            live_tags,
-            conflicts,
-            approver=args.approver or "",
-            list_only=args.list_queue,
-        )
-        if args.list_queue:
-            # "Render the review queue and decide nothing" — nothing decided
-            # means nothing WRITTEN: the corroboration computed on the way to
-            # the queue stays in memory, and the file stays byte-identical.
-            print("\nQueue listed. Nothing decided, nothing written.")
-            return 0
-        if args.dry_run:
-            print("\nDry run. Nothing written.")
-            return 0
-        dump_pois(path, pois, original)
-        print(f"\n✓ wrote verification state to {path.relative_to(ROOT)}")
-        print(f"  NEXT, AND MANDATORY: make sync-poi-exports SLUG={args.slug}")
-        return 0
     by_name = {p.get("name"): p for p in pois}
     todo = [p for p in pois if needs_values(p, rescore=args.rescore)]
     if args.limit is not None:
         todo = todo[: args.limit]
-
-    print(f"{len(pois)} POIs in {path.relative_to(ROOT)}; {len(todo)} to process.")
-    if not todo:
-        print("Nothing to do.")
-        return 0
-
-    from src import city_registry
-
-    print("  fetching OSM opening_hours (one Overpass query) …", flush=True)
-    elements = fetch_osm_hours(city_registry.bbox_map()[args.slug])
-    osm_by_name = match_osm(todo, elements)
-    print(
-        f"  OSM carries opening_hours for {len(osm_by_name)} of {len(todo)} "
-        f"POIs ({len(elements)} candidate elements)."
-    )
-
-    from src.tour.anthropic_client import compose_client
-
-    client = compose_client()
+    print(f"{len(pois)} POIs in {path.relative_to(ROOT)}; {len(todo)} for the model.")
 
     priced: list[dict[str, Any]] = []
-    failed_names: list[str] = []
     errors: list[str] = []
-    for start in range(0, len(todo), args.batch_size):
-        batch = todo[start : start + args.batch_size]
-        print(f"  processing {start + 1}-{start + len(batch)} of {len(todo)} …", flush=True)
-        for record in price_batch(client, args.model, batch, osm_by_name):
-            name = record.get("name", "(unnamed)")
-            existing = by_name.get(name, {})
-            keeps_table = existing.get("opening_hours") is not None and not args.rescore
-            problem = validate(record, name=name, gated_only=keeps_table)
-            if problem:
-                errors.append(problem)
-                failed_names.append(name)
-                continue
-            priced.append(record)
+    if todo:
+        from src.tour.anthropic_client import compose_client
 
-    # ONE retry of just the failures — same budget logic as the capacity pass:
-    # a slip a re-ask fixes must not cost the run; a row failing twice must be
-    # seen, not ground away at.
-    if failed_names:
-        retry = [p for p in todo if p.get("name") in set(failed_names)]
-        print(f"\n  retrying {len(retry)} record(s) that failed the structural check …", flush=True)
-        errors = []
-        for start in range(0, len(retry), args.batch_size):
-            batch = retry[start : start + args.batch_size]
-            for record in price_batch(client, args.model, batch, osm_by_name):
+        client = compose_client()
+        failed_names: list[str] = []
+        for start in range(0, len(todo), args.batch_size):
+            batch = todo[start : start + args.batch_size]
+            print(f"  processing {start + 1}-{start + len(batch)} of {len(todo)} …", flush=True)
+            for record in price_batch(client, args.model, batch):
                 name = record.get("name", "(unnamed)")
                 existing = by_name.get(name, {})
-                keeps_table = existing.get("opening_hours") is not None and not args.rescore
-                problem = validate(record, name=name, gated_only=keeps_table)
+                keeps_hours = existing.get("opening_hours") is not None and not args.rescore
+                problem = validate(record, name=name, gated_only=keeps_hours)
                 if problem:
-                    errors.append(f"(after one retry) {problem}")
+                    errors.append(problem)
+                    failed_names.append(name)
                     continue
                 priced.append(record)
 
-    print()
-    for record in priced:
-        hours = record["opening_hours"]
-        source = "—" if hours is None else ("osm" if record["name"] in osm_by_name else "ai")
-        closed = (
-            "not gated"
-            if hours is None
-            else (
-                "closed " + ", ".join(d for d in DAY_KEYS if hours[d] == [])
-                if any(hours[d] == [] for d in DAY_KEYS)
-                else "open all seven days"
+        # ONE retry of just the failures — same budget logic as the capacity pass:
+        # a slip a re-ask fixes must not cost the run; a row failing twice must be
+        # seen, not ground away at.
+        if failed_names:
+            retry = [p for p in todo if p.get("name") in set(failed_names)]
+            print(
+                f"\n  retrying {len(retry)} record(s) that failed the structural check …",
+                flush=True,
             )
-        )
-        print(f"  {record['name']}")
-        print(f"      hours: {closed}    source: {source}")
-        print(f"      basis: {record['opening_hours_basis']}")
+            errors = []
+            for start in range(0, len(retry), args.batch_size):
+                batch = retry[start : start + args.batch_size]
+                for record in price_batch(client, args.model, batch):
+                    name = record.get("name", "(unnamed)")
+                    existing = by_name.get(name, {})
+                    keeps_hours = existing.get("opening_hours") is not None and not args.rescore
+                    problem = validate(record, name=name, gated_only=keeps_hours)
+                    if problem:
+                        errors.append(f"(after one retry) {problem}")
+                        continue
+                    priced.append(record)
+
+        print()
+        for record in priced:
+            print(f"  {record['name']}")
+            print(f"      hours: {record['opening_hours'] or '— (unknown)'}")
+            print(f"      basis: {record['opening_hours_basis']}")
 
     if errors:
         print(f"\n✗ {len(errors)} record(s) failed the structural check twice:", file=sys.stderr)
@@ -764,29 +515,25 @@ def main(argv: list[str] | None = None) -> int:
         if poi is None:
             print(f"✗ model returned an unknown place: {record['name']!r}", file=sys.stderr)
             return 1
-        # The door verdict always lands; an EXISTING hours table is preserved
-        # unless --rescore was explicit (Docs/adr/0003): a gated backfill over
-        # an already-priced corpus must never re-roll live tables through
-        # model nondeterminism and move clock exclusions as a side effect.
+        # The door verdict always lands; hours the row already holds are
+        # preserved unless --rescore was explicit, and a map row is never a
+        # guess's to overwrite.
         poi["gated"] = record["gated"]
         if poi.get("opening_hours") is not None and not args.rescore:
             continue
-        hours = record["opening_hours"]
+        if poi.get("opening_hours_source") == SOURCE_MAP:
+            continue
+        hours = readable_hours(record["opening_hours"]) if record["gated"] else None
         poi["opening_hours"] = hours
-        # The SCRIPT assigns the source, deterministically: the model is never
-        # asked to grade its own provenance.
-        poi["opening_hours_source"] = (
-            None if hours is None else ("osm" if record["name"] in osm_by_name else "ai")
-        )
+        poi["opening_hours_source"] = SOURCE_GUESS if hours is not None else None
         poi["opening_hours_basis"] = record["opening_hours_basis"]
 
     dump_pois(path, pois, original)
-    print(f"\n✓ wrote opening hours for {len(priced)} POIs to {path.relative_to(ROOT)}")
+    print(f"\n✓ wrote hours to {path.relative_to(ROOT)}: {_coverage(pois)}")
     if errors:
         print(f"  {len(errors)} still unprocessed — re-run this target to pick up just those.")
     print(f"  NEXT, AND MANDATORY: make sync-poi-exports SLUG={args.slug} — fields")
     print("  written here do not reach the graph until that sync runs.")
-    # Non-zero while anything is unprocessed, same as the capacity pass.
     return 1 if errors else 0
 
 

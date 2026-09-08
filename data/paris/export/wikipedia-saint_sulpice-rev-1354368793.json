@@ -289,52 +289,9 @@
       "source_chunk": "saint_sulpice-rev-1354368793",
       "source_book": "Wikipedia"
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "sat": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ],
-      "sun": [
-        [
-          "08:00",
-          "19:45"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated church you enter; transcribed from OSM tag '08:00-19:45' applied to all seven days.",
+    "opening_hours": "08:00-19:45",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 08:00-19:45.",
     "place_category": "church",
     "visit_seconds_inside": 1500,
     "visit_basis": "Huge Baroque church with Delacroix murals, the gnomon solar calendar and a monumental organ; interior of side chapels and nave takes about 25 min, with a large fountain square outside.",
@@ -348,12 +305,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A large free-entry church you walk directly into through its main doors with no ticketing or security, so no queue forms before entering.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"08:00-19:45\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   }
 ]

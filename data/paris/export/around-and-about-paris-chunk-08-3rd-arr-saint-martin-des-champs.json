@@ -61,8 +61,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A walk-by-only synagogue with no public tourist admission; there is no line for a passing visitor to stand in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Priory of Saint-Martin-des-Champs",
@@ -220,8 +219,7 @@
     ],
     "queue_basis": "Now the Musée des Arts et Métiers, entry is through a single ticket and bag-check desk that gathers a few people at midday but the line stays minor and moves steadily.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Musee des Arts et Metiers",
@@ -268,47 +266,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated museum; transcribed from OSM tag 'Tu-Th 10:00-18:00; Fr 10:00-21:00; Sa-Su 10:00-18:00' (Monday closed).",
+    "opening_hours": "Tu-Th 10:00-18:00; Fr 10:00-21:00; Sa-Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Th 10:00-18:00; Fr 10:00-21:00; Sa-Su 10:00-18:00.",
     "place_category": "museum",
     "visit_seconds_inside": 5400,
     "visit_basis": "Large science and technology museum with 80,000 objects across multiple galleries plus Foucault's pendulum in a medieval chapel; would absorb over two hours, capped at the 90-minute tour maximum; exterior is a plain converted priory worth a brief look.",
@@ -327,13 +287,7 @@
     ],
     "queue_basis": "A mid-sized ticketed museum with a bag check and ticket desk that rarely backs up; the line is minor and moves, peaking only midday when school and tour groups arrive.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Th 10:00-18:00; Fr 10:00-21:00; Sa-Su 10:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Porte Saint-Martin",
@@ -426,8 +380,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A freestanding triumphal arch on a street island with no interior and no door, so there is nothing to queue for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Saint-Nicolas-des-Champs",
@@ -516,8 +469,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working parish church with an open door and free entry, walked into without any ticket desk or security check.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "3 Rue Volta",
@@ -582,8 +534,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A private half-timbered house seen only from the street; there is no admission and no interior to enter, so no line forms.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Convent of the Madelonnettes",
@@ -647,7 +598,6 @@
     "queue_peak_hours": [],
     "queue_basis": "The convent was demolished in the 1860s and only a street site remains, so there is nothing to enter and no queue.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   }
 ]

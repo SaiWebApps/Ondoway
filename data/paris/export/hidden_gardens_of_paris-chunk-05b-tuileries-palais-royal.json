@@ -643,52 +643,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "tue": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "wed": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "thu": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "fri": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "sat": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ],
-      "sun": [
-        [
-          "07:30",
-          "21:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated garden with closing gates; transcribed from OSM tag 'Mo-Su 07:30-21:00'.",
+    "opening_hours": "Mo-Su 07:30-21:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 07:30-21:00.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Large formal royal garden with long gravel allees, fountains, statues and terraces between the Louvre and Concorde; walking its length and pausing at the basins fills the better part of an hour, open-air throughout.",
@@ -736,13 +693,7 @@
         "basis": "The Grand Bassin Octogonal fills the western end just inside the Place de la Concorde gates; a person stands at its rim with Le Silence and the basin's edge in front of them, nearly four hundred metres west of the garden pin."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 07:30-21:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Palais-Royal",
@@ -1184,8 +1135,7 @@
         "basis": "The east gallery runs the garden's whole Valois side; its shopfront arcade is where the gallery's own beat stands a person, and the radius spans the colonnade without reaching the garden's centre lawn or the west side."
       }
     ],
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Saint-Germain-l'Auxerrois",
@@ -1357,8 +1307,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working parish church with an open door you walk straight through without ticket or check, so there is no queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Eglise Saint-Roch",
@@ -1455,8 +1404,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door and no ticket or security screening; worshippers and visitors walk straight in without stopping.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Notre-Dame-des-Victoires",
@@ -1555,8 +1503,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A basilica with an open door and no ticket or security check, entered directly without stopping.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Galerie Vivienne",
@@ -1637,47 +1584,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "wed": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "thu": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "fri": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "sat": [
-        [
-          "08:30",
-          "20:30"
-        ]
-      ],
-      "sun": []
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated covered arcade with grilles; OSM tag \"Mo-Sa 08:30-20:30\" transcribed with Sunday closed.",
+    "opening_hours": "Mo-Sa 08:30-20:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 08:30-20:30.",
     "place_category": "arcade",
     "visit_seconds_inside": null,
     "visit_basis": "Elegant covered arcade with mosaic floors, glass roof and neoclassical shopfronts to walk slowly and browse, about 15 minutes; the arcade itself is the space.",
@@ -1691,13 +1600,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A covered arcade open at both ends with no door or ticket; visitors stroll through with no queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 08:30-20:30\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Comedie-Francaise",
@@ -1799,8 +1702,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working theatre entered on a ticket for a performance rather than by a walk-in queue; on a walking tour it is a facade you pass with no standing line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Galignani",
@@ -1820,9 +1722,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A bookshop entered through a door; gated, hours not confidently known; left unfiltered.",
+    "opening_hours": "Mo-Sa 10:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 10:00-19:00.",
     "place_category": "other",
     "visit_seconds_inside": 1200,
     "visit_basis": "Historic English-language bookshop on rue de Rivoli with a classic wood-panelled storefront; the exterior is a few minutes and browsing the interior shelves absorbs about 20 min.",
@@ -1836,8 +1738,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A rue de Rivoli bookshop entered straight from the street with no admission or screening, so there is no queue to enter.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Angelina Paris",
@@ -1878,7 +1779,6 @@
     ],
     "queue_basis": "This is a small famous tea room with limited table seating and no reservations for walk-ins, so patrons queue on the pavement for a table through the midday and afternoon tea rush, with only a short wait at opening.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

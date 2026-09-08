@@ -115,52 +115,9 @@
       }
     ],
     "poi_role": "walk_by_only",
-    "opening_hours": {
-      "mon": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "tue": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "wed": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "thu": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "fri": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "sat": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ],
-      "sun": [
-        [
-          "12:00",
-          "23:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "A brasserie entered through a door (gated); hours from its published daily pattern of roughly midday to 23:00.",
+    "opening_hours": "Mo-Su 12:00-14:30,19:00-22:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 12:00-14:30,19:00-22:30.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Historic Montparnasse brasserie with literary brass plaques; as a walk-by the facade and terrace occupy a few minutes, and entering to dine is not a normal part of a tour stop.",
@@ -174,8 +131,7 @@
     "queue_peak_hours": [],
     "queue_basis": "Priced as a walk-by brasserie with no entry line — you pass its facade and plaques from the street, and any table wait is seating, not a queue to enter a monument.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Statue of Marshal Ney",
@@ -243,8 +199,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A public statue on a street corner with no interior and no admission line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Fontaine des Quatre-Parties-du-Monde",
@@ -311,8 +266,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open-air fountain in a public garden on Avenue de l'Observatoire; nothing is ticketed or gated.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Rue Notre-Dame-des-Champs",
@@ -375,8 +329,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A public street walked past; there is no entrance or line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Ecole Alsacienne",
@@ -439,8 +392,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working private school viewed only from the street; there is no visitor entrance or queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "College Stanislas",
@@ -501,8 +453,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A functioning school seen from outside; no public entry line exists.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "3 Rue Joseph-Bara",
@@ -569,8 +520,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A private residential building admired from the street facade; there is no interior to enter and no line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Musee Zadkine",
@@ -619,47 +569,9 @@
       }
     ],
     "poi_role": "walk_by_only",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated city studio-museum; transcribed from its OSM tag \"Tu-Su 10:00-18:00\".",
+    "opening_hours": "Tu-Su 10:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Su 10:00-18:00.",
     "place_category": "museum",
     "visit_seconds_inside": 2400,
     "visit_basis": "Small free studio-museum with sculptor's house, a few rooms and a garden of bronzes; compact collection absorbing roughly 40 min with little queue.",
@@ -678,13 +590,7 @@
     ],
     "queue_basis": "A small free city studio-museum with one entrance and a bag check that can back up briefly in the afternoon, but the intimate size keeps any wait minor even though the group is only walking by.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Reid Hall",
@@ -751,8 +657,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A university academic centre not open as a visitor attraction; seen from the street with no public queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Academie de la Grande-Chaumiere",
@@ -807,51 +712,9 @@
       }
     ],
     "poi_role": "walk_by_only",
-    "opening_hours": {
-      "mon": [
-        [
-          "14:00",
-          "15:30"
-        ]
-      ],
-      "tue": [
-        [
-          "14:00",
-          "15:30"
-        ]
-      ],
-      "wed": [
-        [
-          "14:00",
-          "15:30"
-        ],
-        [
-          "19:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "14:00",
-          "15:30"
-        ]
-      ],
-      "fri": [
-        [
-          "14:00",
-          "15:30"
-        ]
-      ],
-      "sat": [
-        [
-          "13:30",
-          "14:30"
-        ]
-      ],
-      "sun": []
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated independent art academy; transcribed from its OSM tag \"Mo-Fr 14:00-15:30, We 19:00-20:00, Sa 13:30-14:30\".",
+    "opening_hours": "Mo-Fr 14:00-15:30, We 19:00-20:00, Sa 13:30-14:30",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Fr 14:00-15:30, We 19:00-20:00, Sa 13:30-14:30.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Working art academy on a narrow street, viewed from its entrance and any open courtyard glimpse; not a general visitor interior.",
@@ -865,13 +728,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working art academy viewed from the street; there is no ticketed entry or line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Fr 14:00-15:30, We 19:00-20:00, Sa 13:30-14:30\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "26 Rue Vavin (Sauvage Building)",
@@ -934,8 +791,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A private tiled apartment building appreciated from the pavement; no interior access and no queue.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "La Rotonde",
@@ -1014,9 +870,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A café is entered through a door so it is gated, but no hours tag is provided; gated, hours not confidently known; left unfiltered.",
+    "opening_hours": "Mo-Su 07:30-24:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 07:30-24:00.",
     "place_category": "other",
     "visit_seconds_inside": 2700,
     "visit_basis": "Historic Montparnasse café-brasserie; the outside terrace and facade take a few minutes, while sitting inside for a drink or meal in the belle-epoque room absorbs around 45 min.",
@@ -1030,7 +886,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A café you walk to and enter or seat at will; there is no security or ticket line to price before entering.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   }
 ]

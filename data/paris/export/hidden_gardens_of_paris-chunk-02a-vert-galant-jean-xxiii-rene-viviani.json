@@ -169,52 +169,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "00:00",
-          "24:00"
-        ]
-      ],
-      "tue": [
-        [
-          "00:00",
-          "24:00"
-        ]
-      ],
-      "wed": [
-        [
-          "00:00",
-          "24:00"
-        ]
-      ],
-      "thu": [
-        [
-          "00:00",
-          "24:00"
-        ]
-      ],
-      "fri": [
-        [
-          "00:00",
-          "24:00"
-        ]
-      ],
-      "sat": [
-        [
-          "00:00",
-          "24:00"
-        ]
-      ],
-      "sun": [
-        [
-          "00:00",
-          "24:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated pocket-park with closing bells; OSM tag '24/7' transcribed faithfully.",
+    "opening_hours": "24/7",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: 24/7.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Triangular riverside pocket-park at the island's tip, seven meters below street level, with benches, trees and downstream views under Pont Neuf; you descend, walk to the point and stand looking at the river, nothing to enter.",
@@ -228,13 +185,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open public pocket-park with a free open gate at the island's tip; visitors walk straight down the steps with no door, ticket, or screening.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"24/7\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Place Dauphine",
@@ -336,8 +287,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A triangular open square on the Île de la Cité entered freely from the street, with no gate or ticket and therefore no queue.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Pont des Arts",
@@ -449,8 +399,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A pedestrian bridge you walk straight onto from either bank — no door, no ticket, no line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Voltaire Statue (Square Honoré-Champion)",
@@ -551,8 +500,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An outdoor statue in an open square passed on the walk; there is no door, ticket, or line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Square Jean XXIII",
@@ -834,8 +782,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open cathedral garden entered through a gate off the street with no ticket or screening, so no line forms.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Square Rene Viviani",
@@ -1072,8 +1019,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A small open public square with an open gate and no ticket, so there is no queue.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Shakespeare and Company",
@@ -1168,52 +1114,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "20:00"
-        ]
-      ],
-      "sat": [
-        [
-          "11:00",
-          "20:00"
-        ]
-      ],
-      "sun": [
-        [
-          "11:00",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
-    "opening_hours_basis": "A bookshop entered through a door (gated); hours from the shop's own published pattern of 10:00-20:00 weekdays and 11:00-20:00 weekends.",
+    "opening_hours": "Mo-Su 10:00-23:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 10:00-23:00.",
     "place_category": "other",
     "visit_seconds_inside": 2100,
     "visit_basis": "Cramped multi-room English bookshop across from Notre-Dame; the facade and window are quick, but inside two floors of tightly packed stacks, reading nooks and the tumbleweed beds reward 30-40 min of genuine browsing.",
@@ -1232,8 +1135,7 @@
     ],
     "queue_basis": "A tiny bookshop that caps how many people fit inside and meters entry through one narrow door, so a short line forms at midday tourist peaks but clears quickly at opening; no security screening.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Memorial des Martyrs de la Deportation",
@@ -1320,47 +1222,9 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A gated underground memorial with seasonal hours; transcribed from its OSM tag whose current (Apr-Sep) window is 'Avr - Sep, Mar-Dim 10:00-19:00' (Mardi-Dimanche, Monday closed) in the tag 'Oct - Mar, Mar-Dim 10:00-17:00; Avr - Sep, Mar-Dim 10:00-19:00'.",
+    "opening_hours": "Oct-Mar Tu-Su 10:00-17:00; Apr-Sep Tu-Su 10:00-19:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Oct-Mar Tu-Su 10:00-17:00; Apr-Sep Tu-Su 10:00-19:00.",
     "place_category": "monument",
     "visit_seconds_inside": 1200,
     "visit_basis": "Stark underground memorial at the tip of Île de la Cité; you approach across the small garden above, then descend into the narrow crypt of 200,000 lights and inscriptions, a contemplative space taking about twenty minutes inside.",
@@ -1379,8 +1243,7 @@
     ],
     "queue_basis": "The memorial is free but entered by a narrow staircase that admits only a few visitors at once, so a small line can form at midday while it is otherwise walk-straight-in.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Hotel-Dieu",
@@ -1484,8 +1347,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working hospital, not a ticketed attraction; a tourist stops to look at the facade and courtyard from the street and never joins any admission line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Pont Neuf",
@@ -1604,7 +1466,6 @@
         "basis": "The bronze horseman stands on the terre-plein at the bridge's middle, directly above the steps down to the square du Vert-Galant — one standing position for both named spots, and a person looks at the statue from the platform around it."
       }
     ],
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   }
 ]

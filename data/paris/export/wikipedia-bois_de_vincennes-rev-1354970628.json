@@ -404,7 +404,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A vast open public park with no enclosing gate to queue at; you simply walk in from any edge.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   }
 ]

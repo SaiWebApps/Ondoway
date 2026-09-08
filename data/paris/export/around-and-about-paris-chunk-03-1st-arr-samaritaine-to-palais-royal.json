@@ -137,52 +137,9 @@
       "source_chunk": "chunk-03-1st-arr-samaritaine-to-palais-royal"
     },
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:30",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated ticketed monument; transcribed from OSM tag 'Mo-Su 09:30-18:00'.",
+    "opening_hours": "Mo-Su 09:30-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 09:30-18:00.",
     "place_category": "other",
     "visit_seconds_inside": 3900,
     "visit_basis": "Medieval royal palace and Revolutionary prison; the vaulted Hall of the Men-at-Arms, the tribunal and Marie Antoinette's cell take around an hour plus a ticket queue.",
@@ -201,13 +158,7 @@
     ],
     "queue_basis": "Entry to the medieval prison passes through a security bag-check and a single ticket desk at one narrow entrance, so a substantial line forms midday and thins near opening and late afternoon.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 09:30-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Ile de la Cite",
@@ -301,8 +252,7 @@
     "queue_peak_hours": [],
     "queue_basis": "This is an open island of streets, bridges, and squares with no gated interior, so there is no line to enter it.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Place Dauphine",
@@ -391,8 +341,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A triangular open square on the Île de la Cité entered freely from the street, with no gate or ticket and therefore no queue.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Place du Châtelet",
@@ -545,8 +494,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open public square with a fountain, freely crossed on foot with no door or admission, so there is no line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Pont Neuf",
@@ -629,8 +577,7 @@
         "basis": "The bronze horseman stands on the terre-plein at the bridge's middle, directly above the steps down to the square du Vert-Galant — one standing position for both named spots, and a person looks at the statue from the platform around it."
       }
     ],
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Sainte-Chapelle",
@@ -729,52 +676,9 @@
       "source_chunk": "chunk-03-1st-arr-samaritaine-to-palais-royal"
     },
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "tue": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "wed": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "thu": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "fri": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "19:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated ticketed chapel; transcribed from OSM tag \"Jan-Mar 09:00-17:00; Apr-Sep 09:00-19:00; Oct-Dec 09:00-17:00\" using the current Apr-Sep 09:00-19:00 season.",
+    "opening_hours": "Jan-Mar 09:00-17:00; Apr-Sep 09:00-19:00; Oct-Dec 09:00-17:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Jan-Mar 09:00-17:00; Apr-Sep 09:00-19:00; Oct-Dec 09:00-17:00.",
     "place_category": "church",
     "visit_seconds_inside": 3960,
     "visit_basis": "The modest facade and courtyard are seen in 15 minutes; inside is roughly 28 minutes of security and ticket queue plus 38 minutes under the two-storey glass, the upper chapel's 15 stained-glass windows being the whole point.",
@@ -793,8 +697,7 @@
     ],
     "queue_basis": "Airport-style security shared with the Palais de Justice plus a ticket check funnels visitors ahead of a small chapel, so the line runs long at midday and thins near opening and late afternoon.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Tour de l'Horloge",
@@ -857,7 +760,6 @@
     "queue_peak_hours": [],
     "queue_basis": "A clock tower viewed from the street corner with no visitor entry, so there is nothing to queue for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   }
 ]

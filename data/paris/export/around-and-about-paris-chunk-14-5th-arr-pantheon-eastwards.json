@@ -173,52 +173,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ],
-      "sun": [
-        [
-          "10:00",
-          "18:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated ticketed mausoleum; transcribed from OSM tag \"Mo-Su 10:00-18:00; Apr 1-Sep 30: Mo-Su 10:00-18:30; Jan 1,May 1,Dec 25: off\" using the current Apr-Sep 10:00-18:30 season.",
+    "opening_hours": "Mo-Su 10:00-18:00; Apr 1-Sep 30: Mo-Su 10:00-18:30; Jan 1,May 1,Dec 25: off",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Su 10:00-18:00; Apr 1-Sep 30: Mo-Su 10:00-18:30; Jan 1,May 1,Dec 25: off.",
     "place_category": "other",
     "visit_seconds_inside": 3000,
     "visit_basis": "The neoclassical portico, dome and the square before it absorb 20 minutes; inside is the vast nave with murals, the Foucault pendulum and the crypt of luminaries, taking around 45 minutes plus a short ticket queue.",
@@ -237,8 +194,7 @@
     ],
     "queue_basis": "A single ticket desk and bag check at the front portico creates a minor line at busy midday hours that clears quickly at opening or late in the day.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Bibliotheque Sainte-Genevieve",
@@ -290,9 +246,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A library entered through a door with reader access rules; gated, hours not confidently known; left unfiltered.",
+    "opening_hours": "Mo-Sa 10:00-22:00 ; Jul28 - Aug16 off",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 10:00-22:00 ; Jul28 - Aug16 off.",
     "place_category": "church",
     "visit_seconds_inside": 1500,
     "visit_basis": "Library on Place du Pantheon whose Labrouste iron-framed reading room is the draw; entry needs a reader pass and check-in, so priced conservatively at around 25 min inside for those admitted.",
@@ -311,8 +267,7 @@
     ],
     "queue_basis": "A working university library where access is controlled by a single entry desk with bag check and reader registration, producing a modest line at morning opening that eases through the day.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Saint-Etienne-du-Mont",
@@ -386,60 +341,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "06:30",
-          "19:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:45",
-          "19:45"
-        ]
-      ],
-      "wed": [
-        [
-          "08:45",
-          "22:00"
-        ]
-      ],
-      "thu": [
-        [
-          "08:45",
-          "19:45"
-        ]
-      ],
-      "fri": [
-        [
-          "08:45",
-          "19:45"
-        ]
-      ],
-      "sat": [
-        [
-          "08:45",
-          "12:00"
-        ],
-        [
-          "14:00",
-          "19:45"
-        ]
-      ],
-      "sun": [
-        [
-          "08:45",
-          "12:15"
-        ],
-        [
-          "14:30",
-          "19:45"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "Gated church you enter; transcribed from OSM tag 'Mo 06:30-19:30; Tu-Fr 08:45-19:45; We 08:45-22:00; Sa 08:45-12:00,14:00-19:45; Su 08:45-12:15,14:30-19:45'.",
+    "opening_hours": "Mo 06:30-19:30; Tu-Fr 08:45-19:45; We 08:45-22:00; Sa 08:45-12:00,14:00-19:45; Su 08:45-12:15,14:30-19:45",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo 06:30-19:30; Tu-Fr 08:45-19:45; We 08:45-22:00; Sa 08:45-12:00,14:00-19:45; Su 08:45-12:15,14:30-19:45.",
     "place_category": "church",
     "visit_seconds_inside": 1200,
     "visit_basis": "Church holding the last rood screen in Paris and the shrine of Sainte Genevieve; the carved interior takes about 20 min, the facade near the Pantheon a few minutes.",
@@ -453,13 +357,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A free parish church with an open door and no admission control, so visitors enter without stopping and there is nothing to queue for.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo 06:30-19:30; Tu-Fr 08:45-19:45; We 08:45-22:00; Sa 08:45-12:00,14:00-19:45; Su 08:45-12:15,14:30-19:45\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Lycee Henri IV",
@@ -525,8 +423,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A working secondary school closed to casual visitors and seen only from the street or via rare booked tours, so there is no walk-up admission line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Place de la Contrescarpe",
@@ -589,8 +486,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open public square with no door and no ticket; the whole value stands in the open air with nothing to wait for.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Rue Mouffetard",
@@ -651,8 +547,7 @@
     "queue_peak_hours": [],
     "queue_basis": "An open market street with no door or ticket; the whole value is walked through in the open air, so there is no queue.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "Eglise Saint-Medard",
@@ -730,47 +625,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [],
-      "tue": [
-        [
-          "09:00",
-          "19:30"
-        ]
-      ],
-      "wed": [
-        [
-          "09:00",
-          "19:30"
-        ]
-      ],
-      "thu": [
-        [
-          "09:00",
-          "19:30"
-        ]
-      ],
-      "fri": [
-        [
-          "09:00",
-          "19:30"
-        ]
-      ],
-      "sat": [
-        [
-          "09:00",
-          "19:30"
-        ]
-      ],
-      "sun": [
-        [
-          "09:00",
-          "20:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A church you enter, hence gated; transcribed from its OSM tag 'Tu-Sa 09:00-19:30; Su 09:00-20:00' with Monday closed.",
+    "opening_hours": "Tu-Sa 09:00-19:30; Su 09:00-20:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Sa 09:00-19:30; Su 09:00-20:00.",
     "place_category": "church",
     "visit_seconds_inside": 1100,
     "visit_basis": "Medieval parish church at the foot of rue Mouffetard; exterior is modest, interior has nave, side chapels and Jansenist history to absorb an engaged walk-through.",
@@ -784,13 +641,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door and free entry; visitors walk straight in without any security screening or ticket desk.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu-Sa 09:00-19:30; Su 09:00-20:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   },
   {
     "name": "Grand Mosque of Paris",
@@ -863,8 +714,7 @@
     ],
     "queue_basis": "The visitor areas require a small paid ticket at a single desk that forms a modest, moving line, peaking on weekend afternoons when tourists and tea-salon visitors overlap.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Jardin des Plantes",
@@ -940,51 +790,8 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "tue": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "wed": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "thu": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "fri": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "sat": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ],
-      "sun": [
-        [
-          "08:00",
-          "17:30"
-        ]
-      ]
-    },
-    "opening_hours_source": "ai",
+    "opening_hours": "Mo-Su 08:00-17:30",
+    "opening_hours_source": "guess",
     "opening_hours_basis": "A walled botanical garden with closing times; hours reflect the garden's published winter pattern of roughly 08:00–17:30 daily, extending later in summer.",
     "place_category": "garden",
     "visit_seconds_inside": null,
@@ -999,8 +806,7 @@
     "queue_peak_hours": [],
     "queue_basis": "The botanical garden itself has free open gates you walk through without stopping; the paid museum and zoo inside have their own desks, but entering the garden has no line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Arenes de Lutece",
@@ -1065,8 +871,7 @@
     "queue_peak_hours": [],
     "queue_basis": "The Roman arena is a free public open space entered through an unstaffed passage with no ticket or check, so there is no line.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Institut du Monde Arabe",
@@ -1132,8 +937,7 @@
     "queue_peak_hours": [],
     "queue_basis": "This stop is walk-by only to see Nouvel's photo-sensitive facade from outside, so no interior entry line is priced.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "La Tour d'Argent",
@@ -1182,9 +986,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A restaurant entered through its door and reservation; gated, hours not confidently known; left unfiltered.",
+    "opening_hours": "Tu-Sa 12:00-13:15, 19:00-21:15",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Tu-Sa 12:00-13:15, 19:00-21:15.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Historic restaurant building on the quai; as a stop you view the exterior and the Notre-Dame vista from its street, dining is not part of a walking tour.",
@@ -1198,8 +1002,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A restaurant entered by reservation, not a queued attraction; there is no public standing line outside to price.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": null
+    "gated": true
   },
   {
     "name": "Verlaine's Garret",
@@ -1262,8 +1065,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A private residence viewed only from the street as a plaque-marked facade, with no interior to enter and thus no line.",
     "anchors": null,
-    "gated": false,
-    "opening_hours_verified": null
+    "gated": false
   },
   {
     "name": "College des Bernardins",
@@ -1307,52 +1109,9 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": {
-      "mon": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "tue": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "wed": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "thu": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "fri": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sat": [
-        [
-          "10:00",
-          "18:00"
-        ]
-      ],
-      "sun": [
-        [
-          "14:00",
-          "18:00"
-        ]
-      ]
-    },
-    "opening_hours_source": "osm",
-    "opening_hours_basis": "A cultural center you enter, hence gated; transcribed from its OSM tag 'Mo-Sa 10:00-18:00; Su 14:00-18:00'.",
+    "opening_hours": "Mo-Sa 10:00-18:00; Su 14:00-18:00",
+    "opening_hours_source": "map",
+    "opening_hours_basis": "Door; hours are the place's own OpenStreetMap tag: Mo-Sa 10:00-18:00; Su 14:00-18:00.",
     "place_category": "other",
     "visit_seconds_inside": 1500,
     "visit_basis": "13th-century Cistercian college with a restored Gothic vaulted nave and cellar now used for exhibitions; interior absorbs an unhurried look at the stone hall plus any show.",
@@ -1371,12 +1130,6 @@
     ],
     "queue_basis": "A cultural center with a single reception desk and light bag check that moves quickly; the small afternoon flow to the Cistercian nave rarely holds more than a few people.",
     "anchors": null,
-    "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 10:00-18:00; Su 14:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "gated": true
   }
 ]

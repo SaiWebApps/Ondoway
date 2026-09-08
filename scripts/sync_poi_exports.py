@@ -65,14 +65,12 @@ SYNCED_FIELDS: tuple[str, ...] = (
     "visit_seconds_inside",
     "visit_basis",
     "typical_duration_min",
-    # Opening-hours trio — scripts/poi_opening_hours.py.
+    # The door and its hours (Docs/adr/0006) — scripts/poi_opening_hours.py:
+    # the door verdict, the OpenStreetMap text, its source and its basis.
+    "gated",
     "opening_hours",
     "opening_hours_source",
     "opening_hours_basis",
-    # The trust half (Docs/adr/0003): the explicit door verdict from the same
-    # pass, and the verification record the ladder's review writes.
-    "gated",
-    "opening_hours_verified",
     # Place category — scripts/poi_place_category.py.
     "place_category",
     # Place judgements — redesign S2.6's pass, landing this same phase; listed ahead
