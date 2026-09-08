@@ -637,6 +637,140 @@ def test_hop_2_an_unpriced_record_lands_on_the_safe_defaults() -> None:
     assert poi.place_category == ""
 
 
+# ---------------------------------------------------------------------------
+# THE PHASE GATE (Docs/adr/0006): a door carries ONE hours source — map, guess,
+# or unknown — as OpenStreetMap text the library can read; no verified badge,
+# no ladder, no review command exists anywhere; parity compares hours on every
+# target and never merely warns. These are the sentences the phase is judged
+# by, written before anything was built; the milestone row that carries them
+# cannot flip until every one is green.
+# ---------------------------------------------------------------------------
+
+#: The only vocabulary a door's hours may carry (CONTEXT.md "Hours source").
+HOURS_SOURCES = ("map", "guess")
+
+#: The heatwave shelter file's own words — the source the decision record
+#: forbids. Never a bare "heat": eight théâtres carry it.
+HEATWAVE_WORDS_RE = re.compile(r"heatwave|îlot|fraîcheur|canicule", re.IGNORECASE)
+
+#: Names the ladder left behind. Their absence from the product, the scripts,
+#: the other tests, the Makefile and the make docs is the gate; this file is
+#: excluded from its own grep because it names them here.
+LADDER_NAMES = (
+    "opening_hours_verified",
+    "corroborate(",
+    "review_queue",
+    "poi-hours-review",
+    "_verified_record",
+)
+
+
+def _every_paris_record() -> list[tuple[str, dict]]:
+    """Every POI record in the repo's Paris data: poi-raw.json and every export
+    chunk, each labelled by file — the graph is loaded from the chunks."""
+    out: list[tuple[str, dict]] = []
+    for city in CITIES_WITH_OPENING_HOURS:
+        out += [("poi-raw.json", p) for p in _pois(city)]
+        for chunk in sorted((DATA_ROOT / city / "export").glob("*.json")):
+            out += [(chunk.name, p) for p in json.loads(chunk.read_text())]
+    return out
+
+
+def test_gate_every_door_carries_one_hours_source() -> None:
+    """A door's hours come from the map or from a guess, never from anywhere
+    else; a place with no hours has no source; only a door carries hours."""
+    offenders = []
+    for city in CITIES_WITH_OPENING_HOURS:
+        for poi in _pois(city):
+            hours, source = poi.get("opening_hours"), poi.get("opening_hours_source")
+            if hours is None and source is not None:
+                offenders.append(f"{_name(poi)}: no hours but source={source!r}")
+            if hours is not None and source not in HOURS_SOURCES:
+                offenders.append(f"{_name(poi)}: source={source!r} is not one of {HOURS_SOURCES}")
+            if hours is not None and poi.get("gated") is not True:
+                offenders.append(f"{_name(poi)}: carries hours but is not a door")
+    assert not offenders, "\n".join(offenders)
+
+
+def test_gate_hours_are_map_text_the_library_reads() -> None:
+    """Every stored hours value is OpenStreetMap text: a string the library
+    parses, carrying no quoted comment (a comment reads as OPEN to the
+    library, so it is never stored — unknown is the honest answer)."""
+    from opening_hours import OpeningHours
+
+    offenders = []
+    for city in CITIES_WITH_OPENING_HOURS:
+        for poi in _pois(city):
+            hours = poi.get("opening_hours")
+            if hours is None:
+                continue
+            if not isinstance(hours, str):
+                offenders.append(f"{_name(poi)}: hours are {type(hours).__name__}, not text")
+                continue
+            if '"' in hours:
+                offenders.append(f"{_name(poi)}: hours carry a comment: {hours!r}")
+                continue
+            try:
+                OpeningHours(hours)
+            except Exception as exc:  # the library's own parser error
+                offenders.append(f"{_name(poi)}: {hours!r} does not parse ({exc})")
+    assert not offenders, "\n".join(offenders)
+
+
+def test_gate_no_record_carries_a_verified_badge() -> None:
+    """The word is retired: no Paris record, raw or export, carries the key."""
+    offenders = [
+        f"{file}: {_name(poi)}"
+        for file, poi in _every_paris_record()
+        if "opening_hours_verified" in poi
+    ]
+    assert not offenders, f"{len(offenders)} record(s) still carry opening_hours_verified"
+
+
+def test_gate_no_basis_names_the_heatwave_file() -> None:
+    offenders = [
+        f"{file}: {_name(poi)}"
+        for file, poi in _every_paris_record()
+        if HEATWAVE_WORDS_RE.search(str(poi.get("opening_hours_basis") or ""))
+    ]
+    assert not offenders, "\n".join(offenders)
+
+
+def test_gate_the_ladder_is_gone() -> None:
+    """No product code, script, other test, make target or make doc names the
+    verification ladder or the review command."""
+    roots = [REPO_ROOT / "src", REPO_ROOT / "scripts", REPO_ROOT / "tests"]
+    files = [p for root in roots for p in root.rglob("*.py")]
+    files += [REPO_ROOT / "Makefile", REPO_ROOT / "docs" / "MAKE_TARGETS.md"]
+    this_file = Path(__file__).resolve()
+    offenders = []
+    for path in files:
+        if path.resolve() == this_file:
+            continue
+        text = path.read_text(errors="replace")
+        for name in LADDER_NAMES:
+            if name in text:
+                offenders.append(f"{path.relative_to(REPO_ROOT)}: {name}")
+    assert not offenders, "\n".join(offenders)
+
+
+def test_gate_parity_compares_hours_by_source_on_every_target() -> None:
+    """scripts/db_parity.py compares (key, gated, source, text) for every door
+    and never downgrades a lane to a warning: production carries the same
+    hours as dev, or parity fails."""
+    import importlib
+
+    parity = importlib.import_module("scripts.db_parity")
+    expected = parity._expected("paris")
+    assert "hours" in expected, "db_parity's expected set carries no hours lane"
+    rows = expected["hours"]
+    assert rows and all(len(row) == 4 for row in rows), (
+        "the hours lane is (key, gated, source, text)"
+    )
+    source = (REPO_ROOT / "scripts" / "db_parity.py").read_text()
+    assert "warn_only" not in source, "a parity lane still merely warns on the cloud"
+
+
 def test_the_upload_carries_the_clock_fields_in_both_property_lists() -> None:
     """S1.4d's hop — `scripts/upload_paris.py` keeps TWO hardcoded property
     lists (the param dict and the Cypher SET list) whose own comment warns they
