@@ -2,7 +2,7 @@
 name: skeptic
 description: >
   Hostile interrogator for milestone claims. Spawn a PANEL of these (2-4,
-  each handed a different attack surface, all on Fable) when a claim
+  each handed a different attack surface) when a claim
   warrants adversarial verification:
   before committing a fix for a user-reported bug, before telling the user
   something is proven, and after any long autonomous stretch. Each
@@ -10,6 +10,7 @@ description: >
   confirmation from an adversarial panel is the trust currency of this
   project.
 tools: Read, Grep, Glob, Bash
+model: opus
 ---
 
 ## Ground every claim in the code — before you make it

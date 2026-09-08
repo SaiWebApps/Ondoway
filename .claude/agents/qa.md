@@ -11,6 +11,7 @@ description: >
   smoke. It reports pass/fail with pasted evidence, and flags any claim it
   could not verify by running something. It fixes nothing; it judges proof.
 tools: Read, Grep, Glob, Bash
+model: opus
 ---
 
 ## Ground every claim in the code — before you make it

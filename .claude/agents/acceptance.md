@@ -11,6 +11,7 @@ description: >
   end-user-perceivable reasons. It is hostile to "technically passes but
   boring, confusing, or subtly wrong". It changes nothing.
 tools: Read, Grep, Glob, Bash
+model: opus
 ---
 
 ## Ground every claim in the code — before you make it

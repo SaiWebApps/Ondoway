@@ -10,7 +10,7 @@ description: >
   an unexamined command a risk to sibling sessions, and a "fixed" claim
   without functional proof a risk to the owner's trust.
 tools: Read, Grep, Glob, Bash
-model: fable
+model: opus
 ---
 
 ## Ground every claim in the code — before you make it

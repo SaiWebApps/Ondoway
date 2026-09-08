@@ -194,10 +194,11 @@ Deployment to production, with the dev/prod parity check failing hard when
 stale, is a milestone INSIDE the phase — never a follow-up.
 
 **Which model runs the run.** Planning, building and every judging seat —
-judge, editor, QA, skeptic, acceptance, the exit panel — run on Fable. If
-the session finds itself on another model, it stops before planning or
-building, says so in one line, and waits; it does not continue on the
-weaker model and does not spend the budget on it.
+judge, editor, QA, skeptic, acceptance, the exit panel — run on Opus. Each
+seat pins it in its own frontmatter, so a seat cannot be spawned weaker by
+accident. If the session finds itself on another model, it stops before
+planning or building, says so in one line, and waits; it does not continue
+on the weaker model and does not spend the budget on it.
 
 # Phase 4 — alignment check, record, present, and WAIT
 
@@ -357,9 +358,8 @@ and that is an escalation to the human, never a drawer. A finding parked
 anywhere else is a deferral wearing a costume.
 
 **The run has exactly two exits.** (1) A PANEL — 2–3 adversarial agents in
-different seats (skeptic / tour-adversary / acceptance), all on Fable —
-unanimously judges the goal's personas served; one agent's SHIP is not the
-bar. Diversity comes from the seats' different questions, never from a
+different seats (skeptic / tour-adversary / acceptance) — unanimously
+judges the goal's personas served; one agent's SHIP is not the bar. Diversity comes from the seats' different questions, never from a
 weaker model. (2) The
 budget named at "go" exhausts first. The exit report states which one
 fired, and when it was the budget, the honest gap — what the personas still
