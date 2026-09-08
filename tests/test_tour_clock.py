@@ -633,6 +633,70 @@ def test_the_writer_is_told_a_guessed_shut_door_is_a_guess():
     assert "plainly" in plain and "could not confirm" not in plain, plain
 
 
+def test_a_walkers_closed_report_strengthens_the_guess_and_never_rewrites_hours():
+    """Docs/adr/0006 rule 5: a walker found a guessed door shut. The NEXT
+    walker hears the guess with the report in it — on the closure line, in
+    the day's note, in the voice at the door and in the writer's brief — and
+    the hours themselves are untouched: a door on map hours with reports
+    still speaks plainly, because one report never rewrites hours."""
+    import datetime as dt
+
+    from src.tour.authoring import _door_state
+    from src.tour.contract import ClockExclusion, Route, TransitSegment
+    from src.tour.generation import _closure_opening_lines
+    from src.tour.selection import _clock_exclusion_reason, hours_notes
+
+    closed_wed = "Mo,Tu,Th-Su 09:00-18:00; We off"
+    wednesday = dt.datetime(2026, 8, 12, 10, 0)
+    assert _clock_exclusion_reason(
+        closed_wed, "guess", wednesday, 180, country="FR", closed_reports=1
+    ) == "we think it is closed all day Wednesday, and a walker has found it shut"
+    assert _clock_exclusion_reason(
+        closed_wed, "map", wednesday, 180, country="FR", closed_reports=3
+    ) == "closed all day Wednesday"
+
+    museum = _tuesday_closed_museum().model_copy(
+        update={"opening_hours_source": "guess", "hours_closed_reports": 1}
+    )
+    transits = (
+        TransitSegment(from_poi_id=None, to_poi_id=museum.id, distance_m=0, walk_seconds=0),
+    )
+    quiet = Route(
+        pois=(museum,), transits=transits, total_walk_distance_m=0.0, total_walk_seconds=0
+    )
+    monday = dt.datetime(2026, 8, 10, 10, 0)
+    assert hours_notes(quiet, monday, "FR") == [
+        "We think Musée Fermé le Mardi opens at 09:00, but a walker has found it shut."
+    ]
+    assert hours_notes(quiet, None, None) == [
+        "We could not confirm opening times for Musée Fermé le Mardi, "
+        "and a walker has found it shut."
+    ]
+
+    shut = Route(
+        pois=(museum,),
+        transits=transits,
+        total_walk_distance_m=0.0,
+        total_walk_seconds=0,
+        visit_goes_inside={museum.id: False},
+        clock_exclusions=(
+            ClockExclusion(
+                poi_id=museum.id, name=museum.name, reason="we think it is closed all day "
+                "Tuesday, and a walker has found it shut", kept_outside=True, all_day=True,
+                guessed=True, closed_reports=1,
+            ),
+        ),
+    )
+    (line,) = _closure_opening_lines(shut).values()
+    assert line.text == (
+        "We think Musée Fermé le Mardi is closed today, and a walker has found it shut, "
+        "so we'll take it in from out here."
+    ), line.text
+    brief = _door_state(shut, 0)
+    assert "a walker has found it shut" in brief and "we think" in brief, brief
+    assert "plainly" not in brief
+
+
 # --- the library reads the map's text: seasons, holidays, and what it cannot read
 
 
@@ -685,7 +749,7 @@ def test_a_seasonal_rule_is_read_for_the_walks_own_month():
 @pytest.mark.parametrize(
     "text",
     [
-        'Mo-Su 10:00-18:00; "closed for renovation"',  # a quoted comment
+        'Mo-Su 10:00-18:00; Tu off "closed for renovation"',  # a quoted comment on the off rule
         "Mo-Su 10:00-18:00 unknown",  # the library's own unknown state
         "Fermé le mardi",  # free text the library cannot parse
     ],

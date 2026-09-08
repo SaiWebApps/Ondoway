@@ -485,6 +485,11 @@ class SessionReplanRequest(BaseModel):
     #: the server compares with its one expression and REPORTS on, never adopts
     #: (S5.10's seam).
     phone_next_stop_hhmm: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
+    #: The POI id of a planned stop still ahead whose door the walker found SHUT
+    #: (Docs/adr/0006 rule 5) — an observation: the server takes that stop out of
+    #: the day it replans and counts the report on the place, so the next walker
+    #: with a guess there hears it. None: an ordinary replan.
+    closed_stop_id: str | None = None
 
 
 class TripPreviewRequest(BaseModel):

@@ -59,6 +59,8 @@ from .contract import (
     Route,
     TourabilityAssessment,
     TourInput,
+    closure_doubt,
+    opening_doubt,
 )
 from .corpus_places import CorpusMaterializationPlan, CorpusPlaceManifest
 from .degradations import record
@@ -905,11 +907,6 @@ def hours_are_guessed(poi: POI) -> bool:
     return poi.opening_hours is not None and poi.opening_hours_source != HOURS_SOURCE_MAP
 
 
-#: The doubt a guessed closure carries, in the words a person reads; the
-#: sentence opens with "we think", so the doubt is heard before the fact.
-GUESSED_CLOSURE_DOUBT = ", but we could not confirm that"
-
-
 def _readable_hours(text: str | None, country: str) -> OpeningHours | None:
     """The map's text as the library reads it in ``country``, or None when the
     hours are UNKNOWN: no text, text the library cannot parse, or text carrying
@@ -941,6 +938,7 @@ def _clock_exclusion_reason(
     duration_min: int,
     *,
     country: str,
+    closed_reports: int = 0,
 ) -> str | None:
     """THE one definition of clock-closure (Docs/adr/0006). None = not closed.
 
@@ -1010,7 +1008,7 @@ def _clock_exclusion_reason(
     if source == HOURS_SOURCE_MAP:
         return detail
     verb = "" if detail.startswith("opens") else "is "
-    return f"we think it {verb}{detail}{GUESSED_CLOSURE_DOUBT}"
+    return f"we think it {verb}{detail}{closure_doubt(closed_reports)}"
 
 
 def _closed_all_day(opening_hours: str | None, day: datetime, *, country: str) -> bool:
@@ -1040,19 +1038,32 @@ def hours_notes(route: Route, day: datetime | None, country: str | None) -> list
     if doubted and day is not None and country is not None:
         for p in doubted:
             opens = hours_first_opening(p.opening_hours, day, country=country)
+            doubt = opening_doubt(p.hours_closed_reports)
             if opens is None:
-                notes.append(f"We could not confirm opening times for {p.name}.")
+                notes.append(_unconfirmed_note(p.name, p.hours_closed_reports))
             elif opens == "00:00":
-                notes.append(f"We think {p.name} is open all day, but we could not confirm that.")
+                notes.append(f"We think {p.name} is open all day{doubt}.")
             else:
-                notes.append(f"We think {p.name} opens at {opens}, but we could not confirm that.")
+                notes.append(f"We think {p.name} opens at {opens}{doubt}.")
     elif doubted:
-        names = ", ".join(p.name for p in doubted)
-        notes.append(f"We could not confirm opening times for {names}.")
+        # Reported doors are named on their own so the report is said of the
+        # right place; the rest share one sentence.
+        reported = [p for p in doubted if p.hours_closed_reports > 0]
+        quiet = [p for p in doubted if p.hours_closed_reports == 0]
+        if quiet:
+            notes.append(_unconfirmed_note(", ".join(p.name for p in quiet), 0))
+        notes.extend(_unconfirmed_note(p.name, p.hours_closed_reports) for p in reported)
     no_record = [p.name for p in route.pois if p.gated is True and p.opening_hours is None]
     if no_record:
         notes.append("No opening times on record for " + ", ".join(no_record) + ".")
     return notes
+
+
+def _unconfirmed_note(names: str, closed_reports: int) -> str:
+    """The note for a guess the day cannot time — dateless, or shut all day —
+    with the walker's report on it when one was made."""
+    reported = closure_doubt(closed_reports) if closed_reports > 0 else ""
+    return f"We could not confirm opening times for {names}{reported}."
 
 
 def hours_first_opening(opening_hours: str | None, day: datetime, *, country: str) -> str | None:
@@ -2760,6 +2771,7 @@ def _select_route_once(
             arrival_clock,
             window_min,
             country=country,
+            closed_reports=cand.hours_closed_reports,
         )
 
     def shape_visit(
@@ -2934,6 +2946,7 @@ def _select_route_once(
                 clock_start,
                 input.duration_min,
                 country=country,
+                closed_reports=poi.hours_closed_reports,
             )
             if clock_reason is not None:
                 # The record carries the closure FACT and the pool DECISION, not the
@@ -2962,6 +2975,7 @@ def _select_route_once(
                         all_day=_closed_all_day(poi.opening_hours, clock_start, country=country),
                         at_start=_at_walk_start(poi, start_lat, start_lng),
                         guessed=guessed,
+                        closed_reports=poi.hours_closed_reports,
                     )
                 )
                 if not kept_outside:
@@ -4145,6 +4159,7 @@ def _select_route_once(
                     # data edit cannot desynchronise the two claims.
                     all_day=_closed_all_day(poi.opening_hours, clock, country=country),
                     guessed=hours_are_guessed(poi),
+                    closed_reports=poi.hours_closed_reports,
                 )
             )
     # C9 governor exempt identity — record which POIs are EXEMPT from the per-stop

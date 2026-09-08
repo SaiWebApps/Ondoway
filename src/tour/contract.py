@@ -27,6 +27,29 @@ from src.tour.corpus_places import CoordinateProvenance, valid_coordinates
 SUPPORTED_CITIES: frozenset[str] = frozenset(city_registry.supported_cities())
 
 GENERIC_OPEN_TOUR_CLOSING = "And that brings our walk to a close."
+
+#: The doubt a GUESSED closure carries (Docs/adr/0006), in the words a person
+#: reads or hears — ONE home for every surface, so the exclusion line, the
+#: day's note, the voice at the door and the writer's brief never disagree.
+#: A guess opens with "we think", so the doubt is heard before the fact.
+GUESSED_CLOSURE_LEAD: str = "We think "
+GUESSED_CLOSURE_DOUBT: str = ", but we could not confirm that"
+#: The same guess after a walker REPORTED the door shut (rule 5): the doubt
+#: is stronger and says why. One report never rewrites hours; it only
+#: changes these words.
+REPORTED_SHUT: str = "a walker has found it shut"
+
+
+def closure_doubt(closed_reports: int) -> str:
+    """The clause a guessed CLOSURE ends on: "..., and a walker has found it
+    shut" once reported, else "..., but we could not confirm that"."""
+    return f", and {REPORTED_SHUT}" if closed_reports > 0 else GUESSED_CLOSURE_DOUBT
+
+
+def opening_doubt(closed_reports: int) -> str:
+    """The clause a guessed OPENING TIME ends on ("we think it opens at 10:00,
+    but ..."): the report, once made, else that we could not confirm it."""
+    return f", but {REPORTED_SHUT}" if closed_reports > 0 else GUESSED_CLOSURE_DOUBT
 # GENERIC_TOUR_SIGNOFF ("Thank you for coming along with me today. When you're ready,
 # take your time to keep exploring on your own.") was DELETED at Phase 6 S6.4: the W6.2
 # panel ruled 11/11 that a close never says "keep exploring on your own" (to someone
@@ -793,6 +816,11 @@ class ClockExclusion(BaseModel):
     #: never removes a place from the day. Additive: False keeps every
     #: existing exclusion byte-identical.
     guessed: bool = False
+    #: How many walkers have reported this guessed door shut (rule 5), copied
+    #: from the place's `hours_closed_reports` so the voice can say so. Read
+    #: only when `guessed` is True; 0 keeps every existing exclusion
+    #: byte-identical.
+    closed_reports: int = 0
 
 
 class PromiseShape(BaseModel):

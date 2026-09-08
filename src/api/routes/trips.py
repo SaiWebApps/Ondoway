@@ -2203,6 +2203,7 @@ def replan_trip_session(
 
     k = min(body.next_stop_index, len(current.stops))
     remaining, visited = current.stops[k:], current.stops[:k]
+    remaining, visited = _without_the_shut_door(body.closed_stop_id, remaining, visited)
     finish = (
         tour_input.end
         if tour_input.end is not None
@@ -2320,6 +2321,10 @@ def replan_trip_session(
         }
     )
     _report_phone_clock(body, session_plan, next_planned=remaining[0] if remaining else None)
+    if body.closed_stop_id is not None:
+        # Counted only once the day HAS replanned without the door: a refused
+        # replan records no report.
+        _count_closed_report(driver, body.closed_stop_id)
     write_trip_session(
         session, trip_id, plan_version=plan_version, session_json=session_plan.model_dump_json()
     )
@@ -2340,6 +2345,42 @@ def replan_trip_session(
         listening_rate=body.listening_rate or 1.0,
     )
     return session_plan
+
+
+def _without_the_shut_door(
+    closed_stop_id: str | None,
+    remaining: list[GeneratedStop],
+    visited: list[GeneratedStop],
+) -> tuple[list[GeneratedStop], list[GeneratedStop]]:
+    """The walker's shut-door report applied to the split (Docs/adr/0006 rule
+    5): the reported stop leaves the remainder the planner keeps to and joins
+    the visited list, so the pool never offers it again, no carried-forward
+    answer names it, and the walk in starts from that door. A stop not ahead
+    of the walker cannot be reported — refused by name, never silently kept."""
+    if closed_stop_id is None:
+        return remaining, visited
+    shut = [st for st in remaining if st.poi_id == closed_stop_id]
+    if not shut:
+        raise HTTPException(
+            422,
+            {
+                "reason": "closed_stop_not_ahead",
+                "detail": f"'{closed_stop_id}' is not a stop ahead of you in this day",
+            },
+        )
+    return [st for st in remaining if st.poi_id != closed_stop_id], [*visited, *shut]
+
+
+def _count_closed_report(driver: Driver, poi_id: str) -> None:
+    """One more walker found this door shut: the count on the place rises by
+    one and nothing else changes — one report never rewrites hours; the
+    planner reads the count into the words the next walker hears."""
+    with driver.session() as graph:
+        graph.run(
+            "MATCH (p:POI {id: $pid}) "
+            "SET p.hours_closed_reports = coalesce(p.hours_closed_reports, 0) + 1",
+            pid=poi_id,
+        )
 
 
 def _live_question(

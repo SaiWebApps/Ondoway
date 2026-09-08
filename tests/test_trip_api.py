@@ -1130,6 +1130,109 @@ class TestLivingSession:
         )
         assert degraded.json()["plan_version"] == 3
 
+    def test_a_walker_reports_a_shut_door_and_the_day_replans_without_it(
+        self, client, live_neo4j, cutover_trip
+    ):
+        """Docs/adr/0006 rule 5 — the phone reports the stop whose door the walker
+        found shut; the day replans WITHOUT that stop through the one replan brain;
+        the place's `hours_closed_reports` rises by one per report so the next
+        walker with a guess there hears it; the hours themselves never change. A
+        stop not ahead of the walker cannot be reported."""
+        trip_id = cutover_trip["trip_id"]
+        composed = _compose(client, trip_id, _MarkerAuthoringExecutor())
+        assert composed.status_code == 200, composed.text
+        stops = composed.json()["stops"]
+        assert len(stops) >= 2
+        shut = stops[1]
+        with live_neo4j.session() as s:
+            before = s.run(
+                "MATCH (p:POI {id: $pid}) "
+                "RETURN p.hours_closed_reports AS n, p.opening_hours AS hours",
+                pid=shut["poi_id"],
+            ).single()
+        try:
+            body = {
+                "lat": shut["lat"],
+                "lng": shut["lng"],
+                "wall_elapsed_seconds": 25 * 60,
+                "tour_elapsed_seconds": 24 * 60,
+                "next_stop_index": 1,
+                "closed_stop_id": shut["poi_id"],
+            }
+            replanned = client.post(f"/api/v1/trips/{trip_id}/session/replan", json=body)
+            assert replanned.status_code == 200, replanned.text
+            plan = replanned.json()
+            assert plan["plan_version"] == 2
+            assert shut["poi_id"] not in {st["poi_id"] for st in plan["stops"]}, (
+                "the shut door is out of the day"
+            )
+            assert not any(
+                shut["poi_id"] in e["stop_ids"] for e in plan["contingencies"]
+            ), "no carried-forward answer names the shut door"
+            with live_neo4j.session() as s:
+                after = s.run(
+                    "MATCH (p:POI {id: $pid}) "
+                    "RETURN p.hours_closed_reports AS n, p.opening_hours AS hours",
+                    pid=shut["poi_id"],
+                ).single()
+            assert after["n"] == (before["n"] or 0) + 1
+            assert after["hours"] == before["hours"], "one report never rewrites hours"
+            # The door is out of this day now, so the SAME walker cannot report it
+            # twice; a second walker's day (a fresh compose) can.
+            twice_over = client.post(f"/api/v1/trips/{trip_id}/session/replan", json=body)
+            assert twice_over.status_code == 422, twice_over.text
+            recomposed = _compose(client, trip_id, _MarkerAuthoringExecutor())
+            assert recomposed.status_code == 200, recomposed.text
+            again = client.post(f"/api/v1/trips/{trip_id}/session/replan", json=body)
+            assert again.status_code == 200, again.text
+            with live_neo4j.session() as s:
+                twice = s.run(
+                    "MATCH (p:POI {id: $pid}) RETURN p.hours_closed_reports AS n",
+                    pid=shut["poi_id"],
+                ).single()["n"]
+            assert twice == (before["n"] or 0) + 2
+            # The LAST door of the day found shut: the day ends without it, never a
+            # refusal — the walker is still owed the way home.
+            recomposed = _compose(client, trip_id, _MarkerAuthoringExecutor())
+            assert recomposed.status_code == 200, recomposed.text
+            last = stops[-1]
+            ending = client.post(
+                f"/api/v1/trips/{trip_id}/session/replan",
+                json={
+                    **body,
+                    "lat": last["lat"],
+                    "lng": last["lng"],
+                    "next_stop_index": len(stops) - 1,
+                    "closed_stop_id": last["poi_id"],
+                },
+            )
+            assert ending.status_code == 200, ending.text
+            assert last["poi_id"] not in {st["poi_id"] for st in ending.json()["stops"]}
+            # A stop already behind the walker is not a door ahead: refused by name.
+            behind = client.post(
+                f"/api/v1/trips/{trip_id}/session/replan",
+                json={**body, "next_stop_index": 2, "closed_stop_id": stops[0]["poi_id"]},
+            )
+            assert behind.status_code == 422, behind.text
+            assert stops[0]["poi_id"] in json.dumps(behind.json())
+        finally:
+            with live_neo4j.session() as s:
+                s.run(
+                    "MATCH (p:POI {id: $pid}) "
+                    "SET p.hours_closed_reports = coalesce(p.hours_closed_reports, 1) - 1",
+                    pid=stops[-1]["poi_id"],
+                )
+                if before["n"] is None:
+                    s.run(
+                        "MATCH (p:POI {id: $pid}) REMOVE p.hours_closed_reports",
+                        pid=shut["poi_id"],
+                    )
+                else:
+                    s.run(
+                        "MATCH (p:POI {id: $pid}) SET p.hours_closed_reports = $n",
+                        pid=shut["poi_id"], n=before["n"],
+                    )
+
     def test_a_live_replan_answers_with_the_day_and_the_full_set_follows(
         self, client, live_neo4j, cutover_trip
     ):

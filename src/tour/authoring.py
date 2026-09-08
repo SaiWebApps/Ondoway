@@ -40,6 +40,7 @@ from .claim_dedup import (
 from .compose_gate import ComposeVerificationError, build_full_verifier
 from .contract import (
     END_B_SENTINEL_PREFIX,
+    REPORTED_SHUT,
     BeatRef,
     BeatSequence,
     Route,
@@ -758,13 +759,18 @@ def _door_state(route: Route, stop_index: int) -> str:
         return ""
     shut = next((e for e in route.clock_exclusions if e.poi_id == poi.id and e.kept_outside), None)
     if shut is not None and shut.guessed:
+        report = (
+            f" A walker has reported this door shut; you may say '{REPORTED_SHUT}'."
+            if shut.closed_reports > 0
+            else ""
+        )
         return (
             "This stop's door is probably shut while the walker is here — our hours "
             "for it are a GUESS we could not confirm — so the visit stays on the "
             "OUTSIDE. Never invite the listener through the door — no 'step inside', "
             "'go in', 'enter'. If you mention the closure, keep the hedge exactly: "
             "'we think' it is closed and we 'could not confirm' that; never state it "
-            "as a fact. Stage the exterior."
+            f"as a fact.{report} Stage the exterior."
         )
     if shut is not None:
         return (

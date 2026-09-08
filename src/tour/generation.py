@@ -42,6 +42,7 @@ from .claim_dedup import suppress_exact_repeats, suppress_repeated_claims
 from .contract import (
     END_B_SENTINEL_PREFIX,
     GENERIC_OPEN_TOUR_CLOSING,
+    GUESSED_CLOSURE_LEAD,
     BeatRef,
     BeatSequence,
     ClockExclusion,
@@ -52,6 +53,7 @@ from .contract import (
     Sentence,
     TourInput,
     ValidationReport,
+    closure_doubt,
 )
 from .glue_client import NO_GLUE_SENTINEL, GlueClient, HaikuGlueClient
 from .routing import leg_walk_seconds, planned_audio_seconds
@@ -1410,20 +1412,16 @@ CLOSED_START_KEPT_LINE_TEMPLATE: str = (
 CLOSED_START_KEPT_ALL_DAY_LINE_TEMPLATE: str = (
     "{lead}{name}, right here at the start, is closed today{hedge}."
 )
-#: The guess's doubt, spoken (Docs/adr/0006): the same words the exclusion
-#: line carries, so the ear and the screen agree.
-GUESSED_CLOSURE_LEAD: str = "We think "
-GUESSED_CLOSURE_HEDGE: str = ", but we could not confirm that"
-
-
 def _closure_line(template: str, excl: ClockExclusion, name: str) -> str:
     """One closure template filled for one exclusion: the name, and the
-    lead and hedge iff the closure rests on guessed hours."""
+    lead and hedge iff the closure rests on guessed hours — the hedge from
+    the contract's one definition, stronger once a walker has reported the
+    door shut, so the ear and the screen agree."""
     guessed = excl.guessed
     return template.format(
         lead=GUESSED_CLOSURE_LEAD if guessed else "",
         name=name,
-        hedge=GUESSED_CLOSURE_HEDGE if guessed else "",
+        hedge=closure_doubt(excl.closed_reports) if guessed else "",
     )
 
 
