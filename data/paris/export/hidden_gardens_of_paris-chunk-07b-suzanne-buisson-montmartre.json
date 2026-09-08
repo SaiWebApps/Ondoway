@@ -1744,11 +1744,6 @@
     "queue_basis": "A small cabaret admitted by a single door at the start of an evening show, so a brief cluster forms at doors-open time but there is no security screening or all-day line.",
     "anchors": null,
     "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Tu,Th-Sa 21:00-01:00\"",
-      "at": "2026-09-07"
-    }
+    "opening_hours_verified": null
   }
 ]

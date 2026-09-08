@@ -390,16 +390,28 @@ def quoted_osm_tag(poi: dict[str, Any]) -> str | None:
 #: transcription" would certify the wrong proposition — the badge must attest
 #: that the TABLE faithfully carries the tag, and here it structurally cannot.
 _BEYOND_WEEKLY_RE = re.compile(
-    r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|PH|SH|easter|week)\b"
+    r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|PH|SH|easter|week"
+    r"|summer|winter)\b"
     r"|sunrise|sunset|dawn|dusk"
+    r"|\["  # nth-weekday-of-month selectors: Su[1], Sa[1,3], Su[-1]
+    r"|\|\|"  # fallback rules
+    r"|\d\+",  # open-ended times: "10:00+"
+    re.IGNORECASE,
 )
+
+#: A time span whose end is at or before its start crosses midnight — the one
+#: pure-weekday construct a per-day window list clips instead of carrying.
+_TIME_SPAN_RE = re.compile(r"(\d{2}:\d{2})-(\d{2}:\d{2})")
 
 
 def _tag_fits_a_weekly_table(tag: str) -> bool:
     """Whether a flat mon..sun table can faithfully say everything this OSM
     tag says. Pure weekday/time rules fit; anything seasonal, dated, holiday-
-    keyed or sun-relative does not, and stays with the human queue."""
-    return not _BEYOND_WEEKLY_RE.search(tag)
+    keyed, sun-relative, nth-weekday, fallback-ruled, open-ended, or
+    midnight-crossing does not, and stays with the human queue."""
+    if _BEYOND_WEEKLY_RE.search(tag):
+        return False
+    return all(end > start for start, end in _TIME_SPAN_RE.findall(tag))
 
 
 def corroborate(

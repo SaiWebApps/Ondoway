@@ -368,6 +368,41 @@ def test_a_tag_beyond_the_weekly_table_never_tier0s_and_sheds_a_stale_badge() ->
     assert demoted2 == ["Offline Flattened"] and stale2["opening_hours_verified"] is None
 
 
+def test_the_weekly_predicate_refuses_every_side_door() -> None:
+    """The eligibility rule's edges, probed by the exit panel: nth-weekday
+    brackets, `||` fallback rules, open-ended `+` times, seasonal words,
+    lowercase variants, and a MIDNIGHT-CROSSING span (end at or before its
+    start) — the construct a per-day window list clips rather than carries —
+    all say more than the flat table can repeat. Plain weekday/time forms,
+    comma-joined rules, bare times, `24/7` and `closed` still fit."""
+    from scripts.poi_opening_hours import _tag_fits_a_weekly_table as fits
+
+    beyond = (
+        "Tu[1] off",
+        "Mo-Fr 09:00-17:00; Su[-1] off",
+        "summer: Mo-Su 09:00-20:00; winter: Mo-Su 10:00-17:00",
+        "Mo-Su 10:00+",
+        "Mo-Fr 08:00-12:00 || Sa 09:00-11:00",
+        "Tu,Th-Sa 21:00-01:00",
+        "mo-su 10:00-18:00; dec 25 off",
+        "Mo-Su 09:00-18:00; ph off",
+    )
+    for tag in beyond:
+        assert not fits(tag), f"a weekly table cannot say {tag!r}"
+
+    weekly = (
+        "Mo-Su 09:00-18:00",
+        "24/7",
+        "Tu-Sa 08:00-20:00, Su 08:00-13:30",
+        "08:00-19:45",
+        "closed",
+        "Sa 08:45-12:00,14:00-19:45",
+        "Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30",
+    )
+    for tag in weekly:
+        assert fits(tag), f"a weekly table says {tag!r} exactly"
+
+
 def test_every_corroboration_badge_quotes_a_tag_the_table_can_say() -> None:
     """The shipped-data half of the rule above: every corroboration badge in
     every hours-carrying city quotes a weekly-representable tag. A badge
