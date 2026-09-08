@@ -12,7 +12,7 @@ import uuid
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from neo4j import Session
+    from neo4j import Session, Transaction
 
 _CREATE_FAMILY = """
 MATCH (p:Profile {id: $profile_id})
@@ -26,6 +26,20 @@ MATCH (f:Family {id: $family_id})
 MATCH (p:Profile {id: $profile_id})
 MERGE (p)-[:MEMBER_OF]->(f)
 RETURN f.id AS family_id
+"""
+
+#: Re-derive the family's crew after a membership change: every member is crew
+#: on every trip a co-member captains (ADR 0005 — a trip's crew derives from
+#: family membership; the captain is never their own crew). Trip creation
+#: derives the same edges forward (src/api/crud/trips.py); this closes the
+#: plan-first order, where the day exists before the joiner does. MERGE keeps
+#: it idempotent.
+_REDERIVE_FAMILY_CREW = """
+MATCH (f:Family {id: $family_id})<-[:MEMBER_OF]-(captain:Profile)
+      -[:IS_CAPTAIN_OF]->(t:Trip)
+MATCH (member:Profile)-[:MEMBER_OF]->(f)
+WHERE member.id <> captain.id
+MERGE (member)-[:IS_CREW_OF]->(t)
 """
 
 _FAMILIES_FOR_USER = """
@@ -66,9 +80,21 @@ def create_family(session: Session, profile_id: str, name: str | None) -> str | 
 
 
 def add_member(session: Session, family_id: str, profile_id: str) -> bool:
-    """MERGE the profile into the family. False when the family is gone."""
-    record = session.run(_ADD_MEMBER, family_id=family_id, profile_id=profile_id).single()
-    return record is not None
+    """MERGE the profile into the family, then re-derive the family's crew —
+    one write transaction, so a joiner is never half in (a member of the
+    family whose existing days still 404 for them). False when the family is
+    gone; the crew re-derivation only runs on a real membership write."""
+
+    def _add(tx: Transaction) -> bool:
+        record = tx.run(
+            _ADD_MEMBER, family_id=family_id, profile_id=profile_id
+        ).single()
+        if record is None:
+            return False
+        tx.run(_REDERIVE_FAMILY_CREW, family_id=family_id)
+        return True
+
+    return session.execute_write(_add)
 
 
 def families_for_user(session: Session, user_id: str) -> list[dict[str, Any]]:

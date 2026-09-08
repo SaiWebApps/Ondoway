@@ -366,10 +366,29 @@ class TestCrewReadsCaptainWrites:
 
 @needs_neo4j
 class TestCrewDerivedAtCreation:
-    def test_trip_creation_crews_the_captains_family_co_members(self, graph, client):
+    @pytest.fixture()
+    def shared_family(self, graph):
+        """Fiona and Dev sharing a family, planted HERE — the class carries its
+        own world, so it runs green alone as well as inside the file."""
+        family_id = "p10-families-derived-crew-family"
+        with graph.session() as s:
+            s.run(
+                "MERGE (f:Family {id: $fid}) SET f.created_at = datetime() "
+                "WITH f MATCH (p:Profile) WHERE p.id IN $pids "
+                "MERGE (p)-[:MEMBER_OF]->(f)",
+                fid=family_id,
+                pids=[FIONA_PROFILE_ID, DEV_PROFILE_ID],
+            )
+        yield family_id
+        with graph.session() as s:
+            s.run("MATCH (f:Family {id: $fid}) DETACH DELETE f", fid=family_id)
+
+    def test_trip_creation_crews_the_captains_family_co_members(
+        self, graph, shared_family
+    ):
         """crud.create_trip_with_stops derives IS_CREW_OF from the captain's
-        family membership: Fiona and Dev share a family (built through the wire
-        flow above), so a trip Fiona captains crews Dev — and never Fiona."""
+        family membership: Fiona and Dev share a family (the fixture's), so a
+        trip Fiona captains crews Dev — and never Fiona."""
         from src.api.crud.trips import create_trip_with_stops
         from src.connection import get_database
 
@@ -394,6 +413,155 @@ class TestCrewDerivedAtCreation:
                 "MATCH (t:Trip {id: $tid}) DETACH DELETE t", tid=result["trip_id"]
             )
         assert crew == [DEV_PROFILE_ID]
+
+
+# ── The late joiner: joining the family crews you onto its existing days ─────
+#
+# The pinned semantics for the plan-first order: a day planned BEFORE the
+# invite is still the family's day. add_member re-derives the whole family's
+# crew in the same transaction as the membership write — the joiner reads the
+# family's existing trips, the family reads the joiner's, and the captain of a
+# trip is never their own crew. Writes keep one captain either way.
+
+PLANFIRST_FAMILY_ID = "p10-families-planfirst-family"
+PLANFIRST_TRIP_ID = "p10-families-planfirst-trip"
+JOINERS_OWN_TRIP_ID = "p10-families-joiners-own-trip"
+
+
+@needs_neo4j
+class TestJoinLateCrewsTheExistingDays:
+    @pytest.fixture()
+    def plan_first_world(self, graph):
+        """Fiona alone in a family with an already-composed day, and Dev —
+        not yet a member — with a composed day of his own. Planted directly
+        (the crewed_trip mould), torn down whole."""
+        from src.api.models.trips import SessionPlan
+
+        with graph.session() as s:
+            s.run(
+                "MERGE (f:Family {id: $fid}) SET f.created_at = datetime() "
+                "WITH f MATCH (p:Profile {id: $pid}) MERGE (p)-[:MEMBER_OF]->(f)",
+                fid=PLANFIRST_FAMILY_ID,
+                pid=FIONA_PROFILE_ID,
+            )
+            for trip_id, captain_id in (
+                (PLANFIRST_TRIP_ID, FIONA_PROFILE_ID),
+                (JOINERS_OWN_TRIP_ID, DEV_PROFILE_ID),
+            ):
+                session_json = SessionPlan(
+                    trip_id=trip_id,
+                    plan_version=1,
+                    stops=[],
+                    retime_tolerance_seconds=120,
+                ).model_dump_json()
+                s.run(
+                    "MERGE (t:Trip {id: $tid}) "
+                    "SET t.name = 'Plan-first day', t.status = 'planning', "
+                    "    t.created_at = datetime(), t.plan_version = 1, "
+                    "    t.session_json = $sj "
+                    "WITH t MATCH (captain:Profile {id: $cap}) "
+                    "MERGE (captain)-[:IS_CAPTAIN_OF]->(t)",
+                    tid=trip_id,
+                    sj=session_json,
+                    cap=captain_id,
+                )
+        yield
+        with graph.session() as s:
+            s.run(
+                "MATCH (t:Trip) WHERE t.id IN $tids DETACH DELETE t",
+                tids=[PLANFIRST_TRIP_ID, JOINERS_OWN_TRIP_ID],
+            )
+            s.run(
+                "MATCH (f:Family {id: $fid}) DETACH DELETE f",
+                fid=PLANFIRST_FAMILY_ID,
+            )
+
+    def _join_as_dev(self, client):
+        token = create_invite_token(PLANFIRST_FAMILY_ID, FIONA_USER_ID)
+        resp = client.post(
+            "/api/v1/families/join",
+            json={"token": token},
+            headers=_bearer(DEV_USER_ID, DEV_EMAIL),
+        )
+        assert resp.status_code == 200, resp.text
+        return resp
+
+    def test_plan_first_then_join_reads_200_and_writes_403(
+        self, client, plan_first_world
+    ):
+        """The whole plan-first walk: before joining, the family's day does not
+        exist for Dev (404 — the no-confirmation rule); after joining, he reads
+        it (200) and stays crew on writes (the typed 403)."""
+        before = client.get(
+            f"/api/v1/trips/{PLANFIRST_TRIP_ID}/session",
+            headers=_bearer(DEV_USER_ID, DEV_EMAIL),
+        )
+        assert before.status_code == 404, before.text
+
+        self._join_as_dev(client)
+
+        after = client.get(
+            f"/api/v1/trips/{PLANFIRST_TRIP_ID}/session",
+            headers=_bearer(DEV_USER_ID, DEV_EMAIL),
+        )
+        assert after.status_code == 200, after.text
+        assert after.json()["trip_id"] == PLANFIRST_TRIP_ID
+
+        replan = client.post(
+            f"/api/v1/trips/{PLANFIRST_TRIP_ID}/session/replan",
+            json={
+                "lat": 48.86,
+                "lng": 2.34,
+                "wall_elapsed_seconds": 0,
+                "tour_elapsed_seconds": 0,
+            },
+            headers=_bearer(DEV_USER_ID, DEV_EMAIL),
+        )
+        assert replan.status_code == 403, replan.text
+        assert replan.json()["detail"]["reason"] == "captain_only"
+
+        compose = client.post(
+            f"/api/v1/trips/{PLANFIRST_TRIP_ID}/compose",
+            json={"route_id": f"{PLANFIRST_TRIP_ID}-opt1"},
+            headers=_bearer(DEV_USER_ID, DEV_EMAIL),
+        )
+        assert compose.status_code == 403, compose.text
+        assert compose.json()["detail"]["reason"] == "captain_only"
+
+    def test_the_join_shares_the_joiners_own_days_too(self, client, plan_first_world):
+        """The re-derivation runs for the WHOLE family: the day Dev composed
+        before joining becomes readable by Fiona — and she is crew on it."""
+        self._join_as_dev(client)
+
+        got = client.get(
+            f"/api/v1/trips/{JOINERS_OWN_TRIP_ID}/session",
+            headers=_bearer(FIONA_USER_ID, FIONA_EMAIL),
+        )
+        assert got.status_code == 200, got.text
+
+        replan = client.post(
+            f"/api/v1/trips/{JOINERS_OWN_TRIP_ID}/session/replan",
+            json={
+                "lat": 48.86,
+                "lng": 2.34,
+                "wall_elapsed_seconds": 0,
+                "tour_elapsed_seconds": 0,
+            },
+            headers=_bearer(FIONA_USER_ID, FIONA_EMAIL),
+        )
+        assert replan.status_code == 403, replan.text
+        assert replan.json()["detail"]["reason"] == "captain_only"
+
+    def test_the_captain_is_never_their_own_crew(self, client, graph, plan_first_world):
+        self._join_as_dev(client)
+
+        with graph.session() as s:
+            self_crewed = s.run(
+                "MATCH (p:Profile)-[:IS_CREW_OF]->(t:Trip)<-[:IS_CAPTAIN_OF]-(p) "
+                "WHERE t.id IN $tids RETURN count(*) AS n",
+                tids=[PLANFIRST_TRIP_ID, JOINERS_OWN_TRIP_ID],
+            ).single()["n"]
+        assert self_crewed == 0
 
 
 # ── M2.2: the profile stops collapsing ───────────────────────────────────────
