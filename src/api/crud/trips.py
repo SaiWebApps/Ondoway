@@ -146,6 +146,9 @@ def create_trip_with_stops(
     Creates:
     - Trip node with UUID, name, dates, status='planning'
     - Profile -[:IS_CAPTAIN_OF]-> Trip
+    - Profile -[:IS_CREW_OF]-> Trip for every family co-member of the captain
+      (ADR 0005: a trip's crew derives from family membership; the captain is
+      never their own crew)
     - For each stop: ItineraryItem with HAS_STOP, ASSIGNED_TO, AT_POI, and one
       PLAYS_BEAT edge per beat in the stop's `beat_ids`. The item stores
       `beat_ids` (engine narration order), `primary_beat_id` (= beat_ids[0],
@@ -179,6 +182,17 @@ def create_trip_with_stops(
         MERGE (profile)-[:IS_CAPTAIN_OF]->(trip)
         RETURN trip.id AS trip_id
     """
+    # The crew derives from the captain's FAMILY at creation time (ADR 0005:
+    # `IS_CREW_OF` finally read and written by production). Same transaction as
+    # the trip CREATE, so a trip never exists half-crewed.
+    crew_query = """
+        MATCH (captain:Profile {id: $profile_id})-[:MEMBER_OF]->(:Family)
+              <-[:MEMBER_OF]-(crew:Profile)
+        WHERE crew.id <> $profile_id
+        MATCH (trip:Trip {id: $trip_id})
+        MERGE (crew)-[:IS_CREW_OF]->(trip)
+    """
+
     def _create(tx: Transaction) -> None:
         tx.run(
             create_query,
@@ -190,6 +204,7 @@ def create_trip_with_stops(
             tour_input_json=tour_input_json,
             options_json=options_json,
         )
+        tx.run(crew_query, trip_id=trip_id, profile_id=profile_id)
         _create_itinerary_items(tx, trip_id, profile_id, stops)
 
     session.execute_write(_create)
@@ -418,15 +433,18 @@ def list_trips_for_profile(
     if check is None:
         return None  # type: ignore[return-value]
 
-    # Get all trips for this profile
+    # Every trip this profile can READ: the days it captains and the days it
+    # crews (the family's shared days — ADR 0005). DISTINCT because a profile
+    # could hold both edges to one trip.
     trips_query = """
-        MATCH (p:Profile {id: $pid})-[:IS_CAPTAIN_OF]->(t:Trip)
-        RETURN t.id AS trip_id,
+        MATCH (p:Profile {id: $pid})-[:IS_CAPTAIN_OF|IS_CREW_OF]->(t:Trip)
+        RETURN DISTINCT t.id AS trip_id,
                t.name AS trip_name,
                t.start_date AS start_date,
                t.end_date AS end_date,
-               t.status AS status
-        ORDER BY t.created_at DESC
+               t.status AS status,
+               t.created_at AS _created_at
+        ORDER BY _created_at DESC
     """
     trip_records = session.run(trips_query, pid=profile_id)
     trips = [dict(r) for r in trip_records]

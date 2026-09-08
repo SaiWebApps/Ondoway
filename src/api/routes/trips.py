@@ -910,19 +910,13 @@ def compose_trip(
     structured 422; the trip is left untouched so the client can offer
     another flavour.
 
-    OWNERSHIP-SCOPED: this route destroys the trip's stop ids and burns its
-    one-shot compose budget, so it is authenticated and the trip must hang off a
-    profile of the CALLING user. A trip owned by someone else is reported as 404,
-    never 403 — a 403 would confirm the id exists.
+    CAPTAIN-SCOPED: this route destroys the trip's stop ids and burns its
+    one-shot compose budget, so it is authenticated and stays a WRITE — one
+    writer per living session. Crew (family co-members on the shared day) get
+    the typed 403; a trip the caller has no role on is reported as 404, never
+    403 — a 403 would confirm the id exists.
     """
-    owns_trip = session.run(
-        "MATCH (u:User {id: $uid})-[:HAS_PROFILE]->(:Profile)-[:IS_CAPTAIN_OF]"
-        "->(t:Trip {id: $tid}) RETURN t.id AS id",
-        uid=current_user["id"],
-        tid=trip_id,
-    ).single()
-    if owns_trip is None:
-        raise HTTPException(404, f"Trip '{trip_id}' not found")
+    _captain_trip_or_404(session, current_user["id"], trip_id)
 
     inputs = get_trip_compose_inputs(session, trip_id)
     if inputs is None:
@@ -1857,15 +1851,43 @@ def _finish_session_set(
         )
 
 
-def _owned_trip_or_404(session: Session, user_id: str, trip_id: str) -> None:
-    owns_trip = session.run(
-        "MATCH (u:User {id: $uid})-[:HAS_PROFILE]->(:Profile)-[:IS_CAPTAIN_OF]"
-        "->(t:Trip {id: $tid}) RETURN t.id AS id",
+def _trip_roles(session: Session, user_id: str, trip_id: str) -> set[str]:
+    """The caller's roles on the trip, through any of their profiles:
+    {"IS_CAPTAIN_OF"}, {"IS_CREW_OF"}, both, or empty (no relationship —
+    indistinguishable from a trip that does not exist)."""
+    record = session.run(
+        "MATCH (u:User {id: $uid})-[:HAS_PROFILE]->(:Profile)"
+        "-[r:IS_CAPTAIN_OF|IS_CREW_OF]->(t:Trip {id: $tid}) "
+        "RETURN collect(DISTINCT type(r)) AS roles",
         uid=user_id,
         tid=trip_id,
     ).single()
-    if owns_trip is None:
+    return set(record["roles"]) if record else set()
+
+
+def _readable_trip_or_404(session: Session, user_id: str, trip_id: str) -> None:
+    """Captain OR crew may READ the shared day (the session GETs). A stranger's
+    guess is 404, never 403 — the no-confirmation rule holds for the family
+    surface exactly as it does for owners."""
+    if not _trip_roles(session, user_id, trip_id):
         raise HTTPException(404, f"Trip '{trip_id}' not found")
+
+
+def _captain_trip_or_404(session: Session, user_id: str, trip_id: str) -> None:
+    """Only the captain WRITES (compose, replan): one writer per living session.
+    Crew gets the typed 403 the phone can explain; a stranger still gets 404."""
+    roles = _trip_roles(session, user_id, trip_id)
+    if "IS_CAPTAIN_OF" in roles:
+        return
+    if "IS_CREW_OF" in roles:
+        raise HTTPException(
+            403,
+            {
+                "reason": "captain_only",
+                "detail": "Only the trip's captain can change the day",
+            },
+        )
+    raise HTTPException(404, f"Trip '{trip_id}' not found")
 
 
 @router.get("/trips/{trip_id}/session", response_model=SessionPlan)
@@ -1876,8 +1898,10 @@ def get_trip_session(
 ):
     """The current version of the living session — the day as it stands and the
     contingency set the phone selects from (design §4.6). A trip that was never
-    composed has no session yet: 404 with a reason, never an empty plan."""
-    _owned_trip_or_404(session, current_user["id"], trip_id)
+    composed has no session yet: 404 with a reason, never an empty plan.
+
+    Readable by captain OR crew: the family reads its shared day (ADR 0005)."""
+    _readable_trip_or_404(session, current_user["id"], trip_id)
     inputs = get_trip_compose_inputs(session, trip_id)
     if inputs is None:
         raise HTTPException(404, f"Trip '{trip_id}' not found")
@@ -2162,8 +2186,11 @@ def replan_trip_session(
     fresh contingency set. It never hands back a different day than the one the
     person is standing in (the plan's sabotage line): no new place, no
     re-authoring, the audio already made is kept.
+
+    Captain-only, like compose: a replan WRITES version N+1 over the shared
+    items, and the living session has one writer. Crew gets the typed 403.
     """
-    _owned_trip_or_404(session, current_user["id"], trip_id)
+    _captain_trip_or_404(session, current_user["id"], trip_id)
     inputs = get_trip_compose_inputs(session, trip_id)
     if inputs is None:
         raise HTTPException(404, f"Trip '{trip_id}' not found")

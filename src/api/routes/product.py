@@ -59,12 +59,15 @@ def get_profile(
     selected_lens_ids (the profile's PREFERS_LENS child-lens ids, [] if none),
     and theme_preference (verbatim when set, null when the property is absent —
     read-only pass-through). 404 (not a fabricated empty profile) when the user
-    has no HAS_PROFILE. When a user has >1 profile, the latest by created_at wins
-    and its lens set is returned.
+    has no HAS_PROFILE. When a user has >1 profile, the caller's OWN latest wins
+    — created_at DESC with the id as the tie-break, so the resolution is
+    deterministic even between profiles created in the same instant (or seeded
+    without a created_at). The one-profile shape is the phone's contract; the
+    multi-profile listing is GET /profiles.
     """
     record = session.run(
         "MATCH (u:User {id: $uid})-[:HAS_PROFILE]->(p:Profile) "
-        "WITH p ORDER BY p.created_at DESC LIMIT 1 "
+        "WITH p ORDER BY p.created_at DESC, p.id LIMIT 1 "
         "OPTIONAL MATCH (p)-[:PREFERS_LENS]->(l:Lens) "
         "RETURN p.id AS profile_id, p.display_name AS display_name, "
         "p.theme_preference AS theme_preference, collect(l.id) AS selected_lens_ids",
@@ -80,3 +83,24 @@ def get_profile(
         "selected_lens_ids": record["selected_lens_ids"],
         "theme_preference": record["theme_preference"],
     }
+
+
+@router.get("/profiles")
+def list_profiles(
+    current_user: dict = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> dict:
+    """Every profile of the calling user — the family screen's picker.
+
+    GET /profile keeps its one-profile shape for the phone's existing read;
+    this is the multi-profile listing beside it (a user's profiles are e.g.
+    Mom and Kid — ADR 0005 hangs family membership off exactly these). Ordered
+    newest first, the same created_at DESC + id ordering /profile resolves by.
+    """
+    records = session.run(
+        "MATCH (u:User {id: $uid})-[:HAS_PROFILE]->(p:Profile) "
+        "RETURN p.id AS profile_id, p.display_name AS display_name "
+        "ORDER BY p.created_at DESC, p.id",
+        uid=current_user["id"],
+    )
+    return {"profiles": [dict(r) for r in records]}

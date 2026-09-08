@@ -223,7 +223,7 @@ class TestFamilyFlow:
         )
         assert resp.status_code == 404, resp.text
 
-    def test_invite_to_a_family_the_caller_is_not_in_is_404(self, client, family_id):
+    def test_stranger_invite_is_404_or_unauthenticated(self, client, family_id):
         """The no-confirmation rule: a family id the caller has no profile in is
         indistinguishable from one that does not exist."""
         with_stranger = client.post(
@@ -240,3 +240,188 @@ class TestFamilyFlow:
             headers=_bearer(FIONA_USER_ID, FIONA_EMAIL),
         )
         assert resp.status_code == 404
+
+
+# ── M2.2: a crewed trip is readable by its crew; writes keep one captain ─────
+#
+# The matrix the plan names: crew-read 200, crew-replan (and crew-compose) a
+# typed 403 "captain_only", stranger 404 (never 403 — the no-confirmation rule
+# at src/api/routes/trips.py holds for crew exactly as it does for owners).
+
+STRANGER_USER_ID = "p10-families-test-user-stranger"
+STRANGER_EMAIL = "p10-families-stranger@example.test"
+STRANGER_PROFILE_ID = "p10-families-test-profile-stranger"
+
+CREWED_TRIP_ID = "p10-families-crewed-trip"
+
+
+@pytest.fixture(scope="module")
+def crewed_trip(graph):
+    """A composed-looking trip captained by Fiona's profile with Dev's profile
+    as crew, plus a stranger identity — planted directly, so the guard matrix
+    needs no corpus and no engine run."""
+    from src.api.models.trips import SessionPlan
+
+    session_json = SessionPlan(
+        trip_id=CREWED_TRIP_ID, plan_version=1, stops=[], retime_tolerance_seconds=120
+    ).model_dump_json()
+    with graph.session() as s:
+        s.run(
+            "MERGE (u:User {id: $uid}) SET u.email = $email",
+            uid=STRANGER_USER_ID,
+            email=STRANGER_EMAIL,
+        )
+        s.run(
+            "MERGE (p:Profile {id: $pid}) "
+            "SET p.display_name = 'Stranger', p.created_at = datetime() "
+            "WITH p MATCH (u:User {id: $uid}) MERGE (u)-[:HAS_PROFILE]->(p)",
+            pid=STRANGER_PROFILE_ID,
+            uid=STRANGER_USER_ID,
+        )
+        s.run(
+            "MERGE (t:Trip {id: $tid}) "
+            "SET t.name = 'Crewed day', t.status = 'planning', "
+            "    t.created_at = datetime(), t.plan_version = 1, "
+            "    t.session_json = $sj "
+            "WITH t MATCH (captain:Profile {id: $cap}) "
+            "MERGE (captain)-[:IS_CAPTAIN_OF]->(t) "
+            "WITH t MATCH (crew:Profile {id: $crew}) "
+            "MERGE (crew)-[:IS_CREW_OF]->(t)",
+            tid=CREWED_TRIP_ID,
+            sj=session_json,
+            cap=FIONA_PROFILE_ID,
+            crew=DEV_PROFILE_ID,
+        )
+    return CREWED_TRIP_ID
+
+
+@needs_neo4j
+class TestCrewReadsCaptainWrites:
+    def test_crew_reads_the_session_200(self, client, crewed_trip):
+        resp = client.get(
+            f"/api/v1/trips/{crewed_trip}/session", headers=_bearer(DEV_USER_ID, DEV_EMAIL)
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["trip_id"] == crewed_trip
+
+    def test_captain_still_reads_the_session_200(self, client, crewed_trip):
+        resp = client.get(
+            f"/api/v1/trips/{crewed_trip}/session",
+            headers=_bearer(FIONA_USER_ID, FIONA_EMAIL),
+        )
+        assert resp.status_code == 200, resp.text
+
+    def test_crew_replan_is_a_typed_403(self, client, crewed_trip):
+        resp = client.post(
+            f"/api/v1/trips/{crewed_trip}/session/replan",
+            json={
+                "lat": 48.86,
+                "lng": 2.34,
+                "wall_elapsed_seconds": 0,
+                "tour_elapsed_seconds": 0,
+            },
+            headers=_bearer(DEV_USER_ID, DEV_EMAIL),
+        )
+        assert resp.status_code == 403, resp.text
+        assert resp.json()["detail"]["reason"] == "captain_only"
+
+    def test_crew_compose_is_a_typed_403(self, client, crewed_trip):
+        resp = client.post(
+            f"/api/v1/trips/{crewed_trip}/compose",
+            json={"route_id": f"{crewed_trip}-opt1"},
+            headers=_bearer(DEV_USER_ID, DEV_EMAIL),
+        )
+        assert resp.status_code == 403, resp.text
+        assert resp.json()["detail"]["reason"] == "captain_only"
+
+    def test_stranger_is_404_never_403(self, client, crewed_trip):
+        for method, url, body in (
+            ("get", f"/api/v1/trips/{crewed_trip}/session", None),
+            (
+                "post",
+                f"/api/v1/trips/{crewed_trip}/session/replan",
+                {
+                    "lat": 48.86,
+                    "lng": 2.34,
+                    "wall_elapsed_seconds": 0,
+                    "tour_elapsed_seconds": 0,
+                },
+            ),
+            ("post", f"/api/v1/trips/{crewed_trip}/compose", {"route_id": "x-opt1"}),
+        ):
+            kwargs = {"headers": _bearer(STRANGER_USER_ID, STRANGER_EMAIL)}
+            if body is not None:
+                kwargs["json"] = body
+            resp = getattr(client, method)(url, **kwargs)
+            assert resp.status_code == 404, f"{method} {url}: {resp.status_code} {resp.text}"
+
+    def test_trip_list_includes_crewed_trips(self, client, crewed_trip):
+        resp = client.get(
+            f"/api/v1/trips?profile_id={DEV_PROFILE_ID}",
+            headers=_bearer(DEV_USER_ID, DEV_EMAIL),
+        )
+        assert resp.status_code == 200, resp.text
+        assert crewed_trip in [t["trip_id"] for t in resp.json()]
+
+
+@needs_neo4j
+class TestCrewDerivedAtCreation:
+    def test_trip_creation_crews_the_captains_family_co_members(self, graph, client):
+        """crud.create_trip_with_stops derives IS_CREW_OF from the captain's
+        family membership: Fiona and Dev share a family (built through the wire
+        flow above), so a trip Fiona captains crews Dev — and never Fiona."""
+        from src.api.crud.trips import create_trip_with_stops
+        from src.connection import get_database
+
+        with graph.session(database=get_database()) as s:
+            result = create_trip_with_stops(
+                s,
+                trip_name="Derived-crew day",
+                profile_id=FIONA_PROFILE_ID,
+                start_date="2026-09-08",
+                end_date="2026-09-08",
+                stops=[],
+            )
+            crew = [
+                r["pid"]
+                for r in s.run(
+                    "MATCH (p:Profile)-[:IS_CREW_OF]->(t:Trip {id: $tid}) "
+                    "RETURN p.id AS pid",
+                    tid=result["trip_id"],
+                )
+            ]
+            s.run(
+                "MATCH (t:Trip {id: $tid}) DETACH DELETE t", tid=result["trip_id"]
+            )
+        assert crew == [DEV_PROFILE_ID]
+
+
+# ── M2.2: the profile stops collapsing ───────────────────────────────────────
+
+
+@needs_neo4j
+class TestProfiles:
+    def test_get_profile_keeps_one_profile_shape_deterministically(self, client, graph):
+        """GET /profile keeps the phone's one-profile contract: the caller's OWN
+        latest, resolved deterministically (created_at DESC, id tie-break)."""
+        with graph.session() as s:
+            s.run(
+                "MERGE (p:Profile {id: 'p10-families-fiona-second'}) "
+                "SET p.display_name = 'Fiona II', "
+                "    p.created_at = datetime() + duration('PT1H') "
+                "WITH p MATCH (u:User {id: $uid}) MERGE (u)-[:HAS_PROFILE]->(p)",
+                uid=FIONA_USER_ID,
+            )
+        resp = client.get("/api/v1/profile", headers=_bearer(FIONA_USER_ID, FIONA_EMAIL))
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["profile_id"] == "p10-families-fiona-second"
+
+    def test_get_profiles_lists_every_profile(self, client):
+        resp = client.get("/api/v1/profiles", headers=_bearer(FIONA_USER_ID, FIONA_EMAIL))
+        assert resp.status_code == 200, resp.text
+        profiles = resp.json()["profiles"]
+        assert {p["profile_id"] for p in profiles} == {
+            FIONA_PROFILE_ID,
+            "p10-families-fiona-second",
+        }
+        assert all(p["display_name"] for p in profiles)
