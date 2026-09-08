@@ -401,10 +401,11 @@ def test_queue_column_prints_minutes_and_dash(capsys):
 
 
 def _hours_route() -> Route:
-    """Four stops: a VERIFIED AI table (the ladder's review confirmed it — the
+    """Five stops: a VERIFIED AI table (the ladder's review confirmed it — the
     discriminator of the verified-is-the-one-trust-signal rule, Docs/adr/0003),
-    an unreviewed AI table, an unsourced table, and not gated at all
-    -> M=3 gated, N=2 unverified."""
+    an unreviewed AI table, an unsourced table, a DOOR with no table at all
+    (gated=True, opening_hours=None — the least-known door must still count),
+    and not gated at all -> M=4 doors, N=3 unverified."""
     verified = _poi(
         "poi-verified", "Musee d'Orsay",
         opening_hours=_GATED_TABLE, opening_hours_source="ai",
@@ -420,18 +421,23 @@ def _hours_route() -> Route:
         "poi-none", "Conciergerie",
         opening_hours=_GATED_TABLE, opening_hours_source=None,
     )
+    tableless_door = _poi("poi-door", "Notre-Dame Cathedral", gated=True)
     ungated = _poi("poi-open", "Pont Neuf", place_category="bridge")
-    return _route([verified, ai_judged, sourceless, ungated])
+    return _route([verified, ai_judged, sourceless, tableless_door, ungated])
 
 
 def test_dated_run_prints_hours_unverified_line_with_right_counts(capsys):
     """A dated run says how much of its gate data is on the record's word
-    alone: gated = a non-None opening_hours table; unverified = no
-    `opening_hours_verified` record — the ladder (Docs/adr/0003) is the one
+    alone: gated = a DOOR (`gated=True`, or a non-None table — a table implies
+    a door); unverified = no `opening_hours_verified` record, and a door with
+    no table at all can never count trusted — ADR 0003: a gated place without
+    verified hours fails open WITH that disclosure. The ladder is the one
     trust signal, so a human-confirmed AI table counts trusted and an
     unreviewed OSM transcription does not self-certify. Aiko's finding
     (design §6): clock-native planning is a promise without a table under it,
-    so the harness must SAY when the table under it is unaudited."""
+    so the harness must SAY when the table under it is unaudited — or absent.
+    UNDO: key the count on the table -> Notre-Dame leaves both numbers -> RED.
+    """
     tour_build = _tour_build()
     route = _hours_route()
     tour_build._print_breakdown(
@@ -441,7 +447,7 @@ def test_dated_run_prints_hours_unverified_line_with_right_counts(capsys):
         script=_script_for(route),
     )
     out = capsys.readouterr().out
-    assert "hours unverified for 2 of the 3 gated stops on this route" in out
+    assert "hours unverified for 3 of the 4 gated stops on this route" in out
 
 
 def test_undated_run_prints_no_hours_line(capsys):

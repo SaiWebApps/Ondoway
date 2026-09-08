@@ -551,17 +551,25 @@ def _print_breakdown(
         # AIKO'S HONESTY LINE (plan S3.1 deviation ii; design §6: clock-native
         # planning is "a promise without a table under it" until the hours
         # data exists): on a dated run, say how many of the gated stops rest
-        # on unaudited hours. GATED = a non-None opening_hours table.
-        # UNVERIFIED = no `opening_hours_verified` record — the ladder
-        # (Docs/adr/0003) is the one trust signal, so a human-confirmed AI
-        # table counts trusted and an unreviewed transcription does not
-        # self-certify. Printed even at 0 unverified so a clean run SAYS it
-        # is clean; omitted on undated runs (no clock, no gate) and when no
-        # stop on the route is gated.
+        # on unaudited hours. GATED = a DOOR — `gated is True`, or a non-None
+        # table (a table implies a door on a legacy row). UNVERIFIED = no
+        # `opening_hours_verified` record, and a door with NO table can never
+        # count trusted (ADR 0003: a gated place without verified hours fails
+        # open WITH that disclosure) — the ladder is the one trust signal, so
+        # a human-confirmed AI table counts trusted and an unreviewed
+        # transcription does not self-certify. Printed even at 0 unverified
+        # so a clean run SAYS it is clean; omitted on undated runs (no clock,
+        # no gate) and when no stop on the route has a door.
         if start_dt is not None:
-            gated = [p for p in route.pois if p.opening_hours is not None]
+            gated = [
+                p for p in route.pois
+                if p.gated is True or p.opening_hours is not None
+            ]
             if gated:
-                unverified = sum(1 for p in gated if p.opening_hours_verified is None)
+                unverified = sum(
+                    1 for p in gated
+                    if p.opening_hours_verified is None or p.opening_hours is None
+                )
                 print(
                     f"  hours unverified for {unverified} of the {len(gated)} "
                     "gated stops on this route"

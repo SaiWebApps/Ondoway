@@ -2761,6 +2761,13 @@ def _preview_day_notes(route, body) -> list[str]:
     ]
     if unverified:
         notes.append("We could not confirm opening times for " + ", ".join(unverified) + ".")
+    # A DOOR with no table at all is the least-known kind and gets its own
+    # sentence (ADR 0003: a gated place without verified hours fails open
+    # WITH that disclosure). Distinct from the could-not-confirm list, which
+    # is about tables somebody wrote down.
+    no_record = [p.name for p in route.pois if p.gated is True and p.opening_hours is None]
+    if no_record:
+        notes.append("No opening times on record for " + ", ".join(no_record) + ".")
     return notes
 
 

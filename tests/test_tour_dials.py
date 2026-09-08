@@ -471,6 +471,29 @@ def test_the_unverified_hours_note_keys_on_the_verified_record_alone():
     assert not any("confirm" in n for n in all_trusted), all_trusted
 
 
+def test_a_door_with_no_hours_on_record_is_named_not_silent():
+    """ADR 0003: a gated place without verified hours fails open WITH that
+    disclosure. The doubt sentence above counts tables; this one counts
+    DOORS — a gated stop with no table at all is the least-known door and
+    used to be the only one never doubted anywhere. It gets its own plain
+    sentence; an ungated square stays silent, and the no-record door never
+    leaks into the could-not-confirm list (that sentence is about tables).
+
+    UNDO TEST: key the note on `opening_hours is not None` -> Notre-Dame
+    vanishes from every note -> RED."""
+    from src.api.routes.trips import _preview_day_notes
+
+    cathedral = _poi("Notre-Dame Cathedral", lat=PDV[0], lng=PDV[1] + 0.001).model_copy(
+        update={"gated": True}
+    )
+    street = _poi("Place des Vosges", lat=PDV[0] + 0.001, lng=PDV[1])  # ungated
+
+    notes = _preview_day_notes(_wire_day(cathedral, street), _dial_body())
+    (note,) = [n for n in notes if "on record" in n]
+    assert note == "No opening times on record for Notre-Dame Cathedral.", note
+    assert not any("confirm" in n for n in notes), notes
+
+
 def test_the_api_resolves_presets_and_the_more_dial_exactly_as_the_harness_does():
     """ONE ENGINE (memory: workbench and app share ONE path). `resolve_party_axes`
     expands presets and the "more stops" dial into the axes the planner reads —
