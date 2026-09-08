@@ -2754,10 +2754,17 @@ def _preview_day_notes(route, body) -> list[str]:
         else:
             notes.append(f"{rule}; no waits in this day.")
 
+    # A kept-closed door's exclusion line above already carries the doubt
+    # clause when its table is unverified (the one hedging function composes
+    # every closure reason), so listing it again is the same ignorance said
+    # twice. Keyed on the kept_outside FIELD, never on the reason's words.
+    doubt_carried = {e.poi_id for e in route.clock_exclusions if e.kept_outside}
     unverified = [
         p.name
         for p in route.pois
-        if p.opening_hours is not None and p.opening_hours_verified is None
+        if p.opening_hours is not None
+        and p.opening_hours_verified is None
+        and p.id not in doubt_carried
     ]
     if unverified:
         notes.append("We could not confirm opening times for " + ", ".join(unverified) + ".")

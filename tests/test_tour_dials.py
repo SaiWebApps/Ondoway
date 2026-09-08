@@ -471,6 +471,44 @@ def test_the_unverified_hours_note_keys_on_the_verified_record_alone():
     assert not any("confirm" in n for n in all_trusted), all_trusted
 
 
+def test_a_doubted_door_is_doubted_once_on_the_notes_channel():
+    """A kept-closed unverified door already carries the doubt clause inside
+    its own exclusion line (the reason is composed by the one hedging
+    function, for pool and arrival closures alike), so repeating it in the
+    could-not-confirm list is the same ignorance said twice two lines apart.
+    The skip keys on the exclusion's `kept_outside` FIELD, never on the
+    reason's words (W4.12). A doubted door with no exclusion stays listed —
+    the list is its only doubt."""
+    import json as _json
+
+    from src.api.routes.trips import _preview_day_notes
+    from src.tour.contract import ClockExclusion
+
+    table = _json.dumps(
+        {d: [["09:00", "18:00"]] for d in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")}
+    )
+    closed_doubted = _poi("Marche Bastille", lat=PDV[0], lng=PDV[1] + 0.001).model_copy(
+        update={"opening_hours": table, "opening_hours_source": "osm"}
+    )
+    open_doubted = _poi("Chapelle Douteuse", lat=PDV[0] + 0.001, lng=PDV[1]).model_copy(
+        update={"opening_hours": table, "opening_hours_source": "osm"}
+    )
+    route = _wire_day(
+        closed_doubted, open_doubted,
+        clock_exclusions=(
+            ClockExclusion(
+                poi_id=closed_doubted.id, name=closed_doubted.name,
+                reason="closed all day Wednesday, though we could not confirm its hours",
+                kept_outside=True,
+            ),
+        ),
+    )
+    notes = _preview_day_notes(route, _dial_body())
+    (confirm_note,) = [n for n in notes if "could not confirm" in n and "—" not in n]
+    assert confirm_note == "We could not confirm opening times for Chapelle Douteuse.", notes
+    assert sum("Marche Bastille" in n for n in notes) == 1, notes
+
+
 def test_a_door_with_no_hours_on_record_is_named_not_silent():
     """ADR 0003: a gated place without verified hours fails open WITH that
     disclosure. The doubt sentence above counts tables; this one counts
