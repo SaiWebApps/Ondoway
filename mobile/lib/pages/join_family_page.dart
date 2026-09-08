@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -41,6 +43,12 @@ class _JoinFamilyPageState extends State<JoinFamilyPage> {
         refresh: () async => (await auth.refreshSession()) ? auth.accessToken : null,
       );
       if (!mounted) return;
+      // A fast server can answer before this page's entrance transition has
+      // finished — and leaving for the tab shell mid-animation re-parents the
+      // shell's GlobalKey while its old page is still animating out, which
+      // crashes the tree. Let the transition land first.
+      await _entranceTransitionDone();
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('You joined the family')));
       context.go('/profile');
@@ -55,6 +63,27 @@ class _JoinFamilyPageState extends State<JoinFamilyPage> {
     } catch (e) {
       if (mounted) setState(() => _error = 'Joining failed: $e');
     }
+  }
+
+  /// Completes when this page's route transition is no longer animating.
+  Future<void> _entranceTransitionDone() {
+    final animation = ModalRoute.of(context)?.animation;
+    if (animation == null ||
+        animation.status == AnimationStatus.completed ||
+        animation.status == AnimationStatus.dismissed) {
+      return Future.value();
+    }
+    final done = Completer<void>();
+    late final AnimationStatusListener listener;
+    listener = (status) {
+      if (status == AnimationStatus.completed ||
+          status == AnimationStatus.dismissed) {
+        animation.removeStatusListener(listener);
+        done.complete();
+      }
+    };
+    animation.addStatusListener(listener);
+    return done.future;
   }
 
   @override

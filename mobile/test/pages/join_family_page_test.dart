@@ -52,9 +52,10 @@ MockClient _inviteWorld(List<String> joinedTokens) {
       );
     }
     if (request.url.path.endsWith('/families/join')) {
-      // A real join is a network round trip — answer after the page
-      // transition has finished, the way a live server would.
-      await Future<void>.delayed(const Duration(milliseconds: 600));
+      // Deliberately INSTANT: a join that answers before the page's entrance
+      // transition finishes is the racy case — leaving for the tab shell
+      // mid-animation re-parents the shell's GlobalKey and crashes. The page
+      // must absorb a fast server, not the mock a slow one.
       final body = jsonDecode(request.body) as Map<String, dynamic>;
       joinedTokens.add(body['token'] as String);
       return http.Response(
