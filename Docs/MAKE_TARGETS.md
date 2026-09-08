@@ -65,7 +65,7 @@ process—never a cached or filtered subset.
 | `prune-orphans` | Dev DB, or explicit cloud selection | Cloud only | Yes, with `CITY`; deletes only with `APPLY=1` |
 | `fetch-boundary` | Exact local profile | No | Yes, with slug/relation |
 | `geocode-pois` | Exact local profile | No | Yes, with slug |
-| `poi-opening-hours` | None; reads/writes `data/{slug}/poi-raw.json` | Yes | Yes; one Overpass query + a paid model pass; `LIMIT=` writes nothing |
+| `poi-opening-hours` | None; reads/writes `data/{slug}/poi-raw.json` | Yes | Yes; two Overpass queries (the map first, as OpenStreetMap text) + a paid model pass for the doors the map does not hold; `LIMIT=` writes nothing |
 | `poi-place-category` | None; reads/writes `data/{slug}/poi-raw.json` | No | Yes; deterministic and $0, no network |
 | `poi-body-places` | None; writes `data/{slug}/body-places.json` | No | Yes; one Overpass query, $0, no model; `LIMIT=` writes nothing |
 | `poi-place-judgements` | None; reads/writes `data/{slug}/poi-raw.json` | Yes | Yes; a paid model pass; `LIMIT=` writes nothing |
