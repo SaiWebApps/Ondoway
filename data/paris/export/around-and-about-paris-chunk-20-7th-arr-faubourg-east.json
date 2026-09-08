@@ -230,7 +230,9 @@
         "indoor": false,
         "basis": "The esplanade under the four feet is where the queues form and where a person stands to look straight up through the lattice; the corpus's queue and security lines are about this esplanade. Half the footprint, as a place you look at demands."
       }
-    ]
+    ],
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Quai Voltaire",
@@ -409,7 +411,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open Left Bank embankment and street viewed in the open — not gated.",
+    "opening_hours_basis": "An open riverside embankment walked in the open air, gated by nothing.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Riverside embankment walked its length past 18th-century facades and plaques with open views across the Seine to the Louvre; a setting to stroll, nothing to enter.",
@@ -422,7 +424,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open riverside embankment with no door or admission; the whole value stands in the open.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Fontaine des Quatre Saisons",
@@ -473,7 +477,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A monumental wall fountain on the street facade viewed from the pavement — not gated.",
+    "opening_hours_basis": "A monumental wall fountain on the street facade, viewed from the pavement at any hour.",
     "place_category": "monument",
     "visit_seconds_inside": null,
     "visit_basis": "Monumental Bouchardon wall fountain filling a street frontage with allegorical sculpture read across its full width; no interior.",
@@ -486,7 +490,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A monumental wall fountain on a public street, viewed in the open with no gate or ticket.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Saint-Thomas-d'Aquin",
@@ -536,7 +542,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A Catholic church one enters (gated), but its specific opening hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A parish church you enter; gated, hours not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 1000,
     "visit_basis": "17th-century Dominican church with a classical facade on a small square; interior is a single broad nave with side chapels and a painted ceiling, about 15 minutes to walk through with no queue.",
@@ -549,7 +555,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door you walk straight through; there is no ticket desk or security screening to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Le Bon Marché",
@@ -627,9 +635,52 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "Gated department store but no OSM tag and hours not confidently known; left unfiltered.",
+    "opening_hours": {
+      "mon": [
+        [
+          "10:00",
+          "19:45"
+        ]
+      ],
+      "tue": [
+        [
+          "10:00",
+          "19:45"
+        ]
+      ],
+      "wed": [
+        [
+          "10:00",
+          "19:45"
+        ]
+      ],
+      "thu": [
+        [
+          "10:00",
+          "19:45"
+        ]
+      ],
+      "fri": [
+        [
+          "10:00",
+          "20:45"
+        ]
+      ],
+      "sat": [
+        [
+          "10:00",
+          "20:00"
+        ]
+      ],
+      "sun": [
+        [
+          "11:00",
+          "19:45"
+        ]
+      ]
+    },
+    "opening_hours_source": "ai",
+    "opening_hours_basis": "A department store behind doors; hours from Le Bon Marché's own published store pattern.",
     "place_category": "other",
     "visit_seconds_inside": 3600,
     "visit_basis": "Grand 19th-century department store with a famous iron-and-glass atrium, escalator well and multiple floors including the Grande Epicerie food hall; an engaged wander through the architecture and displays fills an hour.",
@@ -642,7 +693,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A department store with wide free-entry doors and no ticket or security line to enter; any waiting happens at checkout tills inside, not at the threshold.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "La Pagode",
@@ -694,7 +747,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A cinema (gated), but it has been closed for years and no current confident hours exist; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A pagoda cinema you enter; gated, hours not confidently known (long closed for renovation); left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Ornate Japanese-style pagoda facade and garden gate viewed from the street; it is a working cinema, not an interior open to casual visiting, so nothing to enter as a tour stop.",
@@ -707,6 +760,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A neighbourhood cinema entered directly off the street; there is no standing queue to reach the building, only a box office for showtimes.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   }
 ]

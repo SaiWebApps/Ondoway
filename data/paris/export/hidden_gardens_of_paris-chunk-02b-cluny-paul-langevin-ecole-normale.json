@@ -196,7 +196,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An enclosed museum garden with closing gates, but I do not confidently know its hours; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "An enclosed museum garden with closing gates; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Enclosed medieval-themed gardens arranged thematically around love, nature and the soul; you wander the paths and read the plantings, an outdoor space with no interior to enter.",
@@ -209,7 +209,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "The gardens are a free open enclosure entered directly from the street without ticket or screening, so no line forms to reach them.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Square Paul-Painleve",
@@ -289,7 +291,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated municipal square with railings and closing hours, but those hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "Gated small municipal square with railings and closing hours, but hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Small planted square with a statue of Montaigne facing the Cluny museum, paused at and walked round, nothing to enter.",
@@ -302,7 +304,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open street-side square you walk into freely with no door or ticket, so no line exists.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Square Paul-Langevin",
@@ -525,7 +529,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated municipal square with railings and closing hours, but those hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "Gated municipal square with railings and closing hours, but hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Small flower-bordered square with a statue of Villon and an ivy-covered wall, a brief pause on the hillside, nothing to enter.",
@@ -538,7 +542,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A small open garden entered directly from the street with no ticket or screening, so there is nothing to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Jardin Carre",
@@ -624,7 +630,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated courtyard garden with enclosure and closing hours, but those hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "Gated courtyard garden with enclosure and closing hours, but hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Quiet topiary garden with a square pool in a former courtyard, walked round and sat in briefly, nothing to enter.",
@@ -637,7 +643,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A public courtyard garden reached through an open passage with no ticket, so no line forms.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Musee de Cluny",
@@ -780,7 +788,9 @@
       ]
     ],
     "queue_basis": "A single ticket desk and bag check at this modest medieval museum produce a small moving line rather than a substantial one.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Ecole Normale Superieure",
@@ -1068,7 +1078,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A working grande ecole behind gates; not a public visitor site and hours not confidently known, left unfiltered.",
+    "opening_hours_basis": "A working academic institution behind a controlled entrance; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Working academic institution on rue d'Ulm; from the street you take in the classical facade and gated main courtyard, but the interior is not open to casual visitors.",
@@ -1081,7 +1091,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working academic institution, not a ticketed attraction; the tour views it from the street with no public entry line to stand in.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Montagne Sainte-Genevieve",
@@ -1161,7 +1173,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A hill and open street district in the Latin Quarter experienced from the public pavement; not gated.",
+    "opening_hours_basis": "A hill and its streets in the Latin Quarter, open to the public on the pavement; not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Historic Latin Quarter hill with sloping streets around the Panthéon; you climb and walk between viewpoints, a district to stroll through rather than a building to enter.",
@@ -1174,6 +1186,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "This is a hill and its network of open streets in the Latin Quarter, with no door or ticket, so the whole value stands in the open with no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   }
 ]

@@ -46,7 +46,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated covered arcade with grilles; its opening hours are not confidently known, left unfiltered.",
+    "opening_hours_basis": "A covered arcade with grilles that close, so gated, but its exact opening hours are not confidently known; left unfiltered.",
     "place_category": "arcade",
     "visit_seconds_inside": null,
     "visit_basis": "Covered arcade you walk through end to end, lined with stamp dealers, old shopfronts and restaurants to browse, about 15 minutes; it is itself the space, nothing separate to enter.",
@@ -59,7 +59,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A covered public passage open at both ends with no door, ticket, or screening; you walk through freely.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Theatre des Varietes",
@@ -115,7 +117,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated theatre entered by ticket; its hours are not confidently known, left unfiltered.",
+    "opening_hours_basis": "A working theatre entered by ticket, so gated, but public hours vary and are not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Neoclassical theatre facade on Boulevard Montmartre viewed from the pavement, a few minutes; interior entered only for performances so no normal visit inside.",
@@ -128,7 +130,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A performance theatre with no walk-in queue; entry is by show ticket and on a tour it is only viewed from the boulevard.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Place de la Bourse",
@@ -181,7 +185,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Open public square whose value is on the pavement, not gated.",
+    "opening_hours_basis": "An open public square viewed from the pavement, not gated, so hours are null.",
     "place_category": "square",
     "visit_seconds_inside": null,
     "visit_basis": "Open square dominated by the colonnaded Palais Brongniart which you walk around to take in from several angles, about 18 minutes; the exchange building is not normally open to visit.",
@@ -194,7 +198,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open public square with no gate or ticket; the whole value stands in the open with no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Notre-Dame-des-Victoires",
@@ -275,7 +281,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated basilica one enters; its opening hours are not confidently known, left unfiltered.",
+    "opening_hours_basis": "A basilica you enter through doors, so gated, but its precise hours are not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 1100,
     "visit_basis": "Modest facade on a small square takes a few minutes; inside is a basilica famous for its walls covered in thousands of votive plaques plus Lully's tomb, roughly 18 minutes.",
@@ -288,7 +294,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A basilica with an open door and no ticket or security check, entered directly without stopping.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Bibliotheque Nationale de France - Richelieu",
@@ -366,7 +374,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated library with reading rooms behind entry control; hours not confidently known, left unfiltered.",
+    "opening_hours_basis": "A library entered through doors/security, so gated, but its exact hours are not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 3600,
     "visit_basis": "Long historic facade and entrance courtyard take ten minutes outside; inside are the restored Labrouste and Oval reading rooms plus a museum of treasures, roughly an hour with entry.",
@@ -384,7 +392,9 @@
       ]
     ],
     "queue_basis": "Public access to the museum and gallery passes a reception and bag check that moves steadily, giving only a brief line at midday peak.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Galerie Vivienne",
@@ -486,7 +496,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A covered arcade open at both ends with no door or ticket; visitors stroll through with no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 08:30-20:30\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Square Louvois",
@@ -628,7 +645,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated public garden with closing bells; its hours are not confidently known, left unfiltered.",
+    "opening_hours_basis": "A fenced public garden with closing gates, so gated, but its exact hours are not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Small garden with benches and Visconti's four-rivers fountain to walk round and view, about 8 minutes; nothing to enter.",
@@ -641,7 +658,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A small free public garden entered through an open gate with no ticket or check, so no line exists.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Passage Choiseul",
@@ -698,7 +717,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated covered arcade with grilles; its opening hours are not confidently known, left unfiltered.",
+    "opening_hours_basis": "A covered arcade with grilles that close, so gated, but its exact hours are not confidently known; left unfiltered.",
     "place_category": "arcade",
     "visit_seconds_inside": null,
     "visit_basis": "Long covered arcade you walk through with shops and its literary history, about 10 minutes; the passage itself is the space.",
@@ -711,7 +730,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A covered public passage open at both ends with no door or ticket; you walk straight through.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Restaurant Drouant",
@@ -770,7 +791,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated restaurant entered by door; its service hours are not confidently known, left unfiltered.",
+    "opening_hours_basis": "A restaurant entered through a door, so gated, but its exact service hours are not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Restaurant facade on the small Place Gaillon viewed from outside for its Goncourt-prize history, a few minutes; entering is a full meal, not a tour stop.",
@@ -783,7 +804,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A restaurant with no public queue for entry; on a walking tour it is a facade passed by, with dining by reservation not a standing line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Harry's New York Bar",
@@ -838,7 +861,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated bar entered by door; its exact opening hours are not confidently known, left unfiltered.",
+    "opening_hours_basis": "A bar entered through a door, so gated, but its exact hours are not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 1500,
     "visit_basis": "Wood-panelled street frontage takes a few minutes outside; inside is a historic bar where you can sit for a Bloody Mary and take in the pennants and cellar piano, around 25 minutes.",
@@ -851,7 +874,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A bar you walk into off the street with no ticket or security screening; any wait is for a seat inside, not a line to enter.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Rue de la Paix",
@@ -991,7 +1016,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open shopping street whose value stands in the open on the public pavement; not gated.",
+    "opening_hours_basis": "An open public shopping street whose value stands in the open, so it is not gated.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Elegant shopping street of jewellers and couture houses running from the Opera to Place Vendome; walked end to end looking at the storefronts and the Vendome column vista, about 15-20 min, with no single interior that is the point of a visit.",
@@ -1004,6 +1029,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open shopping street with no gate or ticket; the whole value stands in the open, so there is no line to enter.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   }
 ]

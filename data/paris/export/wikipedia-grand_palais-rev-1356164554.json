@@ -401,6 +401,13 @@
       ]
     ],
     "queue_basis": "Entry to the exhibition hall runs through security bag checks and timed-ticket scanning at a controlled entrance, so the line builds midday during major shows; the numbers reflect a busy exhibition period and drop at opening.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30\"",
+      "at": "2026-09-07"
+    }
   }
 ]

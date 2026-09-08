@@ -203,7 +203,7 @@ TRUST_FIELDS = (
 #: must therefore satisfy the presence checks below. Same allowlist discipline
 #: as CITIES_WITH_OPENING_HOURS above: empty until the pass runs; adding a slug
 #: is the deliberate declaration, removing one to reach green is forbidden.
-CITIES_WITH_GATED_VERDICTS: tuple[str, ...] = ()
+CITIES_WITH_GATED_VERDICTS: tuple[str, ...] = ("paris",)
 
 
 def test_every_poi_records_a_gated_verdict() -> None:
@@ -242,6 +242,65 @@ def test_a_verified_row_is_structurally_complete() -> None:
                 offenders.append(f"{_name(poi)}: verified but carries no hours table")
         if offenders:
             _fail(city, "verified row(s) missing their trust record", offenders, REMEDY)
+
+
+def _gated_row(name: str, *, tier: int = 3, source: str = "osm", basis: str | None = None,
+               verified: dict | None = None) -> dict:
+    return {
+        "name": name,
+        "importance_tier": tier,
+        "gated": True,
+        "opening_hours": {d: [["09:00", "18:00"]] for d in DAY_KEYS},
+        "opening_hours_source": source,
+        "opening_hours_basis": basis
+        or 'Gated museum; transcribed from OSM tag "Mo-Su 09:00-18:00".',
+        "opening_hours_verified": verified,
+    }
+
+
+def test_tier0_corroboration_verifies_demotes_and_flags_conflicts() -> None:
+    """The ladder's deterministic rung: a live tag equal to the quoted one
+    tier-0-verifies; a differing live tag is a conflict AND demotes an already
+    verified row (the auto-demote rule); no live tag leaves the row queued."""
+    from scripts.poi_opening_hours import corroborate
+
+    agree = _gated_row("Agree Museum")
+    drifted = _gated_row(
+        "Drifted Museum",
+        verified={"tier": 2, "approver": "owner", "evidence": "x", "at": "2026-09-01"},
+    )
+    silent = _gated_row("Silent Chapel", source="ai",
+                        basis="Gated chapel; published pattern from the diocese site.")
+    live = {
+        "Agree Museum": "Mo-Su 09:00-18:00",
+        "Drifted Museum": "Mo-Su 10:00-17:00",
+    }
+    verified, conflicts, demoted = corroborate([agree, drifted, silent], live)
+    assert verified == ["Agree Museum"]
+    assert agree["opening_hours_verified"]["tier"] == 0
+    assert agree["opening_hours_verified"]["approver"] == "corroboration"
+    assert conflicts == ["Drifted Museum"]
+    assert demoted == ["Drifted Museum"]
+    assert drifted["opening_hours_verified"] is None, (
+        "a re-fetch that disagrees must demote — verified means currently believed true"
+    )
+    assert silent["opening_hours_verified"] is None, "no live tag decides nothing"
+
+
+def test_the_review_queue_orders_conflicts_then_gravity() -> None:
+    """The owner's minutes land where a wrong 'open' costs the most: conflicts
+    first, then importance_tier descending; verified rows are not queued."""
+    from scripts.poi_opening_hours import review_queue
+
+    small = _gated_row("A Small Place", tier=2)
+    marquee = _gated_row("The Marquee", tier=5)
+    conflicted = _gated_row("Conflicted", tier=1)
+    done = _gated_row(
+        "Already Verified",
+        verified={"tier": 0, "approver": "corroboration", "evidence": "x", "at": "2026-09-07"},
+    )
+    queue = review_queue([small, marquee, done, conflicted], ["Conflicted"])
+    assert [p["name"] for p in queue] == ["Conflicted", "The Marquee", "A Small Place"]
 
 
 def test_hop_1_the_corpus_query_asks_the_graph_for_the_trust_fields() -> None:

@@ -173,7 +173,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "Priced as a walk-by brasserie with no entry line — you pass its facade and plaques from the street, and any table wait is seating, not a queue to enter a monument.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Statue of Marshal Ney",
@@ -227,7 +229,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An outdoor bronze statue on a street corner viewed from the pavement — not gated.",
+    "opening_hours_basis": "An open-air monument on a street corner, visible from the pavement at any hour.",
     "place_category": "monument",
     "visit_seconds_inside": null,
     "visit_basis": "Single bronze statue on a plinth at a boulevard corner, seen from a couple of angles; nothing to enter.",
@@ -240,7 +242,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A public statue on a street corner with no interior and no admission line.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Fontaine des Quatre-Parties-du-Monde",
@@ -293,7 +297,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A monumental fountain in the Jardin Marco Polo, an open garden strip on Avenue de l'Observatoire that is not enclosed by closing gates — not gated.",
+    "opening_hours_basis": "A monumental fountain in the open Jardin Marco Polo, an unfenced public garden strip along the avenue.",
     "place_category": "monument",
     "visit_seconds_inside": null,
     "visit_basis": "Monumental Carpeaux fountain with the globe held by four figures and surrounding basin in a small garden, circled and studied from several sides; no interior.",
@@ -306,7 +310,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open-air fountain in a public garden on Avenue de l'Observatoire; nothing is ticketed or gated.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Rue Notre-Dame-des-Champs",
@@ -355,7 +361,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A public street viewed from the open pavement — not gated.",
+    "opening_hours_basis": "An open public street seen from the pavement, gated by nothing.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Long historic Left Bank street walked past several literary addresses and facades; nothing to enter.",
@@ -368,7 +374,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A public street walked past; there is no entrance or line.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Ecole Alsacienne",
@@ -417,7 +425,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A working private school entered only by pupils and staff, not a visitable venue; treated as walk-by from the street, not gated for tour purposes.",
+    "opening_hours_basis": "A working private school behind gates; a walk-by facade only, and its access hours are not confidently known — gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Working private school seen only from the street facade and gate; not open to visitors.",
@@ -430,7 +438,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working private school viewed only from the street; there is no visitor entrance or queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "College Stanislas",
@@ -477,7 +487,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A working private school not open to visitors, seen only from the street; not a gated visitor venue.",
+    "opening_hours_basis": "A working Catholic school behind gates; a walk-by facade only, and its access hours are not confidently known — gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Large Catholic school viewed from its street frontage and entrance; not open to visitors.",
@@ -490,7 +500,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A functioning school seen from outside; no public entry line exists.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "3 Rue Joseph-Bara",
@@ -543,7 +555,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A private residential/studio address viewed from the street — not a gated visitor attraction.",
+    "opening_hours_basis": "A private residential building's facade viewed from the street; not an enterable gated attraction.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Residential building facade associated with 1920s artists, read from the pavement with a plaque; not open to visitors.",
@@ -556,7 +568,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A private residential building admired from the street facade; there is no interior to enter and no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Musee Zadkine",
@@ -663,7 +677,14 @@
       ]
     ],
     "queue_basis": "A small free city studio-museum with one entrance and a bag check that can back up briefly in the afternoon, but the intimate size keeps any wait minor even though the group is only walking by.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Reid Hall",
@@ -716,7 +737,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A private university academic centre not open to general visitors, seen from the street — not a gated public venue.",
+    "opening_hours_basis": "An academic residence and university centre behind a gate; not a public attraction and its access hours are not confidently known — gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Academic residence seen from its street gate and courtyard entrance; not a public visitor interior.",
@@ -729,7 +750,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A university academic centre not open as a visitor attraction; seen from the street with no public queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Academie de la Grande-Chaumiere",
@@ -841,7 +864,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working art academy viewed from the street; there is no ticketed entry or line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo-Fr 14:00-15:30, We 19:00-20:00, Sa 13:30-14:30\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "26 Rue Vavin (Sauvage Building)",
@@ -890,7 +920,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A private apartment building admired from the street for its facade — not gated.",
+    "opening_hours_basis": "A residential building admired for its tiled facade from the street; not an enterable gated place.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Distinctive stepped white-and-blue tiled facade studied from the street across and along; a residential building with no public interior.",
@@ -903,7 +933,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A private tiled apartment building appreciated from the pavement; no interior access and no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "La Rotonde",
@@ -984,7 +1016,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A café that is gated (an entered venue with service), but its precise current hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A café is entered through a door so it is gated, but no hours tag is provided; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 2700,
     "visit_basis": "Historic Montparnasse café-brasserie; the outside terrace and facade take a few minutes, while sitting inside for a drink or meal in the belle-epoque room absorbs around 45 min.",
@@ -997,6 +1029,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A café you walk to and enter or seat at will; there is no security or ticket line to price before entering.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   }
 ]

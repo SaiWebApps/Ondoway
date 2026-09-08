@@ -385,6 +385,8 @@
       ]
     ],
     "queue_basis": "A free-entry department store with open doors, but bag checks and the wait for the small rooftop-terrace elevator create a minor moving line at busy afternoon hours.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   }
 ]

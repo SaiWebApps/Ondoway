@@ -271,14 +271,22 @@ def describe(poi: dict[str, Any], osm_hours: str | None) -> str:
 _TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 
-def validate(record: dict[str, Any], *, name: str) -> str | None:
+def validate(record: dict[str, Any], *, name: str, gated_only: bool = False) -> str | None:
     """Structural check on one record. Returns an error string, or None.
 
     Structural only, like the capacity pass: nobody reviewing this can check
     Paris facts, so these are the properties checkable without knowing the
     city — the same ones ``tests/test_poi_opening_hours.py`` asserts over the
     finished file.
+
+    ``gated_only``: the target POI already carries a table the write path
+    preserves, so the only thing this record contributes is the door verdict —
+    a sloppy table in the reply must not refuse the verdict it rides with.
     """
+    if gated_only:
+        if not isinstance(record.get("gated"), bool):
+            return f"{name}: gated is {record.get('gated')!r} — an explicit true/false is required"
+        return None
     hours = record.get("opening_hours")
     basis = record.get("opening_hours_basis")
 
@@ -337,6 +345,191 @@ def price_batch(
     return records_for_batch(text, batch)
 
 
+# ── the verification ladder (Docs/adr/0003) ────────────────────────────────
+#
+# "Verified" is inspectable per place, forever: a row's `opening_hours_verified`
+# records WHO or WHAT confirmed the table, at which TIER, on what EVIDENCE, and
+# WHEN. Three tiers:
+#   0 — corroboration: the live OSM tag still equals the tag the row's basis
+#       quotes, so the stored transcription describes today's published hours.
+#       Auto-passes with both observations recorded. Deterministic, $0.
+#   1 — a cited model judgement (the audited pass) — surfaces in the queue for
+#       the human's bulk approval rather than self-certifying at launch.
+#   2 — a human, through the interactive review below. The permanent floor:
+#       conflicts, low confidence, and the top-gravity places are reviewed one
+#       by one; the corroborated tail may be bulk-approved.
+# A re-fetch that DISAGREES with a verified row demotes it (the auto-demote
+# rule): the voice falls back to the could-not-confirm disclosure and the row
+# re-enters the queue at its tier.
+
+_OSM_TAG_IN_BASIS_RE = re.compile(r"OSM tag ['\"]([^'\"]+)['\"]")
+
+
+def _verified_record(tier: int, approver: str, evidence: str) -> dict[str, Any]:
+    from datetime import date
+
+    return {
+        "tier": tier,
+        "approver": approver,
+        "evidence": evidence,
+        "at": date.today().isoformat(),
+    }
+
+
+def quoted_osm_tag(poi: dict[str, Any]) -> str | None:
+    """The raw OSM tag an osm-sourced row's basis quotes, or None."""
+    if poi.get("opening_hours_source") != "osm":
+        return None
+    match = _OSM_TAG_IN_BASIS_RE.search(poi.get("opening_hours_basis") or "")
+    return match.group(1) if match else None
+
+
+def corroborate(
+    pois: list[dict[str, Any]], live_tags: dict[str, str]
+) -> tuple[list[str], list[str], list[str]]:
+    """Tier-0 pass over gated, table-carrying, unverified rows.
+
+    Returns (verified_names, conflict_names, demoted_names): a row whose live
+    tag equals its quoted tag is tier-0 verified; one whose live tag DIFFERS is
+    a conflict for the queue — and if it was already verified, it is demoted on
+    the spot (the auto-demote rule). A row with no live tag is left for the
+    queue untouched.
+    """
+    verified: list[str] = []
+    conflicts: list[str] = []
+    demoted: list[str] = []
+    for poi in pois:
+        if poi.get("gated") is not True or poi.get("opening_hours") is None:
+            continue
+        quoted = quoted_osm_tag(poi)
+        live = live_tags.get(poi.get("name", ""))
+        if quoted is None or live is None:
+            continue
+        if live == quoted:
+            if poi.get("opening_hours_verified") is None:
+                poi["opening_hours_verified"] = _verified_record(
+                    0,
+                    "corroboration",
+                    f'OSM tag unchanged since transcription: "{live}"',
+                )
+                verified.append(poi["name"])
+        else:
+            conflicts.append(poi["name"])
+            if poi.get("opening_hours_verified") is not None:
+                poi["opening_hours_verified"] = None
+                demoted.append(poi["name"])
+    return verified, conflicts, demoted
+
+
+def review_queue(
+    pois: list[dict[str, Any]], conflicts: list[str]
+) -> list[dict[str, Any]]:
+    """The rows still owing a human decision, in review order: conflicts first,
+    then by gravity (importance_tier) descending, then name — the owner's
+    minutes land where a wrong "open" costs the most."""
+    conflict_set = set(conflicts)
+    pending = [
+        p
+        for p in pois
+        if p.get("gated") is True
+        and p.get("opening_hours") is not None
+        and p.get("opening_hours_verified") is None
+    ]
+    return sorted(
+        pending,
+        key=lambda p: (
+            p.get("name") not in conflict_set,
+            -(p.get("importance_tier") or 1),
+            p.get("name", ""),
+        ),
+    )
+
+
+def _render_row(poi: dict[str, Any], live_tag: str | None) -> str:
+    hours = poi.get("opening_hours") or {}
+    closed = ", ".join(d for d in DAY_KEYS if hours.get(d) == []) or "none"
+    lines = [
+        f"  {poi.get('name')}  (tier {poi.get('importance_tier')}, "
+        f"source {poi.get('opening_hours_source')})",
+        f"    closed days: {closed}",
+        f"    basis: {poi.get('opening_hours_basis')}",
+    ]
+    if live_tag is not None:
+        lines.append(f'    live OSM tag now: "{live_tag}"')
+    return "\n".join(lines)
+
+
+def run_review(
+    pois: list[dict[str, Any]],
+    live_tags: dict[str, str],
+    conflicts: list[str],
+    *,
+    approver: str,
+    list_only: bool,
+) -> int:
+    """The interactive tier-2 session (the beat_dedup approve-loop precedent).
+
+    ``list_only`` renders the queue and decides nothing — the demoable,
+    TTY-free view. Decisions: [a]ccept (tier 2), [n]ull the table (hours
+    genuinely unknowable; fail-open honesty), [s]kip, [b]ulk-accept every
+    remaining UNCONTESTED osm-sourced row (one confirmation, each row still
+    stamped with this approver), [q]uit. Returns the number decided.
+    """
+    queue = review_queue(pois, conflicts)
+    print(f"\n  {len(queue)} row(s) in the review queue (conflicts first).")
+    if list_only:
+        for poi in queue:
+            print()
+            print(_render_row(poi, live_tags.get(poi.get("name", ""))))
+        return 0
+    decided = 0
+    index = 0
+    while index < len(queue):
+        poi = queue[index]
+        print()
+        print(_render_row(poi, live_tags.get(poi.get("name", ""))))
+        answer = input("  [a]ccept  [n]ull  [s]kip  [b]ulk-osm  [q]uit > ").strip().lower()
+        if answer == "a":
+            poi["opening_hours_verified"] = _verified_record(
+                2, approver, "reviewed in the hours session"
+            )
+            decided += 1
+            index += 1
+        elif answer == "n":
+            poi["opening_hours"] = None
+            poi["opening_hours_source"] = None
+            poi["opening_hours_verified"] = None
+            poi["opening_hours_basis"] = (
+                "Gated, but the published hours could not be confirmed in review; "
+                "left unfiltered."
+            )
+            decided += 1
+            index += 1
+        elif answer == "b":
+            conflict_set = set(conflicts)
+            bulk = [
+                p
+                for p in queue[index:]
+                if p.get("opening_hours_source") == "osm"
+                and p.get("name") not in conflict_set
+            ]
+            confirm = input(f"  accept {len(bulk)} uncontested OSM rows? [y/N] > ")
+            if confirm.strip().lower() == "y":
+                for p in bulk:
+                    p["opening_hours_verified"] = _verified_record(
+                        2, approver, "bulk-accepted: OSM-sourced, uncontested"
+                    )
+                decided += len(bulk)
+                queue = [p for p in queue if p.get("opening_hours_verified") is None]
+                index = 0
+        elif answer == "q":
+            break
+        else:
+            index += 1
+    print(f"\n  {decided} row(s) decided this session.")
+    return decided
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--slug", default="paris", help="City slug (default: paris)")
@@ -358,6 +551,22 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--model", default=DEFAULT_MODEL, help=f"Default: {DEFAULT_MODEL}")
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
+    parser.add_argument(
+        "--verify",
+        action="store_true",
+        help="Run the ladder instead of the pricing pass: tier-0 corroboration, "
+        "auto-demote on drift, then the review queue.",
+    )
+    parser.add_argument(
+        "--list-queue",
+        action="store_true",
+        help="With --verify: render the review queue and decide nothing.",
+    )
+    parser.add_argument(
+        "--approver",
+        default=None,
+        help="With --verify: who is deciding — stamped onto every tier-2 record.",
+    )
     args = parser.parse_args(argv)
 
     path = ROOT / "data" / args.slug / "poi-raw.json"
@@ -365,6 +574,37 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"✗ no POI file at {path}")
 
     pois, original = load_pois(path)
+
+    if args.verify:
+        from src import city_registry
+
+        print("  fetching OSM opening_hours (one Overpass query) …", flush=True)
+        elements = fetch_osm_hours(city_registry.bbox_map()[args.slug])
+        live_tags = match_osm(pois, elements)
+        verified, conflicts, demoted = corroborate(pois, live_tags)
+        print(
+            f"  tier-0: {len(verified)} corroborated, {len(conflicts)} conflict(s), "
+            f"{len(demoted)} demoted."
+        )
+        if not args.list_queue and not args.approver:
+            raise SystemExit(
+                "✗ --verify needs --approver <name> for the review session "
+                "(or --list-queue to render the queue and decide nothing)."
+            )
+        run_review(
+            pois,
+            live_tags,
+            conflicts,
+            approver=args.approver or "",
+            list_only=args.list_queue,
+        )
+        if args.dry_run:
+            print("\nDry run. Nothing written.")
+            return 0
+        dump_pois(path, pois, original)
+        print(f"\n✓ wrote verification state to {path.relative_to(ROOT)}")
+        print(f"  NEXT, AND MANDATORY: make sync-poi-exports SLUG={args.slug}")
+        return 0
     by_name = {p.get("name"): p for p in pois}
     todo = [p for p in pois if needs_values(p, rescore=args.rescore)]
     if args.limit is not None:
@@ -397,7 +637,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  processing {start + 1}-{start + len(batch)} of {len(todo)} …", flush=True)
         for record in price_batch(client, args.model, batch, osm_by_name):
             name = record.get("name", "(unnamed)")
-            problem = validate(record, name=name)
+            existing = by_name.get(name, {})
+            keeps_table = existing.get("opening_hours") is not None and not args.rescore
+            problem = validate(record, name=name, gated_only=keeps_table)
             if problem:
                 errors.append(problem)
                 failed_names.append(name)
@@ -415,7 +657,9 @@ def main(argv: list[str] | None = None) -> int:
             batch = retry[start : start + args.batch_size]
             for record in price_batch(client, args.model, batch, osm_by_name):
                 name = record.get("name", "(unnamed)")
-                problem = validate(record, name=name)
+                existing = by_name.get(name, {})
+                keeps_table = existing.get("opening_hours") is not None and not args.rescore
+                problem = validate(record, name=name, gated_only=keeps_table)
                 if problem:
                     errors.append(f"(after one retry) {problem}")
                     continue

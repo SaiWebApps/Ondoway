@@ -387,7 +387,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated public park with closing bells, but no OSM tag is given and I do not confidently know its seasonal hours; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A fenced public park with closing gates and seasonal hours; gated, hours not confidently known; left unfiltered.",
     "place_category": "park",
     "visit_seconds_inside": null,
     "visit_basis": "Romantic English-style park with winding paths, a Roman colonnade around an oval pond, a miniature pyramid and other follies to walk between; a full loop taking in the features runs about half an hour.",
@@ -412,7 +412,9 @@
         "indoor": false,
         "basis": "The Rotonde de Chartres gate on boulevard de Courcelles is the park's north entrance the beat seats its bench inside; a person stands at the wrought-iron and gold gates — the corpus's Musée Cernuschi record on the east edge calibrates the park's span from the west-side pin."
       }
-    ]
+    ],
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Musée Jacquemart-André",
@@ -490,7 +492,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated museum requiring a ticket, but its hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "A gated mansion museum with a ticket line; hours not confidently known; left unfiltered.",
     "place_category": "museum",
     "visit_seconds_inside": 5400,
     "visit_basis": "Second Empire mansion with Italian Renaissance and French 18th-century collections, grand staircase and tea salon; would absorb well over 90 minutes with audioguide, capped at the 90-minute tour maximum.",
@@ -508,7 +510,9 @@
       ]
     ],
     "queue_basis": "A popular mansion museum with a narrow entrance, bag check and ticket control feeding a limited-capacity house, so blockbuster exhibitions produce a real mid-day line that timed slots only partly relieve.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Musée de la Vie Romantique",
@@ -772,7 +776,14 @@
       ]
     ],
     "queue_basis": "A modest house-museum with a single reception desk and free permanent collection, so only a brief desk/bag-check line forms at busy midday hours.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:00, Mo off\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Square des Batignolles",
@@ -1088,7 +1099,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated public square with closing bells, but no OSM tag given and hours not confidently known; gated, hours not confidently known, left unfiltered.",
+    "opening_hours_basis": "A fenced Paris municipal park with closing gates; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "English-style neighbourhood park with a winding stream, small lake, grotto and mature trees; walking its curving paths and pausing at the water absorbs about half an hour, with nothing to enter.",
@@ -1101,7 +1112,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A public English-style garden with open gates you walk straight through — no admission and no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Square d'Orléans",
@@ -1214,7 +1227,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A private residential courtyard/passage viewed as an open urban space; not gated in the touring sense, so null.",
+    "opening_hours_basis": "A gated private residential courtyard off rue Taitbout; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Private residential courtyard-square off a passage, a paved court with a fountain and elegant facades to walk into and round; nothing public to enter.",
@@ -1227,7 +1240,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A private residential courtyard-garden you walk into through an open gate with no ticket or security, so there is no line to price.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Cathédrale Saint-Alexandre-Nevsky",
@@ -1303,7 +1318,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated church you enter; hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A church you enter with restricted visiting hours; gated, hours not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 1200,
     "visit_basis": "Russian Orthodox cathedral with five gilded onion domes; the exterior and forecourt reward a good look, and the icon-filled Byzantine-Muscovite interior takes around twenty minutes when open during limited visiting hours.",
@@ -1321,7 +1336,9 @@
       ]
     ],
     "queue_basis": "A working Orthodox cathedral with restricted visiting hours entered through one door; a small line can form only within its limited opening windows and is otherwise negligible.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Place Saint-Georges",
@@ -1343,7 +1360,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open public square whose value stands in the open from the pavement; not gated, so null.",
+    "opening_hours_basis": "An open public square with a central monument viewed from the pavement, never closed off.",
     "place_category": "square",
     "visit_seconds_inside": null,
     "visit_basis": "Small ornate 19th-century circle with a central monument and townhouse facades around it; you walk the ring reading the buildings, nothing to enter.",
@@ -1356,6 +1373,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open public square with no door and no interior; the whole value stands in the open, so there is nothing to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   }
 ]

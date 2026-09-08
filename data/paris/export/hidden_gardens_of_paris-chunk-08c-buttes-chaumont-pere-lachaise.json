@@ -442,7 +442,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A free public park with open gates you walk straight through — no ticket, no security, no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Apr,Sep 07:00-21:00; Oct-Mar 07:00-20:00; May-Aug 07:00-22:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Pere Lachaise Cemetery",
@@ -1206,7 +1213,9 @@
         "indoor": false,
         "basis": "The Messina Pieta with its standing Virgin is in the divisions north-east of the crematorium; a person stands before the white marble group to see why the pose is unusual. Twenty-five metres is the plot and its path, clear of the columbarium forecourt."
       }
-    ]
+    ],
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Parc de la Villette",
@@ -1293,7 +1302,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Large park whose grounds are open 24 hours in the open air, but with gated venues; no OSM tag and hours not confidently known, left unfiltered.",
+    "opening_hours_basis": "A large open urban park that is freely walkable and not enclosed by closing gates, so not gated.",
     "place_category": "park",
     "visit_seconds_inside": null,
     "visit_basis": "Very large modern park with canal, lawns, themed gardens and the red follies spread over a big area; crossing and exploring it usefully absorbs around 45 min, all outdoors.",
@@ -1306,7 +1315,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A large open urban park with multiple unbarred entrances and no ticket or bag check, so there is no line to enter the grounds.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Parc de Belleville",
@@ -1460,7 +1471,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A hillside public park entered freely through open gates with no admission or screening, so visitors walk straight in.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Jardin Naturel",
@@ -1538,7 +1551,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated municipal garden with closing gates, but no OSM tag and hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A fenced Paris public garden with closing gates; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Wild-style ecological garden with native plants and a pond near Pere-Lachaise; strolling its winding paths takes about 15 min, nothing to enter.",
@@ -1551,7 +1564,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A small public wild garden near Père-Lachaise entered through an open gate with no ticket or security check, so there is no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Cemetery of Eglise Saint-Germain de Charonne",
@@ -1637,7 +1652,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated cemetery with closing gates, but no OSM tag and hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A walled churchyard cemetery with closing gates; gated, hours not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": null,
     "visit_basis": "Small rural-feeling churchyard cemetery, one of the last village cemeteries in Paris, beside its hilltop church; walking the rows and steps takes about 15 min outdoors.",
@@ -1650,6 +1665,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A small parish churchyard cemetery entered freely from the street with no ticket desk or screening, so there is no line to stand in.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   }
 ]

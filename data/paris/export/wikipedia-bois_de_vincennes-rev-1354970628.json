@@ -390,7 +390,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A large public woodland park with open roads and paths that is freely walkable and effectively unenclosed, so not gated.",
+    "opening_hours_basis": "A vast open public woodland park crossed by public roads and paths at all hours, not enclosed by gates.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Vast 995-hectare woodland park with lakes, gardens and attractions spread far apart; even a focused walk through one section and along a lake absorbs well over an hour, and it functions as an outdoor setting with no single interior.",
@@ -403,6 +403,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A vast open public park with no enclosing gate to queue at; you simply walk in from any edge.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   }
 ]

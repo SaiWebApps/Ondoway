@@ -399,7 +399,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated municipal square with railings and closing hours, but those hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "Gated public square with railings and closing hours, but hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Small pedestrian square off rue de Sèvres, a quiet planted dead-end to walk into and sit; no description given, priced conservatively as a minor square, nothing to enter.",
@@ -412,7 +412,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open public square entered freely from the street with no ticket or door, so no line forms.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Square Santiago du Chili",
@@ -676,7 +678,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated municipal square with railings and closing hours, but those hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "Gated municipal square with railings and closing hours, but hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Small city square near the Invalides; no description given, priced conservatively as a minor planted square walked through, nothing to enter.",
@@ -689,7 +691,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open public square with an open gate and no ticket, so there is nothing to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Champ de Mars",
@@ -983,7 +987,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open public greenspace whose value stands in the open with no gates, and the OSM tag '24/7' confirms it is not gated.",
+    "opening_hours_basis": "An open public greenspace whose value stands in the open; OSM tag '24/7' confirms it is not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Vast formal greenspace stretching from the Ecole Militaire to the Eiffel Tower, with long tree-lined lawns and walks between viewpoints; crossing it and pausing for the tower view absorbs over half an hour.",
@@ -1008,7 +1012,9 @@
         "indoor": false,
         "basis": "The long axis of lawn between the tree lines is where the Revolution's festivals were staged and where a person stands back to look at the tower framed by the park. Half the footprint: you take the lawn in from anywhere along its middle, not from one blade of grass."
       }
-    ]
+    ],
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Eiffel Tower",
@@ -1237,7 +1243,9 @@
         "indoor": false,
         "basis": "The esplanade under the four feet is where the queues form and where a person stands to look straight up through the lattice; the corpus's queue and security lines are about this esplanade. Half the footprint, as a place you look at demands."
       }
-    ]
+    ],
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Théâtre du Vieux-Colombier",
@@ -1331,7 +1339,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated theatre (Comédie-Française's second venue) whose performance/box-office hours I do not confidently know; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A theatre (Comédie-Française's second house) entered through doors and a box office; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 5400,
     "visit_basis": "Historic Comédie-Française annexe theatre; the facade takes a couple of minutes to see, while attending a performance inside fills a full evening, capped at the 90-minute tour maximum.",
@@ -1349,7 +1357,9 @@
       ]
     ],
     "queue_basis": "A working theatre where any wait is a ticket-check and bag glance clustered just before a performance, not a standing queue, so it peaks briefly around curtain time and is otherwise negligible.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Jardin Atlantique",
@@ -1643,6 +1653,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A public rooftop garden atop Gare Montparnasse entered freely via lift or stairs with no ticket or screening, so there is no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   }
 ]

@@ -178,6 +178,13 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A walk-by abbey church attached to a military hospital, viewed from the exterior with no general ticketed entry line to stand in.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"closed\"",
+      "at": "2026-09-07"
+    }
   }
 ]

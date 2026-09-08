@@ -236,7 +236,14 @@
       ]
     ],
     "queue_basis": "A single ticket desk and bag check at the front portico creates a minor line at busy midday hours that clears quickly at opening or late in the day.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 10:00-18:00; Apr 1-Sep 30: Mo-Su 10:00-18:30; Jan 1,May 1,Dec 25: off\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Bibliotheque Sainte-Genevieve",
@@ -290,7 +297,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated public/university library with a reading-room entry, but its exact current hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "A library entered through a door with reader access rules; gated, hours not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 1500,
     "visit_basis": "Library on Place du Pantheon whose Labrouste iron-framed reading room is the draw; entry needs a reader pass and check-in, so priced conservatively at around 25 min inside for those admitted.",
@@ -308,7 +315,9 @@
       ]
     ],
     "queue_basis": "A working university library where access is controlled by a single entry desk with bag check and reader registration, producing a modest line at morning opening that eases through the day.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Saint-Etienne-du-Mont",
@@ -448,7 +457,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A free parish church with an open door and no admission control, so visitors enter without stopping and there is nothing to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo 06:30-19:30; Tu-Fr 08:45-19:45; We 08:45-22:00; Sa 08:45-12:00,14:00-19:45; Su 08:45-12:15,14:30-19:45\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Lycee Henri IV",
@@ -500,7 +516,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Working secondary school not open to the public; gated but no general visiting hours exist, so left unfiltered.",
+    "opening_hours_basis": "An active secondary school behind gates, not freely open to the public; gated, hours not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": null,
     "visit_basis": "Elite school in a former abbey with the Clovis Tower visible over the walls, viewed from the street; an active lycee closed to the public, so no normal entry.",
@@ -513,7 +529,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working secondary school closed to casual visitors and seen only from the street or via rare booked tours, so there is no walk-up admission line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Place de la Contrescarpe",
@@ -562,7 +580,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open public square whose value stands in the open, so not gated.",
+    "opening_hours_basis": "An open public square whose whole value stands in the open pavement, never locked.",
     "place_category": "square",
     "visit_seconds_inside": null,
     "visit_basis": "Small historic village square with cafe terraces, a central fountain and the head of rue Mouffetard; you circle it, read the plaques and settle onto the setting, nothing to enter.",
@@ -575,7 +593,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open public square with no door and no ticket; the whole value stands in the open air with nothing to wait for.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Rue Mouffetard",
@@ -622,7 +642,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open public market street whose value stands in the open with no door or gate, so it is not gated.",
+    "opening_hours_basis": "Open public market street whose value stands in the open with no gate or door, so opening_hours is null.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Winding medieval market street of open-air stalls, shops and cafes stretching several blocks; walking its length and pausing at stalls fills half an hour, with nothing single to enter.",
@@ -635,7 +655,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open market street with no door or ticket; the whole value is walked through in the open air, so there is no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Eglise Saint-Medard",
@@ -766,7 +788,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door and free entry; visitors walk straight in without any security screening or ticket desk.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Tu-Sa 09:00-19:30; Su 09:00-20:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Grand Mosque of Paris",
@@ -820,7 +849,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated site with ticketed visiting hours, but no OSM tag supplied and its exact hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "Gated mosque with ticketed visit; hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 2400,
     "visit_basis": "Spanish-Moorish complex with mosaic prayer hall, planted courtyards, and a tea salon; the interior gardens and tea room absorb about 40 min, the tiled exterior a few minutes.",
@@ -838,7 +867,9 @@
       ]
     ],
     "queue_basis": "The visitor areas require a small paid ticket at a single desk that forms a modest, moving line, peaking on weekend afternoons when tourists and tea-salon visitors overlap.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Jardin des Plantes",
@@ -914,9 +945,52 @@
       }
     ],
     "poi_role": "stop",
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "A walled botanical garden with closing gates (gated), but its precise seasonal opening times vary and are not confidently known; left unfiltered.",
+    "opening_hours": {
+      "mon": [
+        [
+          "08:00",
+          "17:30"
+        ]
+      ],
+      "tue": [
+        [
+          "08:00",
+          "17:30"
+        ]
+      ],
+      "wed": [
+        [
+          "08:00",
+          "17:30"
+        ]
+      ],
+      "thu": [
+        [
+          "08:00",
+          "17:30"
+        ]
+      ],
+      "fri": [
+        [
+          "08:00",
+          "17:30"
+        ]
+      ],
+      "sat": [
+        [
+          "08:00",
+          "17:30"
+        ]
+      ],
+      "sun": [
+        [
+          "08:00",
+          "17:30"
+        ]
+      ]
+    },
+    "opening_hours_source": "ai",
+    "opening_hours_basis": "A walled botanical garden with closing times; hours reflect the garden's published winter pattern of roughly 08:00–17:30 daily, extending later in summer.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Large formal botanical garden with tree-lined alleys, alpine and rose gardens and museum buildings along its edges; walking the full length and side gardens absorbs around 45 min, treated here as an open garden with its museums as separate entries.",
@@ -929,7 +1003,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "The botanical garden itself has free open gates you walk through without stopping; the paid museum and zoo inside have their own desks, but entering the garden has no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Arenes de Lutece",
@@ -980,7 +1056,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open Roman amphitheatre ruin within a public garden; though it has posted gate hours they are not confidently known, and its value is largely open-air — left unfiltered.",
+    "opening_hours_basis": "A walled Roman amphitheatre park with gates that close at dusk; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Open Gallo-Roman amphitheatre ruin you walk down into and around the arena floor and tiers; a free open space, nothing enclosed to enter.",
@@ -993,7 +1069,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "The Roman arena is a free public open space entered through an unstaffed passage with no ticket or check, so there is no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Institut du Monde Arabe",
@@ -1045,7 +1123,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Marked walk_by_only and admired for its facade from the street, so treated as not gated.",
+    "opening_hours_basis": "A ticketed cultural building and museum; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Jean Nouvel's celebrated glass-and-steel building with the photo-sensitive mashrabiya facade; walk-by only, you stand and study the light-diaphragm wall and river frontage from outside.",
@@ -1058,7 +1136,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "This stop is walk-by only to see Nouvel's photo-sensitive facade from outside, so no interior entry line is priced.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "La Tour d'Argent",
@@ -1109,7 +1189,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated restaurant requiring reservation; its precise service hours are not confidently known, left unfiltered.",
+    "opening_hours_basis": "A restaurant entered through its door and reservation; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Historic restaurant building on the quai; as a stop you view the exterior and the Notre-Dame vista from its street, dining is not part of a walking tour.",
@@ -1122,7 +1202,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A restaurant entered by reservation, not a queued attraction; there is no public standing line outside to price.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Verlaine's Garret",
@@ -1171,7 +1253,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A private room seen only from the street as a walk_by_only marker, so not gated.",
+    "opening_hours_basis": "A private residence viewed from the street as a plaque; its value is the facade seen from the open pavement.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Private house at 39 rue Descartes with a commemorative plaque marking where Verlaine died; a brief pause at the facade, no interior access.",
@@ -1184,7 +1266,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A private residence viewed only from the street as a plaque-marked facade, with no interior to enter and thus no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "College des Bernardins",
@@ -1291,6 +1375,13 @@
       ]
     ],
     "queue_basis": "A cultural center with a single reception desk and light bag check that moves quickly; the small afternoon flow to the Cistercian nave rarely holds more than a few people.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 10:00-18:00; Su 14:00-18:00\"",
+      "at": "2026-09-07"
+    }
   }
 ]

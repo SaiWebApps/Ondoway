@@ -169,9 +169,52 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "An open pocket-park at the tip of the island with the OSM tag '24/7' indicating no gated closure.",
+    "opening_hours": {
+      "mon": [
+        [
+          "00:00",
+          "24:00"
+        ]
+      ],
+      "tue": [
+        [
+          "00:00",
+          "24:00"
+        ]
+      ],
+      "wed": [
+        [
+          "00:00",
+          "24:00"
+        ]
+      ],
+      "thu": [
+        [
+          "00:00",
+          "24:00"
+        ]
+      ],
+      "fri": [
+        [
+          "00:00",
+          "24:00"
+        ]
+      ],
+      "sat": [
+        [
+          "00:00",
+          "24:00"
+        ]
+      ],
+      "sun": [
+        [
+          "00:00",
+          "24:00"
+        ]
+      ]
+    },
+    "opening_hours_source": "osm",
+    "opening_hours_basis": "Gated pocket-park with closing bells; OSM tag '24/7' transcribed faithfully.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Triangular riverside pocket-park at the island's tip, seven meters below street level, with benches, trees and downstream views under Pont Neuf; you descend, walk to the point and stand looking at the river, nothing to enter.",
@@ -184,7 +227,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open public pocket-park with a free open gate at the island's tip; visitors walk straight down the steps with no door, ticket, or screening.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"24/7\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Place Dauphine",
@@ -272,7 +322,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open triangular public square on the Île de la Cité, not gated.",
+    "opening_hours_basis": "An open triangular public square whose value stands in the open, so not gated.",
     "place_category": "square",
     "visit_seconds_inside": null,
     "visit_basis": "Quiet triangular square of 1607 townhouses with trees and cafes on the Île de la Cité; an enclosed square to walk through and pause in, nothing to enter.",
@@ -285,7 +335,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A triangular open square on the Île de la Cité entered freely from the street, with no gate or ticket and therefore no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Pont des Arts",
@@ -383,7 +435,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A pedestrian bridge open in the air and crossable at any hour, so not gated.",
+    "opening_hours_basis": "A public pedestrian bridge open at all times, viewed in the open with no gate.",
     "place_category": "bridge",
     "visit_seconds_inside": null,
     "visit_basis": "Pedestrian bridge with wooden deck and open river views of the Louvre and Institut de France; crossing slowly, stopping mid-span for the views both ways absorbs around 15 min, and there is nothing to enter.",
@@ -396,7 +448,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A pedestrian bridge you walk straight onto from either bank — no door, no ticket, no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Voltaire Statue (Square Honoré-Champion)",
@@ -483,7 +537,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Statue in a small public square viewed in the open; hours of the square not confidently known and it is walk-by only, treated as not gated.",
+    "opening_hours_basis": "Statue in a walled municipal square with closing bells; gated, hours not confidently known; left unfiltered.",
     "place_category": "monument",
     "visit_seconds_inside": null,
     "visit_basis": "Single stone statue of Voltaire in a small square; a walk-by stop where you read the base and look at the figure, nothing to enter.",
@@ -496,7 +550,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An outdoor statue in an open square passed on the walk; there is no door, ticket, or line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Square Jean XXIII",
@@ -764,7 +820,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated municipal cathedral garden with closing bells, but its hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "Gated cathedral garden with railings and closing hours, but hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Cathedral garden along the south flank of Notre-Dame with lawns, a fountain and the best close view of the apse and flying buttresses, walked through between viewpoints, nothing to enter.",
@@ -777,7 +833,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open cathedral garden entered through a gate off the street with no ticket or screening, so no line forms.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Square Rene Viviani",
@@ -1000,7 +1058,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated municipal square with railings and closing hours, but those hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "Gated public square with railings and closing bells, but hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Small Left Bank square with the oldest tree in Paris, a bronze fountain and views across to Notre-Dame, a few benches and paths to walk, nothing to enter.",
@@ -1013,7 +1071,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A small open public square with an open gate and no ticket, so there is no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Shakespeare and Company",
@@ -1171,7 +1231,9 @@
       ]
     ],
     "queue_basis": "A tiny bookshop that caps how many people fit inside and meters entry through one narrow door, so a short line forms at midday tourist peaks but clears quickly at opening; no security screening.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Memorial des Martyrs de la Deportation",
@@ -1316,7 +1378,9 @@
       ]
     ],
     "queue_basis": "The memorial is free but entered by a narrow staircase that admits only a few visitors at once, so a small line can form at midday while it is otherwise walk-straight-in.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel-Dieu",
@@ -1406,7 +1470,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A working hospital rather than a visitor attraction; not a gated tourist experience, so no visiting hours apply.",
+    "opening_hours_basis": "An active hospital with a public inner courtyard/chapel behind entrances; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Working hospital with a long facade on the Notre-Dame parvis and an inner courtyard glimpse; it is not a visitor interior, so priced outside only.",
@@ -1419,7 +1483,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working hospital, not a ticketed attraction; a tourist stops to look at the facade and courtyard from the street and never joins any admission line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Pont Neuf",
@@ -1500,7 +1566,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Open public bridge with no gate, always accessible, not gated.",
+    "opening_hours_basis": "Open street bridge crossable at any hour, not gated.",
     "place_category": "bridge",
     "visit_seconds_inside": null,
     "visit_basis": "Oldest bridge in Paris with 381 carved grotesque faces and river views from its bays; a destination to walk across and pause on but nothing to enter.",
@@ -1537,6 +1603,8 @@
         "indoor": false,
         "basis": "The bronze horseman stands on the terre-plein at the bridge's middle, directly above the steps down to the square du Vert-Galant — one standing position for both named spots, and a person looks at the statue from the platform around it."
       }
-    ]
+    ],
+    "gated": false,
+    "opening_hours_verified": null
   }
 ]

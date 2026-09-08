@@ -188,7 +188,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An active parish church with an open door and free entry that visitors walk straight into, so there is no ticket desk or security to stand in.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo,Su 09:30-20:00; Tu-Fr 07:30-20:00; Sa 08:30-20:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Place de Furstemberg",
@@ -303,7 +310,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open public square whose value stands entirely on the pavement, so it is not gated; the Musée Delacroix inside is a separate place.",
+    "opening_hours_basis": "An open public square whose whole value stands in the open on the pavement, not gated.",
     "place_category": "square",
     "visit_seconds_inside": 1500,
     "visit_basis": "Small enclosed square with a central lamppost and paulownia trees to stand in and circle; the Musée Delacroix at no. 6 is a compact studio-and-apartment museum with a small garden, roughly 20-25 min inside.",
@@ -316,7 +323,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open public square with no door and no gate; the Musée Delacroix on it has its own small desk, but the square itself is walked into freely with no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "L'Hotel Paris",
@@ -368,7 +377,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A working luxury hotel, not a gated visitor attraction with public hours; its lobby is not a ticketed experience.",
+    "opening_hours_basis": "A working luxury hotel viewed and passed as a facade on the street; not a gated visitor attraction.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "A working luxury hotel facade viewed from the narrow street where Oscar Wilde died; a few minutes to read the plaque and look up, nothing publicly enterable as a visit.",
@@ -381,7 +390,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working luxury hotel viewed from the street on a walking tour; there is no public ticketed entry and no queue to stand in outside.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Rue Visconti",
@@ -581,7 +592,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A public street open to the air at all times, so it is not gated.",
+    "opening_hours_basis": "A public street open to the air at all times, not gated.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Narrow historic alley you walk end to end reading plaques for Racine, Balzac and Delacroix; the value is entirely along its length, nothing to enter.",
@@ -594,7 +605,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A narrow open alley you walk down; it has no door, no ticket, and no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Ecole des Beaux-Arts",
@@ -683,7 +696,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A working art school whose public admission hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A fine arts school behind gates with restricted access; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Fine arts school with a courtyard gate and historic facades on rue Bonaparte; walk-by only, time to look through the gates at the former convent buildings.",
@@ -696,7 +709,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "Walked by only; the art school's courtyard and street facade are viewed without any ticketed entry or line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Les Deux Magots",
@@ -750,7 +765,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Marked walk_by_only and treated as a streetside landmark café viewed from the pavement, so it is not gated for this tour.",
+    "opening_hours_basis": "Listed as walk-by-only, an iconic cafe experienced from the square rather than entered on this tour, treated as not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Famous cafe terrace on the square; walk-by only, a few minutes to take in the frontage and terrace from the pavement.",
@@ -763,7 +778,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "Walked by only and in any case a café with no security or ticketed entry; there is no queue to price for a tour stop.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel d'York",
@@ -818,7 +835,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A former hotel now marking a historic site, viewed from the pavement as a facade, so it is not gated.",
+    "opening_hours_basis": "A former hotel building noted for its historic facade viewed from the pavement, not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Facade of the building where the 1783 peace treaty was signed; a few minutes to read the plaque and take in the street, nothing to enter as a visit.",
@@ -831,7 +848,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A historic building marked by a plaque and seen from the street; there is no interior visit and no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Natalie Barney Salon",
@@ -885,7 +904,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A former private residence viewed from the street as a facade, not a gated attraction, so hours are null.",
+    "opening_hours_basis": "A former private home viewed as a facade from the street, walk-by-only; not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Private house frontage at 20 rue Jacob; walk-by only, a few minutes to read the story and glimpse the courtyard, the Temple de l'Amitie is not publicly accessible.",
@@ -898,7 +917,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A private former residence seen only from the street with no public interior; there is nothing to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel d'Angleterre Paris",
@@ -946,7 +967,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A working hotel viewed as a streetside facade, not a gated public attraction, so hours are null.",
+    "opening_hours_basis": "A working hotel seen from the street as a facade, walk-by-only; not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Working hotel facade on a quiet street where Hemingway first lodged; walk-by only, a couple of minutes to read the plaque.",
@@ -959,7 +980,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working hotel viewed from the street with no public ticketed entry and no line to stand in.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Rue de Buci Market",
@@ -1007,7 +1030,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open-air street market along the pavement with no enclosing gate; specific stall hours are not confidently known, so left as null and not gated.",
+    "opening_hours_basis": "An open-air street market along the pavement with no gate or door between street and stalls, not gated.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Bustling open street market of stalls and cafe-lined blocks to walk slowly and browse; the whole experience is outdoors along the street, nothing to enter.",
@@ -1020,6 +1043,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open-air street market you stroll through; there is no gate, ticket, or security, so no line to enter.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   }
 ]

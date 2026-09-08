@@ -347,7 +347,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated cabaret with ticketed evening shows; exact performance/access hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "Ticketed cabaret behind a door; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Cabaret facade with its red windmill photographed from the street; there is no daytime interior to tour, evening shows are ticketed sit-down events not a walking-tour stop.",
@@ -360,6 +360,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "This is a cabaret with timed evening show admission, not a walk-in attraction, so a daytime walking-tour stop views the facade from the open street with no line to stand in.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   }
 ]

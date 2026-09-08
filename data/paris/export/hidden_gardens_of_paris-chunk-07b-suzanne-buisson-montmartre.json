@@ -305,7 +305,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated Paris municipal garden with closing bells, but its hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A fenced Paris municipal garden with closing gates, but its specific hours are not confidently known; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Quiet Montmartre garden with tree-lined paths, benches and a statue of Saint Denis; an enclosed green square to walk through and sit in, nothing to enter.",
@@ -318,7 +318,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A public neighborhood garden entered through an open gate with no ticket or screening, so no wait exists before entering.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Musée de Montmartre",
@@ -828,7 +830,14 @@
       ]
     ],
     "queue_basis": "A small museum with a single ticket desk and no airport-style security, so a modest line forms at midday but stays minor at its worst.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"10:00-19:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Square Carpeaux",
@@ -993,7 +1002,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated Paris municipal square with closing bells, but its hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A fenced Paris municipal square with closing gates, but its specific hours are not confidently known; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Small neighbourhood garden square with paths and benches; a place to walk through and pause, nothing to enter.",
@@ -1006,7 +1015,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A public garden with an open gate and no ticket or check, so there is no line before entering.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Square Léon-Serpollet",
@@ -1095,7 +1106,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated Paris municipal square with closing bells, but its hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A fenced Paris municipal square with closing gates, but its specific hours are not confidently known; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Local garden square with lawns, trees and seating; a modest green space to cross and rest in, nothing to enter.",
@@ -1108,7 +1119,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A public neighborhood garden entered freely through an open gate, so no queue exists.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Parc Turlure",
@@ -1206,7 +1219,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated Paris municipal park with closing bells, but its hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A fenced Paris municipal park with closing gates, but its specific hours are not confidently known; gated, hours not confidently known; left unfiltered.",
     "place_category": "park",
     "visit_seconds_inside": null,
     "visit_basis": "Terraced hillside park behind Sacré-Cœur with sloping lawns, a pergola and views over the city; you climb the terraces and stop at the viewpoints, nothing to enter.",
@@ -1219,7 +1232,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A public hillside park with open gates and no ticket or security, so there is nothing to wait in.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Square Louise-Michel",
@@ -1372,7 +1387,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "The open terraced garden below Sacré-Cœur is entered freely from the street with no gate or check, so no line exists.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Square des Abbesses",
@@ -1480,7 +1497,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated Paris municipal square with closing bells, but its hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A fenced Paris municipal square with closing gates, but its specific hours are not confidently known; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Small Montmartre square by the Art Nouveau metro entrance and the church, with the wall of love nearby; you circle the space taking in the metro canopy and facades, nothing entered here.",
@@ -1493,7 +1510,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A small public square-garden entered through an open gate with no ticket, so there is no queue to price.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Montmartre Cemetery",
@@ -1647,7 +1666,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A free public cemetery entered through open gates with no ticketing or bag check, so there is no line to join.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Lapin Agile",
@@ -1721,6 +1742,13 @@
       ]
     ],
     "queue_basis": "A small cabaret admitted by a single door at the start of an evening show, so a brief cluster forms at doors-open time but there is no security screening or all-day line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Tu,Th-Sa 21:00-01:00\"",
+      "at": "2026-09-07"
+    }
   }
 ]

@@ -420,7 +420,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A public neighbourhood garden square with open gates and no ticket or bag check, so visitors walk straight in with no wait.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"sunrise-sunset\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Square de la Roquette",
@@ -687,7 +694,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated public garden with closing hours, but no OSM tag and hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A fenced Paris public square with closing gates; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Small local square-garden with lawns and trees on the site of a former prison; a walk-through and a pause take about 15 min, nothing to enter.",
@@ -700,7 +707,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A public garden square entered freely through open gates with no screening or admission, so there is no queue to stand in.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Canal Saint-Martin",
@@ -806,7 +815,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Open waterway with public towpaths and bridges viewed from the pavement, so it is not gated.",
+    "opening_hours_basis": "Open urban waterway with public towpaths and bridges viewed freely from the pavement, not gated.",
     "place_category": "bridge",
     "visit_seconds_inside": null,
     "visit_basis": "A 4.5-km tree-lined waterway with iron footbridges and locks; an engaged visitor strolls the towpaths, crosses several bridges and watches a lock cycle, easily filling forty minutes, with nothing to enter.",
@@ -819,7 +828,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open waterway with footbridges and towpaths that are walked straight onto, with no gate or ticket, so there is no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Pere Lachaise Cemetery",
@@ -1078,7 +1089,9 @@
         "indoor": false,
         "basis": "The Messina Pieta with its standing Virgin is in the divisions north-east of the crematorium; a person stands before the white marble group to see why the pose is unusual. Twenty-five metres is the plot and its path, clear of the columbarium forecourt."
       }
-    ]
+    ],
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Eglise Notre-Dame de la Croix",
@@ -1224,7 +1237,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A parish church in Ménilmontant with an open door you walk straight through, with no ticket desk or security screening, so there is no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 08:30-19:30\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "La Maison des Metallos",
@@ -1310,7 +1330,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated cultural centre with doors, but no OSM tag and hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A cultural venue entered through doors; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 900,
     "visit_basis": "Former metalworkers' union hall, now a cultural centre; the industrial facade takes several minutes and the interior exhibition hall about 15 min when something is showing.",
@@ -1323,6 +1343,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A public cultural centre and event venue entered freely from the street outside of ticketed shows, with no standing security line, so it is priced as no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   }
 ]

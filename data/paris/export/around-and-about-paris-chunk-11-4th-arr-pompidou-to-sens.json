@@ -123,7 +123,9 @@
       ]
     ],
     "queue_basis": "Security screening and ticket gates at the entrance form a modest line at busy afternoon hours, short at opening and near closing.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Atelier Brancusi",
@@ -225,7 +227,14 @@
       ]
     ],
     "queue_basis": "A small free-admission studio with a single controlled entrance and light bag check that forms only a brief line at busy afternoon hours.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo,We,Th,Fr,Sa,Su 14:00-18:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Stravinsky Fountain",
@@ -274,7 +283,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open public fountain and square with no barrier, so it is not gated.",
+    "opening_hours_basis": "An open public fountain and square, always visible from the pavement.",
     "place_category": "monument",
     "visit_seconds_inside": null,
     "visit_basis": "Open water basin filled with sixteen playful kinetic and colourful sculptures to walk round and watch turn and spray; a stop entirely outside with nothing to enter.",
@@ -287,7 +296,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open public fountain in a square with no door and no line to enter.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Eglise Saint-Merri",
@@ -433,7 +444,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A Gothic parish church with an open door you walk through without a ticket desk or security screening.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"09:00-18:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Rue de la Verrerie",
@@ -479,7 +497,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A public medieval street whose value is in the open, so it is not gated.",
+    "opening_hours_basis": "An open medieval street, always accessible from the pavement.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Medieval Marais street to walk along for its old frontages and the playing-card tale; value is entirely along the street with nothing to enter.",
@@ -492,7 +510,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open medieval street with no interior and no line to enter.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel de Ville",
@@ -591,7 +611,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "The City Hall interior is only open by occasional booked exhibition or event, so a walking-tour stop views the facade and forecourt from the open square with no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 10:00-19:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "BHV (Bazar de l'Hotel de Ville)",
@@ -693,7 +720,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A department store with wide open doors and multiple entrances that visitors walk straight into without a queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 10:00-19:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Eglise des Billettes",
@@ -762,7 +796,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A church and cloister you enter, hence gated, but its hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "A church and cloister you enter through a door; gated, hours not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 1100,
     "visit_basis": "Street facade and the small surviving medieval cloister beside the church, plus a plain single-nave interior; together about 18 minutes if open.",
@@ -775,7 +809,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A church with an open door you walk through without a ticket desk or security line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Fondation Azzedine Alaia",
@@ -816,7 +852,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A foundation gallery that is gated, but as it opens only for specific exhibitions its hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "A foundation gallery entered through a door with exhibition-dependent hours; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 1500,
     "visit_basis": "Small Marais foundation and exhibition space; when a fashion show is on the gallery absorbs about 25 minutes, otherwise it is a facade to note in passing.",
@@ -829,7 +865,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A walk-by foundation viewed from the street; no public entry queue applies to this stop.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Half-Timbered Houses (Rue Francois-Miron)",
@@ -873,7 +911,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Historic house facades viewed from the pavement, so it is not gated.",
+    "opening_hours_basis": "Historic house facades viewed from the open street, always visible from the pavement.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Two rare securely-dated 14th-century timber-framed houses to stand before and study the overhanging storeys and beams; the interest is entirely the exterior.",
@@ -886,7 +924,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "Historic house facades viewed from the open street with no interior entry to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel de Beauvais",
@@ -989,7 +1029,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A Marais mansion (now administrative offices) viewed from the street as a walk-by, so it is not gated for the visitor.",
+    "opening_hours_basis": "A historic mansion behind a portal (now an administrative court); gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Grand 17th-century mansion facade and entrance archway giving a glimpse of the courtyard; an administrative building not generally open, so no interior time.",
@@ -1002,7 +1042,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A mansion now housing administrative offices, seen as a walk-by from the street with no visitor entry line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Memorial de la Shoah",
@@ -1105,7 +1147,9 @@
       ]
     ],
     "queue_basis": "Entry is free but airport-style security screening at this memorial creates a real bag-check line that stays modest at busy hours.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel Chalons de Luxembourg",
@@ -1151,7 +1195,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A private Marais mansion viewed from the street for its portal, so it is not gated.",
+    "opening_hours_basis": "A private Marais mansion behind its portal; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Notable carved lion's-head portal and street frontage of a private 17th-century mansion to look at from the pavement; not open inside.",
@@ -1164,7 +1208,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A private Marais mansion viewed from the street as a walk-by; there is no public entry to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Eglise Saint-Gervais-Saint-Protais",
@@ -1293,7 +1339,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated church (you enter the sanctuary), but its confessional-community hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "A church one enters through a door; gated, hours not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 1200,
     "visit_basis": "Church with Paris's first classical facade to study from the small square outside, and a large Gothic interior with the Couperin organ, typical visit around 20 min.",
@@ -1306,7 +1352,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door and free entry: worshippers and visitors walk straight in with no ticket desk or security screening, so no line forms.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel d'Aumont",
@@ -1354,7 +1402,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Grand mansion now housing an administrative court and marked walk_by_only, not a public venue; value from the street facade, not gated.",
+    "opening_hours_basis": "Marked walk-by only; a mansion viewed from the street (now housing an administrative court), its facade seen from the open pavement, so not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Grand 17th-century mansion viewed from the street, a facade and courtyard gate to take in; interiors are municipal offices and not open, so nothing to enter.",
@@ -1367,6 +1415,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A walk-by mansion now housing administrative offices with no public interior visit, so there is no entry line to stand in on the street outside.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   }
 ]

@@ -45,7 +45,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A street fountain viewed in the open from the pavement, not gated.",
+    "opening_hours_basis": "A street fountain viewed from the open pavement; not gated.",
     "place_category": "monument",
     "visit_seconds_inside": null,
     "visit_basis": "Neoclassical Napoleonic-era fountain with a relief of Mars and Hygeia set into a street corner; a freestanding monument you view and walk around, nothing to enter.",
@@ -58,7 +58,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open street fountain with no interior and no door; the whole value stands in the open, so there is nothing to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Église Saint-Pierre du Gros Caillou",
@@ -109,7 +111,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A parish church one enters (gated), but its specific opening hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A parish church you enter; gated, hours not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 1000,
     "visit_basis": "Modest 1822 neoclassical parish church on a market street; a plain single-nave interior with side altars, about 15 minutes to walk through with no queue.",
@@ -122,7 +124,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door and free entry walked straight into; no ticket desk or screening creates a line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Rue Cler",
@@ -168,7 +172,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open pedestrian market street whose value stands in the open, not gated.",
+    "opening_hours_basis": "An open pedestrian market street whose value stands in the open; not gated.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Pedestrianised market street lined with produce stalls, cheesemongers, cafés and shopfronts; its whole value is strolling its length and pausing at displays, which easily absorbs twenty minutes.",
@@ -181,7 +185,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A pedestrian market street with no door or gate; the whole experience is in the open air with nothing to enter.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Ecole Militaire",
@@ -232,7 +238,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An active military academy (gated) not generally open to the public with no confidently known visitor hours; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "An active military academy behind walls, not generally open to visitors; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Monumental 18th-century military academy by Gabriel with a domed central pavilion and long facade facing the Champ de Mars; still an active military school, so viewed from the parade-ground front and forecourt, no public interior.",
@@ -245,7 +251,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working military academy closed to general public entry and viewed from the exterior; there is no visitor line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "UNESCO Headquarters Paris",
@@ -296,7 +304,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A working headquarters building (gated), enterable only by appointment/guided visit with no confidently known regular public hours; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A headquarters building entered only by prior arrangement/guided visit; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Y-shaped 1958 Modernist building with sculptures and a Noguchi Japanese garden; the exterior, forecourt art and garden fill about twelve minutes, and interior access requires arranged visits rather than casual entry.",
@@ -314,7 +322,9 @@
       ]
     ],
     "queue_basis": "Public access requires advance registration and passes an airport-style security check at the gate, but visitor volume is low, so the screening line stays minor even at its busiest.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Champ de Mars",
@@ -482,7 +492,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open public greenspace whose value stands in the open with no gates, and the OSM tag '24/7' confirms it is not gated.",
+    "opening_hours_basis": "An open public greenspace whose value stands in the open; OSM tag '24/7' confirms it is not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Vast formal greenspace stretching from the Ecole Militaire to the Eiffel Tower, with long tree-lined lawns and walks between viewpoints; crossing it and pausing for the tower view absorbs over half an hour.",
@@ -507,7 +517,9 @@
         "indoor": false,
         "basis": "The long axis of lawn between the tree lines is where the Revolution's festivals were staged and where a person stands back to look at the tower framed by the park. Half the footprint: you take the lawn in from anywhere along its middle, not from one blade of grass."
       }
-    ]
+    ],
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Les Invalides",
@@ -826,7 +838,9 @@
       ]
     ],
     "queue_basis": "The wide complex has a ticket desk and light bag check for Napoleon's tomb and the Army Museum, producing only a minor midday line that clears early or late.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "29 Avenue Rapp",
@@ -875,7 +889,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A private apartment building's ornate facade admired from the pavement, so it is not gated.",
+    "opening_hours_basis": "Art Nouveau building facade admired from the street (walk-by only), no admission gate, so not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "A single ornate 1901 Art Nouveau facade dense with carvings and a famous doorway; an engaged visitor spends around twelve minutes tracing the detail, with no public interior.",
@@ -888,7 +902,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An ornate apartment facade admired from the pavement with no public interior, so there is no queue to enter.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Eiffel Tower",
@@ -1061,6 +1077,8 @@
         "indoor": false,
         "basis": "The esplanade under the four feet is where the queues form and where a person stands to look straight up through the lattice; the corpus's queue and security lines are about this esplanade. Half the footprint, as a place you look at demands."
       }
-    ]
+    ],
+    "gated": true,
+    "opening_hours_verified": null
   }
 ]

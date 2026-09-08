@@ -52,7 +52,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open Seine island crossed by public streets and bridges, valued in the open air with no gate between street and experience.",
+    "opening_hours_basis": "An open Seine island of streets, quays and squares whose value stands in the open, not behind any gate.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Whole Seine island of quays, squares and lanes to walk across between Notre-Dame and Pont Neuf; a setting explored on foot with no single interior to enter here.",
@@ -65,7 +65,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "This is an open island of streets, bridges, and squares with no gated interior, so there is no line to enter it.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Jardin des Tuileries",
@@ -226,7 +228,14 @@
         "indoor": false,
         "basis": "The Carrousel garden fills the eastern end between the Arc du Carrousel and the Tuileries proper; a person stands on its lawns under the arch's sightline, four hundred metres east of the mid-garden pin."
       }
-    ]
+    ],
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 07:30-21:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Les Halles",
@@ -387,7 +396,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "As a site/setting it refers to a public area; the surface square and gardens are open-air with no single gate.",
+    "opening_hours_basis": "Named as a historic market site and present-day district setting rather than an entered venue, so treated as an open urban setting and not gated.",
     "place_category": "market",
     "visit_seconds_inside": 2400,
     "visit_basis": "Site of the former market, now the Forum des Halles with its Canopy roof and surrounding gardens; the mall interior and levels absorb around 40 min if entered.",
@@ -400,7 +409,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "The Forum des Halles is an open shopping centre with multiple free entrances and no admission control, so nobody waits to enter.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Louvre Museum",
@@ -796,7 +807,9 @@
         "indoor": false,
         "basis": "A person stands in the western half of the great square courtyard, the palace's four façades rising on every side; the Cour Carrée chapters are told looking at them from inside the square, not from the pyramid court beyond the Pavillon de l'Horloge."
       }
-    ]
+    ],
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Paris Catacombs",
@@ -849,7 +862,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated underground ossuary with ticket line but no OSM tag and hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "Gated ticketed underground ossuary; hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 5400,
     "visit_basis": "Long underground tunnel route through the bone-lined ossuary of six million dead; the walk plus a notoriously long ticket queue would absorb over two hours, capped at the 90-minute tour maximum.",
@@ -867,7 +880,9 @@
       ]
     ],
     "queue_basis": "Occupancy underground is capped to a few hundred people at once, so entry moves at a trickle and the wall-standing wait can be twenty minutes or three hours with no reliable way to predict which, making any bound untrustworthy.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Pavillon de Flore",
@@ -918,7 +933,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Louvre wing viewed from the exterior as a walk-by, not gated as an independent entry.",
+    "opening_hours_basis": "A Louvre wing seen only from the outside on this walk_by_only stop, its facade stands in the open, not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Ornate southwest wing of the Louvre Palace seen from the riverside and Tuileries; a facade you pause at briefly, no separate entrance for it.",
@@ -931,7 +946,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "This is a walk-by-only wing of the Louvre Palace viewed from the street or riverside with no separate entrance, so there is nothing to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Place Vendome",
@@ -982,7 +999,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Open public square with its column and buildings viewed in the open air, so it is not gated.",
+    "opening_hours_basis": "Open octagonal public square with a column viewed freely from the pavement, not gated.",
     "place_category": "square",
     "visit_seconds_inside": null,
     "visit_basis": "Octagonal 17th-century square with a tall bronze column at its centre ringed by uniform facades; you walk between vantage points around the column and along the arcades for about half an hour, with nothing to enter.",
@@ -995,7 +1012,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open public square walked into freely from surrounding streets with no gate or ticket, so there is no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Saint-Eustache",
@@ -1211,6 +1230,13 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A large free-entry church near Les Halles with open doors and no ticket or security check, so entry is immediate and no line forms.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo-Fr 09:30-19:00; Sa 10:00-19:00; Su 09:00-19:00\"",
+      "at": "2026-09-07"
+    }
   }
 ]

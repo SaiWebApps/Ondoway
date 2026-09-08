@@ -339,7 +339,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated opera house entered by ticket, but performance/visit hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "A gated opera house entered for performances or tours; hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 3600,
     "visit_basis": "Large modern opera house; the sweeping glass exterior takes several minutes, a guided backstage-and-auditorium tour runs about an hour.",
@@ -357,6 +357,8 @@
       ]
     ],
     "queue_basis": "An opera house entered by ticket-holders with a bag check before a performance, so a line builds in the pre-show window but not during ordinary daytime hours.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   }
 ]

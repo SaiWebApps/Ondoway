@@ -260,7 +260,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated Paris square with closing gates, but no OSM tag given and hours not confidently known; gated, hours not confidently known, left unfiltered.",
+    "opening_hours_basis": "A fenced Paris municipal square with closing gates; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Small enclosed Marais garden square with lawn, sculpture fragments and archaeological stonework; a short circuit and pause on a bench, with nothing to enter.",
@@ -273,7 +273,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A small free public square entered through an open gate; there is no ticket or security and thus no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Square Léopold-Achille",
@@ -354,7 +356,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated Paris square with closing gates, but no OSM tag given and hours not confidently known; gated, hours not confidently known, left unfiltered.",
+    "opening_hours_basis": "A fenced Paris municipal square with closing gates; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Small local Marais garden square with lawns, trees and benches; a brief stroll and sit, with nothing to enter.",
@@ -367,7 +369,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A small free neighborhood garden with an open gate you walk straight into — no line to enter.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Clos des Blancs-Manteaux",
@@ -467,7 +471,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated garden/vineyard plot with closing gates, but no OSM tag given and hours not confidently known; gated, hours not confidently known, left unfiltered.",
+    "opening_hours_basis": "An enclosed public garden with closing gates; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Small community garden and green plot in the Marais; a short look through the railings or a quick walk of the compact grounds, with nothing to enter.",
@@ -480,7 +484,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A small open community garden/green space with no ticket or controlled entry, so there is no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Square du Temple",
@@ -972,7 +978,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A free public garden entered through an open gate with no ticket or bag check, so there is no line to price.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"sunrise-sunset\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Marche des Enfants Rouges",
@@ -1048,7 +1061,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated covered market hall with gates that close, but no OSM tag supplied and its exact stall hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "Gated covered market hall with gates; hours not confidently known; left unfiltered.",
     "place_category": "market",
     "visit_seconds_inside": 1800,
     "visit_basis": "Oldest covered market in Paris, a compact hall of food stalls and eateries to wander and sample; browsing and a bite absorbs about 30 min, the entrance a few minutes.",
@@ -1061,7 +1074,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A covered public market with open entrances and no admission control, so visitors walk straight in and there is no line to enter.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Musee des Arts et Metiers",
@@ -1207,6 +1222,13 @@
       ]
     ],
     "queue_basis": "A mid-sized ticketed museum with a bag check and ticket desk that rarely backs up; the line is minor and moves, peaking only midday when school and tour groups arrive.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Tu-Th 10:00-18:00; Fr 10:00-21:00; Sa-Su 10:00-18:00\"",
+      "at": "2026-09-07"
+    }
   }
 ]

@@ -191,7 +191,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A public square viewed from the open street with a sculpture at its entrance; not gated.",
+    "opening_hours_basis": "Open public square commemorating the Boucicauts; its value stands in the open on the pavement, not gated.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Small public square with lawns, benches and a sculpture of Madame Boucicaut at the entrance; you walk in, round the monument and out, nothing to enter.",
@@ -204,7 +204,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open public square with no gate and no interior to enter, so there is no line to stand in at any hour.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Jardin de la Clinique Saint-Jean de Dieu",
@@ -408,7 +410,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated garden accessible only during hospital visiting hours; no OSM tag and hours not confidently known, left unfiltered.",
+    "opening_hours_basis": "A garden behind a hospital accessible only during visiting hours through the grounds; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Concealed formal rose garden behind a hospital, dense with varieties in season; finding it and walking the beds absorbs about 15 min, all outdoors.",
@@ -421,7 +423,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A hidden hospital-grounds rose garden entered during visiting hours with no ticket desk or security line, so there is no queue to stand in.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Musee Rodin",
@@ -804,7 +808,14 @@
       ]
     ],
     "queue_basis": "A single ticket desk and bag check at the Hotel Biron gate create a modest wait at peak hours that stays manageable.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:30\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Le Bon Marché",
@@ -885,9 +896,52 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "Gated department store but no OSM tag and hours not confidently known; left unfiltered.",
+    "opening_hours": {
+      "mon": [
+        [
+          "10:00",
+          "19:45"
+        ]
+      ],
+      "tue": [
+        [
+          "10:00",
+          "19:45"
+        ]
+      ],
+      "wed": [
+        [
+          "10:00",
+          "19:45"
+        ]
+      ],
+      "thu": [
+        [
+          "10:00",
+          "19:45"
+        ]
+      ],
+      "fri": [
+        [
+          "10:00",
+          "20:45"
+        ]
+      ],
+      "sat": [
+        [
+          "10:00",
+          "20:00"
+        ]
+      ],
+      "sun": [
+        [
+          "11:00",
+          "19:45"
+        ]
+      ]
+    },
+    "opening_hours_source": "ai",
+    "opening_hours_basis": "A department store behind doors; hours from Le Bon Marché's own published store pattern.",
     "place_category": "other",
     "visit_seconds_inside": 3600,
     "visit_basis": "Grand 19th-century department store with a famous iron-and-glass atrium, escalator well and multiple floors including the Grande Epicerie food hall; an engaged wander through the architecture and displays fills an hour.",
@@ -900,7 +954,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A department store with wide free-entry doors and no ticket or security line to enter; any waiting happens at checkout tills inside, not at the threshold.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel Lutetia",
@@ -1006,7 +1062,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated luxury hotel whose interior access is controlled; hours not confidently known, left unfiltered.",
+    "opening_hours_basis": "A luxury hotel whose interior is entered through doors; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 900,
     "visit_basis": "Ornate Art Nouveau hotel facade with a memorial plaque worth about 12 min outside; the public lobby and bar can be stepped into for roughly 15 min, but it is a working hotel not a visitor site.",
@@ -1019,7 +1075,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working luxury hotel walked past or entered through its lobby doors with no admission line or screening, so there is no queue to price.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Jardin Catherine-Laboure",
@@ -1101,7 +1159,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated garden with closing gates, but no OSM tag and hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A walled convent garden with closing gates; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Walled convent garden with vegetable plots, flower beds, lawns and a vine-covered arbor; strolling and sitting absorbs around 18 min, all outdoors.",
@@ -1114,7 +1172,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A convent-grounds public garden on rue de Babylone entered freely through an open gate with no ticket or bag check, so there is no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Eglise Sainte-Clotilde",
@@ -1203,7 +1263,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A church one enters (gated), but its specific opening hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A church you enter; gated, hours not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 1100,
     "visit_basis": "19th-century neo-Gothic church with twin spires on a garden square; interior has a tall nave, stained glass and the organ associated with César Franck, about 18 minutes to see.",
@@ -1216,6 +1276,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A neo-Gothic parish church with an open door and free entry; visitors walk straight in without a ticket or screening.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   }
 ]

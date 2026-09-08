@@ -320,7 +320,14 @@
       ]
     ],
     "queue_basis": "A small free city studio-museum with one entrance and a bag check that can back up briefly in the afternoon, but the intimate size keeps any wait minor even though the group is only walking by.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Musee Bourdelle",
@@ -451,7 +458,14 @@
       ]
     ],
     "queue_basis": "A small sculpture museum in the artist's former studio with a modest reception desk and light bag check; free permanent collection keeps the line short, peaking to about 10 minutes midday and a few minutes otherwise.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Tu-Su 10:00-18:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "La Closerie des Lilas",
@@ -593,7 +607,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "Priced as a walk-by brasserie with no entry line — you pass its facade and plaques from the street, and any table wait is seating, not a queue to enter a monument.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Montparnasse Cemetery",
@@ -734,7 +750,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "Free open gates and no entry control mean visitors pass straight in with no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Parc Georges-Brassens",
@@ -1219,7 +1237,9 @@
         "indoor": false,
         "basis": "The old horse market's pavilions stand just inside the rue des Morillons entrance at the park's north edge; the weekend book dealers set their tables under them, and a person stands beneath the iron roofs to look along the rows."
       }
-    ]
+    ],
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "La Ruche",
@@ -1241,7 +1261,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An artists' residence/studio complex not open to the public; role is walk-by only and it is viewed from outside, so treated as not-gated for routing but hours not applicable.",
+    "opening_hours_basis": "An artists' residence and studio complex whose access is restricted; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Historic circular artists' studio building viewed from outside; the round beehive-shaped structure and its garden gate can be seen in a few minutes, and the working studios inside are not normally open to the public.",
@@ -1254,7 +1274,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "This is an artists' residence complex viewed from the outside only on a walk-by; there is no public entrance line to stand in.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Parc Montsouris",
@@ -1629,7 +1651,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A large public park with open gates you walk straight through — no ticket, no security, no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Villa Santos-Dumont",
@@ -1705,7 +1729,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A private residential lane/street viewed from the pavement, not gated, so opening_hours is null.",
+    "opening_hours_basis": "A private residential street/impasse whose value is seen in the open from the pavement, not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Quiet private residential cul-de-sac lined with artists' houses and greenery; you stroll its short length looking at the villas, with nothing to enter.",
@@ -1718,7 +1742,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A private residential lane admired from the street; there is no door or ticket and thus no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Butte-aux-Cailles",
@@ -1742,7 +1768,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open neighbourhood of public streets and cobblestone lanes with no gate between street and experience.",
+    "opening_hours_basis": "An open hilltop neighbourhood of public streets and murals whose value stands in the open, so not gated.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Village-like hilltop quarter of cobbled streets and Miss Tic murals to wander through; a walk-through neighbourhood, nothing single to enter on a tour.",
@@ -1755,6 +1781,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open hilltop neighbourhood of cobbled streets and murals with no door or gate to enter, so there is nothing to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   }
 ]

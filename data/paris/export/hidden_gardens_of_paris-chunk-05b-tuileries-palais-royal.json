@@ -724,7 +724,14 @@
         "indoor": false,
         "basis": "The Carrousel garden fills the eastern end between the Arc du Carrousel and the Tuileries proper; a person stands on its lawns under the arch's sightline, four hundred metres east of the mid-garden pin."
       }
-    ]
+    ],
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 07:30-21:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Palais-Royal",
@@ -1116,7 +1123,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated garden with closing bells and seasonally varying hours; precise current schedule not confidently known; left unfiltered.",
+    "opening_hours_basis": "Enclosed arcaded garden with gates that close at night; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Arcaded gardens with the Buren striped columns, fountains and colonnaded walks to stroll through; the whole value is the open courtyard and garden, the palace itself is government offices not open.",
@@ -1165,7 +1172,9 @@
         "indoor": false,
         "basis": "The east gallery runs the garden's whole Valois side; its shopfront arcade is where the gallery's own beat stands a person, and the radius spans the colonnade without reaching the garden's centre lawn or the west side."
       }
-    ]
+    ],
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Saint-Germain-l'Auxerrois",
@@ -1323,7 +1332,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A church you enter, hence gated, but its hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "A parish church one enters through a door; gated, hours not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 1100,
     "visit_basis": "Royal parish church with Gothic porch opposite the Louvre; interior with nave, stained glass and royal pew absorbs the usual parish-church visit of about 18 min.",
@@ -1336,7 +1345,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working parish church with an open door you walk straight through without ticket or check, so there is no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Eglise Saint-Roch",
@@ -1419,7 +1430,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated church one enters; its opening hours are not confidently known, left unfiltered.",
+    "opening_hours_basis": "A church you enter through doors, so gated, but its precise opening hours are not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 1100,
     "visit_basis": "Long Baroque facade on rue Saint-Honore with its steps takes a few minutes outside; inside is a large church with a deep nave, several chapels and notable tombs, roughly 18 minutes.",
@@ -1432,7 +1443,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door and no ticket or security screening; worshippers and visitors walk straight in without stopping.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Notre-Dame-des-Victoires",
@@ -1517,7 +1530,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated basilica one enters; its opening hours are not confidently known, left unfiltered.",
+    "opening_hours_basis": "A basilica you enter through doors, so gated, but its precise hours are not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 1100,
     "visit_basis": "Modest facade on a small square takes a few minutes; inside is a basilica famous for its walls covered in thousands of votive plaques plus Lully's tomb, roughly 18 minutes.",
@@ -1530,7 +1543,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A basilica with an open door and no ticket or security check, entered directly without stopping.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Galerie Vivienne",
@@ -1664,7 +1679,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A covered arcade open at both ends with no door or ticket; visitors stroll through with no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 08:30-20:30\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Comedie-Francaise",
@@ -1752,7 +1774,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated national theatre entered by ticket; performance and box-office hours not confidently known, left unfiltered.",
+    "opening_hours_basis": "A working national theatre entered by ticket/gate, but performance and box-office hours vary; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 5400,
     "visit_basis": "Grand facade on Place Colette worth a few minutes outside; inside is a working theatre normally entered only for a performance, which fills an entire evening, so the interior is capped at the 90-minute tour maximum.",
@@ -1765,7 +1787,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working theatre entered on a ticket for a performance rather than by a walk-in queue; on a walking tour it is a facade you pass with no standing line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Galignani",
@@ -1787,7 +1811,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated bookshop with a door, but no OSM tag and hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A bookshop entered through a door; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 1200,
     "visit_basis": "Historic English-language bookshop on rue de Rivoli with a classic wood-panelled storefront; the exterior is a few minutes and browsing the interior shelves absorbs about 20 min.",
@@ -1800,7 +1824,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A rue de Rivoli bookshop entered straight from the street with no admission or screening, so there is no queue to enter.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Angelina Paris",
@@ -1822,7 +1848,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated tearoom/café that requires entry, but I do not confidently know its precise hours; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A tearoom/salon entered through a door; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 3600,
     "visit_basis": "Belle Époque tea room on Rue de Rivoli famous for hot chocolate and pastries; the frontage is brief, but sitting for a table, ordering and eating typically runs an hour including the usual queue.",
@@ -1840,6 +1866,8 @@
       ]
     ],
     "queue_basis": "This is a small famous tea room with limited table seating and no reservations for walk-ins, so patrons queue on the pavement for a table through the midday and afternoon tea rush, with only a short wait at opening.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   }
 ]

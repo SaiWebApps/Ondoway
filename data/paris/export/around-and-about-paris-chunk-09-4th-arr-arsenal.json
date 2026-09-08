@@ -130,7 +130,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated cathedral you enter, but post-reopening visiting hours are not confidently known to me; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "Gated cathedral you enter through doors; hours since the 2024 reopening not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 3000,
     "visit_basis": "The west facade with its portals and towers, plus the parvis and views from around the Ile de la Cite, absorb 25 minutes; the interior nave, chancel, rose windows and side chapels take around 35 minutes plus an entry queue since reopening.",
@@ -194,7 +194,9 @@
         "indoor": false,
         "basis": "Square Jean-XXIII is the strip you STAND in to look back along the flying buttresses; the view needs the length of the garden, not its gate. Fifty-five metres covers the walk without reaching the parvis (W7.11 defect 16)."
       }
-    ]
+    ],
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Ile de la Cite",
@@ -241,7 +243,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open Seine island crossed by public streets and bridges, valued in the open air with no gate between street and experience.",
+    "opening_hours_basis": "An open Seine island of streets, quays and squares whose value stands in the open, not behind any gate.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Whole Seine island of quays, squares and lanes to walk across between Notre-Dame and Pont Neuf; a setting explored on foot with no single interior to enter here.",
@@ -254,7 +256,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "This is an open island of streets, bridges, and squares with no gated interior, so there is no line to enter it.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Ile Saint-Louis",
@@ -297,7 +301,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open residential island of public streets and quays, not gated; its value stands in the open.",
+    "opening_hours_basis": "A residential Seine island of open streets and quays freely accessible from the street at any hour.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Small residential island with one main street of 17th-century townhouses, quays and an ice cream stop; the value is walking it, nothing single to enter.",
@@ -310,7 +314,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A residential island of open streets and shopfronts with no controlled entrance, so nothing is queued before you walk onto it.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel de Ville",
@@ -574,7 +580,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "The City Hall interior is only open by occasional booked exhibition or event, so a walking-tour stop views the facade and forecourt from the open square with no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo-Sa 10:00-19:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Place des Vosges",
@@ -709,7 +722,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Open public square accessible from the pavement, not gated.",
+    "opening_hours_basis": "Open public square whose value stands in the open on the pavement, not gated.",
     "place_category": "square",
     "visit_seconds_inside": null,
     "visit_basis": "Oldest planned square in Paris, 36 uniform brick houses framing a central garden you walk round under the arcades; nothing general to enter, Hugo's house is a separate stop.",
@@ -734,7 +747,9 @@
         "indoor": false,
         "basis": "The fenced garden inside the arcades is where the corpus sends a person to find a bench near the children's play area and watch; you stand or sit among the lawns and fountains, not under the arcades. Thirty metres round the centre covers the benches and fountains and stops short of the arcade walks."
       }
-    ]
+    ],
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Centre Pompidou",
@@ -865,7 +880,9 @@
       ]
     ],
     "queue_basis": "Security screening and ticket gates at the entrance form a modest line at busy afternoon hours, short at opening and near closing.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Bibliotheque de l'Arsenal",
@@ -1054,7 +1071,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A historic library with controlled reading-room access, so gated, but its hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "A historic research library behind doors, gated, but hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 1500,
     "visit_basis": "Historic library in the former Royal Arsenal with Louis XIII period rooms; a short look at the exterior, and access to the show rooms and reading room takes about 25 minutes when open to visitors.",
@@ -1072,7 +1089,9 @@
       ]
     ],
     "queue_basis": "A working historic library where entry means a reading-room reception or a small guided-visit desk rather than mass ticketing, so at most a few people wait ahead at busy afternoon hours.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Pavillon de l'Arsenal",
@@ -1120,7 +1139,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated exhibition hall, but its hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "An exhibition hall entered through doors, gated, but hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 2400,
     "visit_basis": "19th-century glass-and-steel hall housing Paris urbanism exhibits including a large city model; brief exterior look, and the free galleries absorb around 40 minutes for an engaged visitor.",
@@ -1138,6 +1157,8 @@
       ]
     ],
     "queue_basis": "A free urbanism exhibition hall with a single entrance and occasional bag check; a brief line can form on busy weekend afternoons but it clears quickly.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   }
 ]

@@ -305,6 +305,13 @@
       ]
     ],
     "queue_basis": "A free-entry department store whose doors carry a bag check that can back up briefly at peak shopping hours but otherwise flows straight through.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 10:00-20:00\"",
+      "at": "2026-09-07"
+    }
   }
 ]

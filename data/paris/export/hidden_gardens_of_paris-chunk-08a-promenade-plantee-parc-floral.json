@@ -284,7 +284,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open elevated park entered by ramps and staircases with no gate, ticket, or bag check, so there is no line to price.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Viaduc des Arts",
@@ -384,7 +386,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "The viaduct's arcade of shopfronts lines a public street and is walked past in the open, not gated as a whole.",
+    "opening_hours_basis": "A street-level row of shopfronts beneath a viaduct viewed from the open pavement, not gated as a whole.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Row of arched brick railway-viaduct bays converted into artisan workshops with glass fronts; you walk the length looking into the studios, which absorbs around twenty minutes at street level.",
@@ -397,7 +399,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A row of street-level artisan shops beneath a viaduct, entered freely from the pavement with no single controlled door.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Bois de Vincennes",
@@ -537,7 +541,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A large public woodland park with open roads and paths that is freely walkable and effectively unenclosed, so not gated.",
+    "opening_hours_basis": "A vast open public woodland park crossed by public roads and paths at all hours, not enclosed by gates.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Vast 995-hectare woodland park with lakes, gardens and attractions spread far apart; even a focused walk through one section and along a lake absorbs well over an hour, and it functions as an outdoor setting with no single interior.",
@@ -550,7 +554,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A vast open public park with no enclosing gate to queue at; you simply walk in from any edge.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Chateau de Vincennes",
@@ -711,7 +717,9 @@
       ]
     ],
     "queue_basis": "A ticketed medieval fortress with a single ticket desk and bag check that draws a modest midday line in summer, shrinking to a few people at opening; the monument is not high-volume enough for a substantial queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Bibliotheque Francois Mitterrand",
@@ -737,7 +745,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated national library with controlled access, but no OSM tag supplied and its reading-room hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "Gated national library requiring entry, but hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 1800,
     "visit_basis": "Four glass book-shaped towers around a sunken forest esplanade you walk across and around; the vast exterior plaza absorbs most of the value, with limited reading-room and exhibition access inside worth about half an hour.",
@@ -750,7 +758,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "The library's esplanade and glass-tower plaza are open public space you walk straight onto with no ticket or door, so there is no line to stand in before reaching the value of the stop.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Parc Floral",
@@ -898,7 +908,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated ticketed botanical park in the Bois de Vincennes with seasonal hours not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A ticketed/gated botanical park in the Bois de Vincennes with seasonal closing hours not confidently known; gated, hours not confidently known; left unfiltered.",
     "place_category": "park",
     "visit_seconds_inside": null,
     "visit_basis": "Large botanical park in the Bois de Vincennes with themed flower gardens, ponds and wide walks; a big open space you spend real time crossing between sections, nothing to enter.",
@@ -916,7 +926,9 @@
       ]
     ],
     "queue_basis": "A public park that charges a small entry fee on event days handled at a ticket booth, so a brief line can form at midday but never a substantial one.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Jardin de Reuilly",
@@ -994,7 +1006,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated Paris municipal garden with closing bells, but its hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A fenced Paris municipal garden with closing gates, but its specific hours are not confidently known; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Sizeable neighbourhood park with a large central lawn, a footbridge and planted borders on the old railway line; an open green space to walk and sit in, nothing to enter.",
@@ -1007,7 +1019,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A public garden entered freely through open gates with no ticket or security, so no wait exists.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Bistro du Peintre",
@@ -1153,7 +1167,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A bistro passed on the walk and only viewed from the street in this role; treated as not gated for touring, so null.",
+    "opening_hours_basis": "A bistro passed on the walk, viewed from the pavement as a facade; not entered as a gated stop for this tour.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Art Nouveau corner bistro with a decorated facade and terrace; from the street you take in the frontage in a few minutes, and it is a café not a visitable interior for a tour.",
@@ -1166,7 +1180,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A street-front bistro walked past on the tour, not a ticketed interior, so there is no entry line to price.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Square Raoul Nordling",
@@ -1254,7 +1270,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated Paris municipal square with closing bells, but its hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A fenced Paris municipal square with closing gates, but its specific hours are not confidently known; gated, hours not confidently known; left unfiltered.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "Small public garden square with paths and benches; a modest green pause point to walk through, nothing to enter.",
@@ -1267,7 +1283,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A small public garden entered through an open gate with no ticket or check, so no queue exists.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Parc de Bercy",
@@ -1432,7 +1450,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A gated Paris municipal park with closing bells, but its hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A fenced Paris municipal park with closing gates, but its specific seasonal hours are not confidently known; gated, hours not confidently known; left unfiltered.",
     "place_category": "park",
     "visit_seconds_inside": null,
     "visit_basis": "Large riverside park in three linked sections with vineyards, gardens, ponds and lawns and old wine-warehouse tracks; a broad space you spend half an hour walking through, nothing to enter.",
@@ -1445,7 +1463,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A large public park with multiple open entrances and no ticket or security, so there is nothing to wait in before entering.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Cinematheque Française",
@@ -1538,7 +1558,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A ticketed cinema and museum institution whose hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A ticketed film museum and cinema; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 4200,
     "visit_basis": "Interior film museum in the Frank Gehry building with permanent collection of cinema apparatus, costumes and exhibits over several floors, roughly 60-70 min plus a ticket queue; the sculptural exterior adds a short outside stop.",
@@ -1556,7 +1576,9 @@
       ]
     ],
     "queue_basis": "A film archive and museum with a ticket desk and light bag check but no airport-style screening, so only a minor line forms before screenings and exhibitions.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Buddhist Temple Lac Daumesnil",
@@ -1634,7 +1656,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated Buddhist temple (Grande Pagode de Vincennes) requiring entry through a door; hours not confidently known, left unfiltered.",
+    "opening_hours_basis": "A Buddhist temple (Grande Pagode de Vincennes) entered through a door; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 1200,
     "visit_basis": "Buddhist temple pavilion by the lake in the Bois de Vincennes; the exterior and lakeside setting take about 15 min, and the interior with its large gilded Buddha absorbs roughly 20 min if open to visitors.",
@@ -1647,7 +1669,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "This Buddhist temple pavilion by Lac Daumesnil in the Bois de Vincennes is entered through open grounds with no security screening or ticket gate, so there is no line to price.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Sainte-Chapelle",
@@ -1799,6 +1823,13 @@
       ]
     ],
     "queue_basis": "Airport-style security shared with the Palais de Justice plus a ticket check funnels visitors ahead of a small chapel, so the line runs long at midday and thins near opening and late afternoon.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Jan-Mar 09:00-17:00; Apr-Sep 09:00-19:00; Oct-Dec 09:00-17:00\"",
+      "at": "2026-09-07"
+    }
   }
 ]

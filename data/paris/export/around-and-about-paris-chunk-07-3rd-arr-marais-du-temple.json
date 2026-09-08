@@ -230,7 +230,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A free public garden entered through an open gate with no ticket or bag check, so there is no line to price.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"sunrise-sunset\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Place des Vosges",
@@ -341,7 +348,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Open public square accessible from the pavement, not gated.",
+    "opening_hours_basis": "Open public square whose value stands in the open on the pavement, not gated.",
     "place_category": "square",
     "visit_seconds_inside": null,
     "visit_basis": "Oldest planned square in Paris, 36 uniform brick houses framing a central garden you walk round under the arcades; nothing general to enter, Hugo's house is a separate stop.",
@@ -367,7 +374,9 @@
         "indoor": false,
         "basis": "The fenced garden inside the arcades is where the corpus sends a person to find a bench near the children's play area and watch; you stand or sit among the lawns and fountains, not under the arcades. Thirty metres round the centre covers the benches and fountains and stops short of the arcade walks."
       }
-    ]
+    ],
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Musee Carnavalet",
@@ -538,7 +547,9 @@
       ]
     ],
     "queue_basis": "The permanent collection is free so there is no ticket-purchase line, but a bag check at the mansion entrance forms a small moving queue at midday.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Musee Picasso",
@@ -708,7 +719,9 @@
       ]
     ],
     "queue_basis": "Timed entry and a bag check at the mansion door keep the line to a minor wait even when the ticket gate is busy.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Marche des Enfants Rouges",
@@ -781,7 +794,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated covered market hall with gates that close, but no OSM tag supplied and its exact stall hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "Gated covered market hall with gates; hours not confidently known; left unfiltered.",
     "place_category": "market",
     "visit_seconds_inside": 1800,
     "visit_basis": "Oldest covered market in Paris, a compact hall of food stalls and eateries to wander and sample; browsing and a bite absorbs about 30 min, the entrance a few minutes.",
@@ -795,7 +808,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A covered public market with open entrances and no admission control, so visitors walk straight in and there is no line to enter.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel de Soubise",
@@ -921,7 +936,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated museum of the National Archives entered by ticket; hours not confidently known, left unfiltered.",
+    "opening_hours_basis": "A museum/archive building entered by ticket, so gated, but its exact hours are not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 3000,
     "visit_basis": "Grand horseshoe courtyard and colonnade absorb over ten minutes outside; inside are the National Archives museum with the sumptuous Rococo salons of the prince and princess, roughly 50 minutes.",
@@ -939,6 +954,8 @@
       ]
     ],
     "queue_basis": "The National Archives museum has a single ticket desk with a bag check that moves quickly, producing only a minor line at afternoon peak.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   }
 ]

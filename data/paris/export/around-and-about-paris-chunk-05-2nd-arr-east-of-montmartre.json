@@ -56,7 +56,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A former stock exchange now an events venue that is gated, but its hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "Former stock exchange now an events venue with a gated interior; hours not confidently known, left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Neoclassical former stock exchange with a colonnaded Roman-temple facade and steps; you circle it and take in the columns from the front, about 12 min, and it is a walk-by with no public interior on the tour.",
@@ -69,7 +69,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A walk-by-only former stock exchange now used as an event venue; no public ticketed entry means there is no queue to price.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Grands Boulevards",
@@ -120,7 +122,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open tree-lined promenade corridor accessible from the street at all times; not gated.",
+    "opening_hours_basis": "An open promenade corridor of public streets, not gated.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Long tree-lined promenade corridor of cafes, theatres and 19th-century facades; a stretch is walked between positions taking in the shopfronts and street life, absorbing about half an hour, with nothing single to enter.",
@@ -133,7 +135,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open promenade corridor with no door and no admission; there is nothing to stand in line for.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Porte Saint-Denis",
@@ -211,7 +215,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A triumphal arch viewed in the open from the street; not gated.",
+    "opening_hours_basis": "A triumphal arch viewed from the open street, not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Free-standing triumphal arch with carved reliefs at a street junction; you cross to it, walk round and read the sculpture from both sides, about 10 min, and there is nothing to enter.",
@@ -224,7 +228,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A triumphal arch in the middle of a street, seen from the pavement; no interior and no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Passage de la Trinite",
@@ -275,7 +281,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A historic covered passage/site treated as walk-by; gated hours not confidently known, left unfiltered.",
+    "opening_hours_basis": "A historic site/passage on the open street with no controlled entry, not gated.",
     "place_category": "arcade",
     "visit_seconds_inside": null,
     "visit_basis": "A narrow historic passage marking a medieval hospital and theatre site with little surviving fabric to see; a brief pause of a few minutes reading the spot, nothing to enter.",
@@ -288,7 +294,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A covered passage you walk straight through with no gate or ticket; nothing to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Passage du Grand-Cerf",
@@ -390,7 +398,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open covered arcade entered freely from the street; no door check and no line to enter.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Tour Jean sans Peur",
@@ -483,7 +493,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A medieval tower open to visitors as a ticketed monument that is gated, but its seasonal hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "A medieval tower museum with ticketed entry; hours not confidently known, left unfiltered.",
     "place_category": "monument",
     "visit_seconds_inside": 1500,
     "visit_basis": "Small surviving medieval tower with a famous carved vaulted staircase; the exterior takes a few minutes, and the compact interior with its stair and one or two exhibition rooms is a 20-25 min visit including ticket.",
@@ -501,7 +511,9 @@
       ]
     ],
     "queue_basis": "A small medieval tower museum with a single ticket desk that admits a trickle of visitors; the desk can hold a few people at busy afternoon hours but the modest interior draws no substantial line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Rue Montorgueil",
@@ -590,7 +602,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open pedestrian market street whose value is on the public pavement; not gated.",
+    "opening_hours_basis": "An open pedestrian market street whose value stands in the open, not gated.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Lively pedestrian market street of food stalls, cafes and old shopfronts; walked slowly end to end taking in the produce and terraces, about 20-25 min, with no single interior being the stop.",
@@ -603,7 +615,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A pedestrian market street entered freely; the value is in the open air with no gate to pass.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Place du Caire",
@@ -658,7 +672,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open public square viewed from the street; not gated.",
+    "opening_hours_basis": "An open public square, not gated.",
     "place_category": "square",
     "visit_seconds_inside": null,
     "visit_basis": "Small square with an Egyptian-themed carved facade of heads and columns; you stand and look up at the decoration and take in the square, about 8 min, nothing to enter.",
@@ -671,7 +685,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open square viewed from the pavement; no interior and no admission means no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Rue de Clery",
@@ -750,7 +766,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open public street in the Sentier district; not gated.",
+    "opening_hours_basis": "An open public street, not gated.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Narrow historic Sentier street with literary associations but ordinary facades; walked along with a short pause at the plaques, about 6 min, nothing to enter.",
@@ -763,7 +779,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open historic street with no door or ticket; there is nothing to stand in line for.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "35 Boulevard des Capucines",
@@ -816,7 +834,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A historic building facade viewed from the pavement as a walk-by site; not gated.",
+    "opening_hours_basis": "A historic address viewed from the open pavement, not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "A single building facade marking the site of the first Impressionist exhibition; you stop, read the plaque and look up at the front, a few minutes, with no relevant interior.",
@@ -829,7 +847,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A commemorative building facade seen from the street with no public entry; no queue to price.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Place de Louvois",
@@ -880,7 +900,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open public square; not gated.",
+    "opening_hours_basis": "An open public square, not gated.",
     "place_category": "square",
     "visit_seconds_inside": null,
     "visit_basis": "Small square with a fountain facing the old national library, benches and trees; you walk round the fountain and take in the setting, about 8 min, nothing to enter.",
@@ -893,7 +913,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A small open square with a fountain, entered freely; no door and no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Cafe du Croissant",
@@ -952,7 +974,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A café is gated by its door, but its hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "Noted here as a historic corner site viewed from the street rather than an interior visit; not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "A street-corner cafe marking where Jean Jaures was assassinated; you stop at the front and plaque and take in the corner, about 5 min, and going in is a meal rather than a normal tour stop.",
@@ -965,6 +987,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working café passed on the street; there is no admission line, only ordinary café seating, so no entry queue to price.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   }
 ]

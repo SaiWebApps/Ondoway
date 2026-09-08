@@ -47,7 +47,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A synagogue that is gated with restricted entry, but its hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "An active synagogue with controlled entry; hours not confidently known, left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 1000,
     "visit_basis": "Early-19th-century synagogue with a restrained facade on a narrow street; the exterior is a few minutes, and if open the single galleried prayer hall is a roughly 15-min interior.",
@@ -60,7 +60,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A walk-by-only synagogue with no public tourist admission; there is no line for a passing visitor to stand in.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Priory of Saint-Martin-des-Champs",
@@ -199,7 +201,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A medieval priory now part of the Musée des Arts et Métiers that is gated, but its hours are not confidently known here; left unfiltered.",
+    "opening_hours_basis": "Medieval priory now part of the Musée des Arts et Métiers with ticketed entry; hours not confidently known, left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 2400,
     "visit_basis": "Medieval priory with crenellated walls and an early Gothic rib-vaulted church, now housing the arts-and-crafts museum galleries; the walls and church exterior take about 12 min and the vaulted refectory and church interior a 35-40 min visit with ticket.",
@@ -217,7 +219,9 @@
       ]
     ],
     "queue_basis": "Now the Musée des Arts et Métiers, entry is through a single ticket and bag-check desk that gathers a few people at midday but the line stays minor and moves steadily.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Musee des Arts et Metiers",
@@ -322,7 +326,14 @@
       ]
     ],
     "queue_basis": "A mid-sized ticketed museum with a bag check and ticket desk that rarely backs up; the line is minor and moves, peaking only midday when school and tour groups arrive.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Tu-Th 10:00-18:00; Fr 10:00-21:00; Sa-Su 10:00-18:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Porte Saint-Martin",
@@ -401,7 +412,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A triumphal arch viewed from the open street; not gated, so hours are null.",
+    "opening_hours_basis": "A triumphal arch standing open on a street island, viewed entirely from the pavement, so not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Freestanding 17th-century triumphal arch on a traffic island; you circle it to read the relief carvings on both faces, nothing to enter.",
@@ -414,7 +425,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A freestanding triumphal arch on a street island with no interior and no door, so there is nothing to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Saint-Nicolas-des-Champs",
@@ -489,7 +502,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A parish church one can enter, so gated, but its precise hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "An enterable parish church, gated, but hours not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 1100,
     "visit_basis": "Parish church with a 15th-century tower and Gothic-to-Renaissance nave; a few minutes on the facade outside, roughly 18 minutes inside among the chapels and burials.",
@@ -502,7 +515,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working parish church with an open door and free entry, walked into without any ticket desk or security check.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "3 Rue Volta",
@@ -553,7 +568,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A private half-timbered house seen from the pavement; not gated, so hours are null.",
+    "opening_hours_basis": "A private half-timbered house seen only from the street, its whole value in the open, so not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "A single half-timbered facade once claimed as the oldest house in Paris; you stand across the narrow street and look at the timbering, private and not enterable.",
@@ -566,7 +581,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A private half-timbered house seen only from the street; there is no admission and no interior to enter, so no line forms.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Convent of the Madelonnettes",
@@ -616,7 +633,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A demolished convent with nothing to enter; not gated, so hours are null.",
+    "opening_hours_basis": "A demolished convent that no longer exists as an enterable site, marked only from the street, so not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Demolished in 1865-66, so only a street site remains; a few minutes to locate the spot and read its history, nothing standing to enter.",
@@ -629,6 +646,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "The convent was demolished in the 1860s and only a street site remains, so there is nothing to enter and no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   }
 ]

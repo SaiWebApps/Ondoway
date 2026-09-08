@@ -395,9 +395,52 @@
       "source_book": "hidden_gardens_of_paris",
       "is_new_poi": false
     },
-    "opening_hours": null,
-    "opening_hours_source": null,
-    "opening_hours_basis": "Gated walled park with closing bells and seasonally shifting hours (roughly dawn to dusk); gated, hours not confidently known; left unfiltered.",
+    "opening_hours": {
+      "mon": [
+        [
+          "07:30",
+          "21:30"
+        ]
+      ],
+      "tue": [
+        [
+          "07:30",
+          "21:30"
+        ]
+      ],
+      "wed": [
+        [
+          "07:30",
+          "21:30"
+        ]
+      ],
+      "thu": [
+        [
+          "07:30",
+          "21:30"
+        ]
+      ],
+      "fri": [
+        [
+          "07:30",
+          "21:30"
+        ]
+      ],
+      "sat": [
+        [
+          "07:30",
+          "21:30"
+        ]
+      ],
+      "sun": [
+        [
+          "07:30",
+          "21:30"
+        ]
+      ]
+    },
+    "opening_hours_source": "ai",
+    "opening_hours_basis": "Walled park with gates and closing bells; hours vary seasonally with sunrise/sunset, typical summer window given per the Senat's published schedule.",
     "place_category": "garden",
     "visit_seconds_inside": null,
     "visit_basis": "A 25-hectare formal garden with the central basin, over 100 statues, the Medici Fountain and tree-lined walks; strolling and sitting absorbs 40 minutes, and it is an open garden with no interior to enter.",
@@ -422,7 +465,9 @@
         "indoor": false,
         "basis": "The pear-and-apple orchard fills the garden's southwest corner where the beat itself places it, adjacent to the rue Auguste-Comte; a person stands among the rows there, three hundred and fifty metres from the garden pin."
       }
-    ]
+    ],
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Fontaine Médicis",
@@ -582,7 +627,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A fountain inside the freely-entered Luxembourg Gardens, viewed in the open with no gate or ticket to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Palais du Luxembourg",
@@ -730,7 +777,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "The Senate palace is gated with restricted public access whose visiting hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "The Senate palace is enterable only on restricted guided visits; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 3000,
     "visit_basis": "Grand 17th-century Medici palace, now the Senate, viewed from the gardens; interior visits are restricted and guided, so about 50 min inside on the limited state-room tour when available.",
@@ -748,7 +795,9 @@
       ]
     ],
     "queue_basis": "As the seat of the French Senate, public access is limited and gated by security screening on booked-visit days, giving a modest controlled line rather than a mass tourist queue; without booking most tours only see the exterior and the surrounding gardens, which are free and unqueued.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Musée Eugène Delacroix",
@@ -1081,7 +1130,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated museum with ticketed entry; no OSM tag and hours not confidently known, left unfiltered.",
+    "opening_hours_basis": "A museum entered through a ticketed door; gated, hours not confidently known; left unfiltered.",
     "place_category": "museum",
     "visit_seconds_inside": 2700,
     "visit_basis": "Small museum in the painter's former apartment and garden studio, a handful of rooms of paintings and personal effects; the visit runs about 40-45 min including a short ticket wait.",
@@ -1099,7 +1148,9 @@
       ]
     ],
     "queue_basis": "A small apartment-and-studio museum with a single ticket desk and modest capacity, so a few visitors may briefly queue at midday but the line is minor and moves.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Place de Furstemberg",
@@ -1182,7 +1233,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open public square whose value stands entirely on the pavement, so it is not gated; the Musée Delacroix inside is a separate place.",
+    "opening_hours_basis": "An open public square whose whole value stands in the open on the pavement, not gated.",
     "place_category": "square",
     "visit_seconds_inside": 1500,
     "visit_basis": "Small enclosed square with a central lamppost and paulownia trees to stand in and circle; the Musée Delacroix at no. 6 is a compact studio-and-apartment museum with a small garden, roughly 20-25 min inside.",
@@ -1195,7 +1246,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open public square with no door and no gate; the Musée Delacroix on it has its own small desk, but the square itself is walked into freely with no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Institut Catholique",
@@ -1348,7 +1401,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated Catholic university building not a public visitor attraction; hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "Gated university with a courtyard behind doors, but hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "University building with a Flemish Gothic courtyard, viewed from the street as a working institution not normally entered by visitors.",
@@ -1361,7 +1414,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working university passed on the street as a walk-by with no public ticketed entry, so there is no visitor queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Ecole des Beaux-Arts",
@@ -1463,7 +1518,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A working art school whose public admission hours are not confidently known; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "A fine arts school behind gates with restricted access; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Fine arts school with a courtyard gate and historic facades on rue Bonaparte; walk-by only, time to look through the gates at the former convent buildings.",
@@ -1476,7 +1531,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "Walked by only; the art school's courtyard and street facade are viewed without any ticketed entry or line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "9 Quai Malaquais (George Sand)",
@@ -1561,7 +1618,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Not gated: a private residential address commemorated only by its facade, viewed from the street.",
+    "opening_hours_basis": "A private residential address seen from the street as a facade plaque, not an entered place.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "A private residential address on the quay associated with George Sand, seen from the pavement as a facade, nothing to enter.",
@@ -1574,7 +1631,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A private residential address viewed from the street with no interior to enter, so there is no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Saint-Sulpice",
@@ -1720,7 +1779,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A large free-entry church you walk directly into through its main doors with no ticketing or security, so no queue forms before entering.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"08:00-19:45\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Saint-Germain-des-Pres",
@@ -1872,6 +1938,13 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An active parish church with an open door and free entry that visitors walk straight into, so there is no ticket desk or security to stand in.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo,Su 09:30-20:00; Tu-Fr 07:30-20:00; Sa 08:30-20:00\"",
+      "at": "2026-09-07"
+    }
   }
 ]

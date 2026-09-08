@@ -93,7 +93,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A working hospital rather than a visitor attraction; not a gated tourist experience, so no visiting hours apply.",
+    "opening_hours_basis": "An active hospital with a public inner courtyard/chapel behind entrances; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Working hospital with a long facade on the Notre-Dame parvis and an inner courtyard glimpse; it is not a visitor interior, so priced outside only.",
@@ -106,7 +106,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working hospital, not a ticketed attraction; a tourist stops to look at the facade and courtyard from the street and never joins any admission line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Notre-Dame Cathedral",
@@ -338,7 +340,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated cathedral you enter, but post-reopening visiting hours are not confidently known to me; gated, hours not confidently known; left unfiltered.",
+    "opening_hours_basis": "Gated cathedral you enter through doors; hours since the 2024 reopening not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 3000,
     "visit_basis": "The west facade with its portals and towers, plus the parvis and views from around the Ile de la Cite, absorb 25 minutes; the interior nave, chancel, rose windows and side chapels take around 35 minutes plus an entry queue since reopening.",
@@ -402,7 +404,9 @@
         "indoor": false,
         "basis": "Square Jean-XXIII is the strip you STAND in to look back along the flying buttresses; the view needs the length of the garden, not its gate. Fifty-five metres covers the walk without reaching the parvis (W7.11 defect 16)."
       }
-    ]
+    ],
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Rue Chanoinesse",
@@ -503,7 +507,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A public medieval street open to the air; not gated.",
+    "opening_hours_basis": "A public medieval street walked freely at any hour, so not gated.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Medieval street on Ile de la Cite with old canons' houses to walk along slowly and look into; a street whose value is entirely outside, nothing to enter.",
@@ -516,7 +520,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open medieval street with no interior and no gate, so nothing is ever queued for.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Memorial des Martyrs de la Deportation",
@@ -617,7 +623,9 @@
       ]
     ],
     "queue_basis": "The memorial is free but entered by a narrow staircase that admits only a few visitors at once, so a small line can form at midday while it is otherwise walk-straight-in.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Ile Saint-Louis",
@@ -768,7 +776,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open residential island of public streets and quays, not gated; its value stands in the open.",
+    "opening_hours_basis": "A residential Seine island of open streets and quays freely accessible from the street at any hour.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Small residential island with one main street of 17th-century townhouses, quays and an ice cream stop; the value is walking it, nothing single to enter.",
@@ -781,7 +789,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A residential island of open streets and shopfronts with no controlled entrance, so nothing is queued before you walk onto it.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Berthillon",
@@ -876,7 +886,9 @@
       ]
     ],
     "queue_basis": "A small ice-cream counter whose line is limited by one serving window, so afternoon and warm-season crowds form a real but bounded queue that shrinks to a few people off-peak; no security or ticket.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Pont-Marie",
@@ -923,7 +935,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open stone bridge crossed freely from the pavement; not gated.",
+    "opening_hours_basis": "An open stone bridge crossed freely from the pavement, whole value in the open, so not gated.",
     "place_category": "bridge",
     "visit_seconds_inside": null,
     "visit_basis": "17th-century stone bridge you cross and pause on for river and island views; a destination in itself but with nothing to enter.",
@@ -936,7 +948,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A stone bridge with no door and no ticket: you simply walk across it in the open, so there is no line.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel de Lauzun",
@@ -1017,7 +1031,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Private/occasional-use mansion marked walk_by_only; admired from the quay, not gated for general entry.",
+    "opening_hours_basis": "Marked walk-by only; a private mansion appreciated from the street facade, so not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Opulent riverside mansion seen from the quay, its facade and ironwork the whole of the stop; interior is by rare special arrangement only, so not a normal entry.",
@@ -1030,7 +1044,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A walk-by private mansion closed to the general public except rare special events, so no ticket line exists on an ordinary day.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel Lambert",
@@ -1109,7 +1125,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Private residence not open to the public; gated but no public hours exist, so left unfiltered.",
+    "opening_hours_basis": "A private mansion behind gates not generally open to visitors; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Le Vau mansion at the tip of Ile Saint-Louis, its rotunda balcony and river-facing walls viewed from the quay and street corner; private residence, no public interior.",
@@ -1122,7 +1138,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A private residence viewed only from the street; with no public admission there is no queue to price.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Quai de Bourbon",
@@ -1193,7 +1211,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An open riverside quay walked freely; not gated.",
+    "opening_hours_basis": "An open riverside quay walked freely from the pavement, so not gated.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Northern quay of Ile Saint-Louis to stroll for river views and old house frontages; an outdoor walk with nothing to enter.",
@@ -1206,7 +1224,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open riverside quay with no door and no ticket; the whole experience is outdoors, so no line forms.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Crypte Archeologique de l'Ile de la Cite",
@@ -1248,7 +1268,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated underground museum with a ticket desk, but its exact current hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "An underground museum behind a ticket line; gated, hours not confidently known; left unfiltered.",
     "place_category": "museum",
     "visit_seconds_inside": 2400,
     "visit_basis": "Small parvis entrance, then an underground museum of excavated Roman and medieval foundations with walkways and displays, typical visit 35-40 min plus a short ticket queue.",
@@ -1266,7 +1286,9 @@
       ]
     ],
     "queue_basis": "A small municipal museum with a single ticket desk at the entrance; a modest queue can build midday when Notre-Dame crowds spill in, but it stays minor and moves quickly.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Saint-Louis-en-l'Ile Church",
@@ -1312,7 +1334,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Gated church you enter, but its current opening hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "A church one enters through a door; gated, hours not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 1100,
     "visit_basis": "Baroque church with an openwork spire seen from the street and a richly gilded single-nave interior, typical visit around 18 min.",
@@ -1325,6 +1347,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A parish church with free open-door entry and no security screening, so visitors walk in directly without waiting in line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   }
 ]

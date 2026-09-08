@@ -303,7 +303,7 @@
     },
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A commemorative column standing in the middle of Place de la Bastille and viewed from the open square; the crypt is not routinely public, but the monument itself is not gated.",
+    "opening_hours_basis": "A monument column whose interior crypt is only occasionally openable; gated, hours not confidently known; left unfiltered.",
     "place_category": "monument",
     "visit_seconds_inside": null,
     "visit_basis": "47-metre bronze column at the centre of the busy Place de la Bastille; you walk between viewing positions around the traffic circle to take it in, and the crypt is not normally open to visitors.",
@@ -316,6 +316,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A column standing on a traffic-island square, viewed from the open; the crypt is not routinely open to visitors, so there is no entry line to stand in.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   }
 ]

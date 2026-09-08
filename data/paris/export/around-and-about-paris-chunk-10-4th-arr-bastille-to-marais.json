@@ -99,7 +99,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Open public square accessible from the pavement, not gated.",
+    "opening_hours_basis": "Open traffic square with monument viewed from the street, not gated.",
     "place_category": "square",
     "visit_seconds_inside": null,
     "visit_basis": "Large open traffic square with the July Column at its centre; you circle to read the plaques and trace the old fortress outline, nothing to enter.",
@@ -112,7 +112,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open traffic square with the July Column at its centre, entered from the surrounding streets with no door or ticket.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Temple du Marais",
@@ -192,7 +194,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A Protestant temple one can enter, so gated, but its hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "An enterable Protestant temple, gated, but hours not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 900,
     "visit_basis": "Mansart's domed 17th-century rotunda church now a Protestant temple; a short look at the classical facade, about 15 minutes inside the plain circular interior when open.",
@@ -205,7 +207,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A working Protestant temple with an open door and free entry, walked straight into with no ticket desk or screening.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel de Mayenne",
@@ -251,7 +255,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A Marais mansion (now a school) viewed from the street; hours not confidently known and left unfiltered as null.",
+    "opening_hours_basis": "A Marais mansion (now a school) seen from the street, its facade the experience, so not gated.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "16th-century brick-and-stone Marais mansion; you view the facade and courtyard entrance from the street, now a school and not open to visitors inside.",
@@ -264,7 +268,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A private Marais mansion (now a school) viewed only from the street, with no public interior and therefore no queue.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Place des Vosges",
@@ -366,7 +372,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "Open public square accessible from the pavement, not gated.",
+    "opening_hours_basis": "Open public square whose value stands in the open on the pavement, not gated.",
     "place_category": "square",
     "visit_seconds_inside": null,
     "visit_basis": "Oldest planned square in Paris, 36 uniform brick houses framing a central garden you walk round under the arcades; nothing general to enter, Hugo's house is a separate stop.",
@@ -391,7 +397,9 @@
         "indoor": false,
         "basis": "The fenced garden inside the arcades is where the corpus sends a person to find a bench near the children's play area and watch; you stand or sit among the lawns and fountains, not under the arcades. Thirty metres round the centre covers the benches and fountains and stops short of the arcade walks."
       }
-    ]
+    ],
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Musee Victor Hugo",
@@ -466,7 +474,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A ticketed/entry-controlled museum, so gated, but its exact hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "A museum in Hugo's former apartment, gated by a ticketed entrance, but hours not confidently known; left unfiltered.",
     "place_category": "museum",
     "visit_seconds_inside": 3000,
     "visit_basis": "Hugo's former apartment on Place des Vosges over several furnished rooms with drawings and period interiors; a few minutes under the square's arcade, about 50 minutes inside with a short queue.",
@@ -484,7 +492,9 @@
       ]
     ],
     "queue_basis": "A small apartment-museum on Place des Vosges with free permanent collection but one narrow entrance and a bag check, so a modest line forms midday when capacity throttles arrivals.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel de Sully",
@@ -559,7 +569,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A mansion with an enterable courtyard and interior, so gated, but its hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "A 17th-century mansion with courtyard and garden accessed through gates, gated, but hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": 1500,
     "visit_basis": "Grand 17th-century mansion with a carved courtyard facade and an orangerie garden linking to Place des Vosges; the courtyards absorb the outside time, interior access is limited to bookshop and rooms for about 25 minutes.",
@@ -577,7 +587,9 @@
       ]
     ],
     "queue_basis": "Entry is through a courtyard and bookshop of the heritage centre with no mass ticketing, so only a brief wait at the single door forms at busy hours.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel de Sens",
@@ -687,7 +699,14 @@
       ]
     ],
     "queue_basis": "The building houses the Forney library with a single reception entrance rather than mass ticketing, so only a few people wait at busy hours.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo-Fr 08:00-19:50; Sa,Su 09:00-19:50\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Saint-Paul-Saint-Louis",
@@ -762,7 +781,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A Baroque church one can enter, so gated, but its hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "An enterable Baroque church, gated, but hours not confidently known; left unfiltered.",
     "place_category": "church",
     "visit_seconds_inside": 1200,
     "visit_basis": "Baroque Jesuit church with a tall domed nave, Delacroix painting and Counter-Reformation detailing; short pause on the rue Saint-Antoine facade, about 20 minutes inside.",
@@ -775,7 +794,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A Baroque church with an open door and free entry on rue Saint-Antoine, walked into without any ticket or security line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Village Saint-Paul",
@@ -819,7 +840,7 @@
     "poi_role": "stop",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A cluster of antique courtyards with gates that close, so gated, but its hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "A cluster of interlinked open antique courtyards passable from the street, so not gated.",
     "place_category": "church",
     "visit_seconds_inside": null,
     "visit_basis": "A linked cluster of open antique-dealer courtyards you wander between through passages; the whole visit is the outdoor meandering, with no single interior to enter.",
@@ -832,7 +853,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open cluster of antique courtyards with multiple street passages and no gate or ticketing, so there is no line to enter.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel Lamoignon",
@@ -941,7 +964,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A Renaissance mansion seen from the street as a walk-by; its historical library is reached through open courtyard access rather than a queued entrance, so no line forms for the passer-by.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo-Fr 08:00-17:00; Sa-Su 09:00-17:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "Synagogue de la rue Pavee",
@@ -991,7 +1021,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "An active synagogue that is gated, but as a working place of worship with restricted access its hours are not confidently known; left unfiltered.",
+    "opening_hours_basis": "An active synagogue you enter through a door; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Narrow street facade of Guimard's Art Nouveau synagogue with its rippling stone frontage to read from the pavement; not normally open to visitors, so no interior time.",
@@ -1004,7 +1034,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A walk-by-only facade viewed from the street with no public entry to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Rue des Rosiers",
@@ -1079,7 +1111,7 @@
     "poi_role": "setting",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A public street in the Marais whose value is in the open, so it is not gated.",
+    "opening_hours_basis": "An open public street whose value stands in the open, always accessible from the pavement.",
     "place_category": "street",
     "visit_seconds_inside": null,
     "visit_basis": "Historic pedestrian street through the old Jewish quarter, with shopfronts, bakeries and falafel stalls to walk slowly along end to end; the value is entirely outside along the street.",
@@ -1092,7 +1124,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "An open street with no door and no line; its value is walked past in the open.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel Amelot de Bisseuil",
@@ -1141,7 +1175,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A private Marais mansion viewed from the street; as a walk-by facade it is not gated for entry.",
+    "opening_hours_basis": "A private Marais mansion behind a portal; gated, hours not confidently known; left unfiltered.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "Ornate carved 17th-century portal and street facade to examine from the pavement; a private mansion not open inside, so no interior time.",
@@ -1154,7 +1188,9 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A private mansion seen from the street as a walk-by; there is no visitor entry to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": null
   },
   {
     "name": "Notre-Dame-des-Blancs-Manteaux",
@@ -1259,7 +1295,14 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A parish church with an open door you walk straight through without any ticket desk or security line.",
-    "anchors": null
+    "anchors": null,
+    "gated": true,
+    "opening_hours_verified": {
+      "tier": 0,
+      "approver": "corroboration",
+      "evidence": "OSM tag unchanged since transcription: \"Mo 17:00-19:30; Tu-Fr 15:00-19:00; Sa 15:00-19:30; Su 10:00-12:00, 15:00-19:00\"",
+      "at": "2026-09-07"
+    }
   },
   {
     "name": "La Force Prison Site",
@@ -1304,7 +1347,7 @@
     "poi_role": "walk_by_only",
     "opening_hours": null,
     "opening_hours_source": null,
-    "opening_hours_basis": "A former prison site now marked only in the open streetscape, so it is not gated.",
+    "opening_hours_basis": "A former prison site now marked only in the streetscape, viewed from the open pavement.",
     "place_category": "other",
     "visit_seconds_inside": null,
     "visit_basis": "The prison is gone; only a street site and possibly a plaque to stand at while the massacre story is told, so a few minutes outside and nothing to enter.",
@@ -1317,6 +1360,8 @@
     "queue_minutes_offpeak": 0,
     "queue_peak_hours": [],
     "queue_basis": "A demolished prison marked only by a street site with no interior and nothing to queue for.",
-    "anchors": null
+    "anchors": null,
+    "gated": false,
+    "opening_hours_verified": null
   }
 ]
