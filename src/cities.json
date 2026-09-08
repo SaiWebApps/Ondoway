@@ -7,6 +7,7 @@
       0.33
     ],
     "cloud_deployed": false,
+    "country": "GB",
     "display_name": "London"
   },
   "new_york": {
@@ -17,6 +18,7 @@
       -73.68
     ],
     "cloud_deployed": true,
+    "country": "US",
     "display_name": "New York"
   },
   "paris": {
@@ -27,6 +29,7 @@
       2.6
     ],
     "cloud_deployed": true,
+    "country": "FR",
     "display_name": "Paris"
   }
 }

@@ -384,29 +384,31 @@ class POI(BaseModel):
     visit_seconds_inside: int | None = None
     visit_basis: str = ""
     typical_duration_min: int = 0
-    # WHEN THE PLACE CAN BE ENTERED (redesign 6.1) — additive, same style as the
-    # visit-capacity trio above. `opening_hours` is the JSON-encoded week table
-    # exactly as the graph stores it (the physical_cues precedent); the clock
-    # filter decodes it. None = NOT GATED — a street, a square, a bridge — the
+    # WHEN THE PLACE CAN BE ENTERED (Docs/adr/0006) — additive, same style as
+    # the visit-capacity trio above. `opening_hours` is the place's hours as
+    # OpenStreetMap text ("Mo-Su 10:00-18:00; PH off"), read at planning time
+    # by the opening-hours library in the city's own country; text the library
+    # cannot read counts as unknown hours. None = no hours on record — the
     # same load-bearing null `visit_seconds_inside` uses, and the safe default
-    # for a corpus the hours pass has not reached: a POI with no table is NEVER
-    # clock-excluded. `opening_hours_source` records "osm" | "ai";
-    # `opening_hours_basis` is the sentence that argues for the table.
+    # for a corpus the hours pass has not reached: a POI with no hours is NEVER
+    # clock-excluded. `opening_hours_source` is where the text came from:
+    # "map" (OpenStreetMap, spoken plainly) or "guess" (spoken as a guess);
+    # None with text is treated as a guess. `opening_hours_basis` is the
+    # sentence that argues for the text.
     opening_hours: str | None = None
     opening_hours_source: str | None = None
     opening_hours_basis: str = ""
-    # THE TRUST HALF OF THE CLOCK (Docs/adr/0003), additive in the same style.
-    # `gated` is the explicit door verdict — True: a door, gate or ticket line
-    # stands between the street and the experience; False: the whole value
-    # stands in the open; None: the gated pass has not reached this POI, the
-    # fail-open direction (never clock-excluded on no claim). It ends the
-    # overload where a null table meant both "no door" and "door, hours
-    # unknown". `opening_hours_verified` is the JSON-encoded trust record
-    # {tier, approver, evidence, at} written only by the verification ladder
-    # (the `opening_hours` encoding precedent); None = nobody verified, and
-    # the voice keeps its could-not-confirm disclosure.
+    # THE DOOR (Docs/adr/0006), additive in the same style. `gated` is the
+    # explicit door verdict — True: a door, gate or ticket line stands between
+    # the street and the experience; False: the whole value stands in the
+    # open; None: the gated pass has not reached this POI, the fail-open
+    # direction (never clock-excluded on no claim). It ends the overload where
+    # null hours meant both "no door" and "door, hours unknown".
+    # `hours_closed_reports` counts the walkers who found a guessed door shut
+    # (a closed report); it is written at run time, never by the upload, and
+    # a count above zero makes the next walker's warning stronger.
     gated: bool | None = None
-    opening_hours_verified: str | None = None
+    hours_closed_reports: int = 0
     # WHAT KIND OF PLACE THIS IS (redesign 6.7): a closed vocabulary (gallery |
     # museum | church | square | arcade | market | park | garden | bridge |
     # street | monument | other) derived deterministically at $0. Phase 3's

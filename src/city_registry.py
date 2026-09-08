@@ -107,6 +107,30 @@ def bbox_map() -> dict[str, tuple[float, float, float, float]]:
     return {slug: tuple(entry["bbox"]) for slug, entry in load_registry().items()}
 
 
+#: A country is the upper-case two-letter code the opening-hours library keys
+#: its public-holiday calendars on (``FR``, ``US``, ``GB``).
+_COUNTRY_RE = re.compile(r"^[A-Z]{2}$")
+
+
+def country_code(slug: str) -> str:
+    """The two-letter country a city's opening hours are read in.
+
+    ``PH`` in a place's hours means the public holidays of the city's own
+    country, so the planner reads hours WITH this code (Docs/adr/0006). There
+    is no default: a registry entry without a country is refused in plain
+    words, because a country guessed wrong reads every holiday as an open day.
+    An unknown slug raises ``KeyError``.
+    """
+    entry = load_registry()[slug]
+    country = entry.get("country")
+    if not isinstance(country, str) or not _COUNTRY_RE.match(country):
+        raise ValueError(
+            f"city {slug!r} has no country in the registry; add a two-letter "
+            "'country' to its src/cities.json entry before planning a dated day there"
+        )
+    return country
+
+
 def supported_cities() -> frozenset[str]:
     """ALL registered slugs. Backs ``SUPPORTED_CITIES`` + the onboarding
     data-integrity guard; the local workbench serves every registered city."""
@@ -178,6 +202,16 @@ def _validate_entry(entry: dict) -> None:
         raise ValueError(
             "city entry 'cloud_deployed' must be a JSON boolean (true/false), "
             f"got {entry['cloud_deployed']!r}"
+        )
+    # The country is optional at registration (onboarding does not yet know
+    # it) but never malformed: ``country_code`` refuses an entry without one
+    # the moment a dated day is planned there.
+    if "country" in entry and not (
+        isinstance(entry["country"], str) and _COUNTRY_RE.match(entry["country"])
+    ):
+        raise ValueError(
+            "city entry 'country' must be an upper-case two-letter code such as 'FR', "
+            f"got {entry['country']!r}"
         )
 
 

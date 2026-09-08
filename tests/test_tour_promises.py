@@ -16,7 +16,6 @@ hours-unverified line.
 """
 
 import importlib
-import json
 import sys
 from types import SimpleNamespace
 
@@ -104,7 +103,8 @@ def _stop_line(out: str, name: str) -> str:
     return lines[0]
 
 
-_GATED_TABLE = json.dumps({"mon": [["09:00", "18:00"]]})
+#: Map hours (Docs/adr/0006): a door's OpenStreetMap text, as the map carries it.
+_DOOR_HOURS = "Mo 09:00-18:00"
 
 
 # --- parser: pins and weather ------------------------------------------------
@@ -401,42 +401,36 @@ def test_queue_column_prints_minutes_and_dash(capsys):
 
 
 def _hours_route() -> Route:
-    """Five stops: a VERIFIED AI table (the ladder's review confirmed it — the
-    discriminator of the verified-is-the-one-trust-signal rule, Docs/adr/0003),
-    an unreviewed AI table, an unsourced table, a DOOR with no table at all
-    (gated=True, opening_hours=None — the least-known door must still count),
-    and not gated at all -> M=4 doors, N=3 unverified."""
-    verified = _poi(
-        "poi-verified", "Musee d'Orsay",
-        opening_hours=_GATED_TABLE, opening_hours_source="ai",
-        opening_hours_verified=(
-            '{"tier": 2, "approver": "owner", "evidence": "reviewed", "at": "2026-09-07"}'
-        ),
+    """Five stops (Docs/adr/0006): map hours, a guess, hours with no source, a
+    DOOR with no hours at all (gated=True, opening_hours=None — the least-known
+    door must still count), and not gated at all -> M=4 doors, N=3 not from
+    the map."""
+    from_map = _poi(
+        "poi-map", "Musee d'Orsay",
+        opening_hours=_DOOR_HOURS, opening_hours_source="map",
     )
-    ai_judged = _poi(
-        "poi-ai", "Musee de Cluny",
-        opening_hours=_GATED_TABLE, opening_hours_source="ai",
+    guessed = _poi(
+        "poi-guess", "Musee de Cluny",
+        opening_hours=_DOOR_HOURS, opening_hours_source="guess",
     )
     sourceless = _poi(
         "poi-none", "Conciergerie",
-        opening_hours=_GATED_TABLE, opening_hours_source=None,
+        opening_hours=_DOOR_HOURS, opening_hours_source=None,
     )
-    tableless_door = _poi("poi-door", "Notre-Dame Cathedral", gated=True)
+    unknown_door = _poi("poi-door", "Notre-Dame Cathedral", gated=True)
     ungated = _poi("poi-open", "Pont Neuf", place_category="bridge")
-    return _route([verified, ai_judged, sourceless, tableless_door, ungated])
+    return _route([from_map, guessed, sourceless, unknown_door, ungated])
 
 
 def test_dated_run_prints_hours_unverified_line_with_right_counts(capsys):
-    """A dated run says how much of its gate data is on the record's word
-    alone: gated = a DOOR (`gated=True`, or a non-None table — a table implies
-    a door); unverified = no `opening_hours_verified` record, and a door with
-    no table at all can never count trusted — ADR 0003: a gated place without
-    verified hours fails open WITH that disclosure. The ladder is the one
-    trust signal, so a human-confirmed AI table counts trusted and an
-    unreviewed OSM transcription does not self-certify. Aiko's finding
-    (design §6): clock-native planning is a promise without a table under it,
-    so the harness must SAY when the table under it is unaudited — or absent.
-    UNDO: key the count on the table -> Notre-Dame leaves both numbers -> RED.
+    """A dated run says how many of its doors rest on hours that are not the
+    map's: gated = a DOOR (`gated=True`, or hours on record — hours imply a
+    door on a legacy row); counted = every door whose source is not "map"
+    (a guess, no source, or no hours at all — Docs/adr/0006: the map is the
+    one source spoken plainly). Aiko's finding (design §6): clock-native
+    planning is a promise without hours under it, so the harness must SAY
+    when the hours under it are a guess — or absent.
+    UNDO: key the count on the hours text -> Notre-Dame leaves both numbers -> RED.
     """
     tour_build = _tour_build()
     route = _hours_route()

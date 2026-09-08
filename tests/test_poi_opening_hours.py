@@ -394,6 +394,32 @@ def test_hop_2_the_snapshot_builder_carries_the_clock_fields_onto_the_poi() -> N
     )
 
 
+def test_hop_the_closed_report_count_rides_the_corpus_query_and_the_loader() -> None:
+    """Docs/adr/0006: a walker's closed report on a guessed door is counted on
+    the place (``hours_closed_reports``) so the next walker hears a stronger
+    warning. The count is written at run time, never by the upload — so it is
+    NOT one of ``CLOCK_FIELDS`` (that tuple drives the upload's SET list, and an
+    upload must never reset a runtime counter). Its own three hops: the corpus
+    query asks for it, the loader carries it, and a record without it lands on
+    zero."""
+    from src.tour.selection import LOAD_PARIS_POIS_CYPHER, _snapshot_from_records
+
+    assert "p.hours_closed_reports" in LOAD_PARIS_POIS_CYPHER
+    base = {
+        "id": "door",
+        "name": "A door",
+        "tier": 4,
+        "poi_role": "stop",
+        "lat": 48.86,
+        "lng": 2.33,
+        "areas": [],
+    }
+    reported = _snapshot_from_records([{**base, "hours_closed_reports": 2}], [], [], []).pois[0]
+    assert reported.hours_closed_reports == 2
+    fresh = _snapshot_from_records([{**base, "hours_closed_reports": None}], [], [], []).pois[0]
+    assert fresh.hours_closed_reports == 0
+
+
 def test_hop_2_an_unpriced_record_lands_on_the_safe_defaults() -> None:
     """A corpus written before the opening-hours pass must still load: every
     field arrives as None from Neo4j and must land on None / None / "" / "" —

@@ -29,10 +29,13 @@ from datetime import datetime, time, timedelta
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
+from opening_hours import OpeningHours, ParserError
 from shapely.errors import ShapelyError as _ShapelyError
 from shapely.geometry import Point as _ShapelyPoint
 from shapely.geometry import shape as _shapely_shape
 from shapely.prepared import prep as _shapely_prep
+
+from src.city_registry import country_code
 
 from .beat_select import (
     _find_closing_friendly_index,
@@ -771,7 +774,7 @@ RETURN
   p.opening_hours_source AS opening_hours_source,
   p.opening_hours_basis AS opening_hours_basis,
   p.gated         AS gated,
-  p.opening_hours_verified AS opening_hours_verified,
+  p.hours_closed_reports AS hours_closed_reports,
   p.place_category AS place_category,
   p.children_can_run AS children_can_run,
   p.sit_and_talk  AS sit_and_talk,
@@ -878,9 +881,8 @@ def _lens_neighbor_map(lens_records: list[dict]) -> dict[str, frozenset[str]]:
 _PLACEHOLDER_AUDIO_PREFIX = "s3://ondoway-audio/placeholder/"
 
 
-#: Weekday index (datetime.weekday(): Monday=0) -> the week-table key the
-#: opening-hours pass writes, and the English name the exclusion reason speaks.
-_CLOCK_DAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+#: Weekday index (datetime.weekday(): Monday=0) -> the English name the
+#: exclusion reason speaks.
 _CLOCK_DAY_NAMES = (
     "Monday",
     "Tuesday",
@@ -892,78 +894,95 @@ _CLOCK_DAY_NAMES = (
 )
 
 
+#: The hours source spoken plainly (Docs/adr/0006). Every other source — a
+#: guess, or text with no source — is spoken with its doubt.
+HOURS_SOURCE_MAP = "map"
+
+
+def _readable_hours(text: str | None, country: str) -> OpeningHours | None:
+    """The map's text as the library reads it in ``country``, or None when the
+    hours are UNKNOWN: no text, text the library cannot parse, or text carrying
+    a quoted comment (``"closed for renovation"``) — a comment is a sentence
+    for a person, and the library reads past it as open, so it is never
+    trusted either way. The one reader, for every clock rule below."""
+    if not isinstance(text, str) or '"' in text:
+        return None
+    try:
+        return OpeningHours(text, country=country)
+    except ParserError:
+        return None
+
+
+def _closed_throughout(hours: OpeningHours, start: datetime, end: datetime) -> bool | None:
+    """True when the library finds the place CLOSED for every minute of
+    ``start``..``end``; False when any minute is open; None when any minute
+    is UNKNOWN to the library (the fail-open state)."""
+    states = {str(state) for _from, _to, state, _comment in hours.intervals(start, end)}
+    if "unknown" in states or not states:
+        return None
+    return states == {"closed"}
+
+
 def _clock_exclusion_reason(
-    opening_hours_json: str,
-    verified: str | None,
+    opening_hours: str | None,
+    source: str | None,
     start: datetime,
     duration_min: int,
+    *,
+    country: str,
 ) -> str | None:
-    """THE one definition of clock-closure (redesign 6.1). None = not closed.
+    """THE one definition of clock-closure (Docs/adr/0006). None = not closed.
 
-    A POI is clock-CLOSED only when its opening table is CLOSED for the
-    ENTIRE visit window (start → start + duration): a place open for any part
-    of the window is simply open — arriving to find a door that closes in
-    an hour is the visitor's trade to make, a locked one is not. What closure
-    MEANS is the call site's decision, not this function's (plan S3.5, W1.9
-    dissent 1): a closed place with an exterior demotes to an outside-only
-    stop; only one with nothing to stand and see is removed. Both outcomes
-    append their own trailer to the detail returned here.
+    A POI is clock-CLOSED only when the map's hours, read by the library in
+    the city's own country (so ``PH off`` means that country's holidays and a
+    season rule means the walk's own month), are CLOSED for the ENTIRE visit
+    window (start → start + duration): a place open for any part of the window
+    is simply open — arriving to find a door that closes in an hour is the
+    visitor's trade to make, a locked one is not. What closure MEANS is the
+    call site's decision, not this function's (plan S3.5, W1.9 dissent 1): a
+    closed place with an exterior demotes to an outside-only stop; only one
+    with nothing to stand and see is removed. Both outcomes append their own
+    trailer to the detail returned here.
 
-    FAILS OPEN, deliberately: a table that does not parse, a malformed window,
-    an unknown shape — all return None, i.e. "not closed". A data defect
-    must degrade to today's trusting behaviour, never lock a visitor out of an
-    open door. The structural bars in tests/test_poi_opening_hours.py are the
-    guard on the data itself.
+    FAILS OPEN, deliberately: unknown hours — no text, text the library
+    cannot read, a quoted comment, an unknown state — return None, i.e. "not
+    closed". A data defect must degrade to the trusting behaviour, never lock
+    a visitor out of an open door.
     """
-    try:
-        table = json.loads(opening_hours_json)
-    except (json.JSONDecodeError, TypeError):
+    hours = _readable_hours(opening_hours, country)
+    if hours is None:
         return None
-    if not isinstance(table, dict):
+    end = start + timedelta(minutes=duration_min)
+    if not _closed_throughout(hours, start, end):
         return None
 
-    end = start + timedelta(minutes=duration_min)
+    # The days the window covers, and the hours the place IS open on them,
+    # so a walker shut out at 19:00 learns to come back at 09:00.
     closed_day_names: list[str] = []
-    open_windows_seen: list[str] = []
+    open_spans_seen: list[str] = []
     cursor = start
     while cursor < end:
-        day_key = _CLOCK_DAY_KEYS[cursor.weekday()]
-        windows = table.get(day_key)
-        if not isinstance(windows, list):
-            return None  # malformed / missing day → fail open
-        next_midnight = datetime.combine(cursor.date() + timedelta(days=1), time.min)
-        segment_end = min(end, next_midnight)
-        seg_from = cursor.strftime("%H:%M")
-        seg_to = "24:00" if segment_end == next_midnight else segment_end.strftime("%H:%M")
-        for window in windows:
-            if (
-                not isinstance(window, list)
-                or len(window) != 2
-                or not all(isinstance(t, str) for t in window)
-            ):
-                return None  # malformed window → fail open
-            opens, closes = window
-            if opens < seg_to and closes > seg_from:
-                return None  # open for part of the window → seatable
+        midnight = datetime.combine(cursor.date(), time.min)
+        next_midnight = midnight + timedelta(days=1)
         closed_day_names.append(_CLOCK_DAY_NAMES[cursor.weekday()])
-        open_windows_seen.extend(f"{w[0]}-{w[1]}" for w in windows)
+        open_spans_seen.extend(
+            f"{span_from.strftime('%H:%M')}-{span_to.strftime('%H:%M')}"
+            for span_from, span_to, state, _comment in hours.intervals(midnight, next_midnight)
+            if str(state) == "open"
+        )
         cursor = next_midnight
 
     # PLAIN LANGUAGE (W4.2 panel, Paulo's wording rulings; design deviation v).
-    # A person reads this sentence, so it carries no provenance tag: "(hours: OSM)"
-    # was ruled a failure of plain language. The DOUBT that tag encoded is not
-    # dropped — it is said in words, so the reader learns we are unsure without
-    # having to decode a label. THE one trust signal is the ladder's verified
-    # record (Docs/adr/0003): a verified table simply states the closure —
-    # whoever transcribed it — and a table nobody verified says we are unsure,
-    # an unreviewed OSM tag included.
-    doubt = "" if verified else ", though we could not confirm its hours"
+    # A person reads this sentence, so it carries no provenance tag. The doubt
+    # is said in words, by SOURCE (Docs/adr/0006): map hours state the closure
+    # plainly; a guess, or hours with no source, say we could not confirm them.
+    doubt = "" if source == HOURS_SOURCE_MAP else ", though we could not confirm its hours"
     if len(closed_day_names) == 1:
         day = closed_day_names[0]
-        if open_windows_seen:
+        if open_spans_seen:
             detail = (
                 f"closed {day} {start.strftime('%H:%M')}-{end.strftime('%H:%M')} "
-                f"(open {', '.join(open_windows_seen)})"
+                f"(open {', '.join(open_spans_seen)})"
             )
         else:
             detail = f"closed all day {day}"
@@ -974,20 +993,17 @@ def _clock_exclusion_reason(
     return detail + doubt
 
 
-def _closed_all_day(opening_hours_json: str, day: datetime) -> bool:
-    """Whether the table lists NO open window at all on ``day`` — the fact the
-    voice's "closed today" branch needs, read from the data itself (a decision
-    belongs in a field, never recovered from the reason sentence's words).
-    Fails to False on bad data, the same trusting direction as the closure
-    rule: an unknowable schedule never strengthens a claim."""
-    try:
-        table = json.loads(opening_hours_json)
-    except (json.JSONDecodeError, TypeError):
+def _closed_all_day(opening_hours: str | None, day: datetime, *, country: str) -> bool:
+    """Whether the map's hours hold NO open minute on ``day``'s calendar day —
+    the fact the voice's "closed today" branch needs, read from the data
+    itself (a decision belongs in a field, never recovered from the reason
+    sentence's words). False on unknown hours, the same trusting direction as
+    the closure rule: an unknowable schedule never strengthens a claim."""
+    hours = _readable_hours(opening_hours, country)
+    if hours is None:
         return False
-    if not isinstance(table, dict):
-        return False
-    windows = table.get(_CLOCK_DAY_KEYS[day.weekday()])
-    return isinstance(windows, list) and not windows
+    midnight = datetime.combine(day.date(), time.min)
+    return _closed_throughout(hours, midnight, midnight + timedelta(days=1)) is True
 
 
 #: The at-the-start footprint floor: a place whose own ``trigger_radius`` is
@@ -1112,11 +1128,12 @@ def _snapshot_from_records(
                 opening_hours=_clean(r.get("opening_hours")),
                 opening_hours_source=_clean(r.get("opening_hours_source")),
                 opening_hours_basis=_clean(r.get("opening_hours_basis")) or "",
-                # The trust half (Docs/adr/0003) — same closed-hop rule. gated
-                # keeps three states: a record carrying None lands on None (no
-                # claim, fail-open), never on False (a claim of no door).
+                # The door (Docs/adr/0006) — same closed-hop rule. gated keeps
+                # three states: a record carrying None lands on None (no
+                # claim, fail-open), never on False (a claim of no door). The
+                # closed-report count is a run-time counter; absent = none yet.
                 gated=(bool(r["gated"]) if r.get("gated") is not None else None),
-                opening_hours_verified=_clean(r.get("opening_hours_verified")),
+                hours_closed_reports=int(r.get("hours_closed_reports") or 0),
                 place_category=_clean(r.get("place_category")) or "",
                 # Row 6.4 (plan S2.6) — same closed-hop safe-default rule: a
                 # corpus the judgements pass has not reached returns None for
@@ -2578,6 +2595,10 @@ def _select_route_once(
     clock_start = (
         datetime.fromisoformat(input.start_datetime) if input.start_datetime is not None else None
     )
+    # THE COUNTRY THE HOURS ARE READ IN (Docs/adr/0006): the city's own, from
+    # the registry, resolved once per plan; a dated day in a city with no
+    # country refuses here in plain words rather than reading holidays wrong.
+    country = country_code(input.city_slug) if clock_start is not None else None
     clock_exclusions: list[ClockExclusion] = []
     # POIs closed for the whole window that keep an exterior worth standing at
     # (plan S3.5, W1.9 dissent 1): they stay in the pool and price OUTSIDE-ONLY
@@ -2668,7 +2689,11 @@ def _select_route_once(
             return None  # nothing behind the door to void
         window_min = max(1, math.ceil(shape_total_seconds(open_shape) / 60))
         return _clock_exclusion_reason(
-            cand.opening_hours, cand.opening_hours_verified, arrival_clock, window_min
+            cand.opening_hours,
+            cand.opening_hours_source,
+            arrival_clock,
+            window_min,
+            country=country,
         )
 
     def shape_visit(
@@ -2839,9 +2864,10 @@ def _select_route_once(
             # no filtering — the safe direction and the identity default.
             clock_reason = _clock_exclusion_reason(
                 poi.opening_hours,
-                poi.opening_hours_verified,
+                poi.opening_hours_source,
                 clock_start,
                 input.duration_min,
+                country=country,
             )
             if clock_reason is not None:
                 # The record carries the closure FACT and the pool DECISION, not the
@@ -2863,7 +2889,7 @@ def _select_route_once(
                         name=poi.name,
                         reason=clock_reason,
                         kept_outside=kept_outside,
-                        all_day=_closed_all_day(poi.opening_hours, clock_start),
+                        all_day=_closed_all_day(poi.opening_hours, clock_start, country=country),
                         at_start=_at_walk_start(poi, start_lat, start_lng),
                     )
                 )
@@ -3179,9 +3205,10 @@ def _select_route_once(
                 and pin.id not in closed_today_ids
                 and _clock_exclusion_reason(
                     pin.opening_hours,
-                    pin.opening_hours_verified,
+                    pin.opening_hours_source,
                     clock_start,
                     input.duration_min,
+                    country=country,
                 )
                 is not None
             ):
@@ -3964,6 +3991,7 @@ def _select_route_once(
             start_lng=start_lng,
             round_trip=input.round_trip,
             clock_start=clock_start,
+            country=country,
             planning_budget=planning_budget,
             clock_exclusions=clock_exclusions,
         )
@@ -4038,14 +4066,10 @@ def _select_route_once(
                     name=poi.name,
                     reason=arrival_reason,
                     kept_outside=True,
-                    # An arrival-window closure on a day with windows is by
-                    # construction not all-day; read the table anyway so a
+                    # An arrival-window closure on a day with open hours is by
+                    # construction not all-day; read the hours anyway so a
                     # data edit cannot desynchronise the two claims.
-                    all_day=(
-                        _closed_all_day(poi.opening_hours, clock)
-                        if poi.opening_hours is not None
-                        else False
-                    ),
+                    all_day=_closed_all_day(poi.opening_hours, clock, country=country),
                 )
             )
     # C9 governor exempt identity — record which POIs are EXEMPT from the per-stop
@@ -5122,11 +5146,12 @@ def _drop_dead_doors(
     start_lng: float,
     round_trip: bool,
     clock_start: datetime,
+    country: str,
     planning_budget: RoutePlanningBudget,
     clock_exclusions: list[ClockExclusion],
 ) -> tuple[list[POI], list[tuple[POI, int | None, int, datetime | None]]]:
     """A door shut at its own arrival with nothing outside leaves the day
-    (Docs/adr/0004).
+    (Docs/adr/0004). ``country`` is the one the hours are read in.
 
     The arrival check demotes a shut door to its exterior; a demoted stop with
     ``typical_duration_min == 0`` is a zero-value stand the walker is still
@@ -5189,8 +5214,8 @@ def _drop_dead_doors(
                     reason=reason or "",
                     kept_outside=False,
                     all_day=(
-                        _closed_all_day(poi.opening_hours, clock)
-                        if poi.opening_hours is not None and clock is not None
+                        _closed_all_day(poi.opening_hours, clock, country=country)
+                        if clock is not None
                         else False
                     ),
                     at_start=_at_walk_start(poi, start_lat, start_lng),

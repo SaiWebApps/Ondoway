@@ -56,6 +56,7 @@ def _fake_registry() -> dict[str, dict]:
             "display_name": "Paris",
             "bbox": [48.70, 49.00, 2.10, 2.60],
             "cloud_deployed": True,
+            "country": "FR",
         },
         "testburg": {
             "display_name": "Testburg",
@@ -63,6 +64,37 @@ def _fake_registry() -> dict[str, dict]:
             "cloud_deployed": False,
         },
     }
+
+
+def test_every_launch_city_carries_its_country_and_the_accessor_refuses_a_city_without_one(
+    monkeypatch,
+) -> None:
+    """Opening hours are read in the city's own country (Docs/adr/0006): ``PH``
+    in a place's hours means THAT country's public holidays. The committed
+    registry carries a two-letter country for every city, the accessor hands it
+    back, and a city with none is refused in plain words — never defaulted,
+    because a default country reads every holiday as an open day."""
+    assert city_registry.country_code("paris") == "FR"
+    assert city_registry.country_code("new_york") == "US"
+    assert city_registry.country_code("london") == "GB"
+
+    monkeypatch.setattr(city_registry, "load_registry", _fake_registry)
+    assert city_registry.country_code("paris") == "FR"
+    with pytest.raises(ValueError, match=r"testburg.*country"):
+        city_registry.country_code("testburg")
+    with pytest.raises(KeyError):
+        city_registry.country_code("nowhere")
+
+
+def test_validate_entry_refuses_a_malformed_country() -> None:
+    """A country, when given, is an upper-case two-letter code — the shape the
+    hours library keys its holiday calendars on."""
+    good = {"display_name": "X", "bbox": [0.0, 1.0, 0.0, 1.0], "cloud_deployed": False}
+    city_registry._validate_entry({**good, "country": "FR"})
+    city_registry._validate_entry(good)  # a city not yet placed in a country
+    for bad in ("fr", "FRA", "", 33, None):
+        with pytest.raises(ValueError, match="country"):
+            city_registry._validate_entry({**good, "country": bad})
 
 
 def test_servable_cities_local_includes_non_cloud_deployed(monkeypatch) -> None:

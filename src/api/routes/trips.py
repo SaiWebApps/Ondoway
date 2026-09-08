@@ -2730,8 +2730,8 @@ def _preview_day_notes(route, body) -> list[str]:
     cabaret on a Tuileries→Notre-Dame day (W4.12, Julien: "I live here. These
     are checkable, and they are false.").
 
-    Unverified hours NAME the stops (Paulo: "gated" is jargon, an unnamed count
-    "is worse than silence").
+    Hours that are not the map's NAME the stops (Paulo: "gated" is jargon, an
+    unnamed count "is worse than silence").
     """
     on_route = {p.id for p in route.pois}
     notes: list[str] = []
@@ -2782,23 +2782,24 @@ def _preview_day_notes(route, body) -> list[str]:
             notes.append(f"{rule}; no waits in this day.")
 
     # A kept-closed door's exclusion line above already carries the doubt
-    # clause when its table is unverified (the one hedging function composes
+    # clause when its hours are a guess (the one hedging function composes
     # every closure reason), so listing it again is the same ignorance said
     # twice. Keyed on the kept_outside FIELD, never on the reason's words.
+    # Map hours are the top source and carry no doubt (Docs/adr/0006).
     doubt_carried = {e.poi_id for e in route.clock_exclusions if e.kept_outside}
-    unverified = [
+    doubted = [
         p.name
         for p in route.pois
         if p.opening_hours is not None
-        and p.opening_hours_verified is None
+        and p.opening_hours_source != "map"
         and p.id not in doubt_carried
     ]
-    if unverified:
-        notes.append("We could not confirm opening times for " + ", ".join(unverified) + ".")
-    # A DOOR with no table at all is the least-known kind and gets its own
-    # sentence (ADR 0003: a gated place without verified hours fails open
-    # WITH that disclosure). Distinct from the could-not-confirm list, which
-    # is about tables somebody wrote down.
+    if doubted:
+        notes.append("We could not confirm opening times for " + ", ".join(doubted) + ".")
+    # A DOOR with no hours at all is the least-known kind and gets its own
+    # sentence (Docs/adr/0006: unknown hours fail open WITH that disclosure).
+    # Distinct from the could-not-confirm list, which is about hours somebody
+    # wrote down.
     no_record = [p.name for p in route.pois if p.gated is True and p.opening_hours is None]
     if no_record:
         notes.append("No opening times on record for " + ", ".join(no_record) + ".")

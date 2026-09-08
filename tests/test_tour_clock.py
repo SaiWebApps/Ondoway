@@ -330,20 +330,11 @@ def test_route_records_clock_exclusions_additively():
 _TUESDAY_10AM = "2026-08-11T10:00:00"
 _MONDAY_10AM = "2026-08-10T10:00:00"
 
-_CLOSED_TUESDAY_TABLE = {
-    "mon": [["09:00", "18:00"]],
-    "tue": [],
-    "wed": [["09:00", "18:00"]],
-    "thu": [["09:00", "18:00"]],
-    "fri": [["09:00", "18:00"]],
-    "sat": [["09:00", "18:00"]],
-    "sun": [["09:00", "18:00"]],
-}
+#: Map hours (Docs/adr/0006): the OpenStreetMap text as the map carries it.
+_CLOSED_TUESDAY_HOURS = "Mo,We-Su 09:00-18:00; Tu off"
 
 
 def _tuesday_closed_museum():
-    import json as _json
-
     from tests.test_tour_selection import PDV
 
     return POI(
@@ -355,9 +346,9 @@ def _tuesday_closed_museum():
         lng=PDV[1],
         areas=("Paris",),
         beat_count=5,
-        opening_hours=_json.dumps(_CLOSED_TUESDAY_TABLE),
-        opening_hours_source="osm",
-        opening_hours_basis="Museum; OSM tag 'Mo,We-Su 09:00-18:00; Tu off'.",
+        opening_hours=_CLOSED_TUESDAY_HOURS,
+        opening_hours_source="map",
+        opening_hours_basis="Museum; the place's own OpenStreetMap tag.",
     )
 
 
@@ -483,51 +474,133 @@ def test_a_closed_poi_with_nothing_to_stand_and_see_is_still_excluded():
     assert recorded[0].kept_outside is False, "nothing to see from the street = left the pool"
 
 
-def test_a_closure_is_disclosed_in_plain_words_and_keeps_its_doubt():
-    """W4.12 (design deviation v; Paulo's wording rulings from the W4.2 panel).
-
-    This sentence goes on screen to a traveller, and the live Paris corpus was
-    printing it as:
-
-        "Marché Bastille — closed all day Wednesday (hours: OSM); closed today
-         — seated outside only"
-
-    which breaks two explicit rulings at once. "(hours: OSM)" is a provenance
-    tag no traveller can read. "seated" is the engine's own word for putting a
-    stop in the day, and on a MARKET the phrase reads as if a shut market had
-    tables outside.
-
-    The rulings did NOT ask for the doubt to be dropped with the tag. So the
-    doubt is now carried in words: an unverified table says so in the sentence,
-    a verified one simply states the closure. That is the pair this test pins —
-    forbidden vocabulary out, honesty in.
+def test_a_closure_is_disclosed_in_plain_words_and_spoken_by_its_source():
+    """The closure sentence goes on screen to a traveller (design deviation v;
+    Paulo's wording rulings), so it carries no provenance tag and none of the
+    engine's own words. What it DOES carry is the hours source (Docs/adr/0006):
+    map hours state the closure plainly; a guess, or hours with no source at
+    all, say in words that we could not confirm them.
     """
     import datetime as dt
-    import json as _json
 
     from src.tour.selection import _clock_exclusion_reason
 
-    closed_wed = _json.dumps({
-        "mon": [["09:00", "18:00"]], "tue": [["09:00", "18:00"]], "wed": [],
-        "thu": [["09:00", "18:00"]], "fri": [["09:00", "18:00"]],
-        "sat": [["09:00", "18:00"]], "sun": [["09:00", "18:00"]],
-    })
+    closed_wed = "Mo,Tu,Th-Su 09:00-18:00; We off"
     wednesday = dt.datetime(2026, 8, 12, 10, 0)
 
-    trust = '{"tier": 2, "approver": "owner", "evidence": "reviewed", "at": "2026-09-07"}'
-    verified = _clock_exclusion_reason(closed_wed, trust, wednesday, 180)
-    guessed = _clock_exclusion_reason(closed_wed, None, wednesday, 180)
+    from_map = _clock_exclusion_reason(closed_wed, "map", wednesday, 180, country="FR")
+    guessed = _clock_exclusion_reason(closed_wed, "guess", wednesday, 180, country="FR")
+    sourceless = _clock_exclusion_reason(closed_wed, None, wednesday, 180, country="FR")
 
-    for sentence in (verified, guessed):
+    for sentence in (from_map, guessed, sourceless):
         assert sentence is not None and "Wednesday" in sentence, sentence
         # The ruled-out vocabulary, in one place so a re-introduction is loud.
         for banned in ("hours:", "OSM", "AI", "seated", "gated", "err-short"):
             assert banned not in sentence, f"{banned!r} is back in {sentence!r}"
 
-    # A table we trust asserts the closure and nothing more.
-    assert verified == "closed all day Wednesday", verified
-    # A table we guessed says we guessed, in words a person reads.
+    # Map hours assert the closure and nothing more.
+    assert from_map == "closed all day Wednesday", from_map
+    # A guess says we guessed, in words a person reads; no source is no better.
     assert "could not confirm" in guessed, guessed
+    assert "could not confirm" in sourceless, sourceless
+
+
+# --- the library reads the map's text: seasons, holidays, and what it cannot read
+
+
+def _paris_run(text: str, start_datetime: str, *, source: str = "map"):
+    """The Tuesday-closed museum fixture with ITS hours replaced by ``text``
+    and a facade worth twenty minutes, planned in Paris at ``start_datetime``.
+    Returns the route and the museum."""
+    from src.tour.selection import select_route
+
+    museum = _tuesday_closed_museum().model_copy(
+        update={
+            "opening_hours": text,
+            "opening_hours_source": source,
+            "typical_duration_min": 20,
+            "visit_seconds_inside": 2700,
+        }
+    )
+    return museum, select_route(_clock_request(start_datetime), _clock_corpus(museum))
+
+
+def test_a_public_holiday_closes_a_door_in_the_citys_own_country():
+    """``PH off`` means the country's public holidays, and the country is the
+    city's (Docs/adr/0006; the registry's country per city). 14 July is a
+    holiday in France and not elsewhere: a Paris museum marked ``PH off`` is
+    closed that day and open the next. Read without a country the library
+    treats every ``PH`` as open, which is the silent wrong answer this pins."""
+    hours = "Mo-Su 10:00-18:00; PH off"
+    museum, bastille_day = _paris_run(hours, "2026-07-14T11:00:00")
+    said = [e for e in bastille_day.clock_exclusions if e.poi_id == museum.id]
+    assert len(said) == 1, "14 July is a public holiday in France; the door is shut"
+    assert said[0].kept_outside is True and said[0].all_day is True
+    assert "closed all day Tuesday" in said[0].reason, said[0].reason
+
+    _museum, next_day = _paris_run(hours, "2026-07-15T11:00:00")
+    assert next_day.clock_exclusions == ()
+
+
+def test_a_seasonal_rule_is_read_for_the_walks_own_month():
+    """Seasons live in the text and the library reads them: a place that closes
+    at 17:00 from October to March is shut at 17:30 in December and open at
+    17:30 in June — one rule, no table to flatten it into."""
+    hours = "Apr-Sep Mo-Su 09:00-18:00; Oct-Mar Mo-Su 09:00-17:00"
+    museum, december = _paris_run(hours, "2026-12-15T17:30:00")
+    assert [e.poi_id for e in december.clock_exclusions if "closed" in e.reason] == [museum.id]
+
+    _museum, june = _paris_run(hours, "2026-06-15T17:30:00")
+    assert not [e for e in june.clock_exclusions if e.poi_id == museum.id]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        'Mo-Su 10:00-18:00; "closed for renovation"',  # a quoted comment
+        "Mo-Su 10:00-18:00 unknown",  # the library's own unknown state
+        "Fermé le mardi",  # free text the library cannot parse
+    ],
+)
+def test_hours_the_library_cannot_settle_never_close_a_door(text):
+    """Docs/adr/0006: text the library cannot read, a quoted comment, or an
+    unknown state are all UNKNOWN hours — the door is never closed on them.
+    The rule fails open, exactly as it does for a place with no hours at all."""
+    import datetime as dt
+
+    from src.tour.selection import _clock_exclusion_reason, _closed_all_day
+
+    tuesday = dt.datetime(2026, 8, 11, 10, 0)
+    assert _clock_exclusion_reason(text, "map", tuesday, 60, country="FR") is None
+    assert _closed_all_day(text, tuesday, country="FR") is False
+
+
+def test_closed_all_day_reads_the_whole_calendar_day_from_the_text():
+    """``ClockExclusion.all_day`` is set from the data: no open minute on that
+    calendar day, holidays included."""
+    import datetime as dt
+
+    from src.tour.selection import _closed_all_day
+
+    assert _closed_all_day(_CLOSED_TUESDAY_HOURS, dt.datetime(2026, 8, 11, 15, 0), country="FR")
+    assert not _closed_all_day(
+        _CLOSED_TUESDAY_HOURS, dt.datetime(2026, 8, 10, 15, 0), country="FR"
+    )
+    bastille = dt.datetime(2026, 7, 14, 15, 0)
+    assert _closed_all_day("Mo-Su 10:00-18:00; PH off", bastille, country="FR")
+    assert not _closed_all_day("Mo-Su 10:00-18:00; PH off", bastille, country="US")
+
+
+def test_a_partly_open_window_names_the_hours_it_was_open():
+    """A door shut for the whole visit on a day it opens at other hours says
+    when it IS open, so the walker can come back; a door shut all day says so."""
+    import datetime as dt
+
+    from src.tour.selection import _clock_exclusion_reason
+
+    early = dt.datetime(2026, 8, 10, 19, 0)  # Monday evening, after 18:00
+    reason = _clock_exclusion_reason(_CLOSED_TUESDAY_HOURS, "map", early, 60, country="FR")
+    assert reason == "closed Monday 19:00-20:00 (open 09:00-18:00)", reason
 
 
 # --- the door is checked at each stop's own ARRIVAL window --------------------
@@ -541,18 +614,13 @@ def test_a_closure_is_disclosed_in_plain_words_and_keeps_its_doubt():
 _MONDAY_0930 = "2026-09-07T09:30:00"
 
 
-def _cathedral_hours(monday_windows):
-    import json as _json
-
-    return _json.dumps(
-        {
-            "mon": monday_windows,
-            "tue": [], "wed": [], "thu": [], "fri": [], "sat": [], "sun": [],
-        }
-    )
+def _cathedral_hours(monday_span: str) -> str:
+    """Map hours open on Monday for ``monday_span`` (``"06:00-09:45"``) and
+    on no other day."""
+    return f"Mo {monday_span}"
 
 
-def _dated_pont_neuf_run(monday_windows, start_datetime=_MONDAY_0930):
+def _dated_pont_neuf_run(monday_span, start_datetime=_MONDAY_0930):
     """The 100-minute Pont Neuf → cathedral day (the fits-the-interior fixture
     from tests.test_tour_selection), with opening hours on the cathedral and a
     clock on the request. The walk reaches the cathedral ~10:00: 720 s on the
@@ -562,8 +630,8 @@ def _dated_pont_neuf_run(monday_windows, start_datetime=_MONDAY_0930):
     bridge, cathedral, snap = _pont_neuf_to_cathedral()
     cathedral = cathedral.model_copy(
         update={
-            "opening_hours": _cathedral_hours(monday_windows),
-            "opening_hours_source": "osm",
+            "opening_hours": _cathedral_hours(monday_span),
+            "opening_hours_source": "map",
         }
     )
     import dataclasses
@@ -593,7 +661,7 @@ def test_a_door_shut_at_the_stops_own_arrival_prices_the_stop_outside_only():
     fault the roadmap names: the plan knows the door is shut; the voice says
     go inside. The arrival-window check prices the stop through the same
     exterior collapse a whole-window closure uses, at the same one site."""
-    bridge, cathedral, route = _dated_pont_neuf_run([["06:00", "09:45"]])
+    bridge, cathedral, route = _dated_pont_neuf_run("06:00-09:45")
 
     assert [p.id for p in route.pois] == [bridge.id, cathedral.id]
     assert route.visit_goes_inside[cathedral.id] is False, (
@@ -615,7 +683,7 @@ def test_a_door_open_at_arrival_keeps_the_interior_untouched():
     """The same day against a door that is open when the walk arrives changes
     nothing: full interior, full queue, no disclosure — the arrival check may
     only ever CLOSE a door the arrival clock proves shut."""
-    _bridge, cathedral, route = _dated_pont_neuf_run([["06:00", "20:00"]])
+    _bridge, cathedral, route = _dated_pont_neuf_run("06:00-20:00")
 
     assert route.visit_goes_inside[cathedral.id] is True
     assert route.planned_visit_seconds[cathedral.id] == 50 * 60 + 15 * 60
@@ -625,9 +693,7 @@ def test_a_door_open_at_arrival_keeps_the_interior_untouched():
 def test_a_dateless_day_never_consults_the_arrival_clock():
     """No clock = no arrival check = today's behaviour, byte-identical — the
     same identity default every other clock rule keeps (plan S1.6b)."""
-    _bridge, cathedral, route = _dated_pont_neuf_run(
-        [["06:00", "09:45"]], start_datetime=None
-    )
+    _bridge, cathedral, route = _dated_pont_neuf_run("06:00-09:45", start_datetime=None)
 
     assert route.visit_goes_inside[cathedral.id] is True
     assert route.planned_visit_seconds[cathedral.id] == 50 * 60 + 15 * 60
@@ -709,6 +775,7 @@ def _run_drop(
         start_lng=pois[0].lng,
         round_trip=False,
         clock_start=clock_start,
+        country="FR",
         planning_budget=budget,
         clock_exclusions=exclusions,
     )
@@ -836,16 +903,11 @@ def _dated_ab_run(*, dead: bool, pinned=(), start_datetime="2026-08-10T09:30:00"
     point, with a mid-course museum open for one minute of the request's
     window (pool keeps it; any arrival finds it shut)."""
     import dataclasses
-    import json as _json
 
     from tests.test_tour_selection import _ND_END, _ND_START, _poi, _pont_neuf_to_cathedral
 
     bridge, _cathedral, snap = _pont_neuf_to_cathedral()
     bridge = bridge.model_copy(update={"typical_duration_min": 22})
-    windows = {
-        d: [["06:00", "09:31"]]
-        for d in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-    }
     museum = _poi(
         "mid-museum",
         tier=5,
@@ -858,8 +920,8 @@ def _dated_ab_run(*, dead: bool, pinned=(), start_datetime="2026-08-10T09:30:00"
             "typical_duration_min": 0 if dead else 20,
             "visit_seconds_inside": 40 * 60,
             "visit_basis": "forty minutes inside the mid-course museum",
-            "opening_hours": _json.dumps(windows),
-            "opening_hours_source": "osm",
+            "opening_hours": "Mo-Su 06:00-09:31",
+            "opening_hours_source": "map",
         }
     )
     snap = dataclasses.replace(snap, pois=(bridge, museum))
@@ -916,7 +978,7 @@ def test_the_planner_flags_an_all_day_closure_and_an_arrival_window_one_apart():
     demoted = [e for e in tuesday.clock_exclusions if e.poi_id == museum.id]
     assert demoted[0].all_day is True
 
-    _bridge, cathedral, route = _dated_pont_neuf_run([["06:00", "09:45"]])
+    _bridge, cathedral, route = _dated_pont_neuf_run("06:00-09:45")
     said = [e for e in route.clock_exclusions if e.poi_id == cathedral.id]
     assert said[0].all_day is False
 

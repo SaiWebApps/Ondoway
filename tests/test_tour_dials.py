@@ -432,66 +432,56 @@ def test_a_closure_note_only_promises_the_outside_of_a_place_that_is_on_the_rout
     )
 
 
-def test_the_unverified_hours_note_keys_on_the_verified_record_alone():
-    """The doubt sentence names exactly the on-route gated stops whose table
-    nobody has verified. A verified table escapes the doubt HOWEVER it was
-    sourced — an AI-written table with a verification record is trusted, which
-    is the ladder's whole point — and an ungated stop was never in question.
-    Nothing unverified, no sentence at all.
+def test_the_could_not_confirm_note_keys_on_the_hours_source():
+    """The doubt sentence names exactly the on-route doors whose hours are a
+    guess, or carry no source at all (Docs/adr/0006). Map hours escape the
+    doubt — the map is the top source and is spoken plainly — and an ungated
+    stop was never in question. Nothing doubted, no sentence at all.
 
-    UNDO TEST: key the list on `opening_hours_source in (None, "ai")` (the
-    pre-ladder rule) -> the verified-AI stop is named as doubted -> RED.
+    UNDO TEST: key the list on `opening_hours is not None` alone -> the map
+    stop is named as doubted -> RED.
     """
-    import json as _json
-
     from src.api.routes.trips import _preview_day_notes
 
-    table = _json.dumps(
-        {d: [["09:00", "18:00"]] for d in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")}
+    hours = "Mo-Su 09:00-18:00"
+    from_map = _poi("Musee du Plan", lat=PDV[0], lng=PDV[1] + 0.001).model_copy(
+        update={"opening_hours": hours, "opening_hours_source": "map"}
     )
-    verified_ai = _poi("Musee Verifie", lat=PDV[0], lng=PDV[1] + 0.001).model_copy(
-        update={
-            "opening_hours": table,
-            "opening_hours_source": "ai",
-            "opening_hours_verified": _json.dumps(
-                {"tier": 2, "approver": "owner", "evidence": "site", "at": "2026-09-07"}
-            ),
-        }
+    guessed = _poi("Chapelle Douteuse", lat=PDV[0] + 0.001, lng=PDV[1]).model_copy(
+        update={"opening_hours": hours, "opening_hours_source": "guess"}
     )
-    doubted = _poi("Chapelle Douteuse", lat=PDV[0] + 0.001, lng=PDV[1]).model_copy(
-        update={"opening_hours": table, "opening_hours_source": "osm"}
+    sourceless = _poi("Crypte Sans Source", lat=PDV[0] + 0.003, lng=PDV[1]).model_copy(
+        update={"opening_hours": hours, "opening_hours_source": None}
     )
     street = _poi("Place des Vosges", lat=PDV[0] + 0.002, lng=PDV[1])  # ungated
 
-    notes = _preview_day_notes(_wire_day(verified_ai, doubted, street), _dial_body())
+    notes = _preview_day_notes(_wire_day(from_map, guessed, sourceless, street), _dial_body())
     (note,) = [n for n in notes if "confirm" in n]
-    assert note == "We could not confirm opening times for Chapelle Douteuse.", note
+    assert note == (
+        "We could not confirm opening times for Chapelle Douteuse, Crypte Sans Source."
+    ), note
 
-    all_trusted = _preview_day_notes(_wire_day(verified_ai, street), _dial_body())
-    assert not any("confirm" in n for n in all_trusted), all_trusted
+    all_from_the_map = _preview_day_notes(_wire_day(from_map, street), _dial_body())
+    assert not any("confirm" in n for n in all_from_the_map), all_from_the_map
 
 
 def test_a_doubted_door_is_doubted_once_on_the_notes_channel():
-    """A kept-closed unverified door already carries the doubt clause inside
+    """A kept-closed guessed door already carries the doubt clause inside
     its own exclusion line (the reason is composed by the one hedging
     function, for pool and arrival closures alike), so repeating it in the
     could-not-confirm list is the same ignorance said twice two lines apart.
     The skip keys on the exclusion's `kept_outside` FIELD, never on the
     reason's words (W4.12). A doubted door with no exclusion stays listed —
     the list is its only doubt."""
-    import json as _json
-
     from src.api.routes.trips import _preview_day_notes
     from src.tour.contract import ClockExclusion
 
-    table = _json.dumps(
-        {d: [["09:00", "18:00"]] for d in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")}
-    )
+    hours = "Mo-Su 09:00-18:00"
     closed_doubted = _poi("Marche Bastille", lat=PDV[0], lng=PDV[1] + 0.001).model_copy(
-        update={"opening_hours": table, "opening_hours_source": "osm"}
+        update={"opening_hours": hours, "opening_hours_source": "guess"}
     )
     open_doubted = _poi("Chapelle Douteuse", lat=PDV[0] + 0.001, lng=PDV[1]).model_copy(
-        update={"opening_hours": table, "opening_hours_source": "osm"}
+        update={"opening_hours": hours, "opening_hours_source": "guess"}
     )
     route = _wire_day(
         closed_doubted, open_doubted,
@@ -510,12 +500,11 @@ def test_a_doubted_door_is_doubted_once_on_the_notes_channel():
 
 
 def test_a_door_with_no_hours_on_record_is_named_not_silent():
-    """ADR 0003: a gated place without verified hours fails open WITH that
-    disclosure. The doubt sentence above counts tables; this one counts
-    DOORS — a gated stop with no table at all is the least-known door and
-    used to be the only one never doubted anywhere. It gets its own plain
-    sentence; an ungated square stays silent, and the no-record door never
-    leaks into the could-not-confirm list (that sentence is about tables).
+    """Docs/adr/0006: a door with unknown hours fails open WITH that
+    disclosure. The doubt sentence above is about hours somebody wrote down;
+    this one counts DOORS — a gated stop with no hours at all is the
+    least-known door. It gets its own plain sentence; an ungated square stays
+    silent, and the no-record door never leaks into the could-not-confirm list.
 
     UNDO TEST: key the note on `opening_hours is not None` -> Notre-Dame
     vanishes from every note -> RED."""

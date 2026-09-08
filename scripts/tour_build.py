@@ -549,17 +549,15 @@ def _print_breakdown(
                 f"{visit:>7}  {shape:>10}  {queue:>5}  {walk_in:>7}"
             )
         # AIKO'S HONESTY LINE (plan S3.1 deviation ii; design §6: clock-native
-        # planning is "a promise without a table under it" until the hours
-        # data exists): on a dated run, say how many of the gated stops rest
-        # on unaudited hours. GATED = a DOOR — `gated is True`, or a non-None
-        # table (a table implies a door on a legacy row). UNVERIFIED = no
-        # `opening_hours_verified` record, and a door with NO table can never
-        # count trusted (ADR 0003: a gated place without verified hours fails
-        # open WITH that disclosure) — the ladder is the one trust signal, so
-        # a human-confirmed AI table counts trusted and an unreviewed
-        # transcription does not self-certify. Printed even at 0 unverified
-        # so a clean run SAYS it is clean; omitted on undated runs (no clock,
-        # no gate) and when no stop on the route has a door.
+        # planning is "a promise without hours under it"): on a dated run, say
+        # how many of the gated stops rest on hours that are not the map's.
+        # GATED = a DOOR — `gated is True`, or hours on record (hours imply a
+        # door on a legacy row). COUNTED = every door whose source is not
+        # "map": a guess, no source, or no hours at all (Docs/adr/0006: the
+        # map is the one source spoken plainly; unknown hours fail open WITH
+        # that disclosure). Printed even at 0 so a clean run SAYS it is clean;
+        # omitted on undated runs (no clock, no gate) and when no stop on the
+        # route has a door.
         if start_dt is not None:
             gated = [
                 p for p in route.pois
@@ -568,7 +566,7 @@ def _print_breakdown(
             if gated:
                 unverified = sum(
                     1 for p in gated
-                    if p.opening_hours_verified is None or p.opening_hours is None
+                    if p.opening_hours_source != "map" or p.opening_hours is None
                 )
                 print(
                     f"  hours unverified for {unverified} of the {len(gated)} "
