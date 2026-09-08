@@ -3939,8 +3939,8 @@ def _select_route_once(
     # walker is still routed to — the pool rule's "one honest removal", owed
     # at this clock too. Dropped at planning time, disclosed as not-in-your-
     # day, order preserved (ordering stays clock-blind; only the timing and
-    # the membership move). Iterated to a fixpoint because a drop moves every
-    # later arrival, which can only OPEN doors earlier arrivals found shut.
+    # the membership move). Iterated to a fixpoint because a drop pulls every
+    # later arrival earlier, which re-decides doors in both directions.
     # Four carve-outs: a pinned stop (an overridden pin is the one outcome
     # worse than a refusal), a replan-protected stop (it triggers the question
     # instead), the fixed end (the person's own destination), and a drop that
@@ -5134,8 +5134,9 @@ def _drop_dead_doors(
     Dropped at planning time, disclosed on ``clock_exclusions`` as
     not-in-your-day (``kept_outside=False``), order preserved: ordering stays
     clock-blind, only the timing and the membership move. Iterated to a
-    fixpoint because a drop moves every later arrival, which can only OPEN
-    doors earlier arrivals found shut.
+    fixpoint because a drop pulls every later arrival earlier, which
+    re-decides doors in both directions: one found shut can now be open, and
+    one that was open can now be reached before it opens.
 
     Carve-outs, all in ``undroppable`` (a pinned stop — an overridden pin is
     the one outcome worse than a refusal; a replan-protected stop — it

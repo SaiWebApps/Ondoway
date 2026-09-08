@@ -517,9 +517,8 @@ def test_a_closure_is_disclosed_in_plain_words_and_keeps_its_doubt():
     trust = '{"tier": 2, "approver": "owner", "evidence": "reviewed", "at": "2026-09-07"}'
     verified = _clock_exclusion_reason(closed_wed, trust, wednesday, 180)
     guessed = _clock_exclusion_reason(closed_wed, None, wednesday, 180)
-    unsourced = _clock_exclusion_reason(closed_wed, None, wednesday, 180)
 
-    for sentence in (verified, guessed, unsourced):
+    for sentence in (verified, guessed):
         assert sentence is not None and "Wednesday" in sentence, sentence
         # The ruled-out vocabulary, in one place so a re-introduction is loud.
         for banned in ("hours:", "OSM", "AI", "seated", "gated", "err-short"):
@@ -529,7 +528,6 @@ def test_a_closure_is_disclosed_in_plain_words_and_keeps_its_doubt():
     assert verified == "closed all day Wednesday", verified
     # A table we guessed says we guessed, in words a person reads.
     assert "could not confirm" in guessed, guessed
-    assert "could not confirm" in unsourced, unsourced
 
 
 # --- the door is checked at each stop's own ARRIVAL window --------------------
@@ -655,10 +653,15 @@ def _seam_poi(pid: str, typical: int):
     )
 
 
-def _run_drop(pois, *, dead_ids, undroppable=frozenset(), minimum=0, nominal=6000):
+def _run_drop(
+    pois, *, dead_ids=frozenset(), undroppable=frozenset(), minimum=0, nominal=6000,
+    door_reason=None,
+):
     """Drive the drop rule at its own seam with deterministic doubles: every
     leg 300 s, every visit 600 s, a door is 'shut at arrival' exactly for the
-    ids the test names — no greedy, no band, no repair in the way."""
+    ids the test names — no greedy, no band, no repair in the way.
+    ``door_reason`` replaces the id-keyed double with a clock-aware one so the
+    fixpoint (a drop re-times later arrivals) can be exercised."""
     import datetime as dt
 
     from src.tour.contract import PromiseShape
@@ -693,8 +696,11 @@ def _run_drop(pois, *, dead_ids, undroppable=frozenset(), minimum=0, nominal=600
         list(pois),
         arrivals,
         undroppable=set(undroppable),
-        arrival_door_reason=lambda poi, hour, clock: (
-            "closed Monday 09:30-10:30" if poi.id in dead_ids else None
+        arrival_door_reason=door_reason
+        or (
+            lambda poi, hour, clock: (
+                "closed Monday 09:30-10:30" if poi.id in dead_ids else None
+            )
         ),
         shape_visit=lambda poi, hour, clock=None: shape,
         price_visit=price,
@@ -759,6 +765,69 @@ def test_a_drop_that_would_underfill_keeps_the_demotion():
     )
     assert [p.id for p in kept] == ["a", "dead-door"]
     assert said == []
+
+
+def test_the_armed_floor_guard_lets_a_healthy_drop_proceed():
+    """The production shape — a firm day always plans with a nonzero minimum —
+    is guard ARMED and floor satisfied, and the drop still goes through: the
+    guard is a refusal of underfill, never a stand-down switch. Remaining
+    after the drop: 2 legs x 300 + 2 visits x 600 = 1800 s, over the 500 s
+    floor (0.5 x 1000)."""
+    a, dead, c = _seam_poi("a", 12), _seam_poi("dead-door", 0), _seam_poi("c", 15)
+    kept, _arrivals, said = _run_drop(
+        [a, dead, c], dead_ids={"dead-door"}, minimum=400, nominal=1000
+    )
+    assert [p.id for p in kept] == ["a", "c"]
+    assert [e.poi_id for e in said] == ["dead-door"]
+
+
+def test_a_drop_retimes_the_walk_and_the_recheck_catches_a_door_not_yet_open():
+    """The fixpoint's second pass: dropping the dead door pulls every later
+    arrival EARLIER, and an earlier arrival can land before a door has
+    opened. late2 (opens 10:00, nothing outside) is fine at its original
+    10:05 arrival; once the drop moves it to 09:50 the re-check finds the
+    shut door and removes it too. A single-pass drop leaves late2 on the
+    route at a door that no longer opens in time."""
+    import datetime as dt
+
+    a, dead = _seam_poi("a", 12), _seam_poi("dead-door", 0)
+    late2 = _seam_poi("late2", 0)
+    opens = dt.datetime(2026, 8, 10, 10, 0)
+
+    def reason(poi, hour, clock):
+        if poi.id == "dead-door":
+            return "closed Monday"
+        if poi.id == "late2" and clock is not None and clock < opens:
+            return "opens at 10:00"
+        return None
+
+    kept, _arrivals, said = _run_drop([a, dead, late2], door_reason=reason)
+    assert [p.id for p in kept] == ["a"]
+    assert [e.poi_id for e in said] == ["dead-door", "late2"]
+
+
+def test_a_dated_run_consults_the_drop_rule_and_a_dateless_run_never_does(monkeypatch):
+    """The planner's own door to the rule: every dated run passes through
+    `_drop_dead_doors` with its clock (delete the call site and this is the
+    test that goes red), and the dateless day never consults it — the
+    identity default every clock rule keeps."""
+    import src.tour.selection as sel
+
+    calls: list = []
+    real = sel._drop_dead_doors
+
+    def spy(selected, final_arrivals, **kwargs):
+        calls.append(kwargs["clock_start"])
+        return real(selected, final_arrivals, **kwargs)
+
+    monkeypatch.setattr(sel, "_drop_dead_doors", spy)
+    museum = _tuesday_closed_museum_with_an_exterior()
+    sel.select_route(_clock_request(_TUESDAY_10AM), _clock_corpus(museum))
+    assert calls and all(c is not None for c in calls)
+
+    calls.clear()
+    sel.select_route(_clock_request(None), _clock_corpus(museum))
+    assert calls == []
 
 
 def _dated_ab_run(*, dead: bool, pinned=(), start_datetime="2026-08-10T09:30:00"):
