@@ -610,19 +610,95 @@ def test_lane4_is_a_complete_lane():
 def test_the_dev_half_of_a_lane_is_lane_aware():
     """`make api LANE=4` must serve lane 4's dev graph, never the canonical one.
 
-    The lane block rewrites the test and workbench profile names but the dev
-    exec used to stay a literal `--profile local`, so a lane target preflighted
-    and seeded its own dev graph and then served :7687. The dev profile now
-    derives from the lane like its two siblings.
+    Behavioural, per the ruling against shape assertions: the recipe `make`
+    itself would run is read off a dry-run and must name the lane's profile,
+    the lane's port and the lane's dev-graph requirement — and the same
+    dry-run per lane pins the Makefile's port arithmetic to preflight's
+    LANE_SERVER_PORTS table, so the two spellings cannot drift apart.
     """
-    text = MAKEFILE.read_text(encoding="utf-8")
-    assert "DEV_PROFILE := local$(LANE)" in text, (
-        "the lane block does not derive a dev profile from LANE="
+    for lane in ("2", "3", "4"):
+        api_port = preflight.LANE_SERVER_PORTS[lane]["api"]
+        result = subprocess.run(
+            ["make", "-n", "api", f"LANE={lane}"],
+            capture_output=True,
+            text=True,
+            cwd=str(ROOT),
+            check=False,
+            timeout=60,
+        )
+        assert result.returncode == 0, result.stderr
+        assert f"--profile local{lane}" in result.stdout, (
+            f"LANE={lane}: the api recipe does not exec under the lane's dev "
+            f"profile:\n{result.stdout}"
+        )
+        assert f"--port {api_port}" in result.stdout, (
+            f"LANE={lane}: the api recipe binds a different port than "
+            f"preflight's lane table ({api_port}):\n{result.stdout}"
+        )
+        assert f"port-{api_port}" in result.stdout, (
+            f"LANE={lane}: the api recipe preflights a different port "
+            f"requirement than the lane table's:\n{result.stdout}"
+        )
+        assert f"db-dev{lane}" in result.stdout, (
+            f"LANE={lane}: the api recipe preflights another lane's dev graph:"
+            f"\n{result.stdout}"
+        )
+
+
+def test_a_lanes_live_shard_execs_under_its_own_test_profile():
+    """`make test-file LANE=4 LIVE=1` used to preflight lane 4's graphs and
+    then exec the destructive live fixtures against the canonical :7688 shard
+    through a literal `--profile test`. The live exec must follow the lane."""
+    result = subprocess.run(
+        ["make", "-n", "test-live", "LANE=4"],
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+        check=False,
+        timeout=60,
     )
-    assert "--profile local --" not in text, (
-        "an exec line still hardcodes the canonical dev profile; it would serve "
-        ":7687 from any lane"
+    assert result.returncode == 0, result.stderr
+    assert "--profile test4" in result.stdout, (
+        f"the live shard's exec does not follow the lane:\n{result.stdout}"
     )
+
+
+def test_a_reusable_lane_port_expects_that_lanes_own_dev_graph(monkeypatch):
+    """Each lane's reusable API-port row must hand `_serves_this_project` that
+    lane's dev graph — a lane-4 workbench must never satisfy itself with a
+    server reading another lane's corpus. Regression for the graph_port
+    plumbing, which every name-existence check would miss."""
+    ours = f"{preflight.ROOT}/.venv/bin/python -m uvicorn src.api.app:app"
+    seen: dict[int, int] = {}
+
+    def capture(port, *, graph_port=preflight.DEV_GRAPH_PORT):
+        seen[port] = graph_port
+        return True
+
+    monkeypatch.setattr(preflight, "_serves_this_project", capture)
+    for lane, ports in preflight.LANE_SERVER_PORTS.items():
+        api_port = ports["api"]
+        monkeypatch.setattr(
+            preflight, "_port_listeners", lambda p: [preflight.PortHolder(1, ours)]
+        )
+        assert preflight.REGISTRY[f"port-{api_port}-reusable"].probe().ok is True
+        expected = preflight.DATABASE_BY_KEY[f"dev{lane}"].port
+        assert seen.get(api_port) == expected, (
+            f"port-{api_port}-reusable would reuse a server on graph "
+            f":{seen.get(api_port)}; lane {lane or 'main'}'s dev graph is :{expected}"
+        )
+
+
+def test_the_canonical_xdist_shards_never_include_the_sandbox_lane():
+    """The bar's three workers map to 7688/7690/7691 and no more; lane 4's
+    graph joining that map would hand the sandbox's fixtures to the bar."""
+    from tests.conftest import _XDIST_WORKER_DB
+
+    assert set(_XDIST_WORKER_DB) == {0, 1, 2}
+    mapped_ports = {row["port"] for row in _XDIST_WORKER_DB.values()}
+    assert mapped_ports == {7688, 7690, 7691}
+    sandbox_port = preflight.DATABASE_BY_KEY["test4"].port
+    assert sandbox_port not in mapped_ports
 
 
 def test_live_corpus_ports_track_the_lane_dev_graphs():
@@ -660,6 +736,91 @@ def test_lane_ports_are_disjoint_and_registered():
         assert name in preflight.REGISTRY, (
             f"lane {lane or 'main'} has no reusable API-port requirement {name}"
         )
+
+
+def _make_in(directory: Path, *goals: str) -> subprocess.CompletedProcess:
+    """`make -n` against the copied Makefile in ``directory`` — parse-time only,
+    so the checkout-identity guards fire without any recipe running."""
+    return subprocess.run(
+        ["make", "-n", *goals],
+        capture_output=True,
+        text=True,
+        cwd=str(directory),
+        check=False,
+        timeout=60,
+    )
+
+
+@pytest.fixture
+def guard_probe(tmp_path):
+    """A throwaway git repo carrying only this repo's Makefile, plus a worktree
+    of it — the two checkout shapes the lane guard must tell apart. Hermetic:
+    nothing touches this repo's own git metadata."""
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    main = tmp_path / "main"
+    main.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=main, check=True)
+    (main / "Makefile").write_text(MAKEFILE.read_text(encoding="utf-8"), encoding="utf-8")
+    subprocess.run([*git, "add", "Makefile"], cwd=main, check=True)
+    subprocess.run([*git, "commit", "-qm", "makefile"], cwd=main, check=True)
+    worktree = tmp_path / "wt"
+    subprocess.run(["git", "worktree", "add", "-q", str(worktree)], cwd=main, check=True)
+    return main, worktree
+
+
+def test_a_worktree_refuses_to_run_without_a_lane(guard_probe):
+    """The trampling trap: a worktree with LANE forgotten used to resolve every
+    target against the MAIN checkout's graphs, every guard green. A worktree
+    must know its lane — from LANE= or its own .ondoway-lane pin — or refuse."""
+    main, worktree = guard_probe
+
+    unpinned = _make_in(worktree, "help")
+    assert unpinned.returncode != 0, "a worktree with no lane ran anyway"
+    assert ".ondoway-lane" in unpinned.stderr, (
+        f"the refusal does not name the pin file: {unpinned.stderr!r}"
+    )
+
+    assert _make_in(worktree, "help", "LANE=4").returncode == 0, (
+        "an explicit LANE=4 must satisfy the worktree guard"
+    )
+    (worktree / ".ondoway-lane").write_text("4\n", encoding="utf-8")
+    assert _make_in(worktree, "help").returncode == 0, (
+        "the .ondoway-lane pin must satisfy the worktree guard"
+    )
+    assert _make_in(main, "help").returncode == 0, (
+        "the main checkout needs no lane and must be untouched by the guard"
+    )
+
+
+def test_the_definitive_bar_refuses_to_run_from_a_worktree(guard_probe):
+    """team.md's multi-track rule, enforced rather than remembered: only the
+    main checkout runs `make test`/`make audit` — from a worktree the bar
+    would run the canonical shards against the canonical graphs."""
+    _main, worktree = guard_probe
+    (worktree / ".ondoway-lane").write_text("4\n", encoding="utf-8")
+    for goal in ("test", "audit"):
+        result = _make_in(worktree, goal)
+        assert result.returncode != 0, f"`make {goal}` ran from a worktree"
+        assert "main checkout" in result.stderr, (
+            f"the refusal does not say where the bar belongs: {result.stderr!r}"
+        )
+
+
+def test_a_worktree_touches_only_its_own_lanes_graphs(guard_probe):
+    """`make db-reset DB=dev` from a worktree used to delete MAIN's dev volume
+    (one pinned compose project across checkouts). A worktree's db targets
+    accept only its own lane's graphs."""
+    _main, worktree = guard_probe
+    (worktree / ".ondoway-lane").write_text("4\n", encoding="utf-8")
+    blocked = _make_in(worktree, "db-reset", "DB=dev")
+    assert blocked.returncode != 0, "a worktree reached another lane's graph"
+    assert "dev4" in blocked.stderr, (
+        f"the refusal does not name the lane's own graphs: {blocked.stderr!r}"
+    )
+    assert _make_in(worktree, "db-status", "DB=dev4").returncode == 0
+    assert _make_in(worktree, "db-reset", "DB=dev4").returncode == 0, (
+        "-n on the worktree's own lane graph must parse clean"
+    )
 
 
 def test_db_up_resolves_every_database_not_just_the_default():

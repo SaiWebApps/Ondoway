@@ -336,11 +336,24 @@ the ways below; everything else in this file applies per track, unchanged.
   region (in `plan.md`), and a per-track budget. "go" is given once for the
   set; after it, a track never idles waiting for human input that is not a
   pause-budget item.
-- **A sandbox is an explicit worktree plus its own lane.** Created with
-  `git worktree add <path> -b <branch>` — never a harness-managed worktree —
-  then `uv sync` and `codegraph init` inside it. `LANE=` selects its graphs
-  and ports. The infra milestones that create a lane land on main BEFORE the
-  worktree is cut, so every sandbox is born already isolated.
+- **A sandbox is an explicit worktree plus its own lane — lane 4.** Created
+  with `git worktree add <path> -b <branch>` — never a harness-managed
+  worktree — then `uv sync` and `codegraph init` inside it, and the lane
+  pinned by writing the lane number to `.ondoway-lane` in the worktree
+  (gitignored, per checkout). Lanes 2 and 3 are the definitive bar's own
+  shards; a sandbox never takes them. The Makefile refuses any target in a
+  worktree that has neither `LANE=` nor the pin, so a forgotten lane can
+  never silently reach the main checkout's graphs. The infra milestones that
+  create a lane land on main BEFORE the worktree is cut, so every sandbox is
+  born already isolated.
+- **Everything in a sandbox runs through `make`.** `ONDOWAY_LANE` comes from
+  make; a bare script invocation loses the lane, and a direct
+  `scripts/preflight.py` call additionally needs
+  `ONDOWAY_ALLOW_INSECURE_AUTH_SECRETS=1` (make exports it — the dev-data
+  seeder's transient API refuses without it). The lane's dev graph is seeded
+  automatically by the first `LANE`-bearing target's `dev-data` repair
+  (~4 min for three cities). `make db-parity TARGET=cloud` runs from main
+  only.
 - **Ledgers are per checkout.** A completion claim re-runs its test in the
   checkout that made it, so each track records its rows in its own
   `.claude/ledger/tracker.db` and serves its own dashboard (main :8010,

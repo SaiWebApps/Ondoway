@@ -248,6 +248,10 @@ temp/
 # Project Specific
 # ====================
 
+# A checkout's own lane pin: a worktree writes its lane number here once so
+# no target can run laneless and reach another checkout's graphs.
+.ondoway-lane
+
 # Claude Code working state (keep shared commands, learnings, agents, the
 # tracker, and workflow scripts; ignore machine-local state and run scratch)
 .claude/*

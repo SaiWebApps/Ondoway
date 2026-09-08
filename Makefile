@@ -34,15 +34,46 @@ PREFLIGHT := python3 scripts/preflight.py
 # requirements with it (PRE_PYTEST below), so a lane cannot silently run against a
 # graph nobody started:   make test-file LANE=2 FILE=tests/test_x.py::TestY::test_z
 #
-# Adding lane 4 is one compose service per graph plus one preflight row each — do
-# that rather than queueing behind a busy lane.  `make test` and `make audit` are
-# deliberately NOT parameterised: the definitive bar always runs the canonical set.
+# Lane 4 is the SANDBOX lane — the one a multi-track worktree owns outright
+# (Docs/adr/0002). Lanes 2 and 3 are the definitive bar's own shards; a
+# sandbox never takes them. Adding a further lane is one compose service per
+# graph plus one preflight row each — do that rather than queueing behind a
+# busy lane.  `make test` and `make audit` are deliberately NOT parameterised:
+# the definitive bar always runs the canonical set, from the MAIN checkout only.
 # The defaults stay LITERAL -- `test`, not `test$(LANE)` -- because
 # scripts/preflight.py resolves `db-$(TEST_PROFILE)` by reading these lines, and
 # it deliberately takes only literal values so it can never start a substitution
 # chain (tests/test_preflight.py fails the moment a name stops resolving). The
 # lane override therefore happens below, where it costs the parser nothing.
 LANE ?=
+
+# ── the checkout knows its lane ──────────────────────────────────────────────
+# A git worktree is a sandbox, and a sandbox with LANE forgotten used to
+# resolve every target against the MAIN checkout's graphs with every guard
+# reporting green — the exact trampling the lanes exist to prevent. So a
+# worktree must know its lane: from LANE= on the command line, or from its own
+# `.ondoway-lane` pin (one line, the lane number — written once at worktree
+# creation). With neither, every target refuses at parse time. The main
+# checkout (git-dir == git-common-dir) is untouched.
+GIT_DIR_PATH := $(shell git rev-parse --git-dir 2>/dev/null)
+GIT_COMMON_PATH := $(shell git rev-parse --git-common-dir 2>/dev/null)
+IS_WORKTREE := $(if $(filter-out $(GIT_COMMON_PATH),$(GIT_DIR_PATH)),1,)
+ifneq ($(IS_WORKTREE),)
+ifeq ($(LANE),)
+LANE := $(strip $(shell cat .ondoway-lane 2>/dev/null))
+endif
+ifeq ($(LANE),)
+$(error this checkout is a git worktree with no lane. Pass LANE=<n> or write the lane number to .ondoway-lane in this checkout (the sandbox lane is 4; lanes 2/3 are the bar's shards). Without a lane every target would touch the MAIN checkout's graphs)
+endif
+ifneq ($(filter test audit,$(MAKECMDGOALS)),)
+$(error the definitive bar runs from the main checkout only — its five tracks consume the canonical graphs and lanes 2/3 as shards. Run narrow tests here instead: make test-file FILE=... (this worktree is lane $(LANE)))
+endif
+ifneq ($(filter db-up db-down db-reset,$(MAKECMDGOALS)),)
+ifeq ($(filter %$(LANE),$(DB)),)
+$(error a worktree touches only its own lane's graphs: DB=dev$(LANE), DB=test$(LANE) or DB=workbench$(LANE) (this worktree is lane $(LANE); DB=$(DB) belongs to another checkout))
+endif
+endif
+endif
 TEST_PROFILE ?= test
 DEV_DB ?= dev
 DEV_PROFILE ?= local
@@ -68,7 +99,7 @@ LOCAL_EXEC := $(ENV_EXEC) --profile $(DEV_PROFILE) --
 TEST_EXEC := $(ENV_EXEC) --profile $(TEST_PROFILE) --
 WORKBENCH_EXEC := $(ENV_EXEC) --profile $(WORKBENCH_PROFILE) --
 RENDER_LOCAL_EXEC := $(ENV_EXEC) --profile $(DEV_PROFILE) --render --
-RENDER_TEST_EXEC := $(ENV_EXEC) --profile test --render --
+RENDER_TEST_EXEC := $(ENV_EXEC) --profile $(TEST_PROFILE) --render --
 CLOUD_EXEC := $(ENV_EXEC) --profile cloud --render --
 NO_PROXY_LIST := api.resend.com,resend.com,www.googleapis.com,googleapis.com,api.anthropic.com,anthropic.com,api.github.com,github.com
 LIVE_TEST_FILES := \
@@ -217,8 +248,8 @@ render-auth-status: ## Validate the Keychain Render API key against ondoway-api.
 
 config-status: ## Fetch Render fresh and validate the final local/test/workbench boundaries.
 	@$(PREFLIGHT) --label config-status $(PRE_PY) render-key
-	@$(RENDER_LOCAL_EXEC) python -c '$(CHECK_PROFILE)' local 7687
-	@$(RENDER_TEST_EXEC) python -c '$(CHECK_PROFILE)' test 7688
+	@$(ENV_EXEC) --profile local --render -- python -c '$(CHECK_PROFILE)' local 7687
+	@$(ENV_EXEC) --profile test --render -- python -c '$(CHECK_PROFILE)' test 7688
 	@$(ENV_EXEC) --profile workbench --render -- python -c '$(CHECK_PROFILE)' workbench 7689
 
 sync: ## Install Python dependencies from public PyPI.
@@ -547,7 +578,7 @@ db-reset: ## Delete exactly one local Neo4j volume. Usage: make db-reset DB=<one
 
 db-parity: ## Compare committed data with local dev or read-only Aura. Usage: make db-parity TARGET=local|cloud.
 	@case "$(TARGET)" in \
-		local) $(PREFLIGHT) --label "db-parity TARGET=local" uv python-deps db-dev && \
+		local) $(PREFLIGHT) --label "db-parity TARGET=local" uv python-deps db-$(DEV_DB) && \
 			$(LOCAL_EXEC) uv run python -m scripts.db_parity $(CITY) ;; \
 		cloud) $(PREFLIGHT) --label "db-parity TARGET=cloud" $(PRE_PY) render-key && \
 			$(CLOUD_EXEC) env ONDOWAY_CLOUD_READ_ONLY=1 \

@@ -305,8 +305,8 @@ def _acquire_lane_lock() -> None:
         _lane_lock_file = None
         raise RuntimeError(
             f"Another test session is already using the test database on port {port}. "
-            f"Use LANE=2, LANE=3 or LANE=4 for concurrent runs, or wait for the other "
-            f"session to finish."
+            f"A sandbox worktree runs on LANE=4 (its own graphs); lanes 2/3 are the "
+            f"definitive bar's shards. Pass LANE=4, or wait for the other session."
         ) from exc
 
 
