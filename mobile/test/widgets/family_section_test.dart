@@ -25,6 +25,7 @@ void main() {
       families: const [_familyOfTwo],
       isLoaded: true,
       onCreate: () async {},
+      onRetry: () async {},
       onInvite: (_) async =>
           const FamilyInvite(inviteUrl: 'http://x/auth/join-family?token=t', expiresAt: ''),
     )));
@@ -41,6 +42,7 @@ void main() {
       families: const [],
       isLoaded: true,
       onCreate: () async => created++,
+      onRetry: () async {},
       onInvite: (_) async =>
           const FamilyInvite(inviteUrl: 'http://x', expiresAt: ''),
     )));
@@ -62,6 +64,7 @@ void main() {
       families: const [_familyOfTwo],
       isLoaded: true,
       onCreate: () async {},
+      onRetry: () async {},
       onInvite: (familyId) async {
         invitedFamilies.add(familyId);
         return const FamilyInvite(
@@ -80,5 +83,57 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(QrImageView), findsOneWidget);
+  });
+
+  testWidgets('still loading (no error) shows the loading line', (tester) async {
+    await tester.pumpWidget(_host(FamilySection(
+      families: const [],
+      isLoaded: false,
+      onCreate: () async {},
+      onRetry: () async {},
+      onInvite: (_) async =>
+          const FamilyInvite(inviteUrl: 'http://x', expiresAt: ''),
+    )));
+
+    expect(find.text('Loading…'), findsOneWidget);
+    expect(find.text('Retry'), findsNothing);
+  });
+
+  testWidgets('a failed load shows the error with a Retry that calls onRetry',
+      (tester) async {
+    var retried = 0;
+    await tester.pumpWidget(_host(FamilySection(
+      families: const [],
+      isLoaded: false,
+      loadError: 'Could not load your family.',
+      onCreate: () async {},
+      onRetry: () async => retried++,
+      onInvite: (_) async =>
+          const FamilyInvite(inviteUrl: 'http://x', expiresAt: ''),
+    )));
+
+    // Never a bare "Loading…" over a failure: the error and the way out.
+    expect(find.text('Loading…'), findsNothing);
+    expect(find.text('Could not load your family.'), findsOneWidget);
+
+    await tester.tap(find.text('Retry'));
+    await tester.pump();
+    expect(retried, 1);
+  });
+
+  testWidgets('a loaded family stays on screen even when a refetch fails',
+      (tester) async {
+    await tester.pumpWidget(_host(FamilySection(
+      families: const [_familyOfTwo],
+      isLoaded: true,
+      loadError: 'Could not load your family.',
+      onCreate: () async {},
+      onRetry: () async {},
+      onInvite: (_) async =>
+          const FamilyInvite(inviteUrl: 'http://x', expiresAt: ''),
+    )));
+
+    expect(find.text('Fiona'), findsOneWidget);
+    expect(find.text('Retry'), findsNothing);
   });
 }

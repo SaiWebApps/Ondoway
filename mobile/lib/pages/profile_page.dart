@@ -107,12 +107,17 @@ class ProfilePage extends StatelessWidget {
           FamilySection(
             families: familyService.families,
             isLoaded: familyService.isLoaded,
+            loadError: familyService.loadError,
             onCreate: () async {
               await familyService.createFamily(
                 auth.accessToken!,
                 refresh: refreshBearer,
               );
             },
+            onRetry: () => familyService.fetchFamilies(
+              auth.accessToken!,
+              refresh: refreshBearer,
+            ),
             onInvite: (familyId) => familyService.createInvite(
               familyId,
               auth.accessToken!,

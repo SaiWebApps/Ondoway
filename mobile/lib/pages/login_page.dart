@@ -5,8 +5,10 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:ondoway/services/auth_service.dart';
+import 'package:ondoway/services/family_service.dart';
 import 'package:ondoway/services/lens_service.dart';
 import 'package:ondoway/services/profile_service.dart';
+import 'package:ondoway/services/session_bootstrap.dart';
 import 'package:ondoway/theme/dims.dart';
 import 'package:ondoway/theme/tokens.dart';
 
@@ -276,13 +278,14 @@ class _LoginPageState extends State<LoginPage> {
 
       if (!mounted) return;
       final authService = context.read<AuthService>();
-      final lensService = context.read<LensService>();
       final profileService = context.read<ProfileService>();
 
-      await Future.wait([
-        if (!lensService.isLoaded) lensService.fetchLenses(),
-        profileService.fetchProfile(authService.accessToken!),
-      ]);
+      await loadSignedInSession(
+        auth: authService,
+        lenses: context.read<LensService>(),
+        profile: profileService,
+        family: context.read<FamilyService>(),
+      );
 
       if (mounted) {
         context.go(profileService.isFirstTime ? '/onboarding' : '/explore');
@@ -303,13 +306,14 @@ class _LoginPageState extends State<LoginPage> {
 
       if (!mounted) return;
       final authService = context.read<AuthService>();
-      final lensService = context.read<LensService>();
       final profileService = context.read<ProfileService>();
 
-      await Future.wait([
-        if (!lensService.isLoaded) lensService.fetchLenses(),
-        profileService.fetchProfile(authService.accessToken!),
-      ]);
+      await loadSignedInSession(
+        auth: authService,
+        lenses: context.read<LensService>(),
+        profile: profileService,
+        family: context.read<FamilyService>(),
+      );
 
       if (mounted) {
         context.go(profileService.isFirstTime ? '/onboarding' : '/explore');

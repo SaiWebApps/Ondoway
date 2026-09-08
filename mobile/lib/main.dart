@@ -10,6 +10,7 @@ import 'package:ondoway/services/feedback_service.dart';
 import 'package:ondoway/services/lens_service.dart';
 import 'package:ondoway/services/location_service.dart';
 import 'package:ondoway/services/profile_service.dart';
+import 'package:ondoway/services/session_bootstrap.dart';
 import 'package:ondoway/services/tour_playback_service.dart';
 import 'package:ondoway/services/trip_service.dart';
 import 'package:ondoway/theme/theme.dart';
@@ -42,11 +43,12 @@ void main() async {
 
   if (authService.isAuthenticated) {
     try {
-      await Future.wait([
-        lensService.fetchLenses(),
-        profileService.fetchProfile(authService.accessToken!),
-        familyService.fetchFamilies(authService.accessToken!),
-      ]);
+      await loadSignedInSession(
+        auth: authService,
+        lenses: lensService,
+        profile: profileService,
+        family: familyService,
+      );
     } catch (_) {
       // Non-fatal: app still works, onboarding detection may default to first-time
     }

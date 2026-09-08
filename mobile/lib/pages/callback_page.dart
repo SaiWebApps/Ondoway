@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:ondoway/services/auth_service.dart';
+import 'package:ondoway/services/family_service.dart';
 import 'package:ondoway/services/lens_service.dart';
 import 'package:ondoway/services/profile_service.dart';
+import 'package:ondoway/services/session_bootstrap.dart';
 
 class CallbackPage extends StatefulWidget {
   final String token;
@@ -35,13 +37,14 @@ class _CallbackPageState extends State<CallbackPage> {
 
       if (!mounted) return;
 
-      final lensService = context.read<LensService>();
       final profileService = context.read<ProfileService>();
 
-      await Future.wait([
-        if (!lensService.isLoaded) lensService.fetchLenses(),
-        profileService.fetchProfile(authService.accessToken!),
-      ]);
+      await loadSignedInSession(
+        auth: authService,
+        lenses: context.read<LensService>(),
+        profile: profileService,
+        family: context.read<FamilyService>(),
+      );
 
       if (!mounted) return;
       context.go(profileService.isFirstTime ? '/onboarding' : '/explore');

@@ -12,14 +12,22 @@ import 'package:qr_flutter/qr_flutter.dart';
 class FamilySection extends StatelessWidget {
   final List<FamilyInfo> families;
   final bool isLoaded;
+
+  /// Why the load failed, when it did — renders as the error line plus a
+  /// Retry instead of a loading state that can never resolve. A family that
+  /// already loaded stays on screen even when a refetch later fails.
+  final String? loadError;
   final Future<void> Function() onCreate;
+  final Future<void> Function() onRetry;
   final Future<FamilyInvite> Function(String familyId) onInvite;
 
   const FamilySection({
     super.key,
     required this.families,
     required this.isLoaded,
+    this.loadError,
     required this.onCreate,
+    required this.onRetry,
     required this.onInvite,
   });
 
@@ -33,7 +41,23 @@ class FamilySection extends StatelessWidget {
           child: Text('Your family', style: Theme.of(context).textTheme.titleMedium),
         ),
         const SizedBox(height: 8),
-        if (!isLoaded)
+        if (!isLoaded && loadError != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(loadError!, style: const TextStyle(color: Colors.grey)),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () => _guarded(context, onRetry),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          )
+        else if (!isLoaded)
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Text('Loading…', style: TextStyle(color: Colors.grey)),

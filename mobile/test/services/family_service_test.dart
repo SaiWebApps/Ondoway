@@ -42,8 +42,9 @@ void main() {
           containsAll(['Fiona', 'Dev']));
     });
 
-    test('fetchFamilies leaves state unloaded on 401 so auth can refresh',
-        () async {
+    test(
+        'fetchFamilies records a retryable error on a terminal 401 — never a '
+        'silent forever-loading state', () async {
       final service = FamilyService(
         httpClient: MockClient(
             (r) async => http.Response('{"detail":"Not authenticated"}', 401)),
@@ -51,6 +52,46 @@ void main() {
       await service.fetchFamilies('bad-token');
       expect(service.isLoaded, false);
       expect(service.families, isEmpty);
+      expect(service.loadError, isNotNull);
+    });
+
+    test('fetchFamilies records an error instead of throwing on a 500',
+        () async {
+      final service = FamilyService(
+        httpClient:
+            MockClient((r) async => http.Response('{"detail":"boom"}', 500)),
+      );
+      await service.fetchFamilies('token');
+      expect(service.isLoaded, false);
+      expect(service.loadError, isNotNull);
+    });
+
+    test('fetchFamilies records an error instead of throwing on a dead network',
+        () async {
+      final service = FamilyService(
+        httpClient:
+            MockClient((r) async => throw http.ClientException('offline')),
+      );
+      await service.fetchFamilies('token');
+      expect(service.isLoaded, false);
+      expect(service.loadError, isNotNull);
+    });
+
+    test('a successful retry clears the recorded error', () async {
+      var calls = 0;
+      final service = FamilyService(
+        httpClient: MockClient((r) async {
+          calls++;
+          if (calls == 1) return http.Response('{"detail":"boom"}', 500);
+          return http.Response(jsonEncode({'families': []}), 200);
+        }),
+      );
+      await service.fetchFamilies('token');
+      expect(service.loadError, isNotNull);
+
+      await service.fetchFamilies('token');
+      expect(service.loadError, isNull);
+      expect(service.isLoaded, true);
     });
 
     test('fetchFamilies with no family loads an empty list', () async {
@@ -225,6 +266,7 @@ void main() {
       service.reset();
       expect(service.isLoaded, false);
       expect(service.families, isEmpty);
+      expect(service.loadError, isNull);
     });
   });
 }

@@ -51,12 +51,17 @@ class FamilyService extends ChangeNotifier {
 
   List<FamilyInfo> _families = [];
   bool _isLoaded = false;
+  String? _loadError;
 
   FamilyService({http.Client? httpClient})
       : _httpClient = httpClient ?? http.Client();
 
   List<FamilyInfo> get families => List.unmodifiable(_families);
   bool get isLoaded => _isLoaded;
+
+  /// Why the last [fetchFamilies] failed, in a sentence the screen shows next
+  /// to a Retry — null while loading and after any success.
+  String? get loadError => _loadError;
 
   /// The family the screen shows: a person is usually in one. Null = none yet.
   FamilyInfo? get family => _families.isEmpty ? null : _families.first;
@@ -81,37 +86,51 @@ class FamilyService extends ChangeNotifier {
 
   /// Loads the caller's families from GET /families/mine.
   ///
-  /// 401/403 = auth failure — left unloaded so the auth layer can refresh and
-  /// retry (the fetchProfile contract). Any other non-200 throws; an empty
-  /// `families` list is a real, loaded answer ("no family yet").
+  /// Never throws, and always ends in exactly one of two states: loaded
+  /// (`isLoaded`, with an empty `families` list being a real answer — "no
+  /// family yet") or failed (`loadError` holds the sentence the screen shows
+  /// beside a Retry). A 401/403 that survives the one refresh-and-retry is a
+  /// failure like any other — never a silent forever-loading state — and a
+  /// dead network is caught here so the sign-in landing's parallel fetches
+  /// cannot be broken by the family read.
   Future<void> fetchFamilies(
     String accessToken, {
     Future<String?> Function()? refresh,
   }) async {
-    final resp = await _withAuthRetry(
-      (token) => _httpClient.get(
-        Uri.parse('$_apiBaseUrl/families/mine'),
-        headers: {'Authorization': 'Bearer $token'},
-      ),
-      accessToken,
-      refresh,
-    );
-
-    if (resp.statusCode == 401 || resp.statusCode == 403) {
+    final http.Response resp;
+    try {
+      resp = await _withAuthRetry(
+        (token) => _httpClient.get(
+          Uri.parse('$_apiBaseUrl/families/mine'),
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+        accessToken,
+        refresh,
+      );
+    } catch (_) {
+      _loadError = 'Could not load your family.';
+      notifyListeners();
       return;
     }
+
     if (resp.statusCode != 200) {
-      throw FamilyServiceException(
-        'Could not load your family: ${resp.body}',
-        statusCode: resp.statusCode,
-      );
+      _loadError = 'Could not load your family.';
+      notifyListeners();
+      return;
     }
 
-    final data = jsonDecode(resp.body) as Map<String, dynamic>;
-    _families = (data['families'] as List<dynamic>)
-        .map((f) => FamilyInfo.fromJson(f as Map<String, dynamic>))
-        .toList();
+    try {
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      _families = (data['families'] as List<dynamic>)
+          .map((f) => FamilyInfo.fromJson(f as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      _loadError = 'Could not load your family.';
+      notifyListeners();
+      return;
+    }
     _isLoaded = true;
+    _loadError = null;
     notifyListeners();
   }
 
@@ -210,6 +229,7 @@ class FamilyService extends ChangeNotifier {
   void reset() {
     _families = [];
     _isLoaded = false;
+    _loadError = null;
     notifyListeners();
   }
 }
