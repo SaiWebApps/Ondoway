@@ -1,10 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:ondoway/services/auth_service.dart';
+import 'package:ondoway/services/profile_service.dart';
 import 'package:ondoway/services/trip_service.dart';
 
-class SavedTripsPage extends StatelessWidget {
+class SavedTripsPage extends StatefulWidget {
   const SavedTripsPage({super.key});
+
+  @override
+  State<SavedTripsPage> createState() => _SavedTripsPageState();
+}
+
+class _SavedTripsPageState extends State<SavedTripsPage> {
+  bool _fetching = false;
+  String? _fetchError;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchFromServer());
+  }
+
+  /// The tab's list is the SERVER's list — GET /trips returns every trip the
+  /// caller captains or crews (ADR 0005), so a day someone else planned for
+  /// the family appears here without this phone ever generating anything.
+  /// The in-memory list filled by the local generate flow is only the
+  /// starting picture until this answers.
+  Future<void> _fetchFromServer() async {
+    final profileId = context.read<ProfileService>().profileId;
+    final accessToken = context.read<AuthService>().accessToken;
+    if (profileId == null || accessToken == null) return;
+
+    setState(() {
+      _fetching = true;
+      _fetchError = null;
+    });
+    try {
+      await context.read<TripService>().fetchSavedTrips(profileId, accessToken);
+    } catch (_) {
+      if (mounted) setState(() => _fetchError = 'Could not load your trips.');
+    } finally {
+      if (mounted) setState(() => _fetching = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,6 +51,33 @@ class SavedTripsPage extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final tripService = context.watch<TripService>();
     final trips = tripService.savedTrips;
+
+    if (trips.isEmpty && _fetching) {
+      return const SafeArea(child: Center(child: CircularProgressIndicator()));
+    }
+    if (trips.isEmpty && _fetchError != null) {
+      return SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _fetchError!,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _fetchFromServer,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return SafeArea(
       child: trips.isEmpty
