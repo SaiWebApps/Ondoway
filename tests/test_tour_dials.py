@@ -432,6 +432,45 @@ def test_a_closure_note_only_promises_the_outside_of_a_place_that_is_on_the_rout
     )
 
 
+def test_the_unverified_hours_note_keys_on_the_verified_record_alone():
+    """The doubt sentence names exactly the on-route gated stops whose table
+    nobody has verified. A verified table escapes the doubt HOWEVER it was
+    sourced — an AI-written table with a verification record is trusted, which
+    is the ladder's whole point — and an ungated stop was never in question.
+    Nothing unverified, no sentence at all.
+
+    UNDO TEST: key the list on `opening_hours_source in (None, "ai")` (the
+    pre-ladder rule) -> the verified-AI stop is named as doubted -> RED.
+    """
+    import json as _json
+
+    from src.api.routes.trips import _preview_day_notes
+
+    table = _json.dumps(
+        {d: [["09:00", "18:00"]] for d in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")}
+    )
+    verified_ai = _poi("Musee Verifie", lat=PDV[0], lng=PDV[1] + 0.001).model_copy(
+        update={
+            "opening_hours": table,
+            "opening_hours_source": "ai",
+            "opening_hours_verified": _json.dumps(
+                {"tier": 2, "approver": "owner", "evidence": "site", "at": "2026-09-07"}
+            ),
+        }
+    )
+    doubted = _poi("Chapelle Douteuse", lat=PDV[0] + 0.001, lng=PDV[1]).model_copy(
+        update={"opening_hours": table, "opening_hours_source": "osm"}
+    )
+    street = _poi("Place des Vosges", lat=PDV[0] + 0.002, lng=PDV[1])  # ungated
+
+    notes = _preview_day_notes(_wire_day(verified_ai, doubted, street), _dial_body())
+    (note,) = [n for n in notes if "confirm" in n]
+    assert note == "We could not confirm opening times for Chapelle Douteuse.", note
+
+    all_trusted = _preview_day_notes(_wire_day(verified_ai, street), _dial_body())
+    assert not any("confirm" in n for n in all_trusted), all_trusted
+
+
 def test_the_api_resolves_presets_and_the_more_dial_exactly_as_the_harness_does():
     """ONE ENGINE (memory: workbench and app share ONE path). `resolve_party_axes`
     expands presets and the "more stops" dial into the axes the planner reads —
@@ -629,9 +668,12 @@ def test_composed_dials_cannot_duck_under_the_one_underfill_line():
     open_day = select_route(composed.model_copy(update={"end_hardness": "open"}), snap)
     assert 1 <= len(open_day.pois) <= 4, "open ships the short honest day"
 
-    # THE TOMBSTONE — one line, one site: the fraction is read at the final gate
-    # and nowhere inside the repair (an absence-of-code invariant, so it is a
-    # source read; the behaviour above is what proves the gate works).
+    # THE TOMBSTONE — one line, two licensed readers: the fraction is read at
+    # the final gate and at the dead-door drop's floor guard (Docs/adr/0004's
+    # underfill carve-out — the guard refuses a drop the gate would refuse to
+    # ship, so both sites MUST share the one constant) — and nowhere inside
+    # the repair (an absence-of-code invariant, so it is a source read; the
+    # behaviour above is what proves the gate works).
     import inspect
 
     from src.tour import selection
@@ -639,8 +681,10 @@ def test_composed_dials_cannot_duck_under_the_one_underfill_line():
     assert "UNDERFILL_REFUSAL_FRACTION" not in inspect.getsource(
         selection._apply_certification_timebox_repair
     ), "the repair still carries its own underfill line — two lines, two answers"
-    assert inspect.getsource(selection).count("UNDERFILL_REFUSAL_FRACTION") == 2, (
-        "exactly one definition and one read of the underfill fraction under src/"
+    assert "UNDERFILL_REFUSAL_FRACTION" in inspect.getsource(selection._drop_dead_doors)
+    assert inspect.getsource(selection).count("UNDERFILL_REFUSAL_FRACTION") == 3, (
+        "one definition, two licensed reads (final gate, drop floor guard) — "
+        "any other count is a new underfill line under src/"
     )
 
 
