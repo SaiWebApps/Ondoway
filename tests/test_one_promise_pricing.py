@@ -368,6 +368,34 @@ def test_rain_halves_an_uncovered_place_and_leaves_a_covered_one_alone():
     assert sheltered.outside_seconds + sheltered.inside_seconds == 38 * 60
 
 
+def test_a_voided_door_shelters_nobody_in_rain():
+    """A covered category shelters the VISIT, and a voided door has no visit:
+    a museum the clock closed (or the day's own repair stepped outside of) is
+    a facade in the weather, and its outside stand pays the rain penalty like
+    any square. The acceptance listen's finding: the closed Louvre was the
+    rainy day's longest outdoor stand, exempt from the penalty it deserved
+    because its CATEGORY said covered."""
+    from src.tour.visit_time import visit_shape
+
+    museum = _chapelle(queue=None, category="museum")
+    closed_in_rain = visit_shape(
+        museum, CAMILLE, _corpus(museum), weather="rain", closed_today=True
+    )
+    assert closed_in_rain.goes_inside is False
+    assert closed_in_rain.outside_seconds == round(15 * 60 * 0.5), (
+        "a clock-voided museum's outdoor stand must pay the rain penalty"
+    )
+
+    stepped_outside = visit_shape(
+        museum, CAMILLE, _corpus(museum), weather="rain", exterior_only=True
+    )
+    assert stepped_outside.outside_seconds == round(15 * 60 * 0.5)
+
+    # The door OPEN, the shelter holds — the existing promise, unmoved.
+    open_in_rain = visit_shape(museum, CAMILLE, _corpus(museum), weather="rain")
+    assert open_in_rain.outside_seconds + open_in_rain.inside_seconds == 38 * 60
+
+
 def test_an_uncategorised_place_counts_as_uncovered_in_rain():
     """"" means the categoriser has not run (src/tour/contract.py row 6.7), and
     the safe direction is OPEN: never promise shelter the data cannot back

@@ -249,7 +249,14 @@ def visit_shape(
             outside if party_ceiling_seconds is None else min(outside, party_ceiling_seconds)
         )
 
-    if weather == "rain" and not place_is_covered(poi):
+    # A covered CATEGORY shelters the visit; a voided door has no visit. A
+    # museum the clock closed — or the day's own repair stepped outside of —
+    # is a facade in the weather, so its outdoor stand pays the rain penalty
+    # like any square (Docs/adr/0004's acceptance finding: the closed Louvre
+    # was a rainy day's longest outdoor stand, exempt because its category
+    # said covered).
+    door_voided = closed_today or exterior_only
+    if weather == "rain" and (not place_is_covered(poi) or door_voided):
         outside_seconds = round(outside_seconds * RAIN_DWELL_FRACTION)
         inside_seconds = round(inside_seconds * RAIN_DWELL_FRACTION)
 

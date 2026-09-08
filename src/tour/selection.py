@@ -2912,6 +2912,20 @@ def _select_route_once(
             continue
         candidates.append(poi)
 
+    # THE RAIN DIM REACHES A VOIDED DOOR (the M1.7 acceptance finding): the
+    # pre-pool rain overlay dims only category-uncovered places, so a closed
+    # museum kept as a facade still scored as SHELTER and out-competed open
+    # streets on a wet day — the walker handed a 30-minute stand outside a
+    # locked door in the rain. A covered place the pool's clock voided joins
+    # the dim here, through the same one per-place score knob; the dwell side
+    # already pays the penalty in THE pricer (visit_time.visit_shape).
+    if input.weather == "rain" and closed_today_ids:
+        rain_penalty = dict(score_penalty or {})
+        for poi in snapshot.pois:
+            if poi.id in closed_today_ids and place_is_covered(poi):
+                rain_penalty[poi.id] = rain_penalty.get(poi.id, 1.0) * RAIN_DWELL_FRACTION
+        score_penalty = rain_penalty
+
     certification_candidates = sorted(
         {poi.id: poi for poi in [*candidates, *corridor_rescue_candidates]}.values(),
         key=lambda poi: poi.id,
