@@ -44,6 +44,7 @@ from .contract import (
     GENERIC_OPEN_TOUR_CLOSING,
     BeatRef,
     BeatSequence,
+    ClockExclusion,
     POIBeats,
     Route,
     Script,
@@ -1447,6 +1448,7 @@ def _closed_start_line(route: Route) -> Sentence | None:
     speaks this ahead of a closed stop 0's own line when both are true: two
     shut doors are two facts, each said once."""
     on_route = {poi.id: idx for idx, poi in enumerate(route.pois)}
+    kept_later: ClockExclusion | None = None
     for excl in route.clock_exclusions:
         if not excl.at_start:
             continue
@@ -1454,19 +1456,29 @@ def _closed_start_line(route: Route) -> Sentence | None:
         if idx == 0:
             continue
         if idx is None:
-            template = (
-                CLOSED_START_ALL_DAY_LINE_TEMPLATE
-                if excl.all_day
-                else CLOSED_START_LINE_TEMPLATE
+            # The dropped door outranks a kept one, whatever order the
+            # planner appended: this line is the ONLY place that door is
+            # ever named, while a kept door's own stop still speaks the
+            # full acknowledgment on arrival.
+            return Sentence(
+                text=(
+                    CLOSED_START_ALL_DAY_LINE_TEMPLATE
+                    if excl.all_day
+                    else CLOSED_START_LINE_TEMPLATE
+                ).format(name=excl.name),
+                source_id=GLUE_STAGING,
+                source_type="glue",
+                stop_idx=0,
             )
-        else:
-            template = (
-                CLOSED_START_KEPT_ALL_DAY_LINE_TEMPLATE
-                if excl.all_day
-                else CLOSED_START_KEPT_LINE_TEMPLATE
-            )
+        if kept_later is None:
+            kept_later = excl
+    if kept_later is not None:
         return Sentence(
-            text=template.format(name=excl.name),
+            text=(
+                CLOSED_START_KEPT_ALL_DAY_LINE_TEMPLATE
+                if kept_later.all_day
+                else CLOSED_START_KEPT_LINE_TEMPLATE
+            ).format(name=kept_later.name),
             source_id=GLUE_STAGING,
             source_type="glue",
             stop_idx=0,

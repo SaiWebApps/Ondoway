@@ -2192,6 +2192,47 @@ def test_a_kept_closed_start_is_named_where_the_walker_stands():
     assert not any("right here at the start" in t for t in texts)
 
 
+def test_the_dropped_door_outranks_the_kept_one_at_the_walks_open():
+    """Two shut doors AT the start: one kept (seated later — its own stop
+    speaks the full line on arrival) and one dropped (this line is the ONLY
+    place that door is ever named). The dropped door speaks, whatever order
+    the planner appended the exclusions in — preferring the kept door would
+    repeat a fact the day already tells and silence one it never will.
+    UNDO: return the first at_start exclusion regardless of membership ->
+    the kept-first ordering silences the dropped door -> RED."""
+    from src.tour.contract import ClockExclusion
+
+    p1 = _poi("p1", "Pantheon")
+    p2 = _poi("p2", "Bourse de Commerce")
+    b1 = _beat("b1", p1.id, body="Soufflot designed it.", nf="establishing")
+    b2 = _beat("b2", p2.id, body="The rotunda is wrapped in a panorama.", nf="establishing")
+    seq = BeatSequence(poi_beats=(_poi_beats(p1, (b1,)), _poi_beats(p2, (b2,))))
+    kept = ClockExclusion(
+        poi_id=p2.id, name=p2.name, reason="closed all day Monday",
+        kept_outside=True, all_day=True, at_start=True,
+    )
+    dropped = ClockExclusion(
+        poi_id="orangerie", name="Musee de l'Orangerie",
+        reason="closed all day Monday",
+        kept_outside=False, all_day=True, at_start=True,
+    )
+    dropped_line = (
+        "Musee de l'Orangerie, right here at the start, is closed today, "
+        "so the walk goes on without it."
+    )
+    for order in ((kept, dropped), (dropped, kept)):
+        route = _route((p1, p2)).model_copy(update={"clock_exclusions": order})
+        script = generate(seq, route, _input(), glue_client=MockGlueClient())
+        stop0 = [s.text for s in script.script if s.stop_idx == 0]
+        assert stop0[1] == dropped_line, (order[0].name, stop0[:3])
+        # The kept door still gets its full acknowledgment at its own stop.
+        assert any(
+            s.text == "Bourse de Commerce is closed today, so we'll take it in from out here."
+            and s.stop_idx == 1
+            for s in script.script
+        )
+
+
 def test_a_dropped_only_invitation_beat_is_not_reported_as_voiced():
     """A beat that was ONLY an invitation at a shut door emits nothing — and
     the voiced roster must say so (the same truth-from-emissions rule the
