@@ -399,9 +399,12 @@ _BEYOND_WEEKLY_RE = re.compile(
     re.IGNORECASE,
 )
 
-#: A time span whose end is at or before its start crosses midnight — the one
-#: pure-weekday construct a per-day window list clips instead of carrying.
-_TIME_SPAN_RE = re.compile(r"(\d{2}:\d{2})-(\d{2}:\d{2})")
+#: A span that crosses midnight is the one pure-weekday construct a per-day
+#: window list clips instead of carrying — and it is a CONSTRUCT, not a
+#: spelling: one-digit hours, whitespace around the dash, and the spec's
+#: extended-hours notation (26:00 = 02:00 next day) all denote it. The span
+#: is parsed as minutes and judged as one; 24:00 is a legal end-of-day.
+_TIME_SPAN_RE = re.compile(r"(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})")
 
 
 def _tag_fits_a_weekly_table(tag: str) -> bool:
@@ -411,7 +414,14 @@ def _tag_fits_a_weekly_table(tag: str) -> bool:
     midnight-crossing does not, and stays with the human queue."""
     if _BEYOND_WEEKLY_RE.search(tag):
         return False
-    return all(end > start for start, end in _TIME_SPAN_RE.findall(tag))
+    for h1, m1, h2, m2 in _TIME_SPAN_RE.findall(tag):
+        start = int(h1) * 60 + int(m1)
+        end = int(h2) * 60 + int(m2)
+        if int(h1) >= 24 or end > 24 * 60:  # extended hours: 25:00, 26:00 …
+            return False
+        if end <= start:  # crosses midnight (or is empty)
+            return False
+    return True
 
 
 def corroborate(

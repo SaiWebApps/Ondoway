@@ -384,6 +384,12 @@ def test_the_weekly_predicate_refuses_every_side_door() -> None:
         "Mo-Su 10:00+",
         "Mo-Fr 08:00-12:00 || Sa 09:00-11:00",
         "Tu,Th-Sa 21:00-01:00",
+        # The crossing is a CONSTRUCT, not a spelling: one-digit hours,
+        # whitespace inside the span, and spec-standard extended hours
+        # (26:00 = 02:00 next day) all denote the same clipped door.
+        "Tu,Th-Sa 21:00-1:00",
+        "Tu,Th-Sa 21:00- 01:00",
+        "Fr-Sa 20:00-26:00",
         "mo-su 10:00-18:00; dec 25 off",
         "Mo-Su 09:00-18:00; ph off",
     )
@@ -398,6 +404,7 @@ def test_the_weekly_predicate_refuses_every_side_door() -> None:
         "closed",
         "Sa 08:45-12:00,14:00-19:45",
         "Tu-Th, Sa-Su 09:30-20:00; Fr 09:30-22:30",
+        "Mo-Su 10:00-24:00",  # 24:00 is a legal end-of-day, not a crossing
     )
     for tag in weekly:
         assert fits(tag), f"a weekly table says {tag!r} exactly"
