@@ -33,6 +33,7 @@ from __future__ import annotations
 import http.server
 import importlib.util
 import inspect
+import os
 import socket
 import subprocess
 import sys
@@ -740,7 +741,16 @@ def test_lane_ports_are_disjoint_and_registered():
 
 def _make_in(directory: Path, *goals: str) -> subprocess.CompletedProcess:
     """`make -n` against the copied Makefile in ``directory`` — parse-time only,
-    so the checkout-identity guards fire without any recipe running."""
+    so the checkout-identity guards fire without any recipe running.
+
+    Runs with make's own inherited state scrubbed: under the definitive bar
+    this test itself executes beneath `make`, and the inherited MAKEFLAGS
+    carries the bar's `LANE=` command-line override into the child — a
+    command-line assignment outranks the pin's file assignment, which is not
+    the shell a developer types into.
+    """
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("MAKE", "MFLAGS"))}
+    env.pop("LANE", None)
     return subprocess.run(
         ["make", "-n", *goals],
         capture_output=True,
@@ -748,6 +758,7 @@ def _make_in(directory: Path, *goals: str) -> subprocess.CompletedProcess:
         cwd=str(directory),
         check=False,
         timeout=60,
+        env=env,
     )
 
 
