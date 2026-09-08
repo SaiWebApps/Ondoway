@@ -636,6 +636,200 @@ def test_a_dateless_day_never_consults_the_arrival_clock():
     assert route.clock_exclusions == ()
 
 
+# --- a dead door leaves the day (Docs/adr/0004) -------------------------------
+#
+# The arrival check above demotes a shut door to its exterior. A shut door with
+# NOTHING outside (typical_duration_min == 0) used to stay anyway — a zero-value
+# stand the walker is still routed to. It now leaves the day at planning time,
+# disclosed as not-in-your-day, with four carve-outs: pinned stops, replan-
+# protected stops and the fixed end are never dropped, and a drop that would
+# push the day under the underfill refusal keeps the demotion instead — a
+# padded day beats no day (refill is Phase 11's).
+
+
+def _seam_poi(pid: str, typical: int):
+    from tests.test_tour_selection import PDV, _poi
+
+    return _poi(pid, tier=5, lat=PDV[0], lng=PDV[1], areas=("Paris",), beat_count=5).model_copy(
+        update={"typical_duration_min": typical}
+    )
+
+
+def _run_drop(pois, *, dead_ids, undroppable=frozenset(), minimum=0, nominal=6000):
+    """Drive the drop rule at its own seam with deterministic doubles: every
+    leg 300 s, every visit 600 s, a door is 'shut at arrival' exactly for the
+    ids the test names — no greedy, no band, no repair in the way."""
+    import datetime as dt
+
+    from src.tour.contract import PromiseShape
+    from src.tour.routing import DEFAULT_ROUTE_PLANNING_POLICY, route_planning_budget
+    from src.tour.selection import _drop_dead_doors, _full_route_leg_seconds, _walk_arrivals
+
+    clock_start = dt.datetime(2026, 8, 10, 9, 30)
+    price = lambda poi, hour, clock=None: 600  # noqa: E731
+    legs_fn = lambda a, b, c, d: 300  # noqa: E731
+    legs = _full_route_leg_seconds(
+        pois, start_lat=pois[0].lat, start_lng=pois[0].lng, round_trip=False,
+        leg_seconds_fn=legs_fn,
+    )
+    arrivals = _walk_arrivals(pois, legs, clock_start=clock_start, price_visit=price)
+    budget = route_planning_budget(60, DEFAULT_ROUTE_PLANNING_POLICY)
+    if minimum == 0:
+        import dataclasses as _dc
+
+        budget = _dc.replace(budget, minimum_elapsed_seconds=0)
+    else:
+        import dataclasses as _dc
+
+        budget = _dc.replace(
+            budget, minimum_elapsed_seconds=minimum, nominal_elapsed_seconds=nominal
+        )
+    exclusions: list = []
+    shape = PromiseShape(
+        outside_seconds=0, inside_seconds=0, queue_seconds=0,
+        goes_inside=False, closed_today=True,
+    )
+    kept, kept_arrivals = _drop_dead_doors(
+        list(pois),
+        arrivals,
+        undroppable=set(undroppable),
+        arrival_door_reason=lambda poi, hour, clock: (
+            "closed Monday 09:30-10:30" if poi.id in dead_ids else None
+        ),
+        shape_visit=lambda poi, hour, clock=None: shape,
+        price_visit=price,
+        leg_seconds_fn=legs_fn,
+        start_lat=pois[0].lat,
+        start_lng=pois[0].lng,
+        round_trip=False,
+        clock_start=clock_start,
+        planning_budget=budget,
+        clock_exclusions=exclusions,
+    )
+    return kept, kept_arrivals, exclusions
+
+
+def test_a_dead_door_at_arrival_leaves_the_day_and_says_so():
+    """Shut at its own arrival, nothing outside: the stop is gone from the
+    served order — the walker is never routed to it — the day says it is not
+    in the day (kept_outside False), the order of the survivors holds, and
+    their arrivals are re-timed on the shorter walk."""
+    a, dead, c = _seam_poi("a", 12), _seam_poi("dead-door", 0), _seam_poi("c", 15)
+    kept, kept_arrivals, said = _run_drop([a, dead, c], dead_ids={"dead-door"})
+
+    assert [p.id for p in kept] == ["a", "c"], "the dead door is still on the route"
+    assert [p.id for p, _h, _s, _c in kept_arrivals] == ["a", "c"]
+    assert len(said) == 1
+    assert said[0].poi_id == "dead-door"
+    assert said[0].kept_outside is False
+    assert "closed" in said[0].reason
+
+
+def test_a_dead_door_with_an_exterior_keeps_todays_demotion():
+    """The same shut arrival at a stop WITH an exterior drops nothing: the
+    demote-and-disclose behaviour above this seam owns it."""
+    a, facade = _seam_poi("a", 12), _seam_poi("facade", 20)
+    kept, _arrivals, said = _run_drop([a, facade], dead_ids={"facade"})
+
+    assert [p.id for p in kept] == ["a", "facade"]
+    assert said == []
+
+
+def test_an_undroppable_dead_door_stays():
+    """Pinned, protected and the fixed end ride the same carve-out: named
+    undroppable, the zero-value stand stays (demoted upstream) rather than
+    being auto-cut."""
+    a, dead = _seam_poi("a", 12), _seam_poi("dead-pin", 0)
+    kept, _arrivals, said = _run_drop(
+        [a, dead], dead_ids={"dead-pin"}, undroppable={"dead-pin"}
+    )
+    assert [p.id for p in kept] == ["a", "dead-pin"]
+    assert said == []
+
+
+def test_a_drop_that_would_underfill_keeps_the_demotion():
+    """A padded day beats no day: when removing the dead stops would push the
+    day's experience under the underfill refusal, the drop stands down and
+    the demotion (upstream) serves the day instead — refill is Phase 11's."""
+    a, dead = _seam_poi("a", 12), _seam_poi("dead-door", 0)
+    # Remaining after a drop: 2 legs x 300 + 1 visit x 600 = 1200 s, under a
+    # 3000 s floor (0.5 x 6000) -> the guard refuses the drop.
+    kept, _arrivals, said = _run_drop(
+        [a, dead], dead_ids={"dead-door"}, minimum=5400, nominal=6000
+    )
+    assert [p.id for p in kept] == ["a", "dead-door"]
+    assert said == []
+
+
+def _dated_ab_run(*, dead: bool, pinned=(), start_datetime="2026-08-10T09:30:00"):
+    """The seam tests above pin the rule's logic; these two drive the WIRING
+    inside the planner — a two-candidate A->B day ending at a sentinel finish
+    point, with a mid-course museum open for one minute of the request's
+    window (pool keeps it; any arrival finds it shut)."""
+    import dataclasses
+    import json as _json
+
+    from tests.test_tour_selection import _ND_END, _ND_START, _poi, _pont_neuf_to_cathedral
+
+    bridge, _cathedral, snap = _pont_neuf_to_cathedral()
+    bridge = bridge.model_copy(update={"typical_duration_min": 22})
+    windows = {
+        d: [["06:00", "09:31"]]
+        for d in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+    }
+    museum = _poi(
+        "mid-museum",
+        tier=5,
+        lat=(_ND_START[0] + _ND_END[0]) / 2,
+        lng=(_ND_START[1] + _ND_END[1]) / 2,
+        areas=("Île de la Cité",),
+        beat_count=8,
+    ).model_copy(
+        update={
+            "typical_duration_min": 0 if dead else 20,
+            "visit_seconds_inside": 40 * 60,
+            "visit_basis": "forty minutes inside the mid-course museum",
+            "opening_hours": _json.dumps(windows),
+            "opening_hours_source": "osm",
+        }
+    )
+    snap = dataclasses.replace(snap, pois=(bridge, museum))
+    from src.tour.selection import select_route
+
+    inp = TourInput(
+        start=_ND_START,
+        end=(_ND_END[0] + 0.002, _ND_END[1]),
+        duration_min=78,
+        city_slug="paris",
+        start_datetime=start_datetime,
+        pinned_poi_ids=tuple(pinned),
+    )
+    return museum, select_route(inp, snap)
+
+
+def test_a_pinned_dead_door_is_never_dropped():
+    """An overridden pin is the one outcome worse than a refusal (the pin
+    block's own ruling): a pinned stop stays, demoted and disclosed, however
+    dead its door."""
+    museum, route = _dated_ab_run(dead=True, pinned=["mid-museum"])
+
+    assert museum.id in [p.id for p in route.pois], (
+        "a pinned stop was auto-dropped — the promise machinery exists to make "
+        "exactly this impossible"
+    )
+    said = [e for e in route.clock_exclusions if e.poi_id == museum.id]
+    assert said and said[0].kept_outside is True
+
+
+def test_a_dateless_day_never_drops_a_door():
+    """No clock, no drop — the identity default every clock rule keeps."""
+    _museum, route = _dated_ab_run(dead=True, start_datetime=None)
+    assert route.pois, "the dateless day serves"
+    assert route.clock_exclusions == (), (
+        "a dateless day consulted the clock — the identity default broke"
+    )
+
+
 # --- the all_day flag: a decision in a field, never recovered from words ------
 
 

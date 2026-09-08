@@ -3901,6 +3901,40 @@ def _select_route_once(
         clock_start=clock_start,
         price_visit=price_visit,
     )
+    # A DOOR SHUT AT ITS OWN ARRIVAL WITH NOTHING OUTSIDE LEAVES THE DAY
+    # (Docs/adr/0004). The arrival check demotes a shut door to its exterior;
+    # a demoted stop with typical_duration_min == 0 is a zero-value stand the
+    # walker is still routed to — the pool rule's "one honest removal", owed
+    # at this clock too. Dropped at planning time, disclosed as not-in-your-
+    # day, order preserved (ordering stays clock-blind; only the timing and
+    # the membership move). Iterated to a fixpoint because a drop moves every
+    # later arrival, which can only OPEN doors earlier arrivals found shut.
+    # Four carve-outs: a pinned stop (an overridden pin is the one outcome
+    # worse than a refusal), a replan-protected stop (it triggers the question
+    # instead), the fixed end (the person's own destination), and a drop that
+    # would push the day's experience under the underfill refusal — a padded
+    # day beats no day, and refilling is Phase 11's, so the demotion stands.
+    if clock_start is not None:
+        undroppable: set[str] = set(input.pinned_poi_ids)
+        if replan is not None:
+            undroppable |= set(replan.protected_poi_ids)
+        if fixed_end is not None:
+            undroppable.add(fixed_end.id)
+        selected, final_arrivals = _drop_dead_doors(
+            selected,
+            final_arrivals,
+            undroppable=undroppable,
+            arrival_door_reason=_arrival_door_reason,
+            shape_visit=shape_visit,
+            price_visit=price_visit,
+            leg_seconds_fn=leg_fn,
+            start_lat=start_lat,
+            start_lng=start_lng,
+            round_trip=input.round_trip,
+            clock_start=clock_start,
+            planning_budget=planning_budget,
+            clock_exclusions=clock_exclusions,
+        )
     route = summarise_route(
         selected,
         start_lat=start_lat,
@@ -5041,6 +5075,95 @@ def _full_route_leg_seconds(
     elif round_trip:
         coords.append((start_lat, start_lng))
     return path_leg_seconds(coords, leg_seconds_fn)
+
+
+def _drop_dead_doors(
+    selected: list[POI],
+    final_arrivals: list[tuple[POI, int | None, int, datetime | None]],
+    *,
+    undroppable: set[str],
+    arrival_door_reason: Callable[[POI, int | None, datetime | None], str | None],
+    shape_visit: Callable[..., PromiseShape],
+    price_visit: Callable[..., int],
+    leg_seconds_fn: LegSecondsFn | None,
+    start_lat: float,
+    start_lng: float,
+    round_trip: bool,
+    clock_start: datetime,
+    planning_budget: RoutePlanningBudget,
+    clock_exclusions: list[ClockExclusion],
+) -> tuple[list[POI], list[tuple[POI, int | None, int, datetime | None]]]:
+    """A door shut at its own arrival with nothing outside leaves the day
+    (Docs/adr/0004).
+
+    The arrival check demotes a shut door to its exterior; a demoted stop with
+    ``typical_duration_min == 0`` is a zero-value stand the walker is still
+    routed to — the pool rule's "one honest removal", owed at this clock too.
+    Dropped at planning time, disclosed on ``clock_exclusions`` as
+    not-in-your-day (``kept_outside=False``), order preserved: ordering stays
+    clock-blind, only the timing and the membership move. Iterated to a
+    fixpoint because a drop moves every later arrival, which can only OPEN
+    doors earlier arrivals found shut.
+
+    Carve-outs, all in ``undroppable`` (a pinned stop — an overridden pin is
+    the one outcome worse than a refusal; a replan-protected stop — it
+    triggers the question instead; the fixed end — the person's own
+    destination) plus the floor guard: a drop that would push the day's
+    experience under the underfill refusal keeps the demotion instead — a
+    padded day beats no day, and refilling is Phase 11's.
+    """
+    while True:
+        dead_ids = {
+            poi.id
+            for poi, hour, _seconds, clock in final_arrivals
+            if poi.id not in undroppable
+            and poi.typical_duration_min == 0
+            and arrival_door_reason(poi, hour, clock) is not None
+        }
+        if not dead_ids:
+            return selected, final_arrivals
+        trial_selected = [p for p in selected if p.id not in dead_ids]
+        trial_legs = _full_route_leg_seconds(
+            trial_selected,
+            start_lat=start_lat,
+            start_lng=start_lng,
+            round_trip=round_trip,
+            leg_seconds_fn=leg_seconds_fn,
+        )
+        trial_arrivals = _walk_arrivals(
+            trial_selected, trial_legs, clock_start=clock_start, price_visit=price_visit
+        )
+        if planning_budget.minimum_elapsed_seconds > 0:
+            trial_elapsed = sum(trial_legs) + sum(
+                seconds for _poi, _hour, seconds, _clock in trial_arrivals
+            )
+            trial_queue = sum(
+                shape_visit(poi, hour, clock).queue_seconds
+                for poi, hour, _seconds, clock in trial_arrivals
+            )
+            floor = UNDERFILL_REFUSAL_FRACTION * planning_budget.nominal_elapsed_seconds
+            if (trial_elapsed - trial_queue) < floor:
+                return selected, final_arrivals
+        already_said = {excl.poi_id for excl in clock_exclusions}
+        for poi, hour, _seconds, clock in final_arrivals:
+            if poi.id not in dead_ids or poi.id in already_said:
+                continue
+            reason = arrival_door_reason(poi, hour, clock)
+            clock_exclusions.append(
+                ClockExclusion(
+                    poi_id=poi.id,
+                    name=poi.name,
+                    reason=reason or "",
+                    kept_outside=False,
+                    all_day=(
+                        _closed_all_day(poi.opening_hours, clock)
+                        if poi.opening_hours is not None and clock is not None
+                        else False
+                    ),
+                )
+            )
+        selected = trial_selected
+        final_arrivals = trial_arrivals
 
 
 def _walk_arrivals(
