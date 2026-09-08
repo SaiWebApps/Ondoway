@@ -1158,12 +1158,7 @@
     ],
     "queue_basis": "Airport-style security shared with the Palais de Justice plus a ticket check funnels visitors ahead of a small chapel, so the line runs long at midday and thins near opening and late afternoon.",
     "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Jan-Mar 09:00-17:00; Apr-Sep 09:00-19:00; Oct-Dec 09:00-17:00\"",
-      "at": "2026-09-07"
-    }
+    "opening_hours_verified": null
   },
   {
     "name": "Pantheon",
@@ -1291,12 +1286,7 @@
     ],
     "queue_basis": "A single ticket desk and bag check at the front portico creates a minor line at busy midday hours that clears quickly at opening or late in the day.",
     "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 10:00-18:00; Apr 1-Sep 30: Mo-Su 10:00-18:30; Jan 1,May 1,Dec 25: off\"",
-      "at": "2026-09-07"
-    }
+    "opening_hours_verified": null
   },
   {
     "name": "Palais Garnier",
@@ -4779,12 +4769,7 @@
     ],
     "queue_basis": "A ticket counter and light bag check at a very large contemporary art hall move quickly, and long opening hours spread arrivals so the line stays minor.",
     "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Mo-Su 12:00-24:00; Tu off; Jan 01 off; May 01 off; Dec 25 off; Dec 24 12:00- 18:00; Dec 31 12:00- 18:00\"",
-      "at": "2026-09-07"
-    }
+    "opening_hours_verified": null
   },
   {
     "name": "Memorial de la Shoah",
@@ -7915,12 +7900,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A free public park with open gates you walk straight through — no ticket, no security, no line.",
     "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"Apr,Sep 07:00-21:00; Oct-Mar 07:00-20:00; May-Aug 07:00-22:00\"",
-      "at": "2026-09-07"
-    }
+    "opening_hours_verified": null
   },
   {
     "name": "Bois de Vincennes",
@@ -11079,12 +11059,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A free public garden entered through an open gate with no ticket or bag check, so there is no line to price.",
     "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"sunrise-sunset\"",
-      "at": "2026-09-07"
-    }
+    "opening_hours_verified": null
   },
   {
     "name": "Hotel de Soubise",
@@ -21332,12 +21307,7 @@
     ],
     "queue_basis": "The tower opens only for small guided-climb groups by one narrow staircase, so a modest ticketed line forms at climb times but is otherwise brief; often the square around it has no line at all.",
     "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"May 15-Nov 15: We-Su 10:00-18:00\"",
-      "at": "2026-09-07"
-    }
+    "opening_hours_verified": null
   },
   {
     "name": "Rue de la Ferronnerie",
@@ -26359,12 +26329,7 @@
     ],
     "queue_basis": "A ticketed contemporary-art museum with a bag check and ticket scan at a single entrance under the dome; the line moves but bunches midday, so peak runs about 15 minutes and off-peak near opening only a few.",
     "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"11:00-19:00; Tu off; Fr 11:00-21:00; May 01 off\"",
-      "at": "2026-09-07"
-    }
+    "opening_hours_verified": null
   },
   {
     "name": "Arc de Triomphe du Carrousel",
@@ -29410,12 +29375,7 @@
     "queue_peak_hours": [],
     "queue_basis": "A public neighbourhood garden square with open gates and no ticket or bag check, so visitors walk straight in with no wait.",
     "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"sunrise-sunset\"",
-      "at": "2026-09-07"
-    }
+    "opening_hours_verified": null
   },
   {
     "name": "Square de la Roquette",

@@ -232,12 +232,7 @@
     "queue_basis": "A free public garden entered through an open gate with no ticket or bag check, so there is no line to price.",
     "anchors": null,
     "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"sunrise-sunset\"",
-      "at": "2026-09-07"
-    }
+    "opening_hours_verified": null
   },
   {
     "name": "Place des Vosges",

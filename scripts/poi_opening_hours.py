@@ -384,6 +384,24 @@ def quoted_osm_tag(poi: dict[str, Any]) -> str | None:
     return match.group(1) if match else None
 
 
+#: Constructs a flat 7-day table cannot encode: month/season rules, date-keyed
+#: exceptions, public/school holidays, sun-relative times. A tag carrying any
+#: of these says more than the table can repeat, so "tag unchanged since
+#: transcription" would certify the wrong proposition — the badge must attest
+#: that the TABLE faithfully carries the tag, and here it structurally cannot.
+_BEYOND_WEEKLY_RE = re.compile(
+    r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|PH|SH|easter|week)\b"
+    r"|sunrise|sunset|dawn|dusk"
+)
+
+
+def _tag_fits_a_weekly_table(tag: str) -> bool:
+    """Whether a flat mon..sun table can faithfully say everything this OSM
+    tag says. Pure weekday/time rules fit; anything seasonal, dated, holiday-
+    keyed or sun-relative does not, and stays with the human queue."""
+    return not _BEYOND_WEEKLY_RE.search(tag)
+
+
 def corroborate(
     pois: list[dict[str, Any]], live_tags: dict[str, str]
 ) -> tuple[list[str], list[str], list[str]]:
@@ -394,6 +412,12 @@ def corroborate(
     a conflict for the queue — and if it was already verified, it is demoted on
     the spot (the auto-demote rule). A row with no live tag is left for the
     queue untouched.
+
+    A quoted tag the weekly table cannot faithfully carry
+    (``_tag_fits_a_weekly_table``) never tier-0s, whatever the live tag says,
+    and a stale corroboration badge on such a row is shed on sight — the
+    quoted tag alone decides, no network needed. A HUMAN badge (any other
+    approver) is never touched by the machine: a person judged the table.
     """
     verified: list[str] = []
     conflicts: list[str] = []
@@ -402,8 +426,16 @@ def corroborate(
         if poi.get("gated") is not True or poi.get("opening_hours") is None:
             continue
         quoted = quoted_osm_tag(poi)
+        if quoted is None:
+            continue
+        if not _tag_fits_a_weekly_table(quoted):
+            record = poi.get("opening_hours_verified")
+            if isinstance(record, dict) and record.get("approver") == "corroboration":
+                poi["opening_hours_verified"] = None
+                demoted.append(poi["name"])
+            continue
         live = live_tags.get(poi.get("name", ""))
-        if quoted is None or live is None:
+        if live is None:
             continue
         if live == quoted:
             if poi.get("opening_hours_verified") is None:

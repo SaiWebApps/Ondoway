@@ -408,11 +408,6 @@
     "queue_basis": "A ticketed contemporary-art museum with a bag check and ticket scan at a single entrance under the dome; the line moves but bunches midday, so peak runs about 15 minutes and off-peak near opening only a few.",
     "anchors": null,
     "gated": true,
-    "opening_hours_verified": {
-      "tier": 0,
-      "approver": "corroboration",
-      "evidence": "OSM tag unchanged since transcription: \"11:00-19:00; Tu off; Fr 11:00-21:00; May 01 off\"",
-      "at": "2026-09-07"
-    }
+    "opening_hours_verified": null
   }
 ]

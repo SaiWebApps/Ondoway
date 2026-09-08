@@ -30,6 +30,7 @@ Runs in milliseconds with no database.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -313,6 +314,82 @@ def test_tier0_corroboration_verifies_demotes_and_flags_conflicts() -> None:
         "a re-fetch that disagrees must demote — verified means currently believed true"
     )
     assert silent["opening_hours_verified"] is None, "no live tag decides nothing"
+
+
+def test_a_tag_beyond_the_weekly_table_never_tier0s_and_sheds_a_stale_badge() -> None:
+    """Tier-0 certifies one proposition: the flat 7-day table faithfully
+    carries the live tag. A tag with months, date rules, PH/SH or sun-times
+    says things no weekly table can encode, so "unchanged since
+    transcription" would certify the wrong claim — the walker gets a
+    verified badge over a table that flattens 'Dec 25: off' into open.
+    Such a row never tier-0s, a stale corroboration badge on it is shed on
+    sight (no network needed — the quoted tag alone decides), and a HUMAN
+    badge is untouched: a person judged the table, not the tag.
+
+    UNDO TEST: drop the eligibility gate in corroborate -> the seasonal row
+    verifies and the stale badge survives -> RED."""
+    from scripts.poi_opening_hours import corroborate
+
+    seasonal_basis = (
+        "Gated museum; transcribed from OSM tag "
+        '"Mo-Su 10:00-18:00; Jan 1,May 1,Dec 25: off".'
+    )
+    stale = _gated_row(
+        "Flattened Museum",
+        basis=seasonal_basis,
+        verified={"tier": 0, "approver": "corroboration", "evidence": "x", "at": "2026-09-01"},
+    )
+    fresh = _gated_row("Seasonal Chapel", basis=seasonal_basis)
+    human = _gated_row(
+        "Human-Judged Hall",
+        basis=seasonal_basis,
+        verified={"tier": 2, "approver": "owner", "evidence": "site", "at": "2026-09-01"},
+    )
+
+    live = {name: "Mo-Su 10:00-18:00; Jan 1,May 1,Dec 25: off"
+            for name in ("Flattened Museum", "Seasonal Chapel", "Human-Judged Hall")}
+    verified, _conflicts, demoted = corroborate([stale, fresh, human], live)
+
+    assert verified == [], "a beyond-weekly tag must never tier-0"
+    assert demoted == ["Flattened Museum"]
+    assert stale["opening_hours_verified"] is None
+    assert fresh["opening_hours_verified"] is None
+    assert human["opening_hours_verified"]["approver"] == "owner", (
+        "a human badge was shed by the machine — tier 2 is the person's call"
+    )
+    # No live tag at all: the stale badge is still shed — eligibility is a
+    # property of the quoted tag, not of the network.
+    stale2 = _gated_row(
+        "Offline Flattened",
+        basis=seasonal_basis,
+        verified={"tier": 0, "approver": "corroboration", "evidence": "x", "at": "2026-09-01"},
+    )
+    _v, _c, demoted2 = corroborate([stale2], {})
+    assert demoted2 == ["Offline Flattened"] and stale2["opening_hours_verified"] is None
+
+
+def test_every_corroboration_badge_quotes_a_tag_the_table_can_say() -> None:
+    """The shipped-data half of the rule above: every corroboration badge in
+    every hours-carrying city quotes a weekly-representable tag. A badge
+    whose own evidence cites 'Dec 25: off' above a table that says open is
+    self-refuting on inspection."""
+    from scripts.poi_opening_hours import _tag_fits_a_weekly_table
+
+    offenders: list[str] = []
+    for city in CITIES_WITH_GATED_VERDICTS:
+        for poi in _pois(city):
+            record = poi.get("opening_hours_verified")
+            if not isinstance(record, dict) or record.get("approver") != "corroboration":
+                continue
+            evidence = record.get("evidence", "")
+            match = re.search(r'"(.*)"', evidence)
+            tag = match.group(1) if match else ""
+            if not tag or not _tag_fits_a_weekly_table(tag):
+                offenders.append(f"{city}/{poi['name']}: {evidence!r}")
+    assert not offenders, (
+        "corroboration badge(s) certify tags the weekly table cannot say:\n  "
+        + "\n  ".join(offenders)
+    )
 
 
 def test_the_review_queue_orders_conflicts_then_gravity() -> None:
