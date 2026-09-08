@@ -42,6 +42,11 @@ class AuthService extends ChangeNotifier {
     _pendingDestination = location;
   }
 
+  /// A read-only peek at the stashed destination, for screens that SAY a
+  /// resume is coming (the login panel's invite line) without spending it —
+  /// only [consumePendingDestination] hands it over.
+  String? get pendingDestination => _pendingDestination;
+
   /// The stashed destination, handed over exactly once — null after, and
   /// after logout.
   String? consumePendingDestination() {

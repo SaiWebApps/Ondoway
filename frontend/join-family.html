@@ -15,17 +15,19 @@
 <body>
 <div class="card">
   <h1>Ondoway</h1>
-  <p>You&rsquo;ve been invited to a family. Tap the button to join in the app.</p>
+  <p>You&rsquo;ve been invited to a family. The Ondoway app must be installed
+     first &mdash; then tap the button to join.</p>
   <a class="btn" id="open" href="#">Join in Ondoway</a>
-  <p style="margin-top:24px;font-size:13px;color:#999;">If the app doesn't open, make sure Ondoway is installed — the invite works once it is.</p>
+  <p style="margin-top:24px;font-size:13px;color:#999;">Don&rsquo;t have the app yet?
+     Install Ondoway first &mdash; this invite link keeps working once it is installed.</p>
 </div>
 <script>
+  // The scheme launch is TAP-initiated only: an on-load navigation shows a
+  // system error alert on a phone without the app before a word is read.
   const params = new URLSearchParams(window.location.search);
   const token = params.get('token') || '';
   const deepLink = 'ondoway://auth/join-family?token=' + encodeURIComponent(token);
   document.getElementById('open').href = deepLink;
-  // Auto-attempt on load
-  window.location.href = deepLink;
 </script>
 </body>
 </html>

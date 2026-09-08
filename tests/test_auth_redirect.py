@@ -84,6 +84,22 @@ class TestJoinFamilyRedirectRoute:
         resp = client.get("/auth/join-family?token=test-tok")
         assert "installed" in resp.text
 
+    def test_join_family_page_fires_no_scheme_on_load(self):
+        """The scheme launch is TAP-initiated only (the button): a phone
+        without the app reads the page first — never a system error alert
+        fired by an on-load navigation."""
+        client = self._make_client()
+        resp = client.get("/auth/join-family?token=test-tok")
+        assert "window.location.href" not in resp.text
+
+    def test_join_family_copy_says_install_first_and_the_link_keeps_working(self):
+        """The words carry the flow: the app must be installed first, and the
+        invite link keeps working once it is."""
+        client = self._make_client()
+        text = client.get("/auth/join-family?token=test-tok").text.lower()
+        assert "install" in text
+        assert "keeps working" in text
+
     def test_join_family_route_without_token_still_serves_page(self):
         client = self._make_client()
         resp = client.get("/auth/join-family")

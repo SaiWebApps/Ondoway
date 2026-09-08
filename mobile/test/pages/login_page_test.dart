@@ -74,6 +74,30 @@ void main() {
       expect(find.textContaining('test@ondoway.app'), findsOneWidget);
     });
 
+    testWidgets('says the invite is saved when a join tap was bounced here',
+        (tester) async {
+      final service = AuthService(
+        storage: FakeSecureStorage(),
+        httpClient: MockClient((r) async => http.Response('', 200)),
+      );
+      service.stashPendingDestination('/auth/join-family?token=tok-1');
+
+      await tester.pumpWidget(
+        _wrapWithProviders(const LoginPage(), authService: service),
+      );
+
+      expect(
+        find.text('Sign in to join your family — your invite is saved.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('shows no invite line when nothing is pending', (tester) async {
+      await tester.pumpWidget(_wrapWithProviders(const LoginPage()));
+
+      expect(find.textContaining('your invite is saved'), findsNothing);
+    });
+
     testWidgets('shows Ondoway branding', (tester) async {
       await tester.pumpWidget(_wrapWithProviders(const LoginPage()));
 

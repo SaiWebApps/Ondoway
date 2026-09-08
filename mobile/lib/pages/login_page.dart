@@ -152,6 +152,14 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  /// A family-invite tap bounced to this screen: the destination is stashed
+  /// (router.dart's redirect), and the panel SAYS so — the four-screen walk
+  /// to the join must not be silent about why signing in is worth it.
+  bool get _hasPendingJoin {
+    final pending = context.read<AuthService>().pendingDestination;
+    return pending != null && Uri.parse(pending).path == '/auth/join-family';
+  }
+
   Widget _buildLoginForm(AuthService authService, OndowayColors c) {
     return Form(
       key: _formKey,
@@ -162,6 +170,17 @@ class _LoginPageState extends State<LoginPage> {
           Text('WELCOME', style: _eyebrow(c)),
           const SizedBox(height: Dims.spaceSm),
           Text('Let’s take a walk', style: _fraunces(c.ink, 26, FontWeight.w600)),
+          if (_hasPendingJoin) ...[
+            const SizedBox(height: Dims.spaceSm),
+            Text(
+              'Sign in to join your family — your invite is saved.',
+              style: TextStyle(
+                fontFamily: 'Space Grotesk',
+                fontSize: 14,
+                color: c.accentDeep,
+              ),
+            ),
+          ],
           const SizedBox(height: Dims.spaceLg),
           TextFormField(
             controller: _emailController,
