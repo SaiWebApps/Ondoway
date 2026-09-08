@@ -85,6 +85,45 @@ def test_a_supplied_checker_marks_the_report_checked() -> None:
     assert report.faithfulness_checked is True
 
 
+def test_the_default_validator_licenses_the_days_own_disclosures() -> None:
+    """The closed-start line names a place on no stop list; the exclusion
+    record's name is the day's own disclosure, never a glue invention. The
+    DEFAULT validator — the one ``scripts/tour_build.py`` rides — must carry
+    ``disclosed_place_names`` exactly as ``generate()``'s in-line call does:
+    one wiring holding the licence while the other flags the honest sentence
+    as ``new_proper_noun`` makes the harness fail the very day the feature
+    exists for.
+
+    UNDO TEST: drop the disclosed_place_names threading from
+    build_full_verifier's default partial -> the hit returns -> RED."""
+    seq, bbi, _ = _fixture()
+    closed_start = _s(
+        "Musee d'Orsay, right here at the start, is closed today, "
+        "so the walk goes on without it.",
+        "GLUE_STAGING",
+        source_type="glue",
+    )
+    script = _script_of(
+        closed_start, _s("The arch was built between 1806 and 1808.", "A")
+    )
+
+    bare = build_full_verifier(seq, bbi, allow_unverified_faithfulness=True)
+    assert any(
+        code.startswith("new_proper_noun:")
+        for _sent, code in bare(script).forbidden_phrase_hits
+    ), "without the licence the scan must still flag the unknown name"
+
+    licensed = build_full_verifier(
+        seq, bbi,
+        allow_unverified_faithfulness=True,
+        disclosed_place_names=("Musee d'Orsay",),
+    )
+    assert licensed(script).forbidden_phrase_hits == (), (
+        "the day's own disclosure was flagged as an invention — the default "
+        "validator dropped the licence generate() carries"
+    )
+
+
 def test_opting_out_and_supplying_a_checker_is_a_contradiction() -> None:
     """Belt and braces: the two arguments must not silently disagree.
 

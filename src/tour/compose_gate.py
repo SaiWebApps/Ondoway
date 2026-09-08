@@ -58,6 +58,7 @@ def build_full_verifier(
     allow_unverified_faithfulness: bool = False,
     expected_claim_ids: set[tuple[str, int]] | None = None,
     spine_area: str | None = None,
+    disclosed_place_names: tuple[str, ...] = (),
     base_validator: Callable[[Script, BeatSequence], ValidationReport] | None = None,
 ) -> Callable[[Script], ValidationReport]:
     """A ``verify(script)`` that merges the VERIFY checks into one report.
@@ -93,8 +94,15 @@ def build_full_verifier(
     #
     # An injected `base_validator` (tests, certification) is left exactly as it
     # was, so this cannot change what those callers measure.
+    #
+    # ``disclosed_place_names`` — the names the route's own disclosure records
+    # carry (clock exclusions) — rides the default the same way the spine does:
+    # the closed-start line names a place on no stop list, and a default that
+    # drops the licence fails the honest sentence as an invention.
     validator = base_validator or functools.partial(
-        validate_script, spine_area=spine_area
+        validate_script,
+        spine_area=spine_area,
+        disclosed_place_names=disclosed_place_names,
     )
     if faithfulness_checker is not None and allow_unverified_faithfulness:
         raise ValueError(

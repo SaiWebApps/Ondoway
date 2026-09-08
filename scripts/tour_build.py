@@ -1014,6 +1014,7 @@ def main() -> int:
             beats_by_id,
             allow_unverified_faithfulness=True,
             spine_area=route.spine_area,
+            disclosed_place_names=tuple(e.name for e in route.clock_exclusions),
         )
         script = script.model_copy(update={"validation": verify(script)})
 
