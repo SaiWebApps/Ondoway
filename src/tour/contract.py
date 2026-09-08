@@ -777,6 +777,14 @@ class ClockExclusion(BaseModel):
     #: lunch). A decision in a field, never recovered from the reason's words.
     #: Additive: False keeps every existing exclusion byte-identical.
     all_day: bool = False
+    #: Whether the excluded place sits AT the walk's own start — within its
+    #: footprint (floored at 50 m) of the input coordinates. The walker can
+    #: SEE that shut door, so setting off past it wordlessly is a lie by
+    #: omission; the voice names an off-route at_start exclusion once, first.
+    #: Set by the planner from coordinates only it holds — never recovered
+    #: from the reason's words — and additive: False keeps every existing
+    #: exclusion byte-identical.
+    at_start: bool = False
 
 
 class PromiseShape(BaseModel):

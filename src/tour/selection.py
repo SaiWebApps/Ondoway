@@ -990,6 +990,23 @@ def _closed_all_day(opening_hours_json: str, day: datetime) -> bool:
     return isinstance(windows, list) and not windows
 
 
+#: The at-the-start footprint floor: a place whose own ``trigger_radius`` is
+#: missing or tiny still counts as "right here" within GPS-jitter distance.
+AT_START_FOOTPRINT_FLOOR_M = 50.0
+
+
+def _at_walk_start(poi: POI, start_lat: float, start_lng: float) -> bool:
+    """Whether the place sits AT the walk's own start — within its footprint
+    (floored at ``AT_START_FOOTPRINT_FLOOR_M``) of the input coordinates. The
+    walker can SEE that door, so an exclusion here must be nameable by the
+    voice; ``ClockExclusion.at_start`` carries the fact as a field, set where
+    the planner still holds the coordinates (a decision in a field, never
+    recovered from the reason sentence's words)."""
+    return haversine_m(start_lat, start_lng, poi.lat, poi.lng) <= max(
+        poi.trigger_radius or 0.0, AT_START_FOOTPRINT_FLOOR_M
+    )
+
+
 def _is_unadopted_placeholder_beat(record: dict) -> bool:
     """True for a seed-artifact beat: no stable beat_id AND placeholder audio.
 
@@ -2847,6 +2864,7 @@ def _select_route_once(
                         reason=clock_reason,
                         kept_outside=kept_outside,
                         all_day=_closed_all_day(poi.opening_hours, clock_start),
+                        at_start=_at_walk_start(poi, start_lat, start_lng),
                     )
                 )
                 if not kept_outside:
@@ -5174,6 +5192,7 @@ def _drop_dead_doors(
                         if poi.opening_hours is not None and clock is not None
                         else False
                     ),
+                    at_start=_at_walk_start(poi, start_lat, start_lng),
                 )
             )
         selected = trial_selected

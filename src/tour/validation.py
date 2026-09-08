@@ -111,10 +111,22 @@ def validate_script(
     beat_sequence: BeatSequence,
     *,
     spine_area: str | None = None,
+    disclosed_place_names: tuple[str, ...] = (),
 ) -> ValidationReport:
-    """Run both gates and return the report."""
+    """Run both gates and return the report.
+
+    ``disclosed_place_names`` are the names the day's own disclosure records
+    carry (the route's clock exclusions) — engine-chosen corpus records, not
+    glue inventions, and the closed-start acknowledgment must name a place
+    that is on no stop list at all. The caller holding the Route supplies
+    them; the empty default keeps every route-less call byte-identical."""
     traceability = validate_source_traceability(script, beat_sequence)
-    forbidden = _forbidden_phrase_hits(script, beat_sequence, spine_area=spine_area)
+    forbidden = _forbidden_phrase_hits(
+        script,
+        beat_sequence,
+        spine_area=spine_area,
+        disclosed_place_names=disclosed_place_names,
+    )
     return traceability.model_copy(
         update={"forbidden_phrase_hits": tuple(forbidden)}
     )
@@ -184,10 +196,16 @@ def _forbidden_phrase_hits(
     beat_sequence: BeatSequence,
     *,
     spine_area: str | None = None,
+    disclosed_place_names: tuple[str, ...] = (),
 ) -> list[tuple[Sentence, str]]:
     out: list[tuple[Sentence, str]] = []
     cited_text = _cited_beat_corpus_text(script, beat_sequence)
     cited_proper_nouns = _proper_nouns_in(cited_text)
+    # The day's own disclosure records (clock exclusions) name places the
+    # engine chose from corpus records and the notes channel already states;
+    # the closed-start line speaks one such name at a place on no stop list.
+    for name in disclosed_place_names:
+        cited_proper_nouns |= _proper_nouns_in(name)
     # THE TOUR'S OWN PLACE VOCABULARY IS NOT AN INVENTION. This scan exists to
     # catch glue asserting a fact the corpus never gave it — a name, a date, a
     # claim the walker cannot check. The names of the stops the engine SEATED, and

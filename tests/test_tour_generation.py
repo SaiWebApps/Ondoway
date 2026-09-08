@@ -2043,6 +2043,90 @@ def test_an_open_day_and_screen_only_notes_speak_no_closure_line():
     assert not any("closed at the moment" in s.text for s in no_time_script.script)
 
 
+def test_a_closed_start_not_in_the_day_is_named_first():
+    """The walker STANDS at the start beside a shut door the plan removed
+    (Docs/adr/0004's honest removal, or a pool-rule ejection). Walking away
+    from it wordlessly is the checkable lie by omission: the person can SEE
+    the place. An exclusion flagged ``at_start`` — set by selection from
+    coordinates, never recovered from words — whose place is NOT on the route
+    is named right after the "Settle in." breath, with the same
+    today/at-the-moment honesty split the on-route line carries.
+    UNDO: drop the at_start branch -> the day opens straight into p1's story
+    with the shut door never spoken -> RED."""
+    from src.tour.contract import ClockExclusion
+
+    poi = _poi("p1", "Pantheon")
+    body = _beat("b", poi.id, body="Soufflot designed it.", nf="establishing")
+    seq = BeatSequence(poi_beats=(_poi_beats(poi, (body,)),))
+
+    def _start_route(all_day: bool):
+        return _route((poi,)).model_copy(
+            update={
+                "clock_exclusions": (
+                    ClockExclusion(
+                        poi_id="orsay", name="Musee d'Orsay",
+                        reason="closed all day Monday",
+                        kept_outside=False, all_day=all_day, at_start=True,
+                    ),
+                ),
+            }
+        )
+
+    script = generate(seq, _start_route(all_day=True), _input(), glue_client=MockGlueClient())
+    texts = [s.text for s in script.script if s.stop_idx == 0]
+    assert texts[0] == "Settle in."
+    assert texts[1] == (
+        "Musee d'Orsay, right here at the start, is closed today, "
+        "so the walk goes on without it."
+    ), texts[:3]
+    from src.tour.generation import GLUE_STAGING
+
+    said = [s for s in script.script if "right here at the start" in s.text]
+    assert len(said) == 1
+    assert said[0].source_id == GLUE_STAGING and said[0].source_type == "glue"
+    # The line is legal glue: the whole script still validates.
+    assert script.validation.passed is True
+
+    partial = generate(
+        seq, _start_route(all_day=False), _input(), glue_client=MockGlueClient()
+    )
+    assert any(
+        "right here at the start, is closed at the moment" in s.text
+        for s in partial.script
+    )
+
+
+def test_a_closed_start_yields_to_the_first_stops_own_closure_line():
+    """When stop 0 itself is clock-closed, its own acknowledgment holds the
+    first-stationary slot and the off-route start line stands down — one
+    closure sentence opens the day, never two stacked. The screen channel
+    still carries both exclusions."""
+    from src.tour.contract import ClockExclusion
+
+    poi = _poi("p1", "Pantheon")
+    body = _beat("b", poi.id, body="Soufflot designed it.", nf="establishing")
+    seq = BeatSequence(poi_beats=(_poi_beats(poi, (body,)),))
+    route = _route((poi,)).model_copy(
+        update={
+            "clock_exclusions": (
+                ClockExclusion(
+                    poi_id=poi.id, name=poi.name, reason="closed all day Monday",
+                    kept_outside=True, all_day=True,
+                ),
+                ClockExclusion(
+                    poi_id="orsay", name="Musee d'Orsay",
+                    reason="closed all day Monday",
+                    kept_outside=False, all_day=True, at_start=True,
+                ),
+            ),
+        }
+    )
+    script = generate(seq, route, _input(), glue_client=MockGlueClient())
+    texts = [s.text for s in script.script if s.stop_idx == 0]
+    assert texts[1] == "Pantheon is closed today, so we'll take it in from out here."
+    assert not any("right here at the start" in s.text for s in script.script)
+
+
 def test_a_dropped_only_invitation_beat_is_not_reported_as_voiced():
     """A beat that was ONLY an invitation at a shut door emits nothing — and
     the voiced roster must say so (the same truth-from-emissions rule the

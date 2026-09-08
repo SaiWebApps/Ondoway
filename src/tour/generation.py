@@ -463,7 +463,9 @@ def generate(
         cold_open_sents, consumed_in_cold_open = _build_cold_open(
             beat_sequence, route, client, tour_input=tour_input, stop_idx=0
         )
-        opening = closure_lines.get(0)
+        # A closed start not in the day (at_start, off-route) is named in the
+        # same slot — unless stop 0's own closure line already holds it.
+        opening = closure_lines.get(0) or _closed_start_line(route)
         if opening is not None:
             # After the "Settle in." breath, before anything about the place.
             cold_open_sents = (
@@ -572,7 +574,12 @@ def generate(
         validation=ValidationReport(),  # placeholder — replaced below
     )
     report = (
-        validate_script(script, beat_sequence, spine_area=route.spine_area)
+        validate_script(
+            script,
+            beat_sequence,
+            spine_area=route.spine_area,
+            disclosed_place_names=tuple(e.name for e in route.clock_exclusions),
+        )
         if validate_output
         else ValidationReport()
     )
@@ -1371,6 +1378,19 @@ CLOSED_STOP_LINE_TEMPLATE: str = (
 CLOSED_ALL_DAY_LINE_TEMPLATE: str = (
     "{name} is closed today, so we'll take it in from out here."
 )
+#: The closed START, when the shut place is NOT in the day at all
+#: (``ClockExclusion.at_start`` with an off-route poi_id): the walker stands
+#: beside a door the plan removed, and setting off past it wordlessly is a
+#: lie by omission — they can SEE it. Same today/at-the-moment honesty split
+#: as the stop templates, same no-weekday/no-clock-time discipline.
+CLOSED_START_LINE_TEMPLATE: str = (
+    "{name}, right here at the start, is closed at the moment, "
+    "so the walk goes on without it."
+)
+CLOSED_START_ALL_DAY_LINE_TEMPLATE: str = (
+    "{name}, right here at the start, is closed today, "
+    "so the walk goes on without it."
+)
 
 
 def _closure_opening_lines(route: Route) -> dict[int, Sentence]:
@@ -1399,6 +1419,29 @@ def _closure_opening_lines(route: Route) -> dict[int, Sentence]:
         for idx, poi in enumerate(route.pois)
         if poi.id in closed
     }
+
+
+def _closed_start_line(route: Route) -> Sentence | None:
+    """The acknowledgment for a shut place AT the walk's start that is NOT in
+    the day (``ClockExclusion.at_start`` set by selection from coordinates,
+    poi_id off-route — an on-route closure already gets its stop's own line).
+    The caller fills stop 0's first-stationary slot with it only when no
+    on-route closure line holds that slot: one closure sentence opens the day,
+    never two stacked, and the screen channel still carries every exclusion."""
+    on_route = {poi.id for poi in route.pois}
+    for excl in route.clock_exclusions:
+        if excl.at_start and excl.poi_id not in on_route:
+            return Sentence(
+                text=(
+                    CLOSED_START_ALL_DAY_LINE_TEMPLATE
+                    if excl.all_day
+                    else CLOSED_START_LINE_TEMPLATE
+                ).format(name=excl.name),
+                source_id=GLUE_STAGING,
+                source_type="glue",
+                stop_idx=0,
+            )
+    return None
 
 
 def _drop_door_lines_at_doorless_stops(

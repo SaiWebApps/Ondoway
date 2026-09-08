@@ -852,6 +852,40 @@ def test_the_planner_flags_an_all_day_closure_and_an_arrival_window_one_apart():
     assert said[0].all_day is False
 
 
+def test_the_planner_flags_a_closed_place_at_the_walks_own_start():
+    """`ClockExclusion.at_start` — the walker can SEE the shut door they are
+    standing beside, so the fact rides the record as a field set from
+    coordinates the planner alone holds, never recovered from words. The
+    Tuesday-closed museum AT the request's start is flagged; the same museum
+    a kilometre away is not."""
+    from src.tour.selection import select_route
+
+    near = _tuesday_closed_museum_with_an_exterior()
+    route = select_route(_clock_request(_TUESDAY_10AM), _clock_corpus(near))
+    said = [e for e in route.clock_exclusions if e.poi_id == near.id]
+    assert said[0].at_start is True
+
+    # ~220 m up the street: past the 50 m footprint floor, still in the pool.
+    afar = near.model_copy(update={"lat": near.lat + 0.002})
+    route = select_route(_clock_request(_TUESDAY_10AM), _clock_corpus(afar))
+    said = [e for e in route.clock_exclusions if e.poi_id == afar.id]
+    assert said[0].at_start is False
+
+
+def test_a_dropped_door_at_the_walks_own_start_is_flagged_at_start():
+    """The honest-removal seam carries the same fact: a dead door dropped
+    right where the walk begins is flagged `at_start`, one dropped a
+    kilometre into the day is not — so the voice can name the door the
+    walker is looking at and stay silent about the one they never see."""
+    a, near = _seam_poi("a", 12), _seam_poi("near-dead", 0)
+    far = _seam_poi("far-dead", 0).model_copy(update={"lat": near.lat + 0.01})
+    _kept, _arrivals, said = _run_drop(
+        [a, near, far], dead_ids={"near-dead", "far-dead"}
+    )
+    flags = {e.poi_id: e.at_start for e in said}
+    assert flags == {"near-dead": True, "far-dead": False}
+
+
 # --- dusk, and the after-dark finish (S3.7; design §4.3; Sofia's swap rule) ---
 
 # December early evening: a 17:00 + 60-min one-way plans to finish ~18:00,

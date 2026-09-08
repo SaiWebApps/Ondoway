@@ -1269,7 +1269,12 @@ def finalize_certification_composition(
             update={
                 "forbidden_phrase_hits": (
                     validate_script(
-                        script, sequence, spine_area=route.spine_area
+                        script,
+                        sequence,
+                        spine_area=route.spine_area,
+                        disclosed_place_names=tuple(
+                            e.name for e in route.clock_exclusions
+                        ),
                     ).forbidden_phrase_hits
                     + floor_hits
                 )
