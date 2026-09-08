@@ -497,10 +497,13 @@ class TestCrewDerivedAtCreation:
 # ── The late joiner: joining the family crews you onto its existing days ─────
 #
 # The pinned semantics for the plan-first order: a day planned BEFORE the
-# invite is still the family's day. add_member re-derives the whole family's
-# crew in the same transaction as the membership write — the joiner reads the
-# family's existing trips, the family reads the joiner's, and the captain of a
-# trip is never their own crew. Writes keep one captain either way.
+# invite is still the family's day. add_member crews the JOINER onto the
+# trips existing members captain, in the same transaction as the membership
+# write — one direction only. The joiner's own pre-join days gain no crew
+# edges: joining shares the family's days, never the joiner's history (a day
+# is shared with the family only when it is knowingly created inside one —
+# trip-creation-time derivation). The captain of a trip is never their own
+# crew, and writes keep one captain either way.
 
 PLANFIRST_FAMILY_ID = "p10-families-planfirst-family"
 PLANFIRST_TRIP_ID = "p10-families-planfirst-trip"
@@ -607,29 +610,27 @@ class TestJoinLateCrewsTheExistingDays:
         assert compose.status_code == 403, compose.text
         assert compose.json()["detail"]["reason"] == "captain_only"
 
-    def test_the_join_shares_the_joiners_own_days_too(self, client, plan_first_world):
-        """The re-derivation runs for the WHOLE family: the day Dev composed
-        before joining becomes readable by Fiona — and she is crew on it."""
+    def test_the_joiners_own_history_stays_their_own(
+        self, client, graph, plan_first_world
+    ):
+        """Joining shares the FAMILY's days, never the joiner's history: the
+        day Dev composed before joining stays invisible to Fiona (404 — the
+        no-confirmation rule), and no crew edge onto it exists."""
         self._join_as_dev(client)
 
         got = client.get(
             f"/api/v1/trips/{JOINERS_OWN_TRIP_ID}/session",
             headers=_bearer(FIONA_USER_ID, FIONA_EMAIL),
         )
-        assert got.status_code == 200, got.text
+        assert got.status_code == 404, got.text
 
-        replan = client.post(
-            f"/api/v1/trips/{JOINERS_OWN_TRIP_ID}/session/replan",
-            json={
-                "lat": 48.86,
-                "lng": 2.34,
-                "wall_elapsed_seconds": 0,
-                "tour_elapsed_seconds": 0,
-            },
-            headers=_bearer(FIONA_USER_ID, FIONA_EMAIL),
-        )
-        assert replan.status_code == 403, replan.text
-        assert replan.json()["detail"]["reason"] == "captain_only"
+        with graph.session() as s:
+            crewed = s.run(
+                "MATCH (:Profile)-[c:IS_CREW_OF]->(:Trip {id: $tid}) "
+                "RETURN count(c) AS n",
+                tid=JOINERS_OWN_TRIP_ID,
+            ).single()["n"]
+        assert crewed == 0
 
     def test_the_captain_is_never_their_own_crew(self, client, graph, plan_first_world):
         self._join_as_dev(client)

@@ -28,18 +28,20 @@ MERGE (p)-[:MEMBER_OF]->(f)
 RETURN f.id AS family_id
 """
 
-#: Re-derive the family's crew after a membership change: every member is crew
-#: on every trip a co-member captains (ADR 0005 — a trip's crew derives from
-#: family membership; the captain is never their own crew). Trip creation
-#: derives the same edges forward (src/api/crud/trips.py); this closes the
-#: plan-first order, where the day exists before the joiner does. MERGE keeps
-#: it idempotent.
-_REDERIVE_FAMILY_CREW = """
+#: Crew the JOINER onto the family's existing days — one direction only. The
+#: joiner becomes crew on every trip an existing member captains (ADR 0005 — a
+#: trip's crew derives from family membership; the captain is never their own
+#: crew), which closes the plan-first order, where the day exists before the
+#: joiner does. The joiner's own captained trips gain NO crew edges here:
+#: joining shares the family's days, never the joiner's history — a day is
+#: shared only when it is knowingly created inside the family (trip creation
+#: derives that forward, src/api/crud/trips.py). MERGE keeps it idempotent.
+_CREW_JOINER_ON_FAMILY_TRIPS = """
 MATCH (f:Family {id: $family_id})<-[:MEMBER_OF]-(captain:Profile)
       -[:IS_CAPTAIN_OF]->(t:Trip)
-MATCH (member:Profile)-[:MEMBER_OF]->(f)
-WHERE member.id <> captain.id
-MERGE (member)-[:IS_CREW_OF]->(t)
+MATCH (joiner:Profile {id: $profile_id})
+WHERE captain.id <> joiner.id
+MERGE (joiner)-[:IS_CREW_OF]->(t)
 """
 
 _FAMILIES_FOR_USER = """
@@ -80,10 +82,12 @@ def create_family(session: Session, profile_id: str, name: str | None) -> str | 
 
 
 def add_member(session: Session, family_id: str, profile_id: str) -> bool:
-    """MERGE the profile into the family, then re-derive the family's crew —
-    one write transaction, so a joiner is never half in (a member of the
-    family whose existing days still 404 for them). False when the family is
-    gone; the crew re-derivation only runs on a real membership write."""
+    """MERGE the profile into the family, then crew the joiner onto the
+    family's existing days — one write transaction, so a joiner is never half
+    in (a member of the family whose existing days still 404 for them). One
+    direction only: the joiner's own pre-join trips stay their own. False when
+    the family is gone; the crew derivation only runs on a real membership
+    write."""
 
     def _add(tx: Transaction) -> bool:
         record = tx.run(
@@ -91,7 +95,7 @@ def add_member(session: Session, family_id: str, profile_id: str) -> bool:
         ).single()
         if record is None:
             return False
-        tx.run(_REDERIVE_FAMILY_CREW, family_id=family_id)
+        tx.run(_CREW_JOINER_ON_FAMILY_TRIPS, family_id=family_id, profile_id=profile_id)
         return True
 
     return session.execute_write(_add)
