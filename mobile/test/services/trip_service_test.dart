@@ -592,6 +592,71 @@ void main() {
       );
     });
 
+    // The family surface's refusal: writes keep one captain, and the crew's
+    // typed 403 must reach the screen as a sentence, never raw JSON.
+    test('composeTrip turns the typed 403 captain_only into a plain sentence',
+        () async {
+      final client = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'detail': {
+              'reason': 'captain_only',
+              'detail': "Only the trip's captain can change the day",
+            },
+          }),
+          403,
+        );
+      });
+
+      final service = TripService(httpClient: client);
+
+      await expectLater(
+        () => service.composeTrip('trip-123', 'trip-123-opt1', 'token'),
+        throwsA(
+          isA<CaptainOnlyException>().having(
+            (e) => e.message,
+            'message',
+            "Only the trip's captain can change the day",
+          ),
+        ),
+      );
+    });
+
+    test('replanSession turns the typed 403 captain_only into a plain sentence',
+        () async {
+      final client = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'detail': {
+              'reason': 'captain_only',
+              'detail': "Only the trip's captain can change the day",
+            },
+          }),
+          403,
+        );
+      });
+
+      final service = TripService(httpClient: client);
+
+      await expectLater(
+        () => service.replanSession(
+          'trip-123',
+          'token',
+          lat: 48.86,
+          lng: 2.33,
+          wallElapsedSeconds: 0,
+          tourElapsedSeconds: 0,
+        ),
+        throwsA(
+          isA<CaptainOnlyException>().having(
+            (e) => e.message,
+            'message',
+            "Only the trip's captain can change the day",
+          ),
+        ),
+      );
+    });
+
     test('generateDeeperDiveAudio POSTs to the keep-exploring endpoint and '
         'parses the result (KE5)', () async {
       final client = MockClient((request) async {

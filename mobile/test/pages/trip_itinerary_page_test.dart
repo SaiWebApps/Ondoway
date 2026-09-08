@@ -846,6 +846,64 @@ void main() {
 
         await tester.pumpWidget(const SizedBox());
       });
+
+      testWidgets(
+          "a crew member's confirm shows the captain-only sentence, "
+          'never raw JSON', (tester) async {
+        final mockClient = MockClient((request) async {
+          if (request.url.path.contains('/trips/generate')) {
+            return http.Response(jsonEncode(generateResponse()), 201);
+          }
+          if (request.url.path.endsWith('/trips/trip-gen/session') &&
+              request.method == 'GET') {
+            return noSessionYet();
+          }
+          if (request.url.path.contains('/trips/trip-gen/compose')) {
+            return http.Response(
+              jsonEncode({
+                'detail': {
+                  'reason': 'captain_only',
+                  'detail': "Only the trip's captain can change the day",
+                },
+              }),
+              403,
+            );
+          }
+          return http.Response('', 200);
+        });
+
+        final service = TripService(httpClient: mockClient);
+        final audio = AudioService(httpClient: mockClient);
+        await service.generateTrip(
+          profileId: 'p1',
+          centerLat: 48.85,
+          centerLng: 2.34,
+          startDate: '2026-07-02',
+          endDate: '2026-07-02',
+          accessToken: 'tok',
+        );
+        final auth = await authedAuthService();
+
+        await pumpTripPage(
+          tester,
+          tripService: service,
+          audioService: audio,
+          authService: auth,
+          tripId: 'trip-gen',
+        );
+
+        await tester.tap(find.text('Confirm & Prepare'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text("Only the trip's captain can change the day"),
+          findsOneWidget,
+        );
+        expect(find.textContaining('captain_only'), findsNothing);
+        expect(find.textContaining('{'), findsNothing);
+
+        await tester.pumpWidget(const SizedBox());
+      });
     });
 
     group('keep exploring here (KE7)', () {

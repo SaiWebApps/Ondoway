@@ -206,6 +206,8 @@ class TripService extends ChangeNotifier {
       return (data['stops'] as List<dynamic>)
           .map((s) => ItineraryStop.fromJson(s as Map<String, dynamic>))
           .toList();
+    } else if (response.statusCode == 403) {
+      throw _refusalFor403(response.body);
     } else if (response.statusCode == 404) {
       throw TripServiceException('Trip or route not found');
     } else if (response.statusCode == 422) {
@@ -287,12 +289,26 @@ class TripService extends ChangeNotifier {
       return SessionPlan.fromJson(
         jsonDecode(response.body) as Map<String, dynamic>,
       );
+    } else if (response.statusCode == 403) {
+      throw _refusalFor403(response.body);
     } else if (response.statusCode == 404) {
       throw TripServiceException('Trip or session not found');
     }
     throw TripServiceException(
       'Replan failed (${response.statusCode}): ${response.body}',
     );
+  }
+
+  /// The write endpoints' 403 as the screen should say it. The typed
+  /// {"reason": "captain_only"} (writes keep one captain — ADR 0005) becomes
+  /// [CaptainOnlyException], whose message is the plain sentence the
+  /// itinerary page renders verbatim; any other 403 still reads as a
+  /// sentence, never the response body's raw JSON.
+  TripServiceException _refusalFor403(String body) {
+    if (_detailMap(body)?['reason'] == 'captain_only') {
+      return CaptainOnlyException();
+    }
+    return TripServiceException("You don't have access to change this trip.");
   }
 
   /// POST /audio/stops/{stopId}/keep-exploring — voice a stop's persisted
@@ -409,6 +425,13 @@ class DeeperDiveAudio {
 /// retryable error instead of crashing.
 class KeepExploringException extends TripServiceException {
   KeepExploringException(super.message);
+}
+
+/// The trip's write endpoints refused a non-captain: 403 with
+/// detail.reason == "captain_only" (writes keep one captain — ADR 0005).
+/// [message] is the sentence the phone shows verbatim.
+class CaptainOnlyException extends TripServiceException {
+  CaptainOnlyException() : super("Only the trip's captain can change the day");
 }
 
 /// The backend REFUSED to write the trip's day: /compose returned 422 with
