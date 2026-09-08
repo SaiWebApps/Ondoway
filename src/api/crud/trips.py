@@ -146,6 +146,10 @@ def create_trip_with_stops(
     Creates:
     - Trip node with UUID, name, dates, status='planning'
     - Profile -[:IS_CAPTAIN_OF]-> Trip
+    - Trip -[:DAY_OF]-> Family for every family the captain belongs to: the
+      trip records the family it is born into. Only a marked day is the
+      family's day — a later joiner is crewed onto marked days alone
+      (src/api/crud/families.py), so pre-family history stays private.
     - Profile -[:IS_CREW_OF]-> Trip for every family co-member of the captain
       (ADR 0005: a trip's crew derives from family membership; the captain is
       never their own crew)
@@ -182,6 +186,15 @@ def create_trip_with_stops(
         MERGE (profile)-[:IS_CAPTAIN_OF]->(trip)
         RETURN trip.id AS trip_id
     """
+    # The trip records the family it is born into — the schema fact the
+    # late-join derivation reads. Its own query, because a captain alone in
+    # their family has no co-members for crew_query to match, and the mark
+    # must exist anyway. Same transaction as the trip CREATE.
+    family_mark_query = """
+        MATCH (captain:Profile {id: $profile_id})-[:MEMBER_OF]->(f:Family)
+        MATCH (trip:Trip {id: $trip_id})
+        MERGE (trip)-[:DAY_OF]->(f)
+    """
     # The crew derives from the captain's FAMILY at creation time (ADR 0005:
     # `IS_CREW_OF` finally read and written by production). Same transaction as
     # the trip CREATE, so a trip never exists half-crewed.
@@ -204,6 +217,7 @@ def create_trip_with_stops(
             tour_input_json=tour_input_json,
             options_json=options_json,
         )
+        tx.run(family_mark_query, trip_id=trip_id, profile_id=profile_id)
         tx.run(crew_query, trip_id=trip_id, profile_id=profile_id)
         _create_itinerary_items(tx, trip_id, profile_id, stops)
 

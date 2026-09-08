@@ -70,6 +70,7 @@ RELATIONSHIP_TYPES: list[str] = [
     "IS_CAPTAIN_OF",
     "IS_CREW_OF",
     "MEMBER_OF",
+    "DAY_OF",
     "PREFERS_LENS",
     "HAS_STOP",
     "ASSIGNED_TO",
@@ -102,6 +103,7 @@ RELATIONSHIP_SCHEMAS: dict[str, list[RelPropertyDef]] = {
     "IS_CAPTAIN_OF": [],
     "IS_CREW_OF": [],
     "MEMBER_OF": [],
+    "DAY_OF": [],
     "PREFERS_LENS": [
         RelPropertyDef("weight", "float", required=False, default=1.0),
     ],

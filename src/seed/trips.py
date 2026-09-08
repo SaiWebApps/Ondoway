@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from neo4j import Driver
 
 from src.connection import get_database
+from src.seed.users import FAMILY_ID
 
 _MERGE_TRIP = """
 MERGE (t:Trip {name: $name})
@@ -28,6 +29,15 @@ _MERGE_CREW = """
 MATCH (p:Profile {display_name: $crew_name})
 MATCH (t:Trip {name: $trip_name})
 MERGE (p)-[:IS_CREW_OF]->(t)
+"""
+
+#: The seeded trip is the seeded family's day — Mom captains it, Kid crews it,
+#: both are members — so it carries the DAY_OF mark the creation path writes
+#: for a day born inside a family (src/api/crud/trips.py).
+_MERGE_DAY_OF = """
+MATCH (t:Trip {name: $trip_name})
+MATCH (f:Family {id: $family_id})
+MERGE (t)-[:DAY_OF]->(f)
 """
 
 _MERGE_ITINERARY_ITEM = """
@@ -94,6 +104,10 @@ def _assign_crew(tx, trip_name: str, crew_name: str) -> None:
     tx.run(_MERGE_CREW, crew_name=crew_name, trip_name=trip_name)
 
 
+def _mark_family_day(tx, trip_name: str) -> None:
+    tx.run(_MERGE_DAY_OF, trip_name=trip_name, family_id=FAMILY_ID)
+
+
 def _create_stop(tx, trip_name: str, profile_name: str, stop: dict) -> None:
     tx.run(
         _MERGE_ITINERARY_ITEM,
@@ -111,6 +125,7 @@ def seed_trip(driver: Driver) -> dict[str, int]:
         session.execute_write(_assign_captain, TRIP_DEF["name"], TRIP_DEF["captain"])
         for crew_name in TRIP_DEF["crew"]:
             session.execute_write(_assign_crew, TRIP_DEF["name"], crew_name)
+        session.execute_write(_mark_family_day, TRIP_DEF["name"])
         for stop in STOPS:
             session.execute_write(_create_stop, TRIP_DEF["name"], TRIP_DEF["captain"], stop)
 

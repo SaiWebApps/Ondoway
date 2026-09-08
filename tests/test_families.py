@@ -511,17 +511,82 @@ class TestCrewDerivedAtCreation:
             )
         assert crew == [DEV_PROFILE_ID]
 
+    def test_trip_created_inside_the_family_carries_the_family_mark(
+        self, graph, shared_family
+    ):
+        """The schema fact the late-join derivation reads: a trip created while
+        its captain belongs to a family records that family
+        (`Trip -[:DAY_OF]-> Family`), in the same creation transaction. The
+        fixture family's mark is asserted by membership: Fiona also belongs to
+        the family TestFamilyFlow founds when the whole file runs, and a trip
+        records EVERY family its captain is in."""
+        from src.api.crud.trips import create_trip_with_stops
+        from src.connection import get_database
 
-# ── The late joiner: joining the family crews you onto its existing days ─────
+        with graph.session(database=get_database()) as s:
+            result = create_trip_with_stops(
+                s,
+                trip_name="Marked day",
+                profile_id=FIONA_PROFILE_ID,
+                start_date="2026-09-08",
+                end_date="2026-09-08",
+                stops=[],
+            )
+            marked = [
+                r["fid"]
+                for r in s.run(
+                    "MATCH (:Trip {id: $tid})-[:DAY_OF]->(f:Family) "
+                    "RETURN f.id AS fid",
+                    tid=result["trip_id"],
+                )
+            ]
+            s.run("MATCH (t:Trip {id: $tid}) DETACH DELETE t", tid=result["trip_id"])
+        assert shared_family in marked
+
+    def test_trip_created_outside_any_family_carries_no_mark(self, graph):
+        """A captain in no family births a private day: no DAY_OF mark, no
+        crew — the day a later family formation must never sweep in."""
+        from src.api.crud.trips import create_trip_with_stops
+        from src.connection import get_database
+
+        pid = "p10-families-familyless-captain"
+        with graph.session(database=get_database()) as s:
+            s.run(
+                "MERGE (p:Profile {id: $pid}) "
+                "SET p.display_name = 'Familyless', p.created_at = datetime()",
+                pid=pid,
+            )
+            result = create_trip_with_stops(
+                s,
+                trip_name="Private day",
+                profile_id=pid,
+                start_date="2026-09-08",
+                end_date="2026-09-08",
+                stops=[],
+            )
+            edges = s.run(
+                "MATCH (t:Trip {id: $tid}) "
+                "OPTIONAL MATCH (t)-[d:DAY_OF]->() "
+                "OPTIONAL MATCH (:Profile)-[c:IS_CREW_OF]->(t) "
+                "RETURN count(d) AS marks, count(c) AS crew",
+                tid=result["trip_id"],
+            ).single()
+            s.run("MATCH (t:Trip {id: $tid}) DETACH DELETE t", tid=result["trip_id"])
+            s.run("MATCH (p:Profile {id: $pid}) DETACH DELETE p", pid=pid)
+        assert (edges["marks"], edges["crew"]) == (0, 0)
+
+
+# ── The late joiner: joining the family crews you onto its marked days ───────
 #
-# The pinned semantics for the plan-first order: a day planned BEFORE the
-# invite is still the family's day. add_member crews the JOINER onto the
-# trips existing members captain, in the same transaction as the membership
-# write — one direction only. The joiner's own pre-join days gain no crew
-# edges: joining shares the family's days, never the joiner's history (a day
-# is shared with the family only when it is knowingly created inside one —
-# trip-creation-time derivation). The captain of a trip is never their own
-# crew, and writes keep one captain either way.
+# The pinned semantics for the plan-first order: a day planned inside the
+# family BEFORE the invite is still the family's day. A Trip records the
+# family it is born into (`Trip -[:DAY_OF]-> Family`, written by
+# create_trip_with_stops in the creation transaction); add_member crews the
+# JOINER onto the family's MARKED days, in the same transaction as the
+# membership write — one direction only. Days carrying no mark — anyone's
+# pre-family history, the joiner's own pre-join days — gain no crew edges:
+# joining shares the family's days, never anyone's history. The captain of a
+# trip is never their own crew, and writes keep one captain either way.
 
 PLANFIRST_FAMILY_ID = "p10-families-planfirst-family"
 PLANFIRST_TRIP_ID = "p10-families-planfirst-trip"
@@ -532,9 +597,11 @@ JOINERS_OWN_TRIP_ID = "p10-families-joiners-own-trip"
 class TestJoinLateCrewsTheExistingDays:
     @pytest.fixture()
     def plan_first_world(self, graph):
-        """Fiona alone in a family with an already-composed day, and Dev —
-        not yet a member — with a composed day of his own. Planted directly
-        (the crewed_trip mould), torn down whole."""
+        """Fiona alone in a family with an already-composed day born INSIDE it
+        (it carries the family's DAY_OF mark, as the creation path writes for a
+        captain already in the family), and Dev — not yet a member — with a
+        composed day of his own, born outside any family, so unmarked. Planted
+        directly (the crewed_trip mould), torn down whole."""
         from src.api.models.trips import SessionPlan
 
         with graph.session() as s:
@@ -565,6 +632,12 @@ class TestJoinLateCrewsTheExistingDays:
                     sj=session_json,
                     cap=captain_id,
                 )
+            s.run(
+                "MATCH (t:Trip {id: $tid}) MATCH (f:Family {id: $fid}) "
+                "MERGE (t)-[:DAY_OF]->(f)",
+                tid=PLANFIRST_TRIP_ID,
+                fid=PLANFIRST_FAMILY_ID,
+            )
         yield
         with graph.session() as s:
             s.run(
@@ -660,6 +733,259 @@ class TestJoinLateCrewsTheExistingDays:
                 tids=[PLANFIRST_TRIP_ID, JOINERS_OWN_TRIP_ID],
             ).single()["n"]
         assert self_crewed == 0
+
+
+# ── A family day is one born in the family ───────────────────────────────────
+#
+# The acceptance probes, on identities of their own (the module's Fiona and
+# Dev become permanent co-members once TestFamilyFlow founds "The Fionas", so
+# a no-family premise cannot be staged on them). Days are planned through the
+# REAL creation path (create_trip_with_stops + write_trip_session), so each
+# trip carries exactly the marks creation gives it.
+
+
+def _plant_identity(s, uid: str, email: str, pid: str, name: str) -> None:
+    """One disposable User+Profile pair on the test graph."""
+    s.run("MERGE (u:User {id: $uid}) SET u.email = $email", uid=uid, email=email)
+    s.run(
+        "MERGE (p:Profile {id: $pid}) "
+        "SET p.display_name = $name, p.created_at = datetime() "
+        "WITH p MATCH (u:User {id: $uid}) MERGE (u)-[:HAS_PROFILE]->(p)",
+        pid=pid,
+        uid=uid,
+        name=name,
+    )
+
+
+def _plan_day(graph, profile_id: str, name: str) -> str:
+    """A composed day through the real paths: the creation-time derivation
+    (create_trip_with_stops) plus a written session, so the session GET serves
+    it to its readers."""
+    from src.api.crud.trips import create_trip_with_stops, write_trip_session
+    from src.api.models.trips import SessionPlan
+    from src.connection import get_database
+
+    with graph.session(database=get_database()) as s:
+        trip_id = create_trip_with_stops(
+            s,
+            trip_name=name,
+            profile_id=profile_id,
+            start_date="2026-09-08",
+            end_date="2026-09-08",
+            stops=[],
+        )["trip_id"]
+        write_trip_session(
+            s,
+            trip_id,
+            plan_version=1,
+            session_json=SessionPlan(
+                trip_id=trip_id,
+                plan_version=1,
+                stops=[],
+                retime_tolerance_seconds=120,
+            ).model_dump_json(),
+        )
+    return trip_id
+
+
+def _teardown_probe_world(graph, profile_ids: list[str], user_ids: list[str]) -> None:
+    with graph.session() as s:
+        s.run(
+            "MATCH (p:Profile) WHERE p.id IN $pids "
+            "OPTIONAL MATCH (p)-[:IS_CAPTAIN_OF]->(t:Trip) DETACH DELETE t",
+            pids=profile_ids,
+        )
+        s.run(
+            "MATCH (p:Profile)-[:MEMBER_OF]->(f:Family) WHERE p.id IN $pids "
+            "DETACH DELETE f",
+            pids=profile_ids,
+        )
+        s.run("MATCH (p:Profile) WHERE p.id IN $pids DETACH DELETE p", pids=profile_ids)
+        s.run("MATCH (u:User) WHERE u.id IN $uids DETACH DELETE u", uids=user_ids)
+
+
+def _found_family(client, uid: str, email: str, pid: str) -> str:
+    resp = client.post(
+        "/api/v1/families", json={"profile_id": pid}, headers=_bearer(uid, email)
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()["family_id"]
+
+
+def _join(client, family_id: str, inviter_uid: str, uid: str, email: str, pid: str):
+    token = create_invite_token(family_id, inviter_uid)
+    resp = client.post(
+        "/api/v1/families/join",
+        json={"token": token, "profile_id": pid},
+        headers=_bearer(uid, email),
+    )
+    assert resp.status_code == 200, resp.text
+
+
+@needs_neo4j
+class TestFoundersPreFamilyHistoryStaysPrivate:
+    """Probe 1: Fiona-like founder plans a solo day, THEN founds the family,
+    THEN a joiner joins — the founder's pre-family day carries no mark, so the
+    joiner never reads it and never lists it."""
+
+    FOUNDER = ("p10-born-user-founder", "p10-born-founder@example.test",
+               "p10-born-profile-founder", "Founder")
+    JOINER = ("p10-born-user-joiner", "p10-born-joiner@example.test",
+              "p10-born-profile-joiner", "Joiner")
+
+    @pytest.fixture()
+    def world(self, graph, client):
+        f_uid, f_email, f_pid, _ = self.FOUNDER
+        j_uid, j_email, j_pid, _ = self.JOINER
+        with graph.session() as s:
+            for ident in (self.FOUNDER, self.JOINER):
+                _plant_identity(s, *ident)
+        solo_trip = _plan_day(graph, f_pid, "Solo pre-family day")
+        family_id = _found_family(client, f_uid, f_email, f_pid)
+        _join(client, family_id, f_uid, j_uid, j_email, j_pid)
+        yield solo_trip
+        _teardown_probe_world(graph, [f_pid, j_pid], [f_uid, j_uid])
+
+    def test_joiner_never_reads_the_founders_pre_family_day(self, client, world):
+        f_uid, f_email, _, _ = self.FOUNDER
+        j_uid, j_email, j_pid, _ = self.JOINER
+
+        # Control: the day itself serves — the founder reads their own history.
+        own = client.get(
+            f"/api/v1/trips/{world}/session", headers=_bearer(f_uid, f_email)
+        )
+        assert own.status_code == 200, own.text
+
+        got = client.get(
+            f"/api/v1/trips/{world}/session", headers=_bearer(j_uid, j_email)
+        )
+        assert got.status_code == 404, (
+            f"the founder's pre-family day leaked to the joiner: {got.text}"
+        )
+
+        listed = client.get(
+            f"/api/v1/trips?profile_id={j_pid}", headers=_bearer(j_uid, j_email)
+        )
+        assert listed.status_code == 200, listed.text
+        assert world not in [t["trip_id"] for t in listed.json()]
+
+
+@needs_neo4j
+class TestPlanFirstInsideTheFamily:
+    """Probe 2: found the family FIRST, then plan the day — it is born inside
+    the family (marked at creation), so a later joiner reads it and stays crew
+    on writes. Green on the creation-time derivation both before and after the
+    mark exists: the regression guard for the family's real order."""
+
+    FOUNDER = ("p10-inside-user-founder", "p10-inside-founder@example.test",
+               "p10-inside-profile-founder", "Founder")
+    JOINER = ("p10-inside-user-joiner", "p10-inside-joiner@example.test",
+              "p10-inside-profile-joiner", "Joiner")
+
+    @pytest.fixture()
+    def world(self, graph, client):
+        f_uid, f_email, f_pid, _ = self.FOUNDER
+        j_uid, j_email, j_pid, _ = self.JOINER
+        with graph.session() as s:
+            for ident in (self.FOUNDER, self.JOINER):
+                _plant_identity(s, *ident)
+        family_id = _found_family(client, f_uid, f_email, f_pid)
+        family_trip = _plan_day(graph, f_pid, "Family-first day")
+        _join(client, family_id, f_uid, j_uid, j_email, j_pid)
+        yield family_trip
+        _teardown_probe_world(graph, [f_pid, j_pid], [f_uid, j_uid])
+
+    def test_joiner_reads_200_and_writes_403(self, client, world):
+        j_uid, j_email, _, _ = self.JOINER
+        got = client.get(
+            f"/api/v1/trips/{world}/session", headers=_bearer(j_uid, j_email)
+        )
+        assert got.status_code == 200, got.text
+        assert got.json()["trip_id"] == world
+
+        replan = client.post(
+            f"/api/v1/trips/{world}/session/replan",
+            json={
+                "lat": 48.86,
+                "lng": 2.34,
+                "wall_elapsed_seconds": 0,
+                "tour_elapsed_seconds": 0,
+            },
+            headers=_bearer(j_uid, j_email),
+        )
+        assert replan.status_code == 403, replan.text
+        assert replan.json()["detail"]["reason"] == "captain_only"
+
+
+@needs_neo4j
+class TestJoinOrderIndependence:
+    """Probe 3: two joiners at different times end with the identical readable
+    set — exactly the family's marked days — and neither reads the other's
+    pre-join history."""
+
+    FOUNDER = ("p10-order-user-founder", "p10-order-founder@example.test",
+               "p10-order-profile-founder", "Founder")
+    EARLY = ("p10-order-user-early", "p10-order-early@example.test",
+             "p10-order-profile-early", "Early")
+    LATE = ("p10-order-user-late", "p10-order-late@example.test",
+            "p10-order-profile-late", "Late")
+
+    @pytest.fixture()
+    def world(self, graph, client):
+        f_uid, f_email, f_pid, _ = self.FOUNDER
+        e_uid, e_email, e_pid, _ = self.EARLY
+        l_uid, l_email, l_pid, _ = self.LATE
+        with graph.session() as s:
+            for ident in (self.FOUNDER, self.EARLY, self.LATE):
+                _plant_identity(s, *ident)
+        family_id = _found_family(client, f_uid, f_email, f_pid)
+        family_day = _plan_day(graph, f_pid, "The family's day")
+        early_own = _plan_day(graph, e_pid, "Early's own pre-join day")
+        _join(client, family_id, f_uid, e_uid, e_email, e_pid)
+        late_own = _plan_day(graph, l_pid, "Late's own pre-join day")
+        _join(client, family_id, f_uid, l_uid, l_email, l_pid)
+        yield {"family_day": family_day, "early_own": early_own, "late_own": late_own}
+        _teardown_probe_world(graph, [f_pid, e_pid, l_pid], [f_uid, e_uid, l_uid])
+
+    def _shared_rows(self, client, uid: str, email: str, pid: str) -> set[str]:
+        resp = client.get(
+            f"/api/v1/trips?profile_id={pid}", headers=_bearer(uid, email)
+        )
+        assert resp.status_code == 200, resp.text
+        return {t["trip_id"] for t in resp.json() if not t["captained"]}
+
+    def test_every_joiner_reads_exactly_the_familys_marked_days(self, client, world):
+        e_uid, e_email, e_pid, _ = self.EARLY
+        l_uid, l_email, l_pid, _ = self.LATE
+        early_shared = self._shared_rows(client, e_uid, e_email, e_pid)
+        late_shared = self._shared_rows(client, l_uid, l_email, l_pid)
+        assert early_shared == late_shared == {world["family_day"]}
+
+    def test_neither_joiner_reads_the_others_pre_join_history(self, client, world):
+        e_uid, e_email, _, _ = self.EARLY
+        l_uid, l_email, _, _ = self.LATE
+        # Controls: each owner still reads their own day.
+        for uid, email, tid in (
+            (e_uid, e_email, world["early_own"]),
+            (l_uid, l_email, world["late_own"]),
+        ):
+            own = client.get(
+                f"/api/v1/trips/{tid}/session", headers=_bearer(uid, email)
+            )
+            assert own.status_code == 200, own.text
+
+        cross_late = client.get(
+            f"/api/v1/trips/{world['early_own']}/session",
+            headers=_bearer(l_uid, l_email),
+        )
+        assert cross_late.status_code == 404, (
+            f"the later joiner read the earlier joiner's history: {cross_late.text}"
+        )
+        cross_early = client.get(
+            f"/api/v1/trips/{world['late_own']}/session",
+            headers=_bearer(e_uid, e_email),
+        )
+        assert cross_early.status_code == 404, cross_early.text
 
 
 # ── Audio generation requires a reader of the trip ───────────────────────────
