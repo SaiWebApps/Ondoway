@@ -2133,6 +2133,65 @@ def test_a_closed_start_speaks_before_the_first_stops_own_closure_line():
     assert sum("Pantheon is closed today" in s.text for s in script.script) == 1
 
 
+def test_a_kept_closed_start_is_named_where_the_walker_stands():
+    """Marcus starts AT the closed Bourse at 13:30; the walk seats it 80
+    minutes later. Until now the voice was silent at the door he is looking
+    at — the same lie of omission M18 forbids off-route. A kept at_start
+    exclusion seated past stop 0 is named at the open as a bare FACT (no
+    "we'll come back": the session may trade the stop away, W6.2 R4); its
+    own stop still speaks the take-it-in-from-out-here line on arrival. An
+    at_start exclusion that IS stop 0 emits no extra line — its own
+    acknowledgment already holds the slot.
+    UNDO: keep the off-route-only guard in _closed_start_line -> the open is
+    silent at the door Marcus stands beside -> RED."""
+    from src.tour.contract import ClockExclusion
+
+    p1 = _poi("p1", "Pantheon")
+    p2 = _poi("p2", "Bourse de Commerce")
+    b1 = _beat("b1", p1.id, body="Soufflot designed it.", nf="establishing")
+    b2 = _beat("b2", p2.id, body="The rotunda is wrapped in a panorama.", nf="establishing")
+    seq = BeatSequence(poi_beats=(_poi_beats(p1, (b1,)), _poi_beats(p2, (b2,))))
+    route = _route((p1, p2)).model_copy(
+        update={
+            "clock_exclusions": (
+                ClockExclusion(
+                    poi_id=p2.id, name=p2.name, reason="closed all day Monday",
+                    kept_outside=True, all_day=True, at_start=True,
+                ),
+            ),
+        }
+    )
+    script = generate(seq, route, _input(), glue_client=MockGlueClient())
+    stop0 = [s.text for s in script.script if s.stop_idx == 0]
+    assert stop0[0] == "Settle in."
+    assert stop0[1] == "Bourse de Commerce, right here at the start, is closed today.", stop0[:3]
+    assert not any("come back" in t.lower() or "later" in t.lower() for t in stop0)
+    # Its own stop still opens on the full acknowledgment, said once.
+    stop1_line = "Bourse de Commerce is closed today, so we'll take it in from out here."
+    assert any(s.text == stop1_line and s.stop_idx == 1 for s in script.script)
+    assert sum("right here at the start" in s.text for s in script.script) == 1
+    assert script.validation.passed is True
+
+    # at_start on stop 0's own exclusion adds nothing: one line, its own.
+    solo = _route((p2,)).model_copy(
+        update={
+            "clock_exclusions": (
+                ClockExclusion(
+                    poi_id=p2.id, name=p2.name, reason="closed all day Monday",
+                    kept_outside=True, all_day=True, at_start=True,
+                ),
+            ),
+        }
+    )
+    solo_script = generate(
+        BeatSequence(poi_beats=(_poi_beats(p2, (b2,)),)), solo, _input(),
+        glue_client=MockGlueClient(),
+    )
+    texts = [s.text for s in solo_script.script if s.stop_idx == 0]
+    assert texts[1] == stop1_line, texts[:3]
+    assert not any("right here at the start" in t for t in texts)
+
+
 def test_a_dropped_only_invitation_beat_is_not_reported_as_voiced():
     """A beat that was ONLY an invitation at a shut door emits nothing — and
     the voiced roster must say so (the same truth-from-emissions rule the

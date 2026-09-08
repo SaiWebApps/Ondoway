@@ -1395,6 +1395,17 @@ CLOSED_START_ALL_DAY_LINE_TEMPLATE: str = (
     "{name}, right here at the start, is closed today, "
     "so the walk goes on without it."
 )
+#: The KEPT closed start, seated later than stop 0: the walker is standing at
+#: a shut door the day still visits from the outside. Spoken as a bare FACT —
+#: never "we'll come back" (W6.2 R4: the session may trade the stop away, and
+#: a promise to a place the walker never reaches is a small shut door). Its
+#: own stop speaks the full acknowledgment on arrival.
+CLOSED_START_KEPT_LINE_TEMPLATE: str = (
+    "{name}, right here at the start, is closed at the moment."
+)
+CLOSED_START_KEPT_ALL_DAY_LINE_TEMPLATE: str = (
+    "{name}, right here at the start, is closed today."
+)
 
 
 def _closure_opening_lines(route: Route) -> dict[int, Sentence]:
@@ -1426,25 +1437,40 @@ def _closure_opening_lines(route: Route) -> dict[int, Sentence]:
 
 
 def _closed_start_line(route: Route) -> Sentence | None:
-    """The acknowledgment for a shut place AT the walk's start that is NOT in
-    the day (``ClockExclusion.at_start`` set by selection from coordinates,
-    poi_id off-route — an on-route closure already gets its stop's own line).
-    The caller speaks it as the day's first line about any place, ahead of a
-    closed stop 0's own line when both are true: the walker is standing at
-    THIS door, and two shut doors are two facts, each said once."""
-    on_route = {poi.id for poi in route.pois}
+    """The acknowledgment for a shut place AT the walk's start
+    (``ClockExclusion.at_start``, set by selection from coordinates). Three
+    cases: a place NOT in the day says the walk goes on without it; a KEPT
+    place seated later than stop 0 is named as a bare fact — the walker is
+    looking at that door NOW, and its own stop speaks the full line on
+    arrival; a place that IS stop 0 adds nothing, because its own
+    acknowledgment already holds the first-stationary slot. The caller
+    speaks this ahead of a closed stop 0's own line when both are true: two
+    shut doors are two facts, each said once."""
+    on_route = {poi.id: idx for idx, poi in enumerate(route.pois)}
     for excl in route.clock_exclusions:
-        if excl.at_start and excl.poi_id not in on_route:
-            return Sentence(
-                text=(
-                    CLOSED_START_ALL_DAY_LINE_TEMPLATE
-                    if excl.all_day
-                    else CLOSED_START_LINE_TEMPLATE
-                ).format(name=excl.name),
-                source_id=GLUE_STAGING,
-                source_type="glue",
-                stop_idx=0,
+        if not excl.at_start:
+            continue
+        idx = on_route.get(excl.poi_id)
+        if idx == 0:
+            continue
+        if idx is None:
+            template = (
+                CLOSED_START_ALL_DAY_LINE_TEMPLATE
+                if excl.all_day
+                else CLOSED_START_LINE_TEMPLATE
             )
+        else:
+            template = (
+                CLOSED_START_KEPT_ALL_DAY_LINE_TEMPLATE
+                if excl.all_day
+                else CLOSED_START_KEPT_LINE_TEMPLATE
+            )
+        return Sentence(
+            text=template.format(name=excl.name),
+            source_id=GLUE_STAGING,
+            source_type="glue",
+            stop_idx=0,
+        )
     return None
 
 
