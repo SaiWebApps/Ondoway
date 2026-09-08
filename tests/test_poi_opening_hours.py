@@ -205,6 +205,34 @@ TRUST_FIELDS = (
 #: is the deliberate declaration, removing one to reach green is forbidden.
 CITIES_WITH_GATED_VERDICTS: tuple[str, ...] = ("paris",)
 
+#: Cities whose hours REVIEW QUEUE has been drained by a human sitting: every
+#: gated, table-carrying POI carries `opening_hours_verified` (the gated
+#: places whose hours nobody can confirm stay honest nulls — fail-open with
+#: the spoken disclosure, per Docs/adr/0003). Same allowlist discipline:
+#: adding a slug is the deliberate declaration the sitting happened; the
+#: operator adds it after `make poi-hours-review` reports an empty queue.
+CITIES_WITH_DRAINED_HOURS_QUEUES: tuple[str, ...] = ()
+
+
+def test_a_drained_city_carries_a_verdict_on_every_table() -> None:
+    """The queue-drained guard — Phase 10's gate criterion, mechanized: in a
+    declared city, no gated table remains unreviewed."""
+    for city in CITIES_WITH_DRAINED_HOURS_QUEUES:
+        offenders = [
+            _name(p)
+            for p in _pois(city)
+            if p.get("gated") is True
+            and p.get("opening_hours") is not None
+            and p.get("opening_hours_verified") is None
+        ]
+        if offenders:
+            _fail(
+                city,
+                "gated table(s) still awaiting review in a drained-declared city",
+                offenders,
+                "Run the sitting: `make poi-hours-review SLUG=<city> APPROVER=<you>`.",
+            )
+
 
 def test_every_poi_records_a_gated_verdict() -> None:
     """Presence check for the trust half — every POI in a declared city carries

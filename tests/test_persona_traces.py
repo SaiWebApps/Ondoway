@@ -55,14 +55,16 @@ pytestmark = pytest.mark.timeout(900)
 #: How many of the eleven days the product SERVES at $0 today. MEASURED on this
 #: tree, 2026-08-24 (phase8-ledger.md §S8.5, the before-picture): camille (5
 #: stops), greta (3) and rosemary (1); re-measured after P9R-S1, when paulo's
-#: day — refused at compose over two corpus lines the placement floors rightly
-#: caught — began serving through the origin-verified transit pick, the drop
-#: valve and the two reworded beats. The rest are refused by S8.3's placement
-#: floors or the C3 audio floor — each named, each pinned by
+#: day began serving through the origin-verified transit pick, the drop valve
+#: and the two reworded beats; re-measured again at Phase 10, when aiko's day
+#: began serving — her compose was refused over one forbidden corpus walking
+#: line, reworded at its source, and the hours work made her Tuesday real
+#: (`test_aikos_rainy_tuesday_serves` is her own pin). The rest are refused by
+#: S8.3's placement floors or the C3 audio floor — each named, each pinned by
 #: `test_every_persona_day_either_serves_or_refuses_by_name`. A FLOOR, not an
 #: equality: a day that starts serving is never a failure; a day that stops
 #: serving is.
-SERVED_FLOOR = 4
+SERVED_FLOOR = 5
 
 #: The wire speaks in whole minutes (`start_time` is HH:MM and `dwell_seconds`
 #: is floored to minutes when a leg is read back), so a leg read off two clocks
