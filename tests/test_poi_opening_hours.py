@@ -204,7 +204,7 @@ def test_gate_the_ladder_is_gone() -> None:
     verification ladder or the review command."""
     roots = [REPO_ROOT / "src", REPO_ROOT / "scripts", REPO_ROOT / "tests"]
     files = [p for root in roots for p in root.rglob("*.py")]
-    files += [REPO_ROOT / "Makefile", REPO_ROOT / "docs" / "MAKE_TARGETS.md"]
+    files += [REPO_ROOT / "Makefile", REPO_ROOT / "Docs" / "MAKE_TARGETS.md"]
     this_file = Path(__file__).resolve()
     offenders = []
     for path in files:

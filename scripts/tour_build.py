@@ -39,6 +39,7 @@ from src.tour.routing import haversine_m
 from src.tour.routing_client import RoutingClient
 from src.tour.selection import (
     B_SNAP_PROXIMITY_M,
+    HOURS_SOURCE_MAP,
     VALHALLA_MAX_CONTOUR_MINUTES,
     CertificationPlanningInfeasibleError,
     build_poi_beat_plans_capped,
@@ -555,7 +556,7 @@ def _print_breakdown(
         # planning is "a promise without hours under it"): on a dated run, say
         # where the doors' hours come from (Docs/adr/0006). DOORS = `gated is
         # True`, or hours on record (hours imply a door on a legacy row); from
-        # the map = source "map"; guessed = hours from any other source;
+        # the map = `HOURS_SOURCE_MAP`; guessed = hours from any other source;
         # unknown = a door with no hours at all. Printed whenever the route
         # has a door so a clean run SAYS it is clean; omitted on undated runs
         # (no clock, no gate).
@@ -565,7 +566,7 @@ def _print_breakdown(
                 if p.gated is True or p.opening_hours is not None
             ]
             if doors:
-                from_map = sum(1 for p in doors if p.opening_hours_source == "map")
+                from_map = sum(1 for p in doors if p.opening_hours_source == HOURS_SOURCE_MAP)
                 guessed = sum(1 for p in doors if hours_are_guessed(p))
                 unknown = sum(1 for p in doors if p.opening_hours is None)
                 print(
