@@ -8,14 +8,14 @@ from tests.conftest import needs_neo4j
 class TestConstraints:
     def test_apply_all_returns_counts(self, driver):
         result = apply_all(driver)
-        assert result["constraints"] == 10
+        assert result["constraints"] == 11
         assert result["indexes"] == 5
 
     def test_constraints_are_idempotent(self, driver):
         """Running apply_all twice should not raise."""
         apply_all(driver)
         result = apply_all(driver)
-        assert result["constraints"] == 10
+        assert result["constraints"] == 11
 
     def test_unique_constraints_exist_in_db(self, driver):
         apply_all(driver)

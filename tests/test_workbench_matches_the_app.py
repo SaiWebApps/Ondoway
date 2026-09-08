@@ -2689,6 +2689,9 @@ class _StubGraph:
             # POI exists (`poi_found`) so a wrong id fails loudly and the A→B finish
             # sentinel is stored. On this stand-in every non-sentinel POI "exists".
             "poi_found": True,
+            # The family split gave the trip routes a roles read (captain or
+            # crew); this store's one user captains its one trip.
+            "roles": ["IS_CAPTAIN_OF"],
         }
 
     def run(self, _cypher: str, **params: Any) -> _StubGraph:

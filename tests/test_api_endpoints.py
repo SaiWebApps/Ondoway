@@ -57,11 +57,11 @@ class TestGraphEndpoint:
 
     def test_contains_seeded_nodes(self, client):
         data = client.get("/api/v1/graph").json()
-        assert len(data["nodes"]) == 43
+        assert len(data["nodes"]) == 44
 
     def test_contains_seeded_edges(self, client):
         data = client.get("/api/v1/graph").json()
-        assert len(data["edges"]) == 53
+        assert len(data["edges"]) == 56
 
     def test_nodes_have_required_fields(self, client):
         node = client.get("/api/v1/graph").json()["nodes"][0]
