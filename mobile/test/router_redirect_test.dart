@@ -114,4 +114,26 @@ void main() {
       expect(result, isNull);
     });
   });
+
+  group('pendingDestinationFor', () {
+    test('a signed-out join tap is worth resuming — token and all', () {
+      expect(
+        pendingDestinationFor(Uri.parse('/auth/join-family?token=abc')),
+        '/auth/join-family?token=abc',
+      );
+    });
+
+    test('a join link with no token resumes nothing', () {
+      expect(pendingDestinationFor(Uri.parse('/auth/join-family')), isNull);
+      expect(
+        pendingDestinationFor(Uri.parse('/auth/join-family?token=')),
+        isNull,
+      );
+    });
+
+    test('ordinary guarded routes resume nothing', () {
+      expect(pendingDestinationFor(Uri.parse('/explore')), isNull);
+      expect(pendingDestinationFor(Uri.parse('/saved-trips')), isNull);
+    });
+  });
 }

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Ondoway — Join your family</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: -apple-system, sans-serif; text-align: center; padding: 60px 20px; background: #f8f9fa; }
+  .card { max-width: 400px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  h1 { font-size: 24px; margin-bottom: 8px; }
+  p { color: #666; margin-bottom: 24px; }
+  a.btn { display: inline-block; background: #1A73E8; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Ondoway</h1>
+  <p>You&rsquo;ve been invited to a family. Tap the button to join in the app.</p>
+  <a class="btn" id="open" href="#">Join in Ondoway</a>
+  <p style="margin-top:24px;font-size:13px;color:#999;">If the app doesn't open, make sure Ondoway is installed — the invite works once it is.</p>
+</div>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token') || '';
+  const deepLink = 'ondoway://auth/join-family?token=' + encodeURIComponent(token);
+  document.getElementById('open').href = deepLink;
+  // Auto-attempt on load
+  window.location.href = deepLink;
+</script>
+</body>
+</html>

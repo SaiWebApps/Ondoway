@@ -50,3 +50,41 @@ class TestAuthRedirectRoute:
         client = self._make_client()
         resp = client.get("/auth")
         assert resp.status_code == 200
+
+
+class TestJoinFamilyRedirectRoute:
+    """The invite URL (FRONTEND_URL/auth/join-family?token=…) must land
+    somewhere real for a browser or a phone without the app — the auth.html
+    mould: deep-link into the app with the token, plus a get-the-app line."""
+
+    def _make_client(self):
+        from src.api.app import create_app
+
+        app = create_app()
+        return TestClient(app, raise_server_exceptions=False)
+
+    def test_join_family_route_returns_html(self):
+        client = self._make_client()
+        resp = client.get("/auth/join-family?token=test-tok")
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers["content-type"]
+
+    def test_join_family_html_deep_links_into_the_app_join_route(self):
+        client = self._make_client()
+        resp = client.get("/auth/join-family?token=test-tok")
+        assert "ondoway://auth/join-family" in resp.text
+
+    def test_join_family_html_reads_token_from_url(self):
+        client = self._make_client()
+        resp = client.get("/auth/join-family?token=test-tok")
+        assert "params.get('token')" in resp.text
+
+    def test_join_family_html_carries_a_get_the_app_line(self):
+        client = self._make_client()
+        resp = client.get("/auth/join-family?token=test-tok")
+        assert "installed" in resp.text
+
+    def test_join_family_route_without_token_still_serves_page(self):
+        client = self._make_client()
+        resp = client.get("/auth/join-family")
+        assert resp.status_code == 200

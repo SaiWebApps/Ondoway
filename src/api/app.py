@@ -89,7 +89,9 @@ def create_app() -> FastAPI:
             headers={"Retry-After": "30"},
         )
 
-    _auth_html = Path(__file__).resolve().parents[2] / "frontend" / "auth.html"
+    _frontend_dir = Path(__file__).resolve().parents[2] / "frontend"
+    _auth_html = _frontend_dir / "auth.html"
+    _join_family_html = _frontend_dir / "join-family.html"
 
     @app.get("/auth")
     async def auth_redirect():
@@ -98,6 +100,18 @@ def create_app() -> FastAPI:
 
             raise HTTPException(404, "auth redirect page not found")
         return FileResponse(str(_auth_html), media_type="text/html")
+
+    @app.get("/auth/join-family")
+    async def join_family_redirect():
+        """The invite URL's browser landing (auth.html's mould): deep-link the
+        token into the app's join route, with a get-the-app line for a phone
+        without the app. The same path is also an Apple universal link
+        (/auth/* below), so a phone WITH the app never sees this page."""
+        if not _join_family_html.is_file():
+            from fastapi import HTTPException
+
+            raise HTTPException(404, "join-family redirect page not found")
+        return FileResponse(str(_join_family_html), media_type="text/html")
 
     @app.get("/api/v1/healthz")
     async def healthz():

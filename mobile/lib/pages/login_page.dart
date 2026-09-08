@@ -288,7 +288,9 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (mounted) {
-        context.go(profileService.isFirstTime ? '/onboarding' : '/explore');
+        context.go(
+          signedInLandingRoute(auth: authService, profile: profileService),
+        );
       }
     } on AuthException catch (e) {
       setState(() => _errorMessage = e.message);
@@ -316,7 +318,9 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (mounted) {
-        context.go(profileService.isFirstTime ? '/onboarding' : '/explore');
+        context.go(
+          signedInLandingRoute(auth: authService, profile: profileService),
+        );
       }
     } on AuthException catch (e) {
       setState(() => _errorMessage = e.message);

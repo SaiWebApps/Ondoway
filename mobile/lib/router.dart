@@ -17,6 +17,7 @@ import 'package:ondoway/pages/trip_itinerary_page.dart';
 import 'package:ondoway/services/auth_service.dart';
 import 'package:ondoway/services/lens_service.dart';
 import 'package:ondoway/services/profile_service.dart';
+import 'package:ondoway/services/session_bootstrap.dart';
 import 'package:ondoway/spike/tour_pin_proof_page.dart';
 import 'package:ondoway/spike/tour_playback_proof_page.dart';
 import 'package:ondoway/theme/dims.dart';
@@ -102,6 +103,22 @@ String? computeAuthRedirect({
   return null;
 }
 
+/// The location a signed-out deep link should RESUME at after sign-in, or null
+/// when the bounce loses nothing worth keeping.
+///
+/// Today that is exactly the family-invite tap: `/auth/join-family?token=…`
+/// needs a signed-in profile, so the guard bounces it to /login — and without
+/// the stash the token dies there, forcing every new member to dig the invite
+/// link back up after signing in. Pure, so the decision is unit-testable
+/// beside [computeAuthRedirect]; the router's redirect closure stashes the
+/// result on AuthService when it bounces.
+String? pendingDestinationFor(Uri uri) {
+  if (uri.path != '/auth/join-family') return null;
+  final token = uri.queryParameters['token'];
+  if (token == null || token.isEmpty) return null;
+  return uri.toString();
+}
+
 GoRouter createRouter(
   AuthService authService,
   ProfileService profileService,
@@ -111,7 +128,7 @@ GoRouter createRouter(
     initialLocation: '/login',
     refreshListenable: authService,
     redirect: (context, state) {
-      return computeAuthRedirect(
+      final redirect = computeAuthRedirect(
         isAuthenticated: authService.isAuthenticated,
         profileLoaded: profileService.isLoaded,
         profileIsFirstTime: profileService.isFirstTime,
@@ -120,6 +137,13 @@ GoRouter createRouter(
         // profile is what on-device iOS testing uses — but never in release.
         allowDebugRoutes: !kReleaseMode,
       );
+      if (redirect == '/login') {
+        // A bounced invite tap survives sign-in: the sign-in landing
+        // (signedInLandingRoute) resumes the stashed location.
+        final pending = pendingDestinationFor(state.uri);
+        if (pending != null) authService.stashPendingDestination(pending);
+      }
+      return redirect;
     },
     routes: [
       // The design system rendered in one page, for on-device visual checking.
@@ -168,7 +192,9 @@ GoRouter createRouter(
       ),
       // The family invite deep link (rides /auth/* — the app's registered
       // universal-link space). NOT exempt from the auth guard above: joining
-      // needs a signed-in profile, so an unauthenticated tap lands on /login.
+      // needs a signed-in profile, so an unauthenticated tap lands on /login —
+      // with the destination stashed (pendingDestinationFor), so the join
+      // resumes after sign-in instead of dying with the bounce.
       GoRoute(
         path: '/auth/join-family',
         builder: (context, state) {
@@ -194,7 +220,11 @@ GoRouter createRouter(
                   refresh: () async =>
                       (await as_.refreshSession()) ? as_.accessToken : null,
                 );
-                if (context.mounted) context.go('/explore');
+                // The one landing decision: a join stashed before onboarding
+                // resumes here; otherwise explore.
+                if (context.mounted) {
+                  context.go(signedInLandingRoute(auth: as_, profile: ps));
+                }
               } on ProfileServiceException catch (e) {
                 if (!context.mounted) return;
                 if (e.statusCode == 401 || e.statusCode == 403) {

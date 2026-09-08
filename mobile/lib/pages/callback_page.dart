@@ -47,7 +47,9 @@ class _CallbackPageState extends State<CallbackPage> {
       );
 
       if (!mounted) return;
-      context.go(profileService.isFirstTime ? '/onboarding' : '/explore');
+      context.go(
+        signedInLandingRoute(auth: authService, profile: profileService),
+      );
     } on AuthException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (e) {

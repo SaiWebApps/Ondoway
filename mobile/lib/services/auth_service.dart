@@ -20,6 +20,7 @@ class AuthService extends ChangeNotifier {
   String? _userId;
   String? _userEmail;
   bool _isLoading = false;
+  String? _pendingDestination;
 
   AuthService({
     FlutterSecureStorage? storage,
@@ -32,6 +33,22 @@ class AuthService extends ChangeNotifier {
   String? get userId => _userId;
   String? get userEmail => _userEmail;
   bool get isLoading => _isLoading;
+
+  /// Remembers where a signed-out deep link was headed (a family-invite tap)
+  /// so the sign-in landing can resume it. Plain fields, deliberately silent:
+  /// the router listens to this service, and a notify here would re-run the
+  /// redirect that is setting it.
+  void stashPendingDestination(String location) {
+    _pendingDestination = location;
+  }
+
+  /// The stashed destination, handed over exactly once — null after, and
+  /// after logout.
+  String? consumePendingDestination() {
+    final destination = _pendingDestination;
+    _pendingDestination = null;
+    return destination;
+  }
 
   Future<void> tryRestoreSession() async {
     final token = await _storage.read(key: _accessTokenKey);
@@ -86,6 +103,7 @@ class AuthService extends ChangeNotifier {
     _accessToken = null;
     _userId = null;
     _userEmail = null;
+    _pendingDestination = null;
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
   }

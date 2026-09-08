@@ -126,4 +126,78 @@ void main() {
     expect(family.isLoaded, false);
     expect(family.loadError, isNotNull);
   });
+
+  group('signedInLandingRoute', () {
+    Future<(AuthService, ProfileService)> signedIn(
+        {required bool firstTime}) async {
+      final client = MockClient((request) async {
+        if (request.url.path.endsWith('/auth/magic-link/verify')) {
+          return http.Response(
+            jsonEncode({
+              'access_token': 'tok',
+              'refresh_token': 'ref',
+              'token_type': 'bearer',
+            }),
+            200,
+          );
+        }
+        if (request.url.path.endsWith('/auth/me')) {
+          return http.Response(
+              jsonEncode({'id': 'user-1', 'email': 'fiona@example.test'}),
+              200);
+        }
+        if (request.url.path.endsWith('/profile')) {
+          return http.Response(
+            jsonEncode({
+              'profile_id': 'p-fiona',
+              'display_name': 'Fiona',
+              'selected_lens_ids': firstTime ? [] : ['l1'],
+              'theme_preference': null,
+            }),
+            200,
+          );
+        }
+        return http.Response('Not found', 404);
+      });
+      final auth =
+          AuthService(storage: FakeSecureStorage(), httpClient: client);
+      await auth.verifyMagicLink('tok');
+      final profile = ProfileService(httpClient: client);
+      await profile.fetchProfile('tok');
+      return (auth, profile);
+    }
+
+    test('a stashed join resumes after sign-in for a returning user', () async {
+      final (auth, profile) = await signedIn(firstTime: false);
+      auth.stashPendingDestination('/auth/join-family?token=abc');
+
+      expect(
+        signedInLandingRoute(auth: auth, profile: profile),
+        '/auth/join-family?token=abc',
+      );
+      // Consumed: the next landing is the plain one.
+      expect(signedInLandingRoute(auth: auth, profile: profile), '/explore');
+    });
+
+    test('nothing stashed lands on explore', () async {
+      final (auth, profile) = await signedIn(firstTime: false);
+      expect(signedInLandingRoute(auth: auth, profile: profile), '/explore');
+    });
+
+    test('a first-time user onboards first; the stashed join waits', () async {
+      final (auth, profile) = await signedIn(firstTime: true);
+      auth.stashPendingDestination('/auth/join-family?token=abc');
+
+      expect(signedInLandingRoute(auth: auth, profile: profile), '/onboarding');
+      // Still stashed for the post-onboarding landing.
+      expect(auth.consumePendingDestination(), '/auth/join-family?token=abc');
+    });
+
+    test('logout drops a stashed destination', () async {
+      final (auth, _) = await signedIn(firstTime: false);
+      auth.stashPendingDestination('/auth/join-family?token=abc');
+      await auth.logout();
+      expect(auth.consumePendingDestination(), isNull);
+    });
+  });
 }
