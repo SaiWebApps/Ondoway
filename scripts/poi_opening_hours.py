@@ -124,8 +124,10 @@ THE TABLE SHAPE, exactly:
 - Where hours vary by season, record the CURRENT typical pattern and say so in
   the basis.
 
-FOR EACH PLACE RETURN: `name` (copied exactly), `opening_hours` (table or
-null), `opening_hours_basis` (ONE sentence: what kind of place it is and where
+FOR EACH PLACE RETURN: `name` (copied exactly), `gated` (true or false — the
+one distinction above, answered EXPLICITLY for every place, including the ones
+whose hours you do not know), `opening_hours` (table or null),
+`opening_hours_basis` (ONE sentence: what kind of place it is and where
 the hours came from — the OSM tag, the institution's own published pattern, or
 why it is not gated. Never "popular" or "usually open").
 
@@ -232,10 +234,18 @@ def match_osm(
 
 
 def needs_values(poi: dict[str, Any], *, rescore: bool) -> bool:
-    """True when this POI still has to go through the pass."""
+    """True when this POI still has to go through the pass.
+
+    A POI missing the explicit `gated` verdict (Docs/adr/0003) needs the pass
+    even when its hours are already priced — the gated backfill is what ends
+    the null-means-two-things overload, and the write path below preserves an
+    existing hours table on such a row unless --rescore says otherwise.
+    """
     if rescore:
         return True
     if "opening_hours" not in poi:
+        return True
+    if not isinstance(poi.get("gated"), bool):
         return True
     basis = poi.get("opening_hours_basis")
     if not (isinstance(basis, str) and basis.strip()):
@@ -272,8 +282,18 @@ def validate(record: dict[str, Any], *, name: str) -> str | None:
     hours = record.get("opening_hours")
     basis = record.get("opening_hours_basis")
 
+    if not isinstance(record.get("gated"), bool):
+        return (
+            f"{name}: gated is {record.get('gated')!r} — the door verdict is the one "
+            "distinction that matters and must be an explicit true/false"
+        )
     if not isinstance(basis, str) or not basis.strip():
         return f"{name}: opening_hours_basis is empty — an unargued table is unauditable"
+    if hours is not None and record["gated"] is False:
+        return (
+            f"{name}: carries an hours table while gated=false — an ungated place "
+            "has no door for a table to describe"
+        )
     if hours is None:
         return None
     if not isinstance(hours, dict) or set(hours) != set(DAY_KEYS):
@@ -437,6 +457,13 @@ def main(argv: list[str] | None = None) -> int:
         if poi is None:
             print(f"✗ model returned an unknown place: {record['name']!r}", file=sys.stderr)
             return 1
+        # The door verdict always lands; an EXISTING hours table is preserved
+        # unless --rescore was explicit (Docs/adr/0003): a gated backfill over
+        # an already-priced corpus must never re-roll live tables through
+        # model nondeterminism and move clock exclusions as a side effect.
+        poi["gated"] = record["gated"]
+        if poi.get("opening_hours") is not None and not args.rescore:
+            continue
         hours = record["opening_hours"]
         poi["opening_hours"] = hours
         # The SCRIPT assigns the source, deterministically: the model is never

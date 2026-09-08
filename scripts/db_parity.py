@@ -111,6 +111,25 @@ def _expected(slug: str) -> dict:
         (canonical_name_key(p["name"]), _canon_anchors(p.get("anchors")))
         for p in in_poi
     }
+
+    def _canon_verified(raw) -> str | None:
+        if not isinstance(raw, dict) or not raw:
+            return None
+        return json.dumps(raw, ensure_ascii=False, sort_keys=True)
+
+    # The trust half of the clock (Docs/adr/0003): the door verdict and the
+    # verification record. In the parity set so the upload hop is mechanically
+    # enforced — a field that reaches poi-raw.json and never the graph turns
+    # the lane's dev-data preflight red instead of silently serving days that
+    # hedge on hours a human already confirmed.
+    clock_trust = {
+        (
+            canonical_name_key(p["name"]),
+            p.get("gated") if isinstance(p.get("gated"), bool) else None,
+            _canon_verified(p.get("opening_hours_verified")),
+        )
+        for p in in_poi
+    }
     body_hashes = {
         (b["beat_id"], _normalized_script_body_hash(b.get("script_body") or ""))
         for b in uploadable
@@ -125,6 +144,7 @@ def _expected(slug: str) -> dict:
         "poi_keys": poi_keys,
         "footprints": footprints,
         "anchors": anchors,
+        "clock_trust": clock_trust,
         "beat_ids": linkable,
         "body_hashes": body_hashes,
         "placement": placement,
@@ -182,6 +202,20 @@ def _actual(session, slug: str) -> dict:
         )
         if r["k"]
     }
+    def _canon_verified_str(raw) -> str | None:
+        if not raw:
+            return None
+        return json.dumps(json.loads(raw), ensure_ascii=False, sort_keys=True)
+
+    clock_trust = {
+        (r["k"], r["g"], _canon_verified_str(r["v"]))
+        for r in q(
+            "MATCH (p:POI {city_name:$city}) "
+            "WHERE p.poi_role IS NULL OR p.poi_role <> 'body' "
+            "RETURN p.name_key AS k, p.gated AS g, p.opening_hours_verified AS v"
+        )
+        if r["k"]
+    }
     body_hashes = {
         (r["b"], _normalized_script_body_hash(r["body"] or ""))
         for r in q(
@@ -211,6 +245,7 @@ def _actual(session, slug: str) -> dict:
         "poi_keys": poi_keys,
         "footprints": footprints,
         "anchors": anchors,
+        "clock_trust": clock_trust,
         "beat_ids": beat_ids,
         "body_hashes": body_hashes,
         "placement": placement,
@@ -291,6 +326,14 @@ def main() -> int:
                 act["anchors"],
                 drift,
                 sample=lambda t: t[0],
+                warn_only=not is_local,
+            )
+            _cmp(
+                "clock trust (key, gated, verified)",
+                exp["clock_trust"],
+                act["clock_trust"],
+                drift,
+                sample=lambda t: f"{t[0]} gated={t[1]} verified={'yes' if t[2] else 'no'}",
                 warn_only=not is_local,
             )
             _cmp("beats (beat_id)", exp["beat_ids"], act["beat_ids"], drift)

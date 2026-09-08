@@ -192,6 +192,131 @@ CLOCK_FIELDS = (
     "place_category",
 )
 
+#: The trust half of the clock (Docs/adr/0003): whether the place has a door at
+#: all, and who verified its hours on what evidence. Ride the same three hops.
+TRUST_FIELDS = (
+    "gated",
+    "opening_hours_verified",
+)
+
+#: Cities whose corpus has been through the gated-verdict half of the pass and
+#: must therefore satisfy the presence checks below. Same allowlist discipline
+#: as CITIES_WITH_OPENING_HOURS above: empty until the pass runs; adding a slug
+#: is the deliberate declaration, removing one to reach green is forbidden.
+CITIES_WITH_GATED_VERDICTS: tuple[str, ...] = ()
+
+
+def test_every_poi_records_a_gated_verdict() -> None:
+    """Presence check for the trust half — every POI in a declared city carries
+    an explicit boolean `gated`, ending the null-means-two-things overload."""
+    for city in CITIES_WITH_GATED_VERDICTS:
+        offenders = [
+            f"{_name(p)}: gated={p.get('gated')!r}"
+            for p in _pois(city)
+            if not isinstance(p.get("gated"), bool)
+        ]
+        if offenders:
+            _fail(city, "POI(s) with no boolean gated verdict", offenders, REMEDY)
+
+
+def test_a_verified_row_is_structurally_complete() -> None:
+    """`opening_hours_verified`, wherever it appears, carries the whole trust
+    record: tier (0-2), approver, evidence, at. A verified badge with no
+    inspectable trail is the thing the field exists to prevent."""
+    for city in CITIES_WITH_OPENING_HOURS:
+        offenders = []
+        for poi in _pois(city):
+            verified = poi.get("opening_hours_verified")
+            if verified is None:
+                continue
+            if not isinstance(verified, dict):
+                offenders.append(f"{_name(poi)}: opening_hours_verified={verified!r}")
+                continue
+            if verified.get("tier") not in (0, 1, 2):
+                offenders.append(f"{_name(poi)}: tier={verified.get('tier')!r}")
+            for key in ("approver", "evidence", "at"):
+                value = verified.get(key)
+                if not isinstance(value, str) or not value.strip():
+                    offenders.append(f"{_name(poi)}: {key}={value!r}")
+            if poi.get("opening_hours") is None:
+                offenders.append(f"{_name(poi)}: verified but carries no hours table")
+        if offenders:
+            _fail(city, "verified row(s) missing their trust record", offenders, REMEDY)
+
+
+def test_hop_1_the_corpus_query_asks_the_graph_for_the_trust_fields() -> None:
+    """HOP 1 for the trust half — a property absent from the RETURN list
+    reaches nothing downstream, with no error."""
+    from src.tour.selection import LOAD_PARIS_POIS_CYPHER
+
+    for field in TRUST_FIELDS:
+        assert f"p.{field}" in LOAD_PARIS_POIS_CYPHER, (
+            f"HOP 1: the corpus query never asks the graph for `{field}`."
+        )
+
+
+def test_hop_2_the_snapshot_builder_carries_the_trust_fields_onto_the_poi() -> None:
+    """HOP 2/3 for the trust half — asserted on VALUES, since POI is
+    extra='ignore' and discards unknown keywords silently."""
+    from src.tour.selection import _snapshot_from_records
+
+    verified = '{"tier": 2, "approver": "owner", "evidence": "official site", "at": "2026-09-07"}'
+    record = {
+        "id": "musee-trust",
+        "name": "Musée Trust",
+        "tier": 4,
+        "poi_role": "stop",
+        "lat": 48.86,
+        "lng": 2.33,
+        "areas": [],
+        "gated": True,
+        "opening_hours_verified": verified,
+    }
+    poi = _snapshot_from_records([record], [], [], []).pois[0]
+    assert poi.gated is True, "HOP 2/3: the record carried gated but the POI does not"
+    assert poi.opening_hours_verified == verified, (
+        "HOP 2/3: the record carried opening_hours_verified but the POI does not"
+    )
+
+    bare = _snapshot_from_records(
+        [{**record, "id": "bare", "gated": None, "opening_hours_verified": None}], [], [], []
+    ).pois[0]
+    assert bare.gated is None, (
+        "a corpus the gated pass never reached must load as None (no claim), "
+        "never as False (a claim of no door)"
+    )
+    assert bare.opening_hours_verified is None
+
+
+def test_the_upload_carries_the_trust_fields_in_both_property_lists() -> None:
+    """The upload's two hardcoded property lists must both carry the trust
+    fields, or they reach the graph as nothing with no error — the exact hop
+    the S1 adversarial review caught missing from the plan."""
+    source = (REPO_ROOT / "scripts" / "upload_paris.py").read_text()
+    for field in TRUST_FIELDS:
+        assert f'"{field}"' in source, (
+            f"upload param dict never carries `{field}` — it will never reach the graph"
+        )
+        assert f"p.{field}" in source, (
+            f"upload Cypher SET list never writes `p.{field}`"
+        )
+
+
+def test_parity_compares_the_trust_fields() -> None:
+    """scripts/db_parity.py is the mechanical enforcement that the trust fields
+    really reach whichever graph is connected — the lane's dev-data preflight
+    runs it, so a missed upload hop turns the sandbox red instead of silently
+    serving unverified days."""
+    import importlib
+
+    parity = importlib.import_module("scripts.db_parity")
+    expected = parity._expected("paris")
+    assert "clock_trust" in expected, (
+        "db_parity's expected set no longer carries the clock-trust lane"
+    )
+    keys = {k for (k, _g, _v) in expected["clock_trust"]}
+    assert keys, "the clock-trust lane compared nothing — vacuous"
+
 
 def test_hop_1_the_corpus_query_asks_the_graph_for_the_clock_fields() -> None:
     """HOP 1 — `LOAD_PARIS_POIS_CYPHER` returns ONLY what it names; a property

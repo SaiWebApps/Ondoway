@@ -206,6 +206,18 @@ def _upload_pois(session, pois: list[dict], city_name: str, bbox: tuple) -> dict
             ),
             "opening_hours_source": poi.get("opening_hours_source"),
             "opening_hours_basis": (poi.get("opening_hours_basis") or "").strip() or None,
+            # The trust half (Docs/adr/0003): the explicit door verdict and the
+            # verification record. Same no-defaults rule — absence stays absent
+            # (`SET x = null` removes the property), so a corpus the gated pass
+            # never reached claims nothing, and nobody's hours read as verified
+            # because a deploy invented a record. The verified dict is
+            # JSON-encoded, the `opening_hours` precedent.
+            "gated": poi.get("gated") if isinstance(poi.get("gated"), bool) else None,
+            "opening_hours_verified": (
+                json.dumps(poi["opening_hours_verified"], ensure_ascii=False)
+                if isinstance(poi.get("opening_hours_verified"), dict)
+                else None
+            ),
             "place_category": (poi.get("place_category") or "").strip() or None,
             # Place judgements (redesign row 6.4, plan S2.6) — three AI verdicts
             # with no external source, same no-defaults rule as the fields
@@ -265,6 +277,8 @@ def _upload_pois(session, pois: list[dict], city_name: str, bbox: tuple) -> dict
             p.opening_hours        = poi.opening_hours,
             p.opening_hours_source = poi.opening_hours_source,
             p.opening_hours_basis  = poi.opening_hours_basis,
+            p.gated                = poi.gated,
+            p.opening_hours_verified = poi.opening_hours_verified,
             p.place_category       = poi.place_category,
             p.children_can_run     = poi.children_can_run,
             p.sit_and_talk         = poi.sit_and_talk,

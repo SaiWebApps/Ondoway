@@ -770,6 +770,8 @@ RETURN
   p.opening_hours AS opening_hours,
   p.opening_hours_source AS opening_hours_source,
   p.opening_hours_basis AS opening_hours_basis,
+  p.gated         AS gated,
+  p.opening_hours_verified AS opening_hours_verified,
   p.place_category AS place_category,
   p.children_can_run AS children_can_run,
   p.sit_and_talk  AS sit_and_talk,
@@ -1090,6 +1092,11 @@ def _snapshot_from_records(
                 opening_hours=_clean(r.get("opening_hours")),
                 opening_hours_source=_clean(r.get("opening_hours_source")),
                 opening_hours_basis=_clean(r.get("opening_hours_basis")) or "",
+                # The trust half (Docs/adr/0003) — same closed-hop rule. gated
+                # keeps three states: a record carrying None lands on None (no
+                # claim, fail-open), never on False (a claim of no door).
+                gated=(bool(r["gated"]) if r.get("gated") is not None else None),
+                opening_hours_verified=_clean(r.get("opening_hours_verified")),
                 place_category=_clean(r.get("place_category")) or "",
                 # Row 6.4 (plan S2.6) — same closed-hop safe-default rule: a
                 # corpus the judgements pass has not reached returns None for

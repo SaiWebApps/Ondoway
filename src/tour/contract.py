@@ -395,6 +395,18 @@ class POI(BaseModel):
     opening_hours: str | None = None
     opening_hours_source: str | None = None
     opening_hours_basis: str = ""
+    # THE TRUST HALF OF THE CLOCK (Docs/adr/0003), additive in the same style.
+    # `gated` is the explicit door verdict — True: a door, gate or ticket line
+    # stands between the street and the experience; False: the whole value
+    # stands in the open; None: the gated pass has not reached this POI, the
+    # fail-open direction (never clock-excluded on no claim). It ends the
+    # overload where a null table meant both "no door" and "door, hours
+    # unknown". `opening_hours_verified` is the JSON-encoded trust record
+    # {tier, approver, evidence, at} written only by the verification ladder
+    # (the `opening_hours` encoding precedent); None = nobody verified, and
+    # the voice keeps its could-not-confirm disclosure.
+    gated: bool | None = None
+    opening_hours_verified: str | None = None
     # WHAT KIND OF PLACE THIS IS (redesign 6.7): a closed vocabulary (gallery |
     # museum | church | square | arcade | market | park | garden | bridge |
     # street | monument | other) derived deterministically at $0. Phase 3's
