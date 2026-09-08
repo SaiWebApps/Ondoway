@@ -13,11 +13,26 @@ from unittest.mock import patch
 
 import pytest
 
+from src.api.auth.tokens import create_access_token
 from src.audio.provider import MockTTSProvider
 from src.connection import get_database
 from tests.conftest import needs_neo4j
 
 TRIP_ID = "stop-audio-test-trip"
+#: The trip's captain — /audio/generate-trip-stops is reader-scoped (captain
+#: or crew of the trip), so the voicing calls sign as this identity.
+CAPTAIN_USER_ID = "stop-audio-test-user"
+CAPTAIN_EMAIL = "stop-audio@example.test"
+CAPTAIN_PROFILE_ID = "stop-audio-test-profile"
+
+
+def _bearer() -> dict[str, str]:
+    """Headers signing the request as the seeded captain, minted just now."""
+    return {
+        "Authorization": f"Bearer {create_access_token(CAPTAIN_USER_ID, CAPTAIN_EMAIL)}"
+    }
+
+
 N1 = "Settle in. Welcome to the Eiffel Tower."
 N2 = "Now walk on to the Arc de Triomphe."
 # KE3: item1 also carries a "keep exploring here" extra narration; item2 does not.
@@ -112,6 +127,19 @@ def _seed(driver) -> None:
             leg2=LEG2,
             segments1=json.dumps(SEGMENTS1),
         )
+        # The captain identity the reader-scoped voicing door resolves.
+        s.run(
+            "MERGE (u:User {id: $uid}) SET u.email = $email "
+            "MERGE (p:Profile {id: $pid}) "
+            "ON CREATE SET p.display_name = 'Stop audio captain', "
+            "              p.created_at = datetime() "
+            "MERGE (u)-[:HAS_PROFILE]->(p) "
+            "WITH p MATCH (t:Trip {id: $tid}) MERGE (p)-[:IS_CAPTAIN_OF]->(t)",
+            uid=CAPTAIN_USER_ID,
+            email=CAPTAIN_EMAIL,
+            pid=CAPTAIN_PROFILE_ID,
+            tid=TRIP_ID,
+        )
 
 
 def _item_audio(driver) -> dict[str, str | None]:
@@ -133,7 +161,8 @@ class TestGenerateTripStopAudio:
         recorder = _Recorder()
         with patch("src.audio.pipeline.get_provider_with_fallback", return_value=recorder):
             resp = client.post(
-                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"}
+                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"},
+                headers=_bearer(),
             )
         assert resp.status_code == 200, resp.text
         data = resp.json()
@@ -190,13 +219,15 @@ class TestGenerateTripStopAudio:
         _seed(clean_driver)
         with patch("src.audio.pipeline.get_provider_with_fallback", return_value=_Recorder()):
             first = client.post(
-                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"}
+                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"},
+                headers=_bearer(),
             )
             assert first.status_code == 200, first.text
             assert first.json()["generated"] == 2
 
             second = client.post(
-                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"}
+                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"},
+                headers=_bearer(),
             )
         assert second.status_code == 200, second.text
         data = second.json()
@@ -232,7 +263,8 @@ class TestGenerateTripStopAudio:
         recorder1 = _Recorder()
         with patch("src.audio.pipeline.get_provider_with_fallback", return_value=recorder1):
             first = client.post(
-                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"}
+                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"},
+                headers=_bearer(),
             )
         assert first.status_code == 200, first.text
         assert first.json()["generated"] == 2, first.text
@@ -253,7 +285,8 @@ class TestGenerateTripStopAudio:
         recorder2 = _Recorder()
         with patch("src.audio.pipeline.get_provider_with_fallback", return_value=recorder2):
             second = client.post(
-                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"}
+                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"},
+                headers=_bearer(),
             )
         assert second.status_code == 200, second.text
         data = second.json()
@@ -278,7 +311,8 @@ class TestGenerateTripStopAudio:
         recorder3 = _Recorder()
         with patch("src.audio.pipeline.get_provider_with_fallback", return_value=recorder3):
             third = client.post(
-                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"}
+                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"},
+                headers=_bearer(),
             )
         assert third.status_code == 200, third.text
         third_by_stop = {r["stop_id"]: r for r in third.json()["results"]}
@@ -288,9 +322,11 @@ class TestGenerateTripStopAudio:
         )
         assert recorder3.texts == [N2], recorder3.texts
 
-    def test_unknown_trip_404(self, client):
+    def test_unknown_trip_404(self, client, clean_driver):
+        _seed(clean_driver)  # the caller identity must exist; the trip must not
         resp = client.post(
-            "/api/v1/audio/generate-trip-stops/no-such-trip", json={"provider": "mock"}
+            "/api/v1/audio/generate-trip-stops/no-such-trip", json={"provider": "mock"},
+            headers=_bearer(),
         )
         assert resp.status_code == 404
         assert "not found" in resp.json()["detail"].lower()
@@ -311,7 +347,8 @@ class TestStopAudioStatus:
 
         with patch("src.audio.pipeline.get_provider_with_fallback", return_value=_Recorder()):
             gen = client.post(
-                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"}
+                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"},
+                headers=_bearer(),
             )
         assert gen.status_code == 200, gen.text
 
@@ -564,7 +601,8 @@ class TestUnknownProviderNever500:
     ):
         _seed(clean_driver)
         resp = client.post(
-            f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "evil"}
+            f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "evil"},
+            headers=_bearer(),
         )
         assert resp.status_code == 200, resp.text
         data = resp.json()
@@ -592,7 +630,8 @@ class TestPreVoicedSessionLines:
         recorder = _Recorder()
         with patch("src.audio.pipeline.get_provider_with_fallback", return_value=recorder):
             resp = client.post(
-                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"}
+                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"},
+                headers=_bearer(),
             )
         assert resp.status_code == 200
         # The narrator said the lines — and ONLY the authored lines.
@@ -619,7 +658,8 @@ class TestPreVoicedSessionLines:
         recorder2 = _Recorder()
         with patch("src.audio.pipeline.get_provider_with_fallback", return_value=recorder2):
             resp2 = client.post(
-                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"}
+                f"/api/v1/audio/generate-trip-stops/{TRIP_ID}", json={"provider": "mock"},
+                headers=_bearer(),
             )
         assert resp2.status_code == 200
         assert recorder2.texts == [], "everything voiced already — nothing re-billed"
@@ -719,10 +759,17 @@ class TestTheFinishSentinelIsARealStop:
                 "MERGE (pr:Profile {id: $prid}) "
                 "CREATE (t:Trip {id: $tid, name: 'Finish test', status: 'planning', "
                 "                created_at: datetime()}) "
-                "CREATE (p1:POI {id: $pid, name: 'Palais de Justice'})",
+                "CREATE (p1:POI {id: $pid, name: 'Palais de Justice'}) "
+                # The reader-scoped voicing door: the module's caller identity
+                # captains this trip through the trip's own profile.
+                "MERGE (u:User {id: $uid}) SET u.email = $email "
+                "MERGE (u)-[:HAS_PROFILE]->(pr) "
+                "MERGE (pr)-[:IS_CAPTAIN_OF]->(t)",
                 prid=f"{self.TRIP2}-profile",
                 tid=self.TRIP2,
                 pid=f"{self.TRIP2}-poi1",
+                uid=CAPTAIN_USER_ID,
+                email=CAPTAIN_EMAIL,
             )
 
     @staticmethod
@@ -764,7 +811,8 @@ class TestTheFinishSentinelIsARealStop:
         recorder = _Recorder()
         with patch("src.audio.pipeline.get_provider_with_fallback", return_value=recorder):
             resp = client.post(
-                f"/api/v1/audio/generate-trip-stops/{self.TRIP2}", json={"provider": "mock"}
+                f"/api/v1/audio/generate-trip-stops/{self.TRIP2}", json={"provider": "mock"},
+                headers=_bearer(),
             )
         assert resp.status_code == 200, resp.text
         assert resp.json()["generated"] == 2, resp.text

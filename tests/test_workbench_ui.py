@@ -5994,8 +5994,14 @@ class TestWorkbenchRunsThePhonePath:
             assert gen_body.get("start_date") and gen_body.get("end_date"), gen_body
             assert gen_body.get("start_time"), gen_body
 
-            # (4) Both ownership-scoped calls carry the workbench token.
-            for path in ("/trips/generate", "/trips/trip-1/compose", "/trips/trip-1/session"):
+            # (4) Every ownership-scoped call carries the workbench token —
+            # the voicing door included (it is reader-scoped: captain or crew).
+            for path in (
+                "/trips/generate",
+                "/trips/trip-1/compose",
+                "/audio/generate-trip-stops/trip-1",
+                "/trips/trip-1/session",
+            ):
                 assert by_path[path]["auth"] == "Bearer wb-access-token", (
                     f"{path} was called without the workbench identity: {by_path[path]}"
                 )

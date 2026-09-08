@@ -4476,7 +4476,9 @@
       busy('⏳ Recording every stop…');
       // No body, exactly as trip_service.confirmTripStopAudio sends none, so the
       // voice resolves through the failover chain rather than one named provider.
-      const voiceResp = await fetch(`${API_BASE}/audio/generate-trip-stops/${phoneTripId}`, {
+      // Through phoneFetch: the voicing door is reader-scoped (captain or crew of
+      // the trip), and the workbench session captains the trip it just generated.
+      const voiceResp = await phoneFetch(`${API_BASE}/audio/generate-trip-stops/${phoneTripId}`, {
         method: 'POST',
       });
       let voiced = null;

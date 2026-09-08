@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 from neo4j import Session
 
+from src.api.auth.dependencies import get_current_user
 from src.api.dependencies import get_session
 from src.api.models.audio import (
     AudioPreviewRequest,
@@ -685,6 +686,7 @@ def _voice_session_lines(
 def generate_stop_audio_for_trip(
     trip_id: str,
     body: GenerateRequest | None = None,
+    current_user: dict = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     """Generate one composed-narration MP3 per stop (Phase 1, Step 1.4a).
@@ -694,12 +696,18 @@ def generate_stop_audio_for_trip(
     (``audio_url``/``audio_duration_sec``), keyed by the item id. THE voicing door
     for a trip (the per-beat ``/audio/generate-trip`` was deleted at Phase 7 S7.10).
     Items with no narration are skipped; existing audio is skipped unless force.
+
+    READER-SCOPED: voicing spends real provider money per stop, so the caller
+    must be an authenticated captain-or-crew reader of the trip — the same
+    resolution the session GET uses. A stranger's guess and a trip that does
+    not exist are the same 404 (the no-confirmation rule).
     """
-    trip_check = session.run(
-        "MATCH (t:Trip {id: $tid}) RETURN t.id AS id", tid=trip_id
-    ).single()
-    if trip_check is None:
-        raise HTTPException(404, f"Trip '{trip_id}' not found")
+    # Imported at call time: routes/trips.py lazily imports this module
+    # (_revoice_replanned_legs), so a module-level import back would be the
+    # circular pair's second half.
+    from src.api.routes.trips import _readable_trip_or_404
+
+    _readable_trip_or_404(session, current_user["id"], trip_id)
 
     rows = session.run(
         """

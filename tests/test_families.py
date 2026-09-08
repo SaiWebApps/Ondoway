@@ -662,6 +662,39 @@ class TestJoinLateCrewsTheExistingDays:
         assert self_crewed == 0
 
 
+# ── Audio generation requires a reader of the trip ───────────────────────────
+
+
+@needs_neo4j
+class TestAudioGenerationRequiresAReader:
+    """POST /audio/generate-trip-stops/{trip_id} triggers PAID voicing, so it
+    is scoped by the same read-access resolution the session GET uses
+    (_readable_trip_or_404): captain and crew pass, a stranger's guess is 404
+    — never 403, the no-confirmation rule — and an unauthenticated caller is
+    refused by the bearer scheme before any trip id is confirmed."""
+
+    def test_unauthenticated_caller_is_refused(self, client, crewed_trip):
+        resp = client.post(f"/api/v1/audio/generate-trip-stops/{crewed_trip}")
+        assert resp.status_code in (401, 403), resp.text
+
+    def test_stranger_is_404_never_403(self, client, crewed_trip):
+        resp = client.post(
+            f"/api/v1/audio/generate-trip-stops/{crewed_trip}",
+            headers=_bearer(STRANGER_USER_ID, STRANGER_EMAIL),
+        )
+        assert resp.status_code == 404, resp.text
+
+    def test_crew_and_captain_pass_the_reader_guard(self, client, crewed_trip):
+        for uid, email in ((DEV_USER_ID, DEV_EMAIL), (FIONA_USER_ID, FIONA_EMAIL)):
+            resp = client.post(
+                f"/api/v1/audio/generate-trip-stops/{crewed_trip}",
+                headers=_bearer(uid, email),
+            )
+            # The planted trip has no ItineraryItems: a reader gets the real
+            # response (nothing to voice), never a guard refusal.
+            assert resp.status_code == 200, f"{email}: {resp.status_code} {resp.text}"
+
+
 # ── Foreign profile ids are never confirmed ──────────────────────────────────
 
 
