@@ -308,6 +308,47 @@ void main() {
       expect(service.nextStop?.poiId, 'poi-4');
     });
 
+    test('a door reported SHUT selects its entry, and the door itself leaves '
+        'the day — the walker is standing at it (Docs/adr/0006 rule 5)', () async {
+      final service = TourPlaybackService(
+        locationService: MockLocationService(),
+        audioService: _RecordingAudio(),
+      );
+      await service.startTour(stops);
+      service.holdSession(
+        plan([
+          _entry(
+            'door',
+            {'kind': 'door_closed', 'stop_id': 'poi-2'},
+            ['poi-3', 'poi-4'],
+            screen: 'Keep the day going at Stop 4 and be at your finish about '
+                '15:50, or carry on without it and be at your finish by 15:40?',
+            question: 'Keep the day going at Stop 4 and be at your finish about '
+                '15:50, or carry on without it and be at your finish by 15:40?',
+            defaultArm: 'keep',
+            alternate: ['poi-3'],
+          ),
+        ]),
+      );
+      // Nothing opens this entry until the walker actually says the door is shut.
+      expect(service.matchContingency(service.measure()), isNull);
+      service.reportDoorClosed('poi-2');
+      expect(service.matchContingency(service.measure())?.contingencyId, 'door');
+
+      service.skipToStop(1); // standing at Stop 2 — the shut door
+      expect(service.applyContingency('door'), isTrue);
+      // The KEEP arm is in force by default and it is the entry's own stops —
+      // an empty list here would delete the rest of the walk.
+      expect(
+        service.plannedStops.map((s) => s.poiId),
+        isNot(contains('poi-2')),
+        reason: 'the door reported shut never stays on the day',
+      );
+      expect(service.currentStop?.poiId, 'poi-3');
+      expect(service.plannedStops.length, greaterThan(1),
+          reason: 'the keep arm must not truncate the walk');
+    });
+
     test('alternates prefetch through the EXISTING audio cache door, keyed as '
         'playback keys them (design §4.7)', () async {
       final audio = _RecordingAudio();

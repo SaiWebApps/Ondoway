@@ -353,6 +353,16 @@ def at_risk_choice(tail: Route, protected_in_order: list[str]) -> POI | None:
     return None
 
 
+def two_arms(first: str, second: str) -> str:
+    """THE one shape of the ONE question (R2): two arms joined by ", or ", the
+    first capitalised, a question mark at the end.
+
+    The phone splits a question on exactly this separator and decides which arm
+    KEEPS by reading the first arm's first word, so a question spelled by hand
+    somewhere else is a question it renders as a single dead button."""
+    return f"{first[0].upper()}{first[1:]}, or {second}?"
+
+
 def question_text(
     *,
     tail: Route,
@@ -383,11 +393,7 @@ def question_text(
             f"sit {round(shortened / 60)} minutes and be at {finish_name} by {hhmm(short_clock)}"
         )
         safe_first = end_hardness == "wall"
-        q = (
-            f"{arm_short[0].upper()}{arm_short[1:]}, or {arm_keep}?"
-            if safe_first
-            else f"{arm_keep[0].upper()}{arm_keep[1:]}, or {arm_short}?"
-        )
+        q = two_arms(arm_short, arm_keep) if safe_first else two_arms(arm_keep, arm_short)
         return q, ("shorten" if safe_first else "keep")
     if alt is None or alt_clock is None or {p.id for p in alt.pois} == {p.id for p in tail.pois}:
         return None, None
@@ -395,11 +401,7 @@ def question_text(
     arm_keep = f"keep {thing} and be at {finish_name} about {hhmm(keep_clock)}"
     arm_leave = f"go straight on and be at {finish_name} by {hhmm(alt_clock)}"
     safe_first = end_hardness == "wall"
-    q = (
-        f"{arm_leave[0].upper()}{arm_leave[1:]}, or {arm_keep}?"
-        if safe_first
-        else f"{arm_keep[0].upper()}{arm_keep[1:]}, or {arm_leave}?"
-    )
+    q = two_arms(arm_leave, arm_keep) if safe_first else two_arms(arm_keep, arm_leave)
     return q, ("shorten" if safe_first else "keep")
 
 
@@ -769,7 +771,23 @@ def build_contingency_set(
         if arrival is None:
             continue
         position = (poi.lat, poi.lng)
-        best_standby = min(
+        after = tuple(planned_ids[k + 1 :])
+        left = _minutes_left(planned_end, arrival) or (
+            sum(visit_of(p) for p in route.pois[k + 1 :]) // 60 + 30
+        )
+        tail_request = _tail_input(tour_input, position=position, clock=arrival, minutes=left)
+        # The SECOND arm, and the clock the first is measured against: the day
+        # from this door onward with the door skipped and nothing put in its place.
+        without = replan(
+            tail_request, ctx_from(k, keep=after, visited=tuple(planned_ids[: k + 1]))
+        )
+        without_clock = finish_clock_of(without, arrival) if without is not None else None
+        if without is None or without_clock is None:
+            continue
+        # Nearest first: the standby is the closest open map-sourced place off the
+        # day, and the next one along is tried when the closest cannot be seated
+        # or cannot be said in one plain sentence.
+        candidates = sorted(
             (
                 c
                 for c in snapshot.pois
@@ -782,37 +800,48 @@ def build_contingency_set(
                 is None
             ),
             key=lambda c: haversine_m(position[0], position[1], c.lat, c.lng),
-            default=None,
         )
-        if best_standby is None:
-            continue
-        after = tuple(planned_ids[k + 1 :])
-        left = _minutes_left(planned_end, arrival) or (
-            sum(visit_of(p) for p in route.pois[k + 1 :]) // 60 + 30
-        )
-        keep = (*after, best_standby.id)
-        ctx = ctx_from(k, keep=keep, visited=tuple(planned_ids[: k + 1]))
-        ctx = ctx.model_copy(
-            update={"protected_poi_ids": (*ctx.protected_poi_ids, best_standby.id)}
-        )
-        alt = replan(
-            _tail_input(tour_input, position=position, clock=arrival, minutes=left),
-            ctx,
-        )
-        if alt is None or best_standby.id not in {p.id for p in alt.pois}:
-            continue
-        q = f"{poi.name} might be closed — carry to {best_standby.name} instead?"
-        add(
-            {"kind": "door_closed", "stop_id": poi.id},
-            k,
-            tail=None,
-            question=q,
-            default_arm="keep",
-            alt=alt,
-            at_risk=poi.id,
-            screen_text=q,
-            clock=arrival,
-        )
+        for standby in candidates:
+            ctx = ctx_from(
+                k, keep=(*after, standby.id), visited=tuple(planned_ids[: k + 1])
+            )
+            ctx = ctx.model_copy(
+                update={"protected_poi_ids": (*ctx.protected_poi_ids, standby.id)}
+            )
+            with_standby = replan(tail_request, ctx)
+            if with_standby is None or standby.id not in {p.id for p in with_standby.pois}:
+                continue
+            keep_clock = finish_clock_of(with_standby, arrival)
+            if keep_clock is None:
+                continue
+            question = two_arms(
+                f"keep the day going at {standby.name} and be at {finish_name} "
+                f"about {hhmm(keep_clock)}",
+                f"carry on without it and be at {finish_name} by {hhmm(without_clock)}",
+            )
+            # The wording rules raise, and this builder's caller does not catch —
+            # so a place whose NAME cannot sit in one plain sentence ("St. Denis")
+            # is a 500 on the session, not a question nobody asks. Try the sentence
+            # here and walk on to the next candidate when it will not do.
+            try:
+                plain(one_sentence(question))
+            except ValueError:
+                continue
+            # The KEPT arm is the day WITH the standby, and it rides the entry's
+            # own route: the phone hands a "keep" answer straight to `stop_ids`,
+            # and an empty list there deletes the rest of the walk.
+            add(
+                {"kind": "door_closed", "stop_id": poi.id},
+                k,
+                with_standby,
+                question=question,
+                default_arm="keep",
+                alt=without,
+                at_risk=poi.id,
+                screen_text=question,
+                clock=arrival,
+            )
+            break
 
     return ContingencySet(
         plan_version=plan_version,

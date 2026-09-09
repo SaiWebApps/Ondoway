@@ -26,6 +26,11 @@ class Divergence {
   final String? wrapUpFromStopId;
   final String? atRiskStopId;
 
+  /// The stop whose door the walker found SHUT and said so (Docs/adr/0006 rule
+  /// 5). An observation like every other field here: the server already decided
+  /// what to offer instead, and the entry it precomputed is matched on this id.
+  final String? closedStopId;
+
   /// The stop the person is at or has just left (W5.12): a late/early/minutes-
   /// left band is the server's answer FROM that stop, so an entry names it and
   /// the phone matches it. Null = the position is unknown; the band alone
@@ -40,6 +45,7 @@ class Divergence {
     this.wrapUpFromStopId,
     this.atRiskStopId,
     this.atStopId,
+    this.closedStopId,
   });
 }
 
@@ -895,6 +901,7 @@ class TourPlaybackService extends ChangeNotifier {
     _opened.clear();
     _lastSkippedPoiId = null;
     _wrapUpRequested = false;
+    _closedStopId = null;
     _clockNotices.clear();
     _closeLine = null;
     _threadLine = null;
@@ -1350,6 +1357,17 @@ class TourPlaybackService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The walker found this door SHUT and said so (Docs/adr/0006 rule 5). It
+  /// records the observation and nothing else: the server has already decided
+  /// what to offer instead, and [matchContingency] finds that entry from here.
+  void reportDoorClosed(String poiId) {
+    _closedStopId = poiId;
+    notifyListeners();
+  }
+
+  /// The stop reported shut, until the walk ends.
+  String? _closedStopId;
+
   // ---- S5.10: THE ONE re-timing expression --------------------------------
 
   /// THE phone's ONE re-timing expression (S5.10's seam; design §4.1): seconds
@@ -1542,6 +1560,7 @@ class TourPlaybackService extends ChangeNotifier {
           _wrapUpRequested && isActive ? currentStop?.poiId : null,
       atRiskStopId: atRisk,
       atStopId: (underfoot ?? behind ?? currentStop)?.poiId,
+      closedStopId: _closedStopId,
     );
   }
 
@@ -1657,6 +1676,8 @@ class TourPlaybackService extends ChangeNotifier {
             entry.triggerStopId == d.wrapUpFromStopId;
       case 'promise_at_risk':
         return d.atRiskStopId != null && entry.triggerStopId == d.atRiskStopId;
+      case 'door_closed':
+        return d.closedStopId != null && entry.triggerStopId == d.closedStopId;
       default:
         return false;
     }
@@ -1954,8 +1975,13 @@ class TourPlaybackService extends ChangeNotifier {
       if (at >= 0) {
         // skip "of k": k goes (exclusive). promise-at-risk about j: the
         // server's answer is FROM the stop before j and its stops start after
-        // that stop, so everything before j stays. A band "from k": k stays.
-        keepCount = entry.kind == 'stop_skipped' || entry.kind == 'promise_at_risk'
+        // that stop, so everything before j stays. A door reported SHUT goes
+        // the way a skip does — the walker is standing at it and it is closed,
+        // so keeping it would send them back to the door they just reported.
+        // A band "from k": k stays.
+        keepCount = entry.kind == 'stop_skipped' ||
+                entry.kind == 'promise_at_risk' ||
+                entry.kind == 'door_closed'
             ? at
             : at + 1;
       }

@@ -930,20 +930,45 @@ def test_a_guessed_stop_yields_a_door_closed_entry_naming_an_open_map_place():
     assert dc, f"no door_closed for {stand_guess.id}"
     entry = dc[0]
 
-    # The alternate names a map-sourced place (the standby).
-    assert entry.alternate_stop_ids, "no alternate — no standby offered"
+    # THE KEEP ARM IS THE ENTRY'S OWN DAY. The phone routes a `keep` default to
+    # `stop_ids` (mobile/lib/services/tour_playback_service.dart:1707), and
+    # `_reorderRemaining` drops every id it is not handed — so the day WITH the
+    # standby has to be `stop_ids`. Reversed, the keep arm hands the phone an
+    # empty list and TRUNCATES the rest of the walk.
     planned = {p.id for p in base.pois}
-    new_ids = set(entry.alternate_stop_ids) - planned
-    assert new_ids, "the alternate should name a NEW stop (the standby)"
+    assert entry.stop_ids, "the keep arm must never ship an empty day"
+    assert "standby-open" in entry.stop_ids, (
+        f"the keep arm carries the standby; stop_ids={entry.stop_ids}"
+    )
+    assert "standby-open" not in entry.alternate_stop_ids, (
+        f"the carry-on arm must not carry the standby; got {entry.alternate_stop_ids}"
+    )
+    assert set(entry.alternate_stop_ids) <= planned, (
+        f"carry-on is the planned day without the shut stop; got {entry.alternate_stop_ids}"
+    )
+    assert stand_guess.id not in entry.stop_ids, (
+        f"the shut door leaves both arms; stop_ids={entry.stop_ids}"
+    )
 
     # The standby counts toward authoring_units.
     assert cset.authoring_units > 0, "the standby is a new stop — authoring spend > 0"
 
-    # The question is one sentence, keep first, no banned words.
+    # The question is one sentence, two arms, keep first, a clock in each.
     assert entry.question is not None, "door_closed must carry the ONE question"
     assert entry.default_arm == "keep", f"default must be keep; got {entry.default_arm}"
     assert entry.question.count("?") == 1 and ". " not in entry.question, (
         f"one sentence, maximum: {entry.question!r}"
+    )
+    arms = entry.question.split(", or ")
+    assert len(arms) == 2, f"the phone splits on ', or ' — two arms: {entry.question!r}"
+    assert arms[0].lower().startswith("keep"), (
+        f"keep first: the phone reads the first arm's first word: {entry.question!r}"
+    )
+    assert all(":" in arm for arm in arms), (
+        f"each arm names a clock time (W5.2 R2.1): {entry.question!r}"
+    )
+    assert standby.name in entry.question, (
+        f"the question names the standby: {entry.question!r}"
     )
     lowered = entry.question.lower()
     for word in BANNED_WORDS:
@@ -1025,10 +1050,96 @@ def test_a_nearer_shut_standby_is_skipped_for_the_farther_open_one():
           and e.trigger["stop_id"] == stand_guess.id]
     assert dc, "no door_closed entry for the guessed stop"
     entry = dc[0]
-    # The shut candidate must NOT appear — the open one must.
-    assert "open-far" in entry.alternate_stop_ids, (
-        f"the farther open candidate must be the standby; got {entry.alternate_stop_ids}"
+    # The shut candidate must NOT appear — the open one must. The standby rides
+    # the KEEP arm, which is the entry's own day (`stop_ids`).
+    assert "open-far" in entry.stop_ids, (
+        f"the farther open candidate must be the standby; got {entry.stop_ids}"
     )
-    assert "shut-near" not in entry.alternate_stop_ids, (
-        f"the nearer shut candidate must be skipped; got {entry.alternate_stop_ids}"
+    assert "shut-near" not in entry.stop_ids, (
+        f"the nearer shut candidate must be skipped; got {entry.stop_ids}"
     )
+
+
+def test_a_standby_whose_name_cannot_sit_in_one_sentence_is_skipped_not_raised():
+    """The wording rules raise INSIDE the builder (`plain`/`one_sentence` in
+    `add`), and the API calls `build_contingency_set` unguarded — so a standby
+    whose name carries a full stop ("St. Denis") or a banned word would be a 500
+    on GET session rather than a question nobody asks. The chooser tests the
+    sentence it would build and moves on to the next candidate.
+
+    UNDO: drop the try/except around the door question -> RED with a ValueError
+    escaping build_contingency_set.
+    """
+    from src.tour.contingency import build_contingency_set
+    from src.tour.contract import ReplanContext
+    from src.tour.selection import select_route
+
+    stand_map = _stand(_at(PDV, 150.0, 20.0, "stand-map", tier=5, beat_count=5), 14)
+    stand_guess = _interior(
+        _at(PDV, 320.0, 60.0, "stand-guess3", tier=5, beat_count=5),
+        outside_min=5,
+        inside_min=7,
+    )
+    stand_guess = stand_guess.model_copy(
+        update={
+            "opening_hours": "Mo-Su 09:00-18:00",
+            "opening_hours_source": "guess",
+            "place_category": "museum",
+        }
+    )
+    bench = _bench(_at(PDV, 460.0, 80.0, "bench-m6c"), 10)
+    stand_end = _stand(_at(PDV, 620.0, 90.0, "stand-end3", tier=5, beat_count=5), 20)
+    end = _at(PDV, 1500.0, 95.0, "end-m6c")
+
+    # The NEARER candidate's name breaks the one-sentence rule; the farther one
+    # is clean. Both are open and map-sourced, so only the name separates them.
+    bad_near = _stand(_at(PDV, 350.0, 65.0, "bad-near", tier=1, beat_count=1), 10)
+    bad_near = bad_near.model_copy(
+        update={
+            "name": "St. Denis Chapel",
+            "opening_hours": "Mo-Su 06:00-22:00",
+            "opening_hours_source": "map",
+        }
+    )
+    good_far = _stand(_at(PDV, 400.0, 70.0, "good-far", tier=1, beat_count=1), 10)
+    good_far = good_far.model_copy(
+        update={
+            "name": "Cluny",
+            "opening_hours": "Mo-Su 06:00-22:00",
+            "opening_hours_source": "map",
+        }
+    )
+
+    snap = _snap([stand_map, stand_guess, bench, stand_end, bad_near, good_far])
+    request = TourInput(
+        start=PDV,
+        end=(end.lat, end.lng),
+        duration_min=110,
+        city_slug="paris",
+        round_trip=False,
+        start_datetime="2026-08-19T14:00",
+        end_hardness="wall",
+        rest_cadence_minutes=6,
+    )
+    base = select_route(request, snap)
+    ids = [p.id for p in base.pois]
+    assert stand_guess.id in ids, f"premise: guessed stop on day; got {ids}"
+    assert "bad-near" not in ids and "good-far" not in ids, f"premise: {ids}"
+
+    # No exception escapes, and the clean name is the one offered.
+    cset = build_contingency_set(
+        base, request, snap, routing_client=None,
+        person=ReplanContext(protected_poi_ids=(bench.id,)),
+    )
+    dc = [
+        e for e in cset.entries
+        if e.trigger.get("kind") == "door_closed" and e.trigger["stop_id"] == stand_guess.id
+    ]
+    assert dc, "no door_closed entry for the guessed stop"
+    assert "good-far" in dc[0].stop_ids, (
+        f"the clean-named candidate is the standby; got {dc[0].stop_ids}"
+    )
+    assert "bad-near" not in dc[0].stop_ids, (
+        f"a name that breaks one sentence is skipped; got {dc[0].stop_ids}"
+    )
+    assert "St. Denis" not in (dc[0].question or ""), dc[0].question
