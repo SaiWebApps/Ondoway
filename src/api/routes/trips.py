@@ -21,6 +21,7 @@ from pydantic import ValidationError
 
 from src.api.auth.dependencies import get_current_user
 from src.api.crud.trips import (
+    add_itinerary_items,
     create_trip_with_stops,
     get_trip_compose_inputs,
     list_trips_for_profile,
@@ -113,6 +114,7 @@ from src.tour.premium_tour import (
     resolve_routing_version,
 )
 from src.tour.quality_rubric import RubricReport, StopMaterial, compose_fixable, score_tour
+from src.tour.render_md import stop_close_text, stop_narration_text
 from src.tour.routing import (
     PACE_KMH,
     haversine_m,
@@ -1497,6 +1499,20 @@ def compose_trip(
         clock_start=day_start,
         day_start_hhmm=hhmm(day_start),
     )
+    # Each standby gets its own piece through the same one-stop seam the day's
+    # stops use, then becomes a real item AFTER them — so the voicing pass gives
+    # it a file and the phone has an id to key its audio by.
+    session_plan = _compose_standby_narration(
+        session_plan,
+        tour_input=tour_input,
+        snapshot=snapshot,
+        routing_version=routing_version,
+        policy=planning_policy,
+        premium_executor=premium_executor,
+        faithfulness_checker=faithfulness_checker,
+        build_identity=build_identity,
+    )
+    session_plan = _persist_standbys(session, trip_id, session_plan)
     write_trip_session(
         session,
         trip_id,
@@ -1838,6 +1854,190 @@ def _standby_stops(cset: ContingencySet, stops_out: list[GeneratedStop]) -> list
                 )
             )
     return out
+
+
+#: A standby whose words could not be written: the door keeps M5's simpler answer.
+STANDBY_DROPPED_DEGRADATION = "standby_dropped"
+
+
+def _compose_standby_narration(
+    plan: SessionPlan,
+    *,
+    tour_input: TourInput,
+    snapshot,
+    routing_version: str,
+    policy,
+    premium_executor: PremiumComposeExecutor,
+    faithfulness_checker: FaithfulnessChecker | None,
+    build_identity,
+) -> SessionPlan:
+    """Write each standby's own piece through the ONE per-stop authoring seam.
+
+    A standby the walker is sent to in silence is a place they were promised
+    something at and got nothing — Nadia's child walks to a second dead stop. So
+    each one is composed exactly the way a stop of the day is: a one-POI route,
+    the same capped beat plan, the same stitch, and `plan_premium_authoring`
+    with `single_stop` — never a second composer, and never the leftover corpus.
+
+    Optional enrichment end to end (the full telling's precedent): a standby
+    whose words fail any gate is DROPPED and reported, and its door falls back to
+    the answer M5 already gives — replan without the shut stop. The day is never
+    refused for a standby.
+    """
+    if not plan.standbys:
+        return plan
+    by_id = {poi.id: poi for poi in snapshot.pois}
+    written: list[GeneratedStop] = []
+    with RoutingClient() as routing_client:
+        for stop in plan.standbys:
+            poi = by_id.get(stop.poi_id)
+            if poi is None:
+                continue
+            try:
+                mini = summarise_route(
+                    [poi],
+                    start_lat=poi.lat,
+                    start_lng=poi.lng,
+                    round_trip=False,
+                    duration_min=max(1, stop.duration_min),
+                    spine_area=None,
+                    routing_client=routing_client,
+                    planning_policy=policy,
+                )
+                capped = build_poi_beat_plans_capped(
+                    mini,
+                    snapshot,
+                    lenses=tour_input.lenses,
+                    end_is_none=True,
+                    narration_density=tour_input.narration_density,
+                )
+                seq = BeatSequence(poi_beats=tuple(pb for pb, _ in capped))
+                if not seq.poi_beats or not seq.poi_beats[0].beats:
+                    raise ValueError("the standby has no story to tell")
+                stitched = generate(seq, mini, tour_input)
+                unit_plan = plan_premium_authoring(
+                    stitched,
+                    seq,
+                    mini,
+                    snapshot=snapshot,
+                    snapshot_sha256=exact_snapshot_sha256(snapshot),
+                    routing_version=routing_version,
+                    policy_version=policy.policy_id,
+                    single_stop=0,
+                )
+                composed = finalize_premium_tour(
+                    unit_plan,
+                    execute_premium_plan(
+                        unit_plan,
+                        executor=premium_executor,
+                        receipt_sink=EphemeralReceiptSink(),
+                    ),
+                    faithfulness_checker=faithfulness_checker,
+                    build_identity=build_identity,
+                ).blueprint.script
+            except Exception as exc:
+                record(
+                    kind=STANDBY_DROPPED_DEGRADATION,
+                    human=(
+                        "The stand-in place offered for a door that might be shut could "
+                        "not be written, so that door keeps its simpler answer."
+                    ),
+                    component="trips._compose_standby_narration",
+                    cause=f"{type(exc).__name__}: {exc}",
+                    poi_id=stop.poi_id,
+                )
+                continue
+            written.append(
+                stop.model_copy(
+                    update={
+                        "narration": stop_narration_text(composed).get(0, ""),
+                        "close_text": stop_close_text(composed).get(0),
+                    }
+                )
+            )
+    kept = {s.poi_id for s in written}
+    return plan.model_copy(
+        update={
+            "standbys": written,
+            # An entry whose standby lost its words offers a silent place: drop the
+            # entry with it, and the door falls back to the replan M5 already does.
+            "contingencies": [
+                e
+                for e in plan.contingencies
+                if e.trigger.get("kind") != "door_closed"
+                or not (set(e.stop_ids) - {st.poi_id for st in plan.stops}) - kept
+            ],
+        }
+    )
+
+
+def _door_by_standby(plan: SessionPlan) -> dict[str, str]:
+    """Which shut door each standby stands by — the first entry that offers it."""
+    out: dict[str, str] = {}
+    for entry in plan.contingencies:
+        if entry.trigger.get("kind") != "door_closed":
+            continue
+        door = entry.trigger.get("stop_id")
+        if door is None:
+            continue
+        for poi_id in entry.stop_ids:
+            out.setdefault(poi_id, door)
+    return out
+
+
+def _persist_standbys(session: Session, trip_id: str, plan: SessionPlan) -> SessionPlan:
+    """Give every standby a real ItineraryItem and put its id back on the wire.
+
+    A standby with no item is a place the voicing pass never sees, so it reaches
+    the walker silently — and the phone keys audio by the item id, so an id it
+    never receives is a piece it can never play. The items are written AFTER the
+    day's own (`replace_trip_stops` has already run), carry the door they stand
+    by, and are left out of the saved day by the one reader that lists it.
+
+    A standby the graph refuses (a POI that has since gone) is DROPPED and
+    reported, never the day: the door simply keeps M5's answer, which is to
+    replan without it.
+    """
+    if not plan.standbys:
+        return plan
+    door_of = _door_by_standby(plan)
+    rows = [
+        {
+            "sort_order": stop.sort_order,
+            "poi_id": stop.poi_id,
+            "poi_name": stop.poi_name,
+            "duration_min": stop.duration_min,
+            "start_time": stop.start_time,
+            "beat_ids": [],
+            "primary_beat_id": None,
+            "lens_name": None,
+            "narration": stop.narration,
+            "close_text": stop.close_text,
+            "standby_for_poi_id": door_of.get(stop.poi_id, ""),
+        }
+        for stop in plan.standbys
+    ]
+    try:
+        item_ids = add_itinerary_items(session, trip_id, rows)
+    except ValueError as exc:
+        record(
+            kind="standby_dropped",
+            human=(
+                "One of the stand-in places offered for a door that might be shut "
+                "could not be saved, so that door keeps its simpler answer."
+            ),
+            component="trips._persist_standbys",
+            cause=str(exc),
+        )
+        return plan.model_copy(update={"standbys": []})
+    return plan.model_copy(
+        update={
+            "standbys": [
+                stop.model_copy(update={"stop_id": item_id})
+                for stop, item_id in zip(plan.standbys, item_ids, strict=True)
+            ]
+        }
+    )
 
 
 def _carry_forward_entries(previous: SessionPlan, new_day: SessionPlan) -> list[SessionContingency]:

@@ -393,6 +393,62 @@ void main() {
       expect(audio.prefetched.single.map((b) => b.beatId), contains('item-9'));
     });
 
+    test('a standby the walker TOOK can still say goodbye — it joins the walked '
+        'day, which the closes read directly (M6c)', () async {
+      final service = TourPlaybackService(
+        locationService: MockLocationService(),
+        audioService: _RecordingAudio(),
+      );
+      await service.startTour(stops);
+      const close = 'And that is the Cluny — the walk ends here.';
+      final standby = ItineraryStop(
+        sortOrder: 9,
+        stopId: 'item-9',
+        poiId: 'poi-9',
+        poiName: 'Stop 9',
+        lat: 48.86,
+        lng: 2.35,
+        lensName: 'history',
+        lensDisplay: 'History',
+        durationMin: 10,
+        importanceTier: 3,
+        startTime: '',
+        closeText: close,
+      );
+      final question = 'Keep the day going at Stop 9 and be at your finish about '
+          '15:50, or carry on without it and be at your finish by 15:40?';
+      service.holdSession(
+        SessionPlan(
+          tripId: 'trip-1',
+          planVersion: 1,
+          stops: stops,
+          standbys: [standby],
+          retimeToleranceSeconds: 180,
+          contingencies: [
+            _entry(
+              'door',
+              {'kind': 'door_closed', 'stop_id': 'poi-2'},
+              ['poi-9'],
+              screen: question,
+              question: question,
+              defaultArm: 'keep',
+              alternate: const [],
+            ),
+            _entry('wrap', {'kind': 'wrap_up_from', 'stop_id': 'poi-9'}, []),
+          ],
+        ),
+      );
+      service.reportDoorClosed('poi-2');
+      service.skipToStop(1);
+      expect(service.applyContingency('door'), isTrue);
+      expect(service.plannedStops.map((s) => s.poiId), contains('poi-9'));
+      // The day now ENDS at the standby, so the head-back close is its own.
+      service.requestWrapUp();
+      expect(service.applyContingency('wrap'), isTrue);
+      expect(service.closeLine, close,
+          reason: 'a seated standby that never joined the walked day is silent');
+    });
+
     test('alternates prefetch through the EXISTING audio cache door, keyed as '
         'playback keys them (design §4.7)', () async {
       final audio = _RecordingAudio();

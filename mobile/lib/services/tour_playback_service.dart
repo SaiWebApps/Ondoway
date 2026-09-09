@@ -2014,6 +2014,19 @@ class TourPlaybackService extends ChangeNotifier {
       }
     }
     _stops = List.unmodifiable([...done, ...remaining]);
+    // A standby the walker has actually TAKEN becomes part of the walked day.
+    // The goodbye after a stop's last chapter, the head-back close and the
+    // thread for a new pair all read the planned list directly rather than
+    // resolving an id, so a seated place that never joins it is walked in
+    // silence — offered, reached, and then unable to say goodbye.
+    final walked = {for (final s in _planned) s.poiId};
+    final joined = [
+      for (final s in _stops)
+        if (!walked.contains(s.poiId)) s,
+    ];
+    if (joined.isNotEmpty) {
+      _planned = List.unmodifiable([..._planned, ...joined]);
+    }
     if (_currentStopIndex >= _stops.length) {
       _currentStopIndex = _stops.length - 1;
     }

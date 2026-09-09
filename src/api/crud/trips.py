@@ -268,6 +268,7 @@ def _create_itinerary_items(
             leg_narration: $leg_narration,
             leg_from_poi_id: $leg_from_poi_id,
             segments_json: $segments_json,
+            standby_for_poi_id: $standby_for_poi_id,
             created_at: datetime()
         })
         CREATE (trip)-[:HAS_STOP]->(item)
@@ -324,6 +325,11 @@ def _create_itinerary_items(
             segments_json=(
                 json.dumps(stop["segments"], ensure_ascii=False) if stop.get("segments") else None
             ),
+            # M6c: the door this place STANDS BY for. A standby is a real item —
+            # so the one voicing pass finds it and gives it a file like any other
+            # stop — and it is not part of the walked day, so the reader that
+            # lists a day's stops leaves it out. Null on every ordinary stop.
+            standby_for_poi_id=stop.get("standby_for_poi_id"),
         ).single()
         # The RETURN now always yields one row (the sentinel-safe UNWIND above), so a
         # missing row is a broken query, never a shrug.
@@ -381,6 +387,32 @@ def replace_trip_stops(
         return _create_itinerary_items(tx, trip_id, record["pid"], stops)
 
     return session.execute_write(_replace)
+
+
+def add_itinerary_items(
+    session: Session, trip_id: str, stops: list[dict[str, Any]]
+) -> list[str]:
+    """Create extra ItineraryItems on a trip WITHOUT touching the ones it has.
+
+    The standbys (M6c) are written through here after the day's own stops: they
+    must be real items so the one voicing pass gives them a file, and they must
+    not disturb the day, so this adds and never deletes. Item ids come back in
+    the order the stops were passed. `replace_trip_stops` is the other door and
+    keeps its delete-then-create contract for the day itself.
+    """
+    if not stops:
+        return []
+
+    def _add(tx: Transaction) -> list[str]:
+        record = tx.run(
+            "MATCH (p:Profile)-[:IS_CAPTAIN_OF]->(t:Trip {id: $tid}) RETURN p.id AS pid",
+            tid=trip_id,
+        ).single()
+        if record is None:
+            raise ValueError(f"Trip {trip_id!r} not found (or has no captain profile)")
+        return _create_itinerary_items(tx, trip_id, record["pid"], stops)
+
+    return session.execute_write(_add)
 
 
 def write_trip_session(
@@ -471,6 +503,10 @@ def list_trips_for_profile(
         # Get stops for each trip
         stops_query = """
             MATCH (t:Trip {id: $tid})-[:HAS_STOP]->(item:ItineraryItem)
+            // M6c: a standby is an item so it can be voiced, but it is not a
+            // stop of the day — the walker was only offered it. Listing it here
+            // would put a place they never went into their saved itinerary.
+            WHERE item.standby_for_poi_id IS NULL
             MATCH (item)-[:AT_POI]->(poi:POI)
             OPTIONAL MATCH (item)-[:PLAYS_BEAT]->(beat:NarrativeBeat)
             OPTIONAL MATCH (beat)-[:TAGGED_WITH]->(bl:Lens)
