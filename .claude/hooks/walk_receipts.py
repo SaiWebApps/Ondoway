@@ -46,6 +46,11 @@ READ_DEFAULT_LINES = 2000
 CODEGRAPH_FILE_RE = re.compile(r"codegraph\s+node\s+--file\s+([^\s;|&]+)")
 BARE_CAT_RE = re.compile(r"^\s*cat\s+(?:-n\s+)?([^\s;|&<>]+)\s*$")
 SED_INPLACE_RE = re.compile(r"\bsed\s+(?:-[a-zA-Z]*\s+)*-i\b")
+#: Parenthesised groups run in a subshell, so a `cd` inside one cannot leak.
+SUBSHELL_RE = re.compile(r"\([^()]*\)")
+#: A `cd` that survives the command — the shell's directory is session state, and
+#: every later call inherits it. Matched at the start or after a separator.
+LEAKING_CD_RE = re.compile(r"(?:^|;|&&|\|\||\|)\s*cd\s")
 REDIRECT_RE = re.compile(r">{1,2}\s*([^\s;|&]+)")
 TEE_RE = re.compile(r"\btee\s+(?:-a\s+)?([^\s;|&]+)")
 PATH_TOKEN_RE = re.compile(r"[^\s;|&'\"<>()]+")
@@ -184,7 +189,20 @@ def pre_tool_use(tool: str, tool_input: dict, cwd: Path, receipts: dict) -> int:
             f"file is covered) or run `codegraph node --file {rel}`, then retry the edit."
         )
     if tool == "Bash":
-        targets = _shell_write_targets(str(tool_input.get("command", "")), cwd)
+        command = str(tool_input.get("command", ""))
+        # A `cd` OUTLIVES its command: the shell's directory is session state, so
+        # every later call starts there — including the ones that would undo it.
+        # Hooks are configured with paths, `make` resolves its own targets from
+        # the root, and a guard that cannot be found refuses everything, so one
+        # `cd` can lock the repo from inside. Say so before it does.
+        if LEAKING_CD_RE.search(SUBSHELL_RE.sub("", command)):
+            return _refuse(
+                "`cd` changes the directory for every command after it, and the "
+                "repo's tooling resolves from the root. Use an absolute path, "
+                "`git -C <path>`, a make target, or wrap it as `(cd <path> && …)` "
+                "so the change stays inside the subshell."
+            )
+        targets = _shell_write_targets(command, cwd)
         if targets:
             return _refuse(
                 "in-place shell writes to source are refused: "

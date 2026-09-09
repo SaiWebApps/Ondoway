@@ -13,7 +13,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/walk_receipts.py\""
+            "command": "sh -c 'g=\"$CLAUDE_PROJECT_DIR/.claude/hooks/walk_receipts.py\"; [ -f \"$g\" ] || exit 0; exec python3 \"$g\"'"
           }
         ]
       }
@@ -24,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/walk_receipts.py\""
+            "command": "sh -c 'g=\"$CLAUDE_PROJECT_DIR/.claude/hooks/walk_receipts.py\"; [ -f \"$g\" ] || exit 0; exec python3 \"$g\"'"
           }
         ]
       }
