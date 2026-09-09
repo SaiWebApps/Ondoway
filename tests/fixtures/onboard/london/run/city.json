@@ -1,5 +1,6 @@
 {
   "slug": "london",
   "display_name": "London",
-  "bbox": [51.28, 51.7, -0.51, 0.33]
+  "bbox": [51.28, 51.7, -0.51, 0.33],
+  "country": "GB"
 }

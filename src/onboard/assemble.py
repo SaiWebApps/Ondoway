@@ -871,9 +871,21 @@ def _register(city: AssembledCity, ctx: CityContext, registry_path: Path | None)
     writes the real ``src/cities.json``; otherwise it redirects the module global
     to ``registry_path`` under try/finally so the global is NEVER leaked to
     sibling tests (the target is seeded from the current registry first)."""
+    # THE COUNTRY IS PART OF BEING ONBOARDED (Docs/adr/0006). Public holidays are
+    # a country's, so a door tagged `PH off` is open or shut by this and nothing
+    # else — and the planner refuses a dated day in a city that has none. Caught
+    # HERE, where the city is registered and the person is watching, rather than
+    # months later at the first walker's first dated request.
+    if not ctx.country:
+        raise ValueError(
+            f"refusing to register {city.slug!r} with no country: opening hours are "
+            "read against a country's public holidays, so a city without one cannot "
+            "plan a dated day. Pass a two-letter country (FR, GB, US) when onboarding."
+        )
     entry = {
         "display_name": ctx.display_name,
         "bbox": list(ctx.bbox),
+        "country": ctx.country,
         "cloud_deployed": city.cloud_deployed,
     }
     default = city_registry._REGISTRY_PATH

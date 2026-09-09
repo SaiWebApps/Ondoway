@@ -124,6 +124,11 @@ class CreateJobRequest(BaseModel):
     display_name: str
     bbox: tuple[float, float, float, float] | None = None  # (min_lat,max_lat,min_lon,max_lon)
     modes: list[str] = []
+    #: The two-letter country whose public holidays this city's opening hours are
+    #: read against (Docs/adr/0006). Asked for here, at the one door a new city
+    #: comes in through, because a city registered without one cannot plan a
+    #: dated day — and the upload refuses rather than discovering that later.
+    country: str | None = None
 
 
 class DraftBeatsRequest(BaseModel):
@@ -203,12 +208,18 @@ def create_job(body: CreateJobRequest, background_tasks: BackgroundTasks) -> dic
         raise HTTPException(422, "bbox is required (geocode-only onboarding is a later feature)")
 
     try:
-        ctx = CityContext(slug=body.slug, display_name=body.display_name, bbox=body.bbox)
+        ctx = CityContext(
+            slug=body.slug,
+            display_name=body.display_name,
+            bbox=body.bbox,
+            country=body.country,
+        )
     except ValidationError as exc:
         raise HTTPException(
             422,
-            f"invalid city slug {body.slug!r}: must be lowercase letters/digits/underscore, "
-            "letter-initial (no path separators or traversal)",
+            f"invalid city slug {body.slug!r} or country {body.country!r}: the slug must be "
+            "lowercase letters/digits/underscore, letter-initial (no path separators or "
+            "traversal), and the country a two-letter code (FR, GB, US)",
         ) from exc
     if ctx.slug in city_registry.supported_cities():
         raise HTTPException(

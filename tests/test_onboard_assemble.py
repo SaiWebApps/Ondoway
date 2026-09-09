@@ -54,7 +54,10 @@ def _load(name: str) -> dict:
 def _ctx() -> CityContext:
     city = _load("run/city.json")
     return CityContext(
-        slug=city["slug"], display_name=city["display_name"], bbox=tuple(city["bbox"])
+        slug=city["slug"],
+        display_name=city["display_name"],
+        bbox=tuple(city["bbox"]),
+        country=city.get("country"),
     )
 
 
@@ -278,8 +281,8 @@ def test_wall3_discovery_pointer_never_reaches_disk(tmp_path: Path) -> None:
 
 
 def test_registry_entry_written_without_centre(tmp_path: Path) -> None:
-    """write_city registers london with display_name/bbox/cloud_deployed=false and
-    NO ``centre`` (register_city validates only those three fields).
+    """write_city registers london with display_name/bbox/country/cloud_deployed
+    and NO ``centre`` (register_city validates only those three fields).
     UNDO: remove the register_city call -> london absent from cities.json -> RED."""
     ctx = _ctx()
     city = assemble(_base_results(ctx), ctx, _extracts())
@@ -293,6 +296,42 @@ def test_registry_entry_written_without_centre(tmp_path: Path) -> None:
     assert entry["bbox"] == [51.28, 51.7, -0.51, 0.33]
     assert entry["cloud_deployed"] is False
     assert "centre" not in entry
+    # M10 (Docs/adr/0006): the country its opening hours are read against.
+    assert entry["country"] == "GB"
+
+
+def test_a_city_with_no_country_is_refused_before_it_is_registered(tmp_path: Path) -> None:
+    """M10: public holidays are a country's, so a door tagged ``PH off`` is open
+    or shut by that and nothing else — and the planner refuses a dated day in a
+    city that has none. A city onboarded without one would look finished and then
+    fail at its first walker's first dated request, months later and far from
+    here. So it is refused where the city is registered and someone is watching.
+
+    UNDO: drop the country guard from ``_register`` -> a countryless city
+    registers happily and breaks at planning time instead -> RED.
+    """
+    ctx = _ctx().model_copy(update={"country": None})
+    city = assemble(_base_results(ctx), ctx, _extracts())
+    with pytest.raises(ValueError, match="country"):
+        write_city(city, ctx, data_root=tmp_path, registry_path=tmp_path / "cities.json")
+
+    assert not (tmp_path / "cities.json").exists(), "nothing was registered"
+
+
+def test_a_country_that_is_not_two_letters_is_refused_at_construction() -> None:
+    """The opening-hours library keys holidays by a two-letter code, so anything
+    else is a country nobody can read hours against — refused where the frame is
+    built rather than carried to the registry.
+    UNDO: drop the country validator -> 'France' reaches the registry -> RED."""
+    for bad in ("France", "F", "", "F1"):
+        with pytest.raises(Exception, match=r"country|two-letter"):
+            CityContext(
+                slug="paris", display_name="Paris", bbox=(48.8, 48.9, 2.2, 2.4), country=bad
+            )
+    # Case and padding are normalised rather than refused.
+    assert CityContext(
+        slug="paris", display_name="Paris", bbox=(48.8, 48.9, 2.2, 2.4), country=" fr "
+    ).country == "FR"
 
 
 def test_registry_global_not_leaked(tmp_path: Path) -> None:

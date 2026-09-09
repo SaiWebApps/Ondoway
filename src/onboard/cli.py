@@ -90,6 +90,9 @@ def _geocode(city: str) -> CityContext:
         slug=data["slug"],
         display_name=data["display_name"],
         bbox=tuple(data["bbox"]),
+        # The country the city's opening hours are read against (Docs/adr/0006).
+        # Absent from an older fixture, which `write_city` then refuses by name.
+        country=data.get("country"),
     )
 
 

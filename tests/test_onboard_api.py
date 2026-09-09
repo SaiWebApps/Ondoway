@@ -65,6 +65,9 @@ def _create_job(client, modes=("license_clean",)):
             "slug": "london",
             "display_name": "London",
             "bbox": LONDON_BBOX,
+            # M10 (Docs/adr/0006): a new city records the country its opening
+            # hours are read against, or the upload refuses to register it.
+            "country": "GB",
             "modes": list(modes),
         },
     )
@@ -500,3 +503,55 @@ def test_upload_before_beats_drafted_is_409(client):
     job_id, _ = _run_to_assembled(client)
     r = client.post(f"/api/v1/onboard/jobs/{job_id}/upload", json={"target": "local"})
     assert r.status_code == 409, r.text
+
+
+def test_a_city_onboarded_with_no_country_is_refused_at_upload(
+    client, monkeypatch, tmp_path
+):
+    """M10 (Docs/adr/0006): opening hours are read against a country's public
+    holidays, so a city registered without one cannot plan a dated day. Onboarding
+    that omits it does not fail silently and surface months later at the first
+    walker's first dated request — the upload refuses, by name, before the city is
+    registered.
+
+    UNDO: drop the country guard from ``assemble._register`` -> the countryless
+    city uploads happily -> RED.
+    """
+    monkeypatch.setenv("ONBOARD_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("ONBOARD_REGISTRY_PATH", str(tmp_path / "cities.json"))
+    created = client.post(
+        "/api/v1/onboard/jobs",
+        json={
+            "slug": "london",
+            "display_name": "London",
+            "bbox": LONDON_BBOX,
+            "modes": ["license_clean"],
+        },  # no country
+    )
+    assert created.status_code == 202, created.text
+    job_id = created.json()["job_id"]
+    _wait_status(client, job_id, "assembled")
+    drafted = client.post(
+        f"/api/v1/onboard/jobs/{job_id}/draft-beats", json={"confirm_cost": True}
+    )
+    assert drafted.status_code == 200, drafted.text
+
+    with pytest.raises(ValueError, match=r"country"):
+        client.post(f"/api/v1/onboard/jobs/{job_id}/upload", json={"target": "local"})
+    assert not (tmp_path / "cities.json").exists(), "nothing was registered"
+
+
+def test_a_country_that_is_not_two_letters_is_refused_at_job_creation(client):
+    """The opening-hours library keys holidays by a two-letter code, so anything
+    else names a country nobody can read hours against — refused at the door."""
+    r = client.post(
+        "/api/v1/onboard/jobs",
+        json={
+            "slug": "london",
+            "display_name": "London",
+            "bbox": LONDON_BBOX,
+            "country": "United Kingdom",
+            "modes": ["license_clean"],
+        },
+    )
+    assert r.status_code == 422, r.text

@@ -190,6 +190,25 @@ class CityContext(BaseModel):
     slug: str
     display_name: str
     bbox: tuple[float, float, float, float]  # (min_lat, max_lat, min_lon, max_lon)
+    #: The two-letter country whose public holidays this city's opening hours are
+    #: read against (Docs/adr/0006). A door tagged `PH off` is open or shut by
+    #: this and nothing else, and a country guessed wrong reads every holiday as
+    #: an ordinary open day — so there is no default, and a city registered
+    #: without one refuses its first dated day in plain words.
+    country: str | None = None
+
+    @field_validator("country")
+    @classmethod
+    def _validate_country(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        code = value.strip().upper()
+        if len(code) != 2 or not code.isalpha():
+            raise ValueError(
+                f"invalid country {value!r}: the opening-hours library keys public "
+                "holidays by a two-letter code (FR, GB, US)"
+            )
+        return code
 
     @field_validator("slug")
     @classmethod
