@@ -352,8 +352,9 @@ class TestPoiMergeKeyDedup:
 
 # ---------------------------------------------------------------------------
 # Showstopper: the beat→POI link must be CITY-SCOPED. Many POI names recur
-# across cities (Chinatown, SoHo, Greenwich Village, Chelsea, Cleopatra's
-# Needle all exist in BOTH data/london and data/new_york). A name-only match
+# across cities (Chinatown, SoHo, Greenwich Village, Chelsea and Cleopatra's
+# Needle all appeared in BOTH the New York corpus and the since-retired London
+# one, which is how this was found). A name-only match
 # would MERGE a London beat onto New York's identically-named POI — seating
 # London beats on NYC tours and failing db_parity. The link must additionally
 # constrain city_name = the city being deployed.

@@ -25,17 +25,6 @@ from scripts.corpus_report import (
     load_city_pois,
     quality_report,
 )
-from scripts.reauthor_cleanroom import city_name, unsupported_words
-from scripts.reauthor_review import (
-    CANDIDATE_FILES,
-    DECISIONS,
-    decision_summary,
-    load_candidates,
-    record_decision,
-    review_order,
-    reviewer_identity,
-    save_candidates,
-)
 from src.connection import create_driver, get_database
 from src.verify.counts import count_nodes_by_label, count_relationships_by_type, total_counts
 from src.verify.traversals import run_all_traversals
@@ -125,67 +114,6 @@ def _corpus_payload(city_slug: str) -> dict[str, Any]:
     }
 
 
-def _needs_a_person(record: dict, source: str) -> bool:
-    """Whether one candidate still has a question only a reviewer can answer."""
-    if source == "cleanroom":
-        return bool(record.get("flags"))
-    verified = record.get("verified") or {}
-    return verified.get("status") == "escalate" or not verified
-
-
-def _reauthored_payload(
-    city_slug: str, *, show_all: bool = False, source: str = "rewrite"
-) -> dict[str, Any]:
-    """The review queue for one city, from either authoring path.
-
-    By default this is ONLY what the machine could not settle. The design's D1 is
-    triage, not blanket verification, so a rewrite two independent models agree
-    adds nothing and drops nothing does not consume a person's attention. Pass
-    show=all to spot-check the auto-approved, which is worth doing periodically.
-
-    `source=cleanroom` reads the clean-room bodies instead. They are ranked by the
-    same `review_order` and decided through the same POST, because a candidate is a
-    candidate — and a clean-room body that carries a flag has nowhere else to go.
-    """
-    records = load_candidates(city_slug, source=source)
-    summary = decision_summary(records)
-    summary["auto_approved"] = sum(
-        1 for r in records if str(r.get("decided_by", "")).startswith("auto:")
-    )
-    summary["escalated"] = sum(
-        1 for r in records if (r.get("verified") or {}).get("status") == "escalate"
-    )
-    summary["unverified"] = sum(1 for r in records if not r.get("verified"))
-    # What the reviewer is actually being handed, whichever artifact this is. The
-    # tally cannot read `escalated` for both: a clean-room body has no panel verdict
-    # to escalate, and reporting zero there would say nobody is needed.
-    summary["needs_a_person"] = sum(1 for r in records if _needs_a_person(r, source))
-
-    shown = review_order(records)
-    if source == "cleanroom":
-        for row in shown:
-            row["unsupported_words"] = unsupported_words(
-                row.get("body_after") or "",
-                row.get("claims_given") or [],
-                poi=row.get("poi_name") or "",
-                city=city_name(city_slug),
-            )
-    if not show_all:
-        # The two artifacts are asked different questions. A rewrite carries a panel's
-        # verdict, so what needs a person is an escalation or a beat nothing judged. A
-        # clean-room body carries no verdict at all — the gates are what looked at it —
-        # so what needs a person is what a gate flagged.
-        shown = [r for r in shown if _needs_a_person(r, source)]
-    return {
-        "city": city_slug,
-        "reviewer": reviewer_identity(),
-        "summary": summary,
-        "candidates": shown,
-        "showing": "all" if show_all else "escalated",
-        "source": source,
-    }
-
-
 class DashboardHandler(SimpleHTTPRequestHandler):
     """Handle API routes and serve static files from frontend/."""
 
@@ -200,59 +128,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._json_response(_build_api_response(self.driver))
         elif route.path == "/api/corpus":
             self._corpus_route(parse_qs(route.query).get("city", ["paris"])[0])
-        elif route.path == "/api/reauthored":
-            query = parse_qs(route.query)
-            self._json_response(
-                _reauthored_payload(
-                    query.get("city", ["paris"])[0],
-                    show_all=query.get("show", [""])[0] == "all",
-                    source=query.get("source", ["rewrite"])[0],
-                )
-            )
         else:
             super().do_GET()
-
-    def do_POST(self):
-        """The one write this server accepts: a reviewer's verdict on one rewrite."""
-        if urlparse(self.path).path != "/api/reauthored/decision":
-            self._json_response({"error": "no such endpoint"}, status=404)
-            return
-        try:
-            length = int(self.headers.get("Content-Length") or 0)
-            payload = json.loads(self.rfile.read(length) or b"{}")
-        except (ValueError, TypeError):
-            self._json_response({"error": "body must be JSON"}, status=400)
-            return
-        self._decision_route(payload)
-
-    def _decision_route(self, payload: dict) -> None:
-        city = payload.get("city") or "paris"
-        beat_id = payload.get("beat_id") or ""
-        decision = payload.get("decision") or ""
-        if decision not in DECISIONS:
-            self._json_response({"error": f"decision must be one of {list(DECISIONS)}"}, status=400)
-            return
-
-        source = payload.get("source") or "rewrite"
-        if source not in CANDIDATE_FILES:
-            self._json_response(
-                {"error": f"source must be one of {list(CANDIDATE_FILES)}"}, status=400
-            )
-            return
-        records = load_candidates(city, source=source)
-        try:
-            row = record_decision(records, beat_id, decision, decided_by=reviewer_identity())
-        except KeyError:
-            self._json_response(
-                {"error": f"no candidate with beat_id {beat_id!r} in {city}"}, status=404
-            )
-            return
-        except ValueError as exc:
-            self._json_response({"error": str(exc)}, status=400)
-            return
-
-        save_candidates(city, records, source=source)
-        self._json_response({"decided": row, "summary": decision_summary(records)})
 
     def _corpus_route(self, city_slug: str) -> None:
         """Answer for one city, or say which city could not be found."""

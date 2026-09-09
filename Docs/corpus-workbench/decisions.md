@@ -1,5 +1,11 @@
 # Corpus Workbench — pre-plan interview
 
+> **Retired in slice 0 of the ingestion rebuild.** This document describes the Lane B
+> re-author pipeline, which was retired: its scripts, tests and review page were moved
+> under `_to_be_deleted/` and its dashboard routes removed, so nothing described here runs.
+> It is kept as a record until slice 11 deletes it; the live plan is
+> `Docs/ingestion/rebuild-spec.md`.
+
 > **Start with [rebuild-brief.md](rebuild-brief.md).** It records the state of the
 > re-author work, what an adversarial panel refuted, and what to build next. It
 > supersedes I4 below and the review-queue design.

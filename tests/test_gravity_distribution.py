@@ -139,14 +139,6 @@ MARQUEE_LANDMARKS: dict[str, tuple[str, ...]] = {
         "Arc de Triomphe",
         "Sacre-Coeur Basilica",
     ),
-    "london": (
-        "Big Ben",
-        "Palace of Westminster",
-        "Westminster Abbey",
-        "Tower of London",
-        "Buckingham Palace",
-        "Tower Bridge",
-    ),
     "new_york": (
         "Statue of Liberty",
         "Empire State Building",

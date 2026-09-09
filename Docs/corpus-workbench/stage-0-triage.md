@@ -1,5 +1,11 @@
 # Stage 0 — what two free gates say about the 524 re-authored beats
 
+> **Retired in slice 0 of the ingestion rebuild.** This document describes the Lane B
+> re-author pipeline, which was retired: its scripts, tests and review page were moved
+> under `_to_be_deleted/` and its dashboard routes removed, so nothing described here runs.
+> It is kept as a record until slice 11 deletes it; the live plan is
+> `Docs/ingestion/rebuild-spec.md`.
+
 Read [rebuild-brief.md](rebuild-brief.md) first. This is the answer to the Stage 0
 question it asks: how much of the existing re-author output survives a re-triage
 that costs nothing. No model was called to produce any number here.
@@ -129,7 +135,7 @@ Revival` in the body against `Renaissance Revival` in the source.
 
 ## What the gates miss, measured rather than asserted
 
-`scripts/reauthor_triage_calibrate.py` builds a labelled set by planting one changed
+`_to_be_deleted/scripts/reauthor_triage_calibrate.py` builds a labelled set by planting one changed
 value in bodies that currently agree with their source, and scores recall per
 channel. Catching the conflicts the gate was designed around proves nothing; these
 are defects it never saw.
@@ -207,12 +213,15 @@ it. The corpus dashboard also still reports only `verbatim_ratio` — the metric
 refuted — because `verbatim_summary` was deliberately left alone to keep the blast
 radius at zero; wiring `max_verbatim_run` into it is outstanding.
 
-The gates are free and deterministic, so they are re-run rather than stored;
-`data/{city}/reauthored.json` is gitignored and nothing writes back to it. Both
-`beats.json` files are untouched, as the brief describes.
+The gates were free and deterministic, so they were re-run rather than stored;
+`data/{city}/reauthored.json` was gitignored and nothing wrote back to it. Both
+`beats.json` files were untouched, as the brief describes.
+
+The commands as they ran before the retirement (the scripts now live under
+`_to_be_deleted/` and are not on the import path):
 
 ```
-uv run python scripts/reauthor_triage.py --city new_york
-uv run python scripts/reauthor_triage.py --city paris --show blocked-conflict
-uv run python scripts/reauthor_triage_calibrate.py --city paris
+uv run python _to_be_deleted/scripts/reauthor_triage.py --city new_york
+uv run python _to_be_deleted/scripts/reauthor_triage.py --city paris --show blocked-conflict
+uv run python _to_be_deleted/scripts/reauthor_triage_calibrate.py --city paris
 ```

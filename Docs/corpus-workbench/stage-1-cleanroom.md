@@ -1,5 +1,11 @@
 # Stage 1 — regenerating the backlog from claims the writer could not trace
 
+> **Retired in slice 0 of the ingestion rebuild.** This document describes the Lane B
+> re-author pipeline, which was retired: its scripts, tests and review page were moved
+> under `_to_be_deleted/` and its dashboard routes removed, so nothing described here runs.
+> It is kept as a record until slice 11 deletes it; the live plan is
+> `Docs/ingestion/rebuild-spec.md`.
+
 Read [rebuild-brief.md](rebuild-brief.md) first, then [stage-0-triage.md](stage-0-triage.md).
 
 **Nothing has shipped.** The output lives in `data/{city}/reauthored-cleanroom.json`,
@@ -160,9 +166,11 @@ York bodies to false positives: "a **US** Coast Guard Cutter" and "Arthur Miller
 
 Bodies carry `flags`, and `reauthor_review.review_order` already ranks a queue by that
 field. Its candidate path named only the rewrite artifact, so routing there was a
-sentence and not a path. `/api/reauthored?source=cleanroom` now serves the clean-room
+sentence and not a path. `/api/reauthored?source=cleanroom` served the clean-room
 bodies to the same review page, ranked the same way and decided through the same POST,
-which writes back to the file the record came from. The two artifacts are asked different
+which wrote back to the file the record came from. That route, its POST and the review
+page were removed in slice 0 of the ingestion rebuild (`Docs/ingestion/rebuild-spec.md`);
+the scripts are quarantined under `_to_be_deleted/`. The two artifacts are asked different
 questions: a rewrite carries a panel's verdict, so a person sees an escalation or a beat
 nothing judged; a clean-room body carries no verdict, so a person sees what a gate
 flagged.
@@ -220,10 +228,14 @@ to the guidebook and wrong in the world.
   `beats.json`. When something does, it must refuse to carry a flagged body without a
   person clearing it — flags nothing reads are decoration — and it must recompute
   `est_spoken_seconds` rather than copying it.
-- `reauthor_run.py`, the refuted path, is still live pending its own removal.
+- `reauthor_run.py`, the refuted path, was retired with the rest of the pipeline in slice 0
+  (`_to_be_deleted/scripts/reauthor_run.py`).
+
+The commands as they ran before the retirement (the scripts now live under
+`_to_be_deleted/` and are not on the import path):
 
 ```
-ONDOWAY_DEMO_APPROVE=1 uv run python scripts/reauthor_cleanroom.py --city paris --phase decompose
-ONDOWAY_DEMO_APPROVE=1 uv run python scripts/reauthor_cleanroom.py --city paris --phase write
-uv run python scripts/reauthor_cleanroom.py --city paris --phase write --dry-run
+ONDOWAY_DEMO_APPROVE=1 uv run python _to_be_deleted/scripts/reauthor_cleanroom.py --city paris --phase decompose
+ONDOWAY_DEMO_APPROVE=1 uv run python _to_be_deleted/scripts/reauthor_cleanroom.py --city paris --phase write
+uv run python _to_be_deleted/scripts/reauthor_cleanroom.py --city paris --phase write --dry-run
 ```

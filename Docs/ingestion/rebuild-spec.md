@@ -46,7 +46,9 @@ them.
   text it judged.
 - No paid call before the job prints a token-based cost estimate; no cloud write without
   `TARGET=cloud CONFIRM_CLOUD_WRITE=1`.
-- London and the 56 orphans are quarantined (slice 0) and never re-extracted; slice 11
+- London and the 137 chunkless orphans (every beat whose `source_chunk_slug` is
+  `legacy_ambiguous`; an earlier audit table counted only the 56 lifted ones) are
+  quarantined (slice 0) and never re-extracted; slice 11
   deletes the quarantine after the swap has held. Wikipedia is ingested on the same terms
   as a book.
 
@@ -194,8 +196,9 @@ file, then withdraw every `NarrativeBeat` of that city whose `beat_id` is not in
 
 ## 7. Batch order (D14)
 
-- [ ] Quarantine London, the 56 orphans, the re-author pipeline under `_to_be_deleted/` (slice 0).
-- [ ] Re-extract Paris and New York into the new-schema files offline (slice 10).
+- [x] Quarantine London, the 137 orphans, the re-author pipeline under `_to_be_deleted/` (slice 0).
+- [ ] Re-extract Paris and New York into the new-schema files offline; the 137 orphans leave
+      `beats.json` here, with the swap that re-establishes parity (slice 10).
 - [ ] Publisher converge merged and proven on 7687 (slice 8).
 - [ ] Publish to 7687; run `_test-golden`, tour grade, invariants (slice 10).
 - [ ] `make deploy TARGET=cloud CONFIRM_CLOUD_WRITE=1` per city (slice 10, human at the keyboard).
@@ -214,13 +217,21 @@ Nothing is deleted in this slice. Everything the rebuild retires is MOVED under 
 top-level `_to_be_deleted/` directory, keeping its relative path, so it can be restored
 with one `git mv` until slice 11 removes the directory after the graph swap succeeds.
 
-**Files:** move `scripts/reauthor_*.py`, `frontend/rewrites.html`, `data/london/`,
-`tests/test_reauthor_*.py`, and the four gitignored `data/*/reauthored*.json` and
-`data/*/claims.json` per city into `_to_be_deleted/` (the data files stay ignored: add
-`_to_be_deleted/data/` to `.gitignore`); write the 56 `legacy_ambiguous` beats to
-`_to_be_deleted/data/{city}/orphans.json` and remove them from `beats.json`; drop the
-reauthor entries from `LINT_PATHS` in `Makefile`; add `_to_be_deleted/README.md` naming
-what is there, why, and the slice that deletes it.
+**Files (done):** the retired `scripts/reauthor_*.py`, `tests/test_reauthor_*.py`, `frontend/rewrites.html` and `data/london/` were moved
+under `_to_be_deleted/` keeping their paths (`_to_be_deleted/frontend/rewrites.html`,
+`_to_be_deleted/data/london/`, 167 renames); the `/api/reauthored` routes that imported the
+scripts left `src/server.py` with their six tests; the reauthor entries left `LINT_PATHS` in
+`Makefile`; `_to_be_deleted/README.md` names what is there, why, the one-command restore and
+the slice that deletes it. The four gitignored `data/*/reauthored*.json` and
+`data/*/claims.json` per city are machine-local model output that exists only in a
+developer's main checkout, never in a worktree, so git cannot move them: the owner moves
+them by hand into `_to_be_deleted/data/{city}/`, and `_to_be_deleted/data/` is ignored so
+they stay ignored there. The 137 `legacy_ambiguous` beats are written to
+`_to_be_deleted/data/paris/orphans.json` (force-added, since that directory is ignored) and
+STAY in `beats.json` until slice 10: they are in the 7687 and Aura graphs, and
+`scripts/db_parity.py` — which every `make test-file` runs through the `dev-data`
+preflight — counts a graph record the file no longer names as drift. They leave
+`beats.json` with the slice-10 swap, which re-establishes parity by publishing.
 
 **Also in this slice, the planned-path rule.** This spec names the files later slices
 create with a leading `./` (see the path convention at the top). The process lint in
@@ -233,9 +244,7 @@ both halves (a `./` path is skipped; the same path bare is checked).
 
 **The invariant every moving or deleting slice keeps:** this spec's own references to
 what a slice moves or deletes are rewritten in that slice's commit, so the lint that
-refuses dangling references stays green at the spec itself. For this slice that is the
-`frontend/rewrites.html` and `data/london/` references above, which become
-`_to_be_deleted/` paths.
+refuses dangling references stays green at the spec itself. For this slice that was the retired `frontend/rewrites.html` and `data/london/` references above, now written as their `_to_be_deleted/` paths.
 **Proves:** `make lint` zero errors (the process lint treats a line that narrates a
 removal as exempt, and `_to_be_deleted/` is not a scanned root) and
 `make test-file FILE=tests/test_beat_validation.py` green on the branch. Judge consult

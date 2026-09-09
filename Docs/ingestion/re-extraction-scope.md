@@ -1,5 +1,11 @@
 # Scope — the corpus is copied, and the fix is in the extractor
 
+> **Retired in slice 0 of the ingestion rebuild.** This document describes the Lane B
+> re-author pipeline, which was retired: its scripts, tests and review page were moved
+> under `_to_be_deleted/` and its dashboard routes removed, so nothing described here runs.
+> It is kept as a record until slice 11 deletes it; the live plan is
+> `Docs/ingestion/rebuild-spec.md`.
+
 ## The finding
 
 Measured with the longest shared word run outside an attributed quotation, which is the
@@ -45,7 +51,7 @@ York), and the sources are on disk.
 |---|---|---|
 | book chunks under `Books/` | 2,560 | **105 chunks** |
 | pinned Wikipedia revisions under `data/{city}/wikipedia/` | 457 | ~57 revisions |
-| orphaned (`legacy_ambiguous`, missing chunk) | 56 | not re-extractable |
+| orphaned (`legacy_ambiguous`, missing chunk) | 56 (of 137 chunkless beats in all) | not re-extractable |
 
 So 3,017 of 3,073 lifted beats are reachable by re-running the extractor over text that
 is already local, in about 162 runs rather than 3,073 rewrites.
@@ -61,15 +67,17 @@ Re-extraction rather than rewriting, for three reasons:
    precisely so the hard refuse in `/unified-beat-extract` can be satisfied, and
    `/pipeline-batch` drives chunks in parallel with resume state.
 
-The clean-room re-author pipeline (`scripts/reauthor_cleanroom.py`) is not the remedy
-here and is not used by this scope. The 56 beats it would have been the fallback for are
-deleted instead.
+The clean-room re-author pipeline (`_to_be_deleted/scripts/reauthor_cleanroom.py`, now
+quarantined) is not the remedy
+here and is not used by this scope. The 137 chunkless beats it would have been the fallback
+for are quarantined in slice 0 (`_to_be_deleted/data/paris/orphans.json`) and leave
+`beats.json` with the slice-10 swap.
 
 ## The changes
 
 **1. A verbatim gate at extraction.** `max_verbatim_run` and the attributed-quotation
-exemption live in `scripts/corpus_report.py` with tests in
-`tests/test_reauthor_triage.py`. Wire them into `extract_validators.validate_beat` so a
+exemption live in `scripts/verbatim.py` with tests in the retired triage tests under `_to_be_deleted/`. Wire them into
+`extract_validators.validate_beat` so a
 beat sharing 8+ consecutive words with its source outside a quotation is a hard error,
 next to the existing fabrication verdict. One implementation, called from extraction.
 
@@ -123,8 +131,10 @@ gate the write.
 beats land `unverified` and are re-earned by a `/fact-check` pass over the chunks that
 moved.
 
-**The 56 orphans are deleted.** They cannot be traced to a source, cannot be
-re-extracted, and carry copied text. Their POIs are covered by other beats.
+**The 137 chunkless orphans are quarantined in slice 0 and leave `beats.json` at the
+slice-10 swap.** They cannot be traced to a source, cannot be re-extracted, and carry copied
+text. All but two of their POIs are covered by other beats; Lycée Henri IV and
+Saint-Étienne-du-Mont have no other beat until re-extraction reaches them.
 
 ## The risk this scope carries
 

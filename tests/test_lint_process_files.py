@@ -9,9 +9,10 @@ Mechanical checks over the repo's self-describing files:
   than the incident that motivated it (LEARNINGS.md, the incident log, is
   exempt by not being scanned);
 - Docs/ and README.md get the same dangling-reference check (dates are allowed
-  there — documentation may record history), with three skips a reference scan
-  needs on prose: `~`-prefixed home paths, gitignored artifacts, and lines that
-  narrate a removal;
+  there — documentation may record history), with four skips a reference scan
+  needs on prose: `~`-prefixed home paths, gitignored artifacts, lines that
+  narrate a removal, and `./`-prefixed planned paths (prose that says a change
+  *creates* `./x` is not claiming the repo already has it);
 - every backticked `make <target>` in any scanned markdown names a target the
   live Makefile defines;
 - no `specs/<path>` citation in src/ or scripts/ Python — the spec tree is
@@ -30,6 +31,7 @@ from scripts.lint_process_files import (
     check_repo,
     find_dates,
     find_refs,
+    is_planned_path,
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -55,6 +57,24 @@ class TestFindRefs:
     def test_strips_trailing_punctuation(self) -> None:
         refs = find_refs("registered in .claude/settings.json, then loaded")
         assert ".claude/settings.json" in refs
+
+    def test_a_planned_path_is_not_a_repo_claim(self) -> None:
+        assert is_planned_path("./src/ingest/model.py") is True
+        assert find_refs("creates ./src/ingest/model.py") == set()
+        # The behaviour this skip actually changes: `./`-prefixed .claude/ paths
+        # were normalised to a bare claim, so prose planning one was reported as
+        # dangling. A `./` prefix means planned wherever it points — the skip runs
+        # before the .claude/ normalisation, and this assertion is what holds it
+        # there.
+        assert is_planned_path("./.claude/plan.json") is True
+        assert find_refs("creates ./.claude/plan.json") == set()
+
+    def test_the_same_path_bare_is_a_claim(self) -> None:
+        assert find_refs("see src/ingest/model.py") == {"src/ingest/model.py"}
+        assert is_planned_path("src/ingest/model.py") is False
+        # The prefix is `./`, not `.`: a bare dotted path is still a claim.
+        assert find_refs("see .claude/settings.json") == {".claude/settings.json"}
+        assert is_planned_path(".claude/settings.json") is False
 
 
 class TestFindDates:

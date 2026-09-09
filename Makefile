@@ -42,6 +42,9 @@ PREFLIGHT := python3 scripts/preflight.py
 # it deliberately takes only literal values so it can never start a substitution
 # chain (tests/test_preflight.py fails the moment a name stops resolving). The
 # lane override therefore happens below, where it costs the parser nothing.
+# A worktree pins its lane (and any other machine-local make setting) here; the
+# file is gitignored, so the committed defaults below stay canonical.
+-include .make.local
 LANE ?=
 TEST_PROFILE ?= test
 DEV_DB ?= dev
@@ -104,11 +107,7 @@ LINT_PATHS := src/ tests/ scripts/dev_env.py scripts/ensure_dev_data.py \
 	scripts/poi_queues.py scripts/poi_trigger_radius.py scripts/sync_poi_exports.py \
 	scripts/report_visit_durations.py scripts/tour_build.py scripts/dedup_review.py \
 	scripts/tour_batch_review.py scripts/lint_process_files.py \
-	scripts/corpus_report.py scripts/reauthor_preview.py \
-	scripts/reauthor_run.py scripts/reauthor_review.py \
-	scripts/reauthor_verify.py scripts/reauthor_triage.py \
-	scripts/reauthor_triage_calibrate.py scripts/reauthor_cleanroom.py \
-	scripts/reauthor_audit.py scripts/verbatim.py \
+	scripts/corpus_report.py scripts/verbatim.py \
 	scripts/extract_validators.py scripts/audit_extraction.py scripts/wipe_beats.py scripts/rebuild_book_log.py
 
 # Reports a missing credential or a wrong endpoint as a sentence. This was a bare

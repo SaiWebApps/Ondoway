@@ -381,3 +381,11 @@ data/*/claims.json
 # carries that for every tracked file.
 data/*/*.bak-*.json
 data/*/*.archived-*.json
+
+# Machine-local make settings (e.g. the lane a worktree runs on); never committed.
+.make.local
+
+# Quarantined paid-model output moved under _to_be_deleted/ by the ingestion rebuild
+# (ADR-0001). Literal, not a glob: it must not swallow the quarantined *scripts*,
+# which are tracked source restorable with `git mv`.
+_to_be_deleted/data/

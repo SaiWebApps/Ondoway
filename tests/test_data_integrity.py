@@ -131,8 +131,8 @@ def test_no_tiny_fragment_beat_bodies(city_dir: Path) -> None:
 
     Catches the most extreme splitter fragments ('S.', 'W.', 'Giles and Soho.')
     for ALL beats, including book beats that have no wikipedia chunk to check
-    against. Real corpus sentences run 6+ words (measured floors: Paris 6, London
-    6, New York 11), so a sub-4-word body is a truncation artifact, not narration.
+    against. Real corpus sentences run 6+ words (measured floors: Paris 6, New York
+    11), so a sub-4-word body is a truncation artifact, not narration.
     This is a FLOOR only — the precise guard against longer truncations (7-20 words,
     which this misses) is ``test_wikipedia_beat_bodies_are_whole_sentences`` below.
     (If a genuinely terse beat is ever authored, lower the floor and note why.)"""
@@ -155,21 +155,9 @@ def test_no_tiny_fragment_beat_bodies(city_dir: Path) -> None:
 # so the body is a prefix/suffix of a mis-joined chunk "sentence". Each verified by
 # hand. Keyed by beat_id -> reason. (NOT fragments — do not "fix" the beat.)
 _WHOLE_SENTENCE_ALLOWLIST: dict[str, str] = {
-    "london_10_downing_street_wikipedia_4":
-        "complete; splitter won't break before the digit-initial next sentence "
-        "'10 Downing Street is property of…'",
-    "london_science_museum_wikipedia_1":
-        "complete; splitter glues the prior sentence's terminal 'etc.' onto this one",
-    "london_heron_tower_wikipedia_1":
-        "complete; digit-initial building name '110 Bishopsgate', splitter won't "
-        "break before it",
     "new_york_plaza_hotel_music_heritage_wikipedia_beatles_first_visit":
         "complete; an intentional edit dropped the discourse marker 'In addition,' "
         "from the chunk sentence",
-    "london_london_waterloo_station_wikipedia_2":
-        "complete ('…commemorated World War I.'); the splitter keeps the regnal 'I.' "
-        "glued to the proper-noun-initial next sentence 'World War I. Waterloo…' — a "
-        "minor missing pause, not a fragment",
 }
 
 

@@ -47,7 +47,13 @@ def _get(url: str) -> tuple[int, bytes]:
 
 
 def test_corpus_route_returns_the_report_for_a_known_city(dashboard_url: str) -> None:
-    """One request carries both halves the screen draws: quality and coverage."""
+    """One request carries both halves the screen draws: quality and coverage.
+
+    Against the real, unstubbed `available_cities()`: it lists the city directories
+    that carry a beats.json, so with the London corpus retired to _to_be_deleted/
+    the answer is exactly the two live cities. Asserted as an equality, so a corpus
+    reappearing under data/ (or one going missing) is caught here.
+    """
     status, body = _get(f"{dashboard_url}/api/corpus?city=paris")
     assert status == 200
 
@@ -58,12 +64,24 @@ def test_corpus_route_returns_the_report_for_a_known_city(dashboard_url: str) ->
     assert payload["coverage"]["anchor_readiness"]["total_pois"] == 370
     assert payload["coverage"]["areas_mapped"] is True
     # The page reads its city selector from here rather than hardcoding slugs.
-    assert "london" in payload["cities"]
+    assert payload["cities"] == ["new_york", "paris"]
 
 
-def test_corpus_route_reports_an_unmapped_city_without_failing(dashboard_url: str) -> None:
-    """London has no areas generated; the route still answers, and says so."""
-    status, body = _get(f"{dashboard_url}/api/corpus?city=london")
+def test_corpus_route_reports_an_unmapped_city_without_failing(
+    dashboard_url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A city with no areas generated still answers, and says so.
+
+    The missing-areas condition is injected rather than borrowed from London's
+    directory, so this keeps testing the route's `FileNotFoundError` branch after
+    that directory is quarantined — the branch is the behaviour, not the city.
+    """
+
+    def _no_areas(_city: str) -> tuple[list[dict], list[str]]:
+        raise FileNotFoundError("areas.json")
+
+    monkeypatch.setattr("src.server.load_city_areas", _no_areas)
+    status, body = _get(f"{dashboard_url}/api/corpus?city=paris")
     assert status == 200
     assert json.loads(body)["coverage"]["areas_mapped"] is False
 
@@ -106,7 +124,7 @@ def test_corpus_page_is_served(dashboard_url: str) -> None:
     assert b"corpus" in body.lower()
 
 
-# ── The re-author review surface ────────────────────────────────────────────
+# ── The re-author review surface is gone ────────────────────────────────────
 
 
 def _post(url: str, payload: dict) -> tuple[int, bytes]:
@@ -121,62 +139,21 @@ def _post(url: str, payload: dict) -> tuple[int, bytes]:
         return exc.code, exc.read()
 
 
-def test_review_route_serves_candidates_most_doubted_first(dashboard_url: str) -> None:
-    """The queue the reviewer works through, in the order they should work it."""
-    status, body = _get(f"{dashboard_url}/api/reauthored?city=paris")
-    assert status == 200
+def test_the_review_surface_is_gone(dashboard_url: str) -> None:
+    """No re-author queue, no decision endpoint — just the corpus route left.
 
-    payload = json.loads(body)
-    assert payload["summary"]["total"] == 524 - 278  # paris only
-    flags = [row["flags"] for row in payload["candidates"]]
-    assert flags == sorted(flags, reverse=True)
-    first = payload["candidates"][0]
-    # A reviewer cannot judge without all three texts on the row.
-    assert first["source_passage"] and first["body_before"] and first["body_after"]
-
-
-def test_review_route_names_the_reviewer_it_would_record(dashboard_url: str) -> None:
-    """The screen shows whose name goes on a decision before any is made."""
-    status, body = _get(f"{dashboard_url}/api/reauthored?city=paris")
-    assert status == 200
-    assert json.loads(body)["reviewer"].strip()
-
-
-def test_a_decision_is_refused_for_an_unknown_beat(dashboard_url: str) -> None:
-    """A bad id is a 404 naming it, never a traceback or a silent no-op."""
-    status, body = _post(
-        f"{dashboard_url}/api/reauthored/decision",
-        {"city": "paris", "beat_id": "not-a-real-beat", "decision": "approve"},
-    )
+    A live, unstubbed handler: nothing here is monkeypatched. The route is gone
+    entirely — a bare 404 from the static fall-through, not a 200 with an empty
+    queue and not a purpose-built "gone" error body.
+    """
+    status, _ = _get(f"{dashboard_url}/api/reauthored?city=paris")
     assert status == 404
-    assert "not-a-real-beat" in json.loads(body)["error"]
 
-
-def test_a_decision_is_refused_for_an_unknown_verdict(dashboard_url: str) -> None:
-    """Only approve and reject exist; anything else is a 400, not a fourth state."""
+    # The one write this server used to accept is unimplemented. There is no
+    # do_POST method at all, so the stdlib's own default answers 501 — not a
+    # hand-written 501 that keeps the endpoint alive as a dead method.
     status, _ = _post(
         f"{dashboard_url}/api/reauthored/decision",
-        {"city": "paris", "beat_id": "x", "decision": "looks-fine"},
+        {"city": "paris", "beat_id": "x", "decision": "approve"},
     )
-    assert status == 400
-
-
-def test_review_route_shows_only_what_needs_a_person(dashboard_url: str) -> None:
-    """The queue is the escalations, not the corpus. 384 of 524 were machine-settled."""
-    status, body = _get(f"{dashboard_url}/api/reauthored?city=paris")
-    assert status == 200
-    payload = json.loads(body)
-
-    assert payload["summary"]["auto_approved"] > 0
-    assert payload["summary"]["escalated"] == len(payload["candidates"])
-    # Every row a person sees carries the machine's reason for not settling it.
-    assert all(row["verified"]["reason"] for row in payload["candidates"])
-    assert len(payload["candidates"]) < payload["summary"]["total"]
-
-
-def test_review_route_can_still_show_everything(dashboard_url: str) -> None:
-    """Spot-checking the auto-approved is a legitimate thing to want."""
-    status, body = _get(f"{dashboard_url}/api/reauthored?city=paris&show=all")
-    payload = json.loads(body)
-    assert status == 200
-    assert len(payload["candidates"]) == payload["summary"]["total"]
+    assert status == 501

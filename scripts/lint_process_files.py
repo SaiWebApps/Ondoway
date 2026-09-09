@@ -16,10 +16,11 @@ defects this lint refuses, each with a file:line:
 - a `specs/<path>` citation in src/ or scripts/ Python — the spec tree is
   retired, so a path citation there points at fixtures/ or at git history.
 
-Three things a reference scan over prose must NOT flag: a `~`-prefixed home
+Four things a reference scan over prose must NOT flag: a `~`-prefixed home
 path (not a repo claim), a gitignored path (a machine-local artifact, judged
-by `git check-ignore`), and a line that narrates a removal (the one sentence
-allowed to name a thing that is gone).
+by `git check-ignore`), a line that narrates a removal (the one sentence
+allowed to name a thing that is gone), and a `./`-prefixed path (a planned
+artifact prose says it *creates*, not a claim that the repo already has it).
 
 Stdlib only; run as `uv run python scripts/lint_process_files.py`.
 """
@@ -96,12 +97,23 @@ def find_dates(text: str) -> list[str]:
     return DATE_RE.findall(text)
 
 
+def is_planned_path(token: str) -> bool:
+    """True when ``token`` is a `./`-prefixed path.
+
+    Prose that says a change *creates* `./src/ingest/model.py` is describing a
+    planned artifact, not claiming the repo already has it — so it must never
+    be treated as a dangling reference just because the file doesn't exist yet.
+    """
+    return token.startswith("./")
+
+
 def find_refs(text: str) -> set[str]:
     """Every repo-relative path the text claims exists.
 
     A claim is a whole token that either contains `.claude/` or starts with a
     known top-level directory and has a `/`. Tokens carrying placeholder or
-    glob characters, or characters a repo path cannot hold, make no claim.
+    glob characters, characters a repo path cannot hold, or a `./` planned-path
+    prefix, make no claim.
     """
     refs: set[str] = set()
     for raw in TOKEN_RE.findall(text):
@@ -111,6 +123,8 @@ def find_refs(text: str) -> set[str]:
             continue
         if token.startswith("~"):
             continue  # a home path is never a repo claim
+        if is_planned_path(token):
+            continue  # a planned artifact, not a claim the repo already has it
         if ".claude/" in token:
             token = token[token.index(".claude/") :]
         elif not any(token.startswith(top + "/") for top in TOP_DIRS):

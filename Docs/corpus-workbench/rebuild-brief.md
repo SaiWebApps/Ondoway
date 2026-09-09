@@ -1,7 +1,13 @@
 # Lane B re-author — state, findings, and what to build next
 
-Read this before touching the re-author pipeline. It records what exists, what an
-adversarial panel proved wrong about it, and the architecture that replaces it.
+> **Retired in slice 0 of the ingestion rebuild.** This document describes the Lane B
+> re-author pipeline, which was retired: its scripts, tests and review page were moved
+> under `_to_be_deleted/` and its dashboard routes removed, so nothing described here runs.
+> It is kept as a record until slice 11 deletes it; the live plan is
+> `Docs/ingestion/rebuild-spec.md`.
+
+This recorded, before the pipeline was retired, what existed, what an adversarial panel
+proved wrong about it, and the architecture that was to replace it.
 The decisions that still hold are in [decisions.md](decisions.md); this document
 supersedes the parts of it named below.
 
@@ -18,11 +24,11 @@ wasted spend, not a corrupted corpus.
 | Module | Does |
 |---|---|
 | `scripts/corpus_report.py` | Corpus quality + coverage, read from files. Sound; unaffected by the findings below. |
-| `scripts/reauthor_preview.py` | Selects the copied backlog, holds the rewrite prompt and model constants. |
-| `scripts/reauthor_run.py` | Batch rewrite into `data/{city}/reauthored.json`. Resumable. |
-| `scripts/reauthor_verify.py` | The two-judge verification. **Its design is refuted — see below.** |
-| `scripts/reauthor_review.py` | Human decision records, hash-bound. Sound. |
-| `frontend/corpus.html`, `frontend/rewrites.html` | The dashboard and the review queue, served by `src/server.py`. |
+| `_to_be_deleted/scripts/reauthor_preview.py` | Selects the copied backlog, holds the rewrite prompt and model constants. |
+| `_to_be_deleted/scripts/reauthor_run.py` | Batch rewrite into `data/{city}/reauthored.json`. Resumable. |
+| `_to_be_deleted/scripts/reauthor_verify.py` | The two-judge verification. **Its design is refuted — see below.** |
+| `_to_be_deleted/scripts/reauthor_review.py` | Human decision records, hash-bound. Sound. |
+| `frontend/corpus.html`, `_to_be_deleted/frontend/rewrites.html` | The dashboard and the review queue it was served beside; the review queue's routes were removed from `src/server.py`. |
 
 London is excluded from all of it and stays excluded: its beats are junk from the
 automated drafter, not a backlog worth repairing.

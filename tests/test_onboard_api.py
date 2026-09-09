@@ -43,7 +43,8 @@ def client():
 def _london_free_registry(monkeypatch):
     """Run these hermetic tests against a registry view that EXCLUDES ``london``.
 
-    ``london`` is now a REAL registered city (``data/london/`` + ``src/cities.json``),
+    ``london`` is a REAL registered city in ``src/cities.json`` (its corpus has since
+    been retired to ``_to_be_deleted/``),
     so ``create_job``'s "already onboarded" guard would 422 every happy-path setup
     here — but the fixtures are london-specific (``tests/fixtures/onboard/london/``),
     so the tests must keep using slug ``london``. Surgically drop ONLY london from
@@ -256,7 +257,7 @@ def test_onboard_router_absent_when_workbench_disabled(monkeypatch):
 # 5. upload: writes the city hermetically + pins the API's OWN NEO4J_* env.
 # ---------------------------------------------------------------------------
 def test_upload_writes_city_and_pins_neo4j_env(client, monkeypatch, tmp_path):
-    """upload writes data/london/ under a tmp root and calls the deploy seam once
+    """upload writes the london corpus under a tmp root and calls the deploy seam once
     with the deploy cmd and a COPY of the API's own env (NEO4J_URI carried
     through).
 
