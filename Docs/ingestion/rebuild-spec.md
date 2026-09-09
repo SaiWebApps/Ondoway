@@ -54,6 +54,54 @@ them.
 
 ---
 
+## Rights and licensing
+
+What the engine may take from a source, and what it owes back. The rules that are enforced
+in code are stated as rules; the two positions marked **default** are the owner's to change,
+and stand until changed.
+
+**Facts, not expression.** A source is used for the facts it states, never for its wording.
+Claims (`P1`) carry a verbatim `span` only as evidence of where the fact came from; narration
+(`P4`) is written from claims alone and never sees a span. The mechanical proof is the lift
+gate: an 8+ consecutive-word run shared with any span, outside an attributed quotation, is
+copying and is refused (`scripts/verbatim.py`); a 5-word run is ordinary phrasing. A quotation
+is attributed only when the narration names its speaker or author; naming a guidebook is not
+attribution and does not license the run.
+
+**Every source carries a rights basis and an as-of date, recorded at intake.** The manifest
+(`D12`) and the `POST /ingest/jobs` body carry `rights_basis`; `P0` refuses a unit without
+one, and the value is copied onto every `Source` the unit yields. The vocabulary
+(**default**):
+
+| `rights_basis` | Meaning | What the engine does with it |
+|---|---|---|
+| `owned_copy` | A guidebook or other work the owner holds a copy of, used as a factual source | Facts only; the lift gate is the proof that no expression was taken. Attribution is recorded on the beat, never voiced. |
+| `cc_by_sa` | Text under CC BY-SA (Wikipedia) | Facts only, same gate. Attribution is owed: the source record carries `article_title`, the `?oldid=` URL, `revision_id`, `section` and `retrieved_at` (§2 validator rules), and the app shows them with the licence name wherever the beat is served (a "Sources" line on the stop). |
+| `public_domain` | Out of copyright or released to the public domain | Facts and, where wanted, wording; the lift gate still applies so narration stays in the house voice. |
+| `own_work` | Text written for Ondoway by its own people | No restriction; recorded so provenance is never blank. |
+| `permission` | Written permission from the rights holder, reference kept in the manifest | As the permission states; the manifest names the reference. |
+
+**Wikipedia (default).** Wikipedia is ingested on a book's terms for the pipeline (chunked,
+revision-pinned, gated the same way) and on `cc_by_sa` terms for what is owed. The project's
+working position is that narration composed from extracted claims is original expression
+built on uncopyrightable facts, so it is not a derivative of the article's text and carries
+no share-alike obligation; the attribution obligation is met by the source record and the
+"Sources" line. This is a position the owner has taken for the product, not legal advice; if
+counsel rules differently, `cc_by_sa` beats are the ones the graph can withdraw by
+`rights_basis` in one query.
+
+**What today's corpus already records.** Every beat carries a `source_attribution` dict —
+for a book its title, and where the extractor recorded them its author and chapter (90% of
+book beats) and page (24%); for Wikipedia, on every one of its 192 beats, `article_title`,
+the `?oldid=` URL, `revision_id`, `section` and `retrieved_at`. The new record (§2) carries
+`as_of` and `rights_basis` on every `Source` and the five Wikipedia fields on a `cc_by_sa`
+source; slice 10 sets them for every re-extracted source from its manifest.
+
+**Why this is written down.** The rights-cleared-drop ruling this rebuild inherits survived in
+no file after the spec tree was retired; the lift threshold and the "facts are not
+copyrightable" reasoning lived only in the Lane B interview notes. Both now live here, beside
+the gates that enforce them.
+
 ## 1. Decisions from the interview (2026-09-08)
 
 | # | Decision | Forced by |
@@ -97,9 +145,10 @@ One beat in `data/{city}/beats.json`. Field names are final; slice 1 pins them.
       "sources": [
         {"source_id": "lonely-planet-new-york-city", "chunk": "chunk-07-upper-east-side",
          "span": "Construction was finally completed in 1959 – after both Wright and Guggenheim had passed away.",
-         "as_of": 2023, "stated_value": null},
+         "as_of": 2023, "rights_basis": "owned_copy", "stated_value": null},
         {"source_id": "frommers-nyc-2024", "chunk": "chunk-05-exploring-uptown",
-         "span": "Visiting this 1959 masterpiece ...", "as_of": 2024, "stated_value": null}
+         "span": "Visiting this 1959 masterpiece ...", "as_of": 2024, "rights_basis": "owned_copy",
+         "stated_value": null}
       ],
       "resolved_value": null,
       "resolution": {"by": "corroborated", "decided_by": null, "decided_at": null},
@@ -127,7 +176,9 @@ One beat in `data/{city}/beats.json`. Field names are final; slice 1 pins them.
 Rules the validator enforces on this shape (slice 1):
 
 - `beat_id == f"{city_name}/{slug(poi_name)}/{story_slug}"`, unique per file.
-- Every claim has ≥1 source; every source has `as_of`; every `span` is a verbatim
+- Every claim has ≥1 source; every source has `as_of` and a `rights_basis` from the
+  vocabulary in Rights and licensing, and a `cc_by_sa` source also carries `article_title`,
+  `url` (with `?oldid=`), `revision_id`, `section` and `retrieved_at`; every `span` is a verbatim
   substring of the named chunk file; every claim has a `verdict` whose `judge_model` differs
   from `narration.author_model`.
 - `kind ∈ {event, state, belief}`; `status ∈ {resolved, contested, superseded}`; a
@@ -330,6 +381,9 @@ the mock client with a screenshot.
 `scripts/db_parity.py` reports withdrawn counts.
 **Proves:** `tests/test_upload_paris.py::test_publish_withdraws_beats_absent_from_file` on
 7688; a before/after count on 7687 pasted into the slice report.
+The withdraw step also retires the four seeded beats that exist in the dev graph and in no
+file — verbatim bodies from `src/seed/narratives.py`, uploaded without a `beat_id` — since
+they are absent from every file by construction; the before/after count names them.
 
 ### Slice 9: Proof chunk under the new model
 
