@@ -195,6 +195,19 @@ def pre_tool_use(tool: str, tool_input: dict, cwd: Path, receipts: dict) -> int:
 
 
 def post_tool_use(tool: str, tool_input: dict, cwd: Path, receipts_file: Path) -> int:
+    # AN EDIT THIS SESSION MADE IS CONTENT THIS SESSION KNOWS. The pre-check has
+    # already proved the whole file was read, and the delta was authored here —
+    # so the receipt is extended over the file's new length instead of leaving
+    # the added lines "unread". Without this, every edit invalidates the lines it
+    # just wrote and the next edit to the same file demands another walk.
+    if tool in ("Edit", "Write", "MultiEdit"):
+        rel = _relative(str(tool_input.get("file_path", "")), cwd)
+        total = _line_total(cwd, rel)
+        if _guarded(rel) and total:
+            receipts = _load(receipts_file)
+            receipts[rel] = [[1, total]]
+            _save(receipts_file, receipts)
+        return 0
     covered = [span for span in _read_ranges(tool, tool_input, cwd) if _guarded(span[0])]
     if covered:
         receipts = _load(receipts_file)
