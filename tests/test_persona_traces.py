@@ -691,6 +691,56 @@ def test_a_lensed_day_serves_the_subject_it_was_asked_for(served, live_neo4j):
 
 
 @needs_neo4j
+def test_a_door_reported_shut_never_returns_to_the_day(served):
+    """M7, Docs/adr/0006 rule 5 — Aiko's own step 6 (07-rainy-tuesday.md: "Walks
+    to a museum she wanted to see and finds it shut. It is Tuesday.").
+
+    A walker standing at a locked door says so, and the day answers. The stop
+    leaves the remainder the planner keeps to, and it never comes back — not in
+    the reply, not in any later version of the walk, not in the stored session
+    the phone fetches next. A door that returns sends the walker back to the door
+    they have just reported, which is the one thing the report exists to prevent.
+
+    The count on the place is the same report's other half and is pinned where it
+    is written (`tests/test_trip_api.py`, the M5 closed-report test); this reads
+    only what a walker can see: the day they are handed.
+
+    UNDO: drop the `_without_the_shut_door` split from `replan_trip_session` ->
+    the shut stop is back in the very next reply -> RED.
+    """
+    reported = 0
+    for name, trace in served.items():
+        for index, step in enumerate(trace.walk):
+            if not step.served or step.reported_closed is None:
+                continue
+            shut = step.reported_closed
+            assert shut in {st["poi_id"] for st in step.ahead}, (
+                f"{name}: the trace reported {shut!r} shut when it was not ahead — "
+                "the step measured nothing"
+            )
+            reported += 1
+            later = [step.reply, *(s.reply for s in trace.walk[index + 1 :] if s.served)]
+            if trace.final_session and "refusal" not in trace.final_session:
+                later.append(trace.final_session)
+            for day in later:
+                assert shut not in _stop_ids(day), (
+                    f"{name}: {shut!r} was reported shut and is back in "
+                    f"v{day.get('plan_version')} — the day sends the walker to the "
+                    "door they just found locked"
+                )
+                # Nor may an answer the phone might apply put it back.
+                for entry in day.get("contingencies", []):
+                    assert shut not in entry.get("stop_ids", []), (
+                        f"{name}: {entry['trigger']} seats {shut!r}, which was "
+                        "reported shut"
+                    )
+    assert reported, (
+        "no served day reported a shut door, so rule 5 measured nothing across the "
+        "eleven — no day the product serves has a stop the walker goes inside"
+    )
+
+
+@needs_neo4j
 def test_aikos_rainy_tuesday_serves(client):
     """Phase 10's gate, red-first: 07-rainy-tuesday.md step 6 is the failure this
     phase exists to close ("Walks to a museum she wanted to see and finds it

@@ -153,6 +153,10 @@ class Step:
     next_stop_index: int
     before: dict
     reply: dict
+    #: The door this step reported SHUT, when it reported one (Docs/adr/0006
+    #: rule 5). Recorded so an invariant can follow that place through every
+    #: later version without re-deriving which stop the step stood at.
+    reported_closed: str | None = None
 
     @property
     def served(self) -> bool:
@@ -274,6 +278,7 @@ def replan(
         next_stop_index=int(next_stop_index),
         before=before,
         reply=resp.json() if resp.status_code == 200 else {"refusal": _detail(resp)},
+        reported_closed=observations.get("closed_stop_id"),
     )
     trace.walk.append(step)
     return step
@@ -311,8 +316,9 @@ MINUTES_LEFT_AT_RISK = 20
 def walk_the_day(client, trace: Trace) -> Trace:
     """REPLAY the persona's day as a scripted position-and-behaviour stream.
 
-    Four steps, and the bound is stated rather than silent (§0.9.2(a) — only the
+    Five steps, and the bound is stated rather than silent (§0.9.2(a) — only the
     relevant calls run; a trace is not a sweep): leaving the first stop on time;
+    REPORTING A SHUT DOOR at the first door still ahead (Docs/adr/0006 rule 5);
     on the LEG between two footprints; a LINGER of 46 minutes at the next stop;
     and the TAIL from the last stop still ahead. Each step reports against the
     version the previous one handed back, because that is the day the person is
@@ -340,6 +346,28 @@ def walk_the_day(client, trace: Trace) -> Trace:
     if not step.served:
         return trace
     current = step.reply
+
+    # THE SHUT DOOR (Docs/adr/0006 rule 5). A walker standing at a door the plan
+    # sent them to can find it locked, and the day must answer: the stop leaves
+    # the day, the report is counted on the place, and a guessed door with a
+    # standby offers it. Reported against the version just handed back, from the
+    # door itself, with every stop of that version still ahead.
+    ahead = list(current.get("stops", []))
+    shut = next((s for s in ahead if (s.get("trigger") or {}).get("door")), None)
+    if shut is not None:
+        step = replan(
+            client,
+            trace,
+            label=f"reporting {shut.get('poi_name', 'a door')} shut",
+            at=(shut["lat"], shut["lng"]),
+            before=current,
+            wall_elapsed_seconds=elapsed_at(trace.session, here),
+            next_stop_index=0,
+            closed_stop_id=shut["poi_id"],
+        )
+        if not step.served:
+            return trace
+        current = step.reply
 
     ahead = list(current.get("stops", []))
     if ahead:
