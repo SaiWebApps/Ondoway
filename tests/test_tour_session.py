@@ -1060,6 +1060,142 @@ def test_a_nearer_shut_standby_is_skipped_for_the_farther_open_one():
     )
 
 
+def _m6_day():
+    """The M6 corpus: one guessed interior stop on the day and one open map-sourced
+    place off it. Returns (base route, request, snapshot, the standby's id)."""
+    from src.tour.selection import select_route
+
+    stand_map = _stand(_at(PDV, 150.0, 20.0, "stand-map", tier=5, beat_count=5), 14)
+    guess = _interior(
+        _at(PDV, 320.0, 60.0, "guess-carry", tier=5, beat_count=5), outside_min=5, inside_min=7
+    )
+    guess = guess.model_copy(
+        update={
+            "opening_hours": "Mo-Su 09:00-18:00",
+            "opening_hours_source": "guess",
+            "place_category": "museum",
+        }
+    )
+    bench = _bench(_at(PDV, 460.0, 80.0, "bench-carry"), 10)
+    stand_end = _stand(_at(PDV, 620.0, 90.0, "stand-end-carry", tier=5, beat_count=5), 20)
+    standby = _stand(_at(PDV, 400.0, 70.0, "standby-carry", tier=3, beat_count=3), 10)
+    standby = standby.model_copy(
+        update={"opening_hours": "Mo-Su 06:00-22:00", "opening_hours_source": "map"}
+    )
+    end = _at(PDV, 1500.0, 95.0, "end-carry")
+    snap = _snap([stand_map, guess, bench, stand_end, standby])
+    request = TourInput(
+        start=PDV,
+        end=(end.lat, end.lng),
+        duration_min=110,
+        city_slug="paris",
+        round_trip=False,
+        start_datetime="2026-08-19T14:00",
+        end_hardness="wall",
+        rest_cadence_minutes=6,
+    )
+    return select_route(request, snap), request, snap, standby.id, guess.id
+
+
+def test_the_standby_leaves_the_set_as_a_held_stop_beside_the_day():
+    """M6b: the phone drops any id it does not already hold, so a standby named by
+    an entry must ARRIVE as a stop. It rides its OWN list, never inside the day's
+    stops — the replan splits the day by the phone's index and a standby sitting in
+    that list would shift every index past it.
+
+    UNDO: return [] from `_standby_stops` -> RED.
+    """
+    from src.api.models.trips import GeneratedStop
+    from src.api.routes.trips import _standby_stops
+    from src.tour.contingency import build_contingency_set
+    from src.tour.contract import ReplanContext
+
+    base, request, snap, standby_id, _guess_id = _m6_day()
+    assert standby_id not in {p.id for p in base.pois}, "premise: the standby is off the day"
+    cset = build_contingency_set(
+        base, request, snap, routing_client=None,
+        person=ReplanContext(protected_poi_ids=("bench-carry",)),
+    )
+    stops_out = [
+        GeneratedStop(
+            sort_order=i + 1,
+            poi_id=p.id,
+            poi_name=p.name,
+            lat=p.lat,
+            lng=p.lng,
+            duration_min=5,
+            importance_tier=p.tier,
+            start_time="14:00",
+        )
+        for i, p in enumerate(base.pois)
+    ]
+    standbys = _standby_stops(cset, stops_out)
+    ids = [s.poi_id for s in standbys]
+    assert standby_id in ids, f"the standby must arrive as a held stop; got {ids}"
+    assert all(isinstance(s, GeneratedStop) for s in standbys)
+    planned = {s.poi_id for s in stops_out}
+    assert not (set(ids) & planned), f"a standby is never a stop of the day; got {ids}"
+    # Named once however many entries mention it.
+    assert len(ids) == len(set(ids)), f"one row per place; got {ids}"
+
+
+def test_a_carried_forward_door_entry_counts_its_standby_as_still_ahead():
+    """M6b: a replan carries forward the answers that still hold. A door_closed
+    entry names a standby that is deliberately NOT one of the new day's stops, so
+    the ahead-set has to include the standbys or every door entry is dropped the
+    moment the day replans.
+
+    UNDO: drop `new_day.standbys` from the ahead set -> RED.
+    """
+    from src.api.models.trips import GeneratedStop, SessionContingency, SessionPlan
+    from src.api.routes.trips import _carry_forward_entries
+
+    def stop(pid: str) -> GeneratedStop:
+        return GeneratedStop(
+            sort_order=1,
+            poi_id=pid,
+            poi_name=pid,
+            lat=48.85,
+            lng=2.35,
+            duration_min=5,
+            importance_tier=3,
+            start_time="14:00",
+        )
+
+    question = "Keep the day going at S and be at the end about 15:38, or carry on by 15:28?"
+    entry = SessionContingency(
+        contingency_id="v1-1",
+        trigger={"kind": "door_closed", "stop_id": "shut"},
+        plan_version=1,
+        stop_ids=["standby", "after"],
+        screen_text=question,
+        question=question,
+        default_arm="keep",
+        alternate_stop_ids=["after"],
+    )
+    previous = SessionPlan(
+        trip_id="t",
+        plan_version=1,
+        stops=[stop("shut"), stop("after")],
+        retime_tolerance_seconds=180,
+        contingencies=[entry],
+    )
+    new_day = SessionPlan(
+        trip_id="t",
+        plan_version=2,
+        stops=[stop("shut"), stop("after")],
+        standbys=[stop("standby")],
+        retime_tolerance_seconds=180,
+    )
+    kept = _carry_forward_entries(previous, new_day)
+    assert [e.contingency_id for e in kept] == ["v1-1"], (
+        "the door entry's standby is held beside the day, so the entry still holds"
+    )
+    # With no standby held, the entry names a place the phone cannot seat: dropped.
+    bare = new_day.model_copy(update={"standbys": []})
+    assert _carry_forward_entries(previous, bare) == []
+
+
 def test_a_standby_whose_name_cannot_sit_in_one_sentence_is_skipped_not_raised():
     """The wording rules raise INSIDE the builder (`plain`/`one_sentence` in
     `add`), and the API calls `build_contingency_set` unguarded — so a standby

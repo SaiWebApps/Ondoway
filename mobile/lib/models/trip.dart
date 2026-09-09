@@ -590,6 +590,12 @@ class SessionPlan {
   final String tripId;
   final int planVersion;
   final List<ItineraryStop> stops;
+
+  /// Places a `door_closed` entry can carry the day to — HELD, not walked. The
+  /// phone drops any id it does not already hold, so a standby has to arrive as
+  /// a stop; it rides beside the day rather than in it, because these are not
+  /// places the walk visits unless a door turns out to be shut.
+  final List<ItineraryStop> standbys;
   final List<SessionPromise> promises;
   final int retimeToleranceSeconds;
   final List<SessionContingency> contingencies;
@@ -632,6 +638,7 @@ class SessionPlan {
     required this.tripId,
     required this.planVersion,
     required this.stops,
+    this.standbys = const [],
     this.promises = const [],
     required this.retimeToleranceSeconds,
     this.contingencies = const [],
@@ -651,6 +658,9 @@ class SessionPlan {
     tripId: json['trip_id'] as String,
     planVersion: (json['plan_version'] as num).toInt(),
     stops: ((json['stops'] as List<dynamic>?) ?? const [])
+        .map((s) => ItineraryStop.fromJson(s as Map<String, dynamic>))
+        .toList(),
+    standbys: ((json['standbys'] as List<dynamic>?) ?? const [])
         .map((s) => ItineraryStop.fromJson(s as Map<String, dynamic>))
         .toList(),
     promises: ((json['promises'] as List<dynamic>?) ?? const [])

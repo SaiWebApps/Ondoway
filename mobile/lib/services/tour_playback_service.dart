@@ -1368,6 +1368,16 @@ class TourPlaybackService extends ChangeNotifier {
   /// The stop reported shut, until the walk ends.
   String? _closedStopId;
 
+  /// Every stop the phone HOLDS: the walked day, plus the standbys the session
+  /// carries beside it (M6b). An id is resolved against this — a standby is not
+  /// on the walked day, and resolving against that list alone is exactly how a
+  /// place the server offered gets dropped on sight (§4.7 cuts the other way:
+  /// what the phone holds it may seat; what it does not hold it may not invent).
+  List<ItineraryStop> get _held => [
+        ..._planned,
+        ...(_session?.standbys ?? const <ItineraryStop>[]),
+      ];
+
   // ---- S5.10: THE ONE re-timing expression --------------------------------
 
   /// THE phone's ONE re-timing expression (S5.10's seam; design §4.1): seconds
@@ -1611,7 +1621,10 @@ class TourPlaybackService extends ChangeNotifier {
       final sessionPois = session.stops.map((s) => s.poiId).toSet();
       if (!setEquals(remainingPois, sessionPois)) {
         final done = _stops.take(keepCount).toList();
-        final byPoi = {for (final s in _planned) s.poiId: s};
+        // The standbys count here too: once the walker has taken one, the next
+        // reply lists it as an ordinary stop, and mapping only through the
+        // walked day would drop the place they are standing in.
+        final byPoi = {for (final s in _held) s.poiId: s};
         final newRemaining = <ItineraryStop>[];
         for (final stop in session.stops) {
           final held = byPoi[stop.poiId];
@@ -1987,9 +2000,10 @@ class TourPlaybackService extends ChangeNotifier {
       }
     }
     final done = _stops.take(keepCount).toList();
-    final byPoi = {for (final s in _planned) s.poiId: s};
+    final held = _held;
+    final byPoi = {for (final s in held) s.poiId: s};
     final byStop = {
-      for (final s in _planned)
+      for (final s in held)
         if (s.stopId != null) s.stopId!: s
     };
     final remaining = <ItineraryStop>[];
@@ -2040,7 +2054,7 @@ class TourPlaybackService extends ChangeNotifier {
     final session = _session;
     if (session == null) return Future.value(0);
     return _audioService.prefetchAudio([
-      for (final stop in session.stops)
+      for (final stop in [...session.stops, ...session.standbys])
         if (_audioKeyOf(stop) != null)
           BeatAudioInfo(beatId: _audioKeyOf(stop)!, audioUrl: stop.audioUrl),
     ]);

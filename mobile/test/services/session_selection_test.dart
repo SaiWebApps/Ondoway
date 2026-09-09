@@ -349,6 +349,50 @@ void main() {
           reason: 'the keep arm must not truncate the walk');
     });
 
+    test('a standby the session HOLDS beside the day resolves and is seated — '
+        'the phone drops any id it does not hold (M6b)', () async {
+      final audio = _RecordingAudio();
+      final service = TourPlaybackService(
+        locationService: MockLocationService(),
+        audioService: audio,
+      );
+      await service.startTour(stops);
+      final standby = _stop(9, audioUrl: 'https://cdn/9.mp3');
+      final question = 'Keep the day going at Stop 9 and be at your finish about '
+          '15:50, or carry on without it and be at your finish by 15:40?';
+      service.holdSession(
+        SessionPlan(
+          tripId: 'trip-1',
+          planVersion: 1,
+          stops: stops,
+          standbys: [standby],
+          retimeToleranceSeconds: 180,
+          contingencies: [
+            _entry(
+              'door',
+              {'kind': 'door_closed', 'stop_id': 'poi-2'},
+              ['poi-9', 'poi-3', 'poi-4'],
+              screen: question,
+              question: question,
+              defaultArm: 'keep',
+              alternate: ['poi-3', 'poi-4'],
+            ),
+          ],
+        ),
+      );
+      service.reportDoorClosed('poi-2');
+      service.skipToStop(1);
+      expect(service.applyContingency('door'), isTrue);
+      final walked = service.plannedStops.map((s) => s.poiId).toList();
+      expect(walked, contains('poi-9'),
+          reason: 'the held standby is seated, not dropped');
+      expect(walked, isNot(contains('poi-2')), reason: 'the shut door leaves');
+      expect(service.currentStop?.poiId, 'poi-9');
+      // Its audio is prefetched with the day's, through the one cache door.
+      expect(await service.prefetchSessionAudio(), 5);
+      expect(audio.prefetched.single.map((b) => b.beatId), contains('item-9'));
+    });
+
     test('alternates prefetch through the EXISTING audio cache door, keyed as '
         'playback keys them (design §4.7)', () async {
       final audio = _RecordingAudio();

@@ -430,6 +430,11 @@ class SessionPlan(BaseModel):
     trip_id: str
     plan_version: int
     stops: list[GeneratedStop]
+    #: Places a `door_closed` entry can carry the day to, HELD but not walked. The
+    #: phone drops any id it does not already hold, so a standby has to arrive as a
+    #: stop — and it rides here rather than among `stops` because a replan splits the
+    #: day by the phone's own stop index, which a standby in that list would shift.
+    standbys: list[GeneratedStop] = Field(default_factory=list)
     promises: list[SessionPromise] = Field(default_factory=list)
     retime_tolerance_seconds: int
     contingencies: list[SessionContingency] = Field(default_factory=list)

@@ -1787,6 +1787,7 @@ def _session_plan(
         ),
         retime_tolerance_seconds=cset.retime_tolerance_seconds,
         contingencies=contingencies,
+        standbys=_standby_stops(cset, stops_out),
         # The preset the phone starts from until it has learned its own (§4.1):
         # the speed THIS day was planned at.
         walking_pace_kmh=PACE_KMH / float(tour_input.walking_pace or 1.0),
@@ -1797,6 +1798,48 @@ def _session_plan(
     )
 
 
+def _standby_stops(cset: ContingencySet, stops_out: list[GeneratedStop]) -> list[GeneratedStop]:
+    """The places a `door_closed` entry can carry the day to, as stops the phone can
+    hold (M6b). Each entry's own route is the KEPT arm — the day with the standby in
+    it — so the standby is whatever that route names and the planned day does not.
+
+    They are returned for their OWN list, never merged into the day: the phone drops
+    an id it does not hold, and a standby among the walked stops would sit on the map,
+    in the re-timing, and inside the index a replan splits the day by. Named once
+    however many doors offer it; the end sentinel is not a place.
+    """
+    planned = {stop.poi_id for stop in stops_out}
+    out: list[GeneratedStop] = []
+    seen: set[str] = set()
+    for entry in cset.entries:
+        if entry.trigger.get("kind") != "door_closed" or entry.route is None:
+            continue
+        for poi in entry.route.pois:
+            if poi.id in planned or poi.id in seen:
+                continue
+            if poi.id.startswith(END_B_SENTINEL_PREFIX) or poi.poi_role == "body":
+                continue
+            seen.add(poi.id)
+            out.append(
+                GeneratedStop(
+                    sort_order=len(planned) + len(out) + 1,
+                    poi_id=poi.id,
+                    poi_name=poi.name,
+                    lat=poi.lat,
+                    lng=poi.lng,
+                    duration_min=max(
+                        1, int(entry.route.planned_visit_seconds.get(poi.id, 0)) // 60
+                    ),
+                    importance_tier=poi.tier,
+                    # The clock is the arm's, not the day's: a standby is reached only
+                    # if the door was shut, so it has no place in the planned running
+                    # order. The entry's own finish clock carries that story.
+                    start_time="",
+                )
+            )
+    return out
+
+
 def _carry_forward_entries(previous: SessionPlan, new_day: SessionPlan) -> list[SessionContingency]:
     """The previous version's answers that are still answers for the NEW day (W5.12,
     "widen the precomputed set"): an entry whose trigger stop is still ahead and whose
@@ -1804,7 +1847,10 @@ def _carry_forward_entries(previous: SessionPlan, new_day: SessionPlan) -> list[
     still walking — it stays on the phone under the new version until the full set,
     computed right after the reply, replaces it on the next fetch. Ids are kept (the
     phone selects by id); the version is the new one."""
-    ahead = {st.poi_id for st in new_day.stops}
+    # A door entry names a standby the new day deliberately does NOT walk, so the
+    # held places count as ahead too — without them every door entry is dropped the
+    # moment the day replans.
+    ahead = {st.poi_id for st in new_day.stops} | {st.poi_id for st in new_day.standbys}
     kept: list[SessionContingency] = []
     for e in previous.contingencies:
         if e.trigger.get("kind") == "live":
@@ -1920,8 +1966,13 @@ def get_trip_session(
 
 
 def _with_live_audio(session: Session, plan: SessionPlan) -> SessionPlan:
-    """Overlay the items' current audio fields onto a saved session's stops."""
-    ids = [stop.stop_id for stop in plan.stops if stop.stop_id]
+    """Overlay the items' current audio fields onto a saved session's stops.
+
+    The HELD standbys go through the same overlay: their audio is written onto their
+    own items by the same voicing pass, and a standby whose file the phone never sees
+    is a place it can seat and cannot play."""
+    held = [*plan.stops, *plan.standbys]
+    ids = [stop.stop_id for stop in held if stop.stop_id]
     if not ids:
         return plan
     rows = session.run(
@@ -1940,41 +1991,52 @@ def _with_live_audio(session: Session, plan: SessionPlan) -> SessionPlan:
         ids=ids,
     )
     by_id = {r["id"]: dict(r) for r in rows}
-    stops = []
-    for stop in plan.stops:
-        live = by_id.get(stop.stop_id or "")
-        if not live:
-            stops.append(stop)
-            continue
-        stops.append(
-            stop.model_copy(
-                update={
-                    "audio_url": live["audio_url"] or stop.audio_url,
-                    "audio_duration_sec": live["audio_duration_sec"] or stop.audio_duration_sec,
-                    "close_audio_url": live["close_audio_url"] or stop.close_audio_url,
-                    "thread_audio_urls": (
-                        json.loads(live["thread_audio_urls"])
-                        if live["thread_audio_urls"]
-                        else stop.thread_audio_urls
-                    ),
-                    "full_close_audio_url": live["full_close_audio_url"]
-                    or stop.full_close_audio_url,
-                    # Phase 7 S7.7: the leg piece's file rides the same overlay.
-                    "leg_audio_url": live["leg_audio_url"] or stop.leg_audio_url,
-                    "leg_audio_duration_sec": (
-                        live["leg_audio_duration_sec"] or stop.leg_audio_duration_sec
-                    ),
-                    # Phase 7 S7.7 (B): the chapters, with the files the voicing pass
-                    # wrote into the item's list, ride the same overlay.
-                    "segments": (
-                        [StopSegment.model_validate(d) for d in json.loads(live["segments_json"])]
-                        if live["segments_json"]
-                        else stop.segments
-                    ),
-                }
+
+    def overlaid(source: list[GeneratedStop]) -> list[GeneratedStop]:
+        stops = []
+        for stop in source:
+            live = by_id.get(stop.stop_id or "")
+            if not live:
+                stops.append(stop)
+                continue
+            stops.append(
+                stop.model_copy(
+                    update={
+                        "audio_url": live["audio_url"] or stop.audio_url,
+                        "audio_duration_sec": (
+                            live["audio_duration_sec"] or stop.audio_duration_sec
+                        ),
+                        "close_audio_url": live["close_audio_url"] or stop.close_audio_url,
+                        "thread_audio_urls": (
+                            json.loads(live["thread_audio_urls"])
+                            if live["thread_audio_urls"]
+                            else stop.thread_audio_urls
+                        ),
+                        "full_close_audio_url": live["full_close_audio_url"]
+                        or stop.full_close_audio_url,
+                        # Phase 7 S7.7: the leg piece's file rides the same overlay.
+                        "leg_audio_url": live["leg_audio_url"] or stop.leg_audio_url,
+                        "leg_audio_duration_sec": (
+                            live["leg_audio_duration_sec"] or stop.leg_audio_duration_sec
+                        ),
+                        # Phase 7 S7.7 (B): the chapters, with the files the voicing
+                        # pass wrote into the item's list, ride the same overlay.
+                        "segments": (
+                            [
+                                StopSegment.model_validate(d)
+                                for d in json.loads(live["segments_json"])
+                            ]
+                            if live["segments_json"]
+                            else stop.segments
+                        ),
+                    }
+                )
             )
-        )
-    return plan.model_copy(update={"stops": stops})
+        return stops
+
+    return plan.model_copy(
+        update={"stops": overlaid(plan.stops), "standbys": overlaid(plan.standbys)}
+    )
 
 
 def _releg_kept_stops(
