@@ -692,9 +692,23 @@ class _WalkControls extends StatelessWidget {
     }
   }
 
+  /// The walker found this door shut and said so.
+  ///
+  /// The server has already worked out what to offer instead, so the phone
+  /// records the observation and SELECTS the answer it is holding: the standby
+  /// question comes up at once, offline, with no round trip to wait through at
+  /// a locked door. Only when no such answer was precomputed does this fall
+  /// back to asking the server to replan the day without the stop, which is
+  /// what every shut door used to do.
   Future<void> _reportClosed(BuildContext context) async {
     final stop = engine.currentStop;
     if (stop == null) return;
+    engine.reportDoorClosed(stop.poiId);
+    final held = engine.matchContingency(engine.measure());
+    if (held != null) {
+      engine.applyContingency(held.contingencyId);
+      return;
+    }
     final token = context.read<AuthService>().accessToken;
     final tripService = context.read<TripService>();
     final tripId = engine.session?.tripId;

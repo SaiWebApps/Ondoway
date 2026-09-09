@@ -799,4 +799,103 @@ void main() {
     expect(service.plannedStops.first.poiId, 'poi-1');
     await tester.pumpWidget(const SizedBox());
   });
+
+  // M6d (Docs/adr/0006 rule 4): the server has already worked out what to offer
+  // at a guessed door, so the tap SELECTS the answer the phone is holding — two
+  // arms, at once, offline — instead of making the walker wait on a round trip
+  // while they stand at a locked door.
+  testWidgets('a shut door with a standby held asks the two-arm question without '
+      'going to the server, and the keep arm walks to the standby', (tester) async {
+    final gps = MockLocationService();
+    final audio = MockAudioService();
+    final service =
+        TourPlaybackService(locationService: gps, audioService: audio);
+    final doorStop = ItineraryStop(
+      sortOrder: 0,
+      stopId: 'item-0',
+      poiId: 'orangerie',
+      poiName: 'the Orangerie',
+      lat: _base,
+      lng: 2.35,
+      beatId: 'beat-0',
+      lensName: 'history',
+      lensDisplay: 'History',
+      durationMin: 5,
+      importanceTier: 3,
+      startTime: '',
+      audioUrl: 'https://cdn.example.com/0.mp3',
+      audioDurationSec: 100,
+      dwellSeconds: 300,
+      trigger: const StopTrigger(radiusM: 40, door: true),
+    );
+    final nextStop = _sessionStop(1, lat: _base + 300 * _degPerMeterLat);
+    const standby = ItineraryStop(
+      sortOrder: 9,
+      stopId: 'item-9',
+      poiId: 'cluny',
+      poiName: 'the Cluny',
+      lat: _base + 120 * _degPerMeterLat,
+      lng: 2.35,
+      lensName: 'history',
+      lensDisplay: 'History',
+      durationMin: 10,
+      importanceTier: 3,
+      startTime: '',
+      audioUrl: 'https://cdn.example.com/9.mp3',
+      narration: 'The Cluny keeps its Roman baths.',
+    );
+    const doorQuestion =
+        'Keep the day going at the Cluny and be at the Orsay about 15:38, '
+        'or carry on without it and be at the Orsay by 15:28?';
+
+    await service.startTour([doorStop, nextStop]);
+    service.holdSession(SessionPlan(
+      tripId: 'trip-1',
+      planVersion: 1,
+      stops: [doorStop, nextStop],
+      standbys: const [standby],
+      retimeToleranceSeconds: 180,
+      dayStartHhmm: '09:00',
+      contingencies: const [
+        SessionContingency(
+          contingencyId: 'v1-door',
+          trigger: {'kind': 'door_closed', 'stop_id': 'orangerie'},
+          planVersion: 1,
+          stopIds: ['cluny', 'poi-1'],
+          screenText: doorQuestion,
+          question: doorQuestion,
+          defaultArm: 'keep',
+          alternateStopIds: ['poi-1'],
+        ),
+      ],
+    ));
+
+    final trips = _MockTripService();
+    await tester.pumpWidget(_closedDoorHarness(
+      loc: gps,
+      audio: audio,
+      engine: service,
+      auth: _FixedTokenAuthService('tok'),
+      tripService: trips,
+    ));
+    await tester.pump(const Duration(milliseconds: 350));
+
+    await tester.tap(find.byKey(const Key('session-closed-report')));
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(trips.capturedClosedStopId, isNull,
+        reason: 'the answer was already held — no round trip at a locked door');
+    expect(find.byKey(const Key('session-question')), findsOneWidget);
+    expect(find.byKey(const Key('session-arm-keep')), findsOneWidget);
+    expect(find.byKey(const Key('session-arm-shorten')), findsOneWidget);
+    expect(find.textContaining('the Cluny'), findsWidgets);
+
+    // The keep arm walks to the standby; the shut door leaves either way.
+    await tester.tap(find.byKey(const Key('session-arm-keep')));
+    await tester.pump(const Duration(milliseconds: 350));
+    final walked = service.plannedStops.map((s) => s.poiId).toList();
+    expect(walked, contains('cluny'));
+    expect(walked, isNot(contains('orangerie')));
+    await tester.pumpWidget(const SizedBox());
+  });
 }
