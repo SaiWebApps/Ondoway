@@ -5,11 +5,16 @@ The team process asks every session to walk the code with codegraph or whole-fil
 reads before touching it. Asked is not enforced; this hook is the enforcement.
 It runs on two Claude Code hook events, from the same script:
 
-- PostToolUse (Read, Bash): records a RECEIPT for every guarded file the session
-  read whole — a `Read` with no offset/limit on a file that fits one default Read
-  window, `codegraph node --file <path>`, or a bare `cat <path>` that nothing
-  truncates. A bare Read of a file longer than the window is an excerpt and earns
-  nothing; the refusal points at the command that shows the whole file.
+- PostToolUse (Read, Bash): records the LINE RANGE every read covered —
+  a `Read` (its offset and limit, or the default window from the top),
+  `codegraph node --file <path>`, or a bare `cat <path>`, which cover the file
+  entire. Ranges accumulate and merge, so a file longer than one Read window is
+  walked by paging through it; the refusal names the lines still missing.
+
+  A cap that no single Read could clear was worse than no cap: a 2353-line file
+  could never earn a receipt, so the only ways forward were the two shell
+  commands or reading an excerpt and reasoning from it — and reasoning is not
+  what this hook gates. A wall invites climbing round; a ladder is climbed.
 - PreToolUse (Edit, Write, MultiEdit, Bash): refuses an edit to an existing guarded
   file with no receipt, and refuses in-place shell writes (`sed -i`, `>`/`>>`
   redirects, `tee`) to guarded paths outright — those bypass the receipt and the
@@ -65,43 +70,85 @@ def _receipts_path(cwd: Path, session_id: str) -> Path:
     return cwd / RECEIPTS_DIR / f"{safe}.json"
 
 
-def _load(path: Path) -> set[str]:
+def _load(path: Path) -> dict[str, list[list[int]]]:
     if not path.is_file():
-        return set()
+        return {}
     try:
-        return set(json.loads(path.read_text()))
+        data = json.loads(path.read_text())
     except (OSError, ValueError):
-        return set()
+        return {}
+    if isinstance(data, list):  # receipts written before ranges: whole files
+        return {str(p): [[1, 10**9]] for p in data}
+    try:
+        return {str(k): [[int(a), int(b)] for a, b in v] for k, v in data.items()}
+    except (TypeError, ValueError):
+        return {}
 
 
-def _save(path: Path, receipts: set[str]) -> None:
+def _save(path: Path, receipts: dict[str, list[list[int]]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(sorted(receipts)))
+    path.write_text(json.dumps({key: receipts[key] for key in sorted(receipts)}))
 
 
-def _fits_one_read(cwd: Path, rel: str) -> bool:
-    """A default Read shows at most READ_DEFAULT_LINES; a longer file was NOT read whole."""
+def _line_total(cwd: Path, rel: str) -> int:
     try:
         with (cwd / rel).open(errors="replace") as handle:
-            return sum(1 for _ in handle) <= READ_DEFAULT_LINES
+            return sum(1 for _ in handle)
     except OSError:
-        return False
+        return 0
 
 
-def _whole_read_paths(tool: str, tool_input: dict, cwd: Path) -> list[str]:
-    """Guarded files this tool call read WHOLE, as repo-relative paths."""
+def _merge(ranges: list[list[int]]) -> list[list[int]]:
+    """Overlapping and adjacent spans become one, so coverage is a simple walk."""
+    merged: list[list[int]] = []
+    for start, end in sorted(ranges):
+        if merged and start <= merged[-1][1] + 1:
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+    return merged
+
+
+def _gaps(ranges: list[list[int]], total: int) -> list[tuple[int, int]]:
+    """The lines still unread, so a refusal names them instead of saying 'walk first'."""
+    missing: list[tuple[int, int]] = []
+    cursor = 1
+    for start, end in _merge(ranges):
+        if start > cursor:
+            missing.append((cursor, start - 1))
+        cursor = max(cursor, end + 1)
+    if cursor <= total:
+        missing.append((cursor, total))
+    return missing
+
+
+def _read_ranges(tool: str, tool_input: dict, cwd: Path) -> list[tuple[str, int, int]]:
+    """What this call actually covered, as (path, first line, last line)."""
     if tool == "Read":
-        if tool_input.get("offset") in (None, 0, 1) and tool_input.get("limit") is None:
-            rel = _relative(str(tool_input.get("file_path", "")), cwd)
-            return [rel] if _fits_one_read(cwd, rel) else []
-        return []
+        rel = _relative(str(tool_input.get("file_path", "")), cwd)
+        total = _line_total(cwd, rel)
+        if not total:
+            return []
+        try:
+            start = max(1, int(tool_input.get("offset") or 1))
+            limit = tool_input.get("limit")
+            span = int(limit) if limit else READ_DEFAULT_LINES
+        except (TypeError, ValueError):
+            return []
+        return [(rel, start, min(total, start + span - 1))]
     if tool == "Bash":
         command = str(tool_input.get("command", ""))
         found = CODEGRAPH_FILE_RE.findall(command)
         bare = BARE_CAT_RE.match(command)
         if bare:
             found.append(bare.group(1))
-        return [_relative(p, cwd) for p in found]
+        covered = []
+        for path in found:
+            rel = _relative(path, cwd)
+            total = _line_total(cwd, rel)
+            if total:
+                covered.append((rel, 1, total))
+        return covered
     return []
 
 
@@ -122,17 +169,19 @@ def _refuse(message: str) -> int:
     return 2
 
 
-def pre_tool_use(tool: str, tool_input: dict, cwd: Path, receipts: set[str]) -> int:
+def pre_tool_use(tool: str, tool_input: dict, cwd: Path, receipts: dict) -> int:
     if tool in ("Edit", "Write", "MultiEdit"):
         rel = _relative(str(tool_input.get("file_path", "")), cwd)
         if not _guarded(rel) or not (cwd / rel).is_file():
             return 0
-        if rel in receipts:
+        missing = _gaps(receipts.get(rel, []), _line_total(cwd, rel))
+        if not missing:
             return 0
+        where = ", ".join(f"{first}-{last}" for first, last in missing[:4])
         return _refuse(
-            f"walk first: {rel} has not been read whole in this session. "
-            f"Run `codegraph node --file {rel}` or Read it with no offset/limit, "
-            "then retry the edit."
+            f"walk first: {rel} is not read whole in this session — missing lines {where}. "
+            f"Read those lines (Read with offset and limit; the ranges add up until the "
+            f"file is covered) or run `codegraph node --file {rel}`, then retry the edit."
         )
     if tool == "Bash":
         targets = _shell_write_targets(str(tool_input.get("command", "")), cwd)
@@ -146,10 +195,11 @@ def pre_tool_use(tool: str, tool_input: dict, cwd: Path, receipts: set[str]) -> 
 
 
 def post_tool_use(tool: str, tool_input: dict, cwd: Path, receipts_file: Path) -> int:
-    paths = [p for p in _whole_read_paths(tool, tool_input, cwd) if _guarded(p)]
-    if paths:
+    covered = [span for span in _read_ranges(tool, tool_input, cwd) if _guarded(span[0])]
+    if covered:
         receipts = _load(receipts_file)
-        receipts.update(paths)
+        for rel, start, end in covered:
+            receipts[rel] = _merge([*receipts.get(rel, []), [start, end]])
         _save(receipts_file, receipts)
     return 0
 

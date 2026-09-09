@@ -14,11 +14,32 @@ citations into a gate:
 - the backticked symbol nearest before a citation on the same plan line
   (`select_route` (`src/x.py:12-40`)) appears inside the cited lines, or
   the cited lines sit inside that symbol's own definition;
-- no guess word survives: TBD, likely, probably, "verify later", assuming.
+- no guess word survives: TBD, likely, probably, "verify later", assuming,
+  should, seems, presumably, "appears to".
+
+THE QUOTE IS THE RECEIPT. A citation proves a line number exists; it never
+proves the line says what the plan claims, and a line number goes stale the
+moment an earlier milestone shifts the file. So a plan line may carry the cited
+line VERBATIM:
+
+    - `_reorderRemaining` (`mobile/lib/services/x.dart:1947`) reads: `void _reorderRemaining(...) {`
+
+and the text after `reads:` must equal that line byte for byte, stripped. A
+quote cannot be written without reading the line, and it stops matching the
+moment the file moves underneath it — which is the drift alarm a one-shot
+citation check does not have. Inside a milestone section (`# M<n> …`) a bullet
+citing an EXACT line must quote it; a range (`:N-M`) points at a region and
+does not.
+
+AND A CLAIM WITHOUT A CITATION IS NOT A CLAIM. A backticked code identifier —
+one carrying `_` or a capital — must be paired with a citation on its own line.
+Checking only the citations that happen to be present rewards leaving them out,
+which is how a plan fills with assertions nobody can check.
 
 Run bare — `python3 .claude/ledger/plan_check.py .claude/runs/<run>/plan.md` —
-and present nothing until it exits 0. Stdlib only, agent tooling under
-`.claude/` (the `track.py` precedent).
+and present nothing until it exits 0. Takes any number of markdown artifacts,
+so a grilling round is gated by the same command as a plan. Stdlib only, agent
+tooling under `.claude/` (the `track.py` precedent).
 """
 
 from __future__ import annotations
@@ -40,8 +61,33 @@ BARE_PATH_RE = re.compile(r"`" + _PATH + r"`")
 BARE_REF_RE = re.compile(r"`:(?P<start>\d+)(?:-(?P<end>\d+))?`")
 SYMBOL_RE = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)`")
 DEF_RE = re.compile(r"^(?P<indent>\s*)(?:async\s+)?(?:def|class)\s+(?P<name>[A-Za-z_]\w*)\b")
-GUESS_RE = re.compile(r"\b(TBD|likely|probably|verify later|assuming)\b", re.IGNORECASE)
+GUESS_RE = re.compile(
+    r"\b(TBD|likely|probably|verify later|assuming|should|seems|presumably|appears to)\b",
+    re.IGNORECASE,
+)
 FENCE = "```"
+#: `… reads: `<the cited line, verbatim>`` — the proof that the line was read.
+READS_RE = re.compile(r"\breads:\s*`(?P<quote>[^`]*)`")
+#: A milestone section: inside one, a bullet citing an exact line must quote it.
+MILESTONE_RE = re.compile(r"^#+\s*M\d+\b")
+BULLET_RE = re.compile(r"^\s*[-*+]\s")
+
+
+#: Language words and short literal values that wear backticks without claiming
+#: anything about this repo: `None` is Python's, `FR` is a value inside a quoted
+#: string. A symbol carries an underscore or mixed case — `HAS_STOP` still does.
+NOT_A_SYMBOL = {"None", "True", "False", "TODO"}
+
+
+def _is_code_identifier(token: str) -> bool:
+    """A backticked token that claims to be code: it carries an underscore or a
+    capital. Plain prose words in backticks (`keep`, `map`) claim nothing and are
+    left alone; `SessionPlan` and `door_closed` are claims and need a citation."""
+    if token in NOT_A_SYMBOL:
+        return False
+    if len(token) <= 3 and token.isupper() and "_" not in token:
+        return False  # a value (`FR`, `PH`), not a symbol
+    return "_" in token or any(character.isupper() for character in token)
 
 
 def tracked_files(root: Path) -> list[str]:
@@ -98,16 +144,29 @@ def check_plan(plan: Path, root: Path) -> list[str]:
     failures: list[str] = []
     last_file: str | None = None
     in_fence = False
+    in_milestone = False
     for lineno, line in enumerate(plan.read_text().splitlines(), start=1):
         if line.strip().startswith(FENCE):
             in_fence = not in_fence
             continue
         if in_fence:
             continue
+        if line.startswith("#"):
+            in_milestone = bool(MILESTONE_RE.match(line))
         if not line.strip():
             last_file = None  # a paragraph break ends the bare-ref inheritance
             continue
-        for match in GUESS_RE.finditer(line):
+        # A verbatim quote is SOURCE, not the plan's own prose. It is blanked out
+        # — same length, so every offset below still lines up — before any other
+        # check runs, so the quoted code never reads as this plan's citation, its
+        # symbol, or its guess word.
+        reads = READS_RE.search(line)
+        scan = (
+            line[: reads.start()] + " " * (reads.end() - reads.start()) + line[reads.end() :]
+            if reads
+            else line
+        )
+        for match in GUESS_RE.finditer(scan):
             failures.append(
                 f"{plan}:{lineno}: guess word {match.group(1)!r} — resolve it against the code"
             )
@@ -116,7 +175,10 @@ def check_plan(plan: Path, root: Path) -> list[str]:
         # (`src/x.py:12-40`)" — so a wrapped bullet never checks one clause's
         # symbol against the next clause's lines.
         refs: list[tuple[str, int, int, int]] = []
-        for m in FILE_REF_RE.finditer(line):
+        #: Spans of backticked paths carrying no line number. They anchor a claim
+        #: to a file, and a path is not also a symbol needing its own citation.
+        path_spans: list[tuple[int, int]] = []
+        for m in FILE_REF_RE.finditer(scan):
             rel, err = resolve(m.group("path"), root, tracked)
             if err:
                 failures.append(f"{plan}:{lineno}: {err}")
@@ -125,13 +187,14 @@ def check_plan(plan: Path, root: Path) -> list[str]:
             refs.append(
                 (rel, int(m.group("start")), int(m.group("end") or m.group("start")), m.start())
             )
-        for m in BARE_PATH_RE.finditer(line):
+        for m in BARE_PATH_RE.finditer(scan):
+            path_spans.append((m.start(), m.end()))
             rel, err = resolve(m.group("path"), root, tracked)
             if err:
                 failures.append(f"{plan}:{lineno}: {err}")
             else:
                 last_file = rel
-        for m in BARE_REF_RE.finditer(line):
+        for m in BARE_REF_RE.finditer(scan):
             if last_file is None:
                 failures.append(
                     f"{plan}:{lineno}: bare line ref {m.group(0)} with no file cited "
@@ -141,7 +204,7 @@ def check_plan(plan: Path, root: Path) -> list[str]:
             start, end = int(m.group("start")), int(m.group("end") or m.group("start"))
             refs.append((last_file, start, end, m.start()))
         symbol_at = [
-            (s.start(), s.group(1)) for s in SYMBOL_RE.finditer(line) if "." not in s.group(1)
+            (s.start(), s.group(1)) for s in SYMBOL_RE.finditer(scan) if "." not in s.group(1)
         ]
         for rel, start, end, pos in refs:
             lines = _line_count(root, rel, cache)
@@ -158,28 +221,72 @@ def check_plan(plan: Path, root: Path) -> list[str]:
                     f"{plan}:{lineno}: `{symbol}` is not at {rel}:{start}-{end} "
                     "— stale or guessed citation"
                 )
+
+        # THE QUOTE IS THE RECEIPT: the line is repeated verbatim, so the claim
+        # cannot be written without reading it and stops matching when it moves.
+        if reads is not None:
+            cited_before = [ref for ref in refs if ref[3] < reads.start()]
+            if not cited_before:
+                failures.append(
+                    f"{plan}:{lineno}: `reads:` quotes a line that this line never cites"
+                )
+            else:
+                rel, start, _end, _pos = cited_before[-1]
+                lines = _line_count(root, rel, cache)
+                if 1 <= start <= len(lines):
+                    said, quoted = lines[start - 1].strip(), reads.group("quote").strip()
+                    if said != quoted:
+                        failures.append(
+                            f"{plan}:{lineno}: the quote is not what {rel}:{start} says\n"
+                            f"      plan says: {quoted}\n"
+                            f"      file says: {said}"
+                        )
+
+        # A CODE CLAIM WITH NO CITATION. Checking only the citations that happen
+        # to be there rewards leaving them out.
+        if not refs and not path_spans:
+            uncited = [name for _, name in symbol_at if _is_code_identifier(name)]
+            if uncited:
+                failures.append(
+                    f"{plan}:{lineno}: `{uncited[0]}` is a code claim with no citation on "
+                    "this line — cite it, or drop the backticks if it is prose"
+                )
+
+        # A MILESTONE'S BULLET THAT NAMES AN EXACT LINE MUST PROVE IT.
+        if in_milestone and reads is None and BULLET_RE.match(line):
+            exact = [ref for ref in refs if ref[1] == ref[2]]
+            if exact:
+                rel, start, _end, _pos = exact[0]
+                failures.append(
+                    f"{plan}:{lineno}: {rel}:{start} names one exact line — quote it with "
+                    "`reads:` so the claim proves itself, or cite a range"
+                )
     return failures
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 2:
-        print("usage: plan_check.py <plan.md>", file=sys.stderr)
-        return 2
-    plan = Path(argv[1])
-    if not plan.is_file():
-        print(f"{plan}: no such plan", file=sys.stderr)
+    if len(argv) < 2:
+        print("usage: plan_check.py <artifact.md> [artifact.md ...]", file=sys.stderr)
         return 2
     root = Path(__file__).resolve().parent.parent.parent
-    failures = check_plan(plan, root)
-    for failure in failures:
-        print(failure)
-    if failures:
+    total = 0
+    for name in argv[1:]:
+        plan = Path(name)
+        if not plan.is_file():
+            print(f"{plan}: no such artifact", file=sys.stderr)
+            return 2
+        failures = check_plan(plan, root)
+        for failure in failures:
+            print(failure)
+        total += len(failures)
+        if not failures:
+            print(f"{plan}: every citation resolves.")
+    if total:
         print(
-            f"{len(failures)} unresolved citation(s): the plan is not ready to present.",
+            f"{total} unresolved citation(s): not ready to present.",
             file=sys.stderr,
         )
         return 1
-    print(f"{plan}: every citation resolves.")
     return 0
 
 

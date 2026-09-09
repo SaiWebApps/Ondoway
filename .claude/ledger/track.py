@@ -317,6 +317,16 @@ def cmd_issue_set(conn: sqlite3.Namespace, args: argparse.Namespace) -> None:
     emit(conn)
 
 
+def plan_for(conn: sqlite3.Connection, story_id: str) -> Path | None:
+    """The run's plan for this story's feature — `.claude/runs/<date>-<slug>/plan.md`."""
+    row = conn.execute("SELECT feature FROM stories WHERE id=?", (story_id,)).fetchone()
+    if not row:
+        return None
+    root = Path(__file__).resolve().parents[2]
+    plans = sorted((root / ".claude" / "runs").glob(f"*-{row['feature']}/plan.md"))
+    return plans[-1] if plans else None
+
+
 def cmd_step_status(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
     row = conn.execute(
         "SELECT id, story, status, test_command, attempts FROM issues WHERE id=?",
@@ -327,6 +337,30 @@ def cmd_step_status(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
     # THE REFUSAL. Only a pass claim has to be earned, and it is earned by this
     # process running the command, not by the caller saying it did.
     if args.status == PROVEN:
+        # THE PLAN IS RE-CHECKED AT EVERY MILESTONE, not once before the build.
+        # A plan is a set of claims about code that the build is busy moving, so
+        # its citations rot as the run proceeds: a milestone shifts a file, and
+        # every later milestone's plan silently describes lines that have moved
+        # out from under it. Checked once, that drift is invisible until someone
+        # builds against a stale line. Checked here, the milestone that caused
+        # the drift is the one that cannot close until the plan is re-read.
+        plan = plan_for(conn, row["story"])
+        if plan is not None:
+            gate = subprocess.run(
+                [sys.executable, str(Path(__file__).resolve().parent / "plan_check.py"),
+                 str(plan)],
+                capture_output=True, text=True, check=False,
+            )
+            if gate.returncode != 0:
+                record(conn, "claim_refused", who=args.who, story=row["story"], issue=args.id,
+                       detail=f"{plan.name} no longer resolves against the code")
+                conn.commit()
+                raise Refused(
+                    f"{plan} does not pass its own citation gate, so nothing can be claimed "
+                    f"against it:\n{gate.stdout.strip()[-1500:]}\n\n"
+                    "A citation that stopped resolving is a plan that has drifted from the "
+                    "code. Re-read what moved, re-point the plan, then claim the step."
+                )
         code = observe(conn, row["test_command"], args.id)
         if code != 0:
             conn.execute("UPDATE issues SET attempts=attempts+1 WHERE id=?", (args.id,))
