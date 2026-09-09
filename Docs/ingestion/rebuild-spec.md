@@ -1,0 +1,371 @@
+# Ingestion rebuild — spec and slice plan
+
+> **For agentic workers:** each slice below is a defined change sized for `/team <slice>`.
+> Run them in order in fresh conversations; every slice states the one test that proves it.
+> Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Date:** 2026-09-08 · **Base branch:** `corpus-workbench` (fast-forward of `main`) ·
+**Tier:** 3 (data + publish path + live graph) · **Decision record:**
+[ADR-0001](../adr/0001-beat-is-a-per-place-story-with-a-claim-set.md) ·
+**Glossary:** [CONTEXT.md](../../CONTEXT.md)
+
+> **Path convention:** a path written with a leading `./` does not exist yet; a slice
+> creates it. Bare paths exist on the branch today. The process lint checks only the
+> bare ones, by design.
+
+**Goal:** an ingestion engine that turns a rights-cleared book or website into per-place
+stories carrying complete, sourced, judged claim sets and derived narration, with every
+gate in code, a workbench front door, and the existing corpus re-extracted through it.
+
+**Architecture:** a Python engine under `./src/ingest/` (planned) with seven phases per chunk
+(decompose, group, judge claims, narrate, judge narration, merge, commit), an author
+model and a judge model that are never the same, deterministic gates between phases, a job
+store with an event stream, a hash-bound review queue, and a publisher that converges the
+graph on the files.
+
+**Tech stack:** Python 3.12, `anthropic` SDK (API billing), FastAPI routes on the existing
+server, Neo4j, the existing `scripts/verbatim.py`, `scripts/beats_io.py` and
+`src/onboard/jobs.py` patterns.
+
+**Supersedes** on the branch: `Docs/ingestion/re-extraction-scope.md` (its four rulings
+survive, its prose-primary model does not), `Docs/corpus-workbench/rebuild-brief.md`,
+`stage-0-triage.md`, `stage-1-cleanroom.md` and the re-author pipeline. Slice 11 deletes
+them.
+
+## Global constraints
+
+- Every command runs through a Makefile target with a preflight line (CLAUDE.md).
+- `make lint` is zero errors before any commit. Node-id tests only, never `-k`.
+- Author model: `claude-opus-5`. Claim and narration judge: `claude-haiku-4-5`. Merge
+  judge: `claude-sonnet-5`. The engine refuses to run a judge whose model id equals the
+  author's, and records the model id the API returned on every verdict.
+- Lift = 8+ consecutive words shared with a span outside an attributed quotation
+  (`scripts/verbatim.py`, unchanged). Attribution to a guidebook is not attribution.
+- Every claim's span must appear verbatim in its chunk. Every narration sentence must be
+  entailed by the story's resolved claims. Every verdict is bound by SHA-256 to the exact
+  text it judged.
+- No paid call before the job prints a token-based cost estimate; no cloud write without
+  `TARGET=cloud CONFIRM_CLOUD_WRITE=1`.
+- London and the 56 orphans are quarantined (slice 0) and never re-extracted; slice 11
+  deletes the quarantine after the swap has held. Wikipedia is ingested on the same terms
+  as a book.
+
+---
+
+## 1. Decisions from the interview (2026-09-08)
+
+| # | Decision | Forced by |
+|---|---|---|
+| D1 | Build on `corpus-workbench`; its copying gate is a symptom fix and survives as a narration check | Proof chunk: 0 lifts but 28/28 same-order, 5/42 provenance leaks, "the Second WWII" shipped |
+| D2 | Beat = one story at one place, bounded by one arc (Rule A). Identity (city, place, story). Book leaves identity | Owner: sentence atoms were unusable and undetectable as duplicates |
+| D3 | Payload = complete claim set; each claim carries sources, span, as-of, kind, status | "Add new detail" and "track both sources" are claim-set operations |
+| D4 | Narration derived from claims, every sentence traceable, no framing (engine owns glue) | `generation.py`: "Glue is the only place generation invents text" |
+| D5 | Lenses are a list on the story | Same reception story tagged `historic_arch` in one book, `local_legends` in another |
+| D6 | Structural beats (orientation, transit, sidebar) exempt from the arc rule | Practical guidance has no arc; the types already exist |
+| D7 | Extraction is corpus-blind; merge is a separate per-place pass with a non-author judge plus a deterministic signature hint; disagreement goes to a person | Judge may never include the author; small candidate sets per place |
+| D8 | Status lives on the claim: resolved / contested / superseded. Contested claims are not voiced; the story still ships | 29 stories dark today for one claim each |
+| D9 | Every source has an as-of date; claims have a temporal kind (event / state / belief). Recency resolves state claims only. Supersession is a merge outcome, not a contest. Fact-check becomes a staleness pass | Richard III: both sources right as of their date |
+| D10 | Re-extract everything; do not migrate. 1,835 verdicts discarded | Proof chunk found 42 stories where migration would keep 24 |
+| D11 | Engine in code; all model calls via the API; model-client seam kept for a subscription worker later | One place to upload and watch; nothing depends on a chat window |
+| D12 | Books are chunked once by `/book-prep` in the Claude interface; the chunk folder plus manifest (with as-of and rights basis) is the job input. Websites are one unit, split mechanically at headings only when over the unit ceiling | Simple, inspectable, one-time per book |
+| D13 | Review queue blocks only: merge disagreement (new story held), narration flagged after second ask (beat held), new place (its beats held). Contested claims queue without blocking. Everything else is a log line | Workbench design: 30-second reads cannot see the defects |
+| D14 | Graph swap is files first, publisher converge second, tour bar third, cloud last, all at once per city | Publisher never withdraws; mixed old/new would seat one story twice |
+
+## 2. The record
+
+One beat in `data/{city}/beats.json`. Field names are final; slice 1 pins them.
+
+```json
+{
+  "beat_id": "new_york/guggenheim-museum/how-the-museum-came-to-be",
+  "city_name": "new_york",
+  "poi_name": "Guggenheim Museum",
+  "story_slug": "how-the-museum-came-to-be",
+  "title": "How the museum came to be",
+  "beat_type": "anecdote",
+  "lenses": ["hidden_history", "visual_art"],
+  "sub_location": null,
+  "trigger_address": null,
+  "claims": [
+    {
+      "claim_id": "c07",
+      "text": "The building was completed in 1959, after both Wright and Guggenheim had died.",
+      "kind": "event",
+      "status": "resolved",
+      "sources": [
+        {"source_id": "lonely-planet-new-york-city", "chunk": "chunk-07-upper-east-side",
+         "span": "Construction was finally completed in 1959 – after both Wright and Guggenheim had passed away.",
+         "as_of": 2023, "stated_value": null},
+        {"source_id": "frommers-nyc-2024", "chunk": "chunk-05-exploring-uptown",
+         "span": "Visiting this 1959 masterpiece ...", "as_of": 2024, "stated_value": null}
+      ],
+      "resolved_value": null,
+      "resolution": {"by": "corroborated", "decided_by": null, "decided_at": null},
+      "verdict": {"judge_model": "claude-haiku-4-5", "entailed": true,
+                  "bound_to": "<sha256 of text + span>"}
+    }
+  ],
+  "narration": {
+    "text": "Solomon Guggenheim was a mining millionaire ...",
+    "claims_hash": "<sha256 of the resolved claim texts in order>",
+    "author_model": "claude-opus-5",
+    "verdict": {"judge_model": "claude-haiku-4-5", "sentences_entailed": 9,
+                "sentences_total": 9, "bound_to": "<sha256 of text>"},
+    "flags": []
+  },
+  "physical_cues": [], "entities": ["Solomon R. Guggenheim", "Hilla Rebay", "Frank Lloyd Wright"],
+  "narrative_function": "establishing", "emotional_register": "neutral",
+  "sensory_anchor": false, "inline_foreign_phrases": [], "pronunciation": null,
+  "kid_friendly": "yes",
+  "duration_sec": 46,
+  "review": {"held": false, "reason": null}
+}
+```
+
+Rules the validator enforces on this shape (slice 1):
+
+- `beat_id == f"{city_name}/{slug(poi_name)}/{story_slug}"`, unique per file.
+- Every claim has ≥1 source; every source has `as_of`; every `span` is a verbatim
+  substring of the named chunk file; every claim has a `verdict` whose `judge_model` differs
+  from `narration.author_model`.
+- `kind ∈ {event, state, belief}`; `status ∈ {resolved, contested, superseded}`; a
+  contested claim has ≥2 sources with differing `stated_value`.
+- `narration.claims_hash` equals the hash of the resolved claims' texts, in order. A
+  narration whose hash is stale is refused (the same rule as `verified_body_hash` today).
+- No lift ≥8 between `narration.text` and any span of the beat, outside attributed
+  quotation. No provenance leak (regex, slice 5).
+- `beat_type ∈ {stop_orientation, transit, sidebar}` beats skip the arc rule; every other
+  beat has ≥2 claims.
+
+**Graph export** (slice 8) keeps the tour engine's contract unchanged: `script_body` =
+`narration.text`; `key_claims` = texts of resolved claims; `beat_length_class` computed from
+`duration_sec` (`micro` <8 s, `seasoning` <32 s, `mid` <80 s, else `anchor`); `lenses`
+exported as the existing `lens` relationship, one per entry. No engine file changes.
+
+## 3. The engine: phases and gates
+
+Per chunk job. A phase's output is written to the job before the next phase starts, so a
+failed job resumes at its last completed phase.
+
+| Phase | Model | Output | Code gates before the next phase |
+|---|---|---|---|
+| P0 intake | none | units of text with `source_id`, `as_of`, rights basis | manifest fields present; a website unit over the ceiling is split at headings and the job logs it |
+| P1 decompose | author | claims `{text, kind, span}` per unit | span verbatim in unit; no lift ≥8 claim-vs-span; no book furniture (leak regex); self-contained (no bare pronoun subject); `kind` present, default `state` when the judge marks it ambiguous |
+| P2 group | author | stories `{title, place, lenses, beat_type, enrichment, claim_ids}` | every claim in exactly one story; place resolves to `poi-raw.json` or is flagged `new_poi`; structural types allowed 1 claim, others ≥2 |
+| P3 judge claims | judge | per claim: entailed yes/no; per unit: facts no claim carries | a claim refused once is re-asked with the judge's reason quoted back; refused twice is dropped and logged; an omission finding re-asks P1 once for that unit |
+| P4 narrate | author, sees claims only | narration text | no lift vs any span; no leak; no framing regex (`imagine`, `picture`, `envision`); duration computed |
+| P5 judge narration | judge | per sentence entailed yes/no | a failing sentence re-asks P4 once with the sentence quoted back; still failing → `narration.flags` set, `review.held = true` |
+| P6 merge | merge judge + signature | per new story: same / new / supersedes; per claim: new / same / conflict | judge and signature agree → apply; disagree → hold the new story, queue item; conflict → both claims `contested`; same → one claim, sources appended; supersedes → old claim `belief`, dated; any claim change → P4/P5 rerun for that beat |
+| P7 commit | none | `beats_io.commit` | the slice-1 validator, extended; nothing reaches disk otherwise |
+
+Refusal loop: exactly one re-ask per phase per item, then drop or hold. No item is padded,
+re-classed or synonym-swapped to pass.
+
+Cost estimate: before P1, `messages.count_tokens` over every unit, multiplied by the
+per-phase call shape, printed as the job's first event. Batch API is used for P1, P3 and P5
+(no latency need, half price).
+
+## 4. Calibration by defect injection
+
+`./fixtures/ingestion/defects.json`: ten known-good beats (from the slice-9 proof chunk,
+hand-read) with planted defects, one per record: a fabricated date, a deleted claim, a
+wrongly attached cause, an 8-word lift, a guidebook attribution, a framing sentence, a
+state claim kinded as event, a contested value, a superseded belief, an omitted fact in
+the unit. The `ingest-calibrate` target runs the judge phases over them and prints caught /
+missed per class. A judge prompt change that lowers a class's catch rate fails the target.
+
+## 5. Front door and review queue
+
+`POST /ingest/jobs` with `{city, source: {kind: "book", chunk_dir} | {kind: "url", url},
+as_of, rights_basis}` → 202 + job id. `GET /ingest/jobs/{id}` snapshot; `GET
+/ingest/jobs/{id}/stream` SSE of phase events. `GET /ingest/review?city=` lists held items
+ranked by content held back; `POST /ingest/review/decision` records `{item_id, decision,
+decided_by}` bound to the hash of what was shown. `POST /ingest/publish?city=&target=`
+refuses while any held item is undecided. All served by the existing FastAPI app beside
+`/onboard/*`, reusing `JobStore`. The workbench page shows jobs, phases, the queue and the
+publish button; nothing else.
+
+## 6. Publisher converge
+
+`scripts/upload_paris.py` becomes "make the graph match the file": MERGE every beat in the
+file, then withdraw every `NarrativeBeat` of that city whose `beat_id` is not in the file
+(`active_status = 'withdrawn'`, `HAS_BEAT` kept so a re-publish can restore). Proven on
+7687 with a before/after count; `db-parity` reports withdrawn counts.
+
+## 7. Batch order (D14)
+
+- [ ] Quarantine London, the 56 orphans, the re-author pipeline under `_to_be_deleted/` (slice 0).
+- [ ] Re-extract Paris and New York into the new-schema files offline (slice 10).
+- [ ] Publisher converge merged and proven on 7687 (slice 8).
+- [ ] Publish to 7687; run `_test-golden`, tour grade, invariants (slice 10).
+- [ ] `make deploy TARGET=cloud CONFIRM_CLOUD_WRITE=1` per city (slice 10, human at the keyboard).
+- [ ] Delete `_to_be_deleted/`, the `beats.legacy.json` copies and every `*.bak-*` file (slice 11), once the cloud publish has served tours for a week without a rollback.
+
+---
+
+## 8. Slices
+
+Each slice is one `/team` run. **Files** and **Interfaces** are what the next slice relies
+on; the proving test is a pytest node id.
+
+### Slice 0: Branch, worktree, quarantine
+
+Nothing is deleted in this slice. Everything the rebuild retires is MOVED under a
+top-level `_to_be_deleted/` directory, keeping its relative path, so it can be restored
+with one `git mv` until slice 11 removes the directory after the graph swap succeeds.
+
+**Files:** move `scripts/reauthor_*.py`, `frontend/rewrites.html`, `data/london/`,
+`tests/test_reauthor_*.py`, and the four gitignored `data/*/reauthored*.json` and
+`data/*/claims.json` per city into `_to_be_deleted/` (the data files stay ignored: add
+`_to_be_deleted/data/` to `.gitignore`); write the 56 `legacy_ambiguous` beats to
+`_to_be_deleted/data/{city}/orphans.json` and remove them from `beats.json`; drop the
+reauthor entries from `LINT_PATHS` in `Makefile`; add `_to_be_deleted/README.md` naming
+what is there, why, and the slice that deletes it.
+
+**Also in this slice, the planned-path rule.** This spec names the files later slices
+create with a leading `./` (see the path convention at the top). The process lint in
+`scripts/lint_process_files.py` passes them today only as a side effect of its
+top-directory prefix test; nothing names the convention, and a natural cleanup (stripping
+a leading `.` alongside the `([` it already strips) would turn every planned path red at
+once. Make it a named rule: a `./`-prefixed token is a planned artifact named by a spec,
+never a claim that it exists, with a test in `tests/test_lint_process_files.py` that pins
+both halves (a `./` path is skipped; the same path bare is checked).
+
+**The invariant every moving or deleting slice keeps:** this spec's own references to
+what a slice moves or deletes are rewritten in that slice's commit, so the lint that
+refuses dangling references stays green at the spec itself. For this slice that is the
+`frontend/rewrites.html` and `data/london/` references above, which become
+`_to_be_deleted/` paths.
+**Proves:** `make lint` zero errors (the process lint treats a line that narrates a
+removal as exempt, and `_to_be_deleted/` is not a scanned root) and
+`make test-file FILE=tests/test_beat_validation.py` green on the branch. Judge consult
+before the moves.
+
+### Slice 1: The record and its validator
+
+**Files:** create `./src/ingest/model.py` (pydantic `Beat`, `Claim`, `Source`, `Verdict`,
+`Narration`), `./fixtures/ingestion/guggenheim-example.json` (the §2 record, four beats);
+modify `scripts/validate_beats.py` to validate the new shape and refuse the old one.
+**Produces:** `validate(beats: list[dict], chunks_root: Path) -> list[str]` (errors);
+`claims_hash(claims) -> str`; `bind(text: str, span: str) -> str`.
+**Proves:** `tests/test_ingest_model.py::test_stale_narration_hash_is_refused` and
+`::test_judge_equal_to_author_is_refused`.
+
+### Slice 2: Model-client seam and cost estimate
+
+**Files:** create `./src/ingest/llm.py` with `class ModelClient(Protocol): complete(role,
+prompt, schema) -> Completion` where `Completion` carries `text`, `model_id` (from the API
+response, never from config) and `usage`; `AnthropicClient` (SDK, Batch for bulk roles),
+`MockClient` (scripted answers); `estimate(units, plan) -> CostEstimate` via
+`count_tokens`.
+**Proves:** `tests/test_ingest_llm.py::test_judge_role_refuses_author_model_id` and
+`::test_estimate_is_printed_before_any_completion`.
+
+### Slice 3: Decompose and group (P1, P2)
+
+**Files:** create `./src/ingest/decompose.py`, `./src/ingest/group.py`, `./src/ingest/prompts/`
+(the decomposer prompt carried from the branch's `_DECOMPOSE_PROMPT`, the Rule-A grouping
+prompt with the tie-break from the interview); `./src/ingest/gates.py` (span-in-unit, leak
+regex, self-contained regex, kind default).
+**Produces:** `decompose(unit, client) -> list[Claim]`; `group(claims, unit, pois, client)
+-> list[Story]`.
+**Proves:** `tests/test_ingest_decompose.py::test_span_not_in_unit_is_refused`,
+`tests/test_ingest_group.py::test_every_claim_lands_in_exactly_one_story`.
+
+### Slice 4: Claim judge, omission, calibration (P3, §4)
+
+**Files:** create `./src/ingest/judge_claims.py`, `./fixtures/ingestion/defects.json`, Makefile
+target `ingest-calibrate` with preflight `$(PRE_PY)`.
+**Produces:** `judge_claims(story, unit, client) -> list[Verdict]`; `omissions(unit,
+claims, client) -> list[str]`.
+**Proves:** `tests/test_ingest_judge.py::test_verdict_is_bound_to_claim_and_span_hash`;
+the `ingest-calibrate` target prints a catch rate per class, with fabricated-date and deleted-claim
+at 100% on the fixture.
+
+### Slice 5: Narrate and judge narration (P4, P5)
+
+**Files:** create `./src/ingest/narrate.py`, `./src/ingest/judge_narration.py`; extend
+`./src/ingest/gates.py` with `provenance_leak(text) -> list[str]` (`the book`, `described
+here`, `the guide`, `the author`, publisher names from the manifest) and
+`framing(text) -> list[str]`; reuse `scripts.verbatim.run_outside_quotation`.
+**Produces:** `narrate(story, client) -> Narration`; `judge_narration(narration, claims,
+client) -> Narration` (sets `flags`).
+**Proves:** `tests/test_ingest_narrate.py::test_narration_never_sees_the_span`,
+`::test_leak_is_refused`, `::test_second_failure_holds_the_beat_not_the_claims`.
+
+### Slice 6: Merge (P6) and the conflict report
+
+**Files:** create `./src/ingest/merge.py` (judge prompt, signature hint reusing
+`_signature` in `src/tour/claim_dedup.py`, outcome application, supersession re-kinding),
+`./scripts/claim_conflicts.py` (city-wide signature match with differing values → both
+contested), Makefile target `claim-conflicts CITY=`.
+**Produces:** `merge(new_story, existing: list[Beat], client) -> MergeOutcome`;
+`apply(outcome, beats) -> list[Beat]`.
+**Proves:** `tests/test_ingest_merge.py::test_judge_and_signature_disagree_holds_new_story`,
+`::test_supersedes_rekinds_old_claim_as_dated_belief`,
+`::test_same_claim_appends_source_not_beat`.
+
+### Slice 7: Job runner, front door, review queue
+
+**Files:** create `./src/ingest/jobs.py` (reuse `JobStore` from `src/onboard/jobs.py`), `./src/ingest/run.py`
+(phase sequencing, resume at last completed phase), `./src/api/routes/ingest.py` (§5 routes),
+`./frontend/ingest.html`; modify `src/server.py` to include the router.
+**Produces:** `run_job(job_id, store, client) -> None`; the routes in §5.
+**Proves:** `tests/test_ingest_routes.py::test_publish_refuses_while_an_item_is_held`,
+`::test_decision_is_bound_to_shown_hash`; `make test-workbench` shows a job reaching P7 on
+the mock client with a screenshot.
+
+### Slice 8: Publisher converge and graph export
+
+**Files:** modify `scripts/upload_paris.py` (export mapping §2, withdraw step §6);
+`scripts/db_parity.py` reports withdrawn counts.
+**Proves:** `tests/test_upload_paris.py::test_publish_withdraws_beats_absent_from_file` on
+7688; a before/after count on 7687 pasted into the slice report.
+
+### Slice 9: Proof chunk under the new model
+
+**Files:** none new. Run one job on
+`Books/new_york/lonely-planet-new-york-city/chunk-07-upper-east-side.txt`, then a second on
+the Frommer's Upper East Side chunk so the merge fires on the Guggenheim.
+**Proves:** the stories match §2's shape by inspection; an `acceptance` agent and a
+`tour-adversary` panel read every Guggenheim beat; the two chunks' cost matches the
+estimate within 25%. The ten hand-read beats seed `./fixtures/ingestion/defects.json`.
+**Stops the line if:** the merge holds more than a third of stories, or the tour bar
+(`_test-golden` on 7687 with only this chunk swapped) regresses.
+
+### Slice 10: Batch re-extraction and swap
+
+**Files:** Makefile target `ingest-batch CITY=` (every chunk folder under `Books/{city}`
+and every pinned revision under `data/{city}/wikipedia`, resumable).
+**Proves:** per-city coverage report (beats, places, lenses, sensory anchors) against the
+old file; `_test-golden`, tour grade and invariants green on 7687; one cloud publish per
+city with `CONFIRM_CLOUD_WRITE=1`, human at the keyboard.
+
+### Slice 11: Cleanup
+
+**Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
+`pipeline-batch.md`, `beat-dedup.md`, `beat-wipe.md`, `beat-enrich.md`, `beat-from-book.md`,
+`vallois-reextract.md`, `fact-check.md` (replaced by the staleness pass, its own later
+slice); replace `src/onboard/beat_draft.py` with a call into the engine; delete the
+superseded docs named at the top; delete `_to_be_deleted/` in full, every `data/*/*.bak-*`
+and `beats.legacy.json`. This is the only slice that deletes, and it runs only after the
+cloud publish has served tours for a week without a rollback. The same invariant as slice
+0 applies: every reference in this spec to a file this slice deletes, including the skill
+and drafter paths named above, is rewritten in this slice's commit as a removal narration,
+so the spec never claims a file that is gone.
+**Proves:** `make lint` (process lint refuses dangling doc refs) and `make test` green.
+
+---
+
+## 9. Self-review against the interview
+
+- D1–D14 each map to a slice (D1→0, D2/D3/D5/D6→1, D4→5, D7→6, D8/D9→1+6, D10/D14→10,
+  D11→2+7, D12→7 intake, D13→7).
+- Not covered here, deliberately: the staleness pass (D9's fact-check replacement) is its
+  own spec once the corpus exists; a subscription-billed worker behind the seam is not
+  built until wanted.
+- Names used across slices: `Beat`, `Claim`, `Source`, `Verdict`, `Narration`, `Story`,
+  `ModelClient`, `Completion`, `CostEstimate`, `MergeOutcome`; functions `validate`,
+  `claims_hash`, `bind`, `decompose`, `group`, `judge_claims`, `omissions`, `narrate`,
+  `judge_narration`, `merge`, `apply`, `run_job`. A later slice that renames one edits this
+  file in the same commit.
