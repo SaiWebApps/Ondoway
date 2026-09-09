@@ -214,6 +214,77 @@ class TestLensesEndpoint:
 
 
 # ---------------------------------------------------------------------------
+# GET /api/v1/cities/{slug}/hours — Docs/adr/0006. The map's hours are
+# share-alike, so what we hold goes back out where anyone can check it.
+# ---------------------------------------------------------------------------
+
+
+class TestCityHoursFile:
+    """M8: the hours we read, mix and speak are published back with their credit.
+
+    Docs/adr/0006: "Because map hours mix with guesses, the OpenStreetMap
+    share-alike licence applies: each city's hours file is published openly and
+    the app carries a credit line." Two things a reader must be able to do: get
+    the file without an account, and tell a MAP hour from a GUESS — the
+    distinction the whole phase turns on, and the one a flattened file would
+    republish as if the map had said it.
+
+    UNDO: drop `source` from the row -> a guess reads as the map's -> RED.
+    """
+
+    def _seed_doors(self, driver):
+        with driver.session(database=get_database()) as s:
+            s.run(
+                "MERGE (p:POI {id: 'hours-mapped'}) SET p.city_name = 'paris', "
+                "p.name = 'Mapped Museum', p.gated = true, "
+                "p.opening_hours = 'Tu-Su 09:30-18:00', p.opening_hours_source = 'map'"
+            )
+            s.run(
+                "MERGE (p:POI {id: 'hours-guessed'}) SET p.city_name = 'paris', "
+                "p.name = 'Guessed Chapel', p.gated = true, "
+                "p.opening_hours = 'Mo-Su 10:00-17:00', p.opening_hours_source = 'guess'"
+            )
+            s.run(
+                "MERGE (p:POI {id: 'hours-open-square'}) SET p.city_name = 'paris', "
+                "p.name = 'Open Square', p.gated = false"
+            )
+
+    def _drop_doors(self, driver):
+        with driver.session(database=get_database()) as s:
+            s.run(
+                "MATCH (p:POI) WHERE p.id STARTS WITH 'hours-' DETACH DELETE p"
+            )
+
+    def test_the_file_is_public_and_says_where_each_hour_came_from(
+        self, seeded_client, clean_driver
+    ):
+        self._seed_doors(clean_driver)
+        try:
+            response = seeded_client.get("/api/v1/cities/paris/hours")
+            assert response.status_code == 200, response.text
+            body = response.json()
+            assert body["license"] == "© OpenStreetMap contributors, ODbL"
+            by_id = {door["poi_id"]: door for door in body["doors"]}
+            assert by_id["hours-mapped"]["source"] == "map"
+            assert by_id["hours-mapped"]["opening_hours"] == "Tu-Su 09:30-18:00"
+            assert by_id["hours-guessed"]["source"] == "guess", (
+                "a guess must not be republished as if the map had said it"
+            )
+            # A place you do not go inside has no door and no hours to publish.
+            assert "hours-open-square" not in by_id
+            assert body["door_count"] == len(body["doors"])
+        finally:
+            self._drop_doors(clean_driver)
+
+    def test_an_unknown_city_is_a_404_not_an_empty_file(self, seeded_client):
+        """An empty file reads as "this city has no doors", which is a claim we
+        would be making about a city we do not have."""
+        response = seeded_client.get("/api/v1/cities/atlantis/hours")
+        assert response.status_code == 404
+        assert response.json().get("detail")
+
+
+# ---------------------------------------------------------------------------
 # GET /api/v1/profile (bearer) — specs/2026-08-10-profile-endpoint/design.md.
 # The module DB is not wiped between tests, so each test uses distinct user ids.
 # ---------------------------------------------------------------------------

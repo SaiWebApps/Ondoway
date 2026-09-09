@@ -10,10 +10,50 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from neo4j import Session
 
+from src import city_registry
 from src.api.auth.dependencies import get_current_user
 from src.api.dependencies import get_session
 
 router = APIRouter(tags=["product"])
+
+#: The attribution the map's share-alike licence requires of anyone who
+#: republishes its hours (Docs/adr/0006: "each city's hours file is published
+#: openly and the app carries a credit line"). Spelled ONCE, here, and served
+#: with the file itself so a copy of the data cannot travel without its credit.
+HOURS_LICENSE = "© OpenStreetMap contributors, ODbL"
+
+
+@router.get("/cities/{slug}/hours")
+def city_hours(slug: str, session: Session = Depends(get_session)) -> dict:
+    """Every door's opening hours for a city, openly, with its credit.
+
+    The map's hours are share-alike: we read them, mix them with our own guesses,
+    and speak them, so what we hold goes back out where anyone can check it. Each
+    row says WHERE its hours came from — the map, or our guess — because that is
+    the distinction the whole phase turns on, and a file that flattened the two
+    would republish a guess as if the map had said it.
+
+    Public and unauthenticated, like the lens taxonomy beside it: an open file
+    nobody has to hold an account to read. An unknown city is a 404, never an
+    empty file that reads as "this city has no doors".
+    """
+    if slug.strip().lower() not in city_registry.servable_cities():
+        raise HTTPException(status_code=404, detail=f"No city '{slug}'")
+    records = session.run(
+        "MATCH (p:POI {city_name: $slug}) WHERE p.gated = true "
+        "RETURN p.id AS poi_id, p.name AS name, "
+        "       p.opening_hours AS opening_hours, "
+        "       p.opening_hours_source AS source "
+        "ORDER BY p.name",
+        slug=slug.strip().lower(),
+    )
+    doors = [dict(record) for record in records]
+    return {
+        "city": slug.strip().lower(),
+        "license": HOURS_LICENSE,
+        "door_count": len(doors),
+        "doors": doors,
+    }
 
 
 @router.get("/lenses")

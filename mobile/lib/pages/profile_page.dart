@@ -68,6 +68,13 @@ class ProfilePage extends StatelessWidget {
               builder: (_) => const FeedbackSheet(),
             ),
           ),
+          // The opening times this app speaks are the map's, and its licence is
+          // share-alike: the credit travels with the words (Docs/adr/0006).
+          const ListTile(
+            key: Key('profile-hours-credit'),
+            leading: Icon(Icons.schedule_outlined),
+            title: Text('Opening hours © OpenStreetMap contributors'),
+          ),
           const Divider(height: 32),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
