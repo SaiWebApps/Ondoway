@@ -1,0 +1,452 @@
+[
+  {
+    "beat_id": "new_york/guggenheim-museum/finding-the-museum",
+    "city_name": "new_york",
+    "poi_name": "Guggenheim Museum",
+    "story_slug": "finding-the-museum",
+    "title": "Finding the museum",
+    "beat_type": "stop_orientation",
+    "lenses": [
+      "historic_arch"
+    ],
+    "sub_location": null,
+    "trigger_address": "1071 Fifth Ave, New York, NY 10128",
+    "claims": [
+      {
+        "claim_id": "c01",
+        "text": "The museum stands at 1071 Fifth Avenue, at East 89th Street.",
+        "kind": "state",
+        "status": "resolved",
+        "sources": [
+          {
+            "source_id": "lonely-planet-new-york-city",
+            "chunk": "chunk-07-upper-east-side",
+            "span": "1071 Fifth Ave, at E 89th St",
+            "as_of": 2023,
+            "rights_basis": "owned_copy",
+            "stated_value": "1071 Fifth Ave"
+          }
+        ],
+        "resolved_value": null,
+        "resolution": {
+          "by": null,
+          "decided_by": null,
+          "decided_at": null
+        },
+        "verdict": {
+          "judge_model": "claude-haiku-4-5",
+          "entailed": true,
+          "bound_to": "fc9639615fb61d28ff5da82e1f20b2fdcef287873f220c6543ff3c5ef72cff2c"
+        }
+      }
+    ],
+    "narration": {
+      "text": "The address here is 1071 Fifth Avenue, on the corner of East 89th Street. Stand back on the sidewalk for a moment before you go any further.",
+      "claims_hash": "0f8fdd33c92867d4149a112e77989095a25134174ba6a40be10fbe4ecccf59d2",
+      "author_model": "claude-opus-5",
+      "verdict": {
+        "judge_model": "claude-haiku-4-5",
+        "sentences_entailed": 2,
+        "sentences_total": 2,
+        "bound_to": "db12e0207d463e43f1f68e6b3a19edaa39ccf72238c490e707fdb45b503ae031"
+      },
+      "flags": []
+    },
+    "physical_cues": [],
+    "entities": [
+      "Fifth Avenue"
+    ],
+    "narrative_function": "establishing",
+    "emotional_register": "neutral",
+    "sensory_anchor": false,
+    "inline_foreign_phrases": [],
+    "pronunciation": null,
+    "kid_friendly": "yes",
+    "duration_sec": 18,
+    "review": {
+      "held": false,
+      "reason": null
+    }
+  },
+  {
+    "beat_id": "new_york/guggenheim-museum/how-the-museum-came-to-be",
+    "city_name": "new_york",
+    "poi_name": "Guggenheim Museum",
+    "story_slug": "how-the-museum-came-to-be",
+    "title": "How the museum came to be",
+    "beat_type": "anecdote",
+    "lenses": [
+      "hidden_history",
+      "visual_art"
+    ],
+    "sub_location": null,
+    "trigger_address": "1071 Fifth Ave, New York, NY 10128",
+    "claims": [
+      {
+        "claim_id": "c01",
+        "text": "Solomon R. Guggenheim began buying abstract art in his sixties, on the advice of Hilla Rebay.",
+        "kind": "event",
+        "status": "resolved",
+        "sources": [
+          {
+            "source_id": "lonely-planet-new-york-city",
+            "chunk": "chunk-07-upper-east-side",
+            "span": "The Guggenheim came out of the collection of Solomon R Guggenheim, a New York mining magnate who began acquiring abstract art in his 60s at the behest of his art adviser, an eccentric German baroness named Hilla Rebay.",
+            "as_of": 2023,
+            "rights_basis": "owned_copy",
+            "stated_value": null
+          }
+        ],
+        "resolved_value": null,
+        "resolution": {
+          "by": null,
+          "decided_by": null,
+          "decided_at": null
+        },
+        "verdict": {
+          "judge_model": "claude-haiku-4-5",
+          "entailed": true,
+          "bound_to": "acf9c3b76fa5ecd0de43431ec57e9c5befb3c47cdeafdb25f2c7f0c6c1b5eea1"
+        }
+      },
+      {
+        "claim_id": "c02",
+        "text": "In 1939 the collection went on view in a temporary museum on 54th Street, called the Museum of Non-Objective Painting.",
+        "kind": "event",
+        "status": "resolved",
+        "sources": [
+          {
+            "source_id": "lonely-planet-new-york-city",
+            "chunk": "chunk-07-upper-east-side",
+            "span": "In 1939, with Rebay serving as director, Guggenheim opened a temporary museum on 54th St titled the Museum of Non-Objective Painting.",
+            "as_of": 2023,
+            "rights_basis": "owned_copy",
+            "stated_value": "1939"
+          }
+        ],
+        "resolved_value": null,
+        "resolution": {
+          "by": null,
+          "decided_by": null,
+          "decided_at": null
+        },
+        "verdict": {
+          "judge_model": "claude-haiku-4-5",
+          "entailed": true,
+          "bound_to": "9037e937342e9b26933b8a19023b6fec685cb328d8b7a8c20d9a63c7e6f2c015"
+        }
+      },
+      {
+        "claim_id": "c03",
+        "text": "The building was finished in 1959, by which time both Wright and Guggenheim were dead.",
+        "kind": "event",
+        "status": "resolved",
+        "sources": [
+          {
+            "source_id": "lonely-planet-new-york-city",
+            "chunk": "chunk-07-upper-east-side",
+            "span": "Construction was finally completed in 1959 – after both Wright and Guggenheim had passed away.",
+            "as_of": 2023,
+            "rights_basis": "owned_copy",
+            "stated_value": "1959"
+          },
+          {
+            "source_id": "frommers-nyc-2024",
+            "chunk": "chunk-05-ch05-uptown",
+            "span": "Visiting this 1959 masterpiece",
+            "as_of": 2024,
+            "rights_basis": "owned_copy",
+            "stated_value": "1959"
+          }
+        ],
+        "resolved_value": null,
+        "resolution": {
+          "by": "corroborated",
+          "decided_by": null,
+          "decided_at": null
+        },
+        "verdict": {
+          "judge_model": "claude-haiku-4-5",
+          "entailed": true,
+          "bound_to": "9b08e6747c060ef716921b701e39a1e1caeac07e8c3cd99aaf38f04bae150f43"
+        }
+      }
+    ],
+    "narration": {
+      "text": "An elderly mining millionaire started buying abstract paintings late in life, pushed along by an adviser named Hilla Rebay. Their first home for the pictures opened in 1939 on 54th Street, under the sober title Museum of Non-Objective Painting. The permanent building took two more decades, and neither man lived to walk into it.",
+      "claims_hash": "0da7e0bc5d185ba46b7bb8c00622678957f8512825155b22546bbd95b301454c",
+      "author_model": "claude-opus-5",
+      "verdict": {
+        "judge_model": "claude-haiku-4-5",
+        "sentences_entailed": 3,
+        "sentences_total": 3,
+        "bound_to": "315b418ffdc7382b735e70ebeaff1560b2763881130d2ddb13717327625ea714"
+      },
+      "flags": []
+    },
+    "physical_cues": [],
+    "entities": [
+      "Solomon R. Guggenheim",
+      "Hilla Rebay",
+      "Frank Lloyd Wright"
+    ],
+    "narrative_function": "establishing",
+    "emotional_register": "neutral",
+    "sensory_anchor": false,
+    "inline_foreign_phrases": [],
+    "pronunciation": null,
+    "kid_friendly": "yes",
+    "duration_sec": 52,
+    "review": {
+      "held": false,
+      "reason": null
+    }
+  },
+  {
+    "beat_id": "new_york/guggenheim-museum/the-opening-and-the-critics",
+    "city_name": "new_york",
+    "poi_name": "Guggenheim Museum",
+    "story_slug": "the-opening-and-the-critics",
+    "title": "The opening and the critics",
+    "beat_type": "event",
+    "lenses": [
+      "hidden_history"
+    ],
+    "sub_location": null,
+    "trigger_address": "1071 Fifth Ave, New York, NY 10128",
+    "claims": [
+      {
+        "claim_id": "c01",
+        "text": "Admission cost fifty cents when the doors opened in October 1959.",
+        "kind": "event",
+        "status": "resolved",
+        "sources": [
+          {
+            "source_id": "lonely-planet-new-york-city",
+            "chunk": "chunk-07-upper-east-side",
+            "span": "When the Guggenheim opened its doors in October 1959, the ticket price was 50¢",
+            "as_of": 2023,
+            "rights_basis": "owned_copy",
+            "stated_value": "50 cents"
+          }
+        ],
+        "resolved_value": null,
+        "resolution": {
+          "by": null,
+          "decided_by": null,
+          "decided_at": null
+        },
+        "verdict": {
+          "judge_model": "claude-haiku-4-5",
+          "entailed": true,
+          "bound_to": "3f13fe5f44845d0d52ff682ced4602a324c3f4079203f63371c055b414b41372"
+        }
+      },
+      {
+        "claim_id": "c02",
+        "text": "The New York Times attacked the new building, while other voices ranked it among the finest in the country.",
+        "kind": "event",
+        "status": "resolved",
+        "sources": [
+          {
+            "source_id": "lonely-planet-new-york-city",
+            "chunk": "chunk-07-upper-east-side",
+            "span": "The structure was savaged by the New York Times, but others quickly celebrated it as one of the country’s most beautiful buildings.",
+            "as_of": 2023,
+            "rights_basis": "owned_copy",
+            "stated_value": null
+          }
+        ],
+        "resolved_value": null,
+        "resolution": {
+          "by": null,
+          "decided_by": null,
+          "decided_at": null
+        },
+        "verdict": {
+          "judge_model": "claude-haiku-4-5",
+          "entailed": true,
+          "bound_to": "75a7ac7e91908472acefd96d6f96d5c6b5173e558b5375a3782d23cb2e2cba36"
+        }
+      },
+      {
+        "claim_id": "c03",
+        "text": "Reviewers were dismissive of the museum in its first years.",
+        "kind": "belief",
+        "status": "resolved",
+        "sources": [
+          {
+            "source_id": "frommers-nyc-2024",
+            "chunk": "chunk-05-ch05-uptown",
+            "span": "Early critics dismissed the museum",
+            "as_of": 2024,
+            "rights_basis": "owned_copy",
+            "stated_value": null
+          }
+        ],
+        "resolved_value": null,
+        "resolution": {
+          "by": null,
+          "decided_by": null,
+          "decided_at": null
+        },
+        "verdict": {
+          "judge_model": "claude-haiku-4-5",
+          "entailed": true,
+          "bound_to": "536d55f0a550d550d67588d92f5273df781234b6c027632da9b358bbbe7b43fa"
+        }
+      }
+    ],
+    "narration": {
+      "text": "Half a dollar bought you a ticket on the October morning in 1959 when the doors first opened. The reviews were brutal in places and rapturous in others, and the paper of record came down hard. Sixty years of visitors have quietly settled that argument.",
+      "claims_hash": "7d8107feeee064376b599e6ac03dca1da03743734a01abb10ae884109c52bb02",
+      "author_model": "claude-opus-5",
+      "verdict": {
+        "judge_model": "claude-haiku-4-5",
+        "sentences_entailed": 3,
+        "sentences_total": 3,
+        "bound_to": "2907e6fe3b289047a9f9a66f96db5b02496b334a1697033a635f08d5050d37cf"
+      },
+      "flags": []
+    },
+    "physical_cues": [],
+    "entities": [
+      "The New York Times"
+    ],
+    "narrative_function": "establishing",
+    "emotional_register": "neutral",
+    "sensory_anchor": false,
+    "inline_foreign_phrases": [],
+    "pronunciation": null,
+    "kid_friendly": "yes",
+    "duration_sec": 44,
+    "review": {
+      "held": false,
+      "reason": null
+    }
+  },
+  {
+    "beat_id": "new_york/guggenheim-museum/the-spiral-and-the-ramp",
+    "city_name": "new_york",
+    "poi_name": "Guggenheim Museum",
+    "story_slug": "the-spiral-and-the-ramp",
+    "title": "The spiral and the ramp",
+    "beat_type": "architectural_detail",
+    "lenses": [
+      "historic_arch",
+      "modern_design"
+    ],
+    "sub_location": null,
+    "trigger_address": "1071 Fifth Ave, New York, NY 10128",
+    "claims": [
+      {
+        "claim_id": "c01",
+        "text": "The inverted ziggurat form divided opinion from the start.",
+        "kind": "belief",
+        "status": "resolved",
+        "sources": [
+          {
+            "source_id": "lonely-planet-new-york-city",
+            "chunk": "chunk-07-upper-east-side",
+            "span": "the inverted ziggurat structure was derided by some critics but hailed by others, who welcomed it as a beloved architectural icon.",
+            "as_of": 2023,
+            "rights_basis": "owned_copy",
+            "stated_value": null
+          }
+        ],
+        "resolved_value": null,
+        "resolution": {
+          "by": null,
+          "decided_by": null,
+          "decided_at": null
+        },
+        "verdict": {
+          "judge_model": "claude-haiku-4-5",
+          "entailed": true,
+          "bound_to": "47f46500bc0a2fa892736546137265dc67e0e0c72a1fa88bfa916bbc259162e9"
+        }
+      },
+      {
+        "claim_id": "c02",
+        "text": "The spiral sits among the conventional towers of Fifth Avenue.",
+        "kind": "state",
+        "status": "resolved",
+        "sources": [
+          {
+            "source_id": "frommers-nyc-2024",
+            "chunk": "chunk-05-ch05-uptown",
+            "span": "delirious spiral of a museum sits among the towers of Fifth Avenue like a steroidal peacock among guinea hens.",
+            "as_of": 2024,
+            "rights_basis": "owned_copy",
+            "stated_value": null
+          }
+        ],
+        "resolved_value": null,
+        "resolution": {
+          "by": null,
+          "decided_by": null,
+          "decided_at": null
+        },
+        "verdict": {
+          "judge_model": "claude-haiku-4-5",
+          "entailed": true,
+          "bound_to": "7d28cd97b35c9c021eaa98fec3c2e4eb8390f55decab5dddeb3e633d994f0ac0"
+        }
+      },
+      {
+        "claim_id": "c03",
+        "text": "Wright meant visitors to start at the top and wind down, but the exhibitions are hung from the bottom up.",
+        "kind": "state",
+        "status": "resolved",
+        "sources": [
+          {
+            "source_id": "lonely-planet-new-york-city",
+            "chunk": "chunk-07-upper-east-side",
+            "span": "Though Wright intended visitors to go to the top and wind their way down, the cramped single elevator makes this difficult. Exhibitions, therefore, are installed from bottom to top.",
+            "as_of": 2023,
+            "rights_basis": "owned_copy",
+            "stated_value": null
+          }
+        ],
+        "resolved_value": null,
+        "resolution": {
+          "by": null,
+          "decided_by": null,
+          "decided_at": null
+        },
+        "verdict": {
+          "judge_model": "claude-haiku-4-5",
+          "entailed": true,
+          "bound_to": "cb78c48bcba13a5b0228c2ccdb3991578250e6183c35f98b13c5bd3409d30ccb"
+        }
+      }
+    ],
+    "narration": {
+      "text": "A pile of stacked circles, widest at the sky, in a street of right angles. Some called it a spaceship and some called it a masterpiece, and both camps were loud about it. The architect wanted you to ride up and drift down; the single small elevator settled that differently, so the shows now begin on the ground.",
+      "claims_hash": "e76ec2f5da038924863552dc95ea6abf9727e4d237db7a1ef2463a55cddc822d",
+      "author_model": "claude-opus-5",
+      "verdict": {
+        "judge_model": "claude-haiku-4-5",
+        "sentences_entailed": 3,
+        "sentences_total": 3,
+        "bound_to": "3e7951689c0dcb9f20a24ee9a50af22f5db0a07561118977c11d04d5a2565023"
+      },
+      "flags": []
+    },
+    "physical_cues": [],
+    "entities": [
+      "Frank Lloyd Wright"
+    ],
+    "narrative_function": "establishing",
+    "emotional_register": "neutral",
+    "sensory_anchor": false,
+    "inline_foreign_phrases": [],
+    "pronunciation": null,
+    "kid_friendly": "yes",
+    "duration_sec": 56,
+    "review": {
+      "held": false,
+      "reason": null
+    }
+  }
+]

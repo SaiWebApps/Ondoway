@@ -146,7 +146,7 @@ One beat in `data/{city}/beats.json`. Field names are final; slice 1 pins them.
         {"source_id": "lonely-planet-new-york-city", "chunk": "chunk-07-upper-east-side",
          "span": "Construction was finally completed in 1959 – after both Wright and Guggenheim had passed away.",
          "as_of": 2023, "rights_basis": "owned_copy", "stated_value": null},
-        {"source_id": "frommers-nyc-2024", "chunk": "chunk-05-exploring-uptown",
+        {"source_id": "frommers-nyc-2024", "chunk": "chunk-05-ch05-uptown",
          "span": "Visiting this 1959 masterpiece ...", "as_of": 2024, "rights_basis": "owned_copy",
          "stated_value": null}
       ],

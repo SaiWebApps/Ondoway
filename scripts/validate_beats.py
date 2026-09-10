@@ -1,6 +1,26 @@
 #!/usr/bin/env python
 """Validate a beats.json file for duplicate beats and ungrounded Wikipedia beats.
 
+Shape dispatch (decisions.shape_detection): `validate()` first classifies the
+file's shape from its records, then routes to one of two independent
+validators:
+
+- All records "legacy"-shaped (neither `claims` nor `narration` present, and
+  carrying more than a bare `beat_id`) — the seven checks below, unchanged.
+  An empty beats list is vacuously all-legacy and passes.
+- All records "new"-shaped (both `claims` and `narration` present) —
+  `src.ingest.model.validate`, given `chunks_root` (explicit `--chunks-root`,
+  else derived the same way the legacy grounding gate below derives
+  `Books/{City}`). An undecidable root on this path is a hard error, never a
+  soft-skip.
+- Anything else is refused before either validator runs: a mix of new- and
+  legacy-shaped records is `SHAPE_MIXED`; a record that is neither (missing
+  virtually everything, or carrying exactly one of `claims`/`narration`, or
+  not a dict) is `SHAPE_UNKNOWN`. Per-record shape is structural — it never
+  keys on `script_body` — matching `src.ingest.model`'s own per-record rule
+  except for the "just a beat_id, nothing else" case, which that rule alone
+  can't tell apart from a genuine legacy beat.
+
 Checks collection-level invariants the Pydantic model can't enforce:
 
 1. `script_body_hash` is unique across all beats in the file.
@@ -38,16 +58,20 @@ script with the city's beats path.
 
 Exit codes:
   0 — all checks pass
-  1 — at least one collision (printed with full beat IDs and the conflict type)
-  2 — file unreadable / not a JSON list (operator error, distinct from a real
+  1 — at least one collision, or a refused SHAPE_MIXED/SHAPE_UNKNOWN file
+      (printed with full beat IDs and the conflict type)
+  2 — file unreadable, not a JSON list, or (new-shape only) no chunks root
+      could be found or given (operator error, distinct from a real
       data-integrity failure)
 
 Usage:
   python scripts/validate_beats.py data/paris/beats.json
+  python scripts/validate_beats.py data/new_york/beats.json --chunks-root Books/new_york
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from collections import defaultdict
@@ -56,6 +80,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts.extract_validators import source_grounding_gate
+from src.ingest import model as ingest_model
 
 LEGACY_WILDCARD = "legacy_unknown"
 WIKIPEDIA_BOOK_SLUG = "wikipedia"
@@ -317,8 +342,9 @@ def _check_status_vocabulary(beats: list[dict]) -> list[str]:
     return errors
 
 
-def validate(path: Path) -> list[str]:
-    beats = _load_beats(path)
+def _validate_legacy(beats: list[dict], path: Path) -> list[str]:
+    """The seven collection-level checks, unchanged (`validate()`'s pre-dispatch
+    behavior). An empty beats list passes trivially."""
     return (
         _check_hash_uniqueness(beats)
         + _check_beat_id_uniqueness(beats)
@@ -330,13 +356,127 @@ def validate(path: Path) -> list[str]:
     )
 
 
+def _record_shape(record: object) -> str:
+    """Per-record shape for FILE-level dispatch: 'new', 'legacy', or 'unknown'.
+
+    Structural, per decisions.shape_detection: both `claims` and `narration`
+    present -> 'new'; exactly one, or a non-dict record -> 'unknown'; never
+    keys on `script_body`. Neither present -> 'legacy' ONLY when the record
+    carries something beyond a bare `beat_id` — a record that is nothing but
+    `{"beat_id": ...}` (or empty) is indistinguishable from a truncated
+    anything and is 'unknown' rather than a guessed 'legacy'. A real legacy
+    beat always carries its old-schema fields (poi_name, script_body_hash,
+    ...) alongside beat_id, so this never affects real corpus data.
+    """
+    if not isinstance(record, dict):
+        return "unknown"
+    has_claims = "claims" in record
+    has_narration = "narration" in record
+    if has_claims and has_narration:
+        return "new"
+    if has_claims or has_narration:
+        return "unknown"
+    if set(record) - {"beat_id"}:
+        return "legacy"
+    return "unknown"
+
+
+def _shape_label(record: object, index: int) -> str:
+    if isinstance(record, dict):
+        beat_id = record.get("beat_id")
+        if isinstance(beat_id, str) and beat_id:
+            return beat_id
+    return f"#{index}"
+
+
+def _dispatch_shape(beats: list[dict]) -> tuple[str, list[str]]:
+    """Classify the whole file's shape. Returns (shape, refusal_errors):
+    `shape` is 'new' or 'legacy' to dispatch to a validator, or 'refused'
+    with `refusal_errors` already filled in (SHAPE_MIXED or SHAPE_UNKNOWN
+    lines) when the file isn't cleanly one shape (decisions.shape_detection
+    — "the CLI refuses a mixed file with SHAPE_MIXED").
+    """
+    if not beats:
+        return "legacy", []
+    per_record = [(i, b, _record_shape(b)) for i, b in enumerate(beats)]
+    shapes_present = {shape for _, _, shape in per_record}
+    if shapes_present == {"new"}:
+        return "new", []
+    if shapes_present == {"legacy"}:
+        return "legacy", []
+    unknowns = [(i, b) for i, b, shape in per_record if shape == "unknown"]
+    if unknowns:
+        return "refused", [
+            f"SHAPE_UNKNOWN {_shape_label(b, i)}: record shape is neither new nor legacy"
+            for i, b in unknowns
+        ]
+    return "refused", [
+        "SHAPE_MIXED: file mixes new-shape (claims+narration) and legacy-shape beat "
+        "records — a beats.json must be entirely one shape or the other"
+    ]
+
+
+def _derive_chunks_root(beats_path: Path) -> Path | None:
+    """`Books/{City}` for `beats_path`, matched case-insensitively — the same
+    derivation the legacy book-grounding gate uses (decisions.chunks_root):
+    `data/{city}/beats.json` -> repo root -> `Books/{City}`. Returns None
+    when unlocatable; the caller turns that into a hard error, never a
+    soft-skip, on the new-shape path.
+    """
+    resolved = beats_path.resolve()
+    books_root = resolved.parent.parent.parent / "Books"
+    if not books_root.exists():
+        return None
+    city_slug = resolved.parent.name
+    return next(
+        (d for d in books_root.iterdir() if d.is_dir() and d.name.lower() == city_slug.lower()),
+        None,
+    )
+
+
+class ChunksRootUnresolvableError(ValueError):
+    """A new-shape file needs a chunks root and none was found or given."""
+
+
+def validate(path: Path, chunks_root: str | Path | None = None) -> list[str]:
+    """Validate a beats.json file, dispatching on shape (module docstring).
+
+    Kept as a single positional-argument-compatible entry point: every
+    existing caller passing only `path` keeps working unchanged (it only
+    ever sees legacy-shape data today). `chunks_root` is used, and may be
+    derived, only on the new-shape path; the legacy path ignores it.
+    """
+    beats = _load_beats(path)
+    shape, refusal = _dispatch_shape(beats)
+    if shape == "refused":
+        return refusal
+    if shape == "legacy":
+        return _validate_legacy(beats, path)
+    # shape == "new"
+    root = Path(chunks_root) if chunks_root is not None else _derive_chunks_root(path)
+    if root is None:
+        raise ChunksRootUnresolvableError(
+            f"cannot locate a chunks root for {path} — pass --chunks-root <dir> "
+            "(new-shape beats need it for span grounding)"
+        )
+    return ingest_model.validate(beats, chunks_root=root)
+
+
 def main(argv: list[str]) -> int:
-    if len(argv) != 2:
-        print("usage: validate_beats.py <path-to-beats.json>", file=sys.stderr)
-        return 2
-    path = Path(argv[1])
+    parser = argparse.ArgumentParser(prog="validate_beats.py")
+    parser.add_argument("path", help="path to a beats.json file")
+    parser.add_argument(
+        "--chunks-root",
+        default=None,
+        help="chunk source root for new-shape span grounding (else derived from path)",
+    )
+    args = parser.parse_args(argv[1:])
+    path = Path(args.path)
     try:
-        errors = validate(path)
+        errors = validate(path, chunks_root=args.chunks_root)
+    except ChunksRootUnresolvableError as exc:
+        print(f"validate_beats: {exc}", file=sys.stderr)
+        return 2
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(f"validate_beats: cannot read {path}: {exc}", file=sys.stderr)
         return 2
@@ -346,7 +486,8 @@ def main(argv: list[str]) -> int:
         for line in errors:
             print(f"  {line}")
         return 1
-    print(f"validate_beats: PASS ({path})")
+    shape, _ = _dispatch_shape(_load_beats(path))
+    print(f"validate_beats: PASS shape={shape} ({path})")
     return 0
 
 
