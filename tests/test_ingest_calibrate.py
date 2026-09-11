@@ -142,10 +142,26 @@ def test_a_class_below_its_baseline_fails_and_pending_never_does():
 
     # The committed baseline for the mock client is what the mock run
     # produces today, so the target exits 0 on a clean checkout.
-    committed = json.loads(BASELINE.read_text())["mock"]
+    baselines = json.loads(BASELINE.read_text())
+    committed = baselines["mock"]
     live_report = calibrate.run(_fixture(), REPO_ROOT / "Books", client="mock")
     assert calibrate.regressions(live_report, committed) == []
     assert calibrate.baseline_from(live_report) == committed
+
+    # Every recorded client carries its run provenance, so a future reader
+    # can tell a measured block from a hand-copied one.
+    import src.ingest.llm as llm
+
+    # The mock block is regenerable for $0, so it must match the current
+    # roles table. The live block is a historical record of a paid run:
+    # it must carry its models and say how it was stamped, and is never
+    # pinned to current config (that would invite rewriting history).
+    assert baselines["_runs"]["mock"]["models"] == dict(llm.ROLE_MODEL)
+    assert baselines["_runs"]["mock"]["recorded_at"] >= "2026-09-11"
+    live_run = baselines["_runs"]["live"]
+    assert set(live_run["models"]) == set(llm.ROLE_MODEL)
+    assert live_run["recorded_at"] == "2026-09-11"
+    assert "stamped after the fact" in live_run["note"]
 
 
 def test_no_live_client_in_this_file():
@@ -217,3 +233,72 @@ def test_confirm_sees_the_whole_estimate_and_declined_rows_say_not_run():
     assert "not run" in fabricated_line and "pending" not in fabricated_line
     framing_line = next(line for line in text.splitlines() if line.startswith("framing_sentence"))
     assert "pending" in framing_line
+
+
+def test_precision_counts_clean_claims_refused_and_claims_dropped_with_reasons():
+    """Catch rate alone rewards a judge that refuses everything. Every
+    judged record also reports how many CLEAN claims the judge refused on
+    attempt one (false refusals) and how many claims were dropped, and the
+    report prints each reason. The fixture's own script has none of
+    either; a script that also refuses a clean claim whose restate then
+    trips the lift gate shows one of each."""
+    import src.ingest.llm as llm
+    from src.ingest import judge_claims
+
+    fixture = _fixture()
+    clean = calibrate.run(fixture, REPO_ROOT / "Books", client="mock")
+    for row in clean.rows:
+        if row.detector in ("judge_claims", "omissions"):
+            assert (row.false_refusals, row.dropped) == (0, 0), row.defect_class
+        else:
+            assert (row.false_refusals, row.dropped) == (None, None), row.defect_class
+
+    record = next(r for r in fixture.records if r.defect_class == "fabricated_date")
+    clean_id = record.claims[0]["claim_id"]
+    lifted_restate = {
+        "text": "Solomon R Guggenheim, a New York mining magnate who began acquiring abstract art",
+        "kind": "event",
+        "span": record.claims[0]["span"],
+    }
+
+    def over_strict(rec: calibrate.DefectRecord, u) -> dict[str, llm.MockAnswer]:
+        answers = calibrate.scripted_answers(rec, u)
+        if rec is record:
+            answers[judge_claims.judge_custom_id(u, clean_id, 1)] = llm.MockAnswer(
+                text='{"entailed": false, "reason": "the span does not say sixties"}',
+                model_id=llm.ROLE_MODEL["claim_judge"],
+            )
+            answers[judge_claims.restate_custom_id(u, clean_id)] = llm.MockAnswer(
+                text=json.dumps(lifted_restate), model_id=llm.ROLE_MODEL["author"]
+            )
+        return answers
+
+    report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock", scripted=over_strict)
+    row = next(r for r in report.rows if r.defect_class == "fabricated_date")
+    assert (row.caught, row.total) == (1, 1)
+    assert (row.false_refusals, row.dropped) == (1, 1)
+    assert any(clean_id in d and "the span does not say sixties" in d for d in row.details)
+    assert any(clean_id in d and d.startswith("dropped") and "lift" in d for d in row.details)
+
+    text = calibrate.format_report(report)
+    assert "false_ref" in text and "dropped" in text
+    assert "the span does not say sixties" in text
+
+    # Precision regresses the baseline too: more false refusals or drops
+    # than recorded is a regression; a baseline without those keys (the
+    # first live run) compares catch rate only.
+    strict_baseline = {
+        "fabricated_date": {"caught": 1, "total": 1, "false_refusals": 0, "dropped": 0}
+    }
+    assert calibrate.regressions(report, strict_baseline) == [
+        "fabricated_date: 1 false refusal(s) above the baseline 0",
+        "fabricated_date: 1 dropped claim(s) above the baseline 0",
+    ]
+    assert calibrate.regressions(report, {"fabricated_date": {"caught": 1, "total": 1}}) == []
+    assert calibrate.baseline_from(report)["fabricated_date"] == {
+        "caught": 1,
+        "total": 1,
+        "false_refusals": 1,
+        "dropped": 1,
+    }
+    assert calibrate.baseline_from(report)["lift"] == {"caught": 1, "total": 1}

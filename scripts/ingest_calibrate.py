@@ -19,6 +19,7 @@ import argparse
 import json
 import os
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -80,6 +81,11 @@ def main(argv: list[str] | None = None) -> int:
     baselines = json.loads(args.baseline.read_text(encoding="utf-8"))
     if args.update_baseline:
         baselines[args.client] = calibrate.baseline_from(report)
+        baselines.setdefault("_runs", {})[args.client] = {
+            "recorded_at": datetime.now(UTC).date().isoformat(),
+            "models": dict(llm.ROLE_MODEL),
+            "fixture": str(args.fixture.relative_to(ROOT)),
+        }
         args.baseline.write_text(
             json.dumps(baselines, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )

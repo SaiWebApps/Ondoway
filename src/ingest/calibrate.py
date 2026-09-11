@@ -58,7 +58,11 @@ class Fixture:
 @dataclass(frozen=True)
 class ClassRow:
     """One class's tally. `caught`/`total` are None for a pending class;
-    `scripted` says the answers came from the fixture, not a judge."""
+    `scripted` says the answers came from the fixture, not a judge.
+    `false_refusals` (clean claims the judge refused on attempt one) and
+    `dropped` (claims that never came out of P3) are the precision side of
+    the record — catch rate alone rewards a judge that refuses everything;
+    `details` carries every refusal and drop reason for the printout."""
 
     defect_class: str
     detector: str
@@ -66,6 +70,9 @@ class ClassRow:
     total: int | None
     scripted: bool
     note: str = ""
+    false_refusals: int | None = None
+    dropped: int | None = None
+    details: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -207,17 +214,46 @@ def _overlaps(found_span: str, planted_span: str) -> bool:
     return bool(a) and (a in b or b in a)
 
 
-def _detect(
-    record: DefectRecord, unit: Unit, client: llm.ModelClient | None
-) -> tuple[bool | None, str]:
-    """Run the record's detector; (caught, note). None = pending."""
+@dataclass(frozen=True)
+class _Detection:
+    caught: bool | None
+    note: str
+    false_refusals: int | None = None
+    dropped: int | None = None
+    details: tuple[str, ...] = ()
+
+
+def _precision(events: list[tuple[str, dict]], planted_id: str | None) -> tuple[int, int, tuple]:
+    """False refusals (clean claims refused on attempt one), drops, and
+    every refusal/drop reason in event order."""
+    false_refusals = 0
+    dropped = 0
+    details: list[str] = []
+    for kind, payload in events:
+        if kind == "claim_refused":
+            if payload["attempt"] == 1 and payload["claim_id"] != planted_id:
+                false_refusals += 1
+            details.append(
+                f"refused {payload['claim_id']} (attempt {payload['attempt']}): "
+                f"{payload['reason']}"
+            )
+        elif kind == "claim_dropped":
+            dropped += 1
+            details.append(f"dropped {payload['claim_id']}: {payload['reason']}")
+        elif kind == "omission_ungrounded":
+            details.append(f"ungrounded finding discarded: {payload['reason']}")
+    return false_refusals, dropped, tuple(details)
+
+
+def _detect(record: DefectRecord, unit: Unit, client: llm.ModelClient | None) -> _Detection:
+    """Run the record's detector. `caught` None = pending."""
     if record.detector == "pending":
-        return None, record.planted.get("pending_phase", "")
+        return _Detection(None, record.planted.get("pending_phase", ""))
 
     if record.detector == "gates":
         planted = next(c for c in record.claims if c["claim_id"] == record.planted["claim_id"])
         reasons = gates.claim_gates(planted["text"], planted["span"], unit.text)
-        return bool(reasons), "; ".join(reasons)
+        return _Detection(bool(reasons), "; ".join(reasons))
 
     assert client is not None
     events: list[tuple[str, dict]] = []
@@ -225,6 +261,7 @@ def _detect(
     def record_event(kind: str, payload: dict) -> None:
         events.append((kind, payload))
 
+    planted_id = record.planted.get("claim_id")
     try:
         if record.detector == "judge_claims":
             judge_claims.judge_claims(
@@ -235,20 +272,24 @@ def _detect(
                 for kind, payload in events
                 if kind == "claim_refused"
                 and payload["attempt"] == 1
-                and payload["claim_id"] == record.planted["claim_id"]
+                and payload["claim_id"] == planted_id
             ]
-            return bool(refused), refused[0]["reason"] if refused else "not refused"
-        judge_claims.omissions(unit, _drafts(record, unit), client, record_event)
-        spans = [
-            span
-            for kind, payload in events
-            if kind == "omissions_found"
-            for span in payload["spans"]
-        ]
-        hit = [span for span in spans if _overlaps(span, record.planted["span"])]
-        return bool(hit), hit[0] if hit else f"{len(spans)} grounded finding(s), none on the span"
+            caught, note = bool(refused), refused[0]["reason"] if refused else "not refused"
+        else:
+            judge_claims.omissions(unit, _drafts(record, unit), client, record_event)
+            spans = [
+                span
+                for kind, payload in events
+                if kind == "omissions_found"
+                for span in payload["spans"]
+            ]
+            hit = [span for span in spans if _overlaps(span, record.planted["span"])]
+            caught = bool(hit)
+            note = hit[0] if hit else f"{len(spans)} grounded finding(s), none on the span"
     except UnitHeld as held:
-        return False, f"unit held: {held.reason}"
+        caught, note = False, f"unit held: {held.reason}"
+    false_refusals, dropped, details = _precision(events, planted_id)
+    return _Detection(caught, note, false_refusals, dropped, details)
 
 
 def _live_client(events: llm.EventSink) -> llm.ModelClient:
@@ -261,11 +302,14 @@ def run(
     client: str = "mock",
     events: llm.EventSink | None = None,
     confirm: Callable[[llm.CostEstimate], bool] | None = None,
+    scripted: Callable[[DefectRecord, Unit], dict[str, llm.MockAnswer]] = scripted_answers,
 ) -> Report:
     """Run every record through its detector and tally per class.
 
-    `client="mock"`: one scripted MockClient per record (records share
-    claim ids, so their batch custom_ids would collide on one mock).
+    `client="mock"`: one MockClient per record (records share claim ids,
+    so their batch custom_ids would collide on one mock), scripted by
+    `scripted(record, unit)` — `scripted_answers` by default; a test
+    passes its own to exercise the harness on a misbehaving judge.
     `client="live"`: one AnthropicClient, its estimate printed before any
     call; `confirm(estimate)` returning False stops the run with every
     judged class reported as not run (caught None, detector unchanged).
@@ -285,7 +329,7 @@ def run(
 
     rows: list[ClassRow] = []
     for record in fixture.records:
-        scripted = client == "mock" and record.detector in ("judge_claims", "omissions")
+        is_scripted = client == "mock" and record.detector in ("judge_claims", "omissions")
         if record.detector == "pending":
             rows.append(ClassRow(record.defect_class, "pending", None, None, False, record.note))
             continue
@@ -296,12 +340,22 @@ def run(
             continue
         per_record_client: llm.ModelClient | None = live
         if client == "mock" and record.detector != "gates":
-            mock = llm.MockClient(sink, batch_answers=scripted_answers(record, unit))
+            mock = llm.MockClient(sink, batch_answers=scripted(record, unit))
             _arm(mock, [record], unit)
             per_record_client = mock
-        caught, note = _detect(record, unit, per_record_client)
+        found = _detect(record, unit, per_record_client)
         rows.append(
-            ClassRow(record.defect_class, record.detector, int(bool(caught)), 1, scripted, note)
+            ClassRow(
+                record.defect_class,
+                record.detector,
+                int(bool(found.caught)),
+                1,
+                is_scripted,
+                found.note,
+                found.false_refusals,
+                found.dropped,
+                found.details,
+            )
         )
     return Report(client=client, rows=rows)
 
@@ -315,11 +369,20 @@ def _rate(row: ClassRow) -> str:
 def format_report(report: Report) -> str:
     lines = [
         f"ingest-calibrate  client={report.client.upper()}",
-        f"{'class':<24}{'detector':<16}{'caught/total':<14}rate",
+        f"{'class':<24}{'detector':<16}{'caught/total':<14}{'rate':<10}{'false_ref':<11}dropped",
     ]
     for row in report.rows:
         tally = "-" if row.total is None else f"{row.caught}/{row.total}"
-        lines.append(f"{row.defect_class:<24}{row.detector:<16}{tally:<14}{_rate(row)}")
+        false_ref = "-" if row.false_refusals is None else str(row.false_refusals)
+        dropped = "-" if row.dropped is None else str(row.dropped)
+        lines.append(
+            f"{row.defect_class:<24}{row.detector:<16}{tally:<14}{_rate(row):<10}"
+            f"{false_ref:<11}{dropped}"
+        )
+    details = [(row.defect_class, d) for row in report.rows for d in row.details]
+    if details:
+        lines.append("details (every refusal and drop, in order):")
+        lines.extend(f"  {defect_class}: {detail}" for defect_class, detail in details)
     if report.client == "mock":
         lines.append(
             "MOCK: the judge_claims and omissions classes are scripted from the "
@@ -330,16 +393,25 @@ def format_report(report: Report) -> str:
 
 
 def baseline_from(report: Report) -> dict[str, dict[str, int] | None]:
-    return {
-        row.defect_class: (
-            None if row.total is None else {"caught": row.caught, "total": row.total}
-        )
-        for row in report.rows
-    }
+    """Per class: catch tally, plus the precision counts where a judge ran."""
+    baseline: dict[str, dict[str, int] | None] = {}
+    for row in report.rows:
+        if row.total is None:
+            baseline[row.defect_class] = None
+            continue
+        entry = {"caught": row.caught, "total": row.total}
+        if row.false_refusals is not None:
+            entry["false_refusals"] = row.false_refusals
+            entry["dropped"] = row.dropped
+        baseline[row.defect_class] = entry
+    return baseline
 
 
 def regressions(report: Report, baseline: dict[str, dict[str, int] | None]) -> list[str]:
-    """Every class whose catch rate fell below the baseline's."""
+    """Every class whose catch rate fell below the baseline's, or whose
+    false refusals or drops rose above it (only where the baseline
+    recorded them — a baseline from before precision was measured
+    compares catch rate alone)."""
     found: list[str] = []
     for row in report.rows:
         if row.total is None:
@@ -351,5 +423,15 @@ def regressions(report: Report, baseline: dict[str, dict[str, int] | None]) -> l
             found.append(
                 f"{row.defect_class}: {row.caught}/{row.total} is below the baseline "
                 f"{expected['caught']}/{expected['total']}"
+            )
+        if "false_refusals" in expected and (row.false_refusals or 0) > expected["false_refusals"]:
+            found.append(
+                f"{row.defect_class}: {row.false_refusals} false refusal(s) above the "
+                f"baseline {expected['false_refusals']}"
+            )
+        if "dropped" in expected and (row.dropped or 0) > expected["dropped"]:
+            found.append(
+                f"{row.defect_class}: {row.dropped} dropped claim(s) above the baseline "
+                f"{expected['dropped']}"
             )
     return found
