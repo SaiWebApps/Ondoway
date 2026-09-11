@@ -203,7 +203,7 @@ failed job resumes at its last completed phase.
 | Phase | Model | Output | Code gates before the next phase |
 |---|---|---|---|
 | P0 intake | none | units of text with `source_id`, `as_of`, rights basis | manifest fields present; a website unit over the ceiling is split at headings and the job logs it |
-| P1 decompose | author | claims `{text, kind, span}` per unit | span verbatim in unit; no lift ≥8 claim-vs-span; no book furniture (leak regex); self-contained (no bare pronoun subject); `kind` present, default `state` when the judge marks it ambiguous |
+| P1 decompose | author | claims `{text, kind, span}` per unit | span verbatim in unit; no lift ≥8 claim-vs-unit (the span is inside the unit; measured with `scripts/verbatim.py`'s `run_outside_quotation`, attributed quotations exempt); no book furniture (leak regex); self-contained (no bare pronoun subject); `kind` present, default `state` when the judge marks it ambiguous |
 | P2 group | author | stories `{title, place, lenses, beat_type, enrichment, claim_ids}` | every claim in exactly one story; place resolves to `poi-raw.json` or is flagged `new_poi`; structural types allowed 1 claim, others ≥2 |
 | P3 judge claims | judge | per claim: entailed yes/no; per unit: facts no claim carries | a claim refused once is re-asked with the judge's reason quoted back; refused twice is dropped and logged; an omission finding re-asks P1 once for that unit |
 | P4 narrate | author, sees claims only | narration text | no lift vs any span; no leak; no framing regex (`imagine`, `picture`, `envision`); duration computed |
@@ -323,12 +323,14 @@ response, never from config) and `usage`; `AnthropicClient` (SDK, Batch for bulk
 
 ### Slice 3: Decompose and group (P1, P2)
 
-**Files:** create `./src/ingest/decompose.py`, `./src/ingest/group.py`, `./src/ingest/prompts/`
-(the decomposer prompt carried from the branch's `_DECOMPOSE_PROMPT`, the Rule-A grouping
+**Files:** create `./src/ingest/unit.py` (the Unit a chunk becomes), `./src/ingest/decompose.py`,
+`./src/ingest/group.py`, `./src/ingest/prompts/` (the decomposer prompt carried from the branch's `_DECOMPOSE_PROMPT`, the Rule-A grouping
 prompt with the tie-break from the interview); `./src/ingest/gates.py` (span-in-unit, leak
 regex, self-contained regex, kind default).
-**Produces:** `decompose(unit, client) -> list[Claim]`; `group(claims, unit, pois, client)
--> list[Story]`.
+**Produces:** `decompose(unit, client) -> list[ClaimDraft]` (a claim without P3's verdict and
+status — `model.Claim` requires both); `group(claims, unit, pois, client) -> list[Story]`. The
+refusal loop's second failure drops items: a double-booked claim is removed from every story that
+listed it, a story under its claim floor is dropped, and the answer is never re-seated.
 **Proves:** `tests/test_ingest_decompose.py::test_span_not_in_unit_is_refused`,
 `tests/test_ingest_group.py::test_every_claim_lands_in_exactly_one_story`.
 
