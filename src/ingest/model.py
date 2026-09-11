@@ -58,6 +58,10 @@ that function's word contract as-is (case-folded, punctuation stripped),
 including its known gap — `is_attributed` has no guidebook check
 (decisions.disclosed_not_fixed) — rather than reimplementing a second,
 narrower measure.
+
+Slice 4 adds VERDICT_NOT_ENTAILED: a claim whose verdict.entailed is false
+is refused — P3 (src/ingest/judge_claims.py) drops a refused claim, so one
+on disk means a gate was bypassed.
 """
 
 from __future__ import annotations
@@ -461,6 +465,18 @@ def _judge_independence_errors(label: str, beat: Beat) -> list[str]:
     return errors
 
 
+def _verdict_entailed_errors(label: str, beat: Beat) -> list[str]:
+    """VERDICT_NOT_ENTAILED: a claim whose own judge refused it
+    (`verdict.entailed` false) must never reach disk — P3 drops such a
+    claim after its one re-ask (src/ingest/judge_claims.py), so one on
+    disk is a bypassed gate, not a record of a decision."""
+    return [
+        f"VERDICT_NOT_ENTAILED {label}: claim {claim.claim_id} verdict.entailed is false"
+        for claim in beat.claims
+        if not claim.verdict.entailed
+    ]
+
+
 def _narration_lift_errors(label: str, beat: Beat) -> list[str]:
     """NARRATION_LIFT: `beat.narration.text` shares an 8+ word run, measured
     outside attributed quotation, with one of the beat's own claim spans
@@ -592,6 +608,7 @@ def validate(records: list[dict[str, Any]], chunks_root: str | Path | None = Non
             continue
         errors.extend(_identity_and_arc_errors(label, beat, seen_beat_ids))
         errors.extend(_judge_independence_errors(label, beat))
+        errors.extend(_verdict_entailed_errors(label, beat))
         errors.extend(_narration_lift_errors(label, beat))
         span_errs: list[str] = []
         span_flagged_claim_ids: set[str] = set()

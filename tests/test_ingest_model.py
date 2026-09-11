@@ -575,6 +575,22 @@ def test_judge_equal_to_author_is_refused():
     assert beat["claims"][0]["claim_id"] in errors[0]
 
 
+def test_claim_verdict_not_entailed_is_refused():
+    """Slice 4 closes the slice-1 carry-forward: P3 drops a claim the judge
+    refuses, so a claim whose verdict says entailed=false must never reach
+    disk — the validator refuses it as VERDICT_NOT_ENTAILED, naming the
+    beat and the claim."""
+    beat = minimal_beat()
+    beat["claims"][1]["verdict"]["entailed"] = False
+
+    errors = validate([beat])
+
+    assert len(errors) == 1
+    assert errors[0].startswith("VERDICT_NOT_ENTAILED")
+    assert beat["beat_id"] in errors[0]
+    assert "c02" in errors[0]
+
+
 def test_narration_judge_equal_to_author_is_refused():
     beat = minimal_beat()
     beat["narration"]["verdict"]["judge_model"] = beat["narration"]["author_model"]

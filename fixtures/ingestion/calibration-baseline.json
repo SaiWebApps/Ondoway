@@ -1,0 +1,15 @@
+{
+  "_comment": "Per-client catch baselines for `make ingest-calibrate` (Docs/ingestion/rebuild-spec.md §4). A class below its baseline fails the target; null = pending detector. `mock` is what the scripted harness run produces; `live` is written by the owner with --update-baseline after an accepted live run.",
+  "mock": {
+    "fabricated_date": {"caught": 1, "total": 1},
+    "deleted_claim": {"caught": 1, "total": 1},
+    "wrong_cause": {"caught": 1, "total": 1},
+    "lift": {"caught": 1, "total": 1},
+    "guidebook_attribution": {"caught": 1, "total": 1},
+    "framing_sentence": null,
+    "state_as_event": null,
+    "contested_value": null,
+    "superseded_belief": null,
+    "omitted_fact": {"caught": 1, "total": 1}
+  }
+}

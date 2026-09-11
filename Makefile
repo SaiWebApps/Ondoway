@@ -101,6 +101,7 @@ LINT_PATHS := src/ tests/ scripts/dev_env.py scripts/ensure_dev_data.py \
 	scripts/preflight.py scripts/db_parity.py scripts/check_audio_setup.py \
 	scripts/tour_batch_candidate.py scripts/score_saved_tours.py \
 	scripts/score_gold_text.py scripts/human_reference_tours.py \
+	scripts/ingest_calibrate.py \
 	scripts/tour_golden_diff.py scripts/poi_visit_duration.py \
 	scripts/poi_opening_hours.py scripts/poi_place_category.py \
 	scripts/poi_body_places.py scripts/poi_place_judgements.py \
@@ -364,6 +365,14 @@ score-saved-tours: ## Score every saved tour artifact against the current rubric
 score-gold-text: ## Score the owner's own gold text against the rubric — calibration. $0, no DB.
 	@$(PREFLIGHT) --label score-gold-text $(PRE_PY)
 	@$(LOCAL_EXEC) uv run python scripts/score_gold_text.py --compare
+
+ingest-calibrate: ## Judge phases over fixtures/ingestion/defects.json on the MOCK client; caught/missed per class vs the baseline. $0: judged classes are scripted, gates classes measured.
+	@$(PREFLIGHT) --label ingest-calibrate $(PRE_PY)
+	@$(LOCAL_EXEC) uv run python scripts/ingest_calibrate.py --client mock $(ARGS)
+
+ingest-calibrate-live: ## The same over the LIVE judge (spends). Prints the cost estimate and stops unless ARGS=--yes; ARGS="--yes --update-baseline" records the accepted rates.
+	@$(PREFLIGHT) --label ingest-calibrate-live $(PRE_PY) render-key
+	@$(RENDER_LOCAL_EXEC) uv run python scripts/ingest_calibrate.py --client live $(ARGS)
 
 score-human-tours: ## Score the two human-authored reference tours against the rubric. $0, no DB.
 	@$(PREFLIGHT) --label score-human-tours $(PRE_PY)

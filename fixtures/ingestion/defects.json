@@ -1,0 +1,414 @@
+{
+  "_comment": "Docs/ingestion/rebuild-spec.md §4 — ten records over the Lonely Planet Guggenheim passage, one planted defect each, hand-read 2026-09-10 from Books/new_york/lonely-planet-new-york-city/chunk-07-upper-east-side.txt (slice 9's proof chunk may refresh them). `planted` records what a correct detector reports; under the mock client (`make ingest-calibrate`) the judged classes are scripted from it (a harness check, not a measurement); `make ingest-calibrate-live` measures.",
+  "unit": {
+    "city": "new_york",
+    "source_id": "lonely-planet-new-york-city",
+    "chunk": "chunk-07-upper-east-side",
+    "as_of": 2023,
+    "rights_basis": "owned_copy"
+  },
+  "records": [
+    {
+      "class": "fabricated_date",
+      "detector": "judge_claims",
+      "note": "c03 states 1961; the span states 1959.",
+      "story": {
+        "title": "How the museum came to be",
+        "place": "Guggenheim Museum",
+        "beat_type": "anecdote",
+        "lenses": [
+          "hidden_history",
+          "visual_art"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02",
+          "c03"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "Solomon R. Guggenheim began collecting abstract art in his sixties, urged on by his adviser, the German baroness Hilla Rebay.",
+          "kind": "event",
+          "span": "a New York mining magnate who began acquiring abstract art in his 60s at the behest of his art adviser, an eccentric German baroness named Hilla Rebay"
+        },
+        {
+          "claim_id": "c02",
+          "text": "Solomon Guggenheim's first museum, run by Hilla Rebay, opened on 54th Street in 1939 under the name Museum of Non-Objective Painting.",
+          "kind": "event",
+          "span": "In 1939, with Rebay serving as director, Guggenheim opened a temporary museum on 54th St titled the Museum of Non-Objective Painting."
+        },
+        {
+          "claim_id": "c03",
+          "text": "The Guggenheim building was finished in 1961, by which time both Frank Lloyd Wright and Solomon Guggenheim were dead.",
+          "kind": "event",
+          "span": "Construction was finally completed in 1959 – after both Wright and Guggenheim had passed away."
+        }
+      ],
+      "planted": {
+        "claim_id": "c03",
+        "reason": "the span says construction was completed in 1959, not 1961",
+        "corrected": {
+          "claim_id": "c03",
+          "text": "The Guggenheim building was finished in 1959, by which time both Frank Lloyd Wright and Solomon Guggenheim were dead.",
+          "kind": "event",
+          "span": "Construction was finally completed in 1959 – after both Wright and Guggenheim had passed away."
+        }
+      }
+    },
+    {
+      "class": "deleted_claim",
+      "detector": "omissions",
+      "note": "The story's closing claim (completion in 1959) was deleted; the passage still states it.",
+      "story": {
+        "title": "How the museum came to be",
+        "place": "Guggenheim Museum",
+        "beat_type": "anecdote",
+        "lenses": [
+          "hidden_history",
+          "visual_art"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02",
+          "c03"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "Solomon R. Guggenheim began collecting abstract art in his sixties, urged on by his adviser, the German baroness Hilla Rebay.",
+          "kind": "event",
+          "span": "a New York mining magnate who began acquiring abstract art in his 60s at the behest of his art adviser, an eccentric German baroness named Hilla Rebay"
+        },
+        {
+          "claim_id": "c02",
+          "text": "Solomon Guggenheim's first museum, run by Hilla Rebay, opened on 54th Street in 1939 under the name Museum of Non-Objective Painting.",
+          "kind": "event",
+          "span": "In 1939, with Rebay serving as director, Guggenheim opened a temporary museum on 54th St titled the Museum of Non-Objective Painting."
+        },
+        {
+          "claim_id": "c03",
+          "text": "Four years after the 1939 opening, Guggenheim and Rebay commissioned Frank Lloyd Wright to build a permanent home for the collection.",
+          "kind": "event",
+          "span": "Four years later, the pair commissioned Wright to construct a permanent home for the collection."
+        }
+      ],
+      "planted": {
+        "fact": "The building was completed in 1959, after both Wright and Guggenheim had died.",
+        "span": "Construction was finally completed in 1959 – after both Wright and Guggenheim had passed away."
+      }
+    },
+    {
+      "class": "wrong_cause",
+      "detector": "judge_claims",
+      "note": "c02 attaches a cause (design revisions) the passage does not state.",
+      "story": {
+        "title": "Twenty years to build",
+        "place": "Guggenheim Museum",
+        "beat_type": "event",
+        "lenses": [
+          "hidden_history",
+          "historic_arch"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02",
+          "c03"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "Four years after the 1939 opening, Guggenheim and Rebay commissioned Frank Lloyd Wright to build a permanent home for the collection.",
+          "kind": "event",
+          "span": "Four years later, the pair commissioned Wright to construct a permanent home for the collection."
+        },
+        {
+          "claim_id": "c02",
+          "text": "Construction was held up for almost thirteen years because Wright kept revising his design.",
+          "kind": "event",
+          "span": "Construction was delayed for almost 13 years due to budget constraints, the outbreak of WWII and outraged neighbors"
+        },
+        {
+          "claim_id": "c03",
+          "text": "The Guggenheim building was finished in 1959, by which time both Frank Lloyd Wright and Solomon Guggenheim were dead.",
+          "kind": "event",
+          "span": "Construction was finally completed in 1959 – after both Wright and Guggenheim had passed away."
+        }
+      ],
+      "planted": {
+        "claim_id": "c02",
+        "reason": "the span attributes the delay to budget constraints, the war and outraged neighbours, not to design revisions",
+        "corrected": {
+          "claim_id": "c02",
+          "text": "Construction was held up for almost thirteen years by budget problems, the Second World War and neighbours who objected to the design.",
+          "kind": "event",
+          "span": "Construction was delayed for almost 13 years due to budget constraints, the outbreak of WWII and outraged neighbors"
+        }
+      }
+    },
+    {
+      "class": "lift",
+      "detector": "gates",
+      "note": "c02 copies eleven consecutive words of the passage outside any quotation.",
+      "story": {
+        "title": "Twenty years to build",
+        "place": "Guggenheim Museum",
+        "beat_type": "event",
+        "lenses": [
+          "hidden_history",
+          "historic_arch"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02",
+          "c03"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "Four years after the 1939 opening, Guggenheim and Rebay commissioned Frank Lloyd Wright to build a permanent home for the collection.",
+          "kind": "event",
+          "span": "Four years later, the pair commissioned Wright to construct a permanent home for the collection."
+        },
+        {
+          "claim_id": "c02",
+          "text": "Construction was delayed for almost 13 years due to budget constraints and the war.",
+          "kind": "event",
+          "span": "Construction was delayed for almost 13 years due to budget constraints, the outbreak of WWII and outraged neighbors"
+        },
+        {
+          "claim_id": "c03",
+          "text": "The Guggenheim building was finished in 1959, by which time both Frank Lloyd Wright and Solomon Guggenheim were dead.",
+          "kind": "event",
+          "span": "Construction was finally completed in 1959 – after both Wright and Guggenheim had passed away."
+        }
+      ],
+      "planted": {
+        "claim_id": "c02",
+        "gate": "lift"
+      }
+    },
+    {
+      "class": "guidebook_attribution",
+      "detector": "gates",
+      "note": "c02 attributes the sculpture line to the guidebook (book apparatus, not attribution).",
+      "story": {
+        "title": "Finding the museum",
+        "place": "Guggenheim Museum",
+        "beat_type": "stop_orientation",
+        "lenses": [
+          "historic_arch"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "The Solomon R. Guggenheim Museum stands at 1071 Fifth Avenue on the corner of East 89th Street.",
+          "kind": "state",
+          "span": "1071 Fifth Ave, at E 89th St"
+        },
+        {
+          "claim_id": "c02",
+          "text": "According to the guidebook, the building is a sculpture in its own right.",
+          "kind": "state",
+          "span": "A sculpture in its own right, this building by architect Frank Lloyd Wright almost overshadows the collection of 20th-century art inside."
+        }
+      ],
+      "planted": {
+        "claim_id": "c02",
+        "gate": "leak"
+      }
+    },
+    {
+      "class": "framing_sentence",
+      "detector": "pending",
+      "note": "The narration opens with a framing verb; the framing regex lands with P4/P5.",
+      "story": {
+        "title": "The opening and the critics",
+        "place": "Guggenheim Museum",
+        "beat_type": "event",
+        "lenses": [
+          "hidden_history"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "Admission to the Guggenheim cost fifty cents when it opened in October 1959.",
+          "kind": "state",
+          "span": "When the Guggenheim opened its doors in October 1959, the ticket price was 50¢"
+        },
+        {
+          "claim_id": "c02",
+          "text": "The New York Times attacked the new building, while others quickly ranked it among the country's most beautiful.",
+          "kind": "event",
+          "span": "The structure was savaged by the New York Times, but others quickly celebrated it as one of the country’s most beautiful buildings."
+        }
+      ],
+      "planted": {
+        "narration_regex": "imagine",
+        "pending_phase": "P4/P5 (slice 5)"
+      },
+      "narration": "Imagine standing on the sidewalk in October 1959 with fifty cents in your pocket. The paper of record came down hard; other voices called it the finest building in the country."
+    },
+    {
+      "class": "state_as_event",
+      "detector": "pending",
+      "note": "c01 is a state claim (the collection includes) kinded as an event.",
+      "story": {
+        "title": "The museum today",
+        "place": "Guggenheim Museum",
+        "beat_type": "factoid",
+        "lenses": [
+          "visual_art"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "Kandinsky, Picasso and Jackson Pollock are all represented in the museum's collection.",
+          "kind": "event",
+          "span": "The museum’s holdings include works by Kandinsky, Picasso and Jackson Pollock."
+        },
+        {
+          "claim_id": "c02",
+          "text": "In the early 1990s the museum gained an eight-storey tower on its east side, adding 50,000 square feet of gallery space.",
+          "kind": "event",
+          "span": "A renovation in the early 1990s added an eight-story tower to the east, which seamlessly provided an extra 50,000 sq ft of exhibition space."
+        }
+      ],
+      "planted": {
+        "claim_id": "c01",
+        "expected_kind": "state",
+        "pending_phase": "P3 kind reading (not in the P3 row; owner decision)"
+      }
+    },
+    {
+      "class": "contested_value",
+      "detector": "pending",
+      "note": "A second source would state 1960 for the completion; the contest is P6's.",
+      "story": {
+        "title": "Twenty years to build",
+        "place": "Guggenheim Museum",
+        "beat_type": "event",
+        "lenses": [
+          "hidden_history",
+          "historic_arch"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "The Guggenheim building was finished in 1959, by which time both Frank Lloyd Wright and Solomon Guggenheim were dead.",
+          "kind": "event",
+          "span": "Construction was finally completed in 1959 – after both Wright and Guggenheim had passed away."
+        },
+        {
+          "claim_id": "c02",
+          "text": "Admission to the Guggenheim cost fifty cents when it opened in October 1959.",
+          "kind": "state",
+          "span": "When the Guggenheim opened its doors in October 1959, the ticket price was 50¢"
+        }
+      ],
+      "planted": {
+        "claim_id": "c01",
+        "stated_values": {
+          "lonely-planet-new-york-city": 1959,
+          "second-source": 1960
+        },
+        "pending_phase": "P6 merge (slice 6)"
+      }
+    },
+    {
+      "class": "superseded_belief",
+      "detector": "pending",
+      "note": "c02 is a dated belief a newer source supersedes; supersession is P6's.",
+      "story": {
+        "title": "The opening and the critics",
+        "place": "Guggenheim Museum",
+        "beat_type": "event",
+        "lenses": [
+          "hidden_history"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "The New York Times attacked the new building, while others quickly ranked it among the country's most beautiful.",
+          "kind": "event",
+          "span": "The structure was savaged by the New York Times, but others quickly celebrated it as one of the country’s most beautiful buildings."
+        },
+        {
+          "claim_id": "c02",
+          "text": "Early reviewers dismissed the museum.",
+          "kind": "belief",
+          "span": "The structure was savaged by the New York Times"
+        }
+      ],
+      "planted": {
+        "claim_id": "c02",
+        "superseded_by": "later reception celebrated the building",
+        "pending_phase": "P6 merge (slice 6)"
+      }
+    },
+    {
+      "class": "omitted_fact",
+      "detector": "omissions",
+      "note": "The passage's renovation paragraph is carried by no claim.",
+      "story": {
+        "title": "The museum today",
+        "place": "Guggenheim Museum",
+        "beat_type": "factoid",
+        "lenses": [
+          "visual_art"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "Kandinsky, Picasso and Jackson Pollock are all represented in the museum's collection.",
+          "kind": "state",
+          "span": "The museum’s holdings include works by Kandinsky, Picasso and Jackson Pollock."
+        },
+        {
+          "claim_id": "c02",
+          "text": "Wright meant visitors to start at the top and wind down, but the exhibitions are hung from the bottom up.",
+          "kind": "state",
+          "span": "Though Wright intended visitors to go to the top and wind their way down, the cramped single elevator makes this difficult. Exhibitions, therefore, are installed from bottom to top."
+        }
+      ],
+      "planted": {
+        "fact": "A renovation in the early 1990s added an eight-story tower to the east with 50,000 square feet of exhibition space.",
+        "span": "A renovation in the early 1990s added an eight-story tower to the east, which seamlessly provided an extra 50,000 sq ft of exhibition space."
+      }
+    }
+  ]
+}

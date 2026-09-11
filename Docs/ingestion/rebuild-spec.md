@@ -336,13 +336,27 @@ listed it, a story under its claim floor is dropped, and the answer is never re-
 
 ### Slice 4: Claim judge, omission, calibration (P3, §4)
 
-**Files:** create `./src/ingest/judge_claims.py`, `./fixtures/ingestion/defects.json`, Makefile
-target `ingest-calibrate` with preflight `$(PRE_PY)`.
-**Produces:** `judge_claims(story, unit, client) -> list[Verdict]`; `omissions(unit,
-claims, client) -> list[str]`.
+**Files:** create `./src/ingest/judge_claims.py`, `./src/ingest/prompts/judge.py` (the
+entailment, restate and omissions prompts), `./src/ingest/calibrate.py` and
+`./scripts/ingest_calibrate.py` (the §4 harness), `./fixtures/ingestion/defects.json`,
+`./fixtures/ingestion/calibration-baseline.json`, Makefile target `ingest-calibrate` with
+preflight `$(PRE_PY)`; extend `src/ingest/model.py` with `VERDICT_NOT_ENTAILED` (a refused
+claim never reaches disk).
+**Produces:** `judge_claims(story, claims, unit, client) -> list[JudgedClaim]` (the
+`ClaimDraft` it judged plus its `Verdict` — a restated claim's text changes, so a bare
+`Verdict` could not carry it); `omissions(unit, claims, client) -> list[str]` (findings whose
+span is not verbatim in the unit are discarded and logged; the P1 re-ask for the unit is the
+job runner's decision, slice 7). The refusal loop: refused once → the author restates that
+claim with the judge's reason quoted back, gated by the P1 gates; refused twice, or failing a
+gate, → dropped and logged; ids never renumbered (stories reference them).
 **Proves:** `tests/test_ingest_judge.py::test_verdict_is_bound_to_claim_and_span_hash`;
 the `ingest-calibrate` target prints a catch rate per class, with fabricated-date and deleted-claim
-at 100% on the fixture.
+at 100% on the fixture. The ten records are hand-read from the Lonely Planet Guggenheim passage
+(slice 9's proof chunk did not exist yet; it may refresh them). `make ingest-calibrate` runs the
+mock client: the judged classes are scripted from the fixture's `planted` block — a harness
+check — and only the gates classes are measured; `make ingest-calibrate-live` (declares
+`render-key`) measures, prints its estimate first and stops without `ARGS=--yes`. Classes whose detector lands later (framing sentence P4/P5, state-as-event, contested
+value and superseded belief P6) print as pending, never missed.
 
 ### Slice 5: Narrate and judge narration (P4, P5)
 
