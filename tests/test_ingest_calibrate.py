@@ -185,3 +185,35 @@ def test_no_live_client_in_this_file():
                 assert forbidden_env_var not in sub.value, (
                     f"{forbidden_env_var!r} must not appear in this file"
                 )
+
+
+def test_confirm_sees_the_whole_estimate_and_declined_rows_say_not_run():
+    """The estimate handed to `confirm` is the SUM of every plan armed (the
+    judge rows and the omissions row), never only the last one — an owner
+    deciding whether to spend must see the whole ceiling. A judged row a
+    declined confirm left unrun prints 'not run', never 'pending' (which
+    means 'no detector exists yet')."""
+    import src.ingest.llm as llm
+
+    fixture = _fixture()
+    unit = _unit(fixture)
+    events: list[tuple[str, dict]] = []
+    mock = llm.MockClient(lambda kind, payload: events.append((kind, payload)))
+
+    estimate = calibrate._arm(mock, fixture.records, unit)
+
+    printed = [payload for kind, payload in events if kind == "cost_estimate"]
+    assert len(printed) == 2
+    assert estimate.total_usd == sum(p["total_usd"] for p in printed)
+    assert estimate.total_input_tokens == sum(p["total_input_tokens"] for p in printed)
+    assert len(estimate.rows) == sum(len(p["rows"]) for p in printed)
+
+    rows = [
+        calibrate.ClassRow("fabricated_date", "judge_claims", None, None, False, "not run"),
+        calibrate.ClassRow("framing_sentence", "pending", None, None, False),
+    ]
+    text = calibrate.format_report(calibrate.Report(client="live", rows=rows))
+    fabricated_line = next(line for line in text.splitlines() if line.startswith("fabricated_date"))
+    assert "not run" in fabricated_line and "pending" not in fabricated_line
+    framing_line = next(line for line in text.splitlines() if line.startswith("framing_sentence"))
+    assert "pending" in framing_line

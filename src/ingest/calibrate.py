@@ -175,7 +175,8 @@ def _arm(client: llm.ModelClient, records: list[DefectRecord], unit: Unit) -> ll
     """Print (emit) the cost estimate that gates every completion: the P3
     plan over every judged claim, the omissions plan over the unit once
     per omission record — never an empty estimate, which would arm the
-    gate without pricing anything. Returns the LAST estimate emitted."""
+    gate without pricing anything. Returns the SUM of every estimate
+    emitted: the whole ceiling an owner is asked to confirm."""
     claim_texts = [
         claim["text"]
         for record in records
@@ -185,13 +186,19 @@ def _arm(client: llm.ModelClient, records: list[DefectRecord], unit: Unit) -> ll
     omission_units = [unit.text for record in records if record.detector == "omissions"]
     if not claim_texts and not omission_units:
         raise ValueError("nothing to estimate: no judged record among those given")
-    estimate: llm.CostEstimate | None = None
+    estimates: list[llm.CostEstimate] = []
     if claim_texts:
-        estimate = client.estimate(claim_texts, list(judge_claims.P3_PLAN))
+        estimates.append(client.estimate(claim_texts, list(judge_claims.P3_PLAN)))
     if omission_units:
-        estimate = client.estimate(omission_units, list(judge_claims.OMISSIONS_PLAN))
-    assert estimate is not None
-    return estimate
+        estimates.append(client.estimate(omission_units, list(judge_claims.OMISSIONS_PLAN)))
+    return llm.CostEstimate(
+        units=sum(e.units for e in estimates),
+        rows=[row for e in estimates for row in e.rows],
+        total_input_tokens=sum(e.total_input_tokens for e in estimates),
+        total_output_tokens=sum(e.total_output_tokens for e in estimates),
+        total_usd=sum(e.total_usd for e in estimates),
+        prices_cached_on=estimates[0].prices_cached_on,
+    )
 
 
 def _overlaps(found_span: str, planted_span: str) -> bool:
@@ -301,7 +308,7 @@ def run(
 
 def _rate(row: ClassRow) -> str:
     if row.total is None:
-        return "pending"
+        return "pending" if row.detector == "pending" else "not run"
     return f"{100 * row.caught // row.total}%"
 
 
