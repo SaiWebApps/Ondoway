@@ -59,6 +59,7 @@ def test_fixture_has_one_record_per_class_and_only_the_planted_defect():
         "judge_claims",
         "gates",
         "omissions",
+        "narration_gates",
         "pending",
     }
 
@@ -78,6 +79,14 @@ def test_fixture_has_one_record_per_class_and_only_the_planted_defect():
                 record.defect_class,
                 claim["claim_id"],
             )
+        if record.detector == "narration_gates":
+            from src.ingest import narrate
+
+            reasons = narrate.narration_gates(
+                record.narration, [claim["span"] for claim in record.claims]
+            )
+            assert len(reasons) == 1, (record.defect_class, reasons)
+            assert reasons[0].startswith(record.planted["gate"]), (record.defect_class, reasons)
         if "span" in record.planted:
             assert gates.span_in_unit(record.planted["span"], unit.text) is None, (
                 record.defect_class
@@ -102,10 +111,12 @@ def test_mock_run_reports_a_rate_per_class_with_pending_detectors_marked():
     for name in ("fabricated_date", "deleted_claim", "wrong_cause", "omitted_fact"):
         assert (by_class[name].caught, by_class[name].total) == (1, 1), name
         assert by_class[name].scripted is True, name
-    for name in ("lift", "guidebook_attribution"):
+    for name in ("lift", "guidebook_attribution", "framing_sentence"):
         assert (by_class[name].caught, by_class[name].total) == (1, 1), name
         assert by_class[name].scripted is False, name
-    for name in ("framing_sentence", "state_as_event", "contested_value", "superseded_belief"):
+    assert by_class["framing_sentence"].detector == "narration_gates"
+    assert "framing" in by_class["framing_sentence"].note
+    for name in ("state_as_event", "contested_value", "superseded_belief"):
         assert by_class[name].detector == "pending", name
         assert by_class[name].caught is None and by_class[name].total is None, name
 

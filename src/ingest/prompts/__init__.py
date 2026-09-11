@@ -7,7 +7,8 @@ The facade re-exports every phase submodule's public names so callers write
 `prompts.render_decompose`, etc. without knowing which submodule owns them.
 
 Step 4 landed `prompts.decompose`'s names. Step 11 added
-`prompts.group`'s. Slice 4 added `prompts.judge`'s (P3).
+`prompts.group`'s. Slice 4 added `prompts.judge`'s (P3). Slice 5 added
+`prompts.narrate`'s (P4, P5).
 """
 
 from __future__ import annotations
@@ -40,6 +41,18 @@ from src.ingest.prompts.judge import (
     render_omissions,
     render_restate,
 )
+from src.ingest.prompts.narrate import (
+    JUDGE_SENTENCE_PROMPT,
+    NARRATE_PROMPT,
+    NARRATE_REDO_PROMPT,
+    NARRATE_REVISE_PROMPT,
+    P4_NARRATION_SCHEMA,
+    P5_VERDICT_SCHEMA,
+    render_judge_sentence,
+    render_narrate,
+    render_narrate_redo,
+    render_narrate_revise,
+)
 
 __all__ = [
     "DECOMPOSE_PROMPT",
@@ -47,12 +60,18 @@ __all__ = [
     "GROUP_PROMPT_TEMPLATE",
     "GROUP_REDO_TEMPLATE",
     "JUDGE_CLAIM_PROMPT",
+    "JUDGE_SENTENCE_PROMPT",
+    "NARRATE_PROMPT",
+    "NARRATE_REDO_PROMPT",
+    "NARRATE_REVISE_PROMPT",
     "OMISSIONS_PROMPT",
     "P1_RESPONSE_SCHEMA",
     "P2_RESPONSE_SCHEMA",
     "P3_OMISSIONS_SCHEMA",
     "P3_RESTATE_SCHEMA",
     "P3_VERDICT_SCHEMA",
+    "P4_NARRATION_SCHEMA",
+    "P5_VERDICT_SCHEMA",
     "REDO_PROMPT",
     "RESTATE_PROMPT",
     "TIE_BREAK",
@@ -61,6 +80,10 @@ __all__ = [
     "render_group",
     "render_group_redo",
     "render_judge_claim",
+    "render_judge_sentence",
+    "render_narrate",
+    "render_narrate_redo",
+    "render_narrate_revise",
     "render_omissions",
     "render_redo",
     "render_restate",

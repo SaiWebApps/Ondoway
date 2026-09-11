@@ -3,11 +3,13 @@
 `fixtures/ingestion/defects.json` holds ten hand-read records over one
 unit, one planted defect each, in the ten classes §4 names. `run()` sends
 each record through the detector its class names — the P1 gates
-(`gates.claim_gates`), the P3 claim judge (`judge_claims.judge_claims`) or
-the omission check (`judge_claims.omissions`) — and tallies caught/missed
-per class. A class whose detector lands in a later slice (the framing
-regex with P4/P5, contest and supersession with P6) is reported `pending`,
-never `missed`.
+(`gates.claim_gates`), the P3 claim judge (`judge_claims.judge_claims`),
+the omission check (`judge_claims.omissions`) or the P4 narration code
+gate (`narrate.narration_gates` over the record's planted narration; the
+class is caught when the reason list names the planted gate) — and
+tallies caught/missed per class. A class whose detector lands in a later
+slice (contest and supersession with P6; state-as-event has no detector
+until the owner rules) is reported `pending`, never `missed`.
 
 Under `client="mock"` the judged classes are SCRIPTED from each record's
 `planted` block (`scripted_answers`): the run proves the harness — routing,
@@ -30,12 +32,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from src.ingest import gates, judge_claims, llm, model
+from src.ingest import gates, judge_claims, llm, model, narrate
 from src.ingest.decompose import ClaimDraft, UnitHeld
 from src.ingest.group import Enrichment, Story
 from src.ingest.unit import Unit, load_unit
 
-DETECTORS = ("judge_claims", "gates", "omissions", "pending")
+DETECTORS = ("judge_claims", "gates", "omissions", "narration_gates", "pending")
 
 
 @dataclass(frozen=True)
@@ -255,6 +257,14 @@ def _detect(record: DefectRecord, unit: Unit, client: llm.ModelClient | None) ->
         reasons = gates.claim_gates(planted["text"], planted["span"], unit.text)
         return _Detection(bool(reasons), "; ".join(reasons))
 
+    if record.detector == "narration_gates":
+        assert record.narration is not None
+        reasons = narrate.narration_gates(
+            record.narration, [claim["span"] for claim in record.claims]
+        )
+        caught = any(reason.startswith(record.planted["gate"]) for reason in reasons)
+        return _Detection(caught, "; ".join(reasons) or "no gate tripped")
+
     assert client is not None
     events: list[tuple[str, dict]] = []
 
@@ -333,13 +343,13 @@ def run(
         if record.detector == "pending":
             rows.append(ClassRow(record.defect_class, "pending", None, None, False, record.note))
             continue
-        if declined and record.detector != "gates":
+        if declined and record.detector not in ("gates", "narration_gates"):
             rows.append(
                 ClassRow(record.defect_class, record.detector, None, None, False, "not run")
             )
             continue
         per_record_client: llm.ModelClient | None = live
-        if client == "mock" and record.detector != "gates":
+        if client == "mock" and record.detector in ("judge_claims", "omissions"):
             mock = llm.MockClient(sink, batch_answers=scripted(record, unit))
             _arm(mock, [record], unit)
             per_record_client = mock
@@ -387,7 +397,8 @@ def format_report(report: Report) -> str:
         lines.append(
             "MOCK: the judge_claims and omissions classes are scripted from the "
             "fixture's planted block — a harness check, not a measurement; only "
-            "the gates classes are measured. Run `make ingest-calibrate-live` to measure."
+            "the gates and narration_gates classes are measured. Run "
+            "`make ingest-calibrate-live` to measure."
         )
     return "\n".join(lines)
 

@@ -364,8 +364,24 @@ value and superseded belief P6) print as pending, never missed.
 `./src/ingest/gates.py` with `provenance_leak(text) -> list[str]` (`the book`, `described
 here`, `the guide`, `the author`, publisher names from the manifest) and
 `framing(text) -> list[str]`; reuse `scripts.verbatim.run_outside_quotation`.
-**Produces:** `narrate(story, client) -> Narration`; `judge_narration(narration, claims,
-client) -> Narration` (sets `flags`).
+**Produces:** `narrate(story, claims, client, publishers=()) -> NarrationDraft` (the
+judged claims come in as a parameter — a `Story` carries only claim ids; the author is
+shown their TEXTS alone, never a span or the unit; the draft carries the text,
+`claims_hash` over those texts, the author model the response reported, and
+`duration_sec` at the tour engine's 150 wpm — a draft, not a `Narration`, because that
+record requires a verdict only P5 can supply). The P4 code gate (`narration_gates`: lift
+against every claim span, `provenance_leak` with the manifest's publisher names via
+`publishers_from_manifest`, `framing`) refuses once with every reason quoted back; a
+second failure raises `BeatHeld` (a `UnitHeld` keyed by story slug) for P4.
+`judge_narration(story, draft, claims, client, publishers=()) -> JudgedNarration`
+(`narration: model.Narration` with the per-sentence verdict bound to the text,
+`duration_sec`, `review: model.Review`): one P5 batch per sentence under
+`narration_judge`; a refused sentence re-asks P4 ONCE with the sentence and reason
+quoted back, the rewrite passes the code gate and is re-judged in full; still refused
+→ `not_entailed` flags and `review.held`, returned (not raised) so the reviewer sees a
+judged record; a rewrite failing the gate is never judged and holds with the round-one
+text. The claims are never touched. The framing calibration class runs under the new
+`narration_gates` detector (mock and live alike, $0).
 **Proves:** `tests/test_ingest_narrate.py::test_narration_never_sees_the_span`,
 `::test_leak_is_refused`, `::test_second_failure_holds_the_beat_not_the_claims`.
 

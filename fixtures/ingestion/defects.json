@@ -229,8 +229,8 @@
     },
     {
       "class": "framing_sentence",
-      "detector": "pending",
-      "note": "The narration opens with a framing verb; the framing regex lands with P4/P5.",
+      "detector": "narration_gates",
+      "note": "The narration opens with a framing verb; the P4 code gate (gates.framing, slice 5) catches it.",
       "story": {
         "title": "The opening and the critics",
         "place": "Guggenheim Museum",
@@ -258,8 +258,8 @@
         }
       ],
       "planted": {
-        "narration_regex": "imagine",
-        "pending_phase": "P4/P5 (slice 5)"
+        "gate": "framing",
+        "narration_regex": "imagine"
       },
       "narration": "Imagine standing on the sidewalk in October 1959 with fifty cents in your pocket. The paper of record came down hard; other voices called it the finest building in the country."
     },

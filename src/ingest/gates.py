@@ -35,6 +35,15 @@ exempts a quotation that names who said it — quoting a named speaker who
 also appears in the source book is not the same failure as an unmarked
 lift.
 
+Slice 5 lands the two narration-only gates: `provenance_leak` (a narration
+must never reveal it was read from a book — the fixed phrases `the book`,
+`described here`, `the guide`, `the author`, plus whatever publisher names
+the caller passes from the source's manifest; CONTEXT.md "Provenance
+leak") and `framing` (`imagine` and `envision` in any form, `picture` only
+as the framing verb with an object — the noun is ordinary art vocabulary;
+framing belongs to the tour engine, never to a beat). Both return every
+match, so a re-ask can quote each one back.
+
 Step 9 lands `resolve_place` (exact casefold+whitespace match against a
 POI's `name` and `name_variations`, else flagged `new_poi`).
 
@@ -165,6 +174,48 @@ def leak(text: str) -> str | None:
         f"leak: {match.group(0)!r} is guidebook apparatus or a listing, "
         "not content about the place"
     )
+
+
+#: Phrases that betray a narration was read from a book rather than
+#: told at the place. Publisher names are the caller's to pass — they
+#: live in each source's manifest, never in this module.
+PROVENANCE_LEAK_RE = re.compile(
+    r"\b(the book|this book|described here|the guide|this guide|the author)\b",
+    re.I,
+)
+
+#: The framing verbs a beat may never use (Docs/ingestion/rebuild-spec.md
+#: §3 P4). `picture` is caught only as the verb with its framing object,
+#: so "the picture hangs" and "Wright pictured" pass.
+FRAMING_RE = re.compile(
+    r"\b(?:imagine|imagining|imagined|envision|envisioning|envisioned"
+    r"|picture (?:yourself|yourselves|this|that|it))\b",
+    re.I,
+)
+
+
+def provenance_leak(text: str, publishers: Sequence[str] = ()) -> list[str]:
+    """Every phrase in `text` that reveals it was read from a book.
+
+    Matches `PROVENANCE_LEAK_RE` plus each name in `publishers` as a
+    whole-word, case-insensitive phrase, in text order. Returns the
+    matched text as written, [] for a clean narration.
+    """
+    patterns = [PROVENANCE_LEAK_RE]
+    if publishers:
+        alternatives = "|".join(re.escape(name) for name in publishers if name.strip())
+        if alternatives:
+            patterns.append(re.compile(rf"\b(?:{alternatives})\b", re.I))
+    hits = [
+        (match.start(), match.group(0)) for pattern in patterns for match in pattern.finditer(text)
+    ]
+    found = sorted(hits, key=lambda hit: hit[0])
+    return [matched for _start, matched in found]
+
+
+def framing(text: str) -> list[str]:
+    """Every framing verb in `text` (`FRAMING_RE`), as written, in text order."""
+    return [match.group(0) for match in FRAMING_RE.finditer(text)]
 
 
 def self_contained(text: str) -> str | None:

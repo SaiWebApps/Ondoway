@@ -141,6 +141,52 @@ def test_leak_catches_apparatus_and_listing_furniture():
     assert gates.leak(clean) is None
 
 
+def test_provenance_leak_names_book_furniture_and_publishers():
+    """Slice 5: a narration must never reveal it was read from a book
+    (CONTEXT.md "Provenance leak"). The fixed phrases are caught in any
+    case; a publisher name is caught only when the caller passes it from
+    the source's manifest; the matched text comes back so a re-ask can
+    quote it. A narration that credits a named person is not a leak."""
+    leaks = {
+        "The book says the ramp climbs a quarter mile.": "The book",
+        "The building is described here as a nautilus.": "described here",
+        "The guide calls the rotunda the city's best room.": "The guide",
+        "The author recommends starting at the top.": "The author",
+        "Lonely Planet calls it one of the country's most beautiful buildings.": (
+            "Lonely Planet"
+        ),
+    }
+    for text, matched in leaks.items():
+        found = gates.provenance_leak(text, publishers=("Lonely Planet",))
+        assert found == [matched], text
+
+    unpassed_publisher = "Lonely Planet calls it a nautilus."
+    assert gates.provenance_leak(unpassed_publisher) == []
+
+    attributed = 'Wright called the museum "a temple of the spirit".'
+    assert gates.provenance_leak(attributed, publishers=("Lonely Planet",)) == []
+    assert gates.provenance_leak("The bookshop sells posters.") == []
+
+
+def test_framing_catches_the_three_verbs_not_the_noun():
+    """The tour engine frames; a beat never does (CONTEXT.md "Narration").
+    `imagine` and `envision` are caught in any form, `picture` only as the
+    framing verb with an object — the noun is ordinary art vocabulary."""
+    framed = {
+        "Imagine standing on the sidewalk in October 1959.": "Imagine",
+        "Imagining the queue takes little effort.": "Imagining",
+        "Picture yourself at the top of the ramp.": "Picture yourself",
+        "Now picture this: a spiral of white concrete.": "picture this",
+        "Envision the rotunda without its skylight.": "Envision",
+    }
+    for text, matched in framed.items():
+        assert gates.framing(text) == [matched], text
+
+    assert gates.framing("The picture hangs on the fourth ramp.") == []
+    assert gates.framing("Wright pictured a museum with no stairs.") == []
+    assert gates.framing("The pictures were hung along the spiral.") == []
+
+
 def test_self_contained_refuses_bare_pronoun_subjects():
     dangling = (
         "He designed it in 1943.",

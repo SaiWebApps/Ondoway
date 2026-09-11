@@ -265,6 +265,85 @@ def test_group_prompt_carries_the_owners_tie_break():
     assert "{tie_break}" not in rendered
 
 
+def test_p4_and_p5_schemas_stay_in_the_structured_output_subset():
+    """Slice 5: the narration schema (one string) and the sentence verdict
+    schema (a boolean and a sentence) stay inside the same subset as the
+    P1-P3 schemas, and the facade re-exports every P4/P5 name."""
+    _walk_schema(prompts.P4_NARRATION_SCHEMA)
+    _walk_schema(prompts.P5_VERDICT_SCHEMA)
+    assert list(prompts.P4_NARRATION_SCHEMA["properties"]) == ["narration"]
+    assert list(prompts.P5_VERDICT_SCHEMA["properties"]) == ["entailed", "reason"]
+
+    bad_schema = copy.deepcopy(prompts.P4_NARRATION_SCHEMA)
+    bad_schema["properties"]["narration"]["minLength"] = 1
+    with pytest.raises(AssertionError):
+        _walk_schema(bad_schema)
+
+    for name in (
+        "NARRATE_PROMPT",
+        "NARRATE_REDO_PROMPT",
+        "NARRATE_REVISE_PROMPT",
+        "JUDGE_SENTENCE_PROMPT",
+        "P4_NARRATION_SCHEMA",
+        "P5_VERDICT_SCHEMA",
+        "render_narrate",
+        "render_narrate_redo",
+        "render_narrate_revise",
+        "render_judge_sentence",
+    ):
+        assert name in prompts.__all__, name
+
+
+def test_narration_prompts_carry_the_voice_rules_and_quote_refusals_back():
+    """The P4 prompt tells the author the narration rules CONTEXT.md pins
+    (every sentence from a claim, no book, no framing, own wording) and
+    carries the claim texts and nothing else; the redo and revise prompts
+    quote every reason / refused sentence back verbatim and refuse to
+    render with nothing to fix; the P5 prompt carries one sentence and the
+    claims. Every slot is substituted by str.replace, so a claim text
+    with braces survives."""
+    claims = ["The museum opened in 1959.", "Wright designed it {in his 80s}."]
+    ask = prompts.render_narrate("Guggenheim Museum", "How it came to be", claims)
+    for rule in (
+        "Every sentence states something one of the claims says",
+        "Never mention a book, a guide, an author",
+        '"imagine", "picture", "envision"',
+        "Your own wording throughout",
+    ):
+        assert rule in ask, rule
+    assert "Guggenheim Museum" in ask and "How it came to be" in ask
+    for claim in claims:
+        assert f"- {claim}" in ask
+    assert "{claims}" not in ask and "{place}" not in ask and "{title}" not in ask
+
+    redo = prompts.render_narrate_redo(
+        "Guggenheim Museum", "How it came to be", claims, "The book says so.",
+        ["provenance_leak: 'The book'", "framing: 'Imagine'"],
+    )
+    assert "The book says so." in redo
+    assert "- provenance_leak: 'The book'" in redo and "- framing: 'Imagine'" in redo
+    assert "{problems}" not in redo and "{narration}" not in redo
+    with pytest.raises(ValueError):
+        prompts.render_narrate_redo("P", "T", claims, "x", [])
+    with pytest.raises(ValueError):
+        prompts.render_narrate_redo("P", "T", claims, "x", ["  "])
+
+    revise = prompts.render_narrate_revise(
+        "Guggenheim Museum", "How it came to be", claims, "A. B.",
+        [("B.", "no claim says B")],
+    )
+    assert '- "B.": no claim says B' in revise
+    assert "A. B." in revise
+    assert "{refusals}" not in revise
+    with pytest.raises(ValueError):
+        prompts.render_narrate_revise("P", "T", claims, "x", [])
+
+    judge = prompts.render_judge_sentence("The museum opened in 1959.", claims)
+    assert "Sentence:\nThe museum opened in 1959." in judge
+    assert "- Wright designed it {in his 80s}." in judge
+    assert "{sentence}" not in judge and "{claims}" not in judge
+
+
 def test_no_live_client_in_this_file():
     """AC-55: this $0-spend test file never names a live LLM client or
     reads its API key. Its own body is exempt from the walk below — this
