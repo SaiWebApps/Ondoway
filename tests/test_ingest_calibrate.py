@@ -60,6 +60,7 @@ def test_fixture_has_one_record_per_class_and_only_the_planted_defect():
         "gates",
         "omissions",
         "narration_gates",
+        "merge",
         "pending",
     }
 
@@ -94,6 +95,21 @@ def test_fixture_has_one_record_per_class_and_only_the_planted_defect():
         if "corrected" in record.planted:
             corrected = record.planted["corrected"]
             assert gates.claim_gates(corrected["text"], corrected["span"], unit.text) == []
+        if record.detector == "merge":
+            # The planted second source must state the SAME fact as the planted
+            # claim by the signature test P6 applies, or the hint would call
+            # it new and the harness would measure a hold, not the detector.
+            from src.ingest import merge
+
+            planted = next(c for c in record.claims if c["claim_id"] == planted_claim_id)
+            beat = merge._signature(planted["text"])
+            second = merge._signature(record.planted["second_source"]["text"])
+            assert merge._overlap(beat, second) >= merge.SIGNATURE_MATCH_MIN, record.defect_class
+            assert record.planted["expected"] in ("contested", "supersedes"), record.defect_class
+            assert set(record.planted["stated_values"]) == {
+                unit.source_id,
+                record.planted["second_source"]["source_id"],
+            }
 
 
 def test_mock_run_reports_a_rate_per_class_with_pending_detectors_marked():
@@ -108,17 +124,27 @@ def test_mock_run_reports_a_rate_per_class_with_pending_detectors_marked():
     by_class = {row.defect_class: row for row in report.rows}
     assert list(by_class) == list(CLASSES)
 
-    for name in ("fabricated_date", "deleted_claim", "wrong_cause", "omitted_fact"):
+    for name in (
+        "fabricated_date",
+        "deleted_claim",
+        "wrong_cause",
+        "omitted_fact",
+        "contested_value",
+        "superseded_belief",
+    ):
         assert (by_class[name].caught, by_class[name].total) == (1, 1), name
         assert by_class[name].scripted is True, name
+    for name in ("contested_value", "superseded_belief"):
+        assert by_class[name].detector == "merge", name
+    assert "contested" in by_class["contested_value"].note
+    assert "supersedes" in by_class["superseded_belief"].note
     for name in ("lift", "guidebook_attribution", "framing_sentence"):
         assert (by_class[name].caught, by_class[name].total) == (1, 1), name
         assert by_class[name].scripted is False, name
     assert by_class["framing_sentence"].detector == "narration_gates"
     assert "framing" in by_class["framing_sentence"].note
-    for name in ("state_as_event", "contested_value", "superseded_belief"):
-        assert by_class[name].detector == "pending", name
-        assert by_class[name].caught is None and by_class[name].total is None, name
+    assert by_class["state_as_event"].detector == "pending"
+    assert by_class["state_as_event"].caught is None and by_class["state_as_event"].total is None
 
     text = calibrate.format_report(report)
     assert "MOCK" in text
@@ -216,7 +242,7 @@ def test_no_live_client_in_this_file():
 
 def test_confirm_sees_the_whole_estimate_and_declined_rows_say_not_run():
     """The estimate handed to `confirm` is the SUM of every plan armed (the
-    judge rows and the omissions row), never only the last one — an owner
+    judge rows, the omissions row and the merge row), never only the last one — an owner
     deciding whether to spend must see the whole ceiling. A judged row a
     declined confirm left unrun prints 'not run', never 'pending' (which
     means 'no detector exists yet')."""
@@ -230,7 +256,7 @@ def test_confirm_sees_the_whole_estimate_and_declined_rows_say_not_run():
     estimate = calibrate._arm(mock, fixture.records, unit)
 
     printed = [payload for kind, payload in events if kind == "cost_estimate"]
-    assert len(printed) == 2
+    assert len(printed) == 3  # the P3 plan, the omissions plan, the P6 plan (slice 6)
     assert estimate.total_usd == sum(p["total_usd"] for p in printed)
     assert estimate.total_input_tokens == sum(p["total_input_tokens"] for p in printed)
     assert len(estimate.rows) == sum(len(p["rows"]) for p in printed)
@@ -313,3 +339,37 @@ def test_precision_counts_clean_claims_refused_and_claims_dropped_with_reasons()
         "dropped": 1,
     }
     assert calibrate.baseline_from(report)["lift"] == {"caught": 1, "total": 1}
+
+
+def test_a_merge_judge_the_signature_contradicts_is_held_and_counts_as_missed():
+    """The merge classes measure P6 end to end: a scripted judge that calls
+    the second source a new story while the signature matches the planted
+    claim is a disagreement, so the story is held (D7) and the class is
+    MISSED with the hold spelled out — the harness never counts a hold as
+    a catch. The default script catches both classes."""
+    import src.ingest.llm as llm
+
+    fixture = _fixture()
+
+    def contrary(rec: calibrate.DefectRecord, u) -> llm.MockAnswer:
+        answer = {
+            "story": "new",
+            "beat_id": "",
+            "claims": [
+                {"claim_id": "n01", "verdict": "new", "existing_claim_id": "",
+                 "new_value": "", "existing_value": "", "reason": "nothing like it"}
+            ],
+        }
+        return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
+
+    report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock", scripted_merge=contrary)
+    by_class = {row.defect_class: row for row in report.rows}
+    for name in ("contested_value", "superseded_belief"):
+        assert (by_class[name].caught, by_class[name].total) == (0, 1), name
+        assert by_class[name].note.startswith("held: judge and signature disagree"), name
+        assert (by_class[name].false_refusals, by_class[name].dropped) == (None, None), name
+
+    clean = calibrate.run(fixture, REPO_ROOT / "Books", client="mock")
+    by_class = {row.defect_class: row for row in clean.rows}
+    assert by_class["contested_value"].note == "n01 contested c01"
+    assert by_class["superseded_belief"].note == "n01 supersedes c02"

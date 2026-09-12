@@ -8,7 +8,7 @@ The facade re-exports every phase submodule's public names so callers write
 
 Step 4 landed `prompts.decompose`'s names. Step 11 added
 `prompts.group`'s. Slice 4 added `prompts.judge`'s (P3). Slice 5 added
-`prompts.narrate`'s (P4, P5).
+`prompts.narrate`'s (P4, P5). Slice 6 added `prompts.merge`'s (P6).
 """
 
 from __future__ import annotations
@@ -41,6 +41,15 @@ from src.ingest.prompts.judge import (
     render_omissions,
     render_restate,
 )
+from src.ingest.prompts.merge import (
+    CLAIM_VERDICTS,
+    MERGE_PROMPT,
+    MERGE_REDO_PROMPT,
+    P6_MERGE_SCHEMA,
+    STORY_VERDICTS,
+    render_merge,
+    render_merge_redo,
+)
 from src.ingest.prompts.narrate import (
     JUDGE_SENTENCE_PROMPT,
     NARRATE_PROMPT,
@@ -55,12 +64,15 @@ from src.ingest.prompts.narrate import (
 )
 
 __all__ = [
+    "CLAIM_VERDICTS",
     "DECOMPOSE_PROMPT",
     "GROUP_AMBIGUITY_CLASSES",
     "GROUP_PROMPT_TEMPLATE",
     "GROUP_REDO_TEMPLATE",
     "JUDGE_CLAIM_PROMPT",
     "JUDGE_SENTENCE_PROMPT",
+    "MERGE_PROMPT",
+    "MERGE_REDO_PROMPT",
     "NARRATE_PROMPT",
     "NARRATE_REDO_PROMPT",
     "NARRATE_REVISE_PROMPT",
@@ -72,8 +84,10 @@ __all__ = [
     "P3_VERDICT_SCHEMA",
     "P4_NARRATION_SCHEMA",
     "P5_VERDICT_SCHEMA",
+    "P6_MERGE_SCHEMA",
     "REDO_PROMPT",
     "RESTATE_PROMPT",
+    "STORY_VERDICTS",
     "TIE_BREAK",
     "TieBreakMissing",
     "render_decompose",
@@ -81,6 +95,8 @@ __all__ = [
     "render_group_redo",
     "render_judge_claim",
     "render_judge_sentence",
+    "render_merge",
+    "render_merge_redo",
     "render_narrate",
     "render_narrate_redo",
     "render_narrate_revise",

@@ -32,8 +32,14 @@
       "total": 1
     },
     "state_as_event": null,
-    "contested_value": null,
-    "superseded_belief": null,
+    "contested_value": {
+      "caught": 1,
+      "total": 1
+    },
+    "superseded_belief": {
+      "caught": 1,
+      "total": 1
+    },
     "omitted_fact": {
       "caught": 1,
       "total": 1,
@@ -73,7 +79,7 @@
   },
   "_runs": {
     "mock": {
-      "recorded_at": "2026-09-11",
+      "recorded_at": "2026-09-12",
       "models": {
         "author": "claude-opus-5",
         "claim_judge": "claude-haiku-4-5",

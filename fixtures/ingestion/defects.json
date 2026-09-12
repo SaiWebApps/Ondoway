@@ -301,8 +301,8 @@
     },
     {
       "class": "contested_value",
-      "detector": "pending",
-      "note": "A second source would state 1960 for the completion; the contest is P6's.",
+      "detector": "merge",
+      "note": "A second source states 1960 for the completion; P6 contests two disagreeing event claims (slice 6).",
       "story": {
         "title": "Twenty years to build",
         "place": "Guggenheim Museum",
@@ -336,13 +336,21 @@
           "lonely-planet-new-york-city": 1959,
           "second-source": 1960
         },
-        "pending_phase": "P6 merge (slice 6)"
+        "second_source": {
+          "source_id": "second-source",
+          "chunk": "calibration",
+          "as_of": 2024,
+          "rights_basis": "own_work",
+          "text": "The Guggenheim building was finished in 1960, by which time both Frank Lloyd Wright and Solomon Guggenheim were dead.",
+          "kind": "event"
+        },
+        "expected": "contested"
       }
     },
     {
       "class": "superseded_belief",
-      "detector": "pending",
-      "note": "c02 is a dated belief a newer source supersedes; supersession is P6's.",
+      "detector": "merge",
+      "note": "c02 is a dated belief; a 2024 state claim that conflicts with it supersedes it in P6 (slice 6).",
       "story": {
         "title": "The opening and the critics",
         "place": "Guggenheim Museum",
@@ -372,7 +380,19 @@
       "planted": {
         "claim_id": "c02",
         "superseded_by": "later reception celebrated the building",
-        "pending_phase": "P6 merge (slice 6)"
+        "stated_values": {
+          "lonely-planet-new-york-city": "dismissed",
+          "second-source": "celebrated"
+        },
+        "second_source": {
+          "source_id": "second-source",
+          "chunk": "calibration",
+          "as_of": 2024,
+          "rights_basis": "own_work",
+          "text": "Reviewers who once dismissed the museum now celebrate it.",
+          "kind": "state"
+        },
+        "expected": "supersedes"
       }
     },
     {

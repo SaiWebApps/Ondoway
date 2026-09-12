@@ -381,3 +381,53 @@ def test_no_live_client_in_this_file():
                 assert forbidden_env_var not in sub.value, (
                     "this file must never read ANTHROPIC_API_KEY"
                 )
+
+
+def test_p6_merge_schema_stays_in_the_structured_output_subset_and_prompt_pins_the_rules():
+    """Slice 6: the merge judge's answer schema lives inside the same
+    structured-output subset as P1-P5's, with the story and claim verdict
+    enums pinned; the prompt carries the non-negotiable rule that a newer
+    source is never right by default, shows the judge claim texts with
+    kinds, years and stated values and never a span; the redo prompt quotes
+    the refused answer and every problem back and refuses to render with
+    none. All reached through the facade."""
+    _walk_schema(prompts.P6_MERGE_SCHEMA)
+    assert prompts.P6_MERGE_SCHEMA["properties"]["story"]["enum"] == ["same", "new", "supersedes"]
+    item = prompts.P6_MERGE_SCHEMA["properties"]["claims"]["items"]
+    assert item["properties"]["verdict"]["enum"] == ["new", "same", "conflict"]
+    assert prompts.STORY_VERDICTS == ("same", "new", "supersedes")
+    assert prompts.CLAIM_VERDICTS == ("new", "same", "conflict")
+    assert "A newer source is never right by default" in prompts.MERGE_PROMPT
+
+    new_claims = [
+        {"claim_id": "c01", "text": "The building was finished in 1959.", "kind": "event",
+         "as_of": 2024}
+    ]
+    existing = [
+        {
+            "beat_id": "new_york/x/y",
+            "title": "Y",
+            "claims": [
+                {"claim_id": "c02", "text": "Finished in 1959.", "kind": "event",
+                 "status": "resolved", "as_of": [2023], "stated_values": ["1959"]}
+            ],
+        }
+    ]
+    rendered = prompts.render_merge("Guggenheim Museum", "The building", new_claims, existing)
+    for slot in ("{place}", "{title}", "{new_claims}", "{existing}"):
+        assert slot not in rendered
+    assert "- c01 [event, 2024]: The building was finished in 1959." in rendered
+    assert 'beat new_york/x/y "Y":' in rendered
+    assert "  - c02 [event, resolved, 2023]: Finished in 1959. (stated: 1959)" in rendered
+    assert "holds no beat at this place" in prompts.render_merge("P", "T", new_claims, [])
+
+    redo = prompts.render_merge_redo(
+        "Guggenheim Museum", "The building", new_claims, existing, '{"story": "same"}', ["p1", "p2"]
+    )
+    assert '{"story": "same"}' in redo
+    assert "- p1" in redo and "- p2" in redo
+    assert "The building was finished in 1959." in redo
+    with pytest.raises(ValueError):
+        prompts.render_merge_redo("P", "T", new_claims, existing, "{}", [])
+    with pytest.raises(ValueError):
+        prompts.render_merge_redo("P", "T", new_claims, existing, "{}", ["  "])

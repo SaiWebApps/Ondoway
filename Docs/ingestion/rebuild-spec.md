@@ -387,12 +387,34 @@ text. The claims are never touched. The framing calibration class runs under the
 
 ### Slice 6: Merge (P6) and the conflict report
 
-**Files:** create `./src/ingest/merge.py` (judge prompt, signature hint reusing
-`_signature` in `src/tour/claim_dedup.py`, outcome application, supersession re-kinding),
-`./scripts/claim_conflicts.py` (city-wide signature match with differing values → both
-contested), Makefile target `claim-conflicts CITY=`.
-**Produces:** `merge(new_story, existing: list[Beat], client) -> MergeOutcome`;
-`apply(outcome, beats) -> list[Beat]`.
+**Files:** create `./src/ingest/merge.py` (signature hint importing `_signature`, `_overlap`
+and the dedup thresholds from `src/tour/claim_dedup.py`, outcome application, supersession
+re-kinding), `./src/ingest/prompts/merge.py` (the merge-judge prompt and `P6_MERGE_SCHEMA`,
+re-exported from the facade), `./scripts/claim_conflicts.py` (city-wide signature match with
+differing number tokens → both claims contested, each gaining the other's sources), Makefile
+target `claim-conflicts CITY=` (report only; `ARGS=--apply` writes, and only if the city still
+validates).
+**Produces:** `merge(new_story, claims, existing: list[Beat], client, events=None) ->
+MergeOutcome` (the judged claims come in as a parameter — a `Story` carries only claim ids; one
+sync call under `merge_judge`/P6 over claim texts, never spans; the judge answers story
+same/new/supersedes and per claim new/same/conflict with both stated values; the signature
+hint is computed locally, never shown to the judge, and compared — any disagreement returns
+`held` with the reason, a queue item with `beat_held` emitted for P6, never re-asked toward
+the hint; an answer naming ids the record lacks is re-asked once then held; a transport
+failure or an unreadable answer raises `BeatHeld` for P6). What a conflict BECOMES is the
+code's by kind (D9), never the judge's: event vs event → contested; event or state over a
+belief, and the newer as_of of two states or two beliefs → supersedes (the older re-kinded
+`belief`, status `superseded`, its text, sources and verdict untouched; the newer appended
+resolved); the same year or any other pairing → contested (one claim, the second source
+appended, every source carrying its stated value). `same` appends the source to ONE claim
+(`corroborated`, verdict re-bound over both spans); `new` appends the claim under a fresh id;
+a `new` STORY is reported, not assembled (its record needs the narration the runner holds).
+`MergeOutcome.rerun` names every beat whose resolved texts changed: its `narration.claims_hash`
+is stale by design and P4/P5 must rerun (slice 7's runner). `apply(outcome, beats) ->
+list[Beat]` is pure and refuses a held outcome. The calibration classes `contested_value` and
+`superseded_belief` run under the new `merge` detector (scripted on the mock, $0);
+`state_as_event` stays pending.
+
 **Proves:** `tests/test_ingest_merge.py::test_judge_and_signature_disagree_holds_new_story`,
 `::test_supersedes_rekinds_old_claim_as_dated_belief`,
 `::test_same_claim_appends_source_not_beat`.
