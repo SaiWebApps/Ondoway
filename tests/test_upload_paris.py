@@ -6,6 +6,7 @@ the targeted backfill (which must never run the audio_url-wiping full upload).""
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -16,14 +17,19 @@ from scripts.upload_paris import (
     _backfill_provenance,
     _beat_blocked,
     _city_paths,
+    _ensure_lenses,
     _in_city_bounds,
     _provenance_fields,
     _upload_beats,
     _upload_pois,
+    publish_beats,
 )
 from src.api.models.nodes import canonical_name_key
 from src.connection import get_database
+from src.ingest import model
+from tests import ingest_job_script as script_mod
 from tests.conftest import needs_neo4j
+from tests.ingest_helpers import stamp
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -424,3 +430,196 @@ class TestBeatPoiLinkCityScoped:
             ).single()["c"]
         assert ldn == 1, "London beat did not attach to its own London POI"
         assert ny == 0, "London beat leaked onto the New York SoHo POI"
+
+
+# ---------------------------------------------------------------------------
+# Slice 8 (Docs/ingestion/rebuild-spec.md §6): the publisher CONVERGES the
+# graph on the file. After every beat in the file is MERGEd, every beat of
+# that city the file no longer names is withdrawn (active_status =
+# 'withdrawn', HAS_BEAT kept) so a re-publish restores it. New-shape records
+# (§2) are exported through the legacy field contract the tour engine reads.
+# The records come from tests/ingest_job_script.py: valid on disk, spans
+# verbatim in the real Lonely Planet chunk-07.
+# ---------------------------------------------------------------------------
+
+
+def _beat_status(driver, beat_id: str) -> tuple[str | None, int]:
+    """(active_status, number of HAS_BEAT edges into the beat)."""
+    with driver.session(database=get_database()) as s:
+        rec = s.run(
+            "MATCH (b:NarrativeBeat {beat_id: $bid}) "
+            "OPTIONAL MATCH (:POI)-[r:HAS_BEAT]->(b) "
+            "RETURN b.active_status AS st, count(r) AS edges",
+            bid=beat_id,
+        ).single()
+    assert rec is not None, f"{beat_id} is not in the graph"
+    return rec["st"], rec["edges"]
+
+
+def _seed_place(driver, name: str, city: str) -> None:
+    with driver.session(database=get_database()) as s:
+        s.run(
+            "MERGE (p:POI {name: $name, city_name: $city}) SET p.id = coalesce(p.id, $name)",
+            name=name,
+            city=city,
+        )
+
+
+@needs_neo4j
+def test_publish_withdraws_beats_absent_from_file(clean_driver):
+    """§6: publish a two-beat new-shape file; re-publish with one beat
+    removed → that beat is withdrawn with its HAS_BEAT kept, the other is
+    still active; publish both again → the withdrawn beat is active again.
+    [undo: drop the withdraw step → the removed beat stays 'active' → RED]"""
+    records = script_mod.existing_records()
+    origins, visiting = records
+    _seed_place(clean_driver, script_mod.PLACE, script_mod.CITY)
+
+    with clean_driver.session(database=get_database()) as s:
+        stats = publish_beats(s, records, script_mod.CITY)
+    assert stats["linked"] == 2 and stats["withdrawn"] == 0
+    assert _beat_status(clean_driver, script_mod.ORIGINS_ID) == ("active", 1)
+    assert _beat_status(clean_driver, script_mod.VISITING_ID) == ("active", 1)
+
+    with clean_driver.session(database=get_database()) as s:
+        stats = publish_beats(s, [origins], script_mod.CITY)
+    assert stats["linked"] == 1 and stats["withdrawn"] == 1
+    assert _beat_status(clean_driver, script_mod.ORIGINS_ID) == ("active", 1)
+    assert _beat_status(clean_driver, script_mod.VISITING_ID) == ("withdrawn", 1), (
+        "a beat the file no longer names must be withdrawn, its HAS_BEAT kept"
+    )
+
+    with clean_driver.session(database=get_database()) as s:
+        stats = publish_beats(s, [origins, visiting], script_mod.CITY)
+    assert stats["linked"] == 2 and stats["withdrawn"] == 0
+    assert _beat_status(clean_driver, script_mod.VISITING_ID) == ("active", 1), (
+        "re-publishing a withdrawn beat must restore it"
+    )
+
+
+def _variant(base: dict, story_slug: str, **fields) -> dict:
+    """A copy of `base` as another story at the same place, hashes restamped."""
+    rec = deepcopy(base)
+    rec["story_slug"] = story_slug
+    rec["beat_id"] = f"{script_mod.CITY}/{model.slug(script_mod.PLACE)}/{story_slug}"
+    rec.update(fields)
+    return stamp(rec)
+
+
+#: duration_sec → beat_length_class, the §2 thresholds as literals
+#: (micro <8 s, seasoning <32 s, mid <80 s, else anchor).
+_LENGTH_CLASSES = [
+    (7, "micro"),
+    (8, "seasoning"),
+    (31, "seasoning"),
+    (32, "mid"),
+    (79, "mid"),
+    (80, "anchor"),
+]
+
+
+@needs_neo4j
+def test_new_shape_export_mapping(clean_driver, tmp_path):
+    """§2 graph export: script_body = narration.text; key_claims = the
+    RESOLVED claims' texts only (a superseded claim is left out);
+    beat_length_class from duration_sec at the spec's thresholds; one
+    TAGGED_WITH per `lenses` entry; active_status 'active'; and a beat
+    with review.held = true is not published at all. The file validates
+    under the real chunk first, so this is the shape slice 10 will publish.
+    [undo: export key_claims from every claim → the superseded text leaks → RED]"""
+    chunks = script_mod.chunk_dir(tmp_path)
+    origins, visiting = script_mod.existing_records()
+    superseded = deepcopy(origins["claims"][1])
+    superseded.update(
+        claim_id="c03",
+        text=script_mod.OPENED_1939["text"],
+        status="superseded",
+    )
+    superseded["sources"][0]["span"] = script_mod.OPENED_1939["span"]
+    mapped = _variant(
+        origins,
+        "how-the-museum-came-to-be",
+        claims=[*origins["claims"], superseded],
+        lenses=["hidden_history", "visual_art"],
+        duration_sec=46,
+    )
+    lengths = [
+        _variant(visiting, f"length-{sec}", duration_sec=sec) for sec, _ in _LENGTH_CLASSES
+    ]
+    held = _variant(visiting, "held-story", review={"held": True, "reason": "merge held"})
+    records = [mapped, *lengths, held]
+    assert model.validate(records, chunks_root=chunks.parent) == []
+
+    _seed_place(clean_driver, script_mod.PLACE, script_mod.CITY)
+    with clean_driver.session(database=get_database()) as s:
+        _ensure_lenses(s, {"hidden_history", "visual_art"})
+        stats = publish_beats(s, records, script_mod.CITY)
+    assert stats["linked"] == 1 + len(_LENGTH_CLASSES)
+    assert stats["blocked"] == 1, "a held beat is the new-shape analogue of a disputed one"
+
+    with clean_driver.session(database=get_database()) as s:
+        props = s.run(
+            "MATCH (b:NarrativeBeat {beat_id: $bid}) RETURN properties(b) AS p",
+            bid=mapped["beat_id"],
+        ).single()["p"]
+        lenses = {
+            r["l"]
+            for r in s.run(
+                "MATCH (b:NarrativeBeat {beat_id: $bid})-[:TAGGED_WITH]->(l:Lens) "
+                "RETURN l.name AS l",
+                bid=mapped["beat_id"],
+            )
+        }
+        classes = {
+            r["bid"]: r["c"]
+            for r in s.run(
+                "MATCH (b:NarrativeBeat) WHERE b.beat_id STARTS WITH $prefix "
+                "RETURN b.beat_id AS bid, b.beat_length_class AS c",
+                prefix=f"{script_mod.CITY}/{model.slug(script_mod.PLACE)}/length-",
+            )
+        }
+        held_nodes = s.run(
+            "MATCH (b:NarrativeBeat {beat_id: $bid}) RETURN count(b) AS c", bid=held["beat_id"]
+        ).single()["c"]
+
+    assert props["script_body"] == script_mod.ORIGINS_NARRATION
+    assert list(props["key_claims"]) == [
+        script_mod.COLLECTING["text"],
+        script_mod.COMPLETED["text"],
+    ], "key_claims must carry the resolved claims only, never the superseded one"
+    assert props["beat_length_class"] == "mid"
+    assert props["active_status"] == "active"
+    assert props["duration_sec"] == 46
+    assert lenses == {"hidden_history", "visual_art"}
+    assert classes == {
+        f"{script_mod.CITY}/{model.slug(script_mod.PLACE)}/length-{sec}": cls
+        for sec, cls in _LENGTH_CLASSES
+    }
+    assert held_nodes == 0, "a review.held beat must not be published"
+
+
+@needs_neo4j
+def test_legacy_lens_tags_one_relationship(clean_driver):
+    """Both real cities are still legacy-shape: a record's single `lens` must
+    keep producing exactly one TAGGED_WITH edge through the per-entry tagging
+    slice 8 introduced. [undo: `_lenses_of` legacy branch → [] → RED]"""
+    _seed_place(clean_driver, "Legacy Lens POI", "paris")
+    beat = {
+        "beat_id": "legacy-lens-1",
+        "poi_name": "Legacy Lens POI",
+        "script_body": "A legacy beat with one lens.",
+        "lens": "historic_arch",
+        "fact_check": {"status": "verified"},
+    }
+    with clean_driver.session(database=get_database()) as s:
+        _ensure_lenses(s, {"historic_arch"})
+        stats = _upload_beats(s, [beat], "paris")
+        lenses = [
+            r["l"]
+            for r in s.run(
+                "MATCH (b:NarrativeBeat {beat_id: 'legacy-lens-1'})-[:TAGGED_WITH]->(l:Lens) "
+                "RETURN l.name AS l"
+            )
+        ]
+    assert stats["linked"] == 1 and stats["tagged"] == 1
+    assert lenses == ["historic_arch"]

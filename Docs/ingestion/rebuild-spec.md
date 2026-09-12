@@ -250,7 +250,9 @@ file, then withdraw every `NarrativeBeat` of that city whose `beat_id` is not in
 - [x] Quarantine London, the 137 orphans, the re-author pipeline under `_to_be_deleted/` (slice 0).
 - [ ] Re-extract Paris and New York into the new-schema files offline; the 137 orphans leave
       `beats.json` here, with the swap that re-establishes parity (slice 10).
-- [ ] Publisher converge merged and proven on 7687 (slice 8).
+- [x] Publisher converge merged (slice 8, 2026-09-12) and proven with a before/after count on
+      the lane-2 dev graph (7692; 7687 belongs to the main checkout — the same files, the
+      same seeded beats).
 - [ ] Publish to 7687; run `_test-golden`, tour grade, invariants (slice 10).
 - [ ] `make deploy TARGET=cloud CONFIRM_CLOUD_WRITE=1` per city (slice 10, human at the keyboard).
 - [ ] Delete `_to_be_deleted/`, the `beats.legacy.json` copies and every `*.bak-*` file (slice 11), once the cloud publish has served tours for a week without a rollback.
@@ -434,9 +436,9 @@ other than `data/`), `tests/test_workbench_ui.py` (the browser proof, on the moc
 from a file the test writes, writing only under a tmp `INGEST_DATA_ROOT`).
 **Produces:** `run_job(job_id, store, client, *, data_root=None) -> None` (never raises: a
 failed job is `error` with its completed phases kept; a held item is a queue item, never a
-failed job); the routes in §5, with two honest gaps this slice leaves: `POST /ingest/publish`
-answers 501 naming slice 8 once nothing is held (the converge does not exist yet, and a 202
-would claim a publish that never happened), and a `url` source is accepted by the route and
+failed job); the routes in §5, with two honest gaps this slice left: `POST /ingest/publish`
+answered 501 naming slice 8 once nothing was held (until slice 8 wired the converge; a 202
+would have claimed a publish that never happened), and a `url` source is accepted by the route and
 refused at P0 (no pinned-revision reader exists; slice 10 owns the Wikipedia terms). P6 is
 skipped with a `merge_skipped` log line when no beat exists at the place. The client comes
 from `INGEST_PROVIDER` (`mock` + `INGEST_MOCK_SCRIPT`, or `anthropic`; unset fails closed).
@@ -453,7 +455,21 @@ then is the owner's call.
 **Files:** modify `scripts/upload_paris.py` (export mapping §2, withdraw step §6);
 `scripts/db_parity.py` reports withdrawn counts.
 **Proves:** `tests/test_upload_paris.py::test_publish_withdraws_beats_absent_from_file` on
-7688; a before/after count on 7687 pasted into the slice report.
+the lane's pytest graph (7688; 7690 on lane 2); `::test_new_shape_export_mapping` (the §2
+mapping: script_body, resolved-only key_claims, the length-class thresholds, one lens
+relationship per entry, a held beat not published); `tests/test_db_parity.py::
+test_withdrawn_beats_are_reported_not_drift`; `tests/test_ingest_routes.py::
+test_publish_converges_the_graph_on_the_file` (`POST /ingest/publish` runs the converge for
+`target=local`, refuses `cloud`); a before/after count on the dev graph pasted into the
+slice report (built in the lane-2 worktree, so 7692 stood in for 7687).
+**Design calls (2026-09-12):** the withdraw set is "not MERGEd by this publish", so a beat the
+file holds but does not publish (legacy `disputed`, new-shape `review.held`) is withdrawn
+rather than left live with stale content; a city's beats are reached through its POIs'
+`HAS_BEAT` (a NarrativeBeat carries no city); `db-parity` compares ACTIVE beats only and
+prints withdrawn as its own line on both sides (repo: blocked/held, db: withdrawn). The
+converge is not one transaction: the MERGE and the withdraw are separate implicit
+transactions, so a crash between them leaves the graph merged-but-not-withdrawn; the
+re-publish is idempotent and repairs it.
 The withdraw step also retires the four seeded beats that exist in the dev graph and in no
 file — verbatim bodies from `src/seed/narratives.py`, uploaded without a `beat_id` — since
 they are absent from every file by construction; the before/after count names them.

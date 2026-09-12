@@ -98,7 +98,7 @@ PRE_FULL_SUITE := uv python-deps db-test db-dev db-workbench dev-data valhalla \
 	playwright-browser flutter flutter-deps render-key
 
 LINT_PATHS := src/ tests/ scripts/dev_env.py scripts/ensure_dev_data.py \
-	scripts/preflight.py scripts/db_parity.py scripts/check_audio_setup.py \
+	scripts/preflight.py scripts/db_parity.py scripts/upload_paris.py scripts/check_audio_setup.py \
 	scripts/tour_batch_candidate.py scripts/score_saved_tours.py \
 	scripts/score_gold_text.py scripts/human_reference_tours.py \
 	scripts/ingest_calibrate.py scripts/claim_conflicts.py \

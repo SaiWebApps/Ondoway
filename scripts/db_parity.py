@@ -7,7 +7,11 @@ this is the gate that makes drift LOUD instead of discovered-by-accident.
 
 For every city it compares, against the profile injected by Make:
   - POIs        : name_key set (in-bbox, from poi-raw.json) vs POI nodes
-  - beats       : beat_id set (uploadable AND linkable) vs POI-reachable beats
+  - beats       : beat_id set (uploadable AND linkable) vs POI-reachable ACTIVE beats
+  - withdrawn   : beats the publisher withdrew (spec §6) are a NAMED category on
+                  both sides (repo: blocked/held; db: active_status 'withdrawn'),
+                  reported, never drift — the graph keeps them so a re-publish
+                  can restore them
   - areas       : name set (areas.json) vs Area nodes
   - POI->Area   : resolvable within_edges vs WITHIN edges
 
@@ -80,7 +84,9 @@ def _expected(slug: str) -> dict:
     uploadable = [b for b in beats if b.get("beat_id") and not _beat_blocked(b)]
     linkable = {b["beat_id"] for b in uploadable if b.get("poi_name") in poi_names}
     unlinkable = sorted(b["beat_id"] for b in uploadable if b.get("poi_name") not in poi_names)
-    blocked = sum(1 for b in beats if b.get("beat_id") and _beat_blocked(b))
+    # Beats the repo says must NOT be active: legacy `disputed`, new-shape
+    # `review.held`. In the graph they are absent or withdrawn — never drift.
+    withdrawn = sum(1 for b in beats if b.get("beat_id") and _beat_blocked(b))
 
     areas = _load(ddir / "areas.json")
     area_names = {a["name"] for a in areas}
@@ -97,7 +103,7 @@ def _expected(slug: str) -> dict:
         "area_names": area_names,
         "p2a": p2a,
         "unlinkable": unlinkable,
-        "blocked": blocked,
+        "withdrawn": withdrawn,
     }
 
 
@@ -118,13 +124,21 @@ def _actual(session, slug: str) -> dict:
         )
         if r["k"]
     }
+    # Only ACTIVE beats are compared against the file; a withdrawn beat keeps
+    # its HAS_BEAT (spec §6) and is counted as its own category below.
     beat_ids = {
         r["b"]
         for r in q(
             "MATCH (:POI {city_name:$city})-[:HAS_BEAT]->(b:NarrativeBeat) "
-            "WHERE b.beat_id IS NOT NULL RETURN DISTINCT b.beat_id AS b"
+            "WHERE b.beat_id IS NOT NULL "
+            "  AND coalesce(b.active_status, 'active') <> 'withdrawn' "
+            "RETURN DISTINCT b.beat_id AS b"
         )
     }
+    withdrawn = q(
+        "MATCH (:POI {city_name:$city})-[:HAS_BEAT]->(b:NarrativeBeat) "
+        "WHERE b.active_status = 'withdrawn' RETURN count(DISTINCT b) AS n"
+    ).single()["n"]
     area_names = {r["n"] for r in q("MATCH (a:Area {city_name:$city}) RETURN a.name AS n")}
     p2a = {
         (r["p"], r["a"])
@@ -133,7 +147,13 @@ def _actual(session, slug: str) -> dict:
             "RETURN p.name AS p, a.name AS a"
         )
     }
-    return {"poi_keys": poi_keys, "beat_ids": beat_ids, "area_names": area_names, "p2a": p2a}
+    return {
+        "poi_keys": poi_keys,
+        "beat_ids": beat_ids,
+        "area_names": area_names,
+        "p2a": p2a,
+        "withdrawn": withdrawn,
+    }
 
 
 def _cmp(label: str, exp: set, act: set, drift: list, sample=lambda x: x) -> None:
@@ -193,10 +213,14 @@ def main() -> int:
                 drift,
                 sample=lambda t: f"{t[0]} -> {t[1]}",
             )
-            if exp["blocked"] or exp["unlinkable"]:
+            print(
+                f"    [info] withdrawn beats: repo={exp['withdrawn']} (blocked/held) "
+                f"db={act['withdrawn']} (a named category, not drift)"
+            )
+            if exp["unlinkable"]:
                 print(
-                    f"    [warn] repo has {exp['blocked']} blocked + {len(exp['unlinkable'])} "
-                    f"unlinkable beats (correctly absent from the graph)"
+                    f"    [warn] repo has {len(exp['unlinkable'])} unlinkable beats "
+                    f"(correctly absent from the graph)"
                 )
             if drift:
                 total_drift[slug] = drift

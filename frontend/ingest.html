@@ -317,9 +317,10 @@ $('publishBtn').addEventListener('click', async () => {
   if (resp.status === 409) {
     result.className = 'result refused';
     result.textContent = `refused: ${detail.error}\n${(detail.undecided || []).join('\n')}`;
-  } else if (resp.status === 501) {
-    result.className = 'result info';
-    result.textContent = `not wired: ${detail.error}`;
+  } else if (resp.ok) {
+    const beats = detail.beats || {};
+    result.className = 'result ok';
+    result.textContent = `published ${detail.city}: ${beats.linked} linked, ${beats.withdrawn} withdrawn, ${beats.blocked} blocked (held)`;
   } else {
     result.className = resp.ok ? 'result ok' : 'result refused';
     result.textContent = `${resp.status}: ${JSON.stringify(detail)}`;

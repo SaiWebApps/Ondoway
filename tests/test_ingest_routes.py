@@ -24,8 +24,10 @@ from fastapi.testclient import TestClient
 
 import src.api.routes.ingest as ingest_routes
 from src.api.app import create_app
+from src.connection import get_database
 from src.ingest import jobs, model
 from tests import ingest_job_script as script_mod
+from tests.conftest import needs_neo4j
 
 
 @pytest.fixture
@@ -167,13 +169,13 @@ def test_stream_is_event_stream_and_terminates(client, workspace, monkeypatch):
     assert client.get("/api/v1/ingest/jobs/nope/stream").status_code == 404
 
 
-def test_publish_refuses_while_an_item_is_held(client, workspace):
+@needs_neo4j
+def test_publish_refuses_while_an_item_is_held(client, workspace, clean_driver):
     """§5's proving node: a job whose merge is held leaves an undecided
     queue item, GET /ingest/review?city= lists it (ranked, with the hash
     a decision binds to), and POST /ingest/publish refuses 409 naming it
-    until it is decided. Once decided, publish no longer refuses — and,
-    this slice, answers 501 naming slice 8 rather than claiming a publish
-    that has not happened."""
+    until it is decided. Once decided, publish converges the graph on the
+    file (slice 8, §6): the two beats the file holds are linked."""
     _hold_a_merge(workspace)
     job_id, snap = _run_job(client, workspace["chunks"])
     assert snap["status"] == "committed", snap["error"]
@@ -201,9 +203,51 @@ def test_publish_refuses_while_an_item_is_held(client, workspace):
     )
     assert r.status_code == 200, r.text
     r = client.post("/api/v1/ingest/publish", params={"city": script_mod.CITY, "target": "local"})
-    assert r.status_code == 501, r.text
-    assert "slice 8" in r.json()["detail"]["error"]
-    assert r.json()["detail"] == {**r.json()["detail"], "city": script_mod.CITY, "target": "local"}
+    assert r.status_code == 200, r.text
+    assert r.json()["beats"]["linked"] == 2
+
+
+def _beat_status(driver, beat_id: str) -> str | None:
+    with driver.session(database=get_database()) as s:
+        rec = s.run(
+            "MATCH (b:NarrativeBeat {beat_id: $bid}) RETURN b.active_status AS st", bid=beat_id
+        ).single()
+    return rec["st"] if rec else None
+
+
+@needs_neo4j
+def test_publish_converges_the_graph_on_the_file(client, workspace, clean_driver):
+    """Slice 8 (§6) behind the front door: POST /ingest/publish?target=local
+    validates the city's new-shape file under its chunks root and makes the
+    graph match it — both beats active; a re-publish of a file that dropped
+    one beat withdraws exactly that beat; and a cloud target is refused
+    here (D14: the cloud publish is a human at the keyboard, never an
+    unauthenticated route). [undo: restore the 501 → RED]"""
+    origins, visiting = script_mod.existing_records()
+    script_mod.seed_beats(workspace["data_root"], [origins, visiting])
+
+    r = client.post("/api/v1/ingest/publish", params={"city": script_mod.CITY, "target": "local"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["city"] == script_mod.CITY and body["target"] == "local"
+    assert body["beats"]["linked"] == 2 and body["beats"]["withdrawn"] == 0
+    assert body["pois"]["created"] > 0
+    assert _beat_status(clean_driver, script_mod.ORIGINS_ID) == "active"
+    assert _beat_status(clean_driver, script_mod.VISITING_ID) == "active"
+
+    script_mod.seed_beats(workspace["data_root"], [origins])
+    r = client.post("/api/v1/ingest/publish", params={"city": script_mod.CITY, "target": "local"})
+    assert r.status_code == 200, r.text
+    assert r.json()["beats"]["linked"] == 1 and r.json()["beats"]["withdrawn"] == 1
+    assert _beat_status(clean_driver, script_mod.ORIGINS_ID) == "active"
+    assert _beat_status(clean_driver, script_mod.VISITING_ID) == "withdrawn"
+
+    r = client.post("/api/v1/ingest/publish", params={"city": script_mod.CITY, "target": "cloud"})
+    assert r.status_code == 400, r.text
+    assert "cloud" in r.json()["detail"]["error"]
+    r = client.post("/api/v1/ingest/publish", params={"city": "atlantis", "target": "local"})
+    assert r.status_code == 404, r.text
+    assert _beat_status(clean_driver, script_mod.VISITING_ID) == "withdrawn", "nothing changed"
 
 
 def test_decision_is_bound_to_shown_hash(client, workspace):

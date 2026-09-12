@@ -31,6 +31,7 @@ import time
 from pathlib import Path
 from urllib.parse import urlparse
 
+from scripts.validate_beats import _record_shape
 from src import city_registry
 from src.api.models.nodes import canonical_name_key
 from src.connection import abort_on_connection_error, create_driver, get_database
@@ -72,11 +73,12 @@ CITY_BBOX: dict[str, tuple[float, float, float, float]] = city_registry.bbox_map
 PARIS_BBOX = CITY_BBOX["paris"]  # back-compat default
 
 
-def _city_paths(city_slug: str) -> tuple[Path, Path]:
+def _city_paths(city_slug: str, data_root: Path | None = None) -> tuple[Path, Path]:
     # Hermetic-aware data root (``$ONBOARD_DATA_ROOT`` when set, else
     # ``<repo>/data``) so a hermetic onboard's tmp corpus is what the deploy reads;
-    # unset → <repo>/data/{slug}, byte-identical to the prior hardcoded path.
-    data_dir = city_registry.onboard_data_root() / city_slug
+    # unset → <repo>/data/{slug}, byte-identical to the prior hardcoded path. An
+    # explicit `data_root` (the ingest front door's INGEST_DATA_ROOT) wins.
+    data_dir = (data_root or city_registry.onboard_data_root()) / city_slug
     return data_dir / "poi-raw.json", data_dir / "beats.json"
 
 # fact_check.status values that must never reach the live database.
@@ -93,12 +95,28 @@ def _in_city_bounds(lat: float, lon: float, bbox: tuple = PARIS_BBOX) -> bool:
 
 
 def _beat_blocked(beat: dict) -> bool:
-    """True if a beat must NOT be uploaded — currently: missing essentials or a
-    `disputed` fact-check status. (Note: this does NOT require `verified`;
-    uploading unverified beats is a launch-policy decision left to the operator.)"""
-    if not beat.get("poi_name") or not beat.get("script_body"):
+    """True if a beat must NOT be uploaded: missing essentials, a legacy
+    `disputed` fact-check status, or — on a new-shape record — `review.held`
+    (the new-shape analogue of the fact-check block: a held story waits for
+    a decision, it is never served). Neither requires `verified`; uploading
+    unverified legacy beats is a launch-policy decision left to the operator."""
+    view = _export_view(beat)
+    if not view.get("poi_name") or not view.get("script_body"):
         return True
+    if _record_shape(beat) == "new":
+        return bool((beat.get("review") or {}).get("held"))
     return (beat.get("fact_check") or {}).get("status") in _BLOCKED_STATUSES
+
+
+def _beat_length_class(duration_sec: int) -> str:
+    """§2: `micro` <8 s, `seasoning` <32 s, `mid` <80 s, else `anchor`."""
+    if duration_sec < 8:
+        return "micro"
+    if duration_sec < 32:
+        return "seasoning"
+    if duration_sec < 80:
+        return "mid"
+    return "anchor"
 
 
 def _assert_beats_valid(beats_path: Path) -> None:
@@ -400,7 +418,70 @@ def _backfill_provenance(session, beats: list[dict]) -> dict[str, int]:
     return {"updated": updated, "candidates": len(params)}
 
 
-def _upload_beats(session, beats: list[dict], city_name: str) -> dict[str, int]:
+def _export_view(beat: dict) -> dict:
+    """The §2 graph export: a new-shape record (`claims` + `narration`, the
+    same rule as scripts/validate_beats.py — never keyed on `script_body`)
+    seen through the legacy field contract the tour engine reads. A legacy
+    record is returned as is, so both real cities keep publishing exactly
+    as today until the slice-10 swap. The engine changes nothing.
+    """
+    if _record_shape(beat) != "new":
+        return beat
+    narration = beat.get("narration") or {}
+    view = dict(beat)
+    view["script_body"] = narration.get("text") or ""
+    view["key_claims"] = [
+        c["text"] for c in beat.get("claims") or [] if c.get("status") == "resolved"
+    ]
+    view["beat_length_class"] = _beat_length_class(int(beat.get("duration_sec") or 0))
+    view["lenses"] = list(beat.get("lenses") or [])
+    return view
+
+
+def _lenses_of(beat: dict) -> list[str]:
+    """The lens slugs a record tags: a new-shape `lenses` list, or the legacy
+    single `lens` as a one-item list (spec §2: one relationship per entry)."""
+    lenses = beat.get("lenses")
+    if lenses:
+        return list(lenses)
+    return [beat["lens"]] if beat.get("lens") else []
+
+
+def _withdraw_absent(session, city_name: str, published_ids: set[str]) -> int:
+    """§6 converge: every beat of `city_name` this publish did not MERGE —
+    a beat_id the file no longer names, or a beat with no beat_id at all
+    (the four seeded narratives of src/seed/narratives.py) — becomes
+    `active_status = 'withdrawn'`. HAS_BEAT is kept, so a re-publish that
+    names the beat again restores it through the ordinary MERGE + SET
+    'active'. Returns how many beats this call withdrew (already-withdrawn
+    beats are not counted again). The city is the POI's: a NarrativeBeat
+    carries no city of its own, and a beat no POI links is one the engine
+    never loads.
+    """
+    result = session.run(
+        """
+        MATCH (:POI {city_name: $city})-[:HAS_BEAT]->(b:NarrativeBeat)
+        WHERE (b.beat_id IS NULL OR NOT b.beat_id IN $ids)
+          AND coalesce(b.active_status, 'active') <> 'withdrawn'
+        SET b.active_status = 'withdrawn'
+        RETURN count(DISTINCT b) AS withdrawn
+        """,
+        city=city_name,
+        ids=sorted(published_ids),
+    )
+    return result.single()["withdrawn"]
+
+
+def publish_beats(session, beats: list[dict], city_name: str) -> dict:
+    """Make the graph's beats for `city_name` match `beats` (spec §6): MERGE
+    every publishable beat, then withdraw every beat of the city this call
+    did not publish. The stats are `_upload_beats`' plus `withdrawn`."""
+    stats = _upload_beats(session, beats, city_name)
+    stats["withdrawn"] = _withdraw_absent(session, city_name, set(stats["published_ids"]))
+    return stats
+
+
+def _upload_beats(session, beats: list[dict], city_name: str) -> dict:
     """Upload NarrativeBeat nodes and link to POIs + Lenses via batched UNWIND.
 
     ``city_name`` is the slug of the city being deployed (POI ``city_name`` in the
@@ -415,7 +496,7 @@ def _upload_beats(session, beats: list[dict], city_name: str) -> dict[str, int]:
     blocked = 0
     no_beat_id = 0
 
-    for beat in beats:
+    for beat in map(_export_view, beats):
         poi_name = beat.get("poi_name", "")
         script_body = beat.get("script_body", "")
         beat_id = beat.get("beat_id", "")
@@ -431,8 +512,8 @@ def _upload_beats(session, beats: list[dict], city_name: str) -> dict[str, int]:
         if not poi_name or not script_body:
             pre_skipped += 1
             continue
-        if (beat.get("fact_check") or {}).get("status") in _BLOCKED_STATUSES:
-            blocked += 1  # disputed beats never go live
+        if _beat_blocked(beat):
+            blocked += 1  # disputed (legacy) or held (new-shape) beats never go live
             continue
 
         word_count = len(script_body.split())
@@ -462,7 +543,7 @@ def _upload_beats(session, beats: list[dict], city_name: str) -> dict[str, int]:
             "kid_friendly": kid_friendly,
             "confidence": confidence,
             "fact_status": fact_status,
-            "lens": beat.get("lens", ""),
+            "lenses": _lenses_of(beat),
             "sub_location": beat.get("sub_location"),
             "trigger_address": beat.get("trigger_address"),
             "narrative_function": beat.get("narrative_function"),
@@ -508,21 +589,25 @@ def _upload_beats(session, beats: list[dict], city_name: str) -> dict[str, int]:
             beat.source_chunk_slug  = b.source_chunk_slug,
             beat.key_claims         = b.key_claims
         MERGE (p)-[:HAS_BEAT]->(beat)
-        RETURN count(beat) AS linked
+        RETURN collect(beat.beat_id) AS ids
         """,
         beats=params,
         city=city_name,
     )
-    linked = result.single()["linked"]
+    published_ids = list(result.single()["ids"])
+    linked = len(published_ids)
     orphaned = len(params) - linked + pre_skipped
 
-    taggable = [b for b in params if b["lens"]]
+    taggable = [b for b in params if b["lenses"]]
     if taggable:
+        # One TAGGED_WITH per entry: a legacy `lens` is a one-item list, a
+        # new-shape `lenses` list tags each (spec §2).
         tag_result = session.run(
             """
             UNWIND $beats AS b
             MATCH (beat:NarrativeBeat {beat_id: b.beat_id})
-            MATCH (l:Lens {name: b.lens})
+            UNWIND b.lenses AS lens_name
+            MATCH (l:Lens {name: lens_name})
             MERGE (beat)-[:TAGGED_WITH]->(l)
             RETURN count(*) AS tagged
             """,
@@ -538,6 +623,113 @@ def _upload_beats(session, beats: list[dict], city_name: str) -> dict[str, int]:
         "tagged": tagged,
         "blocked": blocked,
         "no_beat_id": no_beat_id,
+        "published_ids": published_ids,
+    }
+
+
+def converge(driver, city_slug: str, *, data_root: Path | None = None) -> dict:
+    """Make the graph match the city's files (spec §6): validate the beats
+    file, ensure schema + lenses, MERGE the POIs and body places, then
+    `publish_beats` — MERGE every publishable beat and withdraw every beat
+    of the city the file no longer names. `data_root` overrides the
+    hermetic-aware default (`_city_paths`) for the front door, which
+    publishes from `INGEST_DATA_ROOT`. Returns the per-step stats (the
+    published id list is left out: a city has thousands). Prints progress
+    the way the CLI always has; the caller owns the driver.
+    """
+    if city_slug not in CITY_BBOX:
+        raise KeyError(city_slug)
+    poi_file, beats_file = _city_paths(city_slug, data_root)
+    bbox = CITY_BBOX[city_slug]
+    db = get_database()
+
+    # AC-9: every integrity gate (grounding, verification-freshness, uniqueness,
+    # status vocab) must pass before we touch the database. Fail fast, pre-connect.
+    print("  [0/5] Validating beats (validate_beats gate)...")
+    _assert_beats_valid(beats_file)
+    print("         OK")
+
+    pois = _load_json(poi_file)
+    beats = _load_json(beats_file)
+    print(f"  Source: {len(pois)} POIs, {len(beats)} beats\n")
+
+    beat_lenses = {lens for b in beats for lens in _lenses_of(_export_view(b))}
+    print(f"  Lenses referenced by beats: {len(beat_lenses)}")
+
+    # 1. Schema
+    print("\n  [1/5] Applying schema constraints & indexes...")
+    t0 = time.time()
+    apply_all(driver)
+    print(f"         Done ({time.time()-t0:.1f}s)")
+
+    with driver.session(database=db) as session:
+        # 2. Lenses
+        print("  [2/5] Seeding lenses...")
+        t0 = time.time()
+        seed_lenses(driver)
+        lens_count = _ensure_lenses(session, beat_lenses)
+        print(f"         {lens_count} lenses ensured ({time.time()-t0:.1f}s)")
+
+        # 3. POIs
+        print(f"  [3/5] Uploading {len(pois)} POIs...")
+        t0 = time.time()
+        poi_stats = _upload_pois(session, pois, city_slug, bbox)
+        print(
+            f"         {poi_stats['created']} created, {poi_stats['skipped']} skipped "
+            f"(null coords), {poi_stats['out_of_bounds']} skipped (out of bounds) "
+            f"({time.time()-t0:.1f}s)"
+        )
+        body_stats = _upload_body_places(session, city_slug, bbox)
+        if body_stats["created"] or body_stats["out_of_bounds"]:
+            print(
+                f"         + {body_stats['created']} body places (toilets/benches) "
+                f"created, {body_stats['out_of_bounds']} skipped (out of bounds)"
+            )
+
+        # 4. Beats + relationships, then the §6 withdraw step
+        print(f"  [4/5] Publishing {len(beats)} beats + linking...")
+        t0 = time.time()
+        beat_stats = publish_beats(session, beats, city_slug)
+        print(
+            f"         {beat_stats['linked']} linked, {beat_stats['orphaned']} orphaned, "
+            f"{beat_stats['tagged']} tagged, {beat_stats['blocked']} blocked (disputed/held), "
+            f"{beat_stats['no_beat_id']} skipped (no beat_id), "
+            f"{beat_stats['withdrawn']} withdrawn (absent from the file) "
+            f"({time.time()-t0:.1f}s)"
+        )
+
+        # 5. Summary
+        print("  [5/5] Verifying counts...")
+        nodes = session.run("MATCH (n) RETURN count(n) AS c").single()["c"]
+        rels = session.run("MATCH ()-[r]->() RETURN count(r) AS c").single()["c"]
+        poi_count = session.run("MATCH (n:POI) RETURN count(n) AS c").single()["c"]
+        beat_count = session.run("MATCH (n:NarrativeBeat) RETURN count(n) AS c").single()["c"]
+        lens_count = session.run("MATCH (n:Lens) RETURN count(n) AS c").single()["c"]
+        withdrawn_total = session.run(
+            "MATCH (:POI {city_name: $city})-[:HAS_BEAT]->(b:NarrativeBeat) "
+            "WHERE b.active_status = 'withdrawn' RETURN count(DISTINCT b) AS c",
+            city=city_slug,
+        ).single()["c"]
+
+    print(f"\n{'='*60}")
+    print("  UPLOAD COMPLETE")
+    print(f"  Nodes: {nodes} ({poi_count} POIs, {beat_count} beats, {lens_count} lenses)")
+    print(f"  Relationships: {rels}")
+    print(f"  Withdrawn beats in {city_slug}: {withdrawn_total}")
+    print(f"{'='*60}\n")
+
+    return {
+        "pois": poi_stats,
+        "body_places": body_stats,
+        "beats": {k: v for k, v in beat_stats.items() if k != "published_ids"},
+        "withdrawn_total": withdrawn_total,
+        "graph": {
+            "nodes": nodes,
+            "relationships": rels,
+            "pois": poi_count,
+            "beats": beat_count,
+            "lenses": lens_count,
+        },
     }
 
 
@@ -558,8 +750,6 @@ def main() -> None:
             f"Register it first (onboarding panel / src.city_registry.register_city → "
             f"src/cities.json)."
         )
-    poi_file, beats_file = _city_paths(city_slug)
-    bbox = CITY_BBOX[city_slug]
 
     db = get_database()
     db_label = f"cloud ({db})" if db else "local"
@@ -569,15 +759,13 @@ def main() -> None:
     print(f"  {mode} → Neo4j [{db_label}]")
     print(f"{'='*60}\n")
 
-    # AC-9: every integrity gate (grounding, verification-freshness, uniqueness,
-    # status vocab) must pass before we touch the database. Fail fast, pre-connect.
-    print("  [0/5] Validating beats (validate_beats gate)...")
-    _assert_beats_valid(beats_file)
-    print("         OK")
-
     if provenance_only:
         # Step 4.0 backfill: ONLY the three provenance fields, matched by
         # beat_id. Never the full upload path (it plain-SETs audio_url='').
+        _poi_file, beats_file = _city_paths(city_slug)
+        print("  [0/5] Validating beats (validate_beats gate)...")
+        _assert_beats_valid(beats_file)
+        print("         OK")
         beats = _load_json(beats_file)
         driver = create_driver()
         try:
@@ -599,71 +787,9 @@ def main() -> None:
             driver.close()
         return
 
-    pois = _load_json(poi_file)
-    beats = _load_json(beats_file)
-    print(f"  Source: {len(pois)} POIs, {len(beats)} beats\n")
-
-    beat_lenses = {b["lens"] for b in beats if b.get("lens")}
-    print(f"  Lenses referenced by beats: {len(beat_lenses)}")
-
     driver = create_driver()
     try:
-        with driver.session(database=db) as session:
-            # 1. Schema
-            print("\n  [1/5] Applying schema constraints & indexes...")
-            t0 = time.time()
-        apply_all(driver)
-        print(f"         Done ({time.time()-t0:.1f}s)")
-
-        with driver.session(database=db) as session:
-            # 2. Lenses
-            print("  [2/5] Seeding lenses...")
-            t0 = time.time()
-            seed_lenses(driver)
-            lens_count = _ensure_lenses(session, beat_lenses)
-            print(f"         {lens_count} lenses ensured ({time.time()-t0:.1f}s)")
-
-            # 3. POIs
-            print(f"  [3/5] Uploading {len(pois)} POIs...")
-            t0 = time.time()
-            poi_stats = _upload_pois(session, pois, city_slug, bbox)
-            print(
-                f"         {poi_stats['created']} created, {poi_stats['skipped']} skipped "
-                f"(null coords), {poi_stats['out_of_bounds']} skipped (out of bounds) "
-                f"({time.time()-t0:.1f}s)"
-            )
-            body_stats = _upload_body_places(session, city_slug, bbox)
-            if body_stats["created"] or body_stats["out_of_bounds"]:
-                print(
-                    f"         + {body_stats['created']} body places (toilets/benches) "
-                    f"created, {body_stats['out_of_bounds']} skipped (out of bounds)"
-                )
-
-            # 4. Beats + relationships
-            print(f"  [4/5] Uploading {len(beats)} beats + linking...")
-            t0 = time.time()
-            beat_stats = _upload_beats(session, beats, city_slug)
-            print(
-                f"         {beat_stats['linked']} linked, {beat_stats['orphaned']} orphaned, "
-                f"{beat_stats['tagged']} tagged, {beat_stats['blocked']} blocked (disputed), "
-                f"{beat_stats['no_beat_id']} skipped (no beat_id) "
-                f"({time.time()-t0:.1f}s)"
-            )
-
-            # 5. Summary
-            print("  [5/5] Verifying counts...")
-            nodes = session.run("MATCH (n) RETURN count(n) AS c").single()["c"]
-            rels = session.run("MATCH ()-[r]->() RETURN count(r) AS c").single()["c"]
-            poi_count = session.run("MATCH (n:POI) RETURN count(n) AS c").single()["c"]
-            beat_count = session.run("MATCH (n:NarrativeBeat) RETURN count(n) AS c").single()["c"]
-            lens_count = session.run("MATCH (n:Lens) RETURN count(n) AS c").single()["c"]
-
-        print(f"\n{'='*60}")
-        print("  UPLOAD COMPLETE")
-        print(f"  Nodes: {nodes} ({poi_count} POIs, {beat_count} beats, {lens_count} lenses)")
-        print(f"  Relationships: {rels}")
-        print(f"{'='*60}\n")
-
+        converge(driver, city_slug)
     finally:
         driver.close()
 

@@ -6087,11 +6087,12 @@ class TestIngestPanel:
     real Chromium page — the cost estimate first, every phase chip turning
     done, the committed file landing under the module tmp root (never the
     committed data/) and validating — with a screenshot. Then the queue is
-    empty and the publish button reports honestly that the converge is not
-    wired yet (slice 8).
+    empty and the publish button runs the slice-8 converge (spec §6): the
+    one committed beat is linked in the graph and the result says so.
 
-    Touches no graph: the ingest routes never read Neo4j, so this can sit
-    after the London onboarding test without perturbing anything.
+    The publish DOES write the workbench graph (it converges the city on
+    the tmp file, withdrawing every other New York beat there), so this
+    class stays LAST in the file.
     """
 
     def test_job_reaches_p7_on_the_mock(self, browser_page):
@@ -6134,8 +6135,10 @@ class TestIngestPanel:
                                      ingest_script.CITY) == []
         assert committed_beats.read_bytes() == before
 
-        # Nothing held; publish says plainly the converge is slice 8.
+        # Nothing held; publish converges the graph on the committed file (slice 8).
         expect(page.locator("#reviewQueue")).to_contain_text("Nothing held")
         page.locator("#publishBtn").click()
-        expect(page.locator("#publishResult")).to_contain_text("slice 8", timeout=10000)
-        _take_screenshot(page, "ingest-02-publish-not-wired")
+        expect(page.locator("#publishResult")).to_contain_text(
+            f"published {ingest_script.CITY}: 1 linked", timeout=60000
+        )
+        _take_screenshot(page, "ingest-02-published")

@@ -10,9 +10,11 @@ SSE view of the same log. `GET /ingest/review?city=` lists the D13 queue
 ranked by content held back; `POST /ingest/review/decision` records a
 decision bound to the hash of what was shown (a stale or foreign hash is
 refused); `POST /ingest/publish?city=&target=` refuses while any held
-item of that city is undecided, and otherwise answers 501: the publisher
-converge that makes the graph match the file is slice 8, and a silent
-202 here would claim a publish that never happened.
+item of that city is undecided, refuses a cloud target outright (D14: the
+cloud publish is a human at the keyboard), and otherwise runs the
+publisher converge (`scripts.upload_paris.converge`, spec §6) against the
+process driver from `INGEST_DATA_ROOT`: the graph is made to match the
+file, and the response carries the step stats.
 
 SECURITY: this router reads a caller-named chunk dir and writes
 `data/{city}/` — an UNAUTHENTICATED read/write surface — so
@@ -36,7 +38,9 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ValidationError
 
+from scripts.upload_paris import CITY_BBOX, converge
 from src import city_registry
+from src.api.dependencies import get_driver
 from src.ingest import run as run_mod
 from src.ingest.jobs import PHASES, IngestJob, IngestSource, ReviewItem, get_ingest_store
 
@@ -268,7 +272,10 @@ def record_decision(body: DecisionRequest) -> dict:
 @router.post("/publish")
 def publish(city: str, target: str = "local") -> dict:
     """Refuse while any held item of `city` is undecided (409, naming
-    them). Otherwise 501: the converge (§6) is slice 8."""
+    them) and refuse any target but `local` (400). Otherwise converge the
+    graph on the city's file (§6): 404 for an unregistered city, 422 when
+    the validate_beats gate refuses the file (nothing is written), else
+    200 with the step stats."""
     store = get_ingest_store()
     undecided = store.undecided(city)
     if undecided:
@@ -279,11 +286,22 @@ def publish(city: str, target: str = "local") -> dict:
                 "undecided": [i.item_id for i in undecided],
             },
         )
-    raise HTTPException(
-        501,
-        detail={
-            "error": "publish is not wired yet: the publisher converge (spec §6) is slice 8",
-            "city": city,
-            "target": target,
-        },
-    )
+    if target != "local":
+        raise HTTPException(
+            400,
+            detail={
+                "error": (
+                    f"target {target!r} is not published from here: a cloud publish is "
+                    "`make deploy TARGET=cloud CONFIRM_CLOUD_WRITE=1` with a human at the keyboard"
+                ),
+                "city": city,
+                "target": target,
+            },
+        )
+    if city not in CITY_BBOX:
+        raise HTTPException(404, f"unknown city {city!r}")
+    try:
+        stats = converge(get_driver(), city, data_root=run_mod.data_root_from_env())
+    except RuntimeError as exc:
+        raise HTTPException(422, detail={"error": str(exc), "city": city}) from exc
+    return {"city": city, "target": target, **stats}
