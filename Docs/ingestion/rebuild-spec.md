@@ -205,7 +205,7 @@ failed job resumes at its last completed phase.
 | P0 intake | none | units of text with `source_id`, `as_of`, rights basis | manifest fields present; a website unit over the ceiling is split at headings and the job logs it |
 | P1 decompose | author | claims `{text, kind, span}` per unit | span verbatim in unit; no lift ≥8 claim-vs-unit (the span is inside the unit; measured with `scripts/verbatim.py`'s `run_outside_quotation`, attributed quotations exempt); no book furniture (leak regex); self-contained (no bare pronoun subject); `kind` present, default `state` when the judge marks it ambiguous |
 | P2 group | author | stories `{title, place, lenses, beat_type, enrichment, claim_ids}` | every claim in exactly one story; place resolves to `poi-raw.json` or is flagged `new_poi`; structural types allowed 1 claim, others ≥2 |
-| P3 judge claims | judge | per claim: entailed yes/no; per unit: facts no claim carries | a claim refused once is re-asked with the judge's reason quoted back; refused twice is dropped and logged; an omission finding re-asks P1 once for that unit |
+| P3 judge claims | judge | per claim: entailed yes/no and the temporal kind read from the span (slice 9: a wrongly kinded claim is re-kinded, never refused); per unit: facts no claim carries | a claim refused once is re-asked with the judge's reason quoted back; refused twice is dropped and logged; an omission finding re-asks P1 once for that unit |
 | P4 narrate | author, sees claims only | narration text | no lift vs any span; no leak; no framing regex (`imagine`, `picture`, `envision`); duration computed |
 | P5 judge narration | judge | per sentence entailed yes/no | a failing sentence re-asks P4 once with the sentence quoted back; still failing → `narration.flags` set, `review.held = true` |
 | P6 merge | merge judge + signature | per new story: same / new / supersedes; per claim: new / same / conflict | judge and signature agree → apply; disagree → hold the new story, queue item; conflict → both claims `contested`; same → one claim, sources appended; supersedes → old claim `belief`, dated; any claim change → P4/P5 rerun for that beat |
@@ -476,9 +476,18 @@ they are absent from every file by construction; the before/after count names th
 
 ### Slice 9: Proof chunk under the new model
 
-**Files:** none new. Run one job on
+**Files (as built, 2026-09-12):** `scripts/ingest_job.py` + `make ingest-job CITY= CHUNK_DIR=
+[ARGS=]` (declared with `render-key`; sets `INGEST_PROVIDER=anthropic` and
+`INGEST_DATA_ROOT=data-ingest`, the gitignored root the new-schema file lives in until the
+slice-10 swap; prints the estimate and stops unless `--yes`; writes the job log to
+`data-ingest/{city}/jobs/{job_id}.jsonl` and closes with the P6 hold rate and the P3
+precision counters); `IngestSource.chunks` so one job ingests one chunk of a book;
+`tests/live_graph.py` honours every lane's dev port so `_test-golden` counts on a lane; the
+P3 KIND question (`prompts.judge`, `judge_claims._rekind`, slice-6 ruling 5) with the
+`state_as_event` calibration detector. Run one job on
 `Books/new_york/lonely-planet-new-york-city/chunk-07-upper-east-side.txt`, then a second on
-the Frommer's Upper East Side chunk so the merge fires on the Guggenheim.
+the Frommer's Upper East Side chunk (`chunk-05-ch05-uptown`) so the merge fires on the
+Guggenheim.
 **Proves:** the stories match §2's shape by inspection; an `acceptance` agent and a
 `tour-adversary` panel read every Guggenheim beat; the two chunks' cost matches the
 estimate within 25%. The ten hand-read beats seed `./fixtures/ingestion/defects.json`.

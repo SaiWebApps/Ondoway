@@ -14,7 +14,7 @@ from pathlib import Path
 
 import src.ingest.judge_claims as judge_claims
 import src.ingest.llm as llm
-from src.ingest import decompose, group, model
+from src.ingest import decompose, group, model, prompts
 from src.ingest import unit as unit_mod
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -101,9 +101,11 @@ def _armed_mock(batch_answers: dict, unit: unit_mod.Unit) -> llm.MockClient:
     return mock
 
 
-def _entailed(reason: str = "the span states it") -> llm.MockAnswer:
+def _entailed(reason: str = "the span states it", kind: str = "state") -> llm.MockAnswer:
+    """c01 is the ADDRESS (state) claim in every test below; pass
+    kind="event" for the COMPLETED claim so the judge agrees with the author."""
     return llm.MockAnswer(
-        text=json.dumps({"entailed": True, "reason": reason}),
+        text=json.dumps({"entailed": True, "reason": reason, "kind": kind}),
         model_id=RESPONSE_JUDGE_MODEL,
     )
 
@@ -136,9 +138,9 @@ def test_verdict_is_bound_to_claim_and_span_hash():
     assert mock.calls == [("claim_judge", "P3")]
 
 
-def _refused(reason: str) -> llm.MockAnswer:
+def _refused(reason: str, kind: str = "event") -> llm.MockAnswer:
     return llm.MockAnswer(
-        text=json.dumps({"entailed": False, "reason": reason}),
+        text=json.dumps({"entailed": False, "reason": reason, "kind": kind}),
         model_id=RESPONSE_JUDGE_MODEL,
     )
 
@@ -160,7 +162,7 @@ def test_refused_once_is_restated_by_the_author_with_the_reason_quoted_back():
         {
             judge_claims.judge_custom_id(unit, "c02", 1): _refused(reason),
             judge_claims.restate_custom_id(unit, "c02"): _restated(COMPLETED_CLAIM),
-            judge_claims.judge_custom_id(unit, "c02", 2): _entailed(),
+            judge_claims.judge_custom_id(unit, "c02", 2): _entailed(kind="event"),
         },
         unit,
     )
@@ -360,7 +362,9 @@ def test_only_the_storys_own_claims_are_judged():
     unit = _real_unit()
     listed = _draft(unit, "c02", COMPLETED_CLAIM)
     unlisted = _draft(unit, "c01", ADDRESS_CLAIM)
-    mock = _armed_mock({judge_claims.judge_custom_id(unit, "c02", 1): _entailed()}, unit)
+    mock = _armed_mock(
+        {judge_claims.judge_custom_id(unit, "c02", 1): _entailed(kind="event")}, unit
+    )
 
     judged = judge_claims.judge_claims(_story(["c02"]), [unlisted, listed], unit, mock)
 
@@ -466,6 +470,71 @@ def test_p3_plans_price_the_real_prompts():
         "claude-haiku-4-5",
     ]
     assert all(r.batch for r in estimate.rows)
+
+
+HOLDINGS_CLAIM: dict = {
+    "text": (
+        "Kandinsky, Picasso and Jackson Pollock are all represented in the museum's collection."
+    ),
+    "kind": "event",  # the author's mistake: a holding is a STATE (CONTEXT.md), not an event
+    "span": "The museum’s holdings include works by Kandinsky, Picasso and Jackson Pollock.",  # noqa: RUF001
+}
+
+
+def test_the_judge_reads_the_kind_and_a_misread_kind_is_rekinded_not_refused():
+    """Slice-6 ruling 5 (owner, 2026-09-12): the P3 call carries a KIND
+    question — the judge reads the claim's temporal kind from the span in
+    the SAME batch as entailment — and a claim the author kinded wrongly
+    is RE-KINDED, never refused: entailment is about facts, kind is about
+    time, and `state_as_event` (spec §4) is a kind defect. The judged
+    claim comes out with the judge's kind, a `claim_rekinded` event names
+    the change, and no restate happens. A judge that agrees leaves the
+    kind alone and emits nothing. The schema and the prompt's answer shape
+    carry the third key, so the live judge always answers it; an answer
+    without it, or with a kind outside event/state/belief, is not a
+    verdict (the unit is held as for any unreadable answer)."""
+    unit = _real_unit()
+    misread = _draft(unit, "c01", HOLDINGS_CLAIM)
+    completed = _draft(unit, "c02", COMPLETED_CLAIM)
+    events, sink = _sink_and_events()
+    mock = llm.MockClient(
+        sink,
+        batch_answers={
+            judge_claims.judge_custom_id(unit, "c01", 1): llm.MockAnswer(
+                text=json.dumps(
+                    {"entailed": True, "reason": "the span lists them", "kind": "state"}
+                ),
+                model_id=RESPONSE_JUDGE_MODEL,
+            ),
+            judge_claims.judge_custom_id(unit, "c02", 1): _entailed(kind="event"),
+        },
+    )
+    mock.estimate([unit.text], list(judge_claims.P3_PLAN))
+
+    judged = judge_claims.judge_claims(
+        _story(["c01", "c02"]), [misread, completed], unit, mock, events=sink
+    )
+
+    by_id = {j.draft.claim_id: j for j in judged}
+    assert by_id["c01"].draft.kind == "state"
+    assert by_id["c01"].draft.text == HOLDINGS_CLAIM["text"]
+    assert by_id["c01"].verdict.entailed is True
+    assert by_id["c02"].draft == completed  # the judge agreed: untouched
+    assert mock.calls == [("claim_judge", "P3")] * 2  # one round (per-id count), no restate
+    assert [(k, p) for k, p in events if k == "claim_rekinded"] == [
+        (
+            "claim_rekinded",
+            {"unit_key": unit.key, "claim_id": "c01", "from": "event", "to": "state"},
+        )
+    ]
+
+    assert set(prompts.P3_VERDICT_SCHEMA["properties"]) == {"entailed", "reason", "kind"}
+    assert prompts.P3_VERDICT_SCHEMA["properties"]["kind"]["enum"] == ["event", "state", "belief"]
+    assert '"kind"' in prompts.JUDGE_CLAIM_PROMPT
+    assert judge_claims.parse_verdict('{"entailed": true, "reason": "r"}') is None
+    assert judge_claims.parse_verdict(
+        '{"entailed": true, "reason": "r", "kind": "ambiguous"}'
+    ) is None
 
 
 def test_no_live_client_in_this_file():

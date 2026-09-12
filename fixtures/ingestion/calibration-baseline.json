@@ -31,7 +31,12 @@
       "caught": 1,
       "total": 1
     },
-    "state_as_event": null,
+    "state_as_event": {
+      "caught": 1,
+      "total": 1,
+      "false_refusals": 0,
+      "dropped": 0
+    },
     "contested_value": {
       "caught": 1,
       "total": 1

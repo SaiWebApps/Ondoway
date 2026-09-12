@@ -265,8 +265,8 @@
     },
     {
       "class": "state_as_event",
-      "detector": "pending",
-      "note": "c01 is a state claim (the collection includes) kinded as an event.",
+      "detector": "judge_claims",
+      "note": "c01 is a state claim (the collection includes) kinded as an event; the P3 KIND question re-kinds it (slice 9, slice-6 ruling 5).",
       "story": {
         "title": "The museum today",
         "place": "Guggenheim Museum",
@@ -295,8 +295,7 @@
       ],
       "planted": {
         "claim_id": "c01",
-        "expected_kind": "state",
-        "pending_phase": "P3 kind reading (not in the P3 row; owner decision)"
+        "expected_kind": "state"
       }
     },
     {

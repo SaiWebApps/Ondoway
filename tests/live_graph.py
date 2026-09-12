@@ -1,8 +1,13 @@
 """Safe access to the populated local dev graph from pytest shards.
 
-Pytest's destructive fixtures use ``NEO4J_*`` and are hard-pinned to port
-7688.  Live-corpus tests use this separate prefix and can only open localhost
-port 7687, so neither environment can silently fall through to Aura.
+Pytest's destructive fixtures use ``NEO4J_*`` and are hard-pinned to the
+7688-family test graphs.  Live-corpus tests use this separate prefix and can
+only open a LOCAL DEV graph -- the canonical 7687 or a lane's own (7692, 7693:
+the ``dev*`` rows of scripts/preflight.py's DATABASES) -- so neither
+environment can silently fall through to Aura, a wiped pytest graph or a
+workbench graph.  Until slice 9 only 7687 was accepted, so on a lane every
+golden, persona, coherence and authoring-gate shard SKIPPED and green there
+proved nothing about the tour bar.
 """
 
 from __future__ import annotations
@@ -12,6 +17,13 @@ from urllib.parse import urlparse
 
 from neo4j import GraphDatabase
 from neo4j.exceptions import AuthError, ServiceUnavailable
+
+from scripts.preflight import DATABASES
+
+#: Every local dev graph a live-corpus test may open: one port per lane.
+DEV_GRAPH_PORTS: frozenset[int] = frozenset(
+    spec.port for spec in DATABASES if spec.key.startswith("dev")
+)
 
 
 def dev_graph_environment() -> dict[str, str]:
@@ -49,13 +61,13 @@ def assert_walk_was_routed(route, *, golden: str) -> None:
 
 
 def open_dev_driver():
-    """Return a verified localhost:7687 driver, or ``None`` when unavailable."""
+    """Return a verified driver on a local dev graph, or ``None`` when unavailable."""
     env = dev_graph_environment()
     uri = env["NEO4J_URI"]
     parsed = urlparse(uri)
     if (
         parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
-        or parsed.port != 7687
+        or parsed.port not in DEV_GRAPH_PORTS
         or not env["NEO4J_USER"]
         or not env["NEO4J_PASSWORD"]
         or env["NEO4J_DATABASE"] != "neo4j"

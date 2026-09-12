@@ -155,26 +155,43 @@ def scripted_answers(record: DefectRecord, unit: Unit) -> dict[str, llm.MockAnsw
     answers: dict[str, llm.MockAnswer] = {}
     if record.detector == "judge_claims":
         planted_id = record.planted["claim_id"]
+        expected_kind = record.planted.get("expected_kind")
         for claim in record.claims:
-            refused = claim["claim_id"] == planted_id
+            planted = claim["claim_id"] == planted_id
+            # A kind plant is caught by RE-KINDING, not refusing: the judge
+            # answers entailed with the expected kind; every other claim
+            # keeps the kind the author gave it.
+            refused = planted and expected_kind is None
             verdict = {
                 "entailed": not refused,
                 "reason": record.planted["reason"] if refused else "the span states it",
+                "kind": expected_kind if planted and expected_kind else claim["kind"],
             }
             answers[judge_claims.judge_custom_id(unit, claim["claim_id"], 1)] = llm.MockAnswer(
                 text=json.dumps(verdict), model_id=judge_model
             )
-        corrected = record.planted["corrected"]
-        answers[judge_claims.restate_custom_id(unit, planted_id)] = llm.MockAnswer(
-            text=json.dumps(
-                {"text": corrected["text"], "kind": corrected["kind"], "span": corrected["span"]}
-            ),
-            model_id=llm.ROLE_MODEL["author"],
-        )
-        answers[judge_claims.judge_custom_id(unit, planted_id, 2)] = llm.MockAnswer(
-            text=json.dumps({"entailed": True, "reason": "the restated claim matches the span"}),
-            model_id=judge_model,
-        )
+        corrected = record.planted.get("corrected")
+        if corrected is not None:
+            answers[judge_claims.restate_custom_id(unit, planted_id)] = llm.MockAnswer(
+                text=json.dumps(
+                    {
+                        "text": corrected["text"],
+                        "kind": corrected["kind"],
+                        "span": corrected["span"],
+                    }
+                ),
+                model_id=llm.ROLE_MODEL["author"],
+            )
+            answers[judge_claims.judge_custom_id(unit, planted_id, 2)] = llm.MockAnswer(
+                text=json.dumps(
+                    {
+                        "entailed": True,
+                        "reason": "the restated claim matches the span",
+                        "kind": corrected["kind"],
+                    }
+                ),
+                model_id=judge_model,
+            )
     elif record.detector == "omissions":
         finding = {"fact": record.planted["fact"], "span": record.planted["span"]}
         answers[judge_claims.omissions_custom_id(unit)] = llm.MockAnswer(
@@ -401,14 +418,31 @@ def _detect(record: DefectRecord, unit: Unit, client: llm.ModelClient | None) ->
             judge_claims.judge_claims(
                 _story(record), _drafts(record, unit), unit, client, record_event
             )
-            refused = [
-                payload
-                for kind, payload in events
-                if kind == "claim_refused"
-                and payload["attempt"] == 1
-                and payload["claim_id"] == planted_id
-            ]
-            caught, note = bool(refused), refused[0]["reason"] if refused else "not refused"
+            expected_kind = record.planted.get("expected_kind")
+            if expected_kind is not None:
+                # A kind plant (state_as_event) is caught by RE-KINDING: the
+                # judge read the expected kind and the claim came out with it.
+                rekinds = [
+                    payload
+                    for kind, payload in events
+                    if kind == "claim_rekinded" and payload["claim_id"] == planted_id
+                ]
+                caught = any(p["to"] == expected_kind for p in rekinds)
+                note = (
+                    f"re-kinded {rekinds[0]['from']}→{rekinds[0]['to']}"
+                    if rekinds
+                    else f"not re-kinded (expected {expected_kind})"
+                )
+            else:
+                refused = [
+                    payload
+                    for kind, payload in events
+                    if kind == "claim_refused"
+                    and payload["attempt"] == 1
+                    and payload["claim_id"] == planted_id
+                ]
+                caught = bool(refused)
+                note = refused[0]["reason"] if refused else "not refused"
         else:
             judge_claims.omissions(unit, _drafts(record, unit), client, record_event)
             spans = [

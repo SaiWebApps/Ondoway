@@ -143,8 +143,14 @@ def test_mock_run_reports_a_rate_per_class_with_pending_detectors_marked():
         assert by_class[name].scripted is False, name
     assert by_class["framing_sentence"].detector == "narration_gates"
     assert "framing" in by_class["framing_sentence"].note
-    assert by_class["state_as_event"].detector == "pending"
-    assert by_class["state_as_event"].caught is None and by_class["state_as_event"].total is None
+    # Slice 9 (slice-6 ruling 5): the P3 call carries the KIND question, so a
+    # state claim kinded as event is caught by RE-KINDING — scripted on the
+    # mock like every judged class, no longer pending.
+    assert by_class["state_as_event"].detector == "judge_claims"
+    assert (by_class["state_as_event"].caught, by_class["state_as_event"].total) == (1, 1)
+    assert by_class["state_as_event"].scripted is True
+    assert "re-kinded" in by_class["state_as_event"].note
+    assert (by_class["state_as_event"].false_refusals, by_class["state_as_event"].dropped) == (0, 0)
 
     text = calibrate.format_report(report)
     assert "MOCK" in text
@@ -152,7 +158,7 @@ def test_mock_run_reports_a_rate_per_class_with_pending_detectors_marked():
     for name in CLASSES:
         assert name in text
     assert "fabricated_date" in text and "100%" in text
-    assert "pending" in text
+    assert "pending" not in text  # every class has a detector now
 
 
 def test_a_class_below_its_baseline_fails_and_pending_never_does():
@@ -302,7 +308,10 @@ def test_precision_counts_clean_claims_refused_and_claims_dropped_with_reasons()
         answers = calibrate.scripted_answers(rec, u)
         if rec is record:
             answers[judge_claims.judge_custom_id(u, clean_id, 1)] = llm.MockAnswer(
-                text='{"entailed": false, "reason": "the span does not say sixties"}',
+                text=(
+                    '{"entailed": false, "reason": "the span does not say sixties",'
+                    ' "kind": "event"}'
+                ),
                 model_id=llm.ROLE_MODEL["claim_judge"],
             )
             answers[judge_claims.restate_custom_id(u, clean_id)] = llm.MockAnswer(

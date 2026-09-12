@@ -101,8 +101,8 @@ def live_neo4j():
     d = _live_driver()
     if d is None:
         pytest.skip(
-            "Live Paris Neo4j unreachable — golden tests require the production "
-            "dev instance (port 7687). Start it with `make db-up`."
+            "Live Paris Neo4j unreachable — golden tests require this lane's "
+            "dev graph (ONDOWAY_DEV_NEO4J_URI). Start it with `make db-up`."
         )
     yield d
     d.close()

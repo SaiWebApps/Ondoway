@@ -389,3 +389,9 @@ data/*/*.archived-*.json
 # (ADR-0001). Literal, not a glob: it must not swallow the quarantined *scripts*,
 # which are tracked source restorable with `git mv`.
 _to_be_deleted/data/
+
+# The new-schema beats file's home until the slice-10 swap (Docs/ingestion/
+# rebuild-spec.md §8 slice 9; owner ruling 2026-09-12): `make ingest-job` writes
+# here, never into data/, so the legacy file stays untouched until parity is
+# re-established. Job logs live beside it. Paid-model output, regenerable.
+data-ingest/

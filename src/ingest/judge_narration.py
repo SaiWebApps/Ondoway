@@ -26,7 +26,7 @@ from pydantic import BaseModel, ConfigDict
 
 from src.ingest import llm, model, prompts
 from src.ingest.group import Story
-from src.ingest.judge_claims import JudgedClaim, parse_verdict
+from src.ingest.judge_claims import JudgedClaim, _extract_json_object
 from src.ingest.narrate import (
     P4_MAX_TOKENS,
     Emit,
@@ -100,6 +100,19 @@ P5_PLAN: tuple[llm.PhaseCall, ...] = (
         expected_output_tokens=P5_MAX_TOKENS,
     ),
 )
+
+
+def parse_sentence_verdict(text: str) -> dict | None:
+    """Turn one raw P5 answer into `{'entailed': bool, 'reason': str}`, or
+    None. Two keys only: P5_VERDICT_SCHEMA carries no kind — a sentence has
+    no temporal kind of its own; the P3 verdict (judge_claims.parse_verdict)
+    does, since slice 9's KIND question."""
+    parsed = _extract_json_object(text)
+    if not isinstance(parsed, dict) or set(parsed.keys()) != {"entailed", "reason"}:
+        return None
+    if not isinstance(parsed["entailed"], bool) or not isinstance(parsed["reason"], str):
+        return None
+    return parsed
 
 
 def _ends_with_abbreviation(piece: str) -> bool:
@@ -177,7 +190,7 @@ def _judge_round(
                 "P5",
                 f"transport: batch unit {custom_id!r} {answer.result_type}{detail}",
             )
-        parsed = parse_verdict(answer.text)
+        parsed = parse_sentence_verdict(answer.text)
         if parsed is None:
             hold(
                 emit,

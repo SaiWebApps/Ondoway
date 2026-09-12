@@ -68,12 +68,16 @@ def shown_hash(shown: dict[str, Any]) -> str:
 
 class IngestSource(BaseModel):
     """The §5 source union: a chunked book (a chunk dir with its manifest)
-    or one website page."""
+    or one website page. A book source may name `chunks` — a subset of
+    the manifest's filenames (stems accepted) — so one job ingests one
+    chunk of a book (slice 9's proof chunk); absent, every manifest chunk
+    is a unit."""
 
     model_config = ConfigDict(extra="forbid")
 
     kind: Literal["book", "url"]
     chunk_dir: str | None = None
+    chunks: list[str] | None = None
     url: str | None = None
 
     @model_validator(mode="after")

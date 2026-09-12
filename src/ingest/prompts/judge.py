@@ -6,7 +6,12 @@ its prompts never ask it to rewrite anything, only to decide.
 
 `JUDGE_CLAIM_PROMPT` asks one yes/no question — is this claim entailed by
 its cited span, read in the context of the passage — and a one-sentence
-reason the author can be re-asked with. Slots are substituted with plain
+reason the author can be re-asked with. Since slice 9 (owner ruling
+2026-09-12, slice-6 #5) the same call carries a KIND question: the judge
+reads the claim's temporal kind (event / state / belief, CONTEXT.md) from
+the span, and `judge_claims` RE-KINDS a claim the author kinded wrongly —
+never refuses it — so `state_as_event` (spec §4) is caught without a
+second call. Slots are substituted with plain
 `str.replace`, never `str.format`, for the same reason prompts/decompose.py
 gives: each prompt embeds a literal JSON example whose braces `.format`
 would misparse as fields.
@@ -22,16 +27,27 @@ _ENTAILED_RULE = (
     "is not entailed, even if the detail is true in the world."
 )
 
-_VERDICT_SHAPE = '{"entailed": true, "reason": "..."}'
+_KIND_RULE = (
+    "Also read the claim's temporal kind from the span: \"event\" — something "
+    "that happened at a time and cannot change afterwards (opened in 1939, "
+    "was completed, died); \"state\" — true as of the source's date and able "
+    "to stop being true (houses, holds, stands at, is the tallest, is open); "
+    "\"belief\" — what was held to be so as of the source's date. When the "
+    "kind is unclear, answer \"state\". Answer the kind whatever the "
+    "entailment verdict is; a wrong kind is never a reason to refuse."
+)
+
+_VERDICT_SHAPE = '{"entailed": true, "reason": "...", "kind": "event"}'
 
 JUDGE_CLAIM_PROMPT = (
     "You are checking one factual claim extracted from a guidebook passage "
     "against the source it cites.\n\n"
     f"{_ENTAILED_RULE}\n\n"
+    f"{_KIND_RULE}\n\n"
     "Answer as JSON only, matching this shape exactly:\n"
     f"{_VERDICT_SHAPE}\n"
     "The reason is one sentence naming what the span does or does not "
-    "support.\n\n"
+    "support; kind is one of \"event\", \"state\", \"belief\".\n\n"
     "Claim:\n{claim}\n\n"
     "Cited span:\n{span}\n\n"
     "Passage:\n{source}"
@@ -45,8 +61,9 @@ P3_VERDICT_SCHEMA: dict = {
     "properties": {
         "entailed": {"type": "boolean"},
         "reason": {"type": "string"},
+        "kind": {"type": "string", "enum": ["event", "state", "belief"]},
     },
-    "required": ["entailed", "reason"],
+    "required": ["entailed", "reason", "kind"],
     "additionalProperties": False,
 }
 

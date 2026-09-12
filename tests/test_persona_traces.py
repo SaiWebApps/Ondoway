@@ -87,7 +87,7 @@ def live_neo4j():
     driver = open_dev_driver()
     if driver is None:
         pytest.skip(
-            "The local Paris dev graph (localhost:7687) is unreachable. A persona "
+            "The local Paris dev graph (ONDOWAY_DEV_NEO4J_URI) is unreachable. A persona "
             "trace walks the real corpus; run it through "
             "`make test-file FILE=tests/test_persona_traces.py`."
         )

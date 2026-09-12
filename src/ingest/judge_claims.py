@@ -127,12 +127,21 @@ def _extract_json_object(text: str) -> Any | None:
         return None
 
 
+#: The kinds the judge may answer (CONTEXT.md); never `ambiguous` — the
+#: judge is asked to decide, and the prompt tells it unclear means state.
+VERDICT_KINDS: tuple[str, str, str] = ("event", "state", "belief")
+
+
 def parse_verdict(text: str) -> dict | None:
-    """Turn one raw P3 answer into `{'entailed': bool, 'reason': str}`, or None."""
+    """Turn one raw P3 answer into `{'entailed': bool, 'reason': str,
+    'kind': str}`, or None (a missing kind is not a verdict: the schema
+    requires it, so an answer without one did not come from the schema)."""
     parsed = _extract_json_object(text)
-    if not isinstance(parsed, dict) or set(parsed.keys()) != {"entailed", "reason"}:
+    if not isinstance(parsed, dict) or set(parsed.keys()) != {"entailed", "reason", "kind"}:
         return None
     if not isinstance(parsed["entailed"], bool) or not isinstance(parsed["reason"], str):
+        return None
+    if parsed["kind"] not in VERDICT_KINDS:
         return None
     return parsed
 
@@ -304,6 +313,22 @@ def _restate_round(
     return restated
 
 
+def _rekind(
+    emit: Emit, unit: Unit, by_id: dict[str, ClaimDraft], verdicts: dict[str, dict]
+) -> None:
+    """Apply the judge's kind reading: a claim whose kind differs from the
+    judge's is re-kinded in place (`claim_rekinded`), never refused."""
+    for claim_id, verdict in verdicts.items():
+        draft = by_id[claim_id]
+        if verdict["kind"] == draft.kind:
+            continue
+        emit(
+            "claim_rekinded",
+            {"unit_key": unit.key, "claim_id": claim_id, "from": draft.kind, "to": verdict["kind"]},
+        )
+        by_id[claim_id] = draft.model_copy(update={"kind": verdict["kind"]})
+
+
 def _judged(draft: ClaimDraft, verdict: dict) -> JudgedClaim:
     return JudgedClaim(
         draft=draft,
@@ -344,6 +369,7 @@ def judge_claims(
     drafts = [draft for draft in claims if draft.claim_id in story.claim_ids]
     by_id = {draft.claim_id: draft for draft in drafts}
     verdicts = _judge_round(emit, drafts, unit, client, attempt=1)
+    _rekind(emit, unit, by_id, verdicts)
 
     refused = [
         (by_id[claim_id], verdict["reason"])
@@ -375,7 +401,9 @@ def judge_claims(
                 continue
             restated.append(draft)
         if restated:
-            verdicts.update(_judge_round(emit, restated, unit, client, attempt=2))
+            second = _judge_round(emit, restated, unit, client, attempt=2)
+            verdicts.update(second)
+            _rekind(emit, unit, by_id, second)
         for draft in restated:
             verdict = verdicts[draft.claim_id]
             if verdict["entailed"]:

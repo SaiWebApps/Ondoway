@@ -67,11 +67,94 @@ from src.ingest.unit import Unit, load_unit
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATA_ROOT = REPO_ROOT / "data"
 
-#: The whole job priced over the unit texts before P1 — every phase's
-#: plan, re-ask rows included: a ceiling, printed as the first event.
-PLAN: tuple[llm.PhaseCall, ...] = (
-    *P1_PLAN, *P2_PLAN, *P3_PLAN, *OMISSIONS_PLAN, *P4_PLAN, *P5_PLAN, *P6_PLAN
+#: Every phase's plan with the FAN-OUT its rows are priced by (the phase
+#: modules document it: P3 per claim, P4/P6 per story, P5 per sentence,
+#: P1/P2/omissions per unit). Slice 9's judge caught the runner pricing
+#: every row as one call per unit, which made the "ceiling" a floor.
+PLAN_ROWS: tuple[tuple[llm.PhaseCall, str], ...] = (
+    *((row, "unit") for row in P1_PLAN),
+    *((row, "unit") for row in P2_PLAN),
+    *((row, "claims") for row in P3_PLAN),
+    *((row, "unit") for row in OMISSIONS_PLAN),
+    *((row, "stories") for row in P4_PLAN),
+    *((row, "sentences") for row in P5_PLAN),
+    *((row, "stories") for row in P6_PLAN),
 )
+
+#: The flat plan, for callers that only need the rows.
+PLAN: tuple[llm.PhaseCall, ...] = tuple(row for row, _kind in PLAN_ROWS)
+
+#: Which rows of PLAN (by index) are a phase's FIRST ask, as opposed to
+#: the re-ask rows every plan prices as if each item were refused once.
+#: The first-pass sum is the expected spend when nothing is refused; the
+#: whole plan is the ceiling.
+FIRST_PASS: tuple[bool, ...] = tuple(
+    index == 0
+    for plan in (P1_PLAN, P2_PLAN, P3_PLAN, OMISSIONS_PLAN, P4_PLAN, P5_PLAN, P6_PLAN)
+    for index in range(len(plan))
+)
+
+
+def fanout(unit: Unit) -> dict[str, int]:
+    """The stated fan-out a unit is priced by, from its own sentence count:
+    one claim per source sentence, one story per four claims (at least
+    one), one narration sentence per claim. An ASSUMPTION the job log
+    names, measured against the run's real call counts by the summary —
+    not a ceiling."""
+    n = max(1, len(judge_narration.sentences(unit.text)))
+    return {"claims": n, "stories": max(1, n // 4), "sentences": n}
+
+
+def _scaled_plan(fan: dict[str, int]) -> list[llm.PhaseCall]:
+    return [
+        llm.PhaseCall(
+            phase=row.phase,
+            role=row.role,
+            calls_per_unit=row.calls_per_unit * (1 if kind == "unit" else fan[kind]),
+            overhead_tokens=row.overhead_tokens,
+            expected_output_tokens=row.expected_output_tokens,
+        )
+        for row, kind in PLAN_ROWS
+    ]
+
+
+def _sum_estimates(parts: Sequence[llm.CostEstimate]) -> llm.CostEstimate:
+    """Row-wise sum of per-unit estimates (every part prices the same plan,
+    so rows align by index)."""
+    rows: list[llm.PhaseCost] = []
+    for index in range(len(parts[0].rows)):
+        same = [part.rows[index] for part in parts]
+        first = same[0]
+        rows.append(
+            llm.PhaseCost(
+                phase=first.phase,
+                role=first.role,
+                model_id=first.model_id,
+                batch=first.batch,
+                calls=sum(r.calls for r in same),
+                input_tokens=sum(r.input_tokens for r in same),
+                output_tokens=sum(r.output_tokens for r in same),
+                usd=sum(r.usd for r in same),
+            )
+        )
+    return llm.CostEstimate(
+        units=sum(p.units for p in parts),
+        rows=rows,
+        total_input_tokens=sum(p.total_input_tokens for p in parts),
+        total_output_tokens=sum(p.total_output_tokens for p in parts),
+        total_usd=sum(p.total_usd for p in parts),
+        prices_cached_on=parts[0].prices_cached_on,
+    )
+
+
+def estimate_job(client: llm.ModelClient, units: Sequence[Unit]) -> llm.CostEstimate:
+    """Price the whole job: each unit under its own fan-out, every call
+    carrying the unit's text (a P3 call carries the whole passage), summed.
+    Arms the client's estimate gate (one `client.estimate` per unit)."""
+    parts = [client.estimate([unit.text], _scaled_plan(fanout(unit))) for unit in units]
+    if not parts:
+        return client.estimate([], list(PLAN))
+    return _sum_estimates(parts)
 
 #: Manifest fields P0 requires (D12); as_of and rights basis come from the job.
 MANIFEST_FIELDS: tuple[str, ...] = ("chunks", "publisher")
@@ -150,11 +233,24 @@ def intake(job: IngestJob) -> tuple[list[Unit], dict[str, Any]]:
     missing = [f for f in MANIFEST_FIELDS if not manifest.get(f)]
     if missing:
         raise JobRefused(f"manifest {manifest_path} lacks {missing}")
-    units: list[Unit] = []
+    filenames: list[str] = []
     for entry in manifest["chunks"]:
         filename = entry.get("filename") if isinstance(entry, dict) else None
         if not filename:
             raise JobRefused(f"manifest {manifest_path} names a chunk without a filename")
+        filenames.append(filename)
+    if job.source.chunks is not None:
+        wanted = {Path(name).stem for name in job.source.chunks}
+        known = {Path(name).stem for name in filenames}
+        unknown = sorted(wanted - known)
+        if unknown:
+            raise JobRefused(
+                f"manifest {manifest_path} does not name chunk(s) {unknown}; "
+                f"it names {sorted(known)}"
+            )
+        filenames = [name for name in filenames if Path(name).stem in wanted]
+    units: list[Unit] = []
+    for filename in filenames:
         units.append(
             load_unit(
                 chunk_dir.parent,
@@ -313,8 +409,11 @@ class _Run:
     def arm(self, units: Sequence[Unit]) -> None:
         """Print the job's cost estimate — the ceiling over every phase's
         plan — as a job event, arming the client's estimate gate."""
-        estimate = self.client.estimate([u.text for u in units], list(PLAN))
-        self.emit("cost_estimate", estimate.as_dict())
+        estimate = estimate_job(self.client, units)
+        self.emit(
+            "cost_estimate",
+            {**estimate.as_dict(), "fanout": {u.key: fanout(u) for u in units}},
+        )
 
     # -- P0 --
     def p0(self) -> tuple[list[Unit], list[str], Path]:

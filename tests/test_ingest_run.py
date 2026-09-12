@@ -517,6 +517,88 @@ def test_p0_refuses_a_legacy_file_and_a_url_source_before_any_call(tmp_path):
     assert client.calls == [] and client.count_calls == []
 
 
+def test_a_book_source_may_name_the_chunks_it_ingests(tmp_path):
+    """Slice 9 runs ONE chunk of a fifteen-chunk book. A book source may
+    carry `chunks`, a subset of the manifest's filenames (stems accepted);
+    P0 then intakes only those, in manifest order. A name the manifest
+    does not carry refuses the job before any call — a typo must never
+    quietly ingest the whole book. Without `chunks` every manifest chunk
+    is a unit, as before."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    manifest_path = chunks / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    (chunks / "chunk-08-upper-west-side.txt").write_text(
+        "Central Park\n\nThe park opened in 1858.\n", encoding="utf-8"
+    )
+    manifest["chunks"].append(
+        {"chunk_number": 8, "filename": "chunk-08-upper-west-side.txt", "section_title": "UWS"}
+    )
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    store = jobs.IngestJobStore()
+
+    whole_book = _book_job(store, chunks)
+    units, _manifest = run.intake(whole_book)
+    assert [u.chunk for u in units] == [script_mod.LP_CHUNK, "chunk-08-upper-west-side"]
+
+    one_chunk = store.create(
+        city=script_mod.CITY,
+        source={"kind": "book", "chunk_dir": str(chunks), "chunks": [script_mod.LP_CHUNK]},
+        as_of=2023,
+        rights_basis="owned_copy",
+    )
+    units, _manifest = run.intake(one_chunk)
+    assert [u.chunk for u in units] == [script_mod.LP_CHUNK]
+
+    typo = store.create(
+        city=script_mod.CITY,
+        source={"kind": "book", "chunk_dir": str(chunks), "chunks": ["chunk-07-upper-east"]},
+        as_of=2023,
+        rights_basis="owned_copy",
+    )
+    _events, sink = _sink_and_events()
+    client = llm.MockClient(sink, **script_mod.script(script_mod.unit(chunks)))
+    run.run_job(typo.id, store, client, data_root=script_mod.data_dir(tmp_path))
+    snap = store.snapshot(typo.id)
+    assert snap.status == "error"
+    assert "chunk-07-upper-east" in (snap.error or "") and "manifest" in (snap.error or "")
+    assert client.calls == [] and client.count_calls == []
+
+
+def test_the_estimate_prices_the_per_claim_phases_by_fan_out(tmp_path):
+    """The judge on the first paid job (2026-09-12): the phases' plans are
+    priced PER CLAIM (P3), PER STORY (P4, P6) and PER SENTENCE (P5), but the
+    runner priced every row as ONE call per unit, so the printed "ceiling"
+    was a floor — and slice 9's bar is "cost within 25% of the estimate".
+    `estimate_job` applies a stated fan-out per unit, derived from the
+    unit's own sentence count: one claim per source sentence, one story
+    per four claims (at least one), one narration sentence per claim.
+    Each P3 call carries the whole passage, so the per-call input stays the
+    unit's text plus the prompt. The event payload names the fan-out so
+    the run can be measured against it."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    unit = script_mod.unit(chunks)
+    eight = " ".join(f"Sentence number {i} states one fact about the place." for i in range(8))
+    unit = unit.model_copy(update={"text": eight})
+    _events, sink = _sink_and_events()
+    client = llm.MockClient(sink, count_tokens_fn=lambda _m, text: len(text.split()))
+
+    estimate = run.estimate_job(client, [unit])
+
+    calls = {}
+    for row in estimate.rows:
+        calls.setdefault((row.phase, row.role), []).append(row.calls)
+    assert calls[("P1", "author")][0] == 1  # decompose: once per unit
+    assert calls[("P2", "author")][0] == 1  # group: once per unit
+    assert calls[("P3", "claim_judge")][0] == 8  # one judge call per claim
+    assert calls[("P4", "author")][0] == 2  # one narration per story (8 // 4)
+    assert calls[("P5", "narration_judge")][0] == 8  # one judge call per sentence
+    assert calls[("P6", "merge_judge")][0] == 2  # one merge per story
+    p3 = next(r for r in estimate.rows if r.phase == "P3" and r.role == "claim_judge")
+    words = len(eight.split())
+    assert p3.input_tokens >= 8 * words  # every call carries the passage
+    assert run.fanout(unit) == {"claims": 8, "stories": 2, "sentences": 8}
+
+
 def test_no_live_client_in_this_file():
     """This $0-spend test file never names a live LLM client or reads its
     API key. Its own body is exempt from the walk below — this docstring

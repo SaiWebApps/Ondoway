@@ -111,7 +111,9 @@ def test_post_job_returns_202_and_the_snapshot_reaches_p7(client, workspace):
     assert snap["status"] == "committed", snap["error"]
     assert snap["job_id"] == job_id
     assert snap["city"] == script_mod.CITY
-    assert snap["source"] == {"kind": "book", "chunk_dir": str(workspace["chunks"]), "url": None}
+    assert snap["source"] == {
+        "kind": "book", "chunk_dir": str(workspace["chunks"]), "chunks": None, "url": None,
+    }
     assert snap["events"][0]["message"] == "cost_estimate"
     assert [e["message"] for e in snap["events"] if e["kind"] == "phase"] == [
         "P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7"

@@ -306,10 +306,22 @@ def stories_answer(*, place: str = PLACE, claim_ids: list[str] | None = None) ->
     )
 
 
-def verdicts(u: unit_mod.Unit, claim_ids: list[str], attempt: int = 1) -> dict[str, llm.MockAnswer]:
+#: The kind a CORRECT judge reads for each scripted claim, by id (c01-c03
+#: are CLAIMS in order; c04 is the TICKET claim the omission re-ask adds).
+KINDS: dict[str, str] = {
+    **{f"c{i:02d}": c["kind"] for i, c in enumerate(CLAIMS, 1)},
+    "c04": TICKET["kind"],
+}
+
+
+def verdicts(
+    u: unit_mod.Unit, claim_ids: list[str], attempt: int = 1, kinds: dict[str, str] | None = None
+) -> dict[str, llm.MockAnswer]:
+    """Entailed verdicts whose kind AGREES with the author's (`KINDS`, or
+    `kinds` per id), so no claim is re-kinded on the happy path."""
     return {
         judge_claims.judge_custom_id(u, cid, attempt): _judge(
-            {"entailed": True, "reason": "the span states it"}
+            {"entailed": True, "reason": "the span states it", "kind": (kinds or KINDS)[cid]}
         )
         for cid in claim_ids
     }
