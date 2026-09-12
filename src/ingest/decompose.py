@@ -31,6 +31,13 @@ survived rather than re-asking the model for a clean answer.
 `decompose()` itself (the refusal loop, the transport-failure handling,
 the actual ClaimDraft construction) landed in steps 6-8, below.
 
+Slice 7 added `decompose(..., omitted=)`: the job runner's one P1 re-ask
+for a unit whose P3 omission check found facts no claim carries. With
+`omitted` given, the only ask is the re-ask (`prompts.render_redo` under
+`unit.custom_id(2)`, each fact quoted back as a problem), graded with
+attempt-2 semantics, so the unit's single re-ask is spent there and a
+third ask never happens.
+
 Step 6 added `decompose()`'s happy path: one `complete_batch()`
 call of exactly one prompt under `unit.custom_id(1)`, `parse_claims()` over
 the answer, `gates.default_kind` resolving each item's `kind`, and a
@@ -73,6 +80,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Sequence
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -226,8 +234,16 @@ def decompose(
     client: llm.ModelClient,
     *,
     events: llm.EventSink | None = None,
+    omitted: Sequence[str] = (),
 ) -> list[ClaimDraft]:
     """Turn one Unit's passage into a list of ClaimDraft via P1.
+
+    `omitted` is the runner's one P3 omission re-ask (spec §3): the facts
+    the judge found no claim carries. When given, the ONLY ask is the
+    re-ask — `prompts.render_redo` under `unit.custom_id(2)` with each
+    fact quoted back as a problem — and it is graded with attempt-2
+    semantics (a still-failing claim is dropped, never asked again), so
+    the unit's one P1 re-ask is spent here and a third ask never happens.
 
     One `client.complete_batch()` call of exactly one prompt under
     `unit.custom_id(1)`; a clean answer (`parse_claims` succeeds) is
@@ -265,8 +281,11 @@ def decompose(
         if events is not None:
             events(kind, payload)
 
-    reasons: list[str] | None = None
-    for attempt in (1, 2):
+    reasons: list[str] | None = (
+        [f"omission: the passage also states {fact!r} and no claim carries it" for fact in omitted]
+        or None
+    )
+    for attempt in (2,) if reasons else (1, 2):
         prompt = (
             prompts.render_decompose(unit.text)
             if attempt == 1

@@ -32,6 +32,8 @@ import pytest
 from neo4j import GraphDatabase
 from playwright.sync_api import Page, expect, sync_playwright
 
+from src.ingest import model as ingest_model
+from tests import ingest_job_script as ingest_script
 from tests.browser_launch import chromium_launch_options
 
 # ---------------------------------------------------------------------------
@@ -137,6 +139,12 @@ ONBOARD_URL = (
     f"{(Path(__file__).parent.parent / 'frontend' / 'onboard.html').resolve().as_uri()}"
     f"?apiPort={WORKBENCH_API_PORT}"
 )
+# The ingest front door (Docs/ingestion/rebuild-spec.md §5, slice 7). Same
+# file:// + ?apiPort= pattern.
+INGEST_URL = (
+    f"{(Path(__file__).parent.parent / 'frontend' / 'ingest.html').resolve().as_uri()}"
+    f"?apiPort={WORKBENCH_API_PORT}"
+)
 # London bbox as the panel's text field expects it: "min_lat, max_lat, min_lon, max_lon".
 LONDON_BBOX = "51.28, 51.7, -0.51, 0.33"
 # Repo root (tests/ -> repo). Used to assert the committed tree is UNTOUCHED by a
@@ -147,6 +155,11 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # round-trip is fully HERMETIC — it writes here, never into the committed data/ or
 # src/cities.json.
 _ONBOARD_TMP = Path(tempfile.mkdtemp(prefix="onboard-wb-"))
+# A module-scoped tmp dir for the ingest proof: the chunk dir (the real LP
+# chunk-07 + a manifest naming only it), the data root the job writes under
+# (INGEST_DATA_ROOT — never the committed data/), and the scripted mock answers
+# the api_server's client draws (INGEST_MOCK_SCRIPT; the mock never fabricates).
+_INGEST_TMP = Path(tempfile.mkdtemp(prefix="ingest-wb-"))
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "ui_test_fixture.json"
 REPORT_DIR = Path(__file__).parent / "reports"
 SCREENSHOT_DIR = REPORT_DIR / "screenshots"
@@ -986,6 +999,14 @@ def api_server():
         encoding="utf-8",
     )
 
+    # The ingest proof's workspace, written BEFORE the server starts so the
+    # env below can name it.
+    ingest_chunks = ingest_script.chunk_dir(_INGEST_TMP)
+    ingest_data_root = ingest_script.data_dir(_INGEST_TMP)
+    ingest_script.write_script(
+        _INGEST_TMP / "script.json", ingest_script.script(ingest_script.unit(ingest_chunks))
+    )
+
     # The server's output goes to a FILE, never to an undrained pipe. With
     # stdout/stderr=PIPE and no reader, uvicorn's access log plus the planner's
     # warnings fill the 64 KB pipe buffer and the server BLOCKS FOREVER on its
@@ -1051,6 +1072,11 @@ def api_server():
             # which this shard now starts — and moving it to another fixed guess
             # would only relocate the collision.
             "ONBOARD_DEPLOY_API_PORT": str(_pick_free_port()),
+            # Slice-7 ingest front door: $0 (the mock, scripted from a file the
+            # test wrote) and HERMETIC (writes under the module tmp root only).
+            "INGEST_PROVIDER": "mock",
+            "INGEST_MOCK_SCRIPT": str(_INGEST_TMP / "script.json"),
+            "INGEST_DATA_ROOT": str(ingest_data_root),
         },
     )
 
@@ -6052,3 +6078,64 @@ class TestWorkbenchRunsThePhonePath:
         finally:
             self._unroute_phone_stubs(page)
             _unroute_two_step(page)
+
+
+class TestIngestPanel:
+    """Real-browser proof of the ingest front door (frontend/ingest.html),
+    Docs/ingestion/rebuild-spec.md slice 7: a book job over the real Lonely
+    Planet chunk-07 reaches P7 on the MOCK client through the live API in a
+    real Chromium page — the cost estimate first, every phase chip turning
+    done, the committed file landing under the module tmp root (never the
+    committed data/) and validating — with a screenshot. Then the queue is
+    empty and the publish button reports honestly that the converge is not
+    wired yet (slice 8).
+
+    Touches no graph: the ingest routes never read Neo4j, so this can sit
+    after the London onboarding test without perturbing anything.
+    """
+
+    def test_job_reaches_p7_on_the_mock(self, browser_page):
+        page, _seed_data, _reporter = browser_page
+        committed_beats = REPO_ROOT / "data" / ingest_script.CITY / "beats.json"
+        before = committed_beats.read_bytes()
+
+        page.goto(INGEST_URL)
+        expect(page.locator("#ingestStartBtn")).to_be_visible()
+        expect(page.locator("#reviewQueue")).to_contain_text("Nothing held")
+        page.locator("#ingestChunkDir").fill(str(_INGEST_TMP / "Books" / ingest_script.CITY /
+                                                ingest_script.LP_SOURCE))
+        page.locator("#ingestAsOf").fill("2023")
+        page.select_option("#ingestRightsBasis", "owned_copy")
+        page.locator("#ingestStartBtn").click()
+
+        page.wait_for_function(
+            """() => document.querySelector('.phase-chip[data-phase="P7"].done') !== null""",
+            timeout=30000,
+        )
+        expect(page.locator("#jobStatus")).to_contain_text("committed")
+        for phase in ("P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7"):
+            expect(page.locator(f'.phase-chip[data-phase="{phase}"]')).to_have_class(
+                re.compile(r"\bdone\b")
+            )
+        feed = page.locator("#eventFeed").text_content() or ""
+        assert "cost estimate" in feed, feed[:400]
+        assert feed.index("cost estimate") < feed.index("P1 done"), feed[:400]
+        assert "merge_skipped" in feed, feed[:800]
+        expect(page.locator(".job-row")).to_have_count(1)
+        expect(page.locator(".job-row .status")).to_have_text("committed")
+        shot = _take_screenshot(page, "ingest-01-job-reached-p7")
+        assert Path(shot).is_file()
+
+        # The file landed under the tmp root, valid, and the committed tree is untouched.
+        written = _INGEST_TMP / "data" / ingest_script.CITY / "beats.json"
+        records = json.loads(written.read_text(encoding="utf-8"))
+        assert [r["beat_id"] for r in records] == [ingest_script.BEAT_ID]
+        assert ingest_model.validate(records, chunks_root=_INGEST_TMP / "Books" /
+                                     ingest_script.CITY) == []
+        assert committed_beats.read_bytes() == before
+
+        # Nothing held; publish says plainly the converge is slice 8.
+        expect(page.locator("#reviewQueue")).to_contain_text("Nothing held")
+        page.locator("#publishBtn").click()
+        expect(page.locator("#publishResult")).to_contain_text("slice 8", timeout=10000)
+        _take_screenshot(page, "ingest-02-publish-not-wired")

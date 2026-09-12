@@ -421,13 +421,32 @@ list[Beat]` is pure and refuses a held outcome. The calibration classes `contest
 
 ### Slice 7: Job runner, front door, review queue
 
-**Files:** create `./src/ingest/jobs.py` (reuse `JobStore` from `src/onboard/jobs.py`), `./src/ingest/run.py`
-(phase sequencing, resume at last completed phase), `./src/api/routes/ingest.py` (§5 routes),
-`./frontend/ingest.html`; modify `src/server.py` to include the router.
-**Produces:** `run_job(job_id, store, client) -> None`; the routes in §5.
+**Files:** create `./src/ingest/jobs.py` (`IngestJobStore`, a subclass of `JobStore` from
+`src/onboard/jobs.py` — the onboard store assumes only `.events`/`.status`/`.error` of a job —
+carrying the per-phase outputs and the D13 review queue keyed by the hash of what is
+shown), `./src/ingest/run.py` (phase sequencing, resume at last completed phase, record
+assembly for a `new` story, the P4/P5 rerun for `MergeOutcome.rerun`, the P1 omission
+re-ask through `decompose(..., omitted=)`), `./src/api/routes/ingest.py` (§5 routes),
+`./frontend/ingest.html`; modify `src/api/app.py` to include the router inside the
+workbench gate (the FastAPI app lives there; `src/server.py` is the stdlib dashboard),
+`scripts/beats_io.py` (`commit(..., chunks_root=)` so P7 grounds spans under a data root
+other than `data/`), `tests/test_workbench_ui.py` (the browser proof, on the mock scripted
+from a file the test writes, writing only under a tmp `INGEST_DATA_ROOT`).
+**Produces:** `run_job(job_id, store, client, *, data_root=None) -> None` (never raises: a
+failed job is `error` with its completed phases kept; a held item is a queue item, never a
+failed job); the routes in §5, with two honest gaps this slice leaves: `POST /ingest/publish`
+answers 501 naming slice 8 once nothing is held (the converge does not exist yet, and a 202
+would claim a publish that never happened), and a `url` source is accepted by the route and
+refused at P0 (no pinned-revision reader exists; slice 10 owns the Wikipedia terms). P6 is
+skipped with a `merge_skipped` log line when no beat exists at the place. The client comes
+from `INGEST_PROVIDER` (`mock` + `INGEST_MOCK_SCRIPT`, or `anthropic`; unset fails closed).
 **Proves:** `tests/test_ingest_routes.py::test_publish_refuses_while_an_item_is_held`,
 `::test_decision_is_bound_to_shown_hash`; `make test-workbench` shows a job reaching P7 on
-the mock client with a screenshot.
+the mock client with a screenshot (`TestIngestPanel::test_job_reaches_p7_on_the_mock`).
+**Known gap:** `data/{city}/beats.json` is still legacy-shape for both cities, so a job
+against the real data root stops at P0 (`legacy-shape` refusal, nothing spent, nothing
+written) until the slice-10 swap re-homes the city; where the new-schema file lives before
+then is the owner's call.
 
 ### Slice 8: Publisher converge and graph export
 

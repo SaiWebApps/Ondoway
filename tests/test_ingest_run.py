@@ -1,0 +1,556 @@
+"""Tests for src/ingest/run.py and src/ingest/jobs.py — Docs/ingestion/
+rebuild-spec.md slice 7 (the job runner: P0 intake through P7 commit,
+phase outputs written to the job as they land, resume at the last
+completed phase, the D13 review queue).
+
+Every test runs against llm.MockClient over the scripted Guggenheim job in
+tests/ingest_job_script.py (the real Lonely Planet chunk-07 unit); no live
+client, no network, no spend (test_no_live_client_in_this_file, the same
+walker as the slice-3..6 files). Nothing here touches the repo's data/ —
+every job writes under a per-test data root.
+"""
+
+from __future__ import annotations
+
+import ast
+import json
+from pathlib import Path
+
+from src.ingest import jobs, llm, model, narrate, run
+from tests import ingest_job_script as script_mod
+
+
+def _sink_and_events():
+    events: list[tuple[str, dict]] = []
+
+    def sink(kind: str, payload: dict) -> None:
+        events.append((kind, payload))
+
+    return events, sink
+
+
+def _book_job(store: jobs.IngestJobStore, chunks: Path) -> jobs.IngestJob:
+    return store.create(
+        city=script_mod.CITY,
+        source={"kind": "book", "chunk_dir": str(chunks)},
+        as_of=2023,
+        rights_basis="owned_copy",
+    )
+
+
+def test_job_runs_p0_to_p7_on_the_mock_and_commits_a_valid_file(tmp_path):
+    """The spec's shape end to end: a book job over one chunk dir intakes
+    the unit (P0), decomposes it (P1), groups one story (P2), judges its
+    claims and checks the unit for omissions (P3), narrates (P4), judges
+    every sentence (P5), finds no beat at the place so the story is new
+    without a merge call (P6, logged), assembles the record — beat_id from
+    city/slug(place)/story_slug, the story's enrichment, P5's narration,
+    the spoken duration, review not held — and commits it through the
+    slice-1 validator with the chunks root (P7). The cost estimate is the
+    job's first event; the phases land in order; the file on disk
+    validates with its spans grounded in the real chunk; the book log
+    records the chunk."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    client = llm.MockClient(sink, **script_mod.script(unit))
+
+    run.run_job(job.id, store, client, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    assert snap.events[0].message == "cost_estimate"
+    assert {row["phase"] for row in snap.events[0].data["rows"]} == {
+        "P1", "P2", "P3", "P4", "P5", "P6"
+    }
+    assert snap.events[0].data["units"] == 1
+    phases = [e.message for e in snap.events if e.kind == "phase"]
+    assert phases == ["P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7"]
+    assert client.calls == [
+        ("author", "P1"),
+        ("author", "P2"),
+        ("claim_judge", "P3"),
+        ("claim_judge", "P3"),
+        ("claim_judge", "P3"),
+        ("claim_judge", "P3"),
+        ("author", "P4"),
+        ("narration_judge", "P5"),
+        ("narration_judge", "P5"),
+        ("narration_judge", "P5"),
+    ]
+    logged = [e.message for e in snap.events if e.kind == "info"]
+    assert "merge_skipped" in logged
+    assert "beat_held" not in logged
+
+    beats_path = data_root / script_mod.CITY / "beats.json"
+    records = json.loads(beats_path.read_text(encoding="utf-8"))
+    assert [r["beat_id"] for r in records] == [script_mod.BEAT_ID]
+    beat = records[0]
+    assert beat["city_name"] == script_mod.CITY
+    assert beat["poi_name"] == script_mod.PLACE
+    assert beat["story_slug"] == script_mod.STORY_SLUG
+    assert beat["title"] == script_mod.STORY_TITLE
+    assert beat["beat_type"] == "anecdote"
+    assert beat["lenses"] == ["hidden_history", "visual_art"]
+    assert [c["text"] for c in beat["claims"]] == [c["text"] for c in script_mod.CLAIMS]
+    assert [c["claim_id"] for c in beat["claims"]] == ["c01", "c02", "c03"]
+    assert all(c["status"] == "resolved" for c in beat["claims"])
+    assert [(s["source_id"], s["chunk"], s["span"], s["as_of"], s["rights_basis"])
+            for c in beat["claims"] for s in c["sources"]] == [
+        (script_mod.LP_SOURCE, script_mod.LP_CHUNK, c["span"], 2023, "owned_copy")
+        for c in script_mod.CLAIMS
+    ]
+    assert {c["verdict"]["judge_model"] for c in beat["claims"]} == {
+        script_mod.RESPONSE_JUDGE_MODEL
+    }
+    assert beat["narration"]["text"] == script_mod.NARRATION
+    assert beat["narration"]["author_model"] == script_mod.RESPONSE_AUTHOR_MODEL
+    assert beat["narration"]["verdict"]["judge_model"] == script_mod.RESPONSE_JUDGE_MODEL
+    assert beat["narration"]["verdict"]["sentences_entailed"] == 3
+    assert beat["narration"]["verdict"]["sentences_total"] == 3
+    assert beat["narration"]["flags"] == []
+    assert beat["entities"] == script_mod.ENRICHMENT["entities"]
+    assert beat["narrative_function"] == "establishing"
+    assert beat["kid_friendly"] == "yes"
+    assert beat["duration_sec"] == narrate.duration_sec(script_mod.NARRATION)
+    assert beat["review"] == {"held": False, "reason": None}
+    assert model.validate(records, chunks_root=chunks.parent) == []
+
+    log = json.loads((data_root / script_mod.CITY / "book-log.json").read_text(encoding="utf-8"))
+    entry = next(b for b in log["books_processed"] if b["book_slug"] == script_mod.LP_SOURCE)
+    assert entry["chunks_processed"] == [
+        {"chunk": script_mod.LP_CHUNK, "beats_extracted": 1, "pois_touched": [script_mod.PLACE]}
+    ]
+
+
+class _RecordingClient:
+    """Records every call's (role, phase) in order; forwards to the mock."""
+
+    def __init__(self, client) -> None:
+        self._client = client
+        self.calls: list[tuple[str, str]] = []
+        self.batches: list[tuple[str, list[str], list[str]]] = []  # phase, ids, prompts
+
+    def count_tokens(self, model_id, text):
+        return self._client.count_tokens(model_id, text)
+
+    def estimate(self, units, plan, **kwargs):
+        return self._client.estimate(units, plan, **kwargs)
+
+    def complete(self, role, prompt, schema, *, phase, max_tokens):
+        self.calls.append((role, phase))
+        return self._client.complete(role, prompt, schema, phase=phase, max_tokens=max_tokens)
+
+    def complete_batch(self, role, prompts, schema, *, phase, max_tokens):
+        self.calls.append((role, phase))
+        self.batches.append((phase, [cid for cid, _ in prompts], [p for _, p in prompts]))
+        return self._client.complete_batch(
+            role, prompts, schema, phase=phase, max_tokens=max_tokens
+        )
+
+
+def test_each_phase_output_lands_before_the_next_and_a_job_resumes_where_it_died(tmp_path):
+    """§3: a phase's output is written to the job before the next phase
+    starts, so a failed job resumes at its last completed phase. A client
+    with no P3 answers kills the job in P3 (the mock never fabricates):
+    the job is `error`, its P0/P1/P2 outputs are on it — the P2 output
+    already names the story — and nothing was written. Calling run_job
+    again with a fully scripted client makes NO P1 or P2 call: it starts
+    at P3 and runs to a committed, valid file."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    full = script_mod.script(unit)
+    no_p3 = {
+        "answers": full["answers"],
+        "batch_answers": {unit.custom_id(1): full["batch_answers"][unit.custom_id(1)]},
+    }
+
+    run.run_job(job.id, store, llm.MockClient(sink, **no_p3), data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "error"
+    assert "no scripted batch answer" in (snap.error or "")
+    assert [e.message for e in snap.events if e.kind == "phase"] == ["P0", "P1", "P2"]
+    assert set(store.get(job.id).phases) == {"P0", "P1", "P2"}
+    p2 = store.phase_output(job.id, "P2")
+    assert [s["story_slug"] for s in p2["stories"][unit.key]] == [script_mod.STORY_SLUG]
+    assert not (data_root / script_mod.CITY / "beats.json").exists()
+
+    # The resumed run skips P2, so the author's sync answers start at P4.
+    resumed = {
+        "answers": {"author": [script_mod.narration_answer()]},
+        "batch_answers": full["batch_answers"],
+    }
+    recorder = _RecordingClient(llm.MockClient(sink, **resumed))
+    run.run_job(job.id, store, recorder, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    assert recorder.calls == [
+        ("claim_judge", "P3"),
+        ("claim_judge", "P3"),
+        ("author", "P4"),
+        ("narration_judge", "P5"),
+    ]
+    assert [e.message for e in snap.events if e.kind == "phase"] == [
+        "P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7"
+    ]
+    records = json.loads((data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8"))
+    assert [r["beat_id"] for r in records] == [script_mod.BEAT_ID]
+    assert model.validate(records, chunks_root=chunks.parent) == []
+
+
+def test_an_omission_finding_reasks_p1_once_for_that_unit(tmp_path):
+    """§3 P3: an omission finding re-asks P1 once for that unit. The
+    judge's omission check cites the 50-cent ticket line no claim
+    carries; the runner asks the author ONCE more, under the unit's
+    re-ask custom_id with the omitted fact quoted back, and P2 and P3
+    run again over the re-asked claims — with no second omission check
+    and no third P1 ask. The committed beat carries the fourth claim."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    four = [*script_mod.CLAIMS, script_mod.TICKET]
+    ids = ["c01", "c02", "c03", "c04"]
+    narration = script_mod.NARRATION + " " + script_mod.TICKET_SENTENCE
+    scripted = {
+        "answers": {
+            "author": [
+                script_mod.stories_answer(),
+                script_mod.stories_answer(claim_ids=ids),
+                script_mod.narration_answer(narration),
+            ]
+        },
+        "batch_answers": {
+            unit.custom_id(1): script_mod.claims_answer(),
+            unit.custom_id(2): script_mod.claims_answer(four),
+            **script_mod.verdicts(unit, ids),
+            **script_mod.omissions_answer(
+                unit, [{"fact": script_mod.TICKET["text"], "span": script_mod.TICKET["span"]}]
+            ),
+            **script_mod.sentence_verdicts([c["text"] for c in four], narration),
+        },
+    }
+    recorder = _RecordingClient(llm.MockClient(sink, **scripted))
+
+    run.run_job(job.id, store, recorder, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    assert [phase for _role, phase in recorder.calls] == [
+        "P1", "P2", "P3", "P3", "P1", "P2", "P3", "P4", "P5"
+    ]
+    p1_batches = [(cids, prompts) for phase, cids, prompts in recorder.batches if phase == "P1"]
+    assert [cids for cids, _ in p1_batches] == [[unit.custom_id(1)], [unit.custom_id(2)]]
+    assert script_mod.TICKET["text"] in p1_batches[1][1][0]
+    assert store.phase_output(job.id, "P3")["reasked_units"] == [unit.key]
+    logged = [e.message for e in snap.events if e.kind == "info"]
+    assert logged.count("omissions_found") == 1
+
+    records = json.loads((data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8"))
+    assert [c["text"] for c in records[0]["claims"]] == [c["text"] for c in four]
+    assert records[0]["narration"]["text"] == narration
+    assert model.validate(records, chunks_root=chunks.parent) == []
+
+
+def _claim_verdict(claim_id: str, verdict: str, existing_claim_id: str = "",
+                   new_value: str = "", existing_value: str = "",
+                   reason: str = "the two state the same fact") -> dict:
+    return {
+        "claim_id": claim_id, "verdict": verdict, "existing_claim_id": existing_claim_id,
+        "new_value": new_value, "existing_value": existing_value, "reason": reason,
+    }
+
+
+def test_a_held_merge_is_a_queue_item_and_nothing_of_it_reaches_disk(tmp_path):
+    """D13: a merge the judge and the signature hint disagree on holds the
+    new story as a review-queue item — bound to the hash of what the
+    reviewer is shown, ranked by the content held back — and applies
+    nothing: the city's file is byte-identical afterwards, and the job
+    still completes (a held item is never a failed job)."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    beats_path = script_mod.seed_beats(data_root, script_mod.existing_records())
+    before = beats_path.read_bytes()
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(unit)
+    # The hint matches the story to the origins beat (two of three claims
+    # are already there); a judge calling it new disagrees.
+    scripted["answers"]["merge_judge"] = [
+        script_mod.merge_answer(
+            "new", "", [_claim_verdict(c, "new", reason="nothing like it") for c in
+                        ("c01", "c02", "c03")]
+        )
+    ]
+    client = llm.MockClient(sink, **scripted)
+
+    run.run_job(job.id, store, client, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    assert ("merge_judge", "P6") in client.calls
+    held = [e.data for e in snap.events if e.message == "beat_held"]
+    assert [h["phase"] for h in held] == ["P6"]
+    assert beats_path.read_bytes() == before
+    assert "commit_skipped" in [e.message for e in snap.events if e.kind == "info"]
+
+    items = store.undecided(script_mod.CITY)
+    assert [(i.kind, i.story_slug, i.place) for i in items] == [
+        ("merge_held", script_mod.STORY_SLUG, script_mod.PLACE)
+    ]
+    item = items[0]
+    assert item.job_id == job.id
+    assert item.item_id == jobs.shown_hash(item.shown)
+    assert item.shown["claims"] == [c["text"] for c in script_mod.CLAIMS]
+    assert item.shown["narration"] == script_mod.NARRATION
+    assert item.shown["judge_story"] == "new"
+    assert "disagree" in item.reason
+    assert item.held_back == {
+        "claims": 3, "duration_sec": narrate.duration_sec(script_mod.NARRATION)
+    }
+    assert item.decision is None
+
+
+def test_ids_in_rerun_get_p4_and_p5_again_before_p7(tmp_path):
+    """§3 P6: any claim change → P4/P5 rerun for that beat. The judge and
+    the hint agree the story is the origins beat's: two claims are the
+    same (a second source appended), the 1939 claim is new and joins the
+    beat — so its resolved texts changed and P6 names it for a rerun. The
+    runner narrates the beat again from its resolved claims, judges every
+    sentence, and only then commits: the file holds the same two beats,
+    the origins beat carries three claims and the new narration, and its
+    claims_hash is fresh (the validator is clean). No new record; the
+    book log records the chunk touching the place."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    beats_path = script_mod.seed_beats(data_root, script_mod.existing_records())
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(unit)
+    scripted["answers"]["author"].append(script_mod.narration_answer(script_mod.RERUN_NARRATION))
+    scripted["answers"]["merge_judge"] = [
+        script_mod.merge_answer(
+            "same",
+            script_mod.ORIGINS_ID,
+            [
+                _claim_verdict("c01", "same", "c01", "his sixties", "his sixties"),
+                _claim_verdict("c02", "new", reason="no claim mentions 1939"),
+                _claim_verdict("c03", "same", "c02", "1959", "1959"),
+            ],
+        )
+    ]
+    merged_texts = [
+        script_mod.COLLECTING["text"], script_mod.COMPLETED["text"], script_mod.OPENED_1939["text"]
+    ]
+    scripted["batch_answers"].update(
+        script_mod.sentence_verdicts(merged_texts, script_mod.RERUN_NARRATION)
+    )
+    recorder = _RecordingClient(llm.MockClient(sink, **scripted))
+
+    run.run_job(job.id, store, recorder, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    assert recorder.calls[-3:] == [
+        ("merge_judge", "P6"), ("author", "P4"), ("narration_judge", "P5")
+    ]
+    rerun = [e.data for e in snap.events if e.message == "rerun"]
+    assert rerun == [{"beat_ids": [script_mod.ORIGINS_ID]}]
+    assert store.undecided(script_mod.CITY) == []
+
+    records = json.loads(beats_path.read_text(encoding="utf-8"))
+    assert [r["beat_id"] for r in records] == [script_mod.ORIGINS_ID, script_mod.VISITING_ID]
+    origins = records[0]
+    assert [(c["claim_id"], c["text"]) for c in origins["claims"]] == [
+        ("c01", script_mod.COLLECTING["text"]),
+        ("c02", script_mod.COMPLETED["text"]),
+        ("c03", script_mod.OPENED_1939["text"]),
+    ]
+    assert len(origins["claims"][0]["sources"]) == 2
+    assert origins["narration"]["text"] == script_mod.RERUN_NARRATION
+    assert origins["narration"]["claims_hash"] == model.claims_hash(origins["claims"])
+    assert origins["narration"]["verdict"]["sentences_total"] == 3
+    assert origins["duration_sec"] == narrate.duration_sec(script_mod.RERUN_NARRATION)
+    assert origins["review"] == {"held": False, "reason": None}
+    assert records[1] == script_mod.existing_records()[1]
+    assert model.validate(records, chunks_root=chunks.parent) == []
+
+    log = json.loads((data_root / script_mod.CITY / "book-log.json").read_text(encoding="utf-8"))
+    assert log["books_processed"][-1]["chunks_processed"] == [
+        {"chunk": script_mod.LP_CHUNK, "beats_extracted": 0, "pois_touched": [script_mod.PLACE]}
+    ]
+
+
+def test_a_new_place_holds_its_beat_and_queues_it(tmp_path):
+    """D13: a story at a place the city's POI file does not name is held —
+    its record commits with `review.held` and the reason naming the
+    place, so a reviewer can see it and publish refuses it — and becomes
+    a `new_place` queue item. No merge call: there is no beat at a place
+    the corpus has never seen."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    client = llm.MockClient(sink, **script_mod.script(unit, place="Guggenheim Museum"))
+
+    run.run_job(job.id, store, client, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    assert ("merge_judge", "P6") not in client.calls
+    assert "place_unresolved" in [e.message for e in snap.events if e.kind == "info"]
+
+    records = json.loads((data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8"))
+    assert [r["beat_id"] for r in records] == [
+        f"{script_mod.CITY}/guggenheim-museum/{script_mod.STORY_SLUG}"
+    ]
+    assert records[0]["poi_name"] == "Guggenheim Museum"
+    assert records[0]["review"] == {"held": True, "reason": "new_poi: Guggenheim Museum"}
+    assert model.validate(records, chunks_root=chunks.parent) == []
+
+    items = store.undecided(script_mod.CITY)
+    assert [(i.kind, i.place, i.reason) for i in items] == [
+        ("new_place", "Guggenheim Museum", "new_poi: Guggenheim Museum")
+    ]
+    assert items[0].shown["beat"]["beat_id"] == records[0]["beat_id"]
+    assert items[0].held_back["claims"] == 3
+
+
+def test_a_narration_still_refused_after_the_revise_is_held_and_queued(tmp_path):
+    """D13: a narration flagged after the second ask holds the beat. The
+    judge refuses the 1939 sentence, the author revises once, the judge
+    refuses it again: the record commits held with the `not_entailed`
+    flag, and the queue holds a `narration_held` item showing the
+    narration the reviewer decides on."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    texts = [c["text"] for c in script_mod.CLAIMS]
+    revised = script_mod.NARRATION.replace("ran a temporary museum", "opened a temporary museum")
+    scripted = script_mod.script(unit)
+    scripted["answers"]["author"].append(script_mod.narration_answer(revised))
+    scripted["batch_answers"].update(
+        script_mod.sentence_verdicts(texts, refused={1: "no claim says she ran it"})
+    )
+    scripted["batch_answers"].update(
+        script_mod.sentence_verdicts(
+            texts, revised, attempt=2, refused={1: "no claim says she opened it"}
+        )
+    )
+    client = llm.MockClient(sink, **scripted)
+
+    run.run_job(job.id, store, client, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    held = [e.data for e in snap.events if e.message == "beat_held"]
+    assert [h["phase"] for h in held] == ["P5"]
+
+    records = json.loads((data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8"))
+    assert [r["beat_id"] for r in records] == [script_mod.BEAT_ID]
+    beat = records[0]
+    assert beat["narration"]["text"] == revised
+    assert beat["narration"]["verdict"]["sentences_entailed"] == 2
+    assert [f.split(":")[0] for f in beat["narration"]["flags"]] == ["not_entailed"]
+    assert beat["review"]["held"] is True
+    assert model.validate(records, chunks_root=chunks.parent) == []
+
+    items = store.undecided(script_mod.CITY)
+    assert [(i.kind, i.story_slug) for i in items] == [("narration_held", script_mod.STORY_SLUG)]
+    assert items[0].shown["narration"] == revised
+    assert items[0].shown["phase"] == "P5"
+    assert items[0].held_back == {"claims": 3, "duration_sec": narrate.duration_sec(revised)}
+
+
+def test_p0_refuses_a_legacy_file_and_a_url_source_before_any_call(tmp_path):
+    """P0's gates stop a job before a token is counted: a city whose
+    beats file is still legacy-shape cannot take a new-shape record (the
+    validator would refuse the mixed file at P7, so nothing is spent
+    getting there), and a url source has no reader yet. Both end the job
+    in `error` with the reason, no estimate printed, no call made."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    legacy = [{"beat_id": "new_york/x/y", "script_body": "old", "poi_name": "X"}]
+    script_mod.seed_beats(data_root, legacy)
+    store = jobs.IngestJobStore()
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+
+    job = _book_job(store, chunks)
+    client = llm.MockClient(sink, **script_mod.script(unit))
+    run.run_job(job.id, store, client, data_root=data_root)
+    snap = store.snapshot(job.id)
+    assert snap.status == "error"
+    assert "legacy-shape" in (snap.error or "")
+    assert client.calls == [] and client.count_calls == []
+    assert [e.kind for e in snap.events] == ["error"]
+
+    url_job = store.create(
+        city=script_mod.CITY, source={"kind": "url", "url": "https://en.wikipedia.org/wiki/X"},
+        as_of="2026-09-01", rights_basis="cc_by_sa",
+    )
+    client = llm.MockClient(sink, **script_mod.script(unit))
+    run.run_job(url_job.id, store, client, data_root=data_root)
+    snap = store.snapshot(url_job.id)
+    assert snap.status == "error"
+    assert "url sources are not ingested yet" in (snap.error or "")
+    assert client.calls == [] and client.count_calls == []
+
+
+def test_no_live_client_in_this_file():
+    """This $0-spend test file never names a live LLM client or reads its
+    API key. Its own body is exempt from the walk below — this docstring
+    and the assert messages name those things on purpose to describe the
+    rule, which is not the violation the rule guards against.
+    """
+    tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+    self_name = "test_no_live_client_in_this_file"
+    forbidden_names = {"AnthropicClient", "anthropic"}
+    forbidden_env_var = "ANTHROPIC_API_KEY"
+
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == self_name:
+            continue
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Name):
+                assert sub.id not in forbidden_names, f"{sub.id!r} must not appear in this file"
+            elif isinstance(sub, ast.Attribute):
+                assert sub.attr not in forbidden_names, (
+                    f"{sub.attr!r} must not appear in this file"
+                )
+            elif isinstance(sub, ast.ImportFrom) and sub.module:
+                assert sub.module.split(".")[0] not in forbidden_names, (
+                    f"from-import of {sub.module!r} must not appear in this file"
+                )
+            elif isinstance(sub, ast.alias):
+                top_level_name = sub.name.split(".")[0]
+                assert top_level_name not in forbidden_names, (
+                    f"import of {sub.name!r} must not appear in this file"
+                )
+                assert sub.asname not in forbidden_names, (
+                    f"import alias {sub.asname!r} must not appear in this file"
+                )
+            elif isinstance(sub, ast.Constant) and isinstance(sub.value, str):
+                assert forbidden_env_var not in sub.value, (
+                    f"{forbidden_env_var!r} must not appear in this file"
+                )

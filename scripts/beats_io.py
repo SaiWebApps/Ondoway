@@ -58,11 +58,17 @@ def commit(
     *,
     beats_path: os.PathLike | str,
     log_path: os.PathLike | str,
+    chunks_root: os.PathLike | str | None = None,
 ) -> None:
     """Atomically write `final_beats` and `final_log` to their targets.
 
     Callers compute the full final state of both files. This helper is
     a thin atomicity-plus-validation layer with no business logic.
+
+    `chunks_root` is handed to the validator as `--chunks-root` so a
+    new-shape file written under a data root other than the repo's
+    `data/` (the ingest runner's per-job root) still grounds every span;
+    left `None`, the validator derives it from the path as before.
 
     Steps:
       1. Serialize `final_beats` to `{beats_path}.staging`.
@@ -87,11 +93,10 @@ def commit(
         raise
 
     try:
-        result = subprocess.run(
-            [sys.executable, str(_VALIDATOR), str(beats_staging)],
-            capture_output=True,
-            text=True,
-        )
+        cmd = [sys.executable, str(_VALIDATOR), str(beats_staging)]
+        if chunks_root is not None:
+            cmd += ["--chunks-root", str(chunks_root)]
+        result = subprocess.run(cmd, capture_output=True, text=True)
     except Exception:
         _safe_unlink(beats_staging)
         raise

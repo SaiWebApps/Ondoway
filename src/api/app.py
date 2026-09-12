@@ -14,7 +14,18 @@ from neo4j.exceptions import ServiceUnavailable
 
 from src.api.auth.routes import router as auth_router
 from src.api.dependencies import close_driver, get_resume_coordinator, init_driver
-from src.api.routes import audio, edges, feedback, graph, nodes, onboard, product, schema, trips
+from src.api.routes import (
+    audio,
+    edges,
+    feedback,
+    graph,
+    ingest,
+    nodes,
+    onboard,
+    product,
+    schema,
+    trips,
+)
 
 
 def _workbench_api_enabled() -> bool:
@@ -186,6 +197,10 @@ def create_app() -> FastAPI:
         # MUST stay behind the same gate as the workbench CRUD surface (prod
         # WORKBENCH_API_ENABLED=false => never mounted).
         app.include_router(onboard.router, prefix="/api/v1")
+        # The ingest front door (Docs/ingestion/rebuild-spec.md §5): reads a
+        # caller-named chunk dir and writes data/{city}/, so it stays behind
+        # the same gate.
+        app.include_router(ingest.router, prefix="/api/v1")
 
     # Serve the graph editor frontend
     editor_dir = os.path.join(

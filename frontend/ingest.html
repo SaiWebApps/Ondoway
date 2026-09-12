@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ondoway — Ingest</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* Tokens mirror frontend/review.html and onboard.html so the panels read as one app. */
+  :root {
+    --bg: #0c0f14; --surface: #141820; --surface-2: #1a1f2b; --border: #252b38;
+    --text: #e4e8f0; --text-muted: #6b7280; --accent: #f59e0b; --accent-dim: rgba(245,158,11,0.15);
+    --green: #22c55e; --green-dim: rgba(34,197,94,0.15); --red: #ef4444; --red-dim: rgba(239,68,68,0.15);
+    --blue: #3b82f6; --blue-dim: rgba(59,130,246,0.15); --yellow: #eab308; --yellow-dim: rgba(234,179,8,0.15);
+    --radius: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
+  .header { padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .header h1 { font-size: 1.25rem; font-weight: 700; }
+  .header .city-label { margin-left: auto; font-size: 0.85rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+  .layout { display: grid; grid-template-columns: 340px 1fr 380px; gap: 1rem; padding: 1rem 1.5rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
+  .card h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.75rem; }
+  label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-top: 0.6rem; }
+  input, select { width: 100%; padding: 0.45rem 0.6rem; margin-top: 0.2rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+  button { margin-top: 0.8rem; padding: 0.5rem 0.9rem; border: 1px solid var(--border); border-radius: 6px; background: var(--accent-dim); color: var(--accent); font-weight: 600; cursor: pointer; }
+  button.secondary { background: var(--surface-2); color: var(--text); font-weight: 500; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .job-row { display: flex; gap: 0.6rem; align-items: baseline; padding: 0.4rem 0.5rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; }
+  .job-row:hover, .job-row.selected { background: var(--surface-2); }
+  .job-row .status { margin-left: auto; }
+  .phases { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.5rem 0 0.8rem; }
+  .phase-chip { padding: 0.25rem 0.6rem; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-muted); }
+  .phase-chip.done { background: var(--green-dim); color: var(--green); border-color: var(--green); }
+  .phase-chip.running { background: var(--blue-dim); color: var(--blue); border-color: var(--blue); }
+  .phase-chip.failed { background: var(--red-dim); color: var(--red); border-color: var(--red); }
+  .status-line { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; margin-bottom: 0.4rem; }
+  .status-line.committed { color: var(--green); } .status-line.error { color: var(--red); } .status-line.running { color: var(--blue); }
+  .feed { height: 420px; overflow-y: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; }
+  .feed-line { padding: 0.15rem 0; white-space: pre-wrap; word-break: break-word; }
+  .feed-line.phase { color: var(--green); } .feed-line.error { color: var(--red); } .feed-line.held { color: var(--yellow); } .feed-line.estimate { color: var(--accent); }
+  .queue-item { border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem; margin-bottom: 0.6rem; font-size: 0.8rem; }
+  .queue-item .kind { font-family: 'JetBrains Mono', monospace; color: var(--yellow); }
+  .queue-item .reason { color: var(--text-muted); font-size: 0.75rem; margin: 0.3rem 0; }
+  .queue-item .shown { background: var(--bg); border-radius: 4px; padding: 0.4rem; font-size: 0.72rem; max-height: 140px; overflow: auto; white-space: pre-wrap; font-family: 'JetBrains Mono', monospace; }
+  .queue-item .decided { color: var(--green); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
+  .queue-item button { margin-top: 0.4rem; margin-right: 0.4rem; padding: 0.3rem 0.6rem; }
+  .note { color: var(--text-muted); font-size: 0.8rem; }
+  .result { margin-top: 0.6rem; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; white-space: pre-wrap; }
+  .result.refused { color: var(--red); } .result.ok { color: var(--green); } .result.info { color: var(--yellow); }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Ondoway — Ingest</h1>
+  <span class="city-label" id="cityLabel">no city</span>
+</div>
+
+<div class="layout">
+  <div>
+    <div class="card">
+      <h2>New job</h2>
+      <label>City <input id="ingestCity" value="new_york"></label>
+      <label>Source kind
+        <select id="ingestKind"><option value="book">book (chunk dir + manifest)</option><option value="url">url</option></select>
+      </label>
+      <label id="chunkDirLabel">Chunk dir <input id="ingestChunkDir" placeholder="/…/Books/new_york/lonely-planet-new-york-city"></label>
+      <label id="urlLabel" hidden>URL <input id="ingestUrl" placeholder="https://…?oldid=…"></label>
+      <label>As of (year or YYYY-MM-DD) <input id="ingestAsOf" value="2023"></label>
+      <label>Rights basis
+        <select id="ingestRightsBasis">
+          <option value="owned_copy">owned_copy</option><option value="cc_by_sa">cc_by_sa</option>
+          <option value="public_domain">public_domain</option><option value="own_work">own_work</option>
+          <option value="permission">permission</option>
+        </select>
+      </label>
+      <button id="ingestStartBtn">Start job</button>
+      <div class="result" id="startResult"></div>
+    </div>
+    <div class="card" style="margin-top:1rem">
+      <h2>Jobs</h2>
+      <div id="jobsList"><p class="note">No jobs yet.</p></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Job</h2>
+    <div class="status-line" id="jobStatus">Select or start a job.</div>
+    <div class="phases" id="phaseChips"></div>
+    <div class="feed" id="eventFeed"></div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>Review queue</h2>
+      <label>Decided by <input id="decidedBy" value="editor"></label>
+      <div id="reviewQueue" style="margin-top:0.6rem"><p class="note">Nothing held.</p></div>
+    </div>
+    <div class="card" style="margin-top:1rem">
+      <h2>Publish</h2>
+      <label>Target <select id="publishTarget"><option value="local">local</option><option value="cloud">cloud</option></select></label>
+      <button id="publishBtn">Publish city</button>
+      <div class="result" id="publishResult"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// Port-configurable via ?apiPort= (default 8000), the same rule as review.html.
+const API_BASE = (() => {
+  const raw = new URLSearchParams(location.search).get('apiPort');
+  const port = raw && /^\d{2,5}$/.test(raw) ? raw : '8000';
+  return `http://localhost:${port}/api/v1`;
+})();
+
+const PHASES = ['P0', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7'];
+const $ = (id) => document.getElementById(id);
+let selectedJob = null;
+let stream = null;
+
+function postJSON(path, body) {
+  return fetch(`${API_BASE}${path}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+function city() { return $('ingestCity').value.trim(); }
+
+function feedLine(text, cls) {
+  const div = document.createElement('div');
+  div.className = 'feed-line' + (cls ? ' ' + cls : '');
+  div.textContent = text;
+  $('eventFeed').appendChild(div);
+  $('eventFeed').scrollTop = $('eventFeed').scrollHeight;
+}
+
+function renderEvent(ev) {
+  if (ev.kind === 'phase') { feedLine(`${ev.message} done`, 'phase'); return; }
+  if (ev.kind === 'error') { feedLine(`error: ${ev.message}`, 'error'); return; }
+  const data = ev.data || {};
+  if (ev.message === 'cost_estimate') {
+    feedLine(`cost estimate: $${Number(data.total_usd || 0).toFixed(4)} ceiling over ${data.units} unit(s), prices cached ${data.prices_cached_on}`, 'estimate');
+    return;
+  }
+  if (ev.message === 'beat_held' || ev.message === 'unit_held') {
+    feedLine(`${ev.message} [${data.phase}] ${data.story_slug || data.unit_key}: ${data.reason}`, 'held');
+    return;
+  }
+  const brief = Object.entries(data).filter(([k]) => k !== 'rows').map(([k, v]) => `${k}=${typeof v === 'string' ? v : JSON.stringify(v)}`).join(' ');
+  feedLine(`${ev.message} ${brief}`.slice(0, 400));
+}
+
+function renderPhases(phases, current, status) {
+  const box = $('phaseChips');
+  box.innerHTML = '';
+  PHASES.forEach((p) => {
+    const chip = document.createElement('span');
+    chip.className = 'phase-chip';
+    chip.dataset.phase = p;
+    const info = (phases || {})[p] || { status: 'pending' };
+    if (info.status === 'done') chip.classList.add('done');
+    else if (p === current && status === 'running') chip.classList.add('running');
+    else if (p === current && status === 'error') chip.classList.add('failed');
+    const extra = info.status === 'done'
+      ? Object.entries(info).filter(([k]) => k !== 'status' && k !== 'beats_path').map(([k, v]) => `${k}:${Array.isArray(v) ? v.length : v}`).join(' ')
+      : '';
+    chip.textContent = extra ? `${p} ${extra}` : p;
+    box.appendChild(chip);
+  });
+}
+
+async function loadJob(jobId) {
+  const resp = await fetch(`${API_BASE}/ingest/jobs/${jobId}`);
+  if (!resp.ok) { feedLine(`failed to load job (${resp.status})`, 'error'); return null; }
+  const job = await resp.json();
+  const line = $('jobStatus');
+  line.className = `status-line ${job.status}`;
+  line.textContent = `${job.job_id.slice(0, 8)} · ${job.city} · ${job.status}${job.error ? ' · ' + job.error : ''}`;
+  renderPhases(job.phases, job.current_phase, job.status);
+  return job;
+}
+
+function openStream(jobId) {
+  if (stream) stream.close();
+  $('eventFeed').innerHTML = '';
+  stream = new EventSource(`${API_BASE}/ingest/jobs/${jobId}/stream`);
+  stream.onmessage = (msg) => {
+    const ev = JSON.parse(msg.data);
+    renderEvent(ev);
+    if (ev.kind === 'phase') loadJob(jobId);
+  };
+  stream.addEventListener('end', async () => {
+    stream.close();
+    stream = null;
+    await loadJob(jobId);
+    await Promise.all([loadJobs(), loadQueue()]);
+  });
+  stream.onerror = () => { feedLine('stream closed', 'error'); if (stream) { stream.close(); stream = null; } };
+}
+
+async function selectJob(jobId) {
+  selectedJob = jobId;
+  const job = await loadJob(jobId);
+  if (!job) return;
+  $('eventFeed').innerHTML = '';
+  job.events.forEach(renderEvent);
+  if (job.status === 'running') openStream(jobId);
+  await loadJobs();
+}
+
+async function loadJobs() {
+  const resp = await fetch(`${API_BASE}/ingest/jobs`);
+  if (!resp.ok) return;
+  const { jobs } = await resp.json();
+  const box = $('jobsList');
+  box.innerHTML = '';
+  if (!jobs.length) { box.innerHTML = '<p class="note">No jobs yet.</p>'; return; }
+  jobs.forEach((j) => {
+    const row = document.createElement('div');
+    row.className = 'job-row' + (j.job_id === selectedJob ? ' selected' : '');
+    row.dataset.jobId = j.job_id;
+    row.innerHTML = `<span>${j.job_id.slice(0, 8)}</span><span>${j.city}</span><span>${j.current_phase || ''}</span><span class="status">${j.status}</span>`;
+    row.addEventListener('click', () => selectJob(j.job_id));
+    box.appendChild(row);
+  });
+}
+
+async function loadQueue() {
+  const c = city();
+  $('cityLabel').textContent = c || 'no city';
+  const resp = await fetch(`${API_BASE}/ingest/review?city=${encodeURIComponent(c)}`);
+  if (!resp.ok) return;
+  const { items } = await resp.json();
+  const box = $('reviewQueue');
+  box.innerHTML = '';
+  if (!items.length) { box.innerHTML = '<p class="note">Nothing held.</p>'; return; }
+  items.forEach((item) => {
+    const div = document.createElement('div');
+    div.className = 'queue-item';
+    div.dataset.itemId = item.item_id;
+    const head = document.createElement('div');
+    head.innerHTML = `<span class="kind">${item.kind}</span> · ${item.story_slug} @ ${item.place} · holds ${item.held_back.claims} claim(s), ${item.held_back.duration_sec}s`;
+    const reason = document.createElement('div');
+    reason.className = 'reason';
+    reason.textContent = item.reason;
+    const shown = document.createElement('pre');
+    shown.className = 'shown';
+    shown.textContent = JSON.stringify(item.shown, null, 1);
+    div.append(head, reason, shown);
+    if (item.decision) {
+      const d = document.createElement('div');
+      d.className = 'decided';
+      d.textContent = `${item.decision.decision} by ${item.decision.decided_by} · bound to ${item.decision.bound_to.slice(0, 12)}…`;
+      div.appendChild(d);
+    } else {
+      ['accept', 'reject'].forEach((decision) => {
+        const b = document.createElement('button');
+        b.className = 'secondary';
+        b.textContent = decision;
+        b.dataset.decision = decision;
+        b.addEventListener('click', async () => {
+          const resp = await postJSON('/ingest/review/decision', {
+            item_id: item.item_id, decision, decided_by: $('decidedBy').value.trim() || 'editor',
+            shown_hash: item.shown_hash,
+          });
+          if (!resp.ok) { const body = await resp.json().catch(() => ({})); reason.textContent = `refused (${resp.status}): ${body.detail || ''}`; return; }
+          await loadQueue();
+        });
+        div.appendChild(b);
+      });
+    }
+    box.appendChild(div);
+  });
+}
+
+$('ingestKind').addEventListener('change', () => {
+  const isBook = $('ingestKind').value === 'book';
+  $('chunkDirLabel').hidden = !isBook;
+  $('urlLabel').hidden = isBook;
+});
+$('ingestCity').addEventListener('change', loadQueue);
+
+$('ingestStartBtn').addEventListener('click', async () => {
+  const kind = $('ingestKind').value;
+  const source = kind === 'book' ? { kind, chunk_dir: $('ingestChunkDir').value.trim() } : { kind, url: $('ingestUrl').value.trim() };
+  const asOfRaw = $('ingestAsOf').value.trim();
+  const as_of = /^\d{4}$/.test(asOfRaw) ? Number(asOfRaw) : asOfRaw;
+  const result = $('startResult');
+  result.className = 'result';
+  result.textContent = '';
+  const resp = await postJSON('/ingest/jobs', { city: city(), source, as_of, rights_basis: $('ingestRightsBasis').value });
+  if (resp.status !== 202) {
+    const body = await resp.json().catch(() => ({}));
+    result.className = 'result refused';
+    result.textContent = `refused (${resp.status}): ${JSON.stringify(body.detail || body)}`;
+    return;
+  }
+  const { job_id } = await resp.json();
+  result.className = 'result ok';
+  result.textContent = `job ${job_id.slice(0, 8)} started`;
+  selectedJob = job_id;
+  await loadJobs();
+  await loadJob(job_id);
+  openStream(job_id);
+});
+
+$('publishBtn').addEventListener('click', async () => {
+  const result = $('publishResult');
+  const resp = await postJSON(`/ingest/publish?city=${encodeURIComponent(city())}&target=${encodeURIComponent($('publishTarget').value)}`);
+  const body = await resp.json().catch(() => ({}));
+  const detail = body.detail || body;
+  if (resp.status === 409) {
+    result.className = 'result refused';
+    result.textContent = `refused: ${detail.error}\n${(detail.undecided || []).join('\n')}`;
+  } else if (resp.status === 501) {
+    result.className = 'result info';
+    result.textContent = `not wired: ${detail.error}`;
+  } else {
+    result.className = resp.ok ? 'result ok' : 'result refused';
+    result.textContent = `${resp.status}: ${JSON.stringify(detail)}`;
+  }
+});
+
+loadJobs();
+loadQueue();
+</script>
+</body>
+</html>

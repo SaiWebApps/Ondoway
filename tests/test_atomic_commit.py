@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from scripts.beats_io import BeatValidationError, commit
+from tests import ingest_job_script as ingest_script
 
 
 def _hash(body: str) -> str:
@@ -242,3 +243,31 @@ def test_commit_pre_existing_targets_untouched_on_fail(tmp_path):
         )
 
     assert beats_path.read_bytes() == original_bytes
+
+
+def test_commit_grounds_a_new_shape_file_under_the_given_chunks_root(tmp_path):
+    """A new-shape file written under a data root that is NOT beside a
+    Books/ directory (the ingest runner's per-job root) can only ground its
+    spans through an explicit `chunks_root`: without it the validator cannot
+    derive one, refuses the staged write, and both targets stay absent;
+    with it the same records commit. The chunks root here holds the real
+    Lonely Planet chunk-07 the records' spans are quoted from."""
+    chunks_root = tmp_path / "chunks"
+    (chunks_root / ingest_script.LP_SOURCE).mkdir(parents=True)
+    (chunks_root / ingest_script.LP_SOURCE / f"{ingest_script.LP_CHUNK}.txt").write_bytes(
+        ingest_script.REAL_CHUNK.read_bytes()
+    )
+    out = tmp_path / "out" / "new_york"
+    out.mkdir(parents=True)
+    beats_path, log_path = out / "beats.json", out / "book-log.json"
+    records = ingest_script.existing_records()
+    log = {"city": "new_york", "books_processed": []}
+
+    with pytest.raises(BeatValidationError) as exc:
+        commit(records, log, beats_path=beats_path, log_path=log_path)
+    assert "chunks root" in str(exc.value)
+    assert not beats_path.exists() and not log_path.exists()
+
+    commit(records, log, beats_path=beats_path, log_path=log_path, chunks_root=chunks_root)
+    assert json.loads(beats_path.read_text()) == records
+    assert json.loads(log_path.read_text()) == log

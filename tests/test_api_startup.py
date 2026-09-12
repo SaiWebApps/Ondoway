@@ -86,12 +86,16 @@ def test_workbench_crud_gated_off_by_default(monkeypatch):
     paths = {getattr(r, "path", None) for r in create_app().routes}
     assert "/api/v1/cities" not in paths, "graph router must NOT mount when unset"
     assert "/api/v1/nodes/{label}" not in paths, "nodes write surface must NOT mount when unset"
+    # The ingest front door reads a caller-named filesystem path and writes
+    # data/{city}/ (Docs/ingestion/rebuild-spec.md §5): same gate, same rule.
+    assert "/api/v1/ingest/jobs" not in paths, "ingest front door must NOT mount when unset"
     assert "/api/v1/healthz" in paths, "mobile-facing routes stay mounted"
     # Explicit truthy => opt-in, workbench routes PRESENT.
     monkeypatch.setenv("WORKBENCH_API_ENABLED", "true")
     enabled = {getattr(r, "path", None) for r in create_app().routes}
     assert "/api/v1/cities" in enabled, "graph router mounts when explicitly enabled"
     assert "/api/v1/nodes/{label}" in enabled, "nodes write surface mounts when explicitly enabled"
+    assert "/api/v1/ingest/jobs" in enabled, "ingest front door mounts when explicitly enabled"
 
 
 @pytest.mark.parametrize("value", ["true", "1", "yes", "on", "TRUE", "On", "yes "])
