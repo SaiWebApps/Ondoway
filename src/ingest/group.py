@@ -124,7 +124,11 @@ from src.schema.definitions import TAGGABLE_LENSES
 
 #: Output tokens requested for a P2 call — both the first ask and the
 #: re-ask use the same cap.
-P2_MAX_TOKENS: int = 8000
+P2_MAX_TOKENS: int = 64_000  # thinking-inclusive; unbatched, so a truncation is unrecoverable
+
+#: What the estimate prices per P2 call — a PROJECTION until a run
+#: measures it: ~44 stories x ~250 tokens of JSON plus thinking at ~1x.
+P2_EXPECTED_OUTPUT_TOKENS: int = 20_000
 
 #: The exact keys `prompts.P2_RESPONSE_SCHEMA` allows on one story item,
 #: and on that story's nested `enrichment` object.
@@ -258,14 +262,14 @@ P2_PLAN: tuple[llm.PhaseCall, ...] = (
         role="author",
         calls_per_unit=1,
         overhead_tokens=max(1, len(prompts.GROUP_PROMPT_TEMPLATE) // 4),
-        expected_output_tokens=P2_MAX_TOKENS,
+        expected_output_tokens=P2_EXPECTED_OUTPUT_TOKENS,
     ),
     llm.PhaseCall(
         phase="P2",
         role="author",
         calls_per_unit=1,
         overhead_tokens=max(1, len(prompts.GROUP_REDO_TEMPLATE) // 4),
-        expected_output_tokens=P2_MAX_TOKENS,
+        expected_output_tokens=P2_EXPECTED_OUTPUT_TOKENS,
     ),
 )
 

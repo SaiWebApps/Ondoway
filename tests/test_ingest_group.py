@@ -392,7 +392,7 @@ def test_story_and_enrichment_shapes():
 
 
 def test_p2_plan_rows_and_max_tokens():
-    assert group.P2_MAX_TOKENS == 8000
+    assert group.P2_MAX_TOKENS == 64_000  # tests/test_ingest_output_caps.py sizes it
     assert isinstance(group.P2_PLAN, tuple)
     assert len(group.P2_PLAN) == 2
 
@@ -406,7 +406,7 @@ def test_p2_plan_rows_and_max_tokens():
         assert row.calls_per_unit == 1
         assert row.overhead_tokens == expected_overhead
         assert row.overhead_tokens > 0
-        assert row.expected_output_tokens == group.P2_MAX_TOKENS
+        assert row.expected_output_tokens == group.P2_EXPECTED_OUTPUT_TOKENS
 
     events, sink = _sink_and_events()
     mock = llm.MockClient(sink)

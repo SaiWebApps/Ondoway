@@ -16,6 +16,8 @@ import ast
 import json
 from pathlib import Path
 
+import pytest
+
 from src.ingest import jobs, llm, model, narrate, run
 from tests import ingest_job_script as script_mod
 
@@ -597,6 +599,46 @@ def test_the_estimate_prices_the_per_claim_phases_by_fan_out(tmp_path):
     words = len(eight.split())
     assert p3.input_tokens >= 8 * words  # every call carries the passage
     assert run.fanout(unit) == {"claims": 8, "stories": 2, "sentences": 8}
+
+
+def test_the_cap_bound_is_the_true_upper_limit_and_the_projection_sits_below_it(tmp_path):
+    """The judge on job 1's re-run: once plan rows price EXPECTED output,
+    the printed total is a projection, not a bound — a run can
+    legitimately bill past it. `cap_bound_usd` prices every row at the
+    max_tokens its call actually asks for (the same input, the same
+    prices, the same batch discount): the true upper limit. It sits
+    above the projection by exactly the output headroom, and collapses
+    onto the projection when every expectation equals its cap."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    client = llm.MockClient(sink, count_tokens_fn=lambda _m, text: len(text.split()))
+
+    estimate = run.estimate_job(client, [unit])
+    bound = run.cap_bound_usd(estimate)
+
+    assert bound > estimate.total_usd
+    assert len(run.CAPS) == len(estimate.rows)
+    assert all(
+        cap * row.calls >= row.output_tokens
+        for cap, row in zip(run.CAPS, estimate.rows, strict=True)
+    )
+    # Every row at its cap: an estimate built from the caps themselves.
+    at_cap = llm.CostEstimate(
+        units=estimate.units,
+        rows=[
+            llm.PhaseCost(
+                phase=r.phase, role=r.role, model_id=r.model_id, batch=r.batch, calls=r.calls,
+                input_tokens=r.input_tokens, output_tokens=r.calls * cap, usd=0.0,
+            )
+            for r, cap in zip(estimate.rows, run.CAPS, strict=True)
+        ],
+        total_input_tokens=estimate.total_input_tokens,
+        total_output_tokens=0, total_usd=0.0, prices_cached_on=estimate.prices_cached_on,
+    )
+    assert run.cap_bound_usd(at_cap) == pytest.approx(bound)
+    # And a projection priced at the caps IS the bound (the two formulas agree).
+    assert run.projection_usd(at_cap) == pytest.approx(bound)
 
 
 def test_no_live_client_in_this_file():

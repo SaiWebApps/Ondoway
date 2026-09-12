@@ -90,8 +90,20 @@ from src.ingest.gates import KIND_RESPONSE_VALUES, claim_gates, default_kind
 from src.ingest.unit import Unit
 
 #: Output tokens requested for a P1 call — both the first ask and the
-#: re-ask use the same cap.
-P1_MAX_TOKENS: int = 8000
+#: re-ask use the same cap. Sized for THINKING: the client sends no
+#: `thinking` parameter and claude-opus-5 thinks by default, so the
+#: budget is spent on thinking first and the answer gets the rest. Slice
+#: 9's first paid job (2026-09-12) stopped at the previous 8,000 having
+#: written 4,013 tokens of text (39 claims, 22% of an 8.8k-token chunk);
+#: a whole chunk ~ 177 claims ~ 18k text tokens plus thinking at the
+#: measured 1.0x ~ 36k (4,013 text + 3,987 thinking in the capped call,
+#: `make ingest-batch ARGS=--text-tokens`). tests/test_ingest_output_caps.py
+#: holds the floor; P1_EXPECTED_OUTPUT_TOKENS is what the estimate prices.
+P1_MAX_TOKENS: int = 64_000
+
+#: What the estimate prices per P1 call: the MEASURED projection (thinking
+#: included) for a whole chunk, not the cap.
+P1_EXPECTED_OUTPUT_TOKENS: int = 36_000
 
 #: The exact keys `prompts.P1_RESPONSE_SCHEMA` allows on one claim item.
 _REQUIRED_ITEM_KEYS: frozenset[str] = frozenset({"text", "kind", "span"})
@@ -146,14 +158,14 @@ P1_PLAN: tuple[llm.PhaseCall, ...] = (
         role="author",
         calls_per_unit=1,
         overhead_tokens=max(1, len(prompts.DECOMPOSE_PROMPT) // 4),
-        expected_output_tokens=P1_MAX_TOKENS,
+        expected_output_tokens=P1_EXPECTED_OUTPUT_TOKENS,
     ),
     llm.PhaseCall(
         phase="P1",
         role="author",
         calls_per_unit=1,
         overhead_tokens=max(1, len(prompts.REDO_PROMPT) // 4),
-        expected_output_tokens=P1_MAX_TOKENS,
+        expected_output_tokens=P1_EXPECTED_OUTPUT_TOKENS,
     ),
 )
 

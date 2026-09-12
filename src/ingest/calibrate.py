@@ -305,7 +305,7 @@ def _arm(client: llm.ModelClient, records: list[DefectRecord], unit: Unit) -> ll
     per omission record, the P6 plan over each merge record's second
     source — never an empty estimate, which would arm the
     gate without pricing anything. Returns the SUM of every estimate
-    emitted: the whole ceiling an owner is asked to confirm."""
+    emitted: the whole projection an owner is asked to confirm."""
     claim_texts = [
         claim["text"]
         for record in records

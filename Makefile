@@ -102,6 +102,7 @@ LINT_PATHS := src/ tests/ scripts/dev_env.py scripts/ensure_dev_data.py \
 	scripts/tour_batch_candidate.py scripts/score_saved_tours.py \
 	scripts/score_gold_text.py scripts/human_reference_tours.py \
 	scripts/ingest_calibrate.py scripts/claim_conflicts.py scripts/ingest_job.py \
+	scripts/ingest_batch.py \
 	scripts/tour_golden_diff.py scripts/poi_visit_duration.py \
 	scripts/poi_opening_hours.py scripts/poi_place_category.py \
 	scripts/poi_body_places.py scripts/poi_place_judgements.py \
@@ -380,6 +381,11 @@ ingest-job: ## ONE headless ingest job on the LIVE client into the gitignored da
 	@$(PREFLIGHT) --label ingest-job $(PRE_PY) render-key
 	@$(RENDER_LOCAL_EXEC) env INGEST_PROVIDER=anthropic INGEST_DATA_ROOT=data-ingest \
 		uv run python scripts/ingest_job.py --city $(CITY) --chunk-dir $(CHUNK_DIR) $(ARGS)
+
+ingest-batch: ## Recover a finished Batch API round (-e): per-request stop reason, tokens, priced cost, parsed claim count; saved to data-ingest/batches/. Usage: make ingest-batch BATCH=msgbatch_...
+	@test -n "$(BATCH)" || { echo "ERROR: BATCH is required (a msgbatch_... id)." >&2; exit 2; }
+	@$(PREFLIGHT) --label ingest-batch $(PRE_PY) render-key
+	@$(RENDER_LOCAL_EXEC) uv run python scripts/ingest_batch.py --batch $(BATCH) $(ARGS)
 
 claim-conflicts: ## City-wide report of the same fact stated with different values across beats (P6 sees one place at a time). Usage: make claim-conflicts CITY=new_york [ARGS=--apply]. $0.
 	@test -n "$(CITY)" || { echo "ERROR: CITY is required." >&2; exit 2; }

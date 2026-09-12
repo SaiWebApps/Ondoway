@@ -28,7 +28,7 @@ from src.ingest import llm, model, prompts
 from src.ingest.group import Story
 from src.ingest.judge_claims import JudgedClaim, _extract_json_object
 from src.ingest.narrate import (
-    P4_MAX_TOKENS,
+    P4_EXPECTED_OUTPUT_TOKENS,
     Emit,
     NarrationDraft,
     ask_author,
@@ -90,7 +90,7 @@ P5_PLAN: tuple[llm.PhaseCall, ...] = (
         role="author",
         calls_per_unit=1,
         overhead_tokens=max(1, len(prompts.NARRATE_REVISE_PROMPT) // 4),
-        expected_output_tokens=P4_MAX_TOKENS,
+        expected_output_tokens=P4_EXPECTED_OUTPUT_TOKENS,
     ),
     llm.PhaseCall(
         phase="P5",

@@ -76,7 +76,11 @@ from src.ingest.narrate import Emit, emitter, hold
 from src.tour.claim_dedup import CLAIM_DEDUP_THRESHOLD, MIN_SHARED_TOKENS, _overlap, _signature
 
 #: Output tokens requested for one merge answer (a verdict per new claim).
-P6_MAX_TOKENS: int = 4000
+P6_MAX_TOKENS: int = 16_000  # thinking-inclusive; tests/test_ingest_output_caps.py
+
+#: What the estimate prices per merge verdict — a projection: a verdict
+#: per claim plus thinking at ~1x (Sonnet).
+P6_EXPECTED_OUTPUT_TOKENS: int = 4_000
 
 #: Two claim signatures state the same fact at or above this overlap
 #: coefficient with at least this many shared tokens — the tour engine's
@@ -145,14 +149,14 @@ P6_PLAN: tuple[llm.PhaseCall, ...] = (
         role="merge_judge",
         calls_per_unit=1,
         overhead_tokens=max(1, len(prompts.MERGE_PROMPT) // 4),
-        expected_output_tokens=P6_MAX_TOKENS,
+        expected_output_tokens=P6_EXPECTED_OUTPUT_TOKENS,
     ),
     llm.PhaseCall(
         phase="P6",
         role="merge_judge",
         calls_per_unit=1,
         overhead_tokens=max(1, len(prompts.MERGE_REDO_PROMPT) // 4),
-        expected_output_tokens=P6_MAX_TOKENS,
+        expected_output_tokens=P6_EXPECTED_OUTPUT_TOKENS,
     ),
 )
 

@@ -58,15 +58,17 @@ def _print_event(kind: str, payload: dict) -> None:
 
 
 def _first_pass_usd(estimate: llm.CostEstimate) -> float:
-    """The rows that are each phase's FIRST ask: the expected spend when
-    nothing is refused. The whole plan is the ceiling."""
+    """The rows that are each phase's FIRST ask: the projected spend when
+    nothing is refused. The whole plan is the projection with every re-ask;
+    `run.cap_bound_usd` is the true limit."""
     return sum(row.usd for row, first in zip(estimate.rows, run.FIRST_PASS, strict=True) if first)
 
 
 def _print_estimate(estimate: llm.CostEstimate) -> None:
-    print(f"estimated spend: ${estimate.total_usd:.4f} (a ceiling; prices of "
-          f"{estimate.prices_cached_on}; {estimate.units} unit(s))")
+    print(f"estimated spend: ${estimate.total_usd:.4f} (a projection: every row at its expected "
+          f"output; prices of {estimate.prices_cached_on}; {estimate.units} unit(s))")
     print(f"first-pass (no re-asks): ${_first_pass_usd(estimate):.4f}")
+    print(f"cap-bound (every row at its max_tokens): ${run.cap_bound_usd(estimate):.4f}")
     for row in estimate.rows:
         per_call = row.input_tokens // row.calls if row.calls else 0
         print(
@@ -87,6 +89,9 @@ class _CountingClient:
         self.calls: dict[str, int] = {}
         self.usd: float = 0.0
         self.tokens: dict[str, int] = {"input": 0, "output": 0}
+        #: Calls the client raised on (truncated, empty, transport): billed,
+        #: but their usage never reached the meter — spend is a lower bound.
+        self.unmetered: dict[str, int] = {}
 
     def __getattr__(self, name: str):
         return getattr(self._inner, name)
@@ -125,23 +130,37 @@ class _CountingClient:
         return self._inner.estimate(units, plan, prices=prices)
 
     def complete(self, role, prompt, schema, *, phase, max_tokens):
-        completion = self._inner.complete(role, prompt, schema, phase=phase, max_tokens=max_tokens)
         self.calls[phase] = self.calls.get(phase, 0) + 1
-        self._meter(phase, role, completion)
-        return completion
+        metered = False
+        try:
+            completion = self._inner.complete(
+                role, prompt, schema, phase=phase, max_tokens=max_tokens
+            )
+            self._meter(phase, role, completion)
+            metered = True
+            return completion
+        finally:
+            if not metered:  # a call the client raised on was still billed
+                self.unmetered[phase] = self.unmetered.get(phase, 0) + 1
 
     def complete_batch(self, role, prompts, schema, *, phase, max_tokens):
-        results = self._inner.complete_batch(
-            role, prompts, schema, phase=phase, max_tokens=max_tokens
-        )
         self.calls[phase] = self.calls.get(phase, 0) + len(prompts)
-        for completion in results.values():
-            self._meter(phase, role, completion)
-        return results
+        metered = False
+        try:
+            results = self._inner.complete_batch(
+                role, prompts, schema, phase=phase, max_tokens=max_tokens
+            )
+            for completion in results.values():
+                self._meter(phase, role, completion)
+            metered = True
+            return results
+        finally:
+            if not metered:  # a submitted batch the client raised on was still billed
+                self.unmetered[phase] = self.unmetered.get(phase, 0) + len(prompts)
 
 
 def _spend_lines(estimate: llm.CostEstimate, meter: _CountingClient) -> list[str]:
-    """Estimate (ceiling and first-pass) beside what the run actually made."""
+    """Projection, first-pass and cap-bound beside what the run actually made."""
     first_pass = _first_pass_usd(estimate)
     est_calls: dict[str, int] = {}
     for row in estimate.rows:
@@ -149,9 +168,16 @@ def _spend_lines(estimate: llm.CostEstimate, meter: _CountingClient) -> list[str
     phases = sorted(set(est_calls) | set(meter.calls))
     ratio = f"{meter.usd / estimate.total_usd:.2f}" if estimate.total_usd else "n/a"
     return [
-        f"spend: estimated=${estimate.total_usd:.4f} (ceiling) first_pass=${first_pass:.4f} "
-        f"actual=${meter.usd:.4f} actual/ceiling={ratio} "
-        f"tokens_in={meter.tokens['input']} tokens_out={meter.tokens['output']}",
+        f"spend: projected=${estimate.total_usd:.4f} first_pass=${first_pass:.4f} "
+        f"cap_bound=${run.cap_bound_usd(estimate):.4f} "
+        f"actual=${meter.usd:.4f} actual/projected={ratio} "
+        f"tokens_in={meter.tokens['input']} tokens_out={meter.tokens['output']}"
+        + (
+            f" unmetered_calls={sum(meter.unmetered.values())} (billed, usage unknown: "
+            "actual is a LOWER BOUND)"
+            if meter.unmetered
+            else ""
+        ),
         "calls: "
         + " | ".join(
             f"{p} est={est_calls.get(p, 0)} act={meter.calls.get(p, 0)}" for p in phases

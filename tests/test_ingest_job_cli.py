@@ -119,8 +119,10 @@ def test_without_yes_the_estimate_is_printed_and_nothing_runs(tmp_path, monkeypa
 
     out = capsys.readouterr().out
     assert rc == 2
-    assert "estimated spend: $" in out
+    assert "estimated spend: $" in out and "(a projection:" in out  # never "ceiling"
     assert "first-pass (no re-asks): $" in out  # the number the go decision reads
+    assert "cap-bound (every row at its max_tokens): $" in out  # the true upper limit
+    assert "ceiling" not in out
     assert "P1" in out and "P6" in out
     assert "in/call=" in out  # per-call input, so each model's own token count is visible
     assert "--yes" in out
@@ -182,7 +184,8 @@ def test_the_summary_measures_real_calls_and_spend_against_the_estimate(
 
     out = capsys.readouterr().out
     assert rc == 0, out
-    assert "spend: estimated=$" in out and "actual=$0.0000" in out
+    assert "spend: projected=$" in out and "actual=$0.0000" in out
+    assert "cap_bound=$" in out and "actual/projected=" in out and "ceiling" not in out
     calls_line = next(line for line in out.splitlines() if line.startswith("calls:"))
     assert "P2 est=2 act=1" in calls_line  # group + its re-ask row, no fan-out; one real call
     assert "P3 est=" in calls_line and "act=4" in calls_line
@@ -249,3 +252,30 @@ def test_the_meter_never_alters_or_ends_a_paid_run(capsys):
     assert meter.calls == {"P2": 1}
     assert meter.usd == 0.0
     assert "meter warning" in capsys.readouterr().out
+
+
+class _RaisingClient:
+    roles: dict[str, str]
+
+    def __init__(self) -> None:
+        self.roles = {}
+
+    def complete_batch(self, role, prompts, schema, *, phase, max_tokens):
+        raise RuntimeError("truncated at max_tokens")
+
+
+def test_the_meter_counts_a_batch_that_raised(capsys):
+    """Job 1 (2026-09-12): the P1 batch was submitted and billed, then the
+    client raised on the truncated answer — and the meter reported zero
+    calls, because it counted only after the inner call returned. A
+    submitted prompt is a call whether or not its answer was usable: the
+    count lands even when the client raises, and the exception still
+    propagates. Usage is unknowable then (the exception carries no usage),
+    so spend stays a lower bound and the summary must say so."""
+    meter = ingest_job._CountingClient(_RaisingClient())
+
+    with pytest.raises(RuntimeError):
+        meter.complete_batch("author", [("a1", "p"), ("a2", "q")], None, phase="P1", max_tokens=1)
+
+    assert meter.calls == {"P1": 2}
+    assert meter.unmetered == {"P1": 2}

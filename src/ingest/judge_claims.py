@@ -37,10 +37,18 @@ from src.ingest.unit import Unit
 P3_MAX_TOKENS: int = 400
 
 #: Output tokens requested for the author's single restate of one claim.
-P3_RESTATE_MAX_TOKENS: int = 1000
+P3_RESTATE_MAX_TOKENS: int = 8_000  # thinking-inclusive; tests/test_ingest_output_caps.py
+
+#: What the estimate prices per restate — a projection: one claim plus
+#: thinking at ~1x (Opus).
+P3_RESTATE_EXPECTED_OUTPUT_TOKENS: int = 2_000
 
 #: Output tokens requested for one unit's omission findings.
-P3_OMISSIONS_MAX_TOKENS: int = 4000
+P3_OMISSIONS_MAX_TOKENS: int = 8_000  # a whole passage's uncarried facts; test_ingest_output_caps
+
+#: What the estimate prices per omission check — a projection: a few
+#: dozen findings with spans (Haiku, no thinking).
+P3_OMISSIONS_EXPECTED_OUTPUT_TOKENS: int = 2_000
 
 #: Characters of `Unit.key` kept in a P3 custom_id: the key prefix plus
 #: `-{claim_id}-jN` must fit the Batch API's 64-character limit.
@@ -75,7 +83,7 @@ P3_PLAN: tuple[llm.PhaseCall, ...] = (
         role="author",
         calls_per_unit=1,
         overhead_tokens=max(1, len(prompts.RESTATE_PROMPT) // 4),
-        expected_output_tokens=P3_RESTATE_MAX_TOKENS,
+        expected_output_tokens=P3_RESTATE_EXPECTED_OUTPUT_TOKENS,
     ),
     llm.PhaseCall(
         phase="P3",
@@ -93,7 +101,7 @@ OMISSIONS_PLAN: tuple[llm.PhaseCall, ...] = (
         role="claim_judge",
         calls_per_unit=1,
         overhead_tokens=max(1, len(prompts.OMISSIONS_PROMPT) // 4),
-        expected_output_tokens=P3_OMISSIONS_MAX_TOKENS,
+        expected_output_tokens=P3_OMISSIONS_EXPECTED_OUTPUT_TOKENS,
     ),
 )
 

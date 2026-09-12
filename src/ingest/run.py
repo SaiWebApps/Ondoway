@@ -18,7 +18,8 @@ what those modules deliberately left to the runner.
   cannot take a new-shape record, and the validator would refuse the
   mixed file at P7 anyway, so the job stops before any call. Before P1
   the cost estimate — `P1_PLAN`…`P6_PLAN` over the unit texts, a
-  ceiling — is the job's first event; it arms the mock and the live
+  projection; `cap_bound_usd` is the true limit — is the job's first
+  event; it arms the mock and the live
   client refuses to run without it.
 - P1 decompose, P2 group per unit.
 - P3 judge claims per story, then the unit's omission check; an
@@ -55,13 +56,20 @@ from typing import Any
 
 from scripts import beats_io
 from src.ingest import judge_claims, judge_narration, llm, merge, model, narrate
-from src.ingest.decompose import P1_PLAN, ClaimDraft, UnitHeld, decompose
-from src.ingest.group import P2_PLAN, Enrichment, Story, group
+from src.ingest.decompose import P1_MAX_TOKENS, P1_PLAN, ClaimDraft, UnitHeld, decompose
+from src.ingest.group import P2_MAX_TOKENS, P2_PLAN, Enrichment, Story, group
 from src.ingest.jobs import IngestJob, IngestJobStore
-from src.ingest.judge_claims import OMISSIONS_PLAN, P3_PLAN, JudgedClaim
-from src.ingest.judge_narration import P5_PLAN, JudgedNarration
-from src.ingest.merge import P6_PLAN
-from src.ingest.narrate import P4_PLAN, BeatHeld, NarrationDraft
+from src.ingest.judge_claims import (
+    OMISSIONS_PLAN,
+    P3_MAX_TOKENS,
+    P3_OMISSIONS_MAX_TOKENS,
+    P3_PLAN,
+    P3_RESTATE_MAX_TOKENS,
+    JudgedClaim,
+)
+from src.ingest.judge_narration import P5_MAX_TOKENS, P5_PLAN, JudgedNarration
+from src.ingest.merge import P6_MAX_TOKENS, P6_PLAN
+from src.ingest.narrate import P4_MAX_TOKENS, P4_PLAN, BeatHeld, NarrationDraft
 from src.ingest.unit import Unit, load_unit
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -70,7 +78,7 @@ DEFAULT_DATA_ROOT = REPO_ROOT / "data"
 #: Every phase's plan with the FAN-OUT its rows are priced by (the phase
 #: modules document it: P3 per claim, P4/P6 per story, P5 per sentence,
 #: P1/P2/omissions per unit). Slice 9's judge caught the runner pricing
-#: every row as one call per unit, which made the "ceiling" a floor.
+#: every row as one call per unit, which made the printed figure a floor.
 PLAN_ROWS: tuple[tuple[llm.PhaseCall, str], ...] = (
     *((row, "unit") for row in P1_PLAN),
     *((row, "unit") for row in P2_PLAN),
@@ -84,10 +92,55 @@ PLAN_ROWS: tuple[tuple[llm.PhaseCall, str], ...] = (
 #: The flat plan, for callers that only need the rows.
 PLAN: tuple[llm.PhaseCall, ...] = tuple(row for row, _kind in PLAN_ROWS)
 
+#: The max_tokens each plan row's call actually asks for, aligned with
+#: PLAN/PLAN_ROWS by index. A row prices its EXPECTED output (what a run
+#: is projected to produce); the cap is the headroom the call reserves
+#: for thinking plus the answer, and it is what bounds spend.
+CAPS: tuple[int, ...] = (
+    *(P1_MAX_TOKENS for _row in P1_PLAN),
+    *(P2_MAX_TOKENS for _row in P2_PLAN),
+    P3_MAX_TOKENS,
+    P3_RESTATE_MAX_TOKENS,
+    P3_MAX_TOKENS,
+    *(P3_OMISSIONS_MAX_TOKENS for _row in OMISSIONS_PLAN),
+    *(P4_MAX_TOKENS for _row in P4_PLAN),
+    P5_MAX_TOKENS,
+    P4_MAX_TOKENS,
+    P5_MAX_TOKENS,
+    *(P6_MAX_TOKENS for _row in P6_PLAN),
+)
+
+
+def _price_rows(rows: Sequence[llm.PhaseCost], output_tokens_of) -> float:
+    """Price rows at the estimate's own table and batch discount, with the
+    output tokens `output_tokens_of(row)` says."""
+    total = 0.0
+    for row in rows:
+        price_in, price_out = llm.PRICES_USD_PER_MTOK[row.model_id]
+        usd = (row.input_tokens / 1_000_000) * price_in
+        usd += (output_tokens_of(row) / 1_000_000) * price_out
+        if row.batch:
+            usd *= llm.BATCH_DISCOUNT
+        total += usd
+    return total
+
+
+def projection_usd(estimate: llm.CostEstimate) -> float:
+    """What the job is projected to cost: every row at its expected output."""
+    return _price_rows(estimate.rows, lambda row: row.output_tokens)
+
+
+def cap_bound_usd(estimate: llm.CostEstimate) -> float:
+    """The true upper limit: every row at the max_tokens its call asks
+    for. A run can legitimately bill past the projection; never past this."""
+    caps = dict(zip((id(row) for row in estimate.rows), CAPS, strict=True))
+    return _price_rows(estimate.rows, lambda row: row.calls * caps[id(row)])
+
+
 #: Which rows of PLAN (by index) are a phase's FIRST ask, as opposed to
 #: the re-ask rows every plan prices as if each item were refused once.
 #: The first-pass sum is the expected spend when nothing is refused; the
-#: whole plan is the ceiling.
+#: whole plan is the projection with every re-ask; CAPS bound it.
 FIRST_PASS: tuple[bool, ...] = tuple(
     index == 0
     for plan in (P1_PLAN, P2_PLAN, P3_PLAN, OMISSIONS_PLAN, P4_PLAN, P5_PLAN, P6_PLAN)
@@ -100,7 +153,7 @@ def fanout(unit: Unit) -> dict[str, int]:
     one claim per source sentence, one story per four claims (at least
     one), one narration sentence per claim. An ASSUMPTION the job log
     names, measured against the run's real call counts by the summary —
-    not a ceiling."""
+    not a bound."""
     n = max(1, len(judge_narration.sentences(unit.text)))
     return {"claims": n, "stories": max(1, n // 4), "sentences": n}
 
@@ -407,7 +460,7 @@ class _Run:
         return self.store.phase_output(self.job.id, phase)
 
     def arm(self, units: Sequence[Unit]) -> None:
-        """Print the job's cost estimate — the ceiling over every phase's
+        """Print the job's cost estimate — the projection over every phase's
         plan — as a job event, arming the client's estimate gate."""
         estimate = estimate_job(self.client, units)
         self.emit(

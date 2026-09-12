@@ -276,7 +276,7 @@ def test_claim_draft_and_unit_held_shapes():
 
 
 def test_p1_plan_rows_derive_from_the_real_prompt():
-    assert decompose.P1_MAX_TOKENS == 8000
+    assert decompose.P1_MAX_TOKENS == 64_000  # tests/test_ingest_output_caps.py sizes it
     assert isinstance(decompose.P1_PLAN, tuple)
     assert len(decompose.P1_PLAN) == 2
 
@@ -290,7 +290,7 @@ def test_p1_plan_rows_derive_from_the_real_prompt():
         assert row.calls_per_unit == 1
         assert row.overhead_tokens == expected_overhead
         assert row.overhead_tokens > 0
-        assert row.expected_output_tokens == decompose.P1_MAX_TOKENS
+        assert row.expected_output_tokens == decompose.P1_EXPECTED_OUTPUT_TOKENS
 
     events, sink = _sink_and_events()
     mock = llm.MockClient(sink)
@@ -752,3 +752,19 @@ def test_no_live_client_in_this_file():
                 assert forbidden_env_var not in sub.value, (
                     "this file must never read ANTHROPIC_API_KEY"
                 )
+
+
+def test_p1_asks_for_enough_output_to_decompose_a_whole_chunk():
+    """Job 1 of slice 9 (2026-09-12): the author's P1 answer for the Lonely
+    Planet Upper East Side chunk was truncated at the 8,000-token output
+    cap, the unit was held, and the paid job produced nothing. The
+    measured cause is thinking: the client sends no `thinking` parameter,
+    claude-opus-5 thinks by default, and the 8,000 tokens held 4,013 of
+    text and 3,987 of thinking (10,273 characters, 39 claims, 22% of the
+    chunk; measured with `make ingest-batch ARGS=--text-tokens`). The estimate's
+    own count of the chunk was 8,787 tokens; the provider billed 9,203
+    input tokens for the call. A whole chunk ~ 177 claims ~ 13.3k text
+    tokens plus thinking at the observed ~1.7x ~ 36k, so the floor is
+    64,000 (the API allows 128K); tests/test_ingest_output_caps.py carries
+    the arithmetic for every cap."""
+    assert decompose.P1_MAX_TOKENS >= 64_000

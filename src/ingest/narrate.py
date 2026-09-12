@@ -47,7 +47,11 @@ from src.ingest.group import Story
 from src.ingest.judge_claims import JudgedClaim
 
 #: Output tokens requested for one narration.
-P4_MAX_TOKENS: int = 2000
+P4_MAX_TOKENS: int = 16_000  # thinking-inclusive; tests/test_ingest_output_caps.py
+
+#: What the estimate prices per narration — a projection: ~150 words of
+#: prose plus thinking at ~1x (Opus).
+P4_EXPECTED_OUTPUT_TOKENS: int = 4_000
 
 #: Words a minute of narrated speech. The same 150 the tour engine's
 #: audio clock uses (`src.tour.routing.beat_spoken_seconds`'s fallback and
@@ -91,14 +95,14 @@ P4_PLAN: tuple[llm.PhaseCall, ...] = (
         role="author",
         calls_per_unit=1,
         overhead_tokens=max(1, len(prompts.NARRATE_PROMPT) // 4),
-        expected_output_tokens=P4_MAX_TOKENS,
+        expected_output_tokens=P4_EXPECTED_OUTPUT_TOKENS,
     ),
     llm.PhaseCall(
         phase="P4",
         role="author",
         calls_per_unit=1,
         overhead_tokens=max(1, len(prompts.NARRATE_REDO_PROMPT) // 4),
-        expected_output_tokens=P4_MAX_TOKENS,
+        expected_output_tokens=P4_EXPECTED_OUTPUT_TOKENS,
     ),
 )
 
