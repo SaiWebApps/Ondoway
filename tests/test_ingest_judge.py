@@ -505,3 +505,40 @@ def test_no_live_client_in_this_file():
                 assert forbidden_env_var not in sub.value, (
                     f"{forbidden_env_var!r} must not appear in this file"
                 )
+
+
+STRAIGHTENED_FINDING: dict = {
+    "fact": "Guggenheim's niece Peggy donated key surrealist works to the museum.",
+    "span": "key surrealist works donated by Guggenheim's niece Peggy",  # ASCII apostrophe
+}
+
+
+def test_omission_cited_with_straightened_quotes_is_grounded_to_the_units_own_text():
+    """The live judge straightens curly apostrophes when it copies a span,
+    and the 2026-09-12 live run threw two real omissions away for it. A
+    citation that differs from the passage only by typographic quotes,
+    dashes or whitespace is grounded (gates.locate_span) and the span
+    reported is the passage's OWN text — curly apostrophe and all — never
+    the judge's copy; a paraphrase is still discarded and logged."""
+    unit = _real_unit()
+    claims = [_draft(unit, "c01", ADDRESS_CLAIM), _draft(unit, "c02", COMPLETED_CLAIM)]
+    verbatim = "key surrealist works donated by Guggenheim\u2019s niece Peggy"
+    assert verbatim in " ".join(unit.text.split())
+    assert STRAIGHTENED_FINDING["span"] not in unit.text
+    answer = llm.MockAnswer(
+        text=json.dumps({"omitted": [STRAIGHTENED_FINDING, UNGROUNDED_FINDING]}),
+        model_id=RESPONSE_JUDGE_MODEL,
+    )
+    mock = _armed_mock({judge_claims.omissions_custom_id(unit): answer}, unit)
+    events, sink = _sink_and_events()
+
+    facts = judge_claims.omissions(unit, claims, mock, sink)
+
+    assert facts == [STRAIGHTENED_FINDING["fact"]]
+    assert (
+        "omissions_found",
+        {"unit_key": unit.key, "facts": [STRAIGHTENED_FINDING["fact"]], "spans": [verbatim]},
+    ) in events
+    assert [p["fact"] for kind, p in events if kind == "omission_ungrounded"] == [
+        UNGROUNDED_FINDING["fact"]
+    ]

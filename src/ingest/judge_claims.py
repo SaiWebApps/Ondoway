@@ -23,7 +23,13 @@ from pydantic import BaseModel, ConfigDict
 
 from src.ingest import llm, model, prompts
 from src.ingest.decompose import ClaimDraft, UnitHeld
-from src.ingest.gates import KIND_RESPONSE_VALUES, claim_gates, default_kind, span_in_unit
+from src.ingest.gates import (
+    KIND_RESPONSE_VALUES,
+    claim_gates,
+    default_kind,
+    locate_span,
+    span_in_unit,
+)
 from src.ingest.group import Story
 from src.ingest.unit import Unit
 
@@ -410,9 +416,12 @@ def omissions(
     """Facts the unit states that no claim carries, per the judge.
 
     One P3 batch call under `claim_judge` over the unit and its claims'
-    texts. Every finding must cite a span verbatim in the unit
-    (`gates.span_in_unit`): an ungrounded finding is discarded and logged
-    as `omission_ungrounded`, never returned — the judge may not invent an
+    texts. Every finding must cite a span the unit contains: located with
+    `gates.locate_span`, which forgives a judge that straightened the
+    passage's quotes or dashes and returns the passage's own text — so the
+    span reported is verbatim even when the citation was not; a finding no
+    fold locates (a paraphrase) is discarded and logged as
+    `omission_ungrounded`, never returned — the judge may not invent an
     omission any more than the author may invent a claim. Grounded facts
     are returned and emitted once as `omissions_found` with their spans
     (only when there are any). Transport failures and an unreadable answer hold the unit,
@@ -447,15 +456,18 @@ def omissions(
     facts: list[str] = []
     spans: list[str] = []
     for finding in findings:
-        reason = span_in_unit(finding["span"], unit.text)
-        if reason is not None:
+        located = locate_span(finding["span"], unit.text)
+        if located is None:
+            reason = span_in_unit(finding["span"], unit.text) or (
+                f"span_not_in_unit: {finding['span']!r} is not in the unit text"
+            )
             emit(
                 "omission_ungrounded",
                 {"unit_key": unit.key, "fact": finding["fact"], "reason": reason},
             )
             continue
         facts.append(finding["fact"])
-        spans.append(finding["span"])
+        spans.append(located)
     if facts:
         emit("omissions_found", {"unit_key": unit.key, "facts": list(facts), "spans": spans})
     return facts

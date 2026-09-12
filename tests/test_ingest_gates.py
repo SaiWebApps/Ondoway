@@ -466,3 +466,29 @@ def test_no_live_client_in_this_file():
                 assert forbidden_env_var not in sub.value, (
                     "this file must never read ANTHROPIC_API_KEY"
                 )
+
+
+def test_locate_span_folds_typographic_quotes_and_returns_the_unit_verbatim():
+    """A judge's citation straightened to ASCII quotes and dashes still
+    names the passage's span; locate_span finds it and returns the
+    passage's OWN text — whitespace-normalized as the strict gate compares,
+    typography intact — so what is stored stays verbatim. The strict gate is
+    untouched: span_in_unit still refuses the ASCII form. A paraphrase or an
+    empty citation locates nothing."""
+    cited = "key surrealist works donated by Guggenheim's niece Peggy"
+    verbatim = "key surrealist works donated by Guggenheim\u2019s niece Peggy"
+    assert verbatim in gates.normalize_ws(UNIT_TEXT) and cited not in UNIT_TEXT
+
+    assert gates.locate_span(cited, UNIT_TEXT) == verbatim
+    assert gates.locate_span(verbatim, UNIT_TEXT) == verbatim
+    assert gates.span_in_unit(cited, UNIT_TEXT) is not None
+
+    reflowed_ascii_dash = "completed in 1959 - after  both\nWright"
+    assert gates.locate_span(reflowed_ascii_dash, UNIT_TEXT) == (
+        "completed in 1959 \u2013 after both Wright"
+    )
+    assert gates.locate_span("neighbors who weren't all that excited", UNIT_TEXT) == (
+        "neighbors who weren\u2019t all that excited"
+    )
+    assert gates.locate_span("not in the passage at all", UNIT_TEXT) is None
+    assert gates.locate_span("", UNIT_TEXT) is None

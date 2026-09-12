@@ -109,6 +109,66 @@ def span_in_unit(span: str, unit_text: str) -> str | None:
     return f"span_not_in_unit: {span!r} is not in the unit text"
 
 
+#: Typographic characters a model straightens when it copies a span, and
+#: their ASCII forms. Folded ONLY while locating a citation (locate_span);
+#: the strict gate (span_in_unit) never folds them.
+_TYPOGRAPHY_FOLD = str.maketrans(
+    {
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201a": "'",
+        "\u201b": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\u201e": '"',
+        "\u2013": "-",
+        "\u2014": "-",
+        "\u2212": "-",
+    }
+)
+
+
+def _fold_for_locating(text: str) -> tuple[str, list[int]]:
+    """Fold typography to ASCII and collapse each whitespace run to one
+    space; return the folded text and, per folded character, the index of
+    the original character it came from (a run maps to its first)."""
+    out: list[str] = []
+    origin: list[int] = []
+    in_run = False
+    for index, char in enumerate(text):
+        if char.isspace():
+            if not in_run:
+                out.append(" ")
+                origin.append(index)
+                in_run = True
+            continue
+        in_run = False
+        out.append(char.translate(_TYPOGRAPHY_FOLD))
+        origin.append(index)
+    return "".join(out), origin
+
+
+def locate_span(span: str, unit_text: str) -> str | None:
+    """Find a judge's citation in the unit even when the judge straightened
+    the passage's quotes or dashes, and return the passage's OWN text for
+    it — whitespace-normalized exactly as `span_in_unit` compares, typography
+    intact — so what a caller stores is still verbatim. None when no fold
+    finds it (a paraphrase, or an empty citation). Exists because the live
+    omission judge of 2026-09-12 cited "Guggenheim's" for the passage's
+    "Guggenheim\u2019s" and two real findings were discarded for it.
+    """
+    folded_span, _ = _fold_for_locating(span)
+    folded_span = folded_span.strip()
+    if not folded_span:
+        return None
+    folded_unit, origin = _fold_for_locating(unit_text)
+    start = folded_unit.find(folded_span)
+    if start < 0:
+        return None
+    last = start + len(folded_span) - 1
+    return normalize_ws(unit_text[origin[start] : origin[last] + 1])
+
+
 def lift(text: str, unit_text: str) -> str | None:
     """A claim must not copy `LIFT_RUN_LENGTH`+ consecutive unit words.
 
