@@ -780,3 +780,16 @@ def test_no_live_client_in_this_file():
                 assert forbidden_env_var not in sub.value, (
                     f"{forbidden_env_var!r} must not appear in this file"
                 )
+
+
+def test_every_book_manifest_names_its_publisher():
+    """Owner ruling 2026-09-12: every Books/*/*/manifest.json carries a
+    non-empty `publisher`, so the provenance-leak gate can catch "Lonely
+    Planet calls it" for every source, not only the fixed phrases. Parsing
+    each file also proves the manifests are still valid JSON."""
+    manifests = sorted((REPO_ROOT / "Books").glob("*/*/manifest.json"))
+    assert len(manifests) >= 15
+    for path in manifests:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        assert isinstance(manifest.get("publisher"), str) and manifest["publisher"].strip(), path
+        assert narrate.publishers_from_manifest(manifest), path

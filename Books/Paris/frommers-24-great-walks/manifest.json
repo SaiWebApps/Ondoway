@@ -1,6 +1,7 @@
 {
   "book_title": "Frommer's 24 Great Walks in Paris",
   "author": "Peter Caine, Oriel Caine",
+  "publisher": "Frommer's (Wiley)",
   "source_file": "Frommers 24 great walks in Paris (Caine, Peter, Caine, Oriel) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
   "edition": "2nd Edition, 2010",
   "extraction_mode": "pdftotext -raw (two-column layout — -raw preserves column reading order better than -layout)",
