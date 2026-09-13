@@ -793,3 +793,22 @@ def test_every_book_manifest_names_its_publisher():
         manifest = json.loads(path.read_text(encoding="utf-8"))
         assert isinstance(manifest.get("publisher"), str) and manifest["publisher"].strip(), path
         assert narrate.publishers_from_manifest(manifest), path
+
+
+def test_sentences_keep_a_single_initial_with_its_name():
+    """Slice 9's proof chunk (2026-09-12): the Asia Society narration was
+    held at P5 because "John D. Rockefeller III" was split at "D." into a
+    'sentence' the judge rightly called a name fragment. A lone capital
+    letter followed by a period is an initial, never a sentence end."""
+    text = "The Asia Society was founded in 1956 by John D. Rockefeller III. It sits on Park Ave."
+    assert judge_narration.sentences(text) == [
+        "The Asia Society was founded in 1956 by John D. Rockefeller III.",
+        "It sits on Park Ave.",
+    ]
+    # The accepted cost: a real one-letter word at a sentence end ("plan A.")
+    # is read as an initial and merges with the next sentence. Narration
+    # rarely ends a sentence on a lone capital; a lost split changes only the
+    # granularity P5 judges at, never the narration text (judge, 2026-09-12).
+    assert judge_narration.sentences("Wright chose plan A. Then he built it.") == [
+        "Wright chose plan A. Then he built it.",
+    ]

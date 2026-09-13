@@ -120,7 +120,8 @@ def test_without_yes_the_estimate_is_printed_and_nothing_runs(tmp_path, monkeypa
     out = capsys.readouterr().out
     assert rc == 2
     assert "estimated spend: $" in out and "(a projection:" in out  # never "ceiling"
-    assert "first-pass (no re-asks): $" in out  # the number the go decision reads
+    assert "first-pass (no re-asks): $" in out
+    assert "expected (re-asks at measured rates): $" in out  # the number the go decision reads
     assert "cap-bound (every row at its max_tokens): $" in out  # the true upper limit
     assert "ceiling" not in out
     assert "P1" in out and "P6" in out
@@ -163,7 +164,7 @@ def test_with_yes_the_job_commits_writes_its_log_and_prints_the_measurements(
 
     assert "status=committed" in out and "beats_written=1" in out
     assert "stories=1" in out and "merge_judged=0" in out and "held=0" in out
-    assert "skipped_no_beat=1" in out and "hold_rate=n/a" in out
+    assert "skipped_no_beat=1" in out and "new_place=0" in out and "hold_rate=n/a" in out
     assert "refused_attempt1=0" in out and "dropped=0" in out and "leak_gate_drops=0" in out
 
 
@@ -307,3 +308,86 @@ def test_client_events_reach_the_job_log_once_the_job_exists(tmp_path, capsys):
     logged = [json.loads(line) for line in log_text.splitlines()]
     assert [e["message"] for e in logged] == ["batch_submitted", "batch_polling"]
     assert logged[0]["data"]["batch_id"] == "msgbatch_1"
+
+
+class _UsageOf:
+    def __init__(self, i: int, o: int) -> None:
+        self.input_tokens, self.output_tokens = i, o
+        self.cache_creation_input_tokens = self.cache_read_input_tokens = 0
+
+
+class _CompletionOf:
+    model_id = "claude-opus-5-20260601"
+
+    def __init__(self, i: int, o: int) -> None:
+        self.usage = _UsageOf(i, o)
+
+
+class _PhasedClient:
+    def __init__(self) -> None:
+        self.roles = {"author": "claude-opus-5", "claim_judge": "claude-haiku-4-5"}
+
+    def complete(self, role, prompt, schema, *, phase, max_tokens):
+        return _CompletionOf(500, 900)
+
+    def complete_batch(self, role, prompts, schema, *, phase, max_tokens):
+        return {cid: _CompletionOf(6000, 90) for cid, _p in prompts}
+
+
+def test_the_meter_keeps_tokens_per_phase(capsys):
+    """Job 1's summary had only total tokens; the sync phases (P2, P4) were
+    unrecoverable afterwards because only batches can be read back. The
+    meter keeps input and output tokens per phase and the calls line
+    prints them, so every phase's real per-call shape is on the console
+    and in the log after any run."""
+    meter = ingest_job._CountingClient(_PhasedClient())
+    meter.complete("author", "p", None, phase="P4", max_tokens=1)
+    meter.complete("author", "p", None, phase="P4", max_tokens=1)
+    meter.complete_batch("claim_judge", [("a", "p"), ("b", "q")], None, phase="P3", max_tokens=1)
+
+    assert meter.phase_tokens == {"P4": {"in": 1000, "out": 1800}, "P3": {"in": 12000, "out": 180}}
+    zero_rows = [
+        ingest_job.llm.PhaseCost(
+            phase=call.phase, role=call.role, model_id="claude-opus-5", batch=False,
+            calls=0, input_tokens=0, output_tokens=0, usd=0.0,
+        )
+        for call in ingest_job.run.PLAN
+    ]
+    estimate = ingest_job.llm.CostEstimate(
+        units=1, rows=zero_rows, total_input_tokens=0, total_output_tokens=0, total_usd=0.0,
+        prices_cached_on="x",
+    )
+    lines = ingest_job._spend_lines(estimate, meter)
+    calls_line = next(line for line in lines if line.startswith("calls:"))
+    assert "P4 est=0 act=2 in/call=500 out/call=900" in calls_line
+    assert "P3 est=0 act=2 in/call=6000 out/call=90" in calls_line
+
+
+def test_the_hold_rate_counts_only_stories_a_merge_actually_judged(tmp_path):
+    """Job 1's summary printed merge_judged=12 on a run whose P6 made zero
+    calls: the denominator was stories minus `merge_skipped`, and a story
+    at a NEW place skips the merge without that event. A story is judged
+    only when a merge decided it (`merge_decided`) or held it (`beat_held`
+    in P6); the rate is held over judged, and the stories that never
+    reached a merge are reported by why."""
+    store = ingest_job._PrintingStore(tmp_path / "jobs")
+    job = store.create(
+        city="new_york", source={"kind": "book", "chunk_dir": "x"}, as_of=2022,
+        rights_basis="owned_copy",
+    )
+    for slug in ("a", "b", "c"):
+        store.append_event(job.id, "info", "merge_skipped", data={"story_slug": slug})
+    store.append_event(job.id, "info", "merge_decided", data={"story_slug": "d", "story": "same"})
+    store.append_event(
+        job.id, "info", "beat_held", data={"story_slug": "e", "phase": "P6", "reason": "disagree"}
+    )
+    store.set_phase(job.id, "P6", {"new": ["a", "b", "c", "f", "g"], "applied": ["d"]})
+    store.set_phase(job.id, "P7", {"written": 6})
+    finished = store.get(job.id)
+
+    text = ingest_job.summary(finished, tmp_path / "x.jsonl")
+
+    assert (
+        "p6: stories=7 merge_judged=2 held=1 skipped_no_beat=3 new_place=2 hold_rate=0.50"
+        in text
+    )

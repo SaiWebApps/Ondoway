@@ -110,6 +110,32 @@ CAPS: tuple[int, ...] = (
     *(P6_MAX_TOKENS for _row in P6_PLAN),
 )
 
+#: How often each plan row's call actually fires, aligned with PLAN:
+#: first asks always; re-ask rows at the rate MEASURED on the first real
+#: job (2026-09-12, LP Upper East Side): the omission re-ask and the P2
+#: redo fired on the one unit (1.0); 9 of ~100 claims were refused once
+#: (0.09, restate + re-judge); 5 of 71 narration sentences (0.07, revise +
+#: re-judge); no narration failed its gate (P4 redo 0.0); the P6 re-ask
+#: is a stated projection (0.1) until a merge runs.
+REASK_RATES: tuple[float, ...] = (
+    1.0, 1.0,  # P1 first ask, omission re-ask
+    1.0, 1.0,  # P2 group, redo
+    1.0, 0.09, 0.09,  # P3 judge, restate, re-judge
+    1.0,  # omissions
+    1.0, 0.0,  # P4 narrate, redo
+    1.0, 0.07, 0.07,  # P5 judge, revise, re-judge
+    1.0, 0.1,  # P6 merge, re-ask
+)
+
+
+def expected_usd(estimate: llm.CostEstimate) -> float:
+    """What a run is expected to cost: every row at its expected output,
+    weighted by how often its call fires (REASK_RATES)."""
+    return sum(
+        row.usd * rate for row, rate in zip(estimate.rows, REASK_RATES, strict=True)
+    )
+
+
 
 def _price_rows(rows: Sequence[llm.PhaseCost], output_tokens_of) -> float:
     """Price rows at the estimate's own table and batch discount, with the
@@ -136,6 +162,34 @@ def cap_bound_usd(estimate: llm.CostEstimate) -> float:
     caps = dict(zip((id(row) for row in estimate.rows), CAPS, strict=True))
     return _price_rows(estimate.rows, lambda row: row.calls * caps[id(row)])
 
+#: The input each plan row's call actually carries, aligned with PLAN_ROWS:
+#: only the P1 and P3 prompts embed the passage (`unit`); P2 sees every
+#: claim of the unit (`claims_unit`); P4, P5 and P6 see one story's claims
+#: (`claims_story`). Measured on slice 9's first real job (2026-09-12): a
+#: P3 request carried 6,410 input tokens, a P5 request 418.
+INPUT_BASIS: tuple[str, ...] = (
+    *("unit" for _row in P1_PLAN),
+    *("claims_unit" for _row in P2_PLAN),
+    "unit",  # P3 judge
+    "unit",  # P3 restate (the author sees the passage)
+    "unit",  # P3 re-judge
+    *("unit" for _row in OMISSIONS_PLAN),
+    *("claims_story" for _row in P4_PLAN),
+    *("claims_story" for _row in P5_PLAN),
+    *("claims_story" for _row in P6_PLAN),
+)
+
+#: Measured 2026-09-12 on the Lonely Planet Upper East Side chunk: 82
+#: claims from 130 source sentences (0.63 per sentence), 55 committed
+#: claims in 20 stories (~3 per story, stories = claims // 4), 71
+#: narration sentences judged for 55 claims (1.3 per claim), ~70 input
+#: tokens per claim as P2/P4/P5 see it (a P5 request was 418 tokens with
+#: its prompt).
+CLAIMS_PER_SENTENCE: float = 0.63
+CLAIMS_PER_STORY: int = 3
+NARRATION_SENTENCES_PER_CLAIM: float = 1.3
+CLAIM_TOKENS: int = 70
+
 
 #: Which rows of PLAN (by index) are a phase's FIRST ask, as opposed to
 #: the re-ask rows every plan prices as if each item were refused once.
@@ -149,13 +203,18 @@ FIRST_PASS: tuple[bool, ...] = tuple(
 
 
 def fanout(unit: Unit) -> dict[str, int]:
-    """The stated fan-out a unit is priced by, from its own sentence count:
-    one claim per source sentence, one story per four claims (at least
-    one), one narration sentence per claim. An ASSUMPTION the job log
-    names, measured against the run's real call counts by the summary —
-    not a bound."""
+    """The fan-out a unit is priced by, from its own sentence count and the
+    ratios measured on the first real job (CLAIMS_PER_SENTENCE,
+    NARRATION_SENTENCES_PER_CLAIM, stories = claims // 4). Named in the
+    cost_estimate event, measured again by every run's summary — a
+    projection, not a bound."""
     n = max(1, len(judge_narration.sentences(unit.text)))
-    return {"claims": n, "stories": max(1, n // 4), "sentences": n}
+    claims = max(1, round(n * CLAIMS_PER_SENTENCE))
+    return {
+        "claims": claims,
+        "stories": max(1, claims // 4),
+        "sentences": max(1, round(claims * NARRATION_SENTENCES_PER_CLAIM)),
+    }
 
 
 def _scaled_plan(fan: dict[str, int]) -> list[llm.PhaseCall]:
@@ -201,12 +260,51 @@ def _sum_estimates(parts: Sequence[llm.CostEstimate]) -> llm.CostEstimate:
 
 
 def estimate_job(client: llm.ModelClient, units: Sequence[Unit]) -> llm.CostEstimate:
-    """Price the whole job: each unit under its own fan-out, every call
-    carrying the unit's text (a P3 call carries the whole passage), summed.
-    Arms the client's estimate gate (one `client.estimate` per unit)."""
-    parts = [client.estimate([unit.text], _scaled_plan(fanout(unit))) for unit in units]
-    if not parts:
+    """Price the whole job: each unit under its own fan-out, every row on
+    the input its call actually carries (INPUT_BASIS), summed. The
+    `unit`-basis rows are priced by the client over the unit's real token
+    count (which also arms the client's estimate gate, one `estimate` per
+    unit); the claims-basis rows are priced here over the measured claim
+    sizes, at the same table and batch discount."""
+    if not units:
         return client.estimate([], list(PLAN))
+    parts = []
+    for unit in units:
+        fan = fanout(unit)
+        priced = client.estimate([unit.text], _scaled_plan(fan))
+        rows = []
+        for row, call, basis in zip(priced.rows, PLAN, INPUT_BASIS, strict=True):
+            if basis == "unit":
+                rows.append(row)
+                continue
+            basis_tokens = (
+                fan["claims"] * CLAIM_TOKENS
+                if basis == "claims_unit"
+                else CLAIMS_PER_STORY * CLAIM_TOKENS
+            )
+            input_tokens = row.calls * (basis_tokens + call.overhead_tokens)
+            price_in, price_out = llm.PRICES_USD_PER_MTOK[row.model_id]
+            usd = (input_tokens / 1_000_000) * price_in
+            usd += (row.output_tokens / 1_000_000) * price_out
+            if row.batch:
+                usd *= llm.BATCH_DISCOUNT
+            rows.append(
+                llm.PhaseCost(
+                    phase=row.phase, role=row.role, model_id=row.model_id, batch=row.batch,
+                    calls=row.calls, input_tokens=input_tokens,
+                    output_tokens=row.output_tokens, usd=usd,
+                )
+            )
+        parts.append(
+            llm.CostEstimate(
+                units=1,
+                rows=rows,
+                total_input_tokens=sum(r.input_tokens for r in rows),
+                total_output_tokens=sum(r.output_tokens for r in rows),
+                total_usd=sum(r.usd for r in rows),
+                prices_cached_on=priced.prices_cached_on,
+            )
+        )
     return _sum_estimates(parts)
 
 #: Manifest fields P0 requires (D12); as_of and rights basis come from the job.

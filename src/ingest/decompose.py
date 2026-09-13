@@ -101,9 +101,10 @@ from src.ingest.unit import Unit
 #: holds the floor; P1_EXPECTED_OUTPUT_TOKENS is what the estimate prices.
 P1_MAX_TOKENS: int = 64_000
 
-#: What the estimate prices per P1 call: the MEASURED projection (thinking
-#: included) for a whole chunk, not the cap.
-P1_EXPECTED_OUTPUT_TOKENS: int = 36_000
+#: What the estimate prices per P1 call: MEASURED on the first real job
+#: (2026-09-12, the whole Upper East Side chunk: 5,846 text + 3,110
+#: thinking = 8,956 output tokens for 82 claims), not the cap.
+P1_EXPECTED_OUTPUT_TOKENS: int = 9_000
 
 #: The exact keys `prompts.P1_RESPONSE_SCHEMA` allows on one claim item.
 _REQUIRED_ITEM_KEYS: frozenset[str] = frozenset({"text", "kind", "span"})

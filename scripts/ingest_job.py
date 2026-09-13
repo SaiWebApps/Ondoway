@@ -85,6 +85,7 @@ def _print_estimate(estimate: llm.CostEstimate) -> None:
     print(f"estimated spend: ${estimate.total_usd:.4f} (a projection: every row at its expected "
           f"output; prices of {estimate.prices_cached_on}; {estimate.units} unit(s))")
     print(f"first-pass (no re-asks): ${_first_pass_usd(estimate):.4f}")
+    print(f"expected (re-asks at measured rates): ${run.expected_usd(estimate):.4f}")
     print(f"cap-bound (every row at its max_tokens): ${run.cap_bound_usd(estimate):.4f}")
     for row in estimate.rows:
         per_call = row.input_tokens // row.calls if row.calls else 0
@@ -106,6 +107,8 @@ class _CountingClient:
         self.calls: dict[str, int] = {}
         self.usd: float = 0.0
         self.tokens: dict[str, int] = {"input": 0, "output": 0}
+        #: Per phase, so the sync phases (never recoverable from a batch) are measured too.
+        self.phase_tokens: dict[str, dict[str, int]] = {}
         #: Calls the client raised on (truncated, empty, transport): billed,
         #: but their usage never reached the meter — spend is a lower bound.
         self.unmetered: dict[str, int] = {}
@@ -137,6 +140,9 @@ class _CountingClient:
         self.usd += usd
         self.tokens["input"] += in_tokens
         self.tokens["output"] += usage.output_tokens
+        per_phase = self.phase_tokens.setdefault(phase, {"in": 0, "out": 0})
+        per_phase["in"] += in_tokens
+        per_phase["out"] += usage.output_tokens
 
     def count_tokens(self, model_id: str, text: str) -> int:
         return self._inner.count_tokens(model_id, text)
@@ -184,8 +190,16 @@ def _spend_lines(estimate: llm.CostEstimate, meter: _CountingClient) -> list[str
         est_calls[row.phase] = est_calls.get(row.phase, 0) + row.calls
     phases = sorted(set(est_calls) | set(meter.calls))
     ratio = f"{meter.usd / estimate.total_usd:.2f}" if estimate.total_usd else "n/a"
+    def per_call(phase: str) -> str:
+        made = meter.calls.get(phase, 0)
+        toks = meter.phase_tokens.get(phase)
+        if not made or toks is None:
+            return ""
+        return f" in/call={toks['in'] // made} out/call={toks['out'] // made}"
+
     return [
         f"spend: projected=${estimate.total_usd:.4f} first_pass=${first_pass:.4f} "
+        f"expected=${run.expected_usd(estimate):.4f} "
         f"cap_bound=${run.cap_bound_usd(estimate):.4f} "
         f"actual=${meter.usd:.4f} actual/projected={ratio} "
         f"tokens_in={meter.tokens['input']} tokens_out={meter.tokens['output']}"
@@ -197,7 +211,8 @@ def _spend_lines(estimate: llm.CostEstimate, meter: _CountingClient) -> list[str
         ),
         "calls: "
         + " | ".join(
-            f"{p} est={est_calls.get(p, 0)} act={meter.calls.get(p, 0)}" for p in phases
+            f"{p} est={est_calls.get(p, 0)} act={meter.calls.get(p, 0)}{per_call(p)}"
+            for p in phases
         ),
     ]
 
@@ -240,8 +255,13 @@ def summary(snap: jobs.IngestJob, log_path: Path) -> str:
     held = [d for m, d in events if m == "beat_held"]
     held_p6 = [d for d in held if d.get("phase") == "P6"]
     skipped = sum(1 for m, _d in events if m == "merge_skipped")
+    decided = sum(1 for m, _d in events if m == "merge_decided")
     stories = len(p6.get("new", [])) + len(p6.get("applied", [])) + len(held_p6)
-    judged = stories - skipped
+    # A story is judged only when a merge decided or held it; a story at a
+    # NEW place skips the merge without a merge_skipped event (job 1 printed
+    # merge_judged=12 on a run whose P6 made zero calls).
+    judged = decided + len(held_p6)
+    new_place = max(0, stories - skipped - judged)
     rate = f"{len(held_p6) / judged:.2f}" if judged > 0 else "n/a"
     refused1 = [d for m, d in events if m == "claim_refused" and d.get("attempt") == 1]
     dropped = [d for m, d in events if m == "claim_dropped"]
@@ -250,7 +270,7 @@ def summary(snap: jobs.IngestJob, log_path: Path) -> str:
     lines = [
         f"summary: status={snap.status} beats_written={written} job_log={log_path}",
         f"p6: stories={stories} merge_judged={judged} held={len(held_p6)} "
-        f"skipped_no_beat={skipped} hold_rate={rate}",
+        f"skipped_no_beat={skipped} new_place={new_place} hold_rate={rate}",
         "holds (beat_held): " + ("none" if not held else ""),
         *(f"  [{d.get('phase')}] {d.get('story_slug')}: {d.get('reason')}" for d in held),
         f"claims: refused_attempt1={len(refused1)} dropped={len(dropped)} "

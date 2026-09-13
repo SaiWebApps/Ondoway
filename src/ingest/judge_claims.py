@@ -41,7 +41,7 @@ P3_RESTATE_MAX_TOKENS: int = 8_000  # thinking-inclusive; tests/test_ingest_outp
 
 #: What the estimate prices per restate — a projection: one claim plus
 #: thinking at ~1x (Opus).
-P3_RESTATE_EXPECTED_OUTPUT_TOKENS: int = 2_000
+P3_RESTATE_EXPECTED_OUTPUT_TOKENS: int = 2_300  # measured: ~2,255 per restate on job 1
 
 #: Output tokens requested for one unit's omission findings.
 P3_OMISSIONS_MAX_TOKENS: int = 8_000  # a whole passage's uncarried facts; test_ingest_output_caps

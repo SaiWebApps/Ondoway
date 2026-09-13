@@ -277,8 +277,10 @@ def test_place_resolves_exactly_or_is_flagged_new_poi():
     )
 
     # No prefix/fuzzy match: a bare substring of the canonical name is a
-    # new_poi candidate, returned as given.
-    assert gates.resolve_place("Guggenheim", pois) == ("Guggenheim", True)
+    # new_poi candidate, returned as given. ("Guggenheim" alone resolves only
+    # because "The Guggenheim" is a listed variation and a leading article is
+    # ignored — slice 9; "Guggenheim Museum" is a substring of nothing listed.)
+    assert gates.resolve_place("Guggenheim Museum", pois) == ("Guggenheim Museum", True)
 
     # No pois at all -> always a new_poi candidate.
     assert gates.resolve_place("Neue Galerie", []) == ("Neue Galerie", True)
@@ -492,3 +494,32 @@ def test_locate_span_folds_typographic_quotes_and_returns_the_unit_verbatim():
     )
     assert gates.locate_span("not in the passage at all", UNIT_TEXT) is None
     assert gates.locate_span("", UNIT_TEXT) is None
+
+
+def test_resolve_place_ignores_a_leading_definite_article_and_nothing_else():
+    """Slice 9's proof chunk (2026-09-12): 12 of 20 stories were held as
+    `new_poi` because the author wrote "The Metropolitan Museum of Art"
+    and "The Frick Collection" where poi-raw.json says "Metropolitan
+    Museum of Art" and "Frick Collection" — and "Jewish Museum" where the
+    file says "The Jewish Museum". A leading "the" is not a name; it is
+    ignored on both sides — so "Guggenheim" now matches the LISTED alias
+    "The Guggenheim". Nothing else loosens: PO Risk 1 still holds (a bare
+    substring of the canonical name, "Guggenheim Museum", is new), and a genuinely absent
+    place (Met Breuer) is still new."""
+    pois = [
+        {"name": "Frick Collection", "name_variations": [], "parent_poi": None},
+        {"name": "The Jewish Museum", "name_variations": [], "parent_poi": None},
+        {
+            "name": "Solomon R. Guggenheim Museum",
+            "name_variations": ["The Guggenheim"],
+            "parent_poi": None,
+        },
+    ]
+    assert gates.resolve_place("The Frick Collection", pois) == ("Frick Collection", False)
+    assert gates.resolve_place("the  frick collection", pois) == ("Frick Collection", False)
+    assert gates.resolve_place("Jewish Museum", pois) == ("The Jewish Museum", False)
+    assert gates.resolve_place("The Guggenheim", pois) == ("Solomon R. Guggenheim Museum", False)
+    assert gates.resolve_place("Guggenheim", pois) == ("Solomon R. Guggenheim Museum", False)
+    assert gates.resolve_place("Guggenheim Museum", pois) == ("Guggenheim Museum", True)
+    assert gates.resolve_place("Met Breuer", pois) == ("Met Breuer", True)
+    assert gates.resolve_place("Theatre District", pois) == ("Theatre District", True)  # no article

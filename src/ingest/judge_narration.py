@@ -117,7 +117,11 @@ def parse_sentence_verdict(text: str) -> dict | None:
 
 def _ends_with_abbreviation(piece: str) -> bool:
     last = piece.split()[-1] if piece.split() else ""
-    return last.endswith(".") and last[:-1].lower() in _ABBREVIATIONS
+    if not last.endswith("."):
+        return False
+    stem = last[:-1]
+    # "John D. Rockefeller": a lone capital is an initial, never a sentence end.
+    return stem.lower() in _ABBREVIATIONS or (len(stem) == 1 and stem.isupper())
 
 
 def sentences(text: str) -> list[str]:

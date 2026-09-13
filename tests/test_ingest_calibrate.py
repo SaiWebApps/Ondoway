@@ -381,4 +381,4 @@ def test_a_merge_judge_the_signature_contradicts_is_held_and_counts_as_missed():
     clean = calibrate.run(fixture, REPO_ROOT / "Books", client="mock")
     by_class = {row.defect_class: row for row in clean.rows}
     assert by_class["contested_value"].note == "n01 contested c01"
-    assert by_class["superseded_belief"].note == "n01 supersedes c02"
+    assert by_class["superseded_belief"].note == "n01 supersedes c01"

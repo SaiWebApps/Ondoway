@@ -97,3 +97,40 @@ def test_text_tokens_split_the_answer_from_the_thinking(tmp_path, monkeypatch, c
     assert "text_tokens=2900 nontext_tokens=5100" in out
     saved = json.loads((tmp_path / "msgbatch_test.json").read_text(encoding="utf-8"))
     assert saved["u-a1"]["text_tokens"] == 2900
+
+
+def test_a_job_log_yields_per_phase_usage_and_cost(tmp_path, monkeypatch, capsys):
+    """Job 1's summary carried only total tokens, so nothing could say what
+    each phase actually cost — the numbers the next estimate needs.
+    `--job-log` reads every `batch_submitted` in the job's JSONL, recovers
+    each batch ($0) and prints per phase: batches, requests, input and
+    output tokens, priced cost, and the mean input per request; and the
+    total. The per-request means are what replace the estimate's
+    projections."""
+    log = tmp_path / "job.jsonl"
+    lines = [
+        {"seq": 1, "kind": "info", "message": "batch_submitted",
+         "data": {"phase": "P1", "role": "author", "batch_id": "b1", "count": 1}},
+        {"seq": 2, "kind": "info", "message": "batch_submitted",
+         "data": {"phase": "P3", "role": "claim_judge", "batch_id": "b2", "count": 2}},
+        {"seq": 3, "kind": "info", "message": "batch_submitted",
+         "data": {"phase": "P3", "role": "claim_judge", "batch_id": "b3", "count": 1}},
+    ]
+    log.write_text("\n".join(json.dumps(line) for line in lines) + "\n", encoding="utf-8")
+    batches = {
+        "b1": {"a1": _result("a1", "{}", stop_reason="end_turn", out=1000)},
+        "b2": {"j1": _result("j1", "{}", stop_reason="end_turn", out=50),
+               "j2": _result("j2", "{}", stop_reason="end_turn", out=50)},
+        "b3": {"j3": _result("j3", "{}", stop_reason="end_turn", out=100)},
+    }
+    monkeypatch.setattr(ingest_batch, "collect_results", lambda batch_id, **_kw: batches[batch_id])
+
+    rc = ingest_batch.main(["--job-log", str(log), "--out", str(tmp_path)])
+
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "P1 batches=1 requests=1 in=8787 out=1000" in out and "in/request=8787" in out
+    assert "P3 batches=2 requests=3 in=26361 out=200" in out and "in/request=8787" in out
+    assert "total: batches=3 requests=4" in out and "usd=" in out
+    saved = json.loads((tmp_path / "job-phases.json").read_text(encoding="utf-8"))
+    assert saved["P3"]["requests"] == 3 and saved["P3"]["output_tokens"] == 200

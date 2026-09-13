@@ -55,7 +55,7 @@ def test_plan_rows_price_the_expected_output_not_the_cap():
     chunk -> ~36k for a whole chunk) and a stated projection elsewhere —
     while the call still asks for the cap. The Haiku verdict rows have no
     thinking and price their cap as before."""
-    assert decompose.P1_EXPECTED_OUTPUT_TOKENS == 36_000
+    assert decompose.P1_EXPECTED_OUTPUT_TOKENS == 9_000  # measured: 8,956 for the whole chunk
     assert decompose.P1_EXPECTED_OUTPUT_TOKENS < decompose.P1_MAX_TOKENS
     assert all(row.expected_output_tokens == decompose.P1_EXPECTED_OUTPUT_TOKENS
                for row in decompose.P1_PLAN)

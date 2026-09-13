@@ -51,7 +51,7 @@ P4_MAX_TOKENS: int = 16_000  # thinking-inclusive; tests/test_ingest_output_caps
 
 #: What the estimate prices per narration — a projection: ~150 words of
 #: prose plus thinking at ~1x (Opus).
-P4_EXPECTED_OUTPUT_TOKENS: int = 4_000
+P4_EXPECTED_OUTPUT_TOKENS: int = 1_000  # job 1: P2+P4 sync output 24,503 over 27 calls
 
 #: Words a minute of narrated speech. The same 150 the tour engine's
 #: audio clock uses (`src.tour.routing.beat_spoken_seconds`'s fallback and

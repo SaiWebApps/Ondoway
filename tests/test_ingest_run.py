@@ -571,9 +571,9 @@ def test_the_estimate_prices_the_per_claim_phases_by_fan_out(tmp_path):
     priced PER CLAIM (P3), PER STORY (P4, P6) and PER SENTENCE (P5), but the
     runner priced every row as ONE call per unit, so the printed "ceiling"
     was a floor — and slice 9's bar is "cost within 25% of the estimate".
-    `estimate_job` applies a stated fan-out per unit, derived from the
-    unit's own sentence count: one claim per source sentence, one story
-    per four claims (at least one), one narration sentence per claim.
+    `estimate_job` applies a fan-out per unit from its own sentence count
+    and the ratios MEASURED on the first real job (0.63 claims per source
+    sentence, one story per four claims, 1.3 narration sentences per claim).
     Each P3 call carries the whole passage, so the per-call input stays the
     unit's text plus the prompt. The event payload names the fan-out so
     the run can be measured against it."""
@@ -591,14 +591,15 @@ def test_the_estimate_prices_the_per_claim_phases_by_fan_out(tmp_path):
         calls.setdefault((row.phase, row.role), []).append(row.calls)
     assert calls[("P1", "author")][0] == 1  # decompose: once per unit
     assert calls[("P2", "author")][0] == 1  # group: once per unit
-    assert calls[("P3", "claim_judge")][0] == 8  # one judge call per claim
-    assert calls[("P4", "author")][0] == 2  # one narration per story (8 // 4)
-    assert calls[("P5", "narration_judge")][0] == 8  # one judge call per sentence
-    assert calls[("P6", "merge_judge")][0] == 2  # one merge per story
+    assert calls[("P3", "claim_judge")][0] == 5  # one judge call per claim: round(8 x 0.63)
+    assert calls[("P4", "author")][0] == 1  # one narration per story (5 // 4)
+    # one judge call per narration sentence: round(5 x 1.3) = 6 (6.5 rounds to even)
+    assert calls[("P5", "narration_judge")][0] == 6
+    assert calls[("P6", "merge_judge")][0] == 1  # one merge per story
     p3 = next(r for r in estimate.rows if r.phase == "P3" and r.role == "claim_judge")
     words = len(eight.split())
-    assert p3.input_tokens >= 8 * words  # every call carries the passage
-    assert run.fanout(unit) == {"claims": 8, "stories": 2, "sentences": 8}
+    assert p3.input_tokens >= 5 * words  # every P3 call carries the passage
+    assert run.fanout(unit) == {"claims": 5, "stories": 1, "sentences": 6}
 
 
 def test_the_cap_bound_is_the_true_upper_limit_and_the_projection_sits_below_it(tmp_path):
@@ -639,6 +640,82 @@ def test_the_cap_bound_is_the_true_upper_limit_and_the_projection_sits_below_it(
     assert run.cap_bound_usd(at_cap) == pytest.approx(bound)
     # And a projection priced at the caps IS the bound (the two formulas agree).
     assert run.projection_usd(at_cap) == pytest.approx(bound)
+
+
+def test_only_the_passage_carrying_phases_are_priced_over_the_unit_text(tmp_path):
+    """Measured on slice 9's first real job: a P5 request carried 418 input
+    tokens, a P3 request 6,410 — because only the P1 and P3 prompts embed
+    the passage; P2, P4, P5 and P6 see claim texts. Pricing every row over
+    the unit text overstated the projection several times over. Rows are
+    priced on their INPUT BASIS: `unit` rows over the unit's real token
+    count; `claims_story` rows (P4, P5, P6) over a story's claims,
+    CLAIMS_PER_STORY x CLAIM_TOKENS; the `claims_unit` rows (P2) over every
+    claim of the unit, fan-out claims x CLAIM_TOKENS — measured constants,
+    plus each row's prompt overhead as before."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    unit = script_mod.unit(chunks)
+    eight = " ".join(f"Sentence number {i} states one fact about the place." for i in range(8))
+    unit = unit.model_copy(update={"text": eight})
+    _events, sink = _sink_and_events()
+    client = llm.MockClient(sink, count_tokens_fn=lambda _m, text: len(text.split()))
+
+    estimate = run.estimate_job(client, [unit])
+
+    words = len(eight.split())
+    by_index = list(zip(estimate.rows, run.PLAN, run.INPUT_BASIS, strict=True))
+    p1 = next(
+        (row, call) for row, call, basis in by_index if row.phase == "P1" and basis == "unit"
+    )
+    assert p1[0].input_tokens == words + p1[1].overhead_tokens
+    p5 = next((row, call) for row, call, basis in by_index if row.phase == "P5")
+    per_call = run.CLAIMS_PER_STORY * run.CLAIM_TOKENS + p5[1].overhead_tokens
+    assert p5[0].input_tokens == 6 * per_call
+    p2 = next((row, call) for row, call, basis in by_index if row.phase == "P2")
+    assert p2[0].input_tokens == 5 * run.CLAIM_TOKENS + p2[1].overhead_tokens
+    assert {b for b in run.INPUT_BASIS} == {"unit", "claims_unit", "claims_story"}
+    assert run.CLAIM_TOKENS == 70 and run.CLAIMS_PER_STORY == 3  # measured 2026-09-12
+
+
+def test_expected_prices_reask_rows_at_the_measured_rates(tmp_path):
+    """The first pass prices no re-ask; the projection prices every item as
+    refused once. Neither is what a run costs. `expected_usd` weights each
+    plan row by the rate its re-ask actually fired on the first real job
+    (REASK_RATES, aligned with PLAN): first asks at 1.0; the omission
+    re-ask and the P2 redo at 1.0 (they fired on the only unit); the P3
+    restate and re-judge at 0.09 (9 of about 100 claims refused once); the
+    P5 revise and re-judge at 0.07 (5 of 71 sentences); the P4 redo at 0.0
+    (no narration failed its gate); the P6 re-ask at 0.1, a stated
+    projection until a merge runs. So first-pass <= expected <= projection,
+    and the P3 restate row contributes exactly 0.09 of its price."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    client = llm.MockClient(sink, count_tokens_fn=lambda _m, text: len(text.split()))
+
+    estimate = run.estimate_job(client, [unit])
+
+    first_pass = sum(
+        r.usd for r, first in zip(estimate.rows, run.FIRST_PASS, strict=True) if first
+    )
+    expected = run.expected_usd(estimate)
+    assert first_pass < expected < estimate.total_usd
+    assert len(run.REASK_RATES) == len(estimate.rows)
+    assert all(
+        rate == 1.0
+        for rate, first in zip(run.REASK_RATES, run.FIRST_PASS, strict=True)
+        if first
+    )
+    restate_index = next(
+        i
+        for i, (call, first) in enumerate(zip(run.PLAN, run.FIRST_PASS, strict=True))
+        if call.phase == "P1" and call.role == "author" and not first and i > 3
+    )
+    assert run.REASK_RATES[restate_index] == 0.09
+    weighted = sum(
+        r.usd * rate for r, rate in zip(estimate.rows, run.REASK_RATES, strict=True)
+    )
+    assert expected == pytest.approx(weighted)
+
 
 
 def test_no_live_client_in_this_file():

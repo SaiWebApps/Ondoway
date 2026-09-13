@@ -128,7 +128,7 @@ P2_MAX_TOKENS: int = 64_000  # thinking-inclusive; unbatched, so a truncation is
 
 #: What the estimate prices per P2 call — a PROJECTION until a run
 #: measures it: ~44 stories x ~250 tokens of JSON plus thinking at ~1x.
-P2_EXPECTED_OUTPUT_TOKENS: int = 20_000
+P2_EXPECTED_OUTPUT_TOKENS: int = 1_500  # job 1: P2+P4 sync output 24,503 over 27 calls
 
 #: The exact keys `prompts.P2_RESPONSE_SCHEMA` allows on one story item,
 #: and on that story's nested `enrichment` object.

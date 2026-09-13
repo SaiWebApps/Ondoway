@@ -84,7 +84,7 @@
   },
   "_runs": {
     "mock": {
-      "recorded_at": "2026-09-12",
+      "recorded_at": "2026-09-13",
       "models": {
         "author": "claude-opus-5",
         "claim_judge": "claude-haiku-4-5",
@@ -102,7 +102,7 @@
         "merge_judge": "claude-sonnet-5"
       },
       "fixture": "fixtures/ingestion/defects.json",
-      "note": "owner's run via `make ingest-calibrate-live ARGS=\"--yes --update-baseline\"` on 2026-09-11; provenance stamped after the fact when the harness gained it (models from ROLE_MODEL at that time). Printed cost_estimate lines: P3 plan over 6 claims $0.091315 + omissions over 2 units $0.026048 = ceiling $0.1174; actual batches submitted: 3+2+1, 1, 3+2+2, 1. Precision (false_refusals/dropped) not measured by that run — the batch sizes imply one clean claim refused in each judged record and one restate dropped at a gate."
+      "note": "STALE: the fixture was re-seeded 2026-09-12 from the first real job's beats (slice 9); this block measured the OLD hand-written records and must be re-measured with `make ingest-calibrate-live ARGS=--yes --update-baseline` (owner runs, spends) before it is compared against. Original note: owner's run via `make ingest-calibrate-live ARGS=\"--yes --update-baseline\"` on 2026-09-11; provenance stamped after the fact when the harness gained it (models from ROLE_MODEL at that time). Printed cost_estimate lines: P3 plan over 6 claims $0.091315 + omissions over 2 units $0.026048 = ceiling $0.1174; actual batches submitted: 3+2+1, 1, 3+2+2, 1. Precision (false_refusals/dropped) not measured by that run — the batch sizes imply one clean claim refused in each judged record and one restate dropped at a gate."
     }
   }
 }

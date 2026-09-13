@@ -329,23 +329,31 @@ def claim_gates(text: str, span: str, unit_text: str) -> list[str]:
 def resolve_place(place: str, pois: Sequence[Mapping[str, object]]) -> tuple[str, bool]:
     """Resolve a claim's cited place to a POI's canonical name.
 
-    Exact match only — casefold + whitespace-normalized — against each
-    POI's `name` and `name_variations`. No prefix or fuzzy matching (PO
-    Risk 1: 'Guggenheim' alone must not match 'Solomon R. Guggenheim
-    Museum').
+    Exact match only — casefold + whitespace-normalized, a leading definite
+    article ignored on both sides (slice 9's proof chunk held 12 of 20
+    stories as new places over "The Frick Collection" vs "Frick Collection")
+    — against each POI's `name` and `name_variations`. No prefix or fuzzy
+    matching (PO Risk 1: 'Guggenheim' alone must not match 'Solomon R.
+    Guggenheim Museum').
 
     Returns `(poi['name'], False)` on a match against that POI's name or
     one of its variations. Returns `(place, True)` — the place as given,
     flagged `new_poi` — when no POI matches, including when `pois` is
     empty.
     """
-    normalized_place = normalize_ws(place).casefold()
+    normalized_place = _place_key(place)
     for poi in pois:
         candidates = [poi["name"], *poi.get("name_variations", [])]
         for candidate in candidates:
-            if normalize_ws(candidate).casefold() == normalized_place:
+            if _place_key(candidate) == normalized_place:
                 return poi["name"], False
     return place, True
+
+
+def _place_key(name: str) -> str:
+    """Casefold, whitespace-normalized, without a leading "the"."""
+    key = normalize_ws(name).casefold()
+    return key[4:] if key.startswith("the ") else key
 
 
 def every_claim_once(

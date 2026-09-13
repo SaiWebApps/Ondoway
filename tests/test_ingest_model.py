@@ -740,3 +740,22 @@ def test_attributed_quotation_is_exempt_from_lift():
     assert len(errors) == 1
     assert errors[0].startswith("NARRATION_LIFT")
     assert unattributed["beat_id"] in errors[0]
+
+
+def test_judge_is_author_sees_through_a_dated_model_id():
+    """Slice 9's adversary panel: the validator compared verdict.judge_model
+    to narration.author_model with plain equality, while the provider
+    reports DATED ids ('claude-opus-5-20260601') and the record's
+    author_model is the configured alias ('claude-opus-5'). A judge that IS
+    the author, reported with a date suffix, passed P7. The comparison
+    normalizes the suffix the way llm.same_model does."""
+    beat = minimal_beat()
+    beat["narration"]["author_model"] = "claude-opus-5"
+    beat["claims"][0]["verdict"]["judge_model"] = "claude-opus-5-20260601"
+    beat = stamp(beat)
+    errors = validate([beat])
+    assert any(e.startswith("JUDGE_IS_AUTHOR") for e in errors), errors
+
+    beat["claims"][0]["verdict"]["judge_model"] = "claude-haiku-4-5-20251001"
+    beat = stamp(beat)
+    assert not any(e.startswith("JUDGE_IS_AUTHOR") for e in validate([beat]))

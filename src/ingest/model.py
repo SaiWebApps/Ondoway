@@ -76,6 +76,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from scripts.verbatim import run_outside_quotation
+from src.ingest.llm import same_model
 from src.schema.definitions import TAGGABLE_LENSES
 
 CLAIM_KIND_VALUES = ("event", "state", "belief")
@@ -450,13 +451,13 @@ def _judge_independence_errors(label: str, beat: Beat) -> list[str]:
     author_model = beat.narration.author_model
 
     for claim in beat.claims:
-        if claim.verdict.judge_model == author_model:
+        if same_model(claim.verdict.judge_model, author_model):
             errors.append(
                 f"JUDGE_IS_AUTHOR {label}: claim {claim.claim_id} verdict.judge_model "
                 f"equals narration.author_model ({author_model!r})"
             )
 
-    if beat.narration.verdict.judge_model == author_model:
+    if same_model(beat.narration.verdict.judge_model, author_model):
         errors.append(
             f"JUDGE_IS_AUTHOR {label}: narration verdict.judge_model equals "
             f"narration.author_model ({author_model!r})"

@@ -68,6 +68,57 @@ def _price(model: str, in_tokens: int, out_tokens: int) -> float | None:
     return None
 
 
+def _phase_report(job_log: Path, out_dir: Path) -> int:
+    """Per-phase usage and cost for every batch a job log names ($0)."""
+    phases: dict[str, dict[str, Any]] = {}
+    for line in job_log.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        if row.get("message") != "batch_submitted":
+            continue
+        data = row["data"]
+        entry = phases.setdefault(
+            data["phase"],
+            {"batches": 0, "requests": 0, "input_tokens": 0, "output_tokens": 0, "usd": 0.0},
+        )
+        entry["batches"] += 1
+        for unit in collect_results(data["batch_id"]).values():
+            response = unit.response
+            if response is None:
+                continue
+            in_tokens = (
+                response.input_tokens
+                + response.cache_creation_input_tokens
+                + response.cache_read_input_tokens
+            )
+            entry["requests"] += 1
+            entry["input_tokens"] += in_tokens
+            entry["output_tokens"] += response.output_tokens
+            entry["usd"] += _price(response.model, in_tokens, response.output_tokens) or 0.0
+    total = {"batches": 0, "requests": 0, "input_tokens": 0, "output_tokens": 0, "usd": 0.0}
+    for phase in sorted(phases):
+        e = phases[phase]
+        per = e["input_tokens"] // e["requests"] if e["requests"] else 0
+        out_per = e["output_tokens"] // e["requests"] if e["requests"] else 0
+        e["input_per_request"], e["output_per_request"] = per, out_per
+        print(
+            f"{phase} batches={e['batches']} requests={e['requests']} in={e['input_tokens']} "
+            f"out={e['output_tokens']} usd={e['usd']:.4f} in/request={per} out/request={out_per}"
+        )
+        for key in total:
+            total[key] += e[key]
+    print(
+        f"total: batches={total['batches']} requests={total['requests']} "
+        f"in={total['input_tokens']} out={total['output_tokens']} usd={total['usd']:.4f}"
+    )
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / "job-phases.json"
+    path.write_text(json.dumps(phases, indent=2) + "\n", encoding="utf-8")
+    print(f"saved to {path}")
+    return 0
+
+
 def _live_count_tokens():
     """The provider's free count_tokens endpoint, under the author's
     configured model (the answer's own model id is dated and unpriced)."""
@@ -77,7 +128,10 @@ def _live_count_tokens():
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--batch", required=True, help="the msgbatch_... id")
+    parser.add_argument("--batch", help="the msgbatch_... id")
+    parser.add_argument(
+        "--job-log", type=Path, help="a job's JSONL: per-phase usage over every batch it names"
+    )
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument(
         "--text-tokens",
@@ -85,6 +139,10 @@ def main(argv: list[str] | None = None) -> int:
         help="count each answer's text with count_tokens ($0) so non-text (thinking) = out - text",
     )
     args = parser.parse_args(argv)
+    if bool(args.batch) == bool(args.job_log):
+        parser.error("give exactly one of --batch or --job-log")
+    if args.job_log:
+        return _phase_report(args.job_log, args.out)
     count_tokens = _live_count_tokens() if args.text_tokens else None
 
     results = collect_results(args.batch)
