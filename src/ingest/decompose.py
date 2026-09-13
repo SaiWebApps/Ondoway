@@ -87,7 +87,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict
 
 from src.ingest import llm, model, prompts
-from src.ingest.gates import KIND_RESPONSE_VALUES, claim_gates, default_kind
+from src.ingest.gates import KIND_RESPONSE_VALUES, claim_gates, default_kind, ground_span
 from src.ingest.unit import Unit
 
 #: Output tokens requested for a P1 call — both the first ask and the
@@ -352,6 +352,10 @@ def decompose(
             reasons = [reason]
             continue
 
+        # A citation that only straightened the passage's typography is stored
+        # as the passage's own text before grading, so it never spends the
+        # re-ask or drops a claim (gates.ground_span).
+        items = [{**item, "span": ground_span(item["span"], unit.text)} for item in items]
         graded = [(item, claim_gates(item["text"], item["span"], unit.text)) for item in items]
         failing = [(item, item_reasons) for item, item_reasons in graded if item_reasons]
 

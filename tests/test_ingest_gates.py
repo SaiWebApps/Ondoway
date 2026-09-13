@@ -496,6 +496,28 @@ def test_locate_span_folds_typographic_quotes_and_returns_the_unit_verbatim():
     assert gates.locate_span("", UNIT_TEXT) is None
 
 
+def test_ground_span_swaps_a_straightened_citation_for_the_passages_own_text():
+    """Slice 9 job 1 re-run (2026-09-13): 34 author claims were dropped as
+    span_not_in_unit, 32 of them only because the author's re-ask wrote
+    ASCII quotes for the passage's curly ones and one because the passage
+    breaks "mural-" across a line. ground_span returns the passage's own
+    text wherever locate_span finds the citation — so the strict gate then
+    passes on verbatim text — and the citation unchanged otherwise, so a
+    paraphrase is still refused by span_in_unit with the author's words."""
+    straightened = "key surrealist works donated by Guggenheim's niece Peggy"
+    grounded = gates.ground_span(straightened, UNIT_TEXT)
+    assert grounded == "key surrealist works donated by Guggenheim\u2019s niece Peggy"
+    assert gates.span_in_unit(grounded, UNIT_TEXT) is None
+
+    rejoined = gates.ground_span("at this elegant, mural-lined bar", UNIT_TEXT)
+    assert rejoined == "at this elegant, mural- lined bar"
+    assert gates.span_in_unit(rejoined, UNIT_TEXT) is None
+
+    paraphrase = "Peggy gave the museum its surrealist works"
+    assert gates.ground_span(paraphrase, UNIT_TEXT) == paraphrase
+    assert gates.span_in_unit(paraphrase, UNIT_TEXT) is not None
+
+
 def test_resolve_place_ignores_a_leading_definite_article_and_nothing_else():
     """Slice 9's proof chunk (2026-09-12): 12 of 20 stories were held as
     `new_poi` because the author wrote "The Metropolitan Museum of Art"

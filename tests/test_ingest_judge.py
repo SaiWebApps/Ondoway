@@ -324,6 +324,40 @@ def test_restated_claim_failing_the_gates_is_dropped_not_rejudged():
     assert dropped[0]["reason"].startswith("span_not_in_unit")
 
 
+def test_restated_claim_with_a_straightened_dash_is_grounded_and_rejudged():
+    """Slice 9 job 1 re-run (2026-09-13): restates that straightened the
+    passage's typography were dropped as span_not_in_unit. A restated
+    citation `gates.ground_span` locates is stored as the passage's own
+    text, passes the gates, and is judged in round two like any restate."""
+    unit = _real_unit()
+    fabricated = {**COMPLETED_CLAIM, "text": "The Guggenheim building was finished in 1961."}
+    draft = _draft(unit, "c02", fabricated)
+    ascii_dash = {
+        **COMPLETED_CLAIM,
+        "span": COMPLETED_CLAIM["span"].replace("–", "-"),  # noqa: RUF001
+    }
+    assert ascii_dash["span"] != COMPLETED_CLAIM["span"]
+    mock = _armed_mock(
+        {
+            judge_claims.judge_custom_id(unit, "c02", 1): _refused("the span says 1959"),
+            judge_claims.restate_custom_id(unit, "c02"): _restated(ascii_dash),
+            judge_claims.judge_custom_id(unit, "c02", 2): _entailed(kind="event"),
+        },
+        unit,
+    )
+    events, sink = _sink_and_events()
+
+    judged = judge_claims.judge_claims(_story(["c02"]), [draft], unit, mock, sink)
+
+    assert [kind for kind, _ in events if kind == "claim_dropped"] == []
+    assert mock.calls == [("claim_judge", "P3"), ("author", "P1"), ("claim_judge", "P3")]
+    assert len(judged) == 1
+    assert judged[0].draft.source.span == COMPLETED_CLAIM["span"]
+    assert judged[0].verdict.bound_to == model.bind(
+        COMPLETED_CLAIM["text"], COMPLETED_CLAIM["span"]
+    )
+
+
 def test_transport_failure_or_unreadable_answer_holds_the_unit_in_p3():
     """A batch failure, a truncated completion, an unreadable judge answer,
     or an unreadable restate all hold the unit (`unit_held`, then

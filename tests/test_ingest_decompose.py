@@ -588,6 +588,30 @@ def test_second_refusal_drops_and_never_asks_a_third_time():
         assert quoted in second_prompts[0][1]
 
 
+def test_a_span_with_straightened_quotes_is_grounded_not_refused():
+    """Slice 9 job 1 re-run (2026-09-13): the author's re-asks wrote
+    "Guggenheim's" for the passage's "Guggenheim\u2019s" and the strict span
+    gate dropped the claim. A citation `gates.ground_span` locates is stored
+    as the passage's own text before grading, on any attempt, so it passes
+    in one call and never spends the unit's single re-ask on quote style."""
+    unit = _real_unit()
+    straightened = {
+        "text": "Solomon Guggenheim's niece Peggy donated key surrealist works to the Guggenheim.",
+        "kind": "event",
+        "span": "key surrealist works donated by Guggenheim's niece Peggy",
+    }
+    mock = _armed_mock({unit.custom_id(1): _answer([straightened])})
+    events, sink = _sink_and_events()
+
+    result = decompose.decompose(unit, mock, events=sink)
+
+    assert mock.calls == [("author", "P1")]
+    assert events == []
+    assert [draft.source.span for draft in result] == [
+        "key surrealist works donated by Guggenheim\u2019s niece Peggy"
+    ]
+
+
 def test_unreadable_answer_is_refused_then_held():
     """AC-37: an unreadable answer is a whole-answer refusal; twice
     unreadable holds the unit, and never a third call."""

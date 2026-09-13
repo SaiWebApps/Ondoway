@@ -95,8 +95,10 @@ def span_in_unit(span: str, unit_text: str) -> str | None:
     Whitespace-normalized on both sides (a span reflowed across a line
     break is still the same span) but exact otherwise: case, punctuation
     and dashes must match the unit byte-for-byte, because this gate proves
-    the span was actually quoted from the passage, not paraphrased from
-    it.
+    the STORED span is the passage's own text, not a paraphrase of it. An
+    author's citation that only straightened typography is first swapped for
+    the passage's text by `ground_span` (decompose, restate), so passing here
+    does not prove the author typed it that way.
 
     Returns None when the (normalized) span is found in the (normalized)
     unit text; otherwise a reason starting with `span_not_in_unit` that
@@ -111,8 +113,9 @@ def span_in_unit(span: str, unit_text: str) -> str | None:
 
 
 #: Typographic characters a model straightens when it copies a span, and
-#: their ASCII forms. Folded ONLY while locating a citation (locate_span);
-#: the strict gate (span_in_unit) never folds them.
+#: their ASCII forms. Folded ONLY while locating a citation (locate_span, for a
+#: judge's omission or an author's claim via ground_span); the strict gate
+#: (span_in_unit) never folds them.
 _TYPOGRAPHY_FOLD = str.maketrans(
     {
         "\u2018": "'",
@@ -132,16 +135,28 @@ _TYPOGRAPHY_FOLD = str.maketrans(
 def _fold_for_locating(text: str) -> tuple[str, list[int]]:
     """Fold typography to ASCII and collapse each whitespace run to one
     space; return the folded text and, per folded character, the index of
-    the original character it came from (a run maps to its first)."""
+    the original character it came from (a run maps to its first).
+
+    A run that follows a word's hyphen and precedes a letter or digit is
+    folded away: the passage breaks "mural-" across a line where a model
+    writes "mural-lined" (slice 9 job 1 re-run, 2026-09-13)."""
     out: list[str] = []
     origin: list[int] = []
     in_run = False
     for index, char in enumerate(text):
         if char.isspace():
             if not in_run:
+                in_run = True
+                rest = text[index:].lstrip()
+                if (
+                    out[-2:-1]
+                    and out[-1] == "-"
+                    and out[-2].isalnum()
+                    and rest[:1].isalnum()
+                ):
+                    continue
                 out.append(" ")
                 origin.append(index)
-                in_run = True
             continue
         in_run = False
         out.append(char.translate(_TYPOGRAPHY_FOLD))
@@ -150,10 +165,11 @@ def _fold_for_locating(text: str) -> tuple[str, list[int]]:
 
 
 def locate_span(span: str, unit_text: str) -> str | None:
-    """Find a judge's citation in the unit even when the judge straightened
-    the passage's quotes or dashes, and return the passage's OWN text for
-    it — whitespace-normalized exactly as `span_in_unit` compares, typography
-    intact — so what a caller stores is still verbatim. None when no fold
+    """Find a judge's or author's citation (see `ground_span`) in the unit
+    even when the model straightened the passage's quotes or dashes, and
+    return the passage's OWN text for it — whitespace-normalized exactly as
+    `span_in_unit` compares, typography intact — so what a caller stores is
+    still verbatim. None when no fold
     finds it (a paraphrase, or an empty citation). Exists because the live
     omission judge of 2026-09-12 cited "Guggenheim's" for the passage's
     "Guggenheim\u2019s" and two real findings were discarded for it.
@@ -168,6 +184,22 @@ def locate_span(span: str, unit_text: str) -> str | None:
         return None
     last = start + len(folded_span) - 1
     return normalize_ws(unit_text[origin[start] : origin[last] + 1])
+
+
+def ground_span(span: str, unit_text: str) -> str:
+    """The span to STORE for an author's citation: the citation itself when the
+    strict gate already finds it, else the passage's own text wherever
+    `locate_span` finds it, else the citation unchanged — so `span_in_unit`
+    still refuses a paraphrase in the author's words, and a citation that only
+    straightened the passage's typography is stored verbatim instead of
+    dropped. Slice 9's job 1 re-run (2026-09-13) dropped 34 author claims as
+    span_not_in_unit; this fold recovers 33 of them (one had lost its
+    apostrophe to a line break and stays refused).
+    """
+    if span_in_unit(span, unit_text) is None:
+        return span
+    located = locate_span(span, unit_text)
+    return span if located is None else located
 
 
 #: Joining words a proper name may carry without breaking its capitalized

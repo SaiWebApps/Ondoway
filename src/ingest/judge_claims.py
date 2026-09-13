@@ -27,6 +27,7 @@ from src.ingest.gates import (
     KIND_RESPONSE_VALUES,
     claim_gates,
     default_kind,
+    ground_span,
     locate_span,
     span_in_unit,
 )
@@ -315,7 +316,7 @@ def _restate_round(
                 claim_id=draft.claim_id,
                 text=item["text"],
                 kind=default_kind(item["kind"]),
-                source=unit.source(item["span"]),
+                source=unit.source(ground_span(item["span"], unit.text)),
             )
         )
     return restated
