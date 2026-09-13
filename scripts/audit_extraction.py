@@ -290,7 +290,7 @@ def _foreign_phrase_preservation(beats: list[dict]) -> dict[str, Any]:
 
 def _structural_beat_types(beats: list[dict]) -> dict[str, Any]:
     counts = Counter(b.get("beat_type", "") for b in beats)
-    structural = ["stop_orientation", "transit", "sidebar"]
+    structural = ["stop_orientation", "transit", "sidebar", "practicalities"]
     return {k: counts.get(k, 0) for k in structural}
 
 

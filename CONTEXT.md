@@ -99,8 +99,8 @@ spoken and never product text.
 _Avoid_: quote, excerpt
 
 **Lift**:
-A run of eight or more consecutive words a narration shares with its source outside
-an attributed quotation. The corpus's operational test for copying, not a legal one.
+A run of six or more consecutive words a narration shares with its source outside
+an attributed quotation or a proper name (the P4 gate; the validator's floor is eight). The corpus's operational test for copying, not a legal one.
 _Avoid_: verbatim ratio (a report figure, never a gate), plagiarism
 
 **Attributed quotation**:

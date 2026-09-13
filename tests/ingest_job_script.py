@@ -88,13 +88,15 @@ TICKET: dict = {
 }
 TICKET_SENTENCE = "A ticket cost fifty cents when the doors opened in October 1959."
 
-#: Three sentences, one per claim, no eight-word run with any span, no
-#: leak, no framing verb — passes `narrate.narration_gates` as written.
+#: Three sentences, one per claim, no SIX-word run with any span (the museum's
+#: six-word name "the Museum of Non-Objective Painting" would be one under the
+#: 2026-09-13 narration rule — a proper-name exemption is owed), no leak, no
+#: framing verb — passes `narrate.narration_gates` as written.
 NARRATION = (
     "Solomon Guggenheim started buying abstract art late in life on the advice "
     "of Hilla Rebay. "
-    "In 1939 Hilla Rebay ran a temporary museum for him on 54th Street, called the "
-    "Museum of Non-Objective Painting. "
+    "In 1939 Hilla Rebay ran a temporary museum for him on 54th Street, named for "
+    "non-objective painting. "
     "The building was finished in 1959, by which time both Wright and Guggenheim had died."
 )
 
@@ -128,8 +130,8 @@ VISITING_NARRATION = (
 #: it (file order: collecting, completed, then the appended 1939 claim).
 RERUN_NARRATION = (
     ORIGINS_NARRATION + " "
-    "In 1939 Hilla Rebay ran a temporary museum for him on 54th Street, called the "
-    "Museum of Non-Objective Painting."
+    "In 1939 Hilla Rebay ran a temporary museum for him on 54th Street, named for "
+    "non-objective painting."
 )
 
 ENRICHMENT: dict = {

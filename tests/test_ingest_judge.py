@@ -181,8 +181,17 @@ def test_refused_once_is_restated_by_the_author_with_the_reason_quoted_back():
     assert reason in restate_prompt
     assert fabricated["text"] in restate_prompt
     assert COMPLETED_CLAIM["span"] in restate_prompt
-    assert ("claim_refused", {"unit_key": unit.key, "claim_id": "c02", "attempt": 1,
-                              "reason": reason}) in events
+    assert (
+        "claim_refused",
+        {
+            "unit_key": unit.key,
+            "claim_id": "c02",
+            "attempt": 1,
+            "reason": reason,
+            "claim_text": fabricated["text"],
+            "span": fabricated["span"],
+        },
+    ) in events
 
     assert len(judged) == 1
     assert judged[0].draft.claim_id == "c02"
@@ -261,11 +270,25 @@ def test_refused_twice_is_dropped_and_logged_with_ids_unchanged():
     assert [e for e in events if e[0] == "claim_refused"] == [
         (
             "claim_refused",
-            {"unit_key": unit.key, "claim_id": "c02", "attempt": 1, "reason": "the span says 1959"},
+            {
+                "unit_key": unit.key,
+                "claim_id": "c02",
+                "attempt": 1,
+                "reason": "the span says 1959",
+                "claim_text": fabricated["text"],
+                "span": fabricated["span"],
+            },
         ),
         (
             "claim_refused",
-            {"unit_key": unit.key, "claim_id": "c02", "attempt": 2, "reason": "still not 1959"},
+            {
+                "unit_key": unit.key,
+                "claim_id": "c02",
+                "attempt": 2,
+                "reason": "still not 1959",
+                "claim_text": still_bad["text"],
+                "span": still_bad["span"],
+            },
         ),
     ]
 
@@ -611,3 +634,26 @@ def test_omission_cited_with_straightened_quotes_is_grounded_to_the_units_own_te
     assert [p["fact"] for kind, p in events if kind == "omission_ungrounded"] == [
         UNGROUNDED_FINDING["fact"]
     ]
+
+
+def test_a_refusal_logs_the_claim_text_and_span_it_judged():
+    """The proof-chunk panel could not audit job 1's nine refusals from the
+    log: `claim_refused` carried only an id and the judge's reason. Every
+    refusal now records the claim text and the span the judge read, so a
+    false refusal can be called from the log alone."""
+    unit = _real_unit()
+    draft = _draft(unit, "c02", COMPLETED_CLAIM)
+    events, sink = _sink_and_events()
+    mock = llm.MockClient(
+        sink,
+        batch_answers={
+            judge_claims.judge_custom_id(unit, "c02", 1): _refused("nope"),
+            judge_claims.restate_custom_id(unit, "c02"): _restated(COMPLETED_CLAIM),
+            judge_claims.judge_custom_id(unit, "c02", 2): _entailed(kind="event"),
+        },
+    )
+    mock.estimate([unit.text], list(judge_claims.P3_PLAN))
+    judge_claims.judge_claims(_story(["c02"]), [draft], unit, mock, events=sink)
+    refused = [p for k, p in events if k == "claim_refused"]
+    assert refused and refused[0]["claim_text"] == COMPLETED_CLAIM["text"]
+    assert refused[0]["span"] == COMPLETED_CLAIM["span"]

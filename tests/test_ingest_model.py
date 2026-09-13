@@ -46,7 +46,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.ingest.model import bind, claims_hash, validate
+from src.ingest.model import STRUCTURAL_BEAT_TYPES, bind, claims_hash, validate
 
 from .ingest_helpers import minimal_beat, stamp
 
@@ -759,3 +759,20 @@ def test_judge_is_author_sees_through_a_dated_model_id():
     beat["claims"][0]["verdict"]["judge_model"] = "claude-haiku-4-5-20251001"
     beat = stamp(beat)
     assert not any(e.startswith("JUDGE_IS_AUTHOR") for e in validate([beat]))
+
+
+def test_practicalities_is_a_structural_beat_type():
+    """OWNER RULING 2026-09-13 (after the proof chunk): prices, hours and
+    admission rules are real claims but not a story, and on job 1 the
+    author filed them under `stop_orientation`, which then became the
+    longest beat at the Guggenheim and the tour's likely first words.
+    `practicalities` is its own structural type — one claim is enough,
+    the arc rule does not apply — so `stop_orientation` can mean spatial
+    again (where you stand, what you face, where the entrance is)."""
+    beat = minimal_beat(beat_type="practicalities")
+    beat["claims"] = beat["claims"][:1]
+    beat = stamp(beat)
+    errors = validate([beat])
+    assert not any(e.startswith("ARC_TOO_FEW_CLAIMS") for e in errors), errors
+    assert not any(e.startswith("BEAT_TYPE_INVALID") for e in errors), errors
+    assert "practicalities" in STRUCTURAL_BEAT_TYPES

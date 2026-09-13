@@ -6,7 +6,11 @@ its prompts never ask it to rewrite anything, only to decide.
 
 `JUDGE_CLAIM_PROMPT` asks one yes/no question — is this claim entailed by
 its cited span, read in the context of the passage — and a one-sentence
-reason the author can be re-asked with. Since slice 9 (owner ruling
+reason the author can be re-asked with. OWNER RULING 2026-09-13 (after the
+proof chunk, where at least six of nine attempt-one refusals were false): the
+passage as a whole is the evidence, plain arithmetic and reference count as
+stated, and refusal is only for a fact the passage does not state or contradicts.
+Since slice 9 (owner ruling
 2026-09-12, slice-6 #5) the same call carries a KIND question: the judge
 reads the claim's temporal kind (event / state / belief, CONTEXT.md) from
 the span, and `judge_claims` RE-KINDS a claim the author kinded wrongly —
@@ -20,11 +24,16 @@ would misparse as fields.
 from __future__ import annotations
 
 _ENTAILED_RULE = (
-    "A claim is entailed only when every fact in it — every name, date, "
-    "number, place and causal link — is stated by the span or by the "
-    "passage around it. A claim that adds a detail the source does not "
-    "give, changes a value, or attaches a cause the source does not state "
-    "is not entailed, even if the detail is true in the world."
+    "Read the passage as a whole: the cited span is where the claim comes "
+    "from, and the sentences around it are part of the evidence. A claim "
+    "is entailed when every fact in it — every name, date, number, place "
+    "and causal link — is stated by the passage, including what the "
+    "passage makes plain without spelling out: arithmetic (\"in 1939 … four "
+    "years later\" states 1943), a pronoun or a place named a clause "
+    "earlier, a list given in the same sentence. Refuse only when the "
+    "claim states a fact the passage does not state, or contradicts it: a "
+    "changed value, an added detail, a cause the passage does not give. "
+    "Different wording is never a reason to refuse."
 )
 
 _KIND_RULE = (

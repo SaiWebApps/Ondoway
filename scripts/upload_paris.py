@@ -104,6 +104,11 @@ def _beat_blocked(beat: dict) -> bool:
     if not view.get("poi_name") or not view.get("script_body"):
         return True
     if _record_shape(beat) == "new":
+        # A held story waits for a decision; a practicalities beat (prices,
+        # hours, tickets — owner ruling 2026-09-13) waits for an engine
+        # channel that never voices it in the bare present. Neither is served.
+        if beat.get("beat_type") == "practicalities":
+            return True
         return bool((beat.get("review") or {}).get("held"))
     return (beat.get("fact_check") or {}).get("status") in _BLOCKED_STATUSES
 
@@ -435,6 +440,11 @@ def _export_view(beat: dict) -> dict:
     ]
     view["beat_length_class"] = _beat_length_class(int(beat.get("duration_sec") or 0))
     view["lenses"] = list(beat.get("lenses") or [])
+    # The author's enrichment is unjudged free text and the engine VOICES
+    # pronunciation and physical cues (the proof-chunk panel, 2026-09-13):
+    # a new-shape record exports neither until they are judged.
+    view["pronunciation"] = None
+    view["physical_cues"] = []
     return view
 
 

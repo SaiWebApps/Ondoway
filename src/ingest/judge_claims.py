@@ -387,7 +387,14 @@ def judge_claims(
     for draft, reason in refused:
         emit(
             "claim_refused",
-            {"unit_key": unit.key, "claim_id": draft.claim_id, "attempt": 1, "reason": reason},
+            {
+                "unit_key": unit.key,
+                "claim_id": draft.claim_id,
+                "attempt": 1,
+                "reason": reason,
+                "claim_text": draft.text,
+                "span": draft.source.span,
+            },
         )
     dropped: set[str] = set()
     if refused:
@@ -423,6 +430,8 @@ def judge_claims(
                     "claim_id": draft.claim_id,
                     "attempt": 2,
                     "reason": verdict["reason"],
+                    "claim_text": draft.text,
+                    "span": draft.source.span,
                 },
             )
             emit(

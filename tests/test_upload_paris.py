@@ -623,3 +623,40 @@ def test_legacy_lens_tags_one_relationship(clean_driver):
         ]
     assert stats["linked"] == 1 and stats["tagged"] == 1
     assert lenses == ["historic_arch"]
+
+
+def _new_shape_beat(**overrides):
+    from tests.ingest_helpers import minimal_beat, stamp
+
+    return stamp(minimal_beat(**overrides))
+
+
+def test_a_practicalities_beat_is_not_published_to_the_graph():
+    """OWNER RULING 2026-09-13: prices, hours and tickets are their own
+    structural type and are never voiced in the bare present; until the
+    tour engine has a channel for them they stay out of the graph, like a
+    held beat — the file keeps them, the publish counts them as blocked."""
+    from scripts.upload_paris import _beat_blocked
+
+    story = _new_shape_beat(beat_type="anecdote")
+    assert _beat_blocked(story) is False
+    practical = _new_shape_beat(beat_type="practicalities")
+    assert _beat_blocked(practical) is True
+
+
+def test_a_new_shape_view_drops_unjudged_enrichment():
+    """The proof-chunk panel: `pronunciation` and `physical_cues` on a
+    new-shape record are the author's unjudged free text, and the engine
+    VOICES them (generation.py's "That's pronounced …", the physical-cue
+    pick). On job 1 the Guggenheim record carried a pronunciation of Hilla
+    Rebay's name and cues the passage never states. Until those fields are
+    judged, the export sends none: pronunciation None, physical_cues []."""
+    from scripts.upload_paris import _export_view
+
+    beat = _new_shape_beat()
+    beat["pronunciation"] = "HIL-lah REH-bye"
+    beat["physical_cues"] = ["white concrete spiral"]
+    view = _export_view(beat)
+    assert view["pronunciation"] is None
+    assert view["physical_cues"] == []
+    assert view["script_body"] == beat["narration"]["text"]

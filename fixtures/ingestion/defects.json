@@ -153,8 +153,8 @@
     },
     {
       "class": "lift",
-      "detector": "gates",
-      "note": "c01 copies fourteen consecutive words of the passage outside any quotation.",
+      "detector": "narration_gates",
+      "note": "The narration copies fourteen consecutive words of a span outside any quotation; since the owner ruling of 2026-09-13 lift is a NARRATION gate (six words), never a claim gate.",
       "story": {
         "title": "The baroness and the niece",
         "place": "Solomon R. Guggenheim Museum",
@@ -183,8 +183,8 @@
           "span": "key surrealist works donated by\nGuggenheim’s niece Peggy"
         }
       ],
+      "narration": "He bought at the behest of his art adviser, an eccentric German baroness named Hilla Rebay, and his niece Peggy later gave the museum key surrealist works.",
       "planted": {
-        "claim_id": "c01",
         "gate": "lift"
       }
     },

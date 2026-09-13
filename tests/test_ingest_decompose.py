@@ -482,19 +482,20 @@ def test_span_not_in_unit_is_refused():
     assert reason in second_prompts[0][1]
 
 
-def test_lifted_claim_is_refused_attributed_quote_is_not():
-    """AC-33: eight-plus consecutive chunk words outside a quotation are a
-    lift; the same words inside an ATTRIBUTED quotation are not."""
+def test_lifted_claim_is_accepted_the_lift_gate_is_narrations():
+    """OWNER RULING 2026-09-13 (after slice 9's first real job): the lift
+    test is a NARRATION gate only. A claim that repeats nine consecutive
+    chunk words is provenance, never spoken, and is accepted in ONE call
+    with no refusal — on job 1 the claim-level test deleted 139 facts,
+    including the whole Guggenheim origin story. An attributed quotation
+    was always exempt and still is."""
     unit = _real_unit()
-    result, mock, _proxy, events = _refused_then_clean(
-        unit, [LIFTED_CLAIM], CLEAN_ANSWERS[:1]
-    )
-    assert [kind for kind, _ in events] == ["claims_refused"]
-    reason = events[0][1]["reasons"][0]
-    assert reason.startswith("lift")
-    assert "construction was finally completed in 1959 after both wright" in reason.lower()
-    assert [draft.text for draft in result] == [CLEAN_ANSWERS[0]["text"]]
-    assert mock.calls == [("author", "P1"), ("author", "P1")]
+    mock = _armed_mock({unit.custom_id(1): _answer([LIFTED_CLAIM])})
+    events, sink = _sink_and_events()
+    result = decompose.decompose(unit, mock, events=sink)
+    assert [draft.text for draft in result] == [LIFTED_CLAIM["text"]]
+    assert mock.calls == [("author", "P1")]
+    assert events == []
 
     # The attributed quotation is exempt: accepted in ONE call, no refusal.
     mock2 = _armed_mock({unit.custom_id(1): _answer([ATTRIBUTED_QUOTE_CLAIM])})
@@ -548,7 +549,7 @@ def test_second_refusal_drops_and_never_asks_a_third_time():
     still_dirty = [CLEAN_ANSWERS[0], LEAKING_PHONE_CLAIM, CLEAN_ANSWERS[1]]
     mock = _armed_mock(
         {
-            unit.custom_id(1): _answer([LIFTED_CLAIM, LEAKING_PAGE_CLAIM]),
+            unit.custom_id(1): _answer([DANGLING_CLAIM, LEAKING_PAGE_CLAIM]),
             unit.custom_id(2): _answer(still_dirty),
             # Scripted but never drawn: a third call must not happen.
             unit.key + "-a3": _answer(CLEAN_ANSWERS[:1]),
@@ -570,7 +571,7 @@ def test_second_refusal_drops_and_never_asks_a_third_time():
     assert refusals[0]["attempt"] == 1
     attempt_one_reasons = refusals[0]["reasons"]
     assert len(attempt_one_reasons) == 2
-    assert attempt_one_reasons[0].startswith("lift")
+    assert attempt_one_reasons[0].startswith("not_self_contained")
     assert attempt_one_reasons[1].startswith("leak")
 
     drops = [payload for kind, payload in events if kind == "claim_dropped"]

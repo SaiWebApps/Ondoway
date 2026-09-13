@@ -228,9 +228,10 @@ def test_claim_gates_names_every_failing_gate_once():
     )
     assert gates.claim_gates(clean_claim, clean_span, UNIT_TEXT) == []
 
-    # A single claim that fails all four gates: its span is fabricated
-    # (never in the unit), it lifts the pinned eight-word run, it leaks
-    # guidebook apparatus ("page 139"), and it opens on a bare "It".
+    # A single claim that fails all three claim gates: its span is fabricated
+    # (never in the unit), it leaks guidebook apparatus ("page 139"), and it
+    # opens on a bare "It". (It also copies the pinned eight-word run, which
+    # is no longer a CLAIM gate — owner ruling 2026-09-13; see the test below.)
     failing_claim = (
         "It was finally completed in 1959 \u2013 after both Wright. "
         "See page 139 for the hours."
@@ -238,11 +239,10 @@ def test_claim_gates_names_every_failing_gate_once():
     fabricated_span = "This span was never in any chunk of this book at all."
 
     reasons = gates.claim_gates(failing_claim, fabricated_span, UNIT_TEXT)
-    assert len(reasons) == 4
+    assert len(reasons) == 3
     assert reasons[0].startswith("span_not_in_unit")
-    assert reasons[1].startswith("lift")
-    assert reasons[2].startswith("leak")
-    assert reasons[3].startswith("not_self_contained")
+    assert reasons[1].startswith("leak")
+    assert reasons[2].startswith("not_self_contained")
 
 
 def test_place_resolves_exactly_or_is_flagged_new_poi():
@@ -523,3 +523,27 @@ def test_resolve_place_ignores_a_leading_definite_article_and_nothing_else():
     assert gates.resolve_place("Guggenheim Museum", pois) == ("Guggenheim Museum", True)
     assert gates.resolve_place("Met Breuer", pois) == ("Met Breuer", True)
     assert gates.resolve_place("Theatre District", pois) == ("Theatre District", True)  # no article
+
+
+def test_claim_gates_no_longer_test_a_claim_for_lift():
+    """OWNER RULING 2026-09-13 after slice 9's first real job: the lift test
+    moves off claims and onto narration only. A claim is provenance — its
+    text is never spoken, and it cites a verbatim span by design — so an
+    eight-word run shared with the passage is not copying anything a
+    listener hears. On job 1 the claim-level test deleted 139 facts,
+    including the whole Guggenheim origin story. `gates.lift` still exists
+    for the narration gate; `claim_gates` runs span, leak, self_contained."""
+    unit = UNIT_TEXT
+    # A claim that repeats a long run of the passage word for word.
+    text = (
+        "Solomon R Guggenheim was a New York mining magnate who began acquiring "
+        "abstract art in his 60s."
+    )
+    span = "a New York mining magnate who began acquiring abstract art in his 60s"
+    assert gates.lift(text, unit) is not None  # still a lift by the function's own measure
+    assert gates.claim_gates(text, span, unit) == []  # but not a claim gate any more
+    # The other three gates still fire, in their order.
+    reasons = gates.claim_gates(
+        "It opened in 1959, according to the guidebook.", "not in the unit at all", unit
+    )
+    assert [r.split(":")[0] for r in reasons] == ["span_not_in_unit", "leak", "not_self_contained"]

@@ -93,10 +93,11 @@ BEAT_TYPE_VALUES = (
     "stop_orientation",
     "transit",
     "sidebar",
+    "practicalities",  # prices, hours, tickets, transport (owner ruling 2026-09-13)
 )
-# The three beat_types the arc rule (ARC_TOO_FEW_CLAIMS) exempts from
+# The structural beat_types the arc rule (ARC_TOO_FEW_CLAIMS) exempts from
 # needing >=2 claims — spec's "structural" beats (decisions.pinned_definitions).
-STRUCTURAL_BEAT_TYPES = ("stop_orientation", "transit", "sidebar")
+STRUCTURAL_BEAT_TYPES = ("stop_orientation", "transit", "sidebar", "practicalities")
 # Attribution fields a cc_by_sa source must carry (and every other
 # rights_basis must NOT): CC_BY_SA_FIELDS_MISSING (decisions.vocabulary_enforced).
 CC_BY_SA_ATTRIBUTION_FIELDS = ("article_title", "url", "revision_id", "section", "retrieved_at")
@@ -265,6 +266,7 @@ class Beat(BaseModel):
         "stop_orientation",
         "transit",
         "sidebar",
+        "practicalities",
     ]
     lenses: list[str]
     sub_location: str | None = None

@@ -298,8 +298,10 @@ def test_precision_counts_clean_claims_refused_and_claims_dropped_with_reasons()
 
     record = next(r for r in fixture.records if r.defect_class == "fabricated_date")
     clean_id = record.claims[0]["claim_id"]
-    lifted_restate = {
-        "text": "Solomon R Guggenheim, a New York mining magnate who began acquiring abstract art",
+    leaking_restate = {
+        "text": (
+            "According to the guidebook, Solomon R Guggenheim began collecting abstract art late."
+        ),
         "kind": "event",
         "span": record.claims[0]["span"],
     }
@@ -315,7 +317,7 @@ def test_precision_counts_clean_claims_refused_and_claims_dropped_with_reasons()
                 model_id=llm.ROLE_MODEL["claim_judge"],
             )
             answers[judge_claims.restate_custom_id(u, clean_id)] = llm.MockAnswer(
-                text=json.dumps(lifted_restate), model_id=llm.ROLE_MODEL["author"]
+                text=json.dumps(leaking_restate), model_id=llm.ROLE_MODEL["author"]
             )
         return answers
 
@@ -324,7 +326,7 @@ def test_precision_counts_clean_claims_refused_and_claims_dropped_with_reasons()
     assert (row.caught, row.total) == (1, 1)
     assert (row.false_refusals, row.dropped) == (1, 1)
     assert any(clean_id in d and "the span does not say sixties" in d for d in row.details)
-    assert any(clean_id in d and d.startswith("dropped") and "lift" in d for d in row.details)
+    assert any(clean_id in d and d.startswith("dropped") and "leak" in d for d in row.details)
 
     text = calibrate.format_report(report)
     assert "false_ref" in text and "dropped" in text

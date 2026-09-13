@@ -17,8 +17,9 @@ placeholder verdict here would be exactly the unbound verdict the slice-1
 validator refuses.
 
 The code gate (`narration_gates`) runs on every answer: no
-`gates.LIFT_RUN_LENGTH`-word run with ANY claim span outside an attributed
-quotation (`gates.lift` per span — the author never saw the spans, so a
+`NARRATION_LIFT_GATE_RUN`-word (six) run with ANY claim span outside an
+attributed quotation or a proper name (owner ruling 2026-09-13; the validator's
+floor is eight) (`gates.lift` per span — the author never saw the spans, so a
 run is a memorised source, which is the same defect), no provenance leak
 (`gates.provenance_leak`, with the publisher names the caller passes from
 the source's manifest), no framing verb (`gates.framing`). A failing
@@ -47,6 +48,12 @@ from src.ingest.group import Story
 from src.ingest.judge_claims import JudgedClaim
 
 #: Output tokens requested for one narration.
+#: The narration lift run: OWNER RULING 2026-09-13 — six words, not the
+#: validator's eight-word floor, because on the first real job the book's own
+#: seven-word phrase ("an eccentric German baroness named Hilla Rebay") reached
+#: the listener under eight.
+NARRATION_LIFT_GATE_RUN: int = 6
+
 P4_MAX_TOKENS: int = 16_000  # thinking-inclusive; tests/test_ingest_output_caps.py
 
 #: What the estimate prices per narration — a projection: ~150 words of
@@ -175,7 +182,7 @@ def narration_gates(
     """
     reasons: list[str] = []
     for span in spans:
-        lift_reason = gates.lift(text, span)
+        lift_reason = gates.lift(text, span, run_length=NARRATION_LIFT_GATE_RUN)
         if lift_reason is not None:
             reasons.append(lift_reason.replace("from the unit", "from a claim's span"))
             break

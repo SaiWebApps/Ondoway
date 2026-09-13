@@ -56,7 +56,8 @@ still-unreadable attempt 2 emits `unit_held` and raises `UnitHeld`.
 
 Step 7 added the gate-based half, on the same one-re-ask
 budget (decisions.refusal_rules): every parsed claim is run through
-`gates.claim_gates` (span, lift, leak, self_contained). A claim failing
+`gates.claim_gates` (span, leak, self_contained — lift is a narration gate since
+2026-09-13). A claim failing
 any gate on attempt 1 refuses the whole answer — `claims_refused` carries
 one reason per failing gate per failing claim, each still starting with
 its gate's own code token and naming the claim it came from, and all of

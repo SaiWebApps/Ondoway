@@ -58,7 +58,7 @@ is graded twice: first by `parse_stories` (schema), then by
 `gates.story_problems` over the raw stories and the unit's own claim ids —
 the aggregate that enforces the partition (every claim in exactly one
 story, no id the unit never had), the structural claim floor (one claim for
-stop_orientation/transit/sidebar, two for everything else, never zero), the
+stop_orientation/transit/sidebar/practicalities, two for everything else, never zero), the
 lens/beat_type rules and slug uniqueness. Any defect on attempt 1 refuses
 the WHOLE answer — never the failing stories alone — emitting one
 `stories_refused` carrying every reason, and buys exactly ONE re-ask via

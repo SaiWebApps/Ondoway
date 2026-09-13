@@ -431,3 +431,30 @@ def test_p6_merge_schema_stays_in_the_structured_output_subset_and_prompt_pins_t
         prompts.render_merge_redo("P", "T", new_claims, existing, "{}", [])
     with pytest.raises(ValueError):
         prompts.render_merge_redo("P", "T", new_claims, existing, "{}", ["  "])
+
+
+def test_the_claim_judge_reads_the_whole_passage_and_only_refuses_what_it_contradicts():
+    """OWNER RULING 2026-09-13 after the proof chunk: at least six of nine
+    attempt-one refusals were false — the judge demanded the cited span
+    alone state a detail the passage states a clause away ("in 1939 … four
+    years later"; "closed in August and June"; Cedar Hill one clause
+    earlier). The prompt now says the passage as a whole is the source,
+    that arithmetic and reference the passage makes plain count as stated,
+    and that the only grounds for refusal are a fact the passage does not
+    state or contradicts."""
+    text = prompts.JUDGE_CLAIM_PROMPT.lower()
+    assert "read the passage as a whole" in text
+    assert "four years later" in text  # the worked example of plain arithmetic
+    assert "refuse only" in text
+
+
+def test_p2_offers_practicalities_and_defines_orientation_as_spatial():
+    """OWNER RULING 2026-09-13: the P2 schema offers `practicalities` for
+    prices, hours, tickets and transport, and the prompt tells the author
+    that `stop_orientation` is SPATIAL — where the listener stands, what
+    they face, where the entrance or the ramp is — never a listing."""
+    enum = prompts.P2_RESPONSE_SCHEMA["properties"]["stories"]["items"]["properties"]["beat_type"]
+    assert "practicalities" in enum["enum"]
+    text = prompts.GROUP_PROMPT_TEMPLATE.lower()
+    assert "practicalities" in text
+    assert "stop_orientation" in text and "where the listener stands" in text

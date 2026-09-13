@@ -83,6 +83,13 @@ GROUP_PROMPT_TEMPLATE = (
     f"- {_AMBIGUITY_SUBPLACE}\n"
     f"- {_AMBIGUITY_PERSON_VS_PLACE}\n\n"
     "When one of these comes up, apply this rule:\n{tie_break}\n\n"
+    "Give each story a beat_type. stop_orientation is SPATIAL: where the "
+    "listener stands, what they face, where the entrance, the ramp or the "
+    "fountain is, which way to walk — never a listing. practicalities holds "
+    "prices, opening hours, tickets, tours and transport; it is not a story "
+    "and one claim is enough. transit moves the listener between places; "
+    "sidebar digresses. Every other type is a told story of at least two "
+    "claims.\n\n"
     "Claims:\n{claims}\n\n"
     "Answer as JSON only."
 )

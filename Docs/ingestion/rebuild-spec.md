@@ -185,15 +185,24 @@ Rules the validator enforces on this shape (slice 1):
   contested claim has ≥2 sources with differing `stated_value`.
 - `narration.claims_hash` equals the hash of the resolved claims' texts, in order. A
   narration whose hash is stale is refused (the same rule as `verified_body_hash` today).
-- No lift ≥8 between `narration.text` and any span of the beat, outside attributed
+- No lift between `narration.text` and any span of the beat, outside attributed
+  quotation: the P4 gate refuses a run of six words (`narrate.NARRATION_LIFT_RUN_LENGTH`);
+  the validator's floor is eight. Lift is a NARRATION rule only (owner ruling 2026-09-13
+  after the proof chunk: the claim-level test deleted 139 facts) — a claim is provenance,
+  never spoken. Formerly: no lift ≥8 between `narration.text` and any span, outside attributed
   quotation. No provenance leak (regex, slice 5).
-- `beat_type ∈ {stop_orientation, transit, sidebar}` beats skip the arc rule; every other
-  beat has ≥2 claims.
+- `beat_type ∈ {stop_orientation, transit, sidebar, practicalities}` beats skip the arc rule;
+  every other beat has ≥2 claims. `practicalities` (prices, hours, tickets, transport — owner
+  ruling 2026-09-13) is never voiced in the bare present and is not published to the graph
+  until the engine has a channel for it; `stop_orientation` means SPATIAL (where the listener
+  stands, what they face, where the entrance is), never a listing.
 
 **Graph export** (slice 8) keeps the tour engine's contract unchanged: `script_body` =
 `narration.text`; `key_claims` = texts of resolved claims; `beat_length_class` computed from
 `duration_sec` (`micro` <8 s, `seasoning` <32 s, `mid` <80 s, else `anchor`); `lenses`
-exported as the existing `lens` relationship, one per entry. No engine file changes.
+exported as the existing `lens` relationship, one per entry. A new-shape record exports NO
+`pronunciation` and NO `physical_cues` (unjudged author free text the engine would voice —
+proof-chunk panel, 2026-09-13) until those fields are judged. No engine file changes.
 
 ## 3. The engine: phases and gates
 
@@ -203,7 +212,7 @@ failed job resumes at its last completed phase.
 | Phase | Model | Output | Code gates before the next phase |
 |---|---|---|---|
 | P0 intake | none | units of text with `source_id`, `as_of`, rights basis | manifest fields present; a website unit over the ceiling is split at headings and the job logs it |
-| P1 decompose | author | claims `{text, kind, span}` per unit | span verbatim in unit; no lift ≥8 claim-vs-unit (the span is inside the unit; measured with `scripts/verbatim.py`'s `run_outside_quotation`, attributed quotations exempt); no book furniture (leak regex); self-contained (no bare pronoun subject); `kind` present, default `state` when the judge marks it ambiguous |
+| P1 decompose | author | claims `{text, kind, span}` per unit | span verbatim in unit; NO lift test on claims (owner ruling 2026-09-13 — a claim is never spoken; the lift gate is P4's); no book furniture (leak regex); self-contained (no bare pronoun subject); `kind` present, default `state` when the judge marks it ambiguous |
 | P2 group | author | stories `{title, place, lenses, beat_type, enrichment, claim_ids}` | every claim in exactly one story; place resolves to `poi-raw.json` or is flagged `new_poi`; structural types allowed 1 claim, others ≥2 |
 | P3 judge claims | judge | per claim: entailed yes/no and the temporal kind read from the span (slice 9: a wrongly kinded claim is re-kinded, never refused); per unit: facts no claim carries | a claim refused once is re-asked with the judge's reason quoted back; refused twice is dropped and logged; an omission finding re-asks P1 once for that unit |
 | P4 narrate | author, sees claims only | narration text | no lift vs any span; no leak; no framing regex (`imagine`, `picture`, `envision`); duration computed |
@@ -493,6 +502,21 @@ Guggenheim.
 estimate within 25%. The ten hand-read beats seed `./fixtures/ingestion/defects.json`.
 **Stops the line if:** the merge holds more than a third of stories, or the tour bar
 (`_test-golden` on 7687 with only this chunk swapped) regresses.
+**Job 1 (2026-09-12, LP chunk-07, `--as-of 2022`):** 20 beats committed to `data-ingest/new_york/beats.json`
+for $1.81 (job 1's first attempt truncated at the old 8,000-token P1 cap: thinking is on
+by default for claude-opus-5 and the client sets none; every cap is now sized for it,
+`tests/test_ingest_output_caps.py`). Measured: hold rate n/a (no beat at any place — job 2
+fires the merge); leak-gate drops 1 of 148; 139 drops were the LIFT gate on claim text,
+partly because the empty first P1 answer consumed the unit's one gate re-ask; P3 precision:
+9 attempt-one refusals over ~100 first judgements, at least 6 false by hand-read, including
+"four years after 1939"; 20 re-kinds (belief→state). Cost: the estimator priced every row
+over the passage and every output at its cap; re-anchored on the run (input basis per row,
+measured fan-out and outputs, re-ask rates), job 1's expected without P6 is $2.03 against
+$1.81 — inside 25%, unvalidated until job 2. Panel (acceptance + three adversaries) REJECTS
+the Guggenheim stop: the origin story did not survive the lift gate; decisions owed to the
+owner are in the session report. The tour bar on lane 2 (7692): `_test-golden` 9 passed,
+`_test-invariants` 13 passed, baseline only — "only this chunk swapped in" is not executable
+yet (the converge is whole-city and the validator refuses a mixed file; slice 10).
 
 ### Slice 10: Batch re-extraction and swap
 

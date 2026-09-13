@@ -6,9 +6,9 @@ Step 2 lands the whitespace and copying gates: `normalize_ws`
 (the one whitespace fold every gate in this module uses), `span_in_unit`
 (a claim's cited span must exist in the unit's own text — exact except for
 whitespace, because case, punctuation and dashes prove the span was quoted
-from the passage rather than paraphrased), and `lift` (a claim must not
-copy `LIFT_RUN_LENGTH` or more consecutive unit words outside an attributed
-quotation).
+from the passage rather than paraphrased), and `lift` (text must not copy
+`run_length` or more consecutive unit words outside an attributed quotation or
+a proper name — since the owner ruling of 2026-09-13 a NARRATION gate only).
 
 Step 3 landed `leak` (a claim must not carry guidebook apparatus
 or a phone/URL/domain listing — `APPARATUS_RE`/`LISTING_RE`, carried
@@ -19,14 +19,15 @@ carried verbatim from that file's `_ANAPHOR`, including its
 demonstrative-before-a-verb lookahead so "That is the oldest..." is not
 flagged), `default_kind` (maps the LLM's own `ambiguous` kind to `state`
 and passes `event`/`state`/`belief` through, refusing everything else), and
-`claim_gates` (the per-claim aggregate: span, lift, leak, self_contained,
-in that order, one reason per failing gate, never short-circuiting).
+`claim_gates` (the per-claim aggregate: span, leak, self_contained, in that
+order, one reason per failing gate, never short-circuiting; lift left it on
+2026-09-13).
 
-`LIFT_RUN_LENGTH` is deliberately the same number as
-`scripts.verbatim.VERBATIM_RUN_BLOCK` (8) — one copying threshold serves
-the whole pipeline (run-context.md decisions.spec_extensions #3) — but is
-named separately here because a claim gate and a narration gate are two
-different callers agreeing on a number, not the same constant.
+`LIFT_RUN_LENGTH` (8) is the validator's FLOOR, the same number as
+`scripts.verbatim.VERBATIM_RUN_BLOCK`; the pipeline no longer has one copying
+threshold (decisions.spec_extensions #3 is superseded by the owner ruling of
+2026-09-13): claims are not tested, the P4 narration gate passes six
+(`narrate.NARRATION_LIFT_GATE_RUN`), proper names are exempt.
 
 `lift` measures a claim against the WHOLE unit text, not just its own
 cited span: the span sits inside the unit, so a unit-wide measure is at
@@ -169,19 +170,65 @@ def locate_span(span: str, unit_text: str) -> str | None:
     return normalize_ws(unit_text[origin[start] : origin[last] + 1])
 
 
-def lift(text: str, unit_text: str) -> str | None:
-    """A claim must not copy `LIFT_RUN_LENGTH`+ consecutive unit words.
+#: Joining words a proper name may carry without breaking its capitalized
+#: run: "Museum of Non-Objective Painting", "Sant Ambroeus and Irving Farm
+#: Roasters", "Portrait of Adele Bloch-Bauer I".
+PROPER_NAME_SMALL_WORDS: frozenset[str] = frozenset(
+    {"a", "an", "the", "of", "and", "for", "on", "at", "in", "de", "du", "la",
+     "le", "von", "der", "di", "y", "i", "ii", "iii", "iv", "v"}
+)
+
+#: Placeholder a masked name is replaced with: a non-word character, so the
+#: masked words can never join a run on either side.
+_MASK = "␀"
+
+
+def _cased_run(run_text: str, text: str) -> re.Match[str] | None:
+    """The run as it appears in `text`, case and punctuation intact."""
+    words = run_text.split()
+    if not words:
+        return None
+    pattern = r"\W*".join(re.escape(w) for w in words)
+    return re.search(pattern, text, re.I)
+
+
+def is_proper_name(cased: str) -> bool:
+    """True when every word of the run, small joining words and numbers
+    set aside, is capitalized — a name or a title, which has one wording
+    and is a fact, not the source's expression."""
+    tokens = [t for t in re.findall(r"[^\W_]+(?:'[^\W_]+)?", cased) if t]
+    heads = [t for t in tokens if t.lower() not in PROPER_NAME_SMALL_WORDS and not t[0].isdigit()]
+    return len(heads) >= 2 and all(t[0].isupper() for t in heads)
+
+
+def lift(text: str, unit_text: str, run_length: int = LIFT_RUN_LENGTH) -> str | None:
+    """Text must not copy `run_length`+ consecutive unit words (the
+    narration gate passes NARRATION_LIFT_GATE_RUN; the validator's floor
+    is LIFT_RUN_LENGTH). Since the owner ruling of 2026-09-13 this is a
+    NARRATION gate only — `claim_gates` no longer calls it.
+
+    A shared run that is a PROPER NAME (`is_proper_name`: "Museum of
+    Non-Objective Painting", "Portrait of Adele Bloch-Bauer I") is exempt,
+    as an attributed quotation is: a name is a fact with one wording. The
+    name is masked and the measure runs again, so a lift elsewhere in the
+    text is still found.
 
     Measured against the whole unit (not just the cited span) with
     `run_outside_quotation`, which already exempts a quotation that names
     who said it. Returns None when the longest shared run outside
-    quotation is below `LIFT_RUN_LENGTH`; otherwise a reason starting with
+    quotation is below `run_length`; otherwise a reason starting with
     `lift` that carries the copied words.
     """
-    result = run_outside_quotation(text, unit_text)
-    if result["length"] < LIFT_RUN_LENGTH:
-        return None
-    return f"lift: {result['text']!r} copied verbatim from the unit"
+    masked = text
+    for _ in range(16):
+        result = run_outside_quotation(masked, unit_text)
+        if result["length"] < run_length:
+            return None
+        cased = _cased_run(result["text"], masked)
+        if cased is None or not is_proper_name(cased.group(0)):
+            return f"lift: {result['text']!r} copied verbatim from the unit"
+        masked = masked[: cased.start()] + _MASK * len(cased.group(0)) + masked[cased.end() :]
+    return None
 
 
 #: Claims about the BOOK rather than the place — page numbers, numbered walk
@@ -311,13 +358,14 @@ def claim_gates(text: str, span: str, unit_text: str) -> list[str]:
     """Run every item-level gate against one claim; never short-circuit.
 
     Returns the reasons for every failing gate, in the fixed order span,
-    lift, leak, self_contained — so a caller sees every defect in one
+    leak, self_contained (OWNER RULING 2026-09-13: lift is a NARRATION gate
+    only — a claim is provenance, never spoken, and on the first real job the
+    claim-level test deleted 139 facts) — so a caller sees every defect in one
     pass rather than re-asking once per gate. Returns [] for a clean claim.
     """
     reasons = []
     for gate_reason in (
         span_in_unit(span, unit_text),
-        lift(text, unit_text),
         leak(text),
         self_contained(text),
     ):
@@ -408,7 +456,7 @@ def known_claim_ids(
 def claim_floor(beat_type: str, n: int) -> str | None:
     """A story needs a minimum number of claims to be worth a beat.
 
-    `STRUCTURAL_BEAT_TYPES` (stop_orientation, transit, sidebar) need only
+    `STRUCTURAL_BEAT_TYPES` (stop_orientation, transit, sidebar, practicalities) need only
     one; everything else needs two. Zero never passes, structural or not.
     Returns None when `n` meets the floor; otherwise a `too_few_claims`
     reason naming the floor and the actual count.
