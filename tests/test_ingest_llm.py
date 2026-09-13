@@ -1072,3 +1072,54 @@ def test_anthropic_batch_post_response_refusals_apply_per_unit():
     with pytest.raises(llm.TruncatedCompletion, match="u1") as truncated:
         client.complete_batch("author", [("u1", "p")], None, phase="P1", max_tokens=8)
     assert truncated.value.text == '{"claims": ['
+
+
+def test_a_batch_phase_emits_a_heartbeat_on_every_poll():
+    """Slice 9 (2026-09-12): between 'batch_submitted' and the phase's
+    completion a live client was silent for minutes. Every poll now emits
+    `batch_polling` with the phase, role, batch id, seconds elapsed, the
+    API's processing_status and its request_counts, so the console, the
+    job log and the chat monitor can tell a working job from a stalled
+    one. The last heartbeat is the 'ended' poll."""
+    import types
+
+    statuses = iter(["in_progress", "ended"])
+    stub, _record = _batch_sdk_stub(
+        [_batch_succeeded("c1", text='{"entailed": true, "reason": "r", "kind": "state"}',
+                          model="claude-haiku-4-5-20251001")]
+    )
+    real_batches = stub.messages.batches
+
+    def retrieve(requested_id):
+        return types.SimpleNamespace(
+            id=requested_id,
+            processing_status=next(statuses),
+            request_counts=types.SimpleNamespace(
+                processing=1, succeeded=0, errored=0, canceled=0, expired=0
+            ),
+        )
+
+    real_batches.retrieve = retrieve
+    events: list[tuple[str, dict]] = []
+    client = llm.AnthropicClient(
+        lambda kind, payload: events.append((kind, payload)),
+        sdk=stub, submit_sdk=stub, poll_interval_s=0,
+    )
+    client.estimate([], [])
+
+    client.complete_batch(
+        "claim_judge", [("c1", "p")], None, phase="P3", max_tokens=400
+    )
+
+    beats = [payload for kind, payload in events if kind == "batch_polling"]
+    assert [b["processing_status"] for b in beats] == ["in_progress", "ended"]
+    assert all(
+        b["phase"] == "P3" and b["role"] == "claim_judge" and b["batch_id"] == "msgbatch_stub_01"
+        for b in beats
+    )
+    assert all(b["elapsed_s"] >= 0 for b in beats)
+    assert beats[0]["request_counts"] == {
+        "processing": 1, "succeeded": 0, "errored": 0, "canceled": 0, "expired": 0
+    }
+    kinds = [kind for kind, _p in events]
+    assert kinds.index("batch_submitted") < kinds.index("batch_polling")

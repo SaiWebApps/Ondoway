@@ -1039,11 +1039,29 @@ class AnthropicClient:
             "batch_submitted",
             {"phase": phase, "role": role, "batch_id": batch_id, "count": len(requests)},
         )
+        def heartbeat(batch: object, elapsed_s: float) -> None:
+            counts = getattr(batch, "request_counts", None)
+            self._sink(
+                "batch_polling",
+                {
+                    "phase": phase,
+                    "role": role,
+                    "batch_id": batch_id,
+                    "elapsed_s": round(elapsed_s, 1),
+                    "processing_status": getattr(batch, "processing_status", None),
+                    "request_counts": {
+                        name: getattr(counts, name, 0)
+                        for name in ("processing", "succeeded", "errored", "canceled", "expired")
+                    },
+                },
+            )
+
         _bt.poll_batch(
             batch_id,
             client=self._get_sdk(),
             poll_interval_s=self.poll_interval_s,
             max_poll_s=self.max_poll_s,
+            on_poll=heartbeat,
         )
         collected = _bt.collect_results(batch_id, client=self._get_sdk())
 

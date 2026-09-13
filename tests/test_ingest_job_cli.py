@@ -279,3 +279,31 @@ def test_the_meter_counts_a_batch_that_raised(capsys):
 
     assert meter.calls == {"P1": 2}
     assert meter.unmetered == {"P1": 2}
+
+
+def test_client_events_reach_the_job_log_once_the_job_exists(tmp_path, capsys):
+    """Job 1's JSONL log had no batch id in it — `batch_submitted` and the
+    heartbeats go to the client's sink, which only printed. Once the job
+    exists they are appended to the job log through the store (which also
+    prints them); before it exists they are printed; and `cost_estimate`
+    is only ever printed, because the runner logs its own copy."""
+    store = ingest_job._PrintingStore(tmp_path / "jobs")
+    holder: dict[str, str] = {}
+    sink = ingest_job.client_event_sink(store, holder)
+
+    sink("batch_submitted", {"phase": "P1", "batch_id": "early"})  # no job yet: printed only
+    job = store.create(
+        city="new_york", source={"kind": "book", "chunk_dir": "x"}, as_of=2022,
+        rights_basis="owned_copy",
+    )
+    holder["job_id"] = job.id
+    sink("cost_estimate", {"total_usd": 1.0})
+    sink("batch_submitted", {"phase": "P1", "batch_id": "msgbatch_1"})
+    sink("batch_polling", {"phase": "P1", "batch_id": "msgbatch_1", "elapsed_s": 10})
+
+    out = capsys.readouterr().out
+    assert out.count("batch_submitted") == 2 and "batch_polling" in out
+    log_text = (tmp_path / "jobs" / f"{job.id}.jsonl").read_text(encoding="utf-8")
+    logged = [json.loads(line) for line in log_text.splitlines()]
+    assert [e["message"] for e in logged] == ["batch_submitted", "batch_polling"]
+    assert logged[0]["data"]["batch_id"] == "msgbatch_1"

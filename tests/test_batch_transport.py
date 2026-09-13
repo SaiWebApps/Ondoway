@@ -160,3 +160,69 @@ def test_load_batch_submission_rejects_wrong_schema(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="schema_version"):
         load_batch_submission(path)
+
+
+def test_poll_batch_reports_every_poll_to_the_caller() -> None:
+    """Slice 9 (2026-09-12): a batch phase polls for up to an hour in
+    silence, so a healthy job and a hung one look identical from outside.
+    `on_poll` is called on every poll — the in-progress ones and the final
+    'ended' one — with the batch object and the seconds elapsed, so the
+    caller can print a heartbeat. Absent, nothing changes."""
+    import types
+
+    from src.tour import batch_transport as bt
+
+    statuses = iter(["in_progress", "in_progress", "ended"])
+    retrieved: list[str] = []
+
+    class _Batches:
+        def retrieve(self, batch_id):
+            retrieved.append(batch_id)
+            return types.SimpleNamespace(id=batch_id, processing_status=next(statuses))
+
+    client = types.SimpleNamespace(messages=types.SimpleNamespace(batches=_Batches()))
+    polls: list[tuple[str, float]] = []
+
+    batch = bt.poll_batch(
+        "msgbatch_x",
+        client=client,
+        poll_interval_s=0,
+        on_poll=lambda b, elapsed: polls.append((b.processing_status, elapsed)),
+    )
+
+    assert batch.processing_status == "ended"
+    assert retrieved == ["msgbatch_x"] * 3
+    assert [status for status, _e in polls] == ["in_progress", "in_progress", "ended"]
+    assert all(elapsed >= 0 for _s, elapsed in polls)
+    assert polls[0][1] <= polls[1][1] <= polls[2][1]
+
+
+def test_a_failing_poll_callback_never_stops_the_poll(capsys) -> None:
+    """The judge on the heartbeat: the callback ends in a file write in the
+    live CLI, so an OSError there would abort a batch that is already
+    submitted and billed. Observability on a paid path must never be
+    load-bearing: a raising `on_poll` is reported on one line and the poll
+    goes on to return the ended batch exactly as if no callback existed."""
+    import types
+
+    from src.tour import batch_transport as bt
+
+    statuses = iter(["in_progress", "ended"])
+
+    class _Batches:
+        def retrieve(self, batch_id):
+            return types.SimpleNamespace(id=batch_id, processing_status=next(statuses))
+
+    client = types.SimpleNamespace(messages=types.SimpleNamespace(batches=_Batches()))
+    calls: list[str] = []
+
+    def failing(batch, _elapsed):
+        calls.append(batch.processing_status)
+        raise OSError("disk full")
+
+    batch = bt.poll_batch("msgbatch_x", client=client, poll_interval_s=0, on_poll=failing)
+
+    assert batch.processing_status == "ended"
+    assert calls == ["in_progress", "ended"]
+    out = capsys.readouterr().out
+    assert "on_poll" in out and "disk full" in out

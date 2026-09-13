@@ -57,6 +57,23 @@ def _print_event(kind: str, payload: dict) -> None:
     print(f"event {kind}: {json.dumps(payload, ensure_ascii=False)}")
 
 
+def client_event_sink(store: jobs.IngestJobStore, holder: dict[str, str]):
+    """The model client's event sink: once `holder["job_id"]` is set, every
+    client event (batch_submitted, the batch_polling heartbeats, ...) is
+    appended to the job log through the store, which also prints it;
+    before that it is printed. `cost_estimate` is only printed — the
+    runner logs its own copy as the job's first event."""
+
+    def sink(kind: str, payload: dict) -> None:
+        job_id = holder.get("job_id")
+        if kind == "cost_estimate" or job_id is None:
+            _print_event(kind, payload)
+            return
+        store.append_event(job_id, "info", kind, data=payload)
+
+    return sink
+
+
 def _first_pass_usd(estimate: llm.CostEstimate) -> float:
     """The rows that are each phase's FIRST ask: the projected spend when
     nothing is refused. The whole plan is the projection with every re-ask;
@@ -271,13 +288,15 @@ def main(argv: list[str] | None = None) -> int:
     print(f"data root: {data_root} (beats: {paths['beats']})")
 
     store = _PrintingStore(data_root / args.city / "jobs")
+    holder: dict[str, str] = {}
     job = store.create(
         city=args.city,
         source={"kind": "book", "chunk_dir": str(args.chunk_dir), "chunks": args.chunk},
         as_of=_as_of(args.as_of),
         rights_basis=args.rights_basis,
     )
-    client = _CountingClient(run.client_from_env(_print_event))
+    client = _CountingClient(run.client_from_env(client_event_sink(store, holder)))
+    holder["job_id"] = job.id
 
     try:
         units, _manifest = run.intake(job)

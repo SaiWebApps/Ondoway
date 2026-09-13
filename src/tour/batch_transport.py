@@ -91,12 +91,22 @@ def poll_batch(
     client: object | None = None,
     poll_interval_s: float = 10,
     max_poll_s: float = 3600,
+    on_poll: Callable[[Any, float], None] | None = None,
 ) -> Any:
+    """Poll until the batch has ended. `on_poll(batch, elapsed_s)` is called
+    on every poll, the final one included, so a caller can print a
+    heartbeat: a batch phase otherwise sits silent for minutes."""
     if client is None:
         client = batch_client(max_retries=2)
-    deadline = time.monotonic() + max_poll_s
+    started = time.monotonic()
+    deadline = started + max_poll_s
     while True:
         batch = client.messages.batches.retrieve(batch_id)
+        if on_poll is not None:
+            try:
+                on_poll(batch, time.monotonic() - started)
+            except Exception as exc:  # observability must never end a billed batch
+                print(f"on_poll warning: {type(exc).__name__}: {exc} (batch {batch_id})")
         if batch.processing_status == "ended":
             return batch
         if time.monotonic() >= deadline:
