@@ -814,30 +814,33 @@ def test_sentences_keep_a_single_initial_with_its_name():
     ]
 
 
-def test_narration_lift_is_six_words_because_seven_reached_the_listener():
-    """OWNER RULING 2026-09-13: on job 1 the narration "…an eccentric German
+def test_narration_lift_is_seven_words_because_seven_reached_the_listener():
+    """OWNER RULINGS 2026-09-13: on job 1 the narration "…an eccentric German
     baroness named Hilla Rebay" carried the book's own seven-word phrase to
-    the listener under the eight-word rule. The narration gate now refuses
-    a run of NARRATION_LIFT_GATE_RUN = 6 words shared with any span;
-    five stay ordinary phrasing. The validator's floor stays at eight."""
+    the listener under the eight-word rule, so the narration gate refuses a
+    run of NARRATION_LIFT_GATE_RUN = 7 words shared with any span. Six was
+    ruled first and measured on job 1's twenty beats: it refused 40% of
+    first-attempt narrations on ordinary phrases ("an avid collector of asian
+    art"); seven refused 20% and still catches the baroness. Six stays
+    ordinary phrasing. The validator's floor stays at eight."""
     span = "at the behest of his art adviser, an eccentric German baroness named Hilla Rebay"
-    assert narrate.NARRATION_LIFT_GATE_RUN == 6
-    six = "She was an eccentric German baroness named Hilla, and she steered him."
-    reasons = narrate.narration_gates(six, [span])
+    assert narrate.NARRATION_LIFT_GATE_RUN == 7
+    seven = "His adviser was an eccentric German baroness named Hilla Rebay, who steered him."
+    reasons = narrate.narration_gates(seven, [span])
     assert reasons and reasons[0].startswith("lift"), reasons
-    five = "His adviser, an eccentric German baroness, steered him toward abstract art."
-    assert narrate.narration_gates(five, [span]) == []
+    six = "She was an eccentric German baroness named Hilla, and she steered him."
+    assert narrate.narration_gates(six, [span]) == []
 
 
 def test_a_proper_name_shared_with_the_source_is_not_a_lift():
     """The judge measured the six-word rule over job 1's twenty narrations:
-    ten would now trip it, on runs like "Portrait of Adele Bloch-Bauer I",
+    ten would have tripped it, on runs like "Portrait of Adele Bloch-Bauer I",
     "Museum of Non-Objective Painting", "Sant Ambroeus and Irving Farm
     Roasters" — names and titles, which are facts and have one wording.
     A shared run whose words are a proper name (every word capitalized
     once the small joining words are set aside) is exempt from the
     narration lift, as an attributed quotation is. The book's own phrasing
-    in ordinary words is still a lift at six."""
+    in ordinary words is still a lift at seven."""
     span = "the Museum of Non-Objective Painting on 54th St"
     named = "In 1939 Rebay ran the Museum of Non-Objective Painting for him."
     assert narrate.narration_gates(named, [span]) == []
@@ -845,6 +848,6 @@ def test_a_proper_name_shared_with_the_source_is_not_a_lift():
     titled = "Klimt's Portrait of Adele Bloch-Bauer I hangs upstairs."
     assert narrate.narration_gates(titled, [title_span]) == []
     phrasing_span = "an avid collector of Asian art and a patron of many things"
-    phrasing = "He was an avid collector of Asian art from his youth."
+    phrasing = "He was an avid collector of Asian art and later sold it."
     reasons = narrate.narration_gates(phrasing, [phrasing_span])
     assert reasons and reasons[0].startswith("lift"), reasons

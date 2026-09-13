@@ -186,7 +186,8 @@ Rules the validator enforces on this shape (slice 1):
 - `narration.claims_hash` equals the hash of the resolved claims' texts, in order. A
   narration whose hash is stale is refused (the same rule as `verified_body_hash` today).
 - No lift between `narration.text` and any span of the beat, outside attributed
-  quotation: the P4 gate refuses a run of six words (`narrate.NARRATION_LIFT_RUN_LENGTH`);
+  quotation: the P4 gate refuses a run of seven words (`narrate.NARRATION_LIFT_GATE_RUN`;
+  six was ruled first and refused 40% of job 1's narrations on ordinary phrasing);
   the validator's floor is eight. Lift is a NARRATION rule only (owner ruling 2026-09-13
   after the proof chunk: the claim-level test deleted 139 facts) — a claim is provenance,
   never spoken. Formerly: no lift ≥8 between `narration.text` and any span, outside attributed

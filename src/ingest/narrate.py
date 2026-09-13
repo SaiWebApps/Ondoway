@@ -17,7 +17,7 @@ placeholder verdict here would be exactly the unbound verdict the slice-1
 validator refuses.
 
 The code gate (`narration_gates`) runs on every answer: no
-`NARRATION_LIFT_GATE_RUN`-word (six) run with ANY claim span outside an
+`NARRATION_LIFT_GATE_RUN`-word (seven) run with ANY claim span outside an
 attributed quotation or a proper name (owner ruling 2026-09-13; the validator's
 floor is eight) (`gates.lift` per span — the author never saw the spans, so a
 run is a memorised source, which is the same defect), no provenance leak
@@ -48,11 +48,12 @@ from src.ingest.group import Story
 from src.ingest.judge_claims import JudgedClaim
 
 #: Output tokens requested for one narration.
-#: The narration lift run: OWNER RULING 2026-09-13 — six words, not the
+#: The narration lift run: OWNER RULINGS 2026-09-13 — seven words, not the
 #: validator's eight-word floor, because on the first real job the book's own
 #: seven-word phrase ("an eccentric German baroness named Hilla Rebay") reached
-#: the listener under eight.
-NARRATION_LIFT_GATE_RUN: int = 6
+#: the listener under eight. Six was ruled first and refused 40% of job 1's
+#: first-attempt narrations on ordinary phrasing; seven refused 20%.
+NARRATION_LIFT_GATE_RUN: int = 7
 
 P4_MAX_TOKENS: int = 16_000  # thinking-inclusive; tests/test_ingest_output_caps.py
 

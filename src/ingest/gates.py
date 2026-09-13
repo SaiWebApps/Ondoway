@@ -26,7 +26,7 @@ order, one reason per failing gate, never short-circuiting; lift left it on
 `LIFT_RUN_LENGTH` (8) is the validator's FLOOR, the same number as
 `scripts.verbatim.VERBATIM_RUN_BLOCK`; the pipeline no longer has one copying
 threshold (decisions.spec_extensions #3 is superseded by the owner ruling of
-2026-09-13): claims are not tested, the P4 narration gate passes six
+2026-09-13): claims are not tested, the P4 narration gate passes seven
 (`narrate.NARRATION_LIFT_GATE_RUN`), proper names are exempt.
 
 `lift` measures a claim against the WHOLE unit text, not just its own

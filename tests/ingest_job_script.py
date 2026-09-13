@@ -88,9 +88,8 @@ TICKET: dict = {
 }
 TICKET_SENTENCE = "A ticket cost fifty cents when the doors opened in October 1959."
 
-#: Three sentences, one per claim, no SIX-word run with any span (the museum's
-#: six-word name "the Museum of Non-Objective Painting" would be one under the
-#: 2026-09-13 narration rule — a proper-name exemption is owed), no leak, no
+#: Three sentences, one per claim, no SEVEN-word run with any span (written under
+#: the six-word rule, before the proper-name exemption existed), no leak, no
 #: framing verb — passes `narrate.narration_gates` as written.
 NARRATION = (
     "Solomon Guggenheim started buying abstract art late in life on the advice "

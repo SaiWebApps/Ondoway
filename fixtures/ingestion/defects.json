@@ -154,7 +154,7 @@
     {
       "class": "lift",
       "detector": "narration_gates",
-      "note": "The narration copies fourteen consecutive words of a span outside any quotation; since the owner ruling of 2026-09-13 lift is a NARRATION gate (six words), never a claim gate.",
+      "note": "The narration copies fourteen consecutive words of a span outside any quotation; since the owner ruling of 2026-09-13 lift is a NARRATION gate (seven words), never a claim gate.",
       "story": {
         "title": "The baroness and the niece",
         "place": "Solomon R. Guggenheim Museum",
