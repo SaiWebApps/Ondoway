@@ -547,6 +547,26 @@ def test_resolve_place_ignores_a_leading_definite_article_and_nothing_else():
     assert gates.resolve_place("Theatre District", pois) == ("Theatre District", True)  # no article
 
 
+def test_resolve_place_ignores_full_stops_in_a_name():
+    """Slice 9 job 1 run 3 (2026-09-13): six Guggenheim stories were
+    held as `new_poi` because the author wrote "Solomon R Guggenheim Museum"
+    where poi-raw.json says "Solomon R. Guggenheim Museum" — and P6 matches
+    existing beats by the canonical name, so a second book could never merge
+    into them. A full stop in an initial or an abbreviation ("R.", "St.") is
+    not part of the name. No new POI collision on NYC's poi-raw.json (checked
+    2026-09-13). Nothing else loosens: a missing word is still a new place."""
+    pois = [
+        {"name": "Solomon R. Guggenheim Museum", "name_variations": [], "parent_poi": None},
+        {"name": "St. Patrick's Cathedral", "name_variations": [], "parent_poi": None},
+    ]
+    guggenheim = ("Solomon R. Guggenheim Museum", False)
+    assert gates.resolve_place("Solomon R Guggenheim Museum", pois) == guggenheim
+    assert gates.resolve_place("Solomon R. Guggenheim Museum.", pois) == guggenheim
+    assert gates.resolve_place("St Patrick's Cathedral", pois) == ("St. Patrick's Cathedral", False)
+    assert gates.resolve_place("Solomon R Guggenheim", pois) == ("Solomon R Guggenheim", True)
+    assert gates.resolve_place("Guggenheim Museum", pois) == ("Guggenheim Museum", True)
+
+
 def test_claim_gates_no_longer_test_a_claim_for_lift():
     """OWNER RULING 2026-09-13 after slice 9's first real job: the lift test
     moves off claims and onto narration only. A claim is provenance — its

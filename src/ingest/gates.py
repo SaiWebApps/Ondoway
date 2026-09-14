@@ -46,7 +46,8 @@ framing belongs to the tour engine, never to a beat). Both return every
 match, so a re-ask can quote each one back.
 
 Step 9 lands `resolve_place` (exact casefold+whitespace match against a
-POI's `name` and `name_variations`, else flagged `new_poi`).
+POI's `name` and `name_variations`, a leading "the" and full stops ignored,
+else flagged `new_poi`).
 
 Step 10 landed the P2 set gates: `every_claim_once` and
 `known_claim_ids` (every claim assigned to exactly one story, and every
@@ -410,8 +411,9 @@ def resolve_place(place: str, pois: Sequence[Mapping[str, object]]) -> tuple[str
     """Resolve a claim's cited place to a POI's canonical name.
 
     Exact match only — casefold + whitespace-normalized, a leading definite
-    article ignored on both sides (slice 9's proof chunk held 12 of 20
-    stories as new places over "The Frick Collection" vs "Frick Collection")
+    article and full stops ignored on both sides (slice 9's proof chunk held 12
+    of 20 stories as new places over "The Frick Collection" vs "Frick
+    Collection", and run 3 six Guggenheim stories over "R" vs "R.")
     — against each POI's `name` and `name_variations`. No prefix or fuzzy
     matching (PO Risk 1: 'Guggenheim' alone must not match 'Solomon R.
     Guggenheim Museum').
@@ -431,8 +433,10 @@ def resolve_place(place: str, pois: Sequence[Mapping[str, object]]) -> tuple[str
 
 
 def _place_key(name: str) -> str:
-    """Casefold, whitespace-normalized, without a leading "the"."""
-    key = normalize_ws(name).casefold()
+    """Casefold, whitespace-normalized, without full stops ("Solomon R
+    Guggenheim Museum" is the POI "Solomon R. Guggenheim Museum", slice 9
+    job 1 run 3) and without a leading "the"."""
+    key = normalize_ws(name.replace(".", "")).casefold()
     return key[4:] if key.startswith("the ") else key
 
 
