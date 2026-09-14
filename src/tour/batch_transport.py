@@ -85,6 +85,31 @@ def submit_batch(
     return client.messages.batches.create(requests=batch_requests)
 
 
+#: SDK errors a status check may be retried past: the request never got an
+#: answer, or the service said try again. Named, not imported, because the
+#: SDK is never an import-time dependency of this package.
+_TRANSIENT_ERROR_NAMES = (
+    "APIConnectionError",  # includes APITimeoutError
+    "RateLimitError",
+    "InternalServerError",
+    "ServiceUnavailableError",
+    "OverloadedError",
+    "DeadlineExceededError",
+)
+
+
+def _is_transient(exc: Exception) -> bool:
+    try:
+        import anthropic
+    except ImportError:
+        return False
+    classes = tuple(
+        cls for cls in (getattr(anthropic, name, None) for name in _TRANSIENT_ERROR_NAMES)
+        if isinstance(cls, type)
+    )
+    return bool(classes) and isinstance(exc, classes)
+
+
 def poll_batch(
     batch_id: str,
     *,
@@ -92,16 +117,46 @@ def poll_batch(
     poll_interval_s: float = 10,
     max_poll_s: float = 3600,
     on_poll: Callable[[Any, float], None] | None = None,
+    max_consecutive_retrieve_errors: int = 0,
+    on_poll_error: Callable[[Exception, int], None] | None = None,
 ) -> Any:
     """Poll until the batch has ended. `on_poll(batch, elapsed_s)` is called
     on every poll, the final one included, so a caller can print a
-    heartbeat: a batch phase otherwise sits silent for minutes."""
+    heartbeat: a batch phase otherwise sits silent for minutes.
+
+    A caller may ride out up to `max_consecutive_retrieve_errors` transient
+    status-check failures in a row (connection, timeout, 5xx, 429 — see
+    `_is_transient`): each is reported to `on_poll_error(exc, consecutive)`
+    and the poll goes on; a successful check resets the count. A non-transient
+    error, one past the limit, or one past the deadline raises. The default
+    (0) raises the first error, as every caller did before."""
     if client is None:
         client = batch_client(max_retries=2)
     started = time.monotonic()
     deadline = started + max_poll_s
+    consecutive_errors = 0
     while True:
-        batch = client.messages.batches.retrieve(batch_id)
+        try:
+            batch = client.messages.batches.retrieve(batch_id)
+        except Exception as exc:
+            consecutive_errors += 1
+            if (
+                not _is_transient(exc)
+                or consecutive_errors > max_consecutive_retrieve_errors
+                or time.monotonic() >= deadline
+            ):
+                raise
+            if on_poll_error is not None:
+                try:
+                    on_poll_error(exc, consecutive_errors)
+                except Exception as report_exc:  # observability must never end a billed batch
+                    print(
+                        f"on_poll_error warning: {type(report_exc).__name__}: {report_exc} "
+                        f"(batch {batch_id})"
+                    )
+            time.sleep(poll_interval_s)
+            continue
+        consecutive_errors = 0
         if on_poll is not None:
             try:
                 on_poll(batch, time.monotonic() - started)

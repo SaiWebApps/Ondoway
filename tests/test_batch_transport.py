@@ -226,3 +226,80 @@ def test_a_failing_poll_callback_never_stops_the_poll(capsys) -> None:
     assert calls == ["in_progress", "ended"]
     out = capsys.readouterr().out
     assert "on_poll" in out and "disk full" in out
+
+
+def _api_errors():
+    """Real SDK exception instances, one per class the poll must tell apart."""
+    import anthropic
+    import httpx
+
+    request = httpx.Request("GET", "https://api.anthropic.com/v1/messages/batches/msgbatch_x")
+
+    def status(cls, code):
+        return cls("status", response=httpx.Response(code, request=request), body=None)
+
+    return {
+        "connection": anthropic.APIConnectionError(request=request),
+        "timeout": anthropic.APITimeoutError(request=request),
+        "server": status(anthropic.InternalServerError, 500),
+        "rate_limit": status(anthropic.RateLimitError, 429),
+        "auth": status(anthropic.AuthenticationError, 401),
+    }
+
+
+def test_transient_status_check_errors_are_tolerated_up_to_a_limit_when_asked(capsys) -> None:
+    """Slice 9 job 2 (2026-09-14): with the ingest poll now allowed 24 hours,
+    one status check that fails past the SDK's own retries would still end a
+    paid job. A caller may ask `poll_batch` to ride out up to N CONSECUTIVE
+    transient failures (connection, timeout, 5xx, 429): each is reported to
+    `on_poll_error(exc, consecutive)` and the poll goes on; a successful check
+    resets the count; one past N raises it; a non-transient error (auth)
+    raises at once; and the default (0) leaves every caller as it was."""
+    import types
+
+    from src.tour import batch_transport as bt
+
+    errors = _api_errors()
+
+    def client_answering(*script):
+        answers = iter(script)
+
+        class _Batches:
+            def retrieve(self, batch_id):
+                answer = next(answers)
+                if isinstance(answer, Exception):
+                    raise answer
+                return types.SimpleNamespace(id=batch_id, processing_status=answer)
+
+        return types.SimpleNamespace(messages=types.SimpleNamespace(batches=_Batches()))
+
+    seen: list[tuple[str, int]] = []
+    client = client_answering(
+        errors["connection"], errors["timeout"], "in_progress",
+        errors["server"], errors["rate_limit"], "ended",
+    )
+    batch = bt.poll_batch(
+        "msgbatch_x", client=client, poll_interval_s=0, max_consecutive_retrieve_errors=2,
+        on_poll_error=lambda exc, n: seen.append((type(exc).__name__, n)),
+    )
+    assert batch.processing_status == "ended"
+    assert seen == [
+        ("APIConnectionError", 1), ("APITimeoutError", 2),
+        ("InternalServerError", 1), ("RateLimitError", 2),
+    ]
+
+    client = client_answering(errors["server"], errors["server"], errors["server"], "ended")
+    with pytest.raises(type(errors["server"])):
+        bt.poll_batch(
+            "msgbatch_x", client=client, poll_interval_s=0, max_consecutive_retrieve_errors=2
+        )
+
+    client = client_answering(errors["auth"], "ended")
+    with pytest.raises(type(errors["auth"])):
+        bt.poll_batch(
+            "msgbatch_x", client=client, poll_interval_s=0, max_consecutive_retrieve_errors=5
+        )
+
+    client = client_answering(errors["connection"], "ended")
+    with pytest.raises(type(errors["connection"])):
+        bt.poll_batch("msgbatch_x", client=client, poll_interval_s=0)

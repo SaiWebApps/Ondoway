@@ -1177,3 +1177,49 @@ def test_the_live_client_waits_out_a_slow_batch_up_to_the_batch_apis_24_hours(mo
     client.estimate([], [])
     with pytest.raises(RuntimeError, match="did not reach 'ended' within 86400"):
         client.complete_batch("claim_judge", [("c1", "p")], None, phase="P3", max_tokens=400)
+
+
+def test_the_live_client_rides_out_transient_status_check_failures_and_logs_them():
+    """Slice 9 job 2 (2026-09-14), judge condition before the re-run: a status
+    check that fails past the SDK's retries must not end a paid job. The live
+    client tolerates `BATCH_POLL_RETRIEVE_ERRORS` consecutive transient
+    failures, and each one reaches the job log as `batch_poll_error`."""
+    import anthropic
+    import httpx
+
+    request = httpx.Request("GET", "https://api.anthropic.com/v1/messages/batches/msgbatch_stub_01")
+    answers = iter([
+        anthropic.APIConnectionError(request=request),
+        anthropic.InternalServerError(
+            "overloaded", response=httpx.Response(500, request=request), body=None
+        ),
+        "ended",
+    ])
+    stub, _record = _batch_sdk_stub(
+        [_batch_succeeded("c1", text='{"entailed": true, "reason": "r", "kind": "state"}',
+                          model="claude-haiku-4-5-20251001")]
+    )
+
+    def retrieve(requested_id):
+        answer = next(answers)
+        if isinstance(answer, Exception):
+            raise answer
+        return types.SimpleNamespace(id=requested_id, processing_status=answer)
+
+    stub.messages.batches.retrieve = retrieve
+    events: list[tuple[str, dict]] = []
+    client = llm.AnthropicClient(
+        lambda kind, payload: events.append((kind, payload)),
+        sdk=stub, submit_sdk=stub, poll_interval_s=0,
+    )
+    client.estimate([], [])
+
+    results = client.complete_batch("claim_judge", [("c1", "p")], None, phase="P3", max_tokens=400)
+
+    assert isinstance(results["c1"], llm.Completion)
+    assert llm.BATCH_POLL_RETRIEVE_ERRORS >= 2
+    errors = [payload for kind, payload in events if kind == "batch_poll_error"]
+    assert [(e["error"], e["consecutive"]) for e in errors] == [
+        ("APIConnectionError", 1), ("InternalServerError", 2)
+    ]
+    assert all(e["phase"] == "P3" and e["batch_id"] == "msgbatch_stub_01" for e in errors)

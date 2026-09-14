@@ -768,6 +768,11 @@ class MockClient:
 #: outlasted the previous one-hour ceiling, losing the job's P1-P2 work.
 BATCH_MAX_POLL_S: float = 24 * 3600
 
+#: Transient status-check failures in a row the live client rides out while it
+#: waits (each one already exhausted the SDK's own retries). Judge condition
+#: before slice 9 job 2's re-run: a 24-hour wait is many more checks.
+BATCH_POLL_RETRIEVE_ERRORS: int = 6
+
 
 class AnthropicClient:
     """The real ModelClient, talking to the Anthropic API.
@@ -1062,12 +1067,28 @@ class AnthropicClient:
                 },
             )
 
+        def poll_error(exc: Exception, consecutive: int) -> None:
+            self._sink(
+                "batch_poll_error",
+                {
+                    "phase": phase,
+                    "role": role,
+                    "batch_id": batch_id,
+                    "error": type(exc).__name__,
+                    "message": str(exc)[:300],
+                    "consecutive": consecutive,
+                    "tolerated": BATCH_POLL_RETRIEVE_ERRORS,
+                },
+            )
+
         _bt.poll_batch(
             batch_id,
             client=self._get_sdk(),
             poll_interval_s=self.poll_interval_s,
             max_poll_s=self.max_poll_s,
             on_poll=heartbeat,
+            max_consecutive_retrieve_errors=BATCH_POLL_RETRIEVE_ERRORS,
+            on_poll_error=poll_error,
         )
         collected = _bt.collect_results(batch_id, client=self._get_sdk())
 
