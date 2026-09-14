@@ -303,3 +303,52 @@ def test_transient_status_check_errors_are_tolerated_up_to_a_limit_when_asked(ca
     client = client_answering(errors["connection"], "ended")
     with pytest.raises(type(errors["connection"])):
         bt.poll_batch("msgbatch_x", client=client, poll_interval_s=0)
+
+
+def test_error_retries_back_off_when_asked_and_a_good_check_restores_the_pace() -> None:
+    """Judge, checkpoint 11: six tolerated errors at a 10 s pace cover about
+    85 s of a fast-failing outage (DNS, refused connection, an instant 503).
+    With `retrieve_error_backoff_s` the wait after the nth consecutive error
+    is backoff * 2**(n-1), so the same budget spans a real outage; after a
+    good check the next wait is the ordinary `poll_interval_s` again and the
+    backoff starts over. Unset, errors wait `poll_interval_s` as before."""
+    import types
+
+    from src.tour import batch_transport as bt
+
+    error = _api_errors()["connection"]
+
+    def run(script, **kwargs):
+        clock = types.SimpleNamespace(now=0.0, slept=[])
+        answers = iter(script)
+
+        class _Batches:
+            def retrieve(self, batch_id):
+                answer = next(answers)
+                if isinstance(answer, Exception):
+                    raise answer
+                return types.SimpleNamespace(id=batch_id, processing_status=answer)
+
+        def sleep(seconds):
+            clock.slept.append(seconds)
+            clock.now += seconds
+
+        original = bt.time
+        bt.time = types.SimpleNamespace(monotonic=lambda: clock.now, sleep=sleep)
+        try:
+            bt.poll_batch(
+                "msgbatch_x",
+                client=types.SimpleNamespace(messages=types.SimpleNamespace(batches=_Batches())),
+                poll_interval_s=10, max_poll_s=86_400, **kwargs,
+            )
+        finally:
+            bt.time = original
+        return clock.slept
+
+    assert run(
+        [error, error, error, "in_progress", error, "ended"],
+        max_consecutive_retrieve_errors=6, retrieve_error_backoff_s=30,
+    ) == [30, 60, 120, 10, 30]
+    assert run(
+        [error, error, "ended"], max_consecutive_retrieve_errors=6
+    ) == [10, 10]

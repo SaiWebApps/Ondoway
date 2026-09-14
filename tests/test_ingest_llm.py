@@ -1179,22 +1179,38 @@ def test_the_live_client_waits_out_a_slow_batch_up_to_the_batch_apis_24_hours(mo
         client.complete_batch("claim_judge", [("c1", "p")], None, phase="P3", max_tokens=400)
 
 
-def test_the_live_client_rides_out_transient_status_check_failures_and_logs_them():
+def test_the_live_client_rides_out_transient_status_check_failures_and_logs_them(monkeypatch):
     """Slice 9 job 2 (2026-09-14), judge condition before the re-run: a status
     check that fails past the SDK's retries must not end a paid job. The live
     client tolerates `BATCH_POLL_RETRIEVE_ERRORS` consecutive transient
-    failures, and each one reaches the job log as `batch_poll_error`."""
+    failures, and each one reaches the job log as `batch_poll_error`.
+    The waits between them back off (`BATCH_POLL_ERROR_BACKOFF_S`, doubling),
+    so the errors span an outage of half an hour, not a minute and a half
+    of fast failures (judge, checkpoint 11)."""
     import anthropic
     import httpx
 
+    from src.tour import batch_transport
+
+    clock = types.SimpleNamespace(now=0.0, slept=[])
+
+    def sleep(seconds):
+        clock.slept.append(seconds)
+        clock.now += seconds
+
+    monkeypatch.setattr(
+        batch_transport, "time", types.SimpleNamespace(monotonic=lambda: clock.now, sleep=sleep)
+    )
+
     request = httpx.Request("GET", "https://api.anthropic.com/v1/messages/batches/msgbatch_stub_01")
-    answers = iter([
-        anthropic.APIConnectionError(request=request),
+    connection = anthropic.APIConnectionError(request=request)
+    failures = [connection] * (llm.BATCH_POLL_RETRIEVE_ERRORS - 1)
+    failures.append(
         anthropic.InternalServerError(
             "overloaded", response=httpx.Response(500, request=request), body=None
-        ),
-        "ended",
-    ])
+        )
+    )
+    answers = iter([*failures, "ended"])
     stub, _record = _batch_sdk_stub(
         [_batch_succeeded("c1", text='{"entailed": true, "reason": "r", "kind": "state"}',
                           model="claude-haiku-4-5-20251001")]
@@ -1219,7 +1235,10 @@ def test_the_live_client_rides_out_transient_status_check_failures_and_logs_them
     assert isinstance(results["c1"], llm.Completion)
     assert llm.BATCH_POLL_RETRIEVE_ERRORS >= 2
     errors = [payload for kind, payload in events if kind == "batch_poll_error"]
+    n = llm.BATCH_POLL_RETRIEVE_ERRORS
     assert [(e["error"], e["consecutive"]) for e in errors] == [
-        ("APIConnectionError", 1), ("InternalServerError", 2)
+        *[("APIConnectionError", i) for i in range(1, n)], ("InternalServerError", n)
     ]
+    assert clock.slept == [llm.BATCH_POLL_ERROR_BACKOFF_S * 2**i for i in range(n)]
+    assert sum(clock.slept) >= 30 * 60
     assert all(e["phase"] == "P3" and e["batch_id"] == "msgbatch_stub_01" for e in errors)

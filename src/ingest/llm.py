@@ -773,6 +773,11 @@ BATCH_MAX_POLL_S: float = 24 * 3600
 #: before slice 9 job 2's re-run: a 24-hour wait is many more checks.
 BATCH_POLL_RETRIEVE_ERRORS: int = 6
 
+#: The wait after the first of those errors, doubling after each further one:
+#: six errors span 30+60+...+960 s = 31.5 min of outage, where a fast-failing
+#: error at the 10 s poll pace spent the budget in about 85 s (judge, 2026-09-14).
+BATCH_POLL_ERROR_BACKOFF_S: float = 30.0
+
 
 class AnthropicClient:
     """The real ModelClient, talking to the Anthropic API.
@@ -1089,6 +1094,7 @@ class AnthropicClient:
             on_poll=heartbeat,
             max_consecutive_retrieve_errors=BATCH_POLL_RETRIEVE_ERRORS,
             on_poll_error=poll_error,
+            retrieve_error_backoff_s=BATCH_POLL_ERROR_BACKOFF_S,
         )
         collected = _bt.collect_results(batch_id, client=self._get_sdk())
 

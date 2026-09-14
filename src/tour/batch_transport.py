@@ -119,6 +119,7 @@ def poll_batch(
     on_poll: Callable[[Any, float], None] | None = None,
     max_consecutive_retrieve_errors: int = 0,
     on_poll_error: Callable[[Exception, int], None] | None = None,
+    retrieve_error_backoff_s: float | None = None,
 ) -> Any:
     """Poll until the batch has ended. `on_poll(batch, elapsed_s)` is called
     on every poll, the final one included, so a caller can print a
@@ -129,7 +130,11 @@ def poll_batch(
     `_is_transient`): each is reported to `on_poll_error(exc, consecutive)`
     and the poll goes on; a successful check resets the count. A non-transient
     error, one past the limit, or one past the deadline raises. The default
-    (0) raises the first error, as every caller did before."""
+    (0) raises the first error, as every caller did before.
+
+    With `retrieve_error_backoff_s` the wait after the nth consecutive error is
+    backoff * 2**(n-1), so the error budget spans an outage rather than a
+    minute of fast failures; otherwise errors wait `poll_interval_s`."""
     if client is None:
         client = batch_client(max_retries=2)
     started = time.monotonic()
@@ -154,7 +159,11 @@ def poll_batch(
                         f"on_poll_error warning: {type(report_exc).__name__}: {report_exc} "
                         f"(batch {batch_id})"
                     )
-            time.sleep(poll_interval_s)
+            time.sleep(
+                retrieve_error_backoff_s * 2 ** (consecutive_errors - 1)
+                if retrieve_error_backoff_s
+                else poll_interval_s
+            )
             continue
         consecutive_errors = 0
         if on_poll is not None:
