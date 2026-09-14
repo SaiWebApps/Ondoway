@@ -1123,3 +1123,57 @@ def test_a_batch_phase_emits_a_heartbeat_on_every_poll():
     }
     kinds = [kind for kind, _p in events]
     assert kinds.index("batch_submitted") < kinds.index("batch_polling")
+
+
+def test_the_live_client_waits_out_a_slow_batch_up_to_the_batch_apis_24_hours(monkeypatch):
+    """Slice 9 job 2 (2026-09-14): a 6-request P3 batch was still in_progress
+    after the client's one-hour poll ceiling, and the paid job died with its
+    P1-P2 work in the process. The Batch API allows a batch 24 hours, so the
+    live client — as the job front door builds it — waits that long: a batch
+    that takes two hours completes, and one that never ends still raises at
+    the 24-hour bound. Real `batch_transport.poll_batch`, a fake clock."""
+    from src.ingest import run
+    from src.tour import batch_transport
+
+    clock = types.SimpleNamespace(now=0.0)
+    monkeypatch.setattr(
+        batch_transport,
+        "time",
+        types.SimpleNamespace(
+            monotonic=lambda: clock.now,
+            sleep=lambda seconds: setattr(clock, "now", clock.now + seconds),
+        ),
+    )
+
+    def stub_ending_after(seconds):
+        stub, _record = _batch_sdk_stub(
+            [_batch_succeeded("c1", text='{"entailed": true, "reason": "r", "kind": "state"}',
+                              model="claude-haiku-4-5-20251001")]
+        )
+        stub.messages.batches.retrieve = lambda requested_id: types.SimpleNamespace(
+            id=requested_id,
+            processing_status="ended" if clock.now >= seconds else "in_progress",
+        )
+        return stub
+
+    assert llm.BATCH_MAX_POLL_S == 24 * 3600
+    monkeypatch.setenv("INGEST_PROVIDER", "anthropic")
+    assert run.client_from_env(lambda _k, _p: None).max_poll_s == llm.BATCH_MAX_POLL_S
+
+    two_hours = stub_ending_after(2 * 3600)
+    client = llm.AnthropicClient(
+        lambda _k, _p: None, sdk=two_hours, submit_sdk=two_hours, poll_interval_s=300
+    )
+    client.estimate([], [])
+    results = client.complete_batch("claim_judge", [("c1", "p")], None, phase="P3", max_tokens=400)
+    assert isinstance(results["c1"], llm.Completion)
+    assert clock.now >= 2 * 3600
+
+    clock.now = 0.0
+    never = stub_ending_after(float("inf"))
+    client = llm.AnthropicClient(
+        lambda _k, _p: None, sdk=never, submit_sdk=never, poll_interval_s=1800
+    )
+    client.estimate([], [])
+    with pytest.raises(RuntimeError, match="did not reach 'ended' within 86400"):
+        client.complete_batch("claim_judge", [("c1", "p")], None, phase="P3", max_tokens=400)

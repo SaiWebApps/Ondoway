@@ -763,6 +763,12 @@ class MockClient:
 # ── AnthropicClient (decisions.vocabulary_pinned / decisions.factory_choice) ─
 
 
+#: How long the live client waits for one batch to end: the Batch API's own
+#: 24-hour window. Slice 9 job 2 (2026-09-14) died when a 6-request P3 batch
+#: outlasted the previous one-hour ceiling, losing the job's P1-P2 work.
+BATCH_MAX_POLL_S: float = 24 * 3600
+
+
 class AnthropicClient:
     """The real ModelClient, talking to the Anthropic API.
 
@@ -806,7 +812,7 @@ class AnthropicClient:
         submit_sdk: object | None = None,
         roles: MappingProxyType[str, str] | dict[str, str] = ROLE_MODEL,
         poll_interval_s: float = 10.0,
-        max_poll_s: float = 3600.0,
+        max_poll_s: float = BATCH_MAX_POLL_S,
     ) -> None:
         roles_dict = dict(roles)
         _refuse_if_judge_is_author(roles_dict)
