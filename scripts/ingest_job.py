@@ -246,6 +246,25 @@ class _PrintingStore(jobs.IngestJobStore):
             print(f"event {message}: {json.dumps(event.data, ensure_ascii=False)}")
         return event
 
+    def held_path(self, job_id: str) -> Path:
+        return self.log_dir.parent / "held" / f"{job_id}.jsonl"
+
+    def queue(self, **kwargs):
+        """The review queue is process-local; slice 9 job 1 run 4 lost four
+        held stories when the CLI exited. Each NEW item is appended, whole,
+        to `held_path` the moment it is queued (identical content is one
+        item by hash and writes nothing more)."""
+        item_id = jobs.shown_hash(kwargs["shown"])
+        is_new = self.item(item_id) is None
+        item = super().queue(**kwargs)
+        if is_new:
+            path = self.held_path(item.job_id)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(item.model_dump(mode="json"), ensure_ascii=False) + "\n")
+            print(f"queued {item.kind} {item.story_slug} -> {path}")
+        return item
+
 
 def summary(snap: jobs.IngestJob, log_path: Path) -> str:
     """The slice-9 measurements, read off the job log: the P6 hold rate

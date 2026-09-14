@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from src.ingest import jobs, llm, model, narrate, run
+from src.ingest import jobs, judge_claims, llm, model, narrate, run
 from tests import ingest_job_script as script_mod
 
 
@@ -317,6 +317,8 @@ def test_a_held_merge_is_a_queue_item_and_nothing_of_it_reaches_disk(tmp_path):
     assert item.job_id == job.id
     assert item.item_id == jobs.shown_hash(item.shown)
     assert item.shown["claims"] == [c["text"] for c in script_mod.CLAIMS]
+    kept = [judge_claims.JudgedClaim.model_validate(c) for c in item.shown["judged_claims"]]
+    assert [c.draft.source.span for c in kept] == [c["span"] for c in script_mod.CLAIMS]
     assert item.shown["narration"] == script_mod.NARRATION
     assert item.shown["judge_story"] == "new"
     assert "disagree" in item.reason
@@ -482,6 +484,49 @@ def test_a_narration_still_refused_after_the_revise_is_held_and_queued(tmp_path)
     assert items[0].shown["narration"] == revised
     assert items[0].shown["phase"] == "P5"
     assert items[0].held_back == {"claims": 3, "duration_sec": narrate.duration_sec(revised)}
+
+
+def test_a_story_held_at_p4_keeps_its_judged_claims_in_the_queue_item(tmp_path):
+    """Slice 9 job 1 run 4 (2026-09-14): four stories — the Guggenheim origin
+    story among them — failed the narration lift gate twice, were held at P4,
+    and vanished: the queue item kept only the claim TEXTS, and nothing else
+    of the story's judged claims survived the process. A held narration's
+    item now carries every judged claim whole (text, span, verdict), so the
+    story can be re-narrated later without paying for P1-P3 again."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    lifted = (
+        "Solomon Guggenheim bought abstract art at the behest of his art adviser, "
+        "an eccentric German baroness named Hilla Rebay."
+    )
+    lifted_again = (
+        "A mining magnate began acquiring abstract art in his 60s at the behest of "
+        "his adviser, Hilla Rebay."
+    )
+    scripted = script_mod.script(unit)
+    scripted["answers"]["author"] = [
+        scripted["answers"]["author"][0],
+        script_mod.narration_answer(lifted),
+        script_mod.narration_answer(lifted_again),
+    ]
+    client = llm.MockClient(sink, **scripted)
+
+    run.run_job(job.id, store, client, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    held = [e.data for e in snap.events if e.message == "beat_held"]
+    assert [h["phase"] for h in held] == ["P4"]
+    items = store.undecided(script_mod.CITY)
+    assert [(i.kind, i.story_slug) for i in items] == [("narration_held", script_mod.STORY_SLUG)]
+    kept = [judge_claims.JudgedClaim.model_validate(c) for c in items[0].shown["judged_claims"]]
+    assert [c.draft.text for c in kept] == [c["text"] for c in script_mod.CLAIMS]
+    assert [c.draft.source.span for c in kept] == [c["span"] for c in script_mod.CLAIMS]
+    assert all(c.verdict.entailed for c in kept)
 
 
 def test_p0_refuses_a_legacy_file_and_a_url_source_before_any_call(tmp_path):

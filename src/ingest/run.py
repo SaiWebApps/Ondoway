@@ -766,6 +766,9 @@ class _Run:
         shown = {
             "story": _dump(story),
             "claims": [c.draft.text for c in claims],
+            # Whole, so a held story can be re-narrated without paying for
+            # P1-P3 again (slice 9 job 1 run 4 lost four stories).
+            "judged_claims": [_dump(c) for c in claims],
             "narration": narration,
             "phase": phase,
             "reason": reason,
@@ -791,6 +794,7 @@ class _Run:
         shown = {
             "story": _dump(story),
             "claims": [c.draft.text for c in claims],
+            "judged_claims": [_dump(c) for c in claims],
             "narration": narration.narration.text,
             "judge_story": outcome.judge_story,
             "reason": outcome.reason,

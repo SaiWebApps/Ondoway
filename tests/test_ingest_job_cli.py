@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 
 import scripts.ingest_job as ingest_job
+from src.ingest import jobs
 from tests import ingest_job_script as script_mod
 
 
@@ -193,6 +194,46 @@ def test_the_summary_measures_real_calls_and_spend_against_the_estimate(
     assert "P6 est=" in calls_line and "act=0" in calls_line
 
 
+def test_a_story_held_at_p4_survives_the_cli_in_the_held_sidecar(tmp_path, monkeypatch, capsys):
+    """Slice 9 job 1 run 4 end to end: the CLI runs a job whose only story's
+    narration copies the source twice, the story is held at P4, the process
+    returns — and the held story is on disk with its judged claims whole, in
+    `{data_root}/{city}/held/{job_id}.jsonl`, where the next session can
+    re-narrate it. Before this, the item lived only in the process."""
+    ws = _mock_env(tmp_path, monkeypatch)
+    unit = script_mod.unit(ws["chunks"])
+    lifted = (
+        "Solomon Guggenheim bought abstract art at the behest of his art adviser, "
+        "an eccentric German baroness named Hilla Rebay."
+    )
+    lifted_again = (
+        "A mining magnate began acquiring abstract art in his 60s at the behest of "
+        "his adviser, Hilla Rebay."
+    )
+    scripted = script_mod.script(unit)
+    scripted["answers"]["author"] = [
+        scripted["answers"]["author"][0],
+        script_mod.narration_answer(lifted),
+        script_mod.narration_answer(lifted_again),
+    ]
+    script_mod.write_script(tmp_path / "script.json", scripted)
+
+    rc = ingest_job.main([*ws["argv"], "--yes"])
+
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert "status=committed" in out and "beats_written=0" in out
+    sidecars = list((ws["data_root"] / script_mod.CITY / "held").glob("*.jsonl"))
+    assert len(sidecars) == 1
+    items = [json.loads(line) for line in sidecars[0].read_text(encoding="utf-8").splitlines()]
+    assert [(i["kind"], i["story_slug"], i["shown"]["phase"]) for i in items] == [
+        ("narration_held", script_mod.STORY_SLUG, "P4")
+    ]
+    spans = [c["draft"]["source"]["span"] for c in items[0]["shown"]["judged_claims"]]
+    assert spans == [c["span"] for c in script_mod.CLAIMS]
+    assert f"queued narration_held {script_mod.STORY_SLUG} -> {sidecars[0]}" in out
+
+
 def test_the_job_log_survives_a_run_that_dies_mid_way(tmp_path, monkeypatch):
     """The judge on the first paid job: the store is in-memory, so a
     SIGINT, a crash or an OOM during a paid run must not lose what was
@@ -308,6 +349,33 @@ def test_client_events_reach_the_job_log_once_the_job_exists(tmp_path, capsys):
     logged = [json.loads(line) for line in log_text.splitlines()]
     assert [e["message"] for e in logged] == ["batch_submitted", "batch_polling"]
     assert logged[0]["data"]["batch_id"] == "msgbatch_1"
+
+
+def test_every_new_review_item_is_written_to_the_held_sidecar_as_it_is_queued(tmp_path):
+    """Slice 9 job 1 run 4 (2026-09-14): the review queue lived only in the
+    CLI's process, so four held stories were lost when the job ended. The
+    store now appends each NEW queue item, whole, to
+    `{city root}/held/{job_id}.jsonl` the moment it is queued — the same
+    crash-safe rule as the job log — and re-queueing identical content (one
+    item, by hash) writes nothing more."""
+    store = ingest_job._PrintingStore(tmp_path / "new_york" / "jobs")
+    job = store.create(
+        city="new_york", source={"kind": "book", "chunk_dir": "x"}, as_of=2022,
+        rights_basis="owned_copy",
+    )
+    held = {"story": {"story_slug": "a"}, "judged_claims": [{"claim": 1}], "reason": "lift"}
+    for shown in (held, held, {**held, "reason": "not_entailed"}):
+        store.queue(
+            job_id=job.id, city="new_york", kind="narration_held", story_slug="a",
+            place="Solomon R. Guggenheim Museum", reason=shown["reason"], shown=shown,
+            held_back={"claims": 1, "duration_sec": 0},
+        )
+
+    sidecar = tmp_path / "new_york" / "held" / f"{job.id}.jsonl"
+    lines = [json.loads(line) for line in sidecar.read_text(encoding="utf-8").splitlines()]
+    assert [item["reason"] for item in lines] == ["lift", "not_entailed"]
+    assert lines[0]["shown"] == held
+    assert lines[0]["item_id"] == jobs.shown_hash(held)
 
 
 class _UsageOf:
