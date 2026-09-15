@@ -751,10 +751,15 @@ class _Run:
                 if key not in drafts:
                     continue
                 claims = judged[unit.key][story.story_slug]
-                narrations[key] = judge_narration.judge_narration(
-                    story, drafts[key], claims, self.client, events=self.emit,
-                    publishers=publishers,
-                )
+                try:
+                    narrations[key] = judge_narration.judge_narration(
+                        story, drafts[key], claims, self.client, events=self.emit,
+                        publishers=publishers,
+                    )
+                except BeatHeld as held:
+                    # One story the judge cannot answer is held, never the job
+                    # (slice 9 job 2 attempt 3 died on an uncaught hold in P6).
+                    self._queue_held_narration(story, claims, held.reason, phase="P5")
         self.done("P5", {"narrations": {k: _dump(n) for k, n in narrations.items()}})
         return narrations
 
@@ -787,6 +792,25 @@ class _Run:
             shown=shown, held_back={"claims": len(beat.claims), "duration_sec": beat.duration_sec},
         )
 
+    def _queue_unmerged(
+        self, story: Story, claims: Sequence[JudgedClaim], reason: str,
+        narration: JudgedNarration,
+    ) -> None:
+        """A story P6 could not merge at all (the judge's answer never met the
+        contract, or its call failed): held as a merge item, nothing applied."""
+        shown = {
+            "story": _dump(story),
+            "claims": [c.draft.text for c in claims],
+            "judged_claims": [_dump(c) for c in claims],
+            "narration": narration.narration.text,
+            "reason": reason,
+        }
+        self.store.queue(
+            job_id=self.job.id, city=self.job.city, kind="merge_held",
+            story_slug=story.story_slug, place=story.place, reason=reason, shown=shown,
+            held_back={"claims": len(claims), "duration_sec": narration.duration_sec},
+        )
+
     def _queue_held_merge(
         self, story: Story, claims: Sequence[JudgedClaim], outcome: merge.MergeOutcome,
         narration: JudgedNarration,
@@ -809,8 +833,12 @@ class _Run:
     # -- P6 --
     def _rerun(
         self, beat: model.Beat, publishers: Sequence[str]
-    ) -> model.Beat:
-        """P4/P5 again for a beat whose resolved texts changed."""
+    ) -> model.Beat | None:
+        """P4/P5 again for a beat whose resolved texts changed. None when no
+        judged narration comes back (held at P4 or P5): the caller keeps the
+        beat as it was on disk, because a merged beat carrying its old
+        narration has a stale claims_hash and P7's validator would refuse the
+        whole file (slice 9's all-phases hold test, 2026-09-15)."""
         story = story_of_beat(beat)
         claims = judged_of_beat(beat)
         try:
@@ -818,12 +846,14 @@ class _Run:
                                     publishers=publishers)
         except BeatHeld as held:
             self._queue_held_narration(story, claims, held.reason, phase="P4")
-            return beat.model_copy(
-                update={"review": model.Review(held=True, reason=f"P4: {held.reason}")}
+            return None
+        try:
+            judged = judge_narration.judge_narration(
+                story, draft, claims, self.client, events=self.emit, publishers=publishers
             )
-        judged = judge_narration.judge_narration(
-            story, draft, claims, self.client, events=self.emit, publishers=publishers
-        )
+        except BeatHeld as held:
+            self._queue_held_narration(story, claims, held.reason, phase="P5")
+            return None
         if judged.review.held:
             self._queue_held_narration(
                 story, claims, judged.review.reason or "", phase="P5",
@@ -892,7 +922,15 @@ class _Run:
                     )
                     outcome = None
                 else:
-                    outcome = merge.merge(story, claims, candidates, self.client, events=self.emit)
+                    try:
+                        outcome = merge.merge(
+                            story, claims, candidates, self.client, events=self.emit
+                        )
+                    except BeatHeld as held:
+                        # Slice 9 job 2 attempt 3 (2026-09-15): an invalid merge
+                        # answer, twice, raised here and ended a ten-hour job.
+                        self._queue_unmerged(story, claims, held.reason, narration)
+                        continue
                     if outcome.held:
                         self._queue_held_merge(story, claims, outcome, narration)
                         continue
@@ -918,12 +956,22 @@ class _Run:
                 "beats_extracted": extracted,
                 "pois_touched": sorted(touched),
             }
+        reverted: set[str] = set()
         if rerun:
             self.emit("rerun", {"beat_ids": list(rerun)})
-            existing = [
-                self._rerun(b, publishers) if b.beat_id in rerun else b for b in existing
-            ]
+            kept: list[model.Beat] = []
+            for b in existing:
+                renarrated = self._rerun(b, publishers) if b.beat_id in rerun else b
+                if renarrated is None:
+                    reverted.add(b.beat_id)
+                    kept.append(model.Beat.model_validate(raw_by_id[b.beat_id]))
+                else:
+                    kept.append(renarrated)
+            existing = kept
+            if reverted:
+                self.emit("rerun_reverted", {"beat_ids": sorted(reverted)})
         changed_ids.update(rerun)
+        changed_ids -= reverted
         records = [
             *(_dump(b) if b.beat_id in changed_ids else raw_by_id[b.beat_id] for b in existing),
             *(_dump(b) for b in new_records),

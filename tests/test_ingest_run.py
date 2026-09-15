@@ -400,6 +400,131 @@ def test_ids_in_rerun_get_p4_and_p5_again_before_p7(tmp_path):
     ]
 
 
+def _unreadable(model_id: str) -> llm.MockAnswer:
+    return llm.MockAnswer(text="not json", model_id=model_id)
+
+
+_LIFTED = (
+    "Solomon Guggenheim bought abstract art at the behest of his art adviser, "
+    "an eccentric German baroness named Hilla Rebay."
+)
+_LIFTED_AGAIN = (
+    "A mining magnate began acquiring abstract art in his 60s at the behest of "
+    "his adviser, Hilla Rebay."
+)
+
+
+def _inject_one_item_failure(case: str, unit, scripted: dict, data_root: Path) -> str:
+    """Break exactly one item of the scripted job in `case`'s phase; return
+    the phase whose hold the job must log."""
+    author, judge = script_mod.RESPONSE_AUTHOR_MODEL, script_mod.RESPONSE_JUDGE_MODEL
+    batch, answers = scripted["batch_answers"], scripted["answers"]
+    texts = [c["text"] for c in script_mod.CLAIMS]
+    if case == "P1":
+        batch[unit.custom_id(1)] = _unreadable(author)
+        batch[unit.custom_id(2)] = _unreadable(author)
+        return "P1"
+    if case == "P2":
+        answers["author"] = [_unreadable(author), _unreadable(author)]
+        return "P2"
+    if case == "P3":
+        batch[judge_claims.judge_custom_id(unit, "c01", 1)] = _unreadable(judge)
+        return "P3"
+    if case == "P4":
+        answers["author"] = [
+            answers["author"][0],
+            script_mod.narration_answer(_LIFTED),
+            script_mod.narration_answer(_LIFTED_AGAIN),
+        ]
+        return "P4"
+    if case == "P5":
+        first = next(iter(script_mod.sentence_verdicts(texts)))
+        batch[first] = _unreadable(judge)
+        return "P5"
+    script_mod.seed_beats(data_root, script_mod.existing_records())
+    if case == "P6-merge":
+        invalid = script_mod.merge_answer(
+            "new", "",
+            [
+                _claim_verdict("c01", "conflict", "c01", "his sixties", "his fifties"),
+                _claim_verdict("c02", "new", reason="no claim mentions 1939"),
+                _claim_verdict("c03", "new", reason="no claim mentions it"),
+            ],
+        )
+        answers["merge_judge"] = [invalid, invalid]
+        return "P6"
+    # P6-rerun(-P4): the merge joins the origins beat, and its re-narration
+    # is unreadable to the sentence judge (or copies the source twice).
+    if case == "P6-rerun-P4":
+        answers["author"].extend(
+            [script_mod.narration_answer(_LIFTED), script_mod.narration_answer(_LIFTED_AGAIN)]
+        )
+    else:
+        answers["author"].append(script_mod.narration_answer(script_mod.RERUN_NARRATION))
+    answers["merge_judge"] = [
+        script_mod.merge_answer(
+            "same", script_mod.ORIGINS_ID,
+            [
+                _claim_verdict("c01", "same", "c01", "his sixties", "his sixties"),
+                _claim_verdict("c02", "new", reason="no claim mentions 1939"),
+                _claim_verdict("c03", "same", "c02", "1959", "1959"),
+            ],
+        )
+    ]
+    merged = [
+        script_mod.COLLECTING["text"], script_mod.COMPLETED["text"], script_mod.OPENED_1939["text"]
+    ]
+    rerun_verdicts = script_mod.sentence_verdicts(merged, script_mod.RERUN_NARRATION)
+    batch.update(rerun_verdicts)
+    if case == "P6-rerun-P4":
+        return "P4"
+    batch[next(iter(rerun_verdicts))] = _unreadable(judge)
+    return "P5"
+
+
+@pytest.mark.parametrize(
+    "case", ["P1", "P2", "P3", "P4", "P5", "P6-merge", "P6-rerun", "P6-rerun-P4"]
+)
+def test_one_failing_item_never_ends_the_job(tmp_path, case):
+    """Slice 9 job 2 attempt 3 (2026-09-15) ran ten hours and died at P6: one
+    story's merge answer broke the contract twice, `merge.hold` raised, and
+    the runner caught holds in P1-P4 but not in P5 or P6 — so one bad item
+    ended the job and, with no resume, lost everything. In every phase, one
+    item that cannot be completed (an unreadable answer, a narration refused
+    twice, an invalid merge answer, a re-narration the judge cannot answer)
+    is held and logged for THAT phase, and the job still reaches P7. From P4
+    on the held story is a review-queue item, so it reaches the sidecar."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(unit)
+    phase = _inject_one_item_failure(case, unit, scripted, data_root)
+
+    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    assert [e.message for e in snap.events if e.kind == "phase"][-1] == "P7"
+    held = [
+        e.data for e in snap.events
+        if e.message in ("beat_held", "unit_held") and e.data.get("phase") == phase
+    ]
+    assert held, [e.message for e in snap.events]
+    if case not in ("P1", "P2", "P3"):
+        assert script_mod.STORY_SLUG in [i.story_slug for i in store.undecided(script_mod.CITY)]
+    if case.startswith("P6-rerun"):
+        # The hold came from P6's re-narration, not first-pass P4/P5, and the
+        # merged beat that could not be re-narrated stays exactly as it was.
+        assert "rerun" in [e.message for e in snap.events]
+        records = json.loads(
+            (data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8")
+        )
+        assert records == script_mod.existing_records()
+
+
 def test_a_new_place_holds_its_beat_and_queues_it(tmp_path):
     """D13: a story at a place the city's POI file does not name is held —
     its record commits with `review.held` and the reason naming the
