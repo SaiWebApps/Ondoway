@@ -459,3 +459,150 @@ def test_the_hold_rate_counts_only_stories_a_merge_actually_judged(tmp_path):
         "p6: stories=7 merge_judged=2 held=1 skipped_no_beat=3 new_place=2 hold_rate=0.50"
         in text
     )
+
+
+def _kill_in_p3(ws, capsys) -> str:
+    """Run the scripted job with no P3 answers (the mock never fabricates, so
+    it dies in P3 with P0-P2 done) and return its job id."""
+    unit = script_mod.unit(ws["chunks"])
+    full = script_mod.script(unit)
+    script_mod.write_script(
+        ws["chunks"].parent.parent.parent / "script.json",
+        {
+            "answers": full["answers"],
+            "batch_answers": {unit.custom_id(1): full["batch_answers"][unit.custom_id(1)]},
+        },
+    )
+    rc = ingest_job.main([*ws["argv"], "--yes"])
+    capsys.readouterr()
+    assert rc == 1
+    jobs_dir = ws["data_root"] / script_mod.CITY / "jobs"
+    job_dirs = [p for p in jobs_dir.iterdir() if p.is_dir()]
+    assert len(job_dirs) == 1, list(jobs_dir.iterdir())
+    return job_dirs[0].name
+
+
+def _resume_script(ws) -> None:
+    """Answers for P3 onward only: no P1 claims answer and no P2 stories
+    answer, so a resume that repaid P1 or P2 could not commit the beat."""
+    unit = script_mod.unit(ws["chunks"])
+    full = script_mod.script(unit)
+    batch = dict(full["batch_answers"])
+    del batch[unit.custom_id(1)]
+    script_mod.write_script(
+        ws["chunks"].parent.parent.parent / "script.json",
+        {"answers": {"author": [script_mod.narration_answer()]}, "batch_answers": batch},
+    )
+
+
+def test_a_job_killed_in_p3_resumes_from_its_phase_files_without_repaying_p1_or_p2(
+    tmp_path, monkeypatch, capsys
+):
+    """Slice 9 job 2 lost ten hours three times because phase outputs lived
+    only in the CLI's process. Each phase's output is now written under
+    `{data_root}/{city}/jobs/{job_id}/`, and `--resume JOB_ID --yes` rebuilds
+    the job from disk and runs from the first missing phase: with a script
+    that holds no P1 or P2 answers it still commits the beat, and the job log
+    carries a `resumed` event and continues its seq numbering."""
+    ws = _mock_env(tmp_path, monkeypatch)
+    job_id = _kill_in_p3(ws, capsys)
+    job_dir = ws["data_root"] / script_mod.CITY / "jobs" / job_id
+    assert sorted(p.name for p in job_dir.glob("P*.json")) == ["P0.json", "P1.json", "P2.json"]
+    assert (job_dir / "job.json").exists()
+    _resume_script(ws)
+
+    rc = ingest_job.main(["--city", script_mod.CITY, "--data-root", str(ws["data_root"]),
+                          "--repo-data", str(ws["repo_data"]), "--resume", job_id, "--yes"])
+
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert "status=committed" in out
+    records = json.loads((ws["data_root"] / script_mod.CITY / "beats.json").read_text("utf-8"))
+    assert [r["beat_id"] for r in records] == [script_mod.BEAT_ID]
+    assert records[0]["narration"]["text"] == script_mod.NARRATION
+    log_path = ws["data_root"] / script_mod.CITY / "jobs" / f"{job_id}.jsonl"
+    log = [json.loads(line) for line in log_path.read_text("utf-8").splitlines()]
+    resumed = [e for e in log if e["message"] == "resumed"]
+    assert resumed and resumed[0]["data"]["phases"] == ["P0", "P1", "P2"]
+    assert [e["seq"] for e in log] == sorted({e["seq"] for e in log})  # no restart at 1
+
+
+def test_a_phase_file_is_on_disk_before_its_phase_event_is_logged(tmp_path):
+    """A phase the log calls done must be resumable: the file is written (to a
+    temporary name, then renamed) before the `phase` event is appended."""
+    store = ingest_job._PrintingStore(tmp_path / "new_york" / "jobs")
+    job = store.create(
+        city="new_york", source={"kind": "book", "chunk_dir": "x"}, as_of=2022,
+        rights_basis="owned_copy",
+    )
+    seen: list[bool] = []
+    original = store.append_event
+
+    def spying(job_id, kind, message, **kwargs):
+        if kind == "phase":
+            seen.append((tmp_path / "new_york" / "jobs" / job_id / f"{message}.json").exists())
+        return original(job_id, kind, message, **kwargs)
+
+    store.append_event = spying
+    store.set_phase(job.id, "P1", {"claims": {}})
+    assert seen == [True]
+    assert json.loads((tmp_path / "new_york" / "jobs" / job.id / "P1.json").read_text()) == {
+        "claims": {}
+    }
+
+
+@pytest.mark.parametrize(
+    "case",
+    ["unknown", "committed_p7", "committed_book_log", "gap", "chunk_changed", "beats_changed",
+     "conflicting_as_of"],
+)
+def test_a_resume_that_could_repay_or_corrupt_is_refused_before_any_call(
+    tmp_path, monkeypatch, capsys, case
+):
+    """`--resume` refuses — exit 2, the reason printed, nothing run — for an
+    unknown job; a job that already committed (its P7.json, or the book log
+    naming its id: P7 commits before its phase file lands); phase files with
+    a gap; a source chunk whose text changed; a beats file another run
+    changed since the job started (a saved P6 holds the whole file); or a
+    flag that contradicts the job."""
+    ws = _mock_env(tmp_path, monkeypatch)
+    job_id = _kill_in_p3(ws, capsys)
+    city_dir = ws["data_root"] / script_mod.CITY
+    job_dir = city_dir / "jobs" / job_id
+    extra: list[str] = []
+    expected = {
+        "unknown": "unknown job", "committed_p7": "already committed",
+        "committed_book_log": "already committed", "gap": "gap",
+        "chunk_changed": "chunk", "beats_changed": "beats.json changed",
+        "conflicting_as_of": "as-of",
+    }[case]
+    if case == "unknown":
+        job_id = "0" * 32
+    elif case == "committed_p7":
+        (job_dir / "P7.json").write_text('{"written": 1}', encoding="utf-8")
+    elif case == "committed_book_log":
+        (city_dir / "book-log.json").write_text(
+            json.dumps({"city": script_mod.CITY, "books_processed": [{"job_id": job_id}]}),
+            encoding="utf-8",
+        )
+    elif case == "gap":
+        (job_dir / "P1.json").unlink()
+    elif case == "chunk_changed":
+        chunk = ws["chunks"] / f"{script_mod.LP_CHUNK}.txt"
+        chunk.write_text(chunk.read_text(encoding="utf-8") + "\nedited", encoding="utf-8")
+    elif case == "beats_changed":  # another job committed beats meanwhile
+        script_mod.seed_beats(ws["data_root"], script_mod.existing_records())
+    elif case == "conflicting_as_of":
+        extra = ["--as-of", "1999"]
+    _resume_script(ws)
+    before = (city_dir / "beats.json").read_bytes()
+
+    rc = ingest_job.main(["--city", script_mod.CITY, "--data-root", str(ws["data_root"]),
+                          "--repo-data", str(ws["repo_data"]), "--resume", job_id, "--yes",
+                          *extra])
+
+    out = capsys.readouterr().out
+    assert rc == 2, out
+    assert "resume refused" in out and expected in out, out
+    assert (city_dir / "beats.json").read_bytes() == before
+    assert "phase P3" not in out

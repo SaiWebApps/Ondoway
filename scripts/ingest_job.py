@@ -20,11 +20,22 @@ shape as `make ingest-calibrate-live`). The whole job log is written to
 and a measurement summary closes the run: the P6 hold rate with every
 `beat_held` reason, the leak gate's drops, and the attempt-one refusals
 (the precision side of P3).
+
+Each phase's output is also written to `{data_root}/{city}/jobs/{job_id}/`
+as it lands, so a job that dies continues from its last finished phase:
+
+    make ingest-job CITY=new_york CHUNK_DIR=<the job's chunk dir> \\
+        ARGS="--resume <job_id> --yes"
+
+A resume is refused, before any call, for an unknown or already committed
+job, a gap in its phase files, changed chunk text, a beats file changed
+since the job started, or a flag that contradicts the job.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -51,6 +62,20 @@ def ensure_root(data_root: Path, repo_data: Path, city: str) -> dict[str, Path]:
     if not beats.is_file():
         beats.write_text(json.dumps([]) + "\n", encoding="utf-8")
     return {"poi_raw": poi_raw, "beats": beats}
+
+
+def _sha256(data: bytes | str) -> str:
+    raw = data.encode("utf-8") if isinstance(data, str) else data
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _write_json_atomic(path: Path, payload: object) -> None:
+    """Write to a temporary name and rename, so a crash never leaves a
+    half-written phase file that a resume would trust."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(path)
 
 
 def _print_event(kind: str, payload: dict) -> None:
@@ -246,6 +271,61 @@ class _PrintingStore(jobs.IngestJobStore):
             print(f"event {message}: {json.dumps(event.data, ensure_ascii=False)}")
         return event
 
+    def job_dir(self, job_id: str) -> Path:
+        return self.log_dir / job_id
+
+    def set_phase(self, job_id: str, phase: str, output: dict) -> None:
+        """The phase's output lands on disk BEFORE its `phase` event: a phase
+        the log calls done is always resumable (slice 9 job 2 lost ten hours
+        three times with its outputs only in this process)."""
+        if phase not in jobs.PHASES:
+            raise ValueError(f"unknown phase {phase!r}")
+        _write_json_atomic(self.job_dir(job_id) / f"{phase}.json", output)
+        super().set_phase(job_id, phase, output)
+
+    def write_job_file(self, job: jobs.IngestJob, units, beats_path: Path) -> None:
+        """What a resume needs to rebuild the job and to refuse a changed
+        world: the job's own fields, each source chunk's text hash, and the
+        beats file's hash when the job started."""
+        _write_json_atomic(
+            self.job_dir(job.id) / "job.json",
+            {
+                "id": job.id,
+                "city": job.city,
+                "source": job.source.model_dump(mode="json"),
+                "as_of": job.as_of,
+                "rights_basis": job.rights_basis,
+                "created_at": job.created_at,
+                "chunk_sha256": {u.chunk: _sha256(u.text) for u in units},
+                "beats_sha256": _sha256(Path(beats_path).read_bytes()),
+            },
+        )
+
+    def restore(self, job_id: str) -> tuple[jobs.IngestJob, dict]:
+        """Rebuild a job from its directory: fields from job.json, every phase
+        file present, and the events already in its log (so seq numbering and
+        the summary's counters continue)."""
+        job_dir = self.job_dir(job_id)
+        meta = json.loads((job_dir / "job.json").read_text(encoding="utf-8"))
+        job = jobs.IngestJob(
+            id=meta["id"], city=meta["city"], source=meta["source"], as_of=meta["as_of"],
+            rights_basis=meta["rights_basis"], created_at=meta.get("created_at"),
+        )
+        for phase in jobs.PHASES:
+            phase_file = job_dir / f"{phase}.json"
+            if phase_file.is_file():
+                job.phases[phase] = json.loads(phase_file.read_text(encoding="utf-8"))
+        log = self.log_path(job_id)
+        if log.is_file():
+            job.events = [
+                jobs.OnboardEvent.model_validate(json.loads(line))
+                for line in log.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+        with self._lock:
+            self._jobs[job.id] = job
+        return job, meta
+
     def held_path(self, job_id: str) -> Path:
         return self.log_dir.parent / "held" / f"{job_id}.jsonl"
 
@@ -306,21 +386,54 @@ def _as_of(value: str) -> int | str:
     return int(value) if value.isdigit() else value
 
 
+def _resume_refusal(store: _PrintingStore, args, beats_path: Path) -> str | None:
+    """Why `--resume` must not run, or None. Checked before any call."""
+    job_dir = store.job_dir(args.resume)
+    if not (job_dir / "job.json").is_file():
+        return f"unknown job {args.resume!r} (no {job_dir / 'job.json'})"
+    meta = json.loads((job_dir / "job.json").read_text(encoding="utf-8"))
+    book_log = beats_path.parent / "book-log.json"
+    logged = []
+    if book_log.is_file():
+        logged = json.loads(book_log.read_text(encoding="utf-8")).get("books_processed", [])
+    if (job_dir / "P7.json").is_file() or any(b.get("job_id") == args.resume for b in logged):
+        return "already committed (P7 ran: a resume would commit twice)"
+    present = [phase for phase in jobs.PHASES if (job_dir / f"{phase}.json").is_file()]
+    if present != list(jobs.PHASES[: len(present)]):
+        return f"gap in the phase files: {present}"
+    source = meta["source"]
+    if args.chunk_dir is not None and str(args.chunk_dir) != source.get("chunk_dir"):
+        return f"--chunk-dir {args.chunk_dir} conflicts with the job's {source.get('chunk_dir')}"
+    if args.chunk is not None and args.chunk != source.get("chunks"):
+        return f"--chunk {args.chunk} conflicts with the job's {source.get('chunks')}"
+    if args.as_of is not None and _as_of(args.as_of) != meta["as_of"]:
+        return f"--as-of {args.as_of} conflicts with the job's {meta['as_of']}"
+    if _sha256(beats_path.read_bytes()) != meta["beats_sha256"]:
+        return "beats.json changed since the job started (a saved P6 holds the whole file)"
+    return None
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--city", required=True)
-    parser.add_argument("--chunk-dir", required=True, type=Path)
+    parser.add_argument("--chunk-dir", type=Path, default=None,
+                        help="required for a new job; taken from the job on --resume")
     parser.add_argument(
         "--chunk", action="append", default=None,
         help="a chunk stem from the manifest; repeatable; absent = the whole book",
     )
-    parser.add_argument("--as-of", required=True, help="the source's as-of year (or ISO date)")
+    parser.add_argument("--as-of", default=None,
+                        help="the source's as-of year (or ISO date); required for a new job")
     parser.add_argument("--rights-basis", default="owned_copy")
     parser.add_argument("--data-root", type=Path, default=None,
                         help="defaults to INGEST_DATA_ROOT, then the repo's data-ingest/")
     parser.add_argument("--repo-data", type=Path, default=ROOT / "data")
+    parser.add_argument("--resume", default=None, metavar="JOB_ID",
+                        help="continue a job from its phase files instead of starting one")
     parser.add_argument("--yes", action="store_true", help="proceed past the estimate and spend")
     args = parser.parse_args(argv)
+    if args.resume is None and (args.chunk_dir is None or args.as_of is None):
+        parser.error("a new job needs --chunk-dir and --as-of")
 
     data_root = args.data_root or Path(os.environ.get("INGEST_DATA_ROOT") or ROOT / "data-ingest")
     paths = ensure_root(data_root, args.repo_data, args.city)
@@ -328,12 +441,22 @@ def main(argv: list[str] | None = None) -> int:
 
     store = _PrintingStore(data_root / args.city / "jobs")
     holder: dict[str, str] = {}
-    job = store.create(
-        city=args.city,
-        source={"kind": "book", "chunk_dir": str(args.chunk_dir), "chunks": args.chunk},
-        as_of=_as_of(args.as_of),
-        rights_basis=args.rights_basis,
-    )
+    resumed_phases: list[str] = []
+    if args.resume is not None:
+        refusal = _resume_refusal(store, args, paths["beats"])
+        if refusal is not None:
+            print(f"resume refused: {refusal}")
+            return 2
+        job, meta = store.restore(args.resume)
+        resumed_phases = [phase for phase in jobs.PHASES if phase in job.phases]
+    else:
+        job = store.create(
+            city=args.city,
+            source={"kind": "book", "chunk_dir": str(args.chunk_dir), "chunks": args.chunk},
+            as_of=_as_of(args.as_of),
+            rights_basis=args.rights_basis,
+        )
+        meta = None
     client = _CountingClient(run.client_from_env(client_event_sink(store, holder)))
     holder["job_id"] = job.id
 
@@ -343,7 +466,13 @@ def main(argv: list[str] | None = None) -> int:
     except run.JobRefused as refused:
         print(f"job refused: {refused}")
         return 2
-    print(f"job {job.id}: {args.city} <- {args.chunk_dir.name} "
+    if meta is not None:
+        changed = [u.chunk for u in units if meta["chunk_sha256"].get(u.chunk) != _sha256(u.text)]
+        if changed:
+            print(f"resume refused: source chunk text changed since the job started: {changed}")
+            return 2
+    chunk_dir_name = Path(job.source.chunk_dir or "").name
+    print(f"job {job.id}: {args.city} <- {chunk_dir_name} "
           f"[{', '.join(u.chunk for u in units)}] as_of={job.as_of} rights={job.rights_basis}")
     estimate = run.estimate_job(client, units)
     _print_estimate(estimate)
@@ -351,6 +480,10 @@ def main(argv: list[str] | None = None) -> int:
         print("run refused: re-run with ARGS=\"... --yes\" to spend this.")
         return 2
 
+    if args.resume is not None:
+        store.append_event(job.id, "info", "resumed", data={"phases": resumed_phases})
+    else:
+        store.write_job_file(job, units, paths["beats"])
     run.run_job(job.id, store, client, data_root=data_root)
     finished = store.get(job.id)
     if finished is None:  # the store never forgets a job it created
