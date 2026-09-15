@@ -833,27 +833,25 @@ class _Run:
     # -- P6 --
     def _rerun(
         self, beat: model.Beat, publishers: Sequence[str]
-    ) -> model.Beat | None:
-        """P4/P5 again for a beat whose resolved texts changed. None when no
-        judged narration comes back (held at P4 or P5): the caller keeps the
-        beat as it was on disk, because a merged beat carrying its old
-        narration has a stale claims_hash and P7's validator would refuse the
-        whole file (slice 9's all-phases hold test, 2026-09-15)."""
+    ) -> tuple[model.Beat | None, str]:
+        """P4/P5 again for a beat whose resolved texts changed. `(None,
+        reason)` when no judged narration comes back (held at P4 or P5): the
+        caller keeps the beat as it was on disk — a merged beat carrying its
+        old narration has a stale claims_hash and P7's validator would refuse
+        the whole file — and queues the stories whose merges it dropped."""
         story = story_of_beat(beat)
         claims = judged_of_beat(beat)
         try:
             draft = narrate.narrate(story, claims, self.client, events=self.emit,
                                     publishers=publishers)
         except BeatHeld as held:
-            self._queue_held_narration(story, claims, held.reason, phase="P4")
-            return None
+            return None, f"P4: {held.reason}"
         try:
             judged = judge_narration.judge_narration(
                 story, draft, claims, self.client, events=self.emit, publishers=publishers
             )
         except BeatHeld as held:
-            self._queue_held_narration(story, claims, held.reason, phase="P5")
-            return None
+            return None, f"P5: {held.reason}"
         if judged.review.held:
             self._queue_held_narration(
                 story, claims, judged.review.reason or "", phase="P5",
@@ -865,7 +863,7 @@ class _Run:
                 "duration_sec": judged.duration_sec,
                 "review": judged.review,
             }
-        )
+        ), ""
 
     def p6(
         self,
@@ -888,8 +886,12 @@ class _Run:
         applied: list[str] = []
         changed_ids: set[str] = set()
         per_unit: dict[str, dict[str, Any]] = {}
+        # Who touched which place, per unit, and which stories merged into
+        # which beat — so a merge dropped by a failed rerun counts as nothing.
+        touched_by: dict[str, dict[str, set[str]]] = {}
+        merged_into: dict[str, list[tuple[str, Story, list[JudgedClaim], JudgedNarration]]] = {}
         for unit in units:
-            touched: set[str] = set()
+            touched = touched_by.setdefault(unit.key, {})
             extracted = 0
             for story in stories.get(unit.key, []):
                 key = _story_key(unit, story)
@@ -911,7 +913,7 @@ class _Run:
                     self._queue_new_place(beat, story)
                     new_records.append(beat)
                     extracted += 1
-                    touched.add(story.place)
+                    touched.setdefault(story.place, set()).add(story.story_slug)
                     continue
                 candidates = [b for b in existing if b.poi_name == story.place]
                 if not candidates:
@@ -949,27 +951,42 @@ class _Run:
                     applied.append(story.story_slug)
                     if outcome.beat_id:
                         changed_ids.add(outcome.beat_id)
+                        merged_into.setdefault(outcome.beat_id, []).append(
+                            (unit.key, story, list(outcome.judged or claims), narration)
+                        )
                     rerun.extend(i for i in outcome.rerun if i not in rerun)
-                touched.add(story.place)
-            per_unit[unit.key] = {
-                "chunk": unit.chunk,
-                "beats_extracted": extracted,
-                "pois_touched": sorted(touched),
-            }
+                touched.setdefault(story.place, set()).add(story.story_slug)
+            per_unit[unit.key] = {"chunk": unit.chunk, "beats_extracted": extracted}
         reverted: set[str] = set()
         if rerun:
             self.emit("rerun", {"beat_ids": list(rerun)})
             kept: list[model.Beat] = []
             for b in existing:
-                renarrated = self._rerun(b, publishers) if b.beat_id in rerun else b
-                if renarrated is None:
-                    reverted.add(b.beat_id)
-                    kept.append(model.Beat.model_validate(raw_by_id[b.beat_id]))
-                else:
+                if b.beat_id not in rerun:
+                    kept.append(b)
+                    continue
+                renarrated, reason = self._rerun(b, publishers)
+                if renarrated is not None:
                     kept.append(renarrated)
+                    continue
+                reverted.add(b.beat_id)
+                kept.append(model.Beat.model_validate(raw_by_id[b.beat_id]))
+                for unit_key, story, story_claims, narration in merged_into.get(b.beat_id, []):
+                    self._queue_unmerged(
+                        story, story_claims,
+                        f"merge into {b.beat_id} dropped: its re-narration was held ({reason})",
+                        narration,
+                    )
+                    if story.story_slug in applied:
+                        applied.remove(story.story_slug)
+                    touched_by[unit_key].get(story.place, set()).discard(story.story_slug)
             existing = kept
             if reverted:
                 self.emit("rerun_reverted", {"beat_ids": sorted(reverted)})
+        for unit_key, entry in per_unit.items():
+            entry["pois_touched"] = sorted(
+                place for place, slugs in touched_by.get(unit_key, {}).items() if slugs
+            )
         changed_ids.update(rerun)
         changed_ids -= reverted
         records = [
@@ -984,7 +1001,7 @@ class _Run:
                 "new": [b.beat_id for b in new_records],
                 "applied": applied,
                 "rerun": rerun,
-                "changed": bool(new_records or applied or rerun),
+                "changed": bool(new_records or applied or set(rerun) - reverted),
             },
         )
         return records, per_unit
