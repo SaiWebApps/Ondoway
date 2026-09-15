@@ -110,6 +110,15 @@ def _is_transient(exc: Exception) -> bool:
     return bool(classes) and isinstance(exc, classes)
 
 
+def _is_not_found(exc: Exception) -> bool:
+    try:
+        import anthropic
+    except ImportError:
+        return False
+    cls = getattr(anthropic, "NotFoundError", None)
+    return isinstance(cls, type) and isinstance(exc, cls)
+
+
 def poll_batch(
     batch_id: str,
     *,
@@ -120,6 +129,7 @@ def poll_batch(
     max_consecutive_retrieve_errors: int = 0,
     on_poll_error: Callable[[Exception, int], None] | None = None,
     retrieve_error_backoff_s: float | None = None,
+    not_found_grace_s: float = 0,
 ) -> Any:
     """Poll until the batch has ended. `on_poll(batch, elapsed_s)` is called
     on every poll, the final one included, so a caller can print a
@@ -134,7 +144,11 @@ def poll_batch(
 
     With `retrieve_error_backoff_s` the wait after the nth consecutive error is
     backoff * 2**(n-1), so the error budget spans an outage rather than a
-    minute of fast failures; otherwise errors wait `poll_interval_s`."""
+    minute of fast failures; otherwise errors wait `poll_interval_s`.
+
+    A 404 in the first `not_found_grace_s` seconds counts as a tolerated error
+    too: the Batch API can answer not_found for a batch created a moment ago
+    (slice 9 job 2, 169 ms after submission). After the window it raises."""
     if client is None:
         client = batch_client(max_retries=2)
     started = time.monotonic()
@@ -145,8 +159,9 @@ def poll_batch(
             batch = client.messages.batches.retrieve(batch_id)
         except Exception as exc:
             consecutive_errors += 1
+            just_submitted = time.monotonic() - started < not_found_grace_s
             if (
-                not _is_transient(exc)
+                not (_is_transient(exc) or (just_submitted and _is_not_found(exc)))
                 or consecutive_errors > max_consecutive_retrieve_errors
                 or time.monotonic() >= deadline
             ):

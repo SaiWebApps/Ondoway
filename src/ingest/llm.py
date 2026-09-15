@@ -778,6 +778,11 @@ BATCH_POLL_RETRIEVE_ERRORS: int = 6
 #: error at the 10 s poll pace spent the budget in about 85 s (judge, 2026-09-14).
 BATCH_POLL_ERROR_BACKOFF_S: float = 30.0
 
+#: How long after submission a 404 on the batch counts as "not visible yet"
+#: rather than "gone": slice 9 job 2 attempt 2 (2026-09-14) got not_found 169 ms
+#: after creating the batch and died.
+BATCH_NOT_FOUND_GRACE_S: float = 120.0
+
 
 class AnthropicClient:
     """The real ModelClient, talking to the Anthropic API.
@@ -1095,6 +1100,7 @@ class AnthropicClient:
             max_consecutive_retrieve_errors=BATCH_POLL_RETRIEVE_ERRORS,
             on_poll_error=poll_error,
             retrieve_error_backoff_s=BATCH_POLL_ERROR_BACKOFF_S,
+            not_found_grace_s=BATCH_NOT_FOUND_GRACE_S,
         )
         collected = _bt.collect_results(batch_id, client=self._get_sdk())
 

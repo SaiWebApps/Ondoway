@@ -352,3 +352,64 @@ def test_error_retries_back_off_when_asked_and_a_good_check_restores_the_pace() 
     assert run(
         [error, error, "ended"], max_consecutive_retrieve_errors=6
     ) == [10, 10]
+
+
+def test_a_not_found_just_after_submission_is_tolerated_inside_the_grace_window() -> None:
+    """Slice 9 job 2 attempt 2 (2026-09-14): the first status check, 169 ms
+    after the batch was created, answered 404 not_found and ended a paid job.
+    With `not_found_grace_s`, a 404 that early counts as a tolerated error
+    (same budget, backoff and report as a transient one); after the window a
+    404 means the batch is really gone and raises; the default raises at once."""
+    import types
+
+    import anthropic
+    import httpx
+
+    from src.tour import batch_transport as bt
+
+    request = httpx.Request("GET", "https://api.anthropic.com/v1/messages/batches/msgbatch_x")
+    not_found = anthropic.NotFoundError(
+        "Message Batch not found", response=httpx.Response(404, request=request), body=None
+    )
+
+    def poll(script, **kwargs):
+        clock = types.SimpleNamespace(now=0.0)
+        answers = iter(script)
+
+        class _Batches:
+            def retrieve(self, batch_id):
+                answer = next(answers)
+                if isinstance(answer, Exception):
+                    raise answer
+                return types.SimpleNamespace(id=batch_id, processing_status=answer)
+
+        original = bt.time
+        bt.time = types.SimpleNamespace(
+            monotonic=lambda: clock.now,
+            sleep=lambda seconds: setattr(clock, "now", clock.now + seconds),
+        )
+        try:
+            return bt.poll_batch(
+                "msgbatch_x",
+                client=types.SimpleNamespace(messages=types.SimpleNamespace(batches=_Batches())),
+                poll_interval_s=10, max_poll_s=86_400, **kwargs,
+            )
+        finally:
+            bt.time = original
+
+    seen: list[tuple[str, int]] = []
+    batch = poll(
+        [not_found, "ended"], max_consecutive_retrieve_errors=6, retrieve_error_backoff_s=30,
+        not_found_grace_s=120, on_poll_error=lambda exc, n: seen.append((type(exc).__name__, n)),
+    )
+    assert batch.processing_status == "ended"
+    assert seen == [("NotFoundError", 1)]
+
+    with pytest.raises(anthropic.NotFoundError):
+        poll(
+            ["in_progress"] * 13 + [not_found, "ended"],
+            max_consecutive_retrieve_errors=6, not_found_grace_s=120,
+        )
+
+    with pytest.raises(anthropic.NotFoundError):
+        poll([not_found, "ended"], max_consecutive_retrieve_errors=6)

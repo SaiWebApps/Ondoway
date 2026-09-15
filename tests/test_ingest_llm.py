@@ -1242,3 +1242,56 @@ def test_the_live_client_rides_out_transient_status_check_failures_and_logs_them
     assert clock.slept == [llm.BATCH_POLL_ERROR_BACKOFF_S * 2**i for i in range(n)]
     assert sum(clock.slept) >= 30 * 60
     assert all(e["phase"] == "P3" and e["batch_id"] == "msgbatch_stub_01" for e in errors)
+
+
+def test_the_live_client_tolerates_a_404_on_a_batch_it_just_submitted(monkeypatch):
+    """Slice 9 job 2 attempt 2: a 404 on the first status check of a batch
+    submitted 169 ms earlier ended the job. The live client passes
+    `BATCH_NOT_FOUND_GRACE_S`, so that 404 is logged as `batch_poll_error` and
+    the round completes."""
+    import anthropic
+    import httpx
+
+    from src.tour import batch_transport
+
+    clock = types.SimpleNamespace(now=0.0)
+    monkeypatch.setattr(
+        batch_transport,
+        "time",
+        types.SimpleNamespace(
+            monotonic=lambda: clock.now,
+            sleep=lambda seconds: setattr(clock, "now", clock.now + seconds),
+        ),
+    )
+    request = httpx.Request("GET", "https://api.anthropic.com/v1/messages/batches/msgbatch_stub_01")
+    answers = iter([
+        anthropic.NotFoundError(
+            "Message Batch not found", response=httpx.Response(404, request=request), body=None
+        ),
+        "ended",
+    ])
+    stub, _record = _batch_sdk_stub(
+        [_batch_succeeded("c1", text='{"entailed": true, "reason": "r", "kind": "state"}',
+                          model="claude-haiku-4-5-20251001")]
+    )
+
+    def retrieve(requested_id):
+        answer = next(answers)
+        if isinstance(answer, Exception):
+            raise answer
+        return types.SimpleNamespace(id=requested_id, processing_status=answer)
+
+    stub.messages.batches.retrieve = retrieve
+    events: list[tuple[str, dict]] = []
+    client = llm.AnthropicClient(
+        lambda kind, payload: events.append((kind, payload)),
+        sdk=stub, submit_sdk=stub, poll_interval_s=0,
+    )
+    client.estimate([], [])
+
+    results = client.complete_batch("claim_judge", [("c1", "p")], None, phase="P3", max_tokens=400)
+
+    assert isinstance(results["c1"], llm.Completion)
+    assert llm.BATCH_NOT_FOUND_GRACE_S >= 60
+    errors = [payload for kind, payload in events if kind == "batch_poll_error"]
+    assert [(e["error"], e["consecutive"]) for e in errors] == [("NotFoundError", 1)]
