@@ -226,7 +226,12 @@ re-classed or synonym-swapped to pass.
 
 Cost estimate: before P1, `messages.count_tokens` over every unit, multiplied by the
 per-phase call shape, printed as the job's first event. Batch API is used for P1, P3 and P5
-(no latency need, half price).
+(no latency need, half price) — SUPERSEDED BY OWNER RULING 2026-09-14, NOT YET BUILT: P1
+decompose (the first ask, its re-ask and the omission re-decompose) stays batched; the
+per-story rounds move to synchronous calls — the P3 and P5 judge rounds and the P3 claim
+restates (one batch round per story made a job 71 sequential rounds, and slow batch days cost
+two paid attempts of job 2); see `Docs/ingestion/2026-09-14-ingest-transport-and-resume-design.md`. Amend this
+paragraph to the built behaviour when that design lands.
 
 ## 4. Calibration by defect injection
 
