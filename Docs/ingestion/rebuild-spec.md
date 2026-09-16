@@ -524,6 +524,100 @@ owner are in the session report. The tour bar on lane 2 (7692): `_test-golden` 9
 `_test-invariants` 13 passed, baseline only — "only this chunk swapped in" is not executable
 yet (the converge is whole-city and the validator refuses a mixed file; slice 10).
 
+**Job 1, runs 2-4 (2026-09-12..14, LP chunk-07):** the owner's rulings after run 2 moved the
+lift gate off claims onto narration (seven words, proper names exempt) and the run was
+repeated. Run 3: 35 beats, $2.88 — 34 claims were dropped because the author's re-asks
+straightened the passage's curly quotes, so `gates.ground_span` now stores the passage's own
+text for a citation only its typography differs from (4986889), and the place resolver
+ignores full stops ("Solomon R Guggenheim Museum" is the POI, 0809ecc). Run 4 (the one in the
+file): **29 beats, $1.77**, 1 span drop, 0 place holds that name a known POI, the Guggenheim
+under its canonical name. The narration lift gate at seven refused 21 of 33 first narrations
+and held 4 stories outright — held stories used to die with the process, so every review-queue
+item is now written to `data-ingest/{city}/held/{job_id}.jsonl` as it is queued (0b99999).
+
+**Job 2 (2026-09-15, Frommer's `chunk-05-ch05-uptown`, `--as-of 2024`): 61 beats in the file
+(29 + 32), $3.9126 against an expected $3.41 — inside 25%, so the estimate is validated on a
+second chunk.** It took five attempts and four transport or control-flow defects, each fixed
+test-first: the live client's one-hour batch poll ceiling (24 h now, 971f48e) with a
+transient-error guard and backoff (913d651, 21a44a9); a 404 on a batch 169 ms after
+submission (a grace window, 0d60d17); an invalid merge answer that raised in P6 where P1-P4
+caught (`test_one_failing_item_never_ends_the_job` covers every phase now, 0a4cc7d, plus the
+reverted-merge queue fix 9568574); and one $0 no-op where the API refused a valid P1 request
+as `invalid_request_error`. Because a dead job repaid everything, phase outputs are now
+written to `data-ingest/{city}/jobs/{job_id}/P*.json` before each phase event and
+`--resume JOB_ID` continues from the first missing phase (6aeecd6).
+
+**P6 measured on real data: stories 35, merge_judged 12, held 3 — a hold rate of 0.25 that
+measures nothing, because P6 completed no merge at all (see the panel below).** 4 stories skipped (no beat at the place), 19 held as new
+places (Cooper Hewitt and Neue Galerie are `name_variations` gaps, the Met's galleries and
+"Frick Madison" are sub-locations the author invents as places — both carry into slice 10).
+Every judged story came back `new` with every claim new: the two books' uptown chapters do not
+overlap at claim level, so the Guggenheim holds 8 beats side by side (5 LP + 3 Frommer's) and
+no claim-level merge has yet been exercised on live data. Two of the three holds are the judge-vs-signature
+disagreement — and the panel below shows that rule holding the only two matches the judge
+found; the third is the invalid answer above.
+Other measurements: 43 attempt-one claim refusals, 31 drops (9 of them the model writing a
+newline for the passage's `’` — the span corruption is still open), 3 leak-gate drops, 37
+omissions found (a full second P1/P2/P3 pass, which is why the run took 9.4 h), and zero
+transport errors across the run.
+
+**Panel on the merged Guggenheim stop (acceptance + three adversaries on opus/sonnet/fable,
+2026-09-16): UNANIMOUSLY REJECTED.** What they could not break, each re-derived
+independently: all 33 claim spans are in the two chapters byte-for-byte after whitespace
+folding; `gates.lift` is clean on all 8 narrations at run 7 and 8; no provenance leak, no
+framing verb, no apparatus; held and `practicalities` beats really are fenced at publish and
+`pronunciation`/`physical_cues` really are stripped at export. The grounding substrate holds.
+What they broke:
+- **P6 completed 0 merges out of 12 judged stories, by two independent routes.** 9
+  `merge_decided` are `story: new` with every claim `new` — including two same-fact pairs at
+  this stop ("designed by Frank Lloyd Wright" and "critics rejected it"), so the judge emits
+  false `new`. The other 3 were HELD: the judge did return `same` once and `supersedes` once
+  (plus `conflict` at claim level), and each time the signature hint matched no beat, so the
+  arbitration rule held the story — the hint is 0 for 3 on exactly the cases the judge got
+  right. **The number to move in slice 10 is 0 merges completed / 12 judged (3 of 3
+  judge-found matches held), not the 0.25 hold rate**, and three components are indicted: the
+  judge's false `new`, the signature hint, and the hold-on-disagreement arbitration. §2's
+  worked example (LP and Frommer's corroborating "1959" into one claim with two sources) did
+  not happen.
+- **Claim ids collide across jobs in one corpus**: `c01` in `beats.json` is both the
+  Guggenheim's "designed by architect Frank Lloyd Wright" (job 1) and Cooper Hewitt's "the
+  design division of the Smithsonian" (job 2), so every merge reference by claim id — the
+  events, the holds, the pairs above — is ambiguous outside its own job.
+- The stop is two guidebooks side by side: the hostile-reception story told twice (beats 2 and
+  7), the ramp twice (4 and 6), Frank Lloyd Wright introduced cold four times, two
+  pronunciations of "Guggenheim", and a beat that ends "The architectural critic Herbert
+  Muschamp wrote a description of this building" without ever giving it (the quote itself was
+  refused at P3 and its fragments kept as bare assertions).
+- Defects a listener would hear: "almost thirteen years passed between the design and the day
+  it stood finished" (the source says construction was DELAYED 13 years; 1943→1959 is 16), one
+  beat saying the building "begins at the top floor" against another's "installed from the
+  bottom to the top", the same exhibition list voiced twice in consecutive sentences
+  (c155 ⊂ c156 ⊃ c157, three overlapping claims from one source sentence), and literal `\u`
+  escapes inside `narration.text` that a TTS pass would read aloud — `\u2014` ×5, `\u00e8` ×2,
+  `\u00f1` ×1 across 6 beats corpus-wide.
+- The honest size of the stop is **6 beats / 435 words / 174 s**, not 8/512/205: the
+  `practicalities` beat and the held beat are not servable.
+- The `’`/`–`-to-newline span corruption is 5 of the 13 span drops across both jobs, and it is
+  load-bearing: it deleted Frommer's 2024 admission claim (c160), so P6 never saw a conflict
+  and the stop voices LP's 2022 "$25, children free, pay-what-you-wish 5-8pm Sat, cash only"
+  against the newer book's "$18 seniors/students, free for kids 11 and under, Sat 6-8pm".
+- Record fields the engine reads are wrong: `narrative_function` is free prose on all 8 beats
+  while `src/tour/beat_select.py` orders by `hook|establishing|deepen|climax|callback`, so
+  every beat sorts last (the P2 schema types it as a bare string); `sub_location` is invented
+  ("annex galleries"), case-split ("Rotunda ramp" / "rotunda ramp") and IS exported, unlike the
+  other enrichment; `kid_friendly: yes` sits on the beat that mentions nobody jumping to their
+  death; `entities` keeps names (Mondrian, Miró) from a claim P3 dropped.
+**Both halves of this slice's stop condition are VOID, not passed.** "The merge holds more than
+a third of stories" cannot be read off a P6 that completed no merge at all, and the tour-bar
+half ("`_test-golden` on 7687 with only this chunk swapped") is still not executable — the
+lane-2 run was a baseline that never saw these beats, which are gitignored and cannot be
+swapped in until slice 10's converge tooling. Slice 9's CODE is committed and its cost estimate
+is validated on two chunks; the corpus it produced is not shippable; the suite bar is deferred
+to slice 10. Carried forward, in order: the merge trio (judge false `new`, signature hint 0/3,
+the arbitration rule), the `’`/`–`-to-newline span corruption, the claim-id collision,
+`narrative_function` typed against `src/tour/beat_select.py`'s vocabulary, the literal `\u`
+escapes, and the `sub_location`/`kid_friendly`/`entities` defects above.
+
 ### Slice 10: Batch re-extraction and swap
 
 **Files:** Makefile target `ingest-batch CITY=` (every chunk folder under `Books/{city}`
