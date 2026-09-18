@@ -766,6 +766,80 @@ because the check now asks two questions. The parser still reads an answer witho
 as "nothing compound" so the pre-slice-10 mock answers stay valid; live calls always send the
 schema, which requires the key, so this matters only if a path ever loses `output_config`.
 
+*Live calibration after step 2 (2026-09-18 UTC, owner go, HEAD 36320cb, projected $0.6471):
+FAIL on the registered reading.* `compound_claim` 1/1 (the Wright + "almost overshadows" claim
+named and split) and `omitted_fact` 1/1, every other class 1/1 — but `stated_relation` 0/1: the
+coverage judge split the planted claim "The Guggenheim's cramped single elevator makes
+descending from the top difficult, so exhibitions are installed from bottom to top" (the
+passage: "…the cramped single elevator makes this difficult. Exhibitions, therefore, are
+installed from bottom to top") into cause and effect, ignoring the carve-out. It also
+flagged a list claim and "both Wright and Guggenheim had died" (two subjects) — both correct by
+the rule. Not retried. The compound flag over-counts stated relations, so it stays log-only; a
+re-ask on it waits for a precision fix and a passing live `stated_relation`. The owner chose to
+proceed to the re-extraction with a hand audit in place of the flag.
+
+*Re-extraction — pass criteria, registered before the paid run, by CONTENT (every claim id
+renumbers; amended at the judge's PROVE-FIRST).* A fresh sandbox data root
+`data-ingest/sandboxes/step2/` (its `poi-raw.json` the repo's, sha `5965554e90d5e1e0` — the one
+both slice-9 jobs used — and an empty `beats.json`; every console log written inside it). Job A:
+Lonely Planet `chunk-07-upper-east-side`, as-of 2022 (the 12th edition; the Makefile's "2023"
+is a stale example), `owned_copy`. Job B: Frommer's `chunk-05-ch05-uptown`, as-of 2024,
+`owned_copy`, merging into job A's beats — its own P6 is the merge proof, no replay. Job B
+starts only if (i) job A's actual spend is within 1.5x its printed expected (nothing mechanical
+caps a running job) and (ii) a $0 audit of job A's output passes the Lonely Planet half of R1
+and finds an atomic "Wright designed the building" claim and at least one critics claim at the
+Guggenheim — without them job B buys an R2 nobody can read.
+
+Expected pairs at the Guggenheim, Lonely Planet (existing) against Frommer's (new), from the
+two passages. `same`: Wright designed the building; the early critical reception (LP's
+before-opening "derided by some critics" OR its after-opening "savaged by the New York Times" —
+a fold of Frommer's "early critics dismissed the museum" into either passes); the building's
+1959 date (only if Frommer's yields a claim stating just that); the collection includes
+Kandinsky, and includes Brancusi (only if Frommer's yields a claim stating just that — "given
+permanent gallery space" says more and may stay `new`); the address 1071 Fifth Avenue at 89th
+Street; adult admission $25; subway 4/5/6 to 86th Street. `conflict`, the newer superseding
+(state claims, 2024 over 2022): pay-what-you-wish on Saturdays (5-8pm against 6-8pm); the
+opening hours. Registered FALSE in advance: Frommer's Mapplethorpe RETROSPECTIVE folding into
+LP's Mapplethorpe photographs in the holdings; a claim about walking the ramps folding into a
+completion-date claim; "begins on the top floor" (the building) folding into Wright's intended
+route or the hanging order. A pair is MEASURED only when both sides exist as claims that
+reached P6 (a practicalities story with no narration skips P6, as in job 2); a pair whose
+Frommer's side was dropped upstream is "unproven: upstream drop" with the drop reason — not a
+merge failure — and the next step is a $0 diagnosis of that drop, not another paid run.
+- R0 isolation: the live `data-ingest/new_york/beats.json` stays sha `556830a5342e178c`; `find`
+  over the worktree and `$HOME/ondoway-ingest-backup-2026-09-13` for files newer than a marker
+  touched after the backup rsync, excluding the sandbox, `__pycache__`, `.ruff_cache` and
+  `.pytest_cache`, finds nothing.
+- R1 one fact per claim, by hand audit of every Guggenheim claim of both books against the P1
+  rule: Frommer's "Frank Lloyd Wright's delirious spiral of a museum sits among the towers of
+  Fifth Avenue" yields a claim stating only that Wright designed the museum; "Early critics
+  dismissed the museum (Newsweek's insipid review was headlined 'Museum or Cupcake?')" yields
+  the dismissal and the headline as separate claims; the blockbuster sentence yields one claim
+  per retrospective or show and no list claim; LP's "the cramped single elevator makes this
+  difficult. Exhibitions, therefore, are installed from bottom to top" stays ONE claim; at most
+  two Guggenheim claims across both books are compound by the rule.
+- R2 a merge merges: both books' Guggenheim beats resolve to the one `poi-raw` place (no
+  new-place queue item); every MEASURED expected pair comes out as registered (`same` folds;
+  the two conflicts become supersessions); the Wright and critics pairs are both measured; no
+  `rerun_reverted` names an LP Guggenheim beat; the R3 panel upholds every fold.
+- R3 no false fold: every `merge_folded` at the Guggenheim judged by three panel members on
+  opus, fable and haiku (never Sonnet, the merge judge), blind to these criteria, majority rules,
+  each given the pair's texts and the merge prompt's own `same`/`conflict` contract; 0 false,
+  the three registered-false shapes included.
+- R4 no P6 hold at the Guggenheim, tripwire or answer contract.
+- R5 integrity: both jobs `status=committed`, P7's validator passes, and each of job B's judged
+  Guggenheim claims has exactly one disposition (folded, a claim of a written beat, or a claim
+  of a queue item P6 made).
+- R6 facts not lost, as a RATE (one fact per claim raises the count): `claim_dropped` over the
+  claims P1 emitted, per job, not above slice 9's for that chunk — Frommer's 31 of 76 (16 judge
+  refusals, 3 leak drops, 12 spans not in the unit, of which 4 the `'`/newline defect); Lonely
+  Planet 1 drop in run 4 (its claim count was not recorded; an earlier LP P1 parsed 82,
+  batch msgbatch_01Egvftd…, so about 1.2%), read — loosely, registered in advance — as at most 3%.
+- R7 measured, not gated: P1 output tokens per call against `P1_EXPECTED_OUTPUT_TOKENS` (9,000);
+  claims P1 emits against slice 9 (Frommer's 76); every `compound_found` hand-classified correct
+  or false (the flag's precision on real output).
+The stop's shippability is a separate panel verdict, not part of this pass.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
