@@ -39,6 +39,32 @@ _SPAN_SENTENCE = (
     "word, so it can be checked against the source."
 )
 
+#: Slice 10 step 2 — one fact per claim. P1 had emitted compound claims
+#: (a relative clause stacking three facts, two facts joined by "and", a list
+#: beside its own items) against CONTEXT.md's "one atomic factual
+#: statement", and the merge could neither fold nor keep them. The carve-out
+#: is CONTEXT.md's own: a relation the source STATES is one claim naming
+#: both sides — never two events that merely follow each other. The worked
+#: example is from Rome, a place no calibration record or replay uses.
+_ONE_FACT = (
+    "Every claim states exactly one fact about one subject. Split \"X is A and "
+    "B\", \"X, which did A, is B\" and \"X did A; Y did B\" into separate claims, "
+    "each naming its subject. Split a list into one claim per item — and "
+    "never also a claim that lists them together. A relation the passage itself "
+    "states between two facts (one caused the other, one contrasts with the "
+    f"other) is one fact: it {_NAMES_BOTH_SIDES} — never two events that merely "
+    "follow each other, which are two claims.\n"
+    "Worked example. Passage: \"The Pantheon, rebuilt by Hadrian around AD 125, "
+    "has a dome with an open oculus, and Raphael and two Italian kings are "
+    "buried inside; because it became a church in 609, it escaped the "
+    "stripping of Rome's other temples.\" Claims: \"Hadrian rebuilt the Pantheon "
+    "around AD 125.\" / \"The Pantheon's dome has an open oculus.\" / \"Raphael "
+    "is buried in the Pantheon.\" / \"Two Italian kings are buried in the "
+    "Pantheon.\" / \"Because the Pantheon became a church in 609, it escaped "
+    "the stripping of Rome's other temples.\" (the last is a relation the "
+    "passage states, so it stays one claim)."
+)
+
 #: The JSON shape both prompts ask for. A plain literal (never an f-string
 #: or `.format` target) so its braces are inert until `str.replace` swaps
 #: in the `{source}` / `{problems}` slots elsewhere in the prompt.
@@ -50,9 +76,8 @@ DECOMPOSE_PROMPT = (
     f"Every claim {_STANDS_ALONE}: a reader who has never seen the passage "
     "must be able to understand it with no other claim beside it, so "
     f"{_NO_DANGLING_REFERENCE}. If a claim needs a pronoun, name the actual "
-    "person or place instead. When a fact only makes sense next to another "
-    f"fact, it {_NAMES_BOTH_SIDES}, not split across two claims that lean "
-    "on each other.\n\n"
+    "person or place instead.\n\n"
+    f"{_ONE_FACT}\n\n"
     f"{_OWN_WORDING}: the claim's own sentence must never repeat "
     f"{_EIGHT_WORD_RUN} outside a quotation you attribute to a named "
     f"speaker. {_SPAN_SENTENCE}\n\n"
@@ -68,6 +93,7 @@ REDO_PROMPT = (
     "Your previous answer had problems:\n{problems}\n\n"
     "Fix every one of them and answer again from the start — do not just "
     "patch the flagged claims.\n\n"
+    f"{_ONE_FACT}\n\n"
     "Answer as JSON only, matching this shape exactly:\n"
     f"{_ANSWER_SHAPE}\n\n"
     "Passage:\n{source}"

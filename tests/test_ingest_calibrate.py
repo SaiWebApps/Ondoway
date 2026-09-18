@@ -16,16 +16,17 @@ import ast
 import json
 from pathlib import Path
 
-from src.ingest import calibrate, gates
+from src.ingest import calibrate, gates, judge_claims
 from src.ingest import unit as unit_mod
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = REPO_ROOT / "fixtures" / "ingestion" / "defects.json"
 BASELINE = REPO_ROOT / "fixtures" / "ingestion" / "calibration-baseline.json"
 
-#: The defect classes §4 names, in its order (the eleventh and twelfth,
-#: shared_element and same_fact, added in slice 10: the precision and the
-#: recall side of the merge judge's `same`).
+#: The defect classes §4 names, in its order (slice 10 added four: the
+#: precision and recall sides of the merge judge's `same`, shared_element and
+#: same_fact; and of the coverage check's compound flag, stated_relation and
+#: compound_claim).
 CLASSES = (
     "fabricated_date",
     "deleted_claim",
@@ -39,6 +40,8 @@ CLASSES = (
     "omitted_fact",
     "shared_element",
     "same_fact",
+    "compound_claim",
+    "stated_relation",
 )
 
 
@@ -69,6 +72,15 @@ def test_fixture_has_one_record_per_class_and_only_the_planted_defect():
     }
 
     for record in fixture.records:
+        # Slice 10: two records copied claims from others and collided on
+        # ids (and pointed the plant at the wrong claim) — every record's
+        # ids are unique, its story lists exactly them, and its plant names
+        # one of them.
+        ids = [claim["claim_id"] for claim in record.claims]
+        assert len(ids) == len(set(ids)), (record.defect_class, ids)
+        assert sorted(record.story["claim_ids"]) == sorted(ids), record.defect_class
+        if "claim_id" in record.planted:
+            assert record.planted["claim_id"] in ids, record.defect_class
         planted_claim_id = record.planted.get("claim_id")
         for claim in record.claims:
             assert gates.span_in_unit(claim["span"], unit.text) is None, (
@@ -478,3 +490,61 @@ def test_a_true_paraphrase_folds_and_a_judge_that_calls_it_new_misses():
     report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock", scripted_merge=splitting)
     row = next(r for r in report.rows if r.defect_class == "same_fact")
     assert (row.caught, row.total) == (0, 1)
+
+
+def test_the_coverage_check_flags_a_compound_claim_and_leaves_a_stated_relation_whole():
+    """Slice 10 step 2: the P3 coverage check now names claims that state
+    more than one fact. compound_claim plants "designed by Wright AND almost
+    overshadows the art" as one claim — caught when the check names it.
+    stated_relation plants the passage's own "the cramped elevator makes the
+    descent difficult, THEREFORE exhibitions are installed bottom to top" —
+    one fact by CONTEXT.md's rule, caught only when the check does NOT name
+    it. A check that flags nothing misses the first; one that flags every
+    long claim misses the second."""
+    import src.ingest.llm as llm
+
+    fixture = _fixture()
+    for name, expected in (("compound_claim", "compound"), ("stated_relation", "atomic")):
+        record = next(r for r in fixture.records if r.defect_class == name)
+        assert (record.detector, record.planted["expected"]) == ("omissions", expected)
+    # Pin each plant to the claim it is about, by text, so a plant pointing at
+    # the wrong claim cannot score: the relation is superseded_belief's
+    # "... therefore installed from bottom to top", the compound is Wright +
+    # "almost overshadows".
+    def planted_text(name: str) -> str:
+        record = next(r for r in fixture.records if r.defect_class == name)
+        return next(c["text"] for c in record.claims if c["claim_id"] == record.planted["claim_id"])
+
+    belief = next(r for r in fixture.records if r.defect_class == "superseded_belief")
+    assert planted_text("stated_relation") == next(
+        c["text"] for c in belief.claims if "bottom to top" in c["text"]
+    )
+    assert "and almost overshadows" in planted_text("compound_claim")
+
+    report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock")
+    rows = {r.defect_class: r for r in report.rows}
+    assert (rows["compound_claim"].caught, rows["compound_claim"].total) == (1, 1)
+    assert (rows["stated_relation"].caught, rows["stated_relation"].total) == (1, 1)
+
+    def judge_flagging(flag_all: bool):
+        def scripted(rec: calibrate.DefectRecord, u) -> dict:
+            answers = calibrate.scripted_answers(rec, u)
+            if rec.planted.get("expected") in ("compound", "atomic"):
+                flagged = (
+                    [{"claim_id": c["claim_id"], "facts": ["x", "y"]} for c in rec.claims]
+                    if flag_all else []
+                )
+                answers[judge_claims.omissions_custom_id(u)] = llm.MockAnswer(
+                    text=json.dumps({"omitted": [], "compound": flagged}),
+                    model_id=llm.ROLE_MODEL["claim_judge"],
+                )
+            return answers
+        return scripted
+
+    rows = {r.defect_class: r for r in calibrate.run(
+        fixture, REPO_ROOT / "Books", client="mock", scripted=judge_flagging(False)).rows}
+    assert rows["compound_claim"].caught == 0 and rows["stated_relation"].caught == 1
+    rows = {r.defect_class: r for r in calibrate.run(
+        fixture, REPO_ROOT / "Books", client="mock", scripted=judge_flagging(True)).rows}
+    assert rows["compound_claim"].caught == 1 and rows["stated_relation"].caught == 0
+

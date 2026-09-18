@@ -213,9 +213,9 @@ failed job resumes at its last completed phase.
 | Phase | Model | Output | Code gates before the next phase |
 |---|---|---|---|
 | P0 intake | none | units of text with `source_id`, `as_of`, rights basis | manifest fields present; a website unit over the ceiling is split at headings and the job logs it |
-| P1 decompose | author | claims `{text, kind, span}` per unit | span verbatim in unit; NO lift test on claims (owner ruling 2026-09-13 — a claim is never spoken; the lift gate is P4's); no book furniture (leak regex); self-contained (no bare pronoun subject); `kind` present, default `state` when the judge marks it ambiguous |
+| P1 decompose | author | claims `{text, kind, span}` per unit, one fact each (slice 10: a relation the source states is one claim naming both sides; a list is one claim per item) | span verbatim in unit; NO lift test on claims (owner ruling 2026-09-13 — a claim is never spoken; the lift gate is P4's); no book furniture (leak regex); self-contained (no bare pronoun subject); `kind` present, default `state` when the judge marks it ambiguous |
 | P2 group | author | stories `{title, place, lenses, beat_type, enrichment, claim_ids}` | every claim in exactly one story; place resolves to `poi-raw.json` or is flagged `new_poi`; structural types allowed 1 claim, others ≥2 |
-| P3 judge claims | judge | per claim: entailed yes/no and the temporal kind read from the span (slice 9: a wrongly kinded claim is re-kinded, never refused); per unit: facts no claim carries | a claim refused once is re-asked with the judge's reason quoted back; refused twice is dropped and logged; an omission finding re-asks P1 once for that unit |
+| P3 judge claims | judge | per claim: entailed yes/no and the temporal kind read from the span (slice 9: a wrongly kinded claim is re-kinded, never refused); per unit: facts no claim carries, and (slice 10) claims that state more than one fact — logged as `compound_found`, no re-ask yet | a claim refused once is re-asked with the judge's reason quoted back; refused twice is dropped and logged; an omission finding re-asks P1 once for that unit |
 | P4 narrate | author, sees claims only | narration text | no lift vs any span; no leak; no framing regex (`imagine`, `picture`, `envision`); duration computed |
 | P5 judge narration | judge | per sentence entailed yes/no | a failing sentence re-asks P4 once with the sentence quoted back; still failing → `narration.flags` set, `review.held = true` |
 | P6 merge | merge judge + signature | per new story: same / new / supersedes; per claim, against ANY claim at the place whatever the story verdict: new / same / conflict — candidate beats and claims named by handle (`b1`, `b1.c02`), never by id | the signature is a one-way tripwire: a signature match on a claim the judge called `new`, or on a different claim than the judge named, holds the new story (queue item); a judge match the signature cannot see applies. Every raw answer is logged (`merge_answered`), every matched claim logged with both texts and the new span (`merge_folded`). A matched claim FOLDS into the claim that holds it: conflict → the D9 kind rules (`contested`, or supersedes → old claim `belief`, dated); same → one claim, sources appended. A `new` story's own beat keeps only its unmatched claims and is narrated again; left below its arc minimum it is a queue item; fully folded it writes nothing (`merge_absorbed`). Any claim change → P4/P5 rerun for that beat |
@@ -242,7 +242,9 @@ state claim kinded as event, a contested value, a superseded belief, an omitted 
 the unit — and, since slice 10, two merge classes that pin the judge's `same` from both sides:
 a second source sharing only an element (a date) with a claim, which must stay `new`
 (`shared_element`), and a true paraphrase no signature can see, which must fold as `same`
-(`same_fact`). The `ingest-calibrate` target runs the judge phases over them and prints caught /
+(`same_fact`); and two for the coverage check's compound flag: a claim bundling two facts,
+which must be named (`compound_claim`), and a relation the passage states, which must not be
+(`stated_relation`). The `ingest-calibrate` target runs the judge phases over them and prints caught /
 missed per class. A judge prompt change that lowers a class's catch rate fails the target.
 
 ## 5. Front door and review queue
@@ -739,6 +741,30 @@ Guggenheim merge completed: compound c141 came out `new` and its signature match
 story in both runs, and compound c148 came out `new`. One residue: in run 2's FIRST answer the
 judge again named c148 as c149's match despite the rule; the re-ask fixed it. PC1 now waits on
 step 2 — atomic claims at P1 and a re-extraction of both chunks.
+
+*Step 2, code (2026-09-18 UTC, owner go on the code only; judge PROCEED with five amendments):*
+P1's prompt requires one fact per claim, with a worked example from Rome splitting all three
+compound shapes seen here (a relative clause, two facts joined by "and", a list beside its own
+items); the carve-out is only a relation the passage itself states — never two events that
+merely follow each other — and the re-ask prompt carries the rule too. The P3 coverage call
+(the omission check: the claim judge, one batch call per unit, no new round) numbers the claims
+and also names each claim that states more than one fact with the facts it bundles; findings
+naming a real claim are logged `compound_found`, and one naming an id the unit lacks is dropped
+and logged `compound_unknown`. It is LOG-ONLY by the
+judge's smaller-path ruling: a compound-triggered P1 re-ask would re-decompose a COMPLETE set
+under attempt-2 semantics, dropping split fragments that fail `self_contained` with no coverage
+check after — switched on only if compounds survive the prompt rule in a measured run.
+Calibration gains `compound_claim` (recall) and `stated_relation` (precision). Owed before any
+paid extraction: (1) one live calibration run with owner go — changing the coverage prompt
+voids `omitted_fact`'s live measurement, and the two new classes have none; (2) pass criteria
+registered BY CONTENT (re-extraction renumbers every claim id), in a sandbox so the live file's
+sha stays the PC0 baseline; (3) `P1_EXPECTED_OUTPUT_TOKENS` (9,000, measured before atomic
+claims) re-measured on that run — the 64k cap has the headroom. Also recorded: the
+`omitted_fact` record's own c05 is a list claim, a shape the new P1 rule forbids (its score is
+unaffected — the detector reads only `omissions_found`), and its earlier live figure is void
+because the check now asks two questions. The parser still reads an answer without `compound`
+as "nothing compound" so the pre-slice-10 mock answers stay valid; live calls always send the
+schema, which requires the key, so this matters only if a path ever loses `output_config`.
 
 ### Slice 11: Cleanup
 

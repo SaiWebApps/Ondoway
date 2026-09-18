@@ -495,6 +495,56 @@ def test_omissions_returns_only_facts_grounded_in_the_unit():
     assert events == []
 
 
+def test_the_coverage_check_logs_compound_claims_by_id_and_changes_nothing_else():
+    """Slice 10 step 2 (log-only): the same P3 unit call now names every
+    claim that states more than one fact. A finding naming a claim id the
+    unit has is emitted as `compound_found` with the claim's text and the
+    facts it bundles; one naming an id the unit lacks is dropped — the
+    judge may not invent a claim. What omissions() RETURNS is untouched (the
+    runner still re-asks P1 only for omitted facts), and an answer without
+    the compound list still reads as "nothing compound"."""
+    unit = _real_unit()
+    claims = [_draft(unit, "c01", ADDRESS_CLAIM), _draft(unit, "c02", COMPLETED_CLAIM)]
+    bundled = ["The building was finished in 1959.", "Wright had died by then."]
+    answer = llm.MockAnswer(
+        text=json.dumps({
+            "omitted": [],
+            "compound": [
+                {"claim_id": "c02", "facts": bundled},
+                {"claim_id": "c09", "facts": ["a", "b"]},
+            ],
+        }),
+        model_id=RESPONSE_JUDGE_MODEL,
+    )
+    _events, sink = _sink_and_events()
+    mock = llm.MockClient(sink, batch_answers={judge_claims.omissions_custom_id(unit): answer})
+    mock.estimate([unit.text], list(judge_claims.OMISSIONS_PLAN))
+    recorder = _RecordingBatchClient(mock)
+    events, sink = _sink_and_events()
+
+    facts = judge_claims.omissions(unit, claims, recorder, sink)
+
+    assert facts == []
+    prompt = recorder.batch_calls[0]["prompts"][0][1]
+    assert f"- c02: {COMPLETED_CLAIM['text']}" in prompt
+    assert [(k, p) for k, p in events if k == "compound_found"] == [
+        (
+            "compound_found",
+            {
+                "unit_key": unit.key,
+                "claims": [
+                    {"claim_id": "c02", "text": COMPLETED_CLAIM["text"], "facts": bundled}
+                ],
+            },
+        )
+    ]
+    # A dropped finding leaves a trace, as omission_ungrounded does: a live
+    # judge answering "c1" for "c01" must show up, not vanish as a miss.
+    assert [(k, p) for k, p in events if k == "compound_unknown"] == [
+        ("compound_unknown", {"unit_key": unit.key, "claim_id": "c09", "facts": ["a", "b"]})
+    ]
+
+
 def test_p3_plans_price_the_real_prompts():
     """P3_PLAN (per claim: judge, restate ceiling, re-judge ceiling) and
     OMISSIONS_PLAN (per unit) carry the real prompt lengths, never a

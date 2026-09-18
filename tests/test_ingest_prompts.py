@@ -477,3 +477,43 @@ def test_p2_offers_practicalities_and_defines_orientation_as_spatial():
     text = prompts.GROUP_PROMPT_TEMPLATE.lower()
     assert "practicalities" in text
     assert "stop_orientation" in text and "where the listener stands" in text
+
+
+def test_the_coverage_check_numbers_claims_and_asks_which_state_more_than_one_fact():
+    """Slice 10 step 2: P1 emitted compound claims (Wright + the spiral + the
+    Fifth Avenue towers in one claim) against CONTEXT.md's "one atomic
+    factual statement", and nothing flagged them. The P3 unit check that
+    already looks for omitted facts now also names, by claim id, every
+    claim that states more than one fact — with the facts it bundles — while
+    a relation the passage itself states (a cause, a contrast) stays one
+    fact. Log-only for now: the runner does not re-ask on it."""
+    _walk_schema(prompts.P3_OMISSIONS_SCHEMA)
+    compound = prompts.P3_OMISSIONS_SCHEMA["properties"]["compound"]["items"]
+    assert compound["properties"]["claim_id"] == {"type": "string"}
+    assert compound["properties"]["facts"] == {"type": "array", "items": {"type": "string"}}
+    assert prompts.P3_OMISSIONS_SCHEMA["required"] == ["omitted", "compound"]
+
+    rendered = prompts.render_omissions([("c01", "A claim."), ("c02", "Another.")], "The text.")
+    assert "- c01: A claim." in rendered and "- c02: Another." in rendered
+    assert "states more than one fact" in prompts.OMISSIONS_PROMPT
+    assert "A relation the passage itself states" in prompts.OMISSIONS_PROMPT
+
+
+def test_decompose_asks_for_one_fact_per_claim_with_a_worked_example_from_rome():
+    """Slice 10 step 2: P1's compound claims (c141 = Wright + the spiral +
+    the Fifth Avenue towers, a relative clause; c148 = two facts joined by
+    "and"; c156 = a list emitted beside its own items) made the merge judge
+    flip between runs. The first ask now requires ONE fact per claim, with a
+    worked example that splits all three shapes, from a place no calibration
+    or replay uses. The carve-out is only a relation the passage itself
+    states — CONTEXT.md's "X caused Y" — never two events that merely follow
+    each other, so the "names both sides" rule cannot let a compound back
+    in. The re-ask prompt carries the rule too."""
+    for rendered in (prompts.DECOMPOSE_PROMPT, prompts.render_redo("P.", ["x"])):
+        assert "states exactly one fact" in rendered
+        assert "A relation the passage itself states" in rendered
+        assert "never two events that merely follow each other" in rendered
+        assert "never also a claim that lists them together" in rendered
+        assert "Pantheon" in rendered
+        assert "Guggenheim" not in rendered and "Eiffel" not in rendered
+

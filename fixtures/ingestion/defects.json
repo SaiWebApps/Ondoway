@@ -1,5 +1,5 @@
 {
-  "_comment": "Calibration by defect injection (Docs/ingestion/rebuild-spec.md §4): hand-read beats from slice 9's first real job on the Lonely Planet Upper East Side chunk (2026-09-12), one planted defect per record (an eleventh and twelfth class, shared_element and same_fact, added in slice 10). Spans are verbatim in the chunk; `planted` carries what a correct detector must find. `detector` names the phase that catches the class.",
+  "_comment": "Calibration by defect injection (Docs/ingestion/rebuild-spec.md §4): hand-read beats from slice 9's first real job on the Lonely Planet Upper East Side chunk (2026-09-12), one planted defect per record (slice 10 added shared_element, same_fact, compound_claim and stated_relation). Spans are verbatim in the chunk; `planted` carries what a correct detector must find. `detector` names the phase that catches the class.",
   "unit": {
     "city": "new_york",
     "source_id": "lonely-planet-new-york-city",
@@ -549,6 +549,82 @@
           "kind": "event"
         },
         "expected": "same"
+      }
+    },
+    {
+      "class": "compound_claim",
+      "detector": "omissions",
+      "note": "c01 bundles two facts (Wright designed the building; it almost overshadows the art) into one claim; the coverage check must name it (slice 10: P1's compound claims made the merge flip).",
+      "story": {
+        "place": "Solomon R. Guggenheim Museum",
+        "beat_type": "establishing",
+        "lenses": [
+          "historic_arch",
+          "modern_design"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ],
+        "title": "The building that upstages its art"
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "The Guggenheim Museum building was designed by architect Frank Lloyd Wright and almost overshadows the collection of 20th-century art inside it.",
+          "kind": "state",
+          "span": "this building by architect Frank Lloyd Wright almost overshadows the collection of 20th-century art inside"
+        },
+        {
+          "claim_id": "c02",
+          "text": "Construction of the Guggenheim was finally completed in 1959.",
+          "kind": "event",
+          "span": "Construction was finally completed in 1959"
+        }
+      ],
+      "planted": {
+        "claim_id": "c01",
+        "expected": "compound",
+        "facts": [
+          "The Guggenheim Museum building was designed by architect Frank Lloyd Wright.",
+          "The Guggenheim Museum building almost overshadows the collection of 20th-century art inside it."
+        ]
+      }
+    },
+    {
+      "class": "stated_relation",
+      "detector": "omissions",
+      "note": "c02 is ONE fact by CONTEXT.md's rule: a relation the passage itself states (the cramped elevator makes the descent difficult, therefore exhibitions are installed bottom to top); the coverage check must NOT name it (the precision side of compound_claim).",
+      "story": {
+        "place": "Solomon R. Guggenheim Museum",
+        "beat_type": "establishing",
+        "lenses": [
+          "historic_arch",
+          "modern_design"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ],
+        "title": "Why exhibitions start at the bottom"
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "Construction of the Guggenheim was finally completed in 1959.",
+          "kind": "event",
+          "span": "Construction was finally completed in 1959"
+        },
+        {
+          "claim_id": "c02",
+          "text": "The Guggenheim's cramped single elevator makes descending from the top difficult, so exhibitions are installed from bottom to top.",
+          "kind": "state",
+          "span": "the cramped single elevator makes this difficult.\nExhibitions, therefore, are installed from bottom to top."
+        }
+      ],
+      "planted": {
+        "claim_id": "c02",
+        "expected": "atomic"
       }
     }
   ]

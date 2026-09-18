@@ -155,24 +155,36 @@ def parse_verdict(text: str) -> dict | None:
     return parsed
 
 
-def parse_omissions(text: str) -> list[dict] | None:
-    """Turn one raw omissions answer into its `[{fact, span}, ...]` list, or None.
+def parse_omissions(text: str) -> tuple[list[dict], list[dict]] | None:
+    """Turn one raw coverage answer into `(omitted, compound)` — its
+    `[{fact, span}, ...]` and `[{claim_id, facts}, ...]` lists — or None.
 
-    An empty list is a valid answer (nothing omitted); a single malformed
-    item makes the whole answer unreadable.
+    Empty lists are valid answers. An answer without `compound` (the shape
+    before slice 10) reads as nothing compound; a single malformed item in
+    either list makes the whole answer unreadable.
     """
     parsed = _extract_json_object(text)
-    if not isinstance(parsed, dict) or set(parsed.keys()) != {"omitted"}:
+    if not isinstance(parsed, dict) or set(parsed.keys()) not in (
+        {"omitted"},
+        {"omitted", "compound"},
+    ):
         return None
-    omitted = parsed["omitted"]
-    if not isinstance(omitted, list):
+    omitted, compound = parsed["omitted"], parsed.get("compound", [])
+    if not isinstance(omitted, list) or not isinstance(compound, list):
         return None
     for item in omitted:
         if not isinstance(item, dict) or set(item.keys()) != {"fact", "span"}:
             return None
         if not isinstance(item["fact"], str) or not isinstance(item["span"], str):
             return None
-    return omitted
+    for item in compound:
+        if not isinstance(item, dict) or set(item.keys()) != {"claim_id", "facts"}:
+            return None
+        if not isinstance(item["claim_id"], str) or not isinstance(item["facts"], list):
+            return None
+        if not all(isinstance(fact, str) for fact in item["facts"]):
+            return None
+    return omitted, compound
 
 
 def parse_restated(text: str) -> dict | None:
@@ -470,8 +482,11 @@ def omissions(
     `omission_ungrounded`, never returned — the judge may not invent an
     omission any more than the author may invent a claim. Grounded facts
     are returned and emitted once as `omissions_found` with their spans
-    (only when there are any). Transport failures and an unreadable answer hold the unit,
-    exactly as `judge_claims` does. Re-asking P1 for the unit on a finding
+    (only when there are any). Slice 10: the same answer names every claim
+    that states more than one fact; each naming a claim id the unit has is
+    emitted as `compound_found` (log-only — nothing re-asks on it yet).
+    Transport failures and an unreadable answer hold the unit, exactly as
+    `judge_claims` does. Re-asking P1 for the unit on a finding
     is the job runner's decision, not this function's.
     """
 
@@ -485,19 +500,37 @@ def omissions(
         unit,
         client,
         role="claim_judge",
-        prompts_=[(custom_id, prompts.render_omissions([c.text for c in claims], unit.text))],
+        prompts_=[
+            (custom_id, prompts.render_omissions([(c.claim_id, c.text) for c in claims], unit.text))
+        ],
         schema=prompts.P3_OMISSIONS_SCHEMA,
         phase="P3",
         max_tokens=P3_OMISSIONS_MAX_TOKENS,
     )
-    findings = parse_omissions(completions[custom_id].text)
-    if findings is None:
+    parsed = parse_omissions(completions[custom_id].text)
+    if parsed is None:
         _hold(
             emit,
             unit,
             "schema: the judge's omission answer was not valid JSON matching the "
             "P3 omissions schema",
         )
+
+    findings, compound = parsed
+    texts = {c.claim_id: c.text for c in claims}
+    bundled = []
+    for item in compound:
+        if item["claim_id"] not in texts:  # the judge may not invent a claim
+            emit(
+                "compound_unknown",
+                {"unit_key": unit.key, "claim_id": item["claim_id"], "facts": item["facts"]},
+            )
+            continue
+        bundled.append(
+            {"claim_id": item["claim_id"], "text": texts[item["claim_id"]], "facts": item["facts"]}
+        )
+    if bundled:
+        emit("compound_found", {"unit_key": unit.key, "claims": bundled})
 
     facts: list[str] = []
     spans: list[str] = []

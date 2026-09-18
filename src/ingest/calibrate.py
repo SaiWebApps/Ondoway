@@ -2,7 +2,7 @@
 
 `fixtures/ingestion/defects.json` holds hand-read records over one unit,
 one planted defect each, one per class §4 names (ten, plus slice 10's
-shared_element and same_fact). `run()` sends
+shared_element, same_fact, compound_claim and stated_relation). `run()` sends
 each record through the detector its class names — the P1 gates
 (`gates.claim_gates`), the P3 claim judge (`judge_claims.judge_claims`),
 the omission check (`judge_claims.omissions`) or the P4 narration code
@@ -194,6 +194,15 @@ def scripted_answers(record: DefectRecord, unit: Unit) -> dict[str, llm.MockAnsw
                 ),
                 model_id=judge_model,
             )
+    elif record.detector == "omissions" and record.planted.get("expected") == "compound":
+        flagged = [{"claim_id": record.planted["claim_id"], "facts": record.planted["facts"]}]
+        answers[judge_claims.omissions_custom_id(unit)] = llm.MockAnswer(
+            text=json.dumps({"omitted": [], "compound": flagged}), model_id=judge_model
+        )
+    elif record.detector == "omissions" and record.planted.get("expected") == "atomic":
+        answers[judge_claims.omissions_custom_id(unit)] = llm.MockAnswer(
+            text=json.dumps({"omitted": [], "compound": []}), model_id=judge_model
+        )
     elif record.detector == "omissions":
         finding = {"fact": record.planted["fact"], "span": record.planted["span"]}
         answers[judge_claims.omissions_custom_id(unit)] = llm.MockAnswer(
@@ -475,6 +484,21 @@ def _detect(record: DefectRecord, unit: Unit, client: llm.ModelClient | None) ->
                 note = refused[0]["reason"] if refused else "not refused"
         else:
             judge_claims.omissions(unit, _drafts(record, unit), client, record_event)
+            expected = record.planted.get("expected")
+            if expected in ("compound", "atomic"):
+                # compound_claim / stated_relation: the coverage check's
+                # compound flag, recall and precision.
+                flagged = [
+                    claim["claim_id"]
+                    for kind, payload in events
+                    if kind == "compound_found"
+                    for claim in payload["claims"]
+                ]
+                named = planted_id in flagged
+                caught = named if expected == "compound" else not named
+                note = f"flagged {flagged}" if flagged else "nothing flagged"
+                false_refusals, dropped, details = _precision(events, planted_id)
+                return _Detection(caught, note, false_refusals, dropped, details)
             spans = [
                 span
                 for kind, payload in events

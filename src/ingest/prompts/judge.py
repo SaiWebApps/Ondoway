@@ -23,6 +23,8 @@ would misparse as fields.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 _ENTAILED_RULE = (
     "Read the passage as a whole: the cited span is where the claim comes "
     "from, and the sentences around it are part of the evidence. A claim "
@@ -131,11 +133,15 @@ def render_restate(claim_text: str, span: str, reason: str, unit_text: str) -> s
     return rendered.replace("{source}", unit_text)
 
 
-_OMISSIONS_SHAPE = '{"omitted": [{"fact": "...", "span": "..."}]}'
+_OMISSIONS_SHAPE = (
+    '{"omitted": [{"fact": "...", "span": "..."}], '
+    '"compound": [{"claim_id": "c01", "facts": ["...", "..."]}]}'
+)
 
 OMISSIONS_PROMPT = (
     "You are checking whether a set of claims extracted from a guidebook "
-    "passage about a place has left anything out.\n\n"
+    "passage about a place has left anything out, and whether each claim "
+    "states only one fact.\n\n"
     "List every fact the passage states about the place — a name, a date, "
     "a number, something that happened there, something that is true of "
     "it — that NO claim below carries. Ignore practicalities (opening "
@@ -143,8 +149,14 @@ OMISSIONS_PROMPT = (
     "directions and recommendations, and anything a claim already states "
     "in other words. For each omitted fact, copy the span of the passage "
     "that states it exactly, word for word.\n\n"
+    "Then list, by its id, every claim below that states more than one fact — "
+    "two things about one subject (\"X is A and B\", \"X, which did A, is B\"), "
+    "facts about two subjects, or a list together with its items — and write "
+    "out the separate facts it bundles. A relation the passage itself states "
+    "between two facts (one caused the other, one contrasts with the other) is "
+    "one fact: never list such a claim.\n\n"
     "Answer as JSON only, matching this shape exactly, with an empty list "
-    "when nothing is omitted:\n"
+    "for either when there is nothing to report:\n"
     f"{_OMISSIONS_SHAPE}\n\n"
     "Claims:\n{claims}\n\n"
     "Passage:\n{source}"
@@ -165,14 +177,27 @@ P3_OMISSIONS_SCHEMA: dict = {
                 "additionalProperties": False,
             },
         },
+        "compound": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "claim_id": {"type": "string"},
+                    "facts": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["claim_id", "facts"],
+                "additionalProperties": False,
+            },
+        },
     },
-    "required": ["omitted"],
+    "required": ["omitted", "compound"],
     "additionalProperties": False,
 }
 
 
-def render_omissions(claim_texts: list[str], unit_text: str) -> str:
-    """Render OMISSIONS_PROMPT over the unit's claims, one per line."""
-    claim_lines = "\n".join(f"- {text}" for text in claim_texts) or "- (none)"
+def render_omissions(claims: Sequence[tuple[str, str]], unit_text: str) -> str:
+    """Render OMISSIONS_PROMPT over the unit's `(claim_id, text)` claims, one
+    per line and numbered, so a compound finding can name the claim."""
+    claim_lines = "\n".join(f"- {cid}: {text}" for cid, text in claims) or "- (none)"
     rendered = OMISSIONS_PROMPT.replace("{claims}", claim_lines)
     return rendered.replace("{source}", unit_text)

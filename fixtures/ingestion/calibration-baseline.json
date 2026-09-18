@@ -58,6 +58,18 @@
     "same_fact": {
       "caught": 1,
       "total": 1
+    },
+    "compound_claim": {
+      "caught": 1,
+      "total": 1,
+      "false_refusals": 0,
+      "dropped": 0
+    },
+    "stated_relation": {
+      "caught": 1,
+      "total": 1,
+      "false_refusals": 0,
+      "dropped": 0
     }
   },
   "live": {
