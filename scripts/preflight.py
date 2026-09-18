@@ -63,7 +63,7 @@ COLIMA_CPUS = 4
 
 # Ports this project's own servers bind: the API/workbench, the workbench test
 # shard's managed server, the dashboard, and the Flutter web dev server.
-SERVER_PORTS = (3000, 8000, 8001, 8080)
+SERVER_PORTS = (3000, 8000, 8001, 8080, 8766)  # 8766: concept-prototype (throwaway)
 
 DAEMON_WAIT_SECONDS = 180
 DATABASE_WAIT_SECONDS = 180

@@ -1,0 +1,35 @@
+<meta charset="utf-8">
+<!-- PROTOTYPE — throwaway. Concept-interview walkthrough for Planners (NYC).
+     Question it answers: can a target traveller experience Ondoway's core value proposition
+     with no founder narration? Spec: ../script.md (authority), ../brief.md.
+     Views:  (default)        traveller — phone frame, self-running walk
+             ?view=iv         interviewer — question script, tallies, clock, tap log (never shown to the traveller)
+             ?view=board      close — ranking board on the founder's screen
+             add &s=<code>    to pair a remote traveller with the interviewer view
+     Content lives in content.js. Delete this folder once NOTES.md holds the answer. -->
+<title>Ondoway Concept Walkthrough</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0&display=block">
+<link rel="stylesheet" href="styles.css">
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script src="content.js"></script>
+<script src="sync.js"></script>
+<script src="app-core.js"></script>
+<script src="screens-plan.js"></script>
+<script src="walk-kit.js"></script>
+<script src="screens-walk.js"></script>
+<script src="screens-line.js"></script>
+<script src="screens-late.js"></script>
+<script src="interviewer.js"></script>
+<script src="board.js"></script>
+<script>
+  (function () {
+    const view = new URLSearchParams(location.search).get("view");
+    if (view === "iv") Interviewer.boot();
+    else if (view === "board") Board.boot();
+    else App.boot();
+  })();
+</script>

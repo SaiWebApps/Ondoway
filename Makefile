@@ -72,7 +72,7 @@ DB ?= dev
 TARGET ?= local
 
 .PHONY: \
-	help doctor setup bootstrap preflight preflight-list \
+	help doctor setup bootstrap preflight preflight-list concept-prototype \
 	render-auth-setup render-auth-status config-status \
 	sync sync-apple requirements lint format flutter-analyze \
 	test audit test-file test-live test-workbench golden-probe golden-diff \
@@ -432,6 +432,13 @@ api: ## Start the local API with dev data and fresh Render provider credentials.
 workbench: ## Start the local editorial workbench with dev data and fresh Render credentials.
 	@$(PREFLIGHT) --label workbench $(PRE_TOUR) render-key port-8000-reusable
 	@$(RENDER_LOCAL_EXEC) bash scripts/workbench.sh
+
+concept-prototype: ## PROTOTYPE (throwaway): serve the concept-interview walkthrough on :8766.
+	@$(PREFLIGHT) --label concept-prototype port-8766
+	@echo "Traveller:   http://127.0.0.1:8766/PROTOTYPE-walkthrough.html?s=demo"
+	@echo "Interviewer: http://127.0.0.1:8766/PROTOTYPE-walkthrough.html?view=iv&s=demo"
+	@echo "Board:       http://127.0.0.1:8766/PROTOTYPE-walkthrough.html?view=board&s=demo"
+	python3 -m http.server 8766 --bind 127.0.0.1 --directory Docs/research/2026-09-17-concept-interview/prototype
 
 dashboard: ## Start the local dashboard with the validated dev profile.
 	@$(PREFLIGHT) --label dashboard $(PRE_LOCAL_GRAPH) port-8080
