@@ -387,6 +387,12 @@ ingest-batch: ## Recover a finished Batch API round ($0): per-request stop reaso
 	@$(PREFLIGHT) --label ingest-batch $(PRE_PY) render-key
 	@$(RENDER_LOCAL_EXEC) uv run python scripts/ingest_batch.py $(if $(BATCH),--batch $(BATCH),--job-log $(JOB_LOG)) $(ARGS)
 
+ingest-merge-replay: ## Prepare a sandbox to replay a finished job's P6 under the current merge code ($0): rebuilds the beats file the job started from (refused unless its sha matches the job's), copies P0-P5 (PLACE keeps one place's stories), prints the resume that spends. Usage: make ingest-merge-replay CITY=new_york JOB=<job_id> [PLACE="Solomon R. Guggenheim Museum"]
+	@test -n "$(CITY)" || { echo "ERROR: CITY is required." >&2; exit 2; }
+	@test -n "$(JOB)" || { echo "ERROR: JOB (a data-ingest job id) is required." >&2; exit 2; }
+	@$(PREFLIGHT) --label ingest-merge-replay $(PRE_PY)
+	@$(LOCAL_EXEC) uv run python scripts/ingest_merge_replay.py --city $(CITY) --job $(JOB) $(if $(PLACE),--place "$(PLACE)") $(ARGS)
+
 ingest-lift-report: ## Narration lift report over a new-shape beats file ($0): per beat the longest run shared with its spans, proper-name or not, and refusals at the gate's run length with/without the name exemption. Usage: make ingest-lift-report FILE=data-ingest/new_york/beats.json [ARGS="--run 6"]
 	@test -n "$(FILE)" || { echo "ERROR: FILE is required (a new-shape beats.json)." >&2; exit 2; }
 	@$(PREFLIGHT) --label ingest-lift-report $(PRE_PY)

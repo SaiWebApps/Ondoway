@@ -630,6 +630,70 @@ and every pinned revision under `data/{city}/wikipedia`, resumable).
 old file; `_test-golden`, tour grade and invariants green on 7687; one cloud publish per
 city with `CONFIRM_CLOUD_WRITE=1`, human at the keyboard.
 
+**Slice 10, part 1: the merge trio (2026-09-17; owner's bar: a merge that actually merges,
+proven on the Guggenheim, before any bulk run).** Diagnosis from job 2's log ($0): 3 of the 4
+`merge_reasked` were the judge naming a claim match inside a story it called new, which the
+answer contract forbade (one re-ask talked it out of a correct match); the lexical signature
+matched 1 claim across all 12 judged stories and its at-least-half-of-the-story vote discarded
+even that; hold-on-any-disagreement held the rest. Built test-first (869103d): every raw judge
+answer logged (`merge_answered`); beats and claims answered by handle; a claim may match any
+claim at the place whatever the story verdict and folds into the beat that holds it; the
+signature is a one-way tripwire (D7 amended); the runner writes a new story's beat from its
+unmatched claims only and narrates it again. `make ingest-merge-replay CITY= JOB= [PLACE=]`
+($0) rebuilds the beats file a finished job started from (refused unless its sha matches the
+job's) and copies its P0-P5 into a sandbox root; the printed `--resume ... --data-root` run
+replays P6 onward there, never touching the city's file.
+
+*Guggenheim replay — pass criteria, registered before the paid run (amended at the judge's
+PROVE-FIRST so every one is decidable without re-argument).* Input: job `ed4b6064…`
+(Frommer's chunk-05), place "Solomon R. Guggenheim Museum": three narrated stories
+(`a-spiral-among-the-boxes` 7 judged claims, `museum-or-cupcake` 3 — its first-pass narration
+is P5-held but it still merges — `blockbusters-along-the-ramp` 7; `guggenheim-visiting-details`
+has no narration and is skipped) against the 5 LP beats of the 29-beat file (sha
+`63a805933ac8c6dc`). Registered verdicts, from the texts, not from a run: c141 (Wright's spiral)
+is `same` as LP c01 ("designed by architect Frank Lloyd Wright") and c148 ("the earliest critics
+rejected it") is `same` as LP c03 ("derided by some critics but hailed by others") — the two
+same-fact pairs slice 9's panel named; a `conflict` on c148↔c03 is false (the texts agree).
+c146 ("this 1959 masterpiece" — a claim about touring the ramps) folding into LP c13 is a FAIL
+(it would take the ramp content out of the story), and so is c145 ("begins on the top floor",
+the building) folding into LP c23 (Wright's intended route) or c25 (the hanging order). Every
+blockbusters claim, c149 and c151 are `new`. A fold of any other claim (c140, c142, c144,
+c147, ...) is decided by the PC2 panel alone.
+- PC0 isolation: after each run the real `data-ingest/new_york/beats.json` sha is still
+  `556830a5342e178c`, and no file outside the run's sandbox is newer than a marker touched just
+  before the run.
+- PC1 a merge merges: c141→LP c01 and c148→LP c03 both fold as `same`, AND the PC2 panel
+  upholds both; no `rerun_reverted` names an LP beat (a fold dropped because its target's
+  re-narration was held is a FAIL, not infra).
+- PC2 no false fold: every `merge_folded` pair judged by a panel of three on opus, fable and
+  haiku (never the merge judge's model, Sonnet), majority rules, each member given the pair's
+  two texts and the merge prompt's own contract text for `same` and `conflict`, and NOT shown
+  these registered verdicts; 0 false `same` or `conflict` (a false conflict marks a true LP
+  event `contested`, which D8 silences).
+- PC3 no tripwire hold at the place (only c141 has a signature match; a hold there is a FAIL,
+  diagnosed from `merge_answered`).
+- PC4 integrity: the job commits in the sandbox; P7's validator passes; every Guggenheim beat
+  whose claims changed carries a fresh `claims_hash`; each of the 17 judged claims has EXACTLY
+  one terminal disposition — folded, a claim of a written beat, `merge_absorbed`, or a claim of
+  a queue item P6 made — the `narration_held` item P5's hold queued before the merge does not
+  count.
+- PC5 stability: a second run from a fresh prep; PC0-PC4 must hold in both; the two fold sets
+  are reported side by side and differing sets are not by themselves a FAIL.
+Operating rules: back up `data-ingest/new_york` and the sandbox under `$HOME` first; a run that
+dies gets a FRESH prep, never a re-resume (P6 writes events and `held/` before its phase file);
+nothing mechanical caps a run's spend (the estimate gate only refuses an unprinted estimate),
+so the stop rule — actual over $2 — decides only whether the second run starts.
+Known cost of the design, for the panel: folding a compound claim keeps the EXISTING text, so
+c141's "spiral among the towers of Fifth Avenue" leaves the Frommer's story when it folds; c148
+is compound too, which is benign only because c149 carries its Newsweek headline. Out
+of scope here and still carried: the `’`/`–` span corruption (it deleted Frommer's 2024
+admission claim), claim-id collisions across jobs, `narrative_function` vocabulary, literal
+`\u` escapes, `sub_location`/`kid_friendly`/`entities`; the judge's step-E carry-forwards (a
+reverted fold queues the whole story although its remainder beat was written; a
+`beat_id_collision` drops a remainder after its folds landed; a remainder queue item carries
+the first-pass narration; a P5-held story that then merges leaves its pre-merge
+`narration_held` item in the queue, stale). The stop's shippability is the panel's separate verdict.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
