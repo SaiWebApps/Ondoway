@@ -350,11 +350,11 @@ def test_ids_in_rerun_get_p4_and_p5_again_before_p7(tmp_path):
     scripted["answers"]["merge_judge"] = [
         script_mod.merge_answer(
             "same",
-            script_mod.ORIGINS_ID,
+            "b1",
             [
-                _claim_verdict("c01", "same", "c01", "his sixties", "his sixties"),
+                _claim_verdict("c01", "same", "b1.c01", "his sixties", "his sixties"),
                 _claim_verdict("c02", "new", reason="no claim mentions 1939"),
-                _claim_verdict("c03", "same", "c02", "1959", "1959"),
+                _claim_verdict("c03", "same", "b1.c02", "1959", "1959"),
             ],
         )
     ]
@@ -443,12 +443,13 @@ def _inject_one_item_failure(case: str, unit, scripted: dict, data_root: Path) -
         return "P5"
     script_mod.seed_beats(data_root, script_mod.existing_records())
     if case == "P6-merge":
+        # Invalid under the slice-10 contract: a claim handle the place lacks.
         invalid = script_mod.merge_answer(
-            "new", "",
+            "same", "b1",
             [
-                _claim_verdict("c01", "conflict", "c01", "his sixties", "his fifties"),
+                _claim_verdict("c01", "conflict", "b9.c01", "his sixties", "his fifties"),
                 _claim_verdict("c02", "new", reason="no claim mentions 1939"),
-                _claim_verdict("c03", "new", reason="no claim mentions it"),
+                _claim_verdict("c03", "same", "b1.c02", "1959", "1959"),
             ],
         )
         answers["merge_judge"] = [invalid, invalid]
@@ -463,11 +464,11 @@ def _inject_one_item_failure(case: str, unit, scripted: dict, data_root: Path) -
         answers["author"].append(script_mod.narration_answer(script_mod.RERUN_NARRATION))
     answers["merge_judge"] = [
         script_mod.merge_answer(
-            "same", script_mod.ORIGINS_ID,
+            "same", "b1",
             [
-                _claim_verdict("c01", "same", "c01", "his sixties", "his sixties"),
+                _claim_verdict("c01", "same", "b1.c01", "his sixties", "his sixties"),
                 _claim_verdict("c02", "new", reason="no claim mentions 1939"),
-                _claim_verdict("c03", "same", "c02", "1959", "1959"),
+                _claim_verdict("c03", "same", "b1.c02", "1959", "1959"),
             ],
         )
     ]
@@ -513,6 +514,8 @@ def test_one_failing_item_never_ends_the_job(tmp_path, case):
         if e.message in ("beat_held", "unit_held") and e.data.get("phase") == phase
     ]
     assert held, [e.message for e in snap.events]
+    if case == "P6-merge":
+        assert held[0]["reason"].startswith("answer: claim c01: existing_claim_id 'b9.c01'")
     if case not in ("P1", "P2", "P3"):
         assert script_mod.STORY_SLUG in [i.story_slug for i in store.undecided(script_mod.CITY)]
     if case.startswith("P6-rerun"):
@@ -566,11 +569,11 @@ def test_a_reverted_merge_is_queued_as_the_incoming_story_and_counts_as_nothing(
     ]
     scripted["answers"]["merge_judge"] = [
         script_mod.merge_answer(
-            "same", script_mod.ORIGINS_ID,
+            "same", "b1",
             [
-                _claim_verdict("c01", "same", "c01", "his sixties", "his sixties"),
+                _claim_verdict("c01", "same", "b1.c01", "his sixties", "his sixties"),
                 _claim_verdict("c02", "new", reason="no claim mentions 1939"),
-                _claim_verdict("c03", "same", "c02", "1959", "1959"),
+                _claim_verdict("c03", "same", "b1.c02", "1959", "1959"),
             ],
         )
     ]
@@ -600,6 +603,175 @@ def test_a_reverted_merge_is_queued_as_the_incoming_story_and_counts_as_nothing(
     assert p6["per_unit"][unit.key]["pois_touched"] == []
     assert beats_path.read_bytes() == before
     assert "commit_skipped" in [e.message for e in snap.events]
+
+
+def test_a_new_storys_beat_holds_only_its_unmatched_claims_renarrated(tmp_path):
+    """Slice 10: a claim of a NEW story that the judge matches in an
+    existing beat folds into that beat (merge.apply), so the new story's own
+    beat must not voice it a second time. The runner assembles the new beat
+    from its unmatched claims only and narrates it again (P4/P5) over them,
+    so its claims_hash is fresh; the sidebar that took the folded claim
+    carries both sources. Nothing is queued."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    beats_path = script_mod.seed_beats(data_root, script_mod.folding_records())
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(unit)
+    scripted["answers"]["author"].append(
+        script_mod.narration_answer(script_mod.REMAINDER_NARRATION)
+    )
+    scripted["answers"]["merge_judge"] = [
+        script_mod.merge_answer(
+            "new", "",
+            [
+                _claim_verdict("c01", "new", reason="no claim mentions collecting"),
+                _claim_verdict("c02", "new", reason="no claim mentions 1939"),
+                _claim_verdict("c03", "same", "b2.c01", "1959", "1959"),
+            ],
+        )
+    ]
+    remainder = [script_mod.COLLECTING["text"], script_mod.OPENED_1939["text"]]
+    scripted["batch_answers"].update(
+        script_mod.sentence_verdicts(remainder, script_mod.REMAINDER_NARRATION)
+    )
+    recorder = _RecordingClient(llm.MockClient(sink, **scripted))
+
+    run.run_job(job.id, store, recorder, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    assert recorder.calls[-3:] == [
+        ("merge_judge", "P6"), ("author", "P4"), ("narration_judge", "P5")
+    ]
+    assert store.undecided(script_mod.CITY) == []
+    records = json.loads(beats_path.read_text(encoding="utf-8"))
+    assert [r["beat_id"] for r in records] == [
+        script_mod.VISITING_ID, script_mod.COMPLETION_ID, script_mod.BEAT_ID
+    ]
+    assert records[0] == script_mod.folding_records()[0]
+    completion = records[1]["claims"][0]
+    assert [s["span"] for s in completion["sources"]] == [script_mod.COMPLETED["span"]] * 2
+    new = records[2]
+    assert [(c["claim_id"], c["text"]) for c in new["claims"]] == [
+        ("c01", script_mod.COLLECTING["text"]), ("c02", script_mod.OPENED_1939["text"])
+    ]
+    assert new["narration"]["text"] == script_mod.REMAINDER_NARRATION
+    assert new["narration"]["claims_hash"] == model.claims_hash(new["claims"])
+    assert new["duration_sec"] == narrate.duration_sec(script_mod.REMAINDER_NARRATION)
+    assert model.validate(records, chunks_root=chunks.parent) == []
+
+
+def test_a_new_story_too_small_after_folding_is_queued_and_a_fully_folded_one_vanishes(
+    tmp_path,
+):
+    """A new story whose matched claims fold away can be left below its
+    beat type's arc minimum (an anecdote needs two claims): writing it
+    would make P7's validator refuse the WHOLE file, so the remainder is a
+    merge queue item carrying its unmatched judged claims, while the folds
+    still land. A story whose every claim folds writes no beat and queues
+    nothing — all of it is already told — and is logged `merge_absorbed`."""
+    def run_with(verdicts: list[dict]):
+        root = tmp_path / str(len(list(tmp_path.iterdir())))
+        root.mkdir()
+        chunks = script_mod.chunk_dir(root)
+        data_root = script_mod.data_dir(root)
+        beats_path = script_mod.seed_beats(data_root, script_mod.existing_records())
+        store = jobs.IngestJobStore()
+        job = _book_job(store, chunks)
+        _events, sink = _sink_and_events()
+        scripted = script_mod.script(script_mod.unit(chunks))
+        scripted["answers"]["merge_judge"] = [script_mod.merge_answer("new", "", verdicts)]
+        client = llm.MockClient(sink, **scripted)
+        run.run_job(job.id, store, client, data_root=data_root)
+        records = json.loads(beats_path.read_text(encoding="utf-8"))
+        assert model.validate(records, chunks_root=chunks.parent) == []
+        return store.snapshot(job.id), store, records, client
+
+    folded_collecting = _claim_verdict("c01", "same", "b1.c01", "his sixties", "his sixties")
+    folded_completed = _claim_verdict("c03", "same", "b1.c02", "1959", "1959")
+    snap, store, records, client = run_with(
+        [folded_collecting, _claim_verdict("c02", "new", reason="no claim mentions 1939"),
+         folded_completed]
+    )
+    assert snap.status == "committed", snap.error
+    assert client.calls[-1] == ("merge_judge", "P6")  # nothing re-narrated
+    assert [r["beat_id"] for r in records] == [script_mod.ORIGINS_ID, script_mod.VISITING_ID]
+    assert [len(c["sources"]) for c in records[0]["claims"]] == [2, 2]
+    items = store.undecided(script_mod.CITY)
+    assert [(i.kind, i.story_slug) for i in items] == [("merge_held", script_mod.STORY_SLUG)]
+    assert items[0].shown["claims"] == [script_mod.OPENED_1939["text"]]
+    assert "arc" in items[0].reason
+
+    snap, store, records, client = run_with(
+        [folded_collecting,
+         _claim_verdict("c02", "same", "b1.c02", "1939", "1939"),
+         folded_completed]
+    )
+    assert snap.status == "committed", snap.error
+    assert [r["beat_id"] for r in records] == [script_mod.ORIGINS_ID, script_mod.VISITING_ID]
+    assert store.undecided(script_mod.CITY) == []
+    absorbed = [e.data for e in snap.events if e.message == "merge_absorbed"]
+    assert absorbed == [{"story_slug": script_mod.STORY_SLUG, "place": script_mod.PLACE}]
+
+
+def test_a_fold_dropped_by_a_held_rerun_is_queued_with_the_incoming_claim(tmp_path):
+    """The 9568574 path, now for folds out of a NEW story: its completion
+    claim conflicts with the sidebar's (event vs event → contested), so the
+    sidebar must be narrated again; that re-narration copies the source
+    twice and is held at P4, so the sidebar is kept exactly as it was on
+    disk. The folded claim must not vanish: the incoming story is queued as
+    a merge item carrying its judged completion claim, while its own beat
+    (the two unmatched claims, re-narrated) is still written."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    beats_path = script_mod.seed_beats(data_root, script_mod.folding_records())
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(unit)
+    lifted = [
+        "When the Guggenheim opened its doors in October 1959, the ticket price was 50\u00a2.",
+        "The ticket price was 50\u00a2 when the Guggenheim opened its doors in October 1959.",
+    ]
+    scripted["answers"]["author"].extend(
+        [script_mod.narration_answer(script_mod.REMAINDER_NARRATION)]
+        + [script_mod.narration_answer(text) for text in lifted]
+    )
+    scripted["answers"]["merge_judge"] = [
+        script_mod.merge_answer(
+            "new", "",
+            [
+                _claim_verdict("c01", "new", reason="no claim mentions collecting"),
+                _claim_verdict("c02", "new", reason="no claim mentions 1939"),
+                _claim_verdict("c03", "conflict", "b2.c01", "1959", "1960"),
+            ],
+        )
+    ]
+    remainder = [script_mod.COLLECTING["text"], script_mod.OPENED_1939["text"]]
+    scripted["batch_answers"].update(
+        script_mod.sentence_verdicts(remainder, script_mod.REMAINDER_NARRATION)
+    )
+
+    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    assert [e.data for e in snap.events if e.message == "rerun_reverted"] == [
+        {"beat_ids": [script_mod.COMPLETION_ID]}
+    ]
+    records = json.loads(beats_path.read_text(encoding="utf-8"))
+    assert records[:2] == script_mod.folding_records()
+    assert [c["claim_id"] for c in records[2]["claims"]] == ["c01", "c02"]
+    items = store.undecided(script_mod.CITY)
+    assert [(i.kind, i.story_slug) for i in items] == [("merge_held", script_mod.STORY_SLUG)]
+    assert "dropped" in items[0].reason
+    queued = [judge_claims.JudgedClaim.model_validate(c) for c in items[0].shown["judged_claims"]]
+    assert script_mod.COMPLETED["text"] in [c.draft.text for c in queued]
+    assert model.validate(records, chunks_root=chunks.parent) == []
 
 
 def test_a_new_place_holds_its_beat_and_queues_it(tmp_path):

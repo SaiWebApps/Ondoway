@@ -282,14 +282,15 @@ def scripted_merge_answer(record: DefectRecord, unit: Unit) -> llm.MockAnswer:
     or supersedes) is the code's, by kind and date — never the judge's."""
     planted = record.planted
     values = planted["stated_values"]
+    # The record's beat is P6's only candidate, so its handle is b1.
     answer = {
         "story": "same",
-        "beat_id": _beat(record, unit).beat_id,
+        "beat_id": "b1",
         "claims": [
             {
                 "claim_id": "n01",
                 "verdict": "conflict",
-                "existing_claim_id": planted["claim_id"],
+                "existing_claim_id": f"b1.{planted['claim_id']}",
                 "new_value": str(values[planted["second_source"]["source_id"]]),
                 "existing_value": str(values[unit.source_id]),
                 "reason": record.note,

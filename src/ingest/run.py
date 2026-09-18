@@ -32,9 +32,13 @@ what those modules deliberately left to the runner.
   city's file: no beat there → the story is new without a merge call
   (logged `merge_skipped`); a held outcome → a D13 queue item, nothing
   applied; otherwise `merge.apply`, then P4/P5 run again for every id in
-  `MergeOutcome.rerun` before P7. A `new` story's record is assembled
-  here: `beat_id = city/slug(place)/story_slug`, the story's enrichment
-  fields, P5's narration, its duration and review. A story at a new place
+  `MergeOutcome.rerun` before P7 (every beat a claim folded into counts as
+  changed). A `new` story's record is assembled here:
+  `beat_id = city/slug(place)/story_slug`, the story's enrichment fields,
+  P5's narration, its duration and review. When some of its claims folded
+  into existing beats, the record holds only the unmatched ones and is
+  narrated again (P4/P5); left below its arc minimum it is a merge queue
+  item instead, and with nothing left it writes no beat (`merge_absorbed`). A story at a new place
   (`story.new_poi`) and a narration P5 held both become queue items too.
 - P7 commit through the slice-1 validator with the chunks root (the
   chunk dir's parent), via `scripts.beats_io.commit`; nothing reaches
@@ -936,8 +940,59 @@ class _Run:
                     if outcome.held:
                         self._queue_held_merge(story, claims, outcome, narration)
                         continue
+                folds = (
+                    [o for o in outcome.claims if o.existing_beat_id is not None]
+                    if outcome is not None else []
+                )
+                if outcome is not None and (outcome.story != "new" or folds):
+                    existing = merge.apply(outcome, existing)
+                    applied.append(story.story_slug)
+                    targets = {o.existing_beat_id for o in folds}
+                    if outcome.beat_id:
+                        targets.add(outcome.beat_id)
+                    for target in sorted(targets):
+                        changed_ids.add(target)
+                        merged_into.setdefault(target, []).append(
+                            (unit.key, story, list(outcome.judged or claims), narration)
+                        )
+                    rerun.extend(i for i in outcome.rerun if i not in rerun)
                 if outcome is None or outcome.story == "new":
-                    beat = assemble_record(self.job.city, story, claims, narration)
+                    new_story, kept = story, list(claims)
+                    if folds:
+                        # Its matched claims now live in the beats that hold
+                        # them; its own beat is the rest, narrated again.
+                        unmatched = {o.claim_id for o in outcome.claims if o.outcome == "new"}
+                        kept = [c for c in claims if c.draft.claim_id in unmatched]
+                        new_story = story.model_copy(
+                            update={"claim_ids": [c.draft.claim_id for c in kept]}
+                        )
+                        if not kept:
+                            self.emit(
+                                "merge_absorbed",
+                                {"story_slug": story.story_slug, "place": story.place},
+                            )
+                            touched.setdefault(story.place, set()).add(story.story_slug)
+                            continue
+                        if model.arc_too_short(story.beat_type, len(kept)):
+                            # Written, it would make P7 refuse the whole file.
+                            self._queue_unmerged(
+                                new_story, kept,
+                                f"after folding, {len(kept)} claim is below the arc "
+                                f"minimum for beat_type {story.beat_type!r}",
+                                narration,
+                            )
+                            continue
+                    beat = assemble_record(self.job.city, new_story, kept, narration)
+                    if folds:
+                        renarrated, reason = self._rerun(beat, publishers)
+                        if renarrated is None:
+                            self._queue_unmerged(
+                                new_story, kept,
+                                f"its unmatched claims could not be re-narrated ({reason})",
+                                narration,
+                            )
+                            continue
+                        beat = renarrated
                     if any(b.beat_id == beat.beat_id for b in [*existing, *new_records]):
                         self.emit(
                             "beat_id_collision",
@@ -946,15 +1001,6 @@ class _Run:
                         continue
                     new_records.append(beat)
                     extracted += 1
-                else:
-                    existing = merge.apply(outcome, existing)
-                    applied.append(story.story_slug)
-                    if outcome.beat_id:
-                        changed_ids.add(outcome.beat_id)
-                        merged_into.setdefault(outcome.beat_id, []).append(
-                            (unit.key, story, list(outcome.judged or claims), narration)
-                        )
-                    rerun.extend(i for i in outcome.rerun if i not in rerun)
                 touched.setdefault(story.place, set()).add(story.story_slug)
             per_unit[unit.key] = {"chunk": unit.chunk, "beats_extracted": extracted}
         reverted: set[str] = set()

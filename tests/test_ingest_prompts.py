@@ -405,7 +405,7 @@ def test_p6_merge_schema_stays_in_the_structured_output_subset_and_prompt_pins_t
     ]
     existing = [
         {
-            "beat_id": "new_york/x/y",
+            "handle": "b1",
             "title": "Y",
             "claims": [
                 {"claim_id": "c02", "text": "Finished in 1959.", "kind": "event",
@@ -417,8 +417,8 @@ def test_p6_merge_schema_stays_in_the_structured_output_subset_and_prompt_pins_t
     for slot in ("{place}", "{title}", "{new_claims}", "{existing}"):
         assert slot not in rendered
     assert "- c01 [event, 2024]: The building was finished in 1959." in rendered
-    assert 'beat new_york/x/y "Y":' in rendered
-    assert "  - c02 [event, resolved, 2023]: Finished in 1959. (stated: 1959)" in rendered
+    assert 'beat b1 "Y":' in rendered
+    assert "  - b1.c02 [event, resolved, 2023]: Finished in 1959. (stated: 1959)" in rendered
     assert "holds no beat at this place" in prompts.render_merge("P", "T", new_claims, [])
 
     redo = prompts.render_merge_redo(

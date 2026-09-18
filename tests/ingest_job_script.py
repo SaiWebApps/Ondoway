@@ -228,6 +228,36 @@ def existing_records() -> list[dict]:
     return records
 
 
+COMPLETION_ID = f"{CITY}/{model.slug(PLACE)}/the-1959-building"
+COMPLETION_NARRATION = (
+    "The building was finished in 1959, by which time both Wright and Guggenheim had died. "
+    "A ticket cost fifty cents when the doors opened in October 1959."
+)
+
+#: What the author writes for the new story once its completion claim has
+#: folded into the corpus: its two unmatched claims only.
+REMAINDER_NARRATION = (
+    "Solomon Guggenheim started buying abstract art late in life on the advice "
+    "of Hilla Rebay. "
+    "In 1939 Hilla Rebay ran a temporary museum for him on 54th Street, named for "
+    "non-objective painting."
+)
+
+
+def folding_records() -> list[dict]:
+    """The visiting beat plus a sidebar holding the completion claim and the
+    ticket claim: the job's story shares the completion fact with the corpus
+    and nothing else, so it stays a new story that folds one claim."""
+    visiting = existing_records()[1]
+    completion = _beat(
+        COMPLETION_ID, "the-1959-building", "The 1959 building", "sidebar",
+        [_lp_claim("c01", COMPLETED), _lp_claim("c02", TICKET)], COMPLETION_NARRATION,
+    )
+    records = [visiting, completion]
+    assert model.validate(records) == []
+    return records
+
+
 def seed_beats(data_root: Path, records: list[dict]) -> Path:
     path = data_root / CITY / "beats.json"
     path.write_text(json.dumps(records, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

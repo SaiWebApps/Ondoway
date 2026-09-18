@@ -98,6 +98,13 @@ BEAT_TYPE_VALUES = (
 # The structural beat_types the arc rule (ARC_TOO_FEW_CLAIMS) exempts from
 # needing >=2 claims — spec's "structural" beats (decisions.pinned_definitions).
 STRUCTURAL_BEAT_TYPES = ("stop_orientation", "transit", "sidebar", "practicalities")
+
+
+def arc_too_short(beat_type: str, claims: int) -> bool:
+    """ARC_TOO_FEW_CLAIMS: a non-structural beat needs at least two claims."""
+    return beat_type not in STRUCTURAL_BEAT_TYPES and claims < 2
+
+
 # Attribution fields a cc_by_sa source must carry (and every other
 # rights_basis must NOT): CC_BY_SA_FIELDS_MISSING (decisions.vocabulary_enforced).
 CC_BY_SA_ATTRIBUTION_FIELDS = ("article_title", "url", "revision_id", "section", "retrieved_at")
@@ -412,7 +419,7 @@ def _identity_and_arc_errors(
     else:
         seen_beat_ids[beat.beat_id] = label
 
-    if beat.beat_type not in STRUCTURAL_BEAT_TYPES and len(beat.claims) < 2:
+    if arc_too_short(beat.beat_type, len(beat.claims)):
         errors.append(
             f"ARC_TOO_FEW_CLAIMS {label}: beat_type {beat.beat_type!r} "
             f"requires >=2 claims, has {len(beat.claims)}"

@@ -9,17 +9,27 @@ under the `merge_judge` role (P6 is not one of `llm.BATCH_PHASES`; the role's
 model may never be the author's — llm's JudgeIsAuthor gate refuses that at
 construction and per response, and this module does not re-implement it),
 with the new story's claim TEXTS and every candidate beat's claims — never a
-span. Independently of the judge, `signature_hint` computes the deterministic
-answer from `src.tour.claim_dedup`'s claim signatures (the same "same fact"
-test the tour engine's dedup uses, imported, never copied). The two are then
-compared:
+span. Candidate beats are shown and answered by handle (`b1`, and their
+claims `b1.c02`): the judge once retyped a beat id wrong, and two beats at
+one place can both hold a `c01`. Each new claim may match a claim of ANY
+beat at the place, whatever the story verdict — two books cut the same facts
+into different stories (slice 10: job 2's contract forbade that and talked
+the judge out of correct matches). Every raw answer is emitted as
+`merge_answered` before it is checked.
 
-- Judge and hint agree on new-vs-matched, on which beat, and on which
-  existing claim each new claim matches → the outcome applies.
-- They disagree → the new story is HELD: `MergeOutcome.held`, a review-queue
-  item (D13), `beat_held` emitted for phase P6, nothing applied. The hint is
-  never shown to the judge and the judge is never re-asked toward it — that
-  would make the hint the judge.
+Independently of the judge, `signature_hint` computes each new claim's best
+signature match from `src.tour.claim_dedup`'s claim signatures (the same
+"same fact" test the tour engine's dedup uses, imported, never copied). The
+hint is a one-way tripwire (D7 as amended in slice 10):
+
+- The signature matches a claim the judge called `new`, or a different claim
+  than the one the judge named → the new story is HELD: `MergeOutcome.held`,
+  a review-queue item (D13), `beat_held` emitted for phase P6, nothing
+  applied. The hint is never shown to the judge and the judge is never
+  re-asked toward it — that would make the hint the judge.
+- The signature matches nothing → no evidence either way; the judge's answer
+  applies. A lexical signature is blind to paraphrase (it matched one claim
+  across job 2's 12 judged stories).
 
 Whether a matched pair is `same` or `conflict` is the judge's call (the hint
 cannot read values). What a conflict BECOMES is the code's, by claim kind
@@ -36,12 +46,15 @@ cannot read values). What a conflict BECOMES is the code's, by claim kind
   there is no newer.
 - anything else (event vs state, belief against a fact) → contested.
 
-`same` → ONE claim with the second source appended (never a sibling claim,
-never a sibling beat), `resolution.by = corroborated`. `new` → the claim is
-appended to the matched beat under a fresh id (the new story's ids would
-collide). A story the judge and hint both call `new` is not applied here at
-all: assembling its record needs the narration the job runner holds (slice 7);
-the outcome just says `new`.
+A matched claim FOLDS into the claim that holds it, in whichever beat that
+is: `same` → ONE claim with the second source appended (never a sibling
+claim, never a sibling beat), `resolution.by = corroborated`; a conflict →
+the kind rules above. A `new` claim of a matched story is appended to the
+story's beat under a fresh id (the new story's ids would collide). A `new`
+story's unmatched claims are not applied here: assembling its record needs
+the narration the job runner holds (slice 7), and the runner narrates it
+again over those claims alone. Every fold is emitted as `merge_folded` with
+both texts and the new span, so a wrong `same` can be audited.
 
 Every re-kinded claim keeps its text, sources and verdict byte-for-byte —
 kind and status are not in the binding. A claim that gained a source is
@@ -64,7 +77,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -99,16 +112,20 @@ _CLAIM_ID_RE = re.compile(r"^c(\d+)$")
 class ClaimOutcome(BaseModel):
     """What happens to one new claim when the outcome is applied.
 
-    `claim_id` is the new story's id; `applied_claim_id` is the id the fact
-    carries in the beat afterwards — the existing claim's for `same` and
-    `contested`, a fresh one for `new`, `supersedes` (the new claim) and
-    `superseded` (the new claim, appended as a dated belief).
+    `claim_id` is the new story's id; `existing_beat_id` + `existing_claim_id`
+    name the matched claim at the place, in whichever beat holds it (None
+    for `new`). `applied_claim_id` is the id the fact carries afterwards —
+    the existing claim's for `same` and `contested`; a fresh id in the
+    matched claim's beat for `supersedes` (the new claim) and `superseded`
+    (the new claim, appended as a dated belief); for `new`, a fresh id in
+    the story's matched beat, or the story's own id when the story is new.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     claim_id: str
     verdict: ClaimVerdict
+    existing_beat_id: str | None
     existing_claim_id: str | None
     outcome: ClaimOutcomeKind
     applied_claim_id: str
@@ -204,70 +221,82 @@ def parse_merge(text: str) -> dict | None:
 
 # ── The deterministic signature hint ────────────────────────────────────────
 
+#: A claim at the place, named by the beat that holds it: claim ids repeat
+#: across beats (every story numbers its own), so a bare id is ambiguous.
+ClaimRef = tuple[str, str]
+
 
 class Hint(BaseModel):
-    """What the claim signatures say: which beat (if any) the new story
-    matches, and which existing claim of it each new claim matches."""
+    """What the claim signatures say: for each new claim, the claim at the
+    place it states the same fact as, (beat id, claim id), or None."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    beat_id: str | None
-    matches: dict[str, str | None]
+    matches: dict[str, ClaimRef | None]
 
 
-def _best_match(text: str, beat: model.Beat) -> str | None:
+def _best_match(text: str, existing: Sequence[model.Beat]) -> ClaimRef | None:
     signature = _signature(text)
-    best: str | None = None
+    best: ClaimRef | None = None
     best_score = 0.0
-    for claim in beat.claims:
-        other = _signature(claim.text)
-        score = _overlap(signature, other)
-        if (
-            score >= SIGNATURE_MATCH_MIN
-            and len(signature & other) >= SIGNATURE_MIN_SHARED
-            and score > best_score
-        ):
-            best, best_score = claim.claim_id, score
+    for beat in existing:
+        for claim in beat.claims:
+            other = _signature(claim.text)
+            score = _overlap(signature, other)
+            if (
+                score >= SIGNATURE_MATCH_MIN
+                and len(signature & other) >= SIGNATURE_MIN_SHARED
+                and score > best_score
+            ):
+                best, best_score = (beat.beat_id, claim.claim_id), score
     return best
 
 
 def signature_hint(claims: Sequence[JudgedClaim], existing: Sequence[model.Beat]) -> Hint:
-    """The deterministic answer: the candidate beat matching the most new
-    claims (first wins a tie), taken as the story's beat when it matches at
-    least half of them; otherwise no beat and no matches."""
-    unmatched = Hint(beat_id=None, matches={c.draft.claim_id: None for c in claims})
-    best_beat: model.Beat | None = None
-    best_pairs: dict[str, str | None] = {}
-    best_count = 0
-    for beat in existing:
-        pairs = {c.draft.claim_id: _best_match(c.draft.text, beat) for c in claims}
-        count = sum(1 for match in pairs.values() if match is not None)
-        if count > best_count:
-            best_beat, best_pairs, best_count = beat, pairs, count
-    if best_beat is None or best_count * 2 < len(claims):
-        return unmatched
-    return Hint(beat_id=best_beat.beat_id, matches=best_pairs)
+    """The deterministic answer, claim by claim: each new claim's best
+    signature match among every claim at the place (first wins a tie).
+
+    There is no story-level vote. Slice 9 took a beat as the story's only
+    when it matched at least half the story's claims, which threw away the
+    one real match job 2's signatures found (Frank Lloyd Wright, 1 of 7)."""
+    return Hint(matches={c.draft.claim_id: _best_match(c.draft.text, existing) for c in claims})
 
 
 # ── Judge answer checks ─────────────────────────────────────────────────────
 
 
+def handles(existing: Sequence[model.Beat]) -> dict[str, model.Beat]:
+    """The short handle each candidate beat is shown and answered under:
+    `b1`, `b2`, ... in candidate order. Its claims are `b1.c02`."""
+    return {f"b{i}": beat for i, beat in enumerate(existing, 1)}
+
+
+def _claim_ref(ref: str, handled: dict[str, model.Beat]) -> ClaimRef | None:
+    """(beat id, claim id) for a `b1.c02` handle the place has, else None."""
+    beat_handle, _, claim_id = ref.partition(".")
+    beat = handled.get(beat_handle)
+    if beat is None or not any(c.claim_id == claim_id for c in beat.claims):
+        return None
+    return beat.beat_id, claim_id
+
+
 def answer_problems(
-    answer: dict, claims: Sequence[JudgedClaim], existing: Sequence[model.Beat]
+    answer: dict, claims: Sequence[JudgedClaim], handled: dict[str, model.Beat]
 ) -> list[str]:
     """Why a schema-valid answer cannot be applied to THIS record: unknown
-    beat or claim ids, a claim answered twice or not at all, a conflict
-    without both values. These earn the one re-ask."""
+    beat or claim handles, a claim answered twice or not at all, a conflict
+    without both values. These earn the one re-ask.
+
+    A claim may match a claim of ANY beat at the place, whatever the story
+    verdict: a new story can share a fact with a differently cut existing
+    one (slice 9 forbade that, and job 2's re-asks talked the judge out of
+    three correct matches)."""
     problems: list[str] = []
-    beats = {beat.beat_id: beat for beat in existing}
-    beat: model.Beat | None = None
     if answer["story"] == "new":
         if answer["beat_id"]:
             problems.append('story "new" must leave beat_id empty')
-    elif answer["beat_id"] not in beats:
+    elif answer["beat_id"] not in handled:
         problems.append(f"beat_id {answer['beat_id']!r} is not a beat at this place")
-    else:
-        beat = beats[answer["beat_id"]]
 
     expected = [c.draft.claim_id for c in claims]
     answered = [item["claim_id"] for item in answer["claims"]]
@@ -275,20 +304,16 @@ def answer_problems(
         problems.append(
             f"claims must be answered exactly once each: expected {expected}, got {answered}"
         )
-    existing_ids = {c.claim_id for c in beat.claims} if beat is not None else set()
     for item in answer["claims"]:
         cid = item["claim_id"]
         if item["verdict"] == "new":
             if item["existing_claim_id"]:
                 problems.append(f'claim {cid}: verdict "new" must leave existing_claim_id empty')
             continue
-        if answer["story"] == "new":
-            problems.append(f'claim {cid}: a "new" story cannot have a {item["verdict"]} claim')
-            continue
-        if item["existing_claim_id"] not in existing_ids:
+        if _claim_ref(item["existing_claim_id"], handled) is None:
             problems.append(
                 f"claim {cid}: existing_claim_id {item['existing_claim_id']!r} is not a "
-                f"claim of beat {answer['beat_id']}"
+                "claim at this place"
             )
         if item["verdict"] == "conflict":
             if not item["new_value"] or not item["existing_value"]:
@@ -301,32 +326,51 @@ def answer_problems(
     return problems
 
 
+def resolve_handles(answer: dict, handled: dict[str, model.Beat]) -> dict:
+    """The answer with every handle replaced by real ids: `beat_id` the
+    story's beat id, and per claim `existing_beat_id` + `existing_claim_id`.
+    Call it only on an answer `answer_problems` passed."""
+    beat = handled.get(answer["beat_id"])
+    claims = []
+    for item in answer["claims"]:
+        ref = _claim_ref(item["existing_claim_id"], handled) if item["existing_claim_id"] else None
+        claims.append(
+            {
+                **item,
+                "existing_beat_id": ref[0] if ref else "",
+                "existing_claim_id": ref[1] if ref else "",
+            }
+        )
+    return {**answer, "beat_id": beat.beat_id if beat else "", "claims": claims}
+
+
+def _ref_text(ref: ClaimRef | None) -> str:
+    return f"{ref[1]} of {ref[0]}" if ref else "nothing"
+
+
 def disagreements(answer: dict, hint: Hint) -> list[str]:
-    """Where the judge and the signature hint part ways; any entry holds
-    the new story."""
+    """Where the signature hint has POSITIVE evidence against the judge
+    (handles resolved): a signature match on a claim the judge called
+    `new`, or a match to a different claim than the judge named. Any entry
+    holds the new story.
+
+    A judge match the signature cannot see is not a disagreement: a lexical
+    signature is blind to paraphrase — across job 2's 12 judged stories it
+    matched one claim while the judge named four correct matches — so its
+    silence is no evidence (D7 as amended in slice 10)."""
     found: list[str] = []
-    if answer["story"] == "new":
-        if hint.beat_id is not None:
-            found.append(f"story: judge says new; signature matches beat {hint.beat_id}")
-    elif hint.beat_id is None:
-        found.append(
-            f"story: judge says {answer['story']} as beat {answer['beat_id']}; "
-            "signature matches no beat"
-        )
-    elif hint.beat_id != answer["beat_id"]:
-        found.append(
-            f"story: judge says beat {answer['beat_id']}; signature matches beat {hint.beat_id}"
-        )
     for item in answer["claims"]:
         cid = item["claim_id"]
         hinted = hint.matches.get(cid)
         if item["verdict"] == "new":
             if hinted is not None:
-                found.append(f"claim {cid}: judge says new; signature matches {hinted}")
-        elif hinted != item["existing_claim_id"]:
+                found.append(f"claim {cid}: judge says new; signature matches {_ref_text(hinted)}")
+            continue
+        named = (item["existing_beat_id"], item["existing_claim_id"])
+        if hinted is not None and hinted != named:
             found.append(
-                f"claim {cid}: judge says {item['verdict']} with "
-                f"{item['existing_claim_id']}; signature matches {hinted or 'nothing'}"
+                f"claim {cid}: judge says {item['verdict']} with {_ref_text(named)}; "
+                f"signature matches {_ref_text(hinted)}"
             )
     return found
 
@@ -375,10 +419,10 @@ def _prompt_claims(claims: Sequence[JudgedClaim]) -> list[dict]:
     ]
 
 
-def _prompt_existing(existing: Sequence[model.Beat]) -> list[dict]:
+def _prompt_existing(handled: dict[str, model.Beat]) -> list[dict]:
     return [
         {
-            "beat_id": beat.beat_id,
+            "handle": handle,
             "title": beat.title,
             "claims": [
                 {
@@ -394,14 +438,18 @@ def _prompt_existing(existing: Sequence[model.Beat]) -> list[dict]:
                 for claim in beat.claims
             ],
         }
-        for beat in existing
+        for handle, beat in handled.items()
     ]
 
 
 def _ask_judge(
-    emit: Emit, story: Story, client: llm.ModelClient, prompt: str
+    emit: Emit, story: Story, client: llm.ModelClient, prompt: str, attempt: int
 ) -> tuple[dict, str, str]:
     """One sync P6 call; returns (parsed answer, raw text, response model id).
+
+    The raw answer is emitted as `merge_answered` the moment it arrives,
+    before it is parsed or checked, so every verdict the judge gave is in
+    the job log whatever happens to it next.
 
     The same failure contract as narrate.ask_author: an
     `llm.EmptyCompletion`/`llm.TruncatedCompletion`, or a raw (non-LlmError)
@@ -418,6 +466,11 @@ def _ask_judge(
         raise
     except ValueError as exc:
         hold(emit, story, "P6", f"transport: {exc}", exc)
+    emit(
+        "merge_answered",
+        {"story_slug": story.story_slug, "attempt": attempt, "model": completion.model_id,
+         "answer": completion.text},
+    )
     parsed = parse_merge(completion.text)
     if parsed is None:
         hold(
@@ -443,36 +496,49 @@ def _fresh_ids(beat: model.Beat):
 
 
 def _decide_claims(
-    answer: dict, claims: Sequence[JudgedClaim], beat: model.Beat | None
+    answer: dict,
+    claims: Sequence[JudgedClaim],
+    existing: Sequence[model.Beat],
+    story_beat: model.Beat | None,
 ) -> list[ClaimOutcome]:
     by_id = {c.draft.claim_id: c for c in claims}
-    existing = {c.claim_id: c for c in beat.claims} if beat is not None else {}
-    fresh = _fresh_ids(beat) if beat is not None else None
+    beats = {b.beat_id: b for b in existing}
+    fresh: dict[str, Iterator[str]] = {}
+
+    def fresh_id(beat_id: str) -> str:
+        if beat_id not in fresh:
+            fresh[beat_id] = _fresh_ids(beats[beat_id])
+        return next(fresh[beat_id])
+
     outcomes: list[ClaimOutcome] = []
     for item in answer["claims"]:
         judged = by_id[item["claim_id"]]
         verdict = item["verdict"]
+        beat_id = item["existing_beat_id"] or None
         existing_id = item["existing_claim_id"] or None
         new_value = item["new_value"] or None
         existing_value = item["existing_value"] or None
         if verdict == "new":
             outcome: ClaimOutcomeKind = "new"
-            applied = next(fresh) if fresh is not None else judged.draft.claim_id
+            applied = (
+                fresh_id(story_beat.beat_id) if story_beat is not None else judged.draft.claim_id
+            )
         elif verdict == "same":
             outcome, applied = "same", item["existing_claim_id"]
         else:
-            old = existing[item["existing_claim_id"]]
+            old = next(c for c in beats[beat_id].claims if c.claim_id == existing_id)
             outcome = conflict_outcome(
                 judged.draft.kind,
                 as_of_year(judged.draft.source.as_of),
                 old.kind,
                 claim_year(old),
             )
-            applied = item["existing_claim_id"] if outcome == "contested" else next(fresh)
+            applied = existing_id if outcome == "contested" else fresh_id(beat_id)
         outcomes.append(
             ClaimOutcome(
                 claim_id=item["claim_id"],
                 verdict=verdict,
+                existing_beat_id=beat_id,
                 existing_claim_id=existing_id,
                 outcome=outcome,
                 applied_claim_id=applied,
@@ -501,11 +567,12 @@ def merge(
     selects them. Pure: nothing is applied here."""
     emit = emitter(events)
     new_claims = _prompt_claims(claims)
-    candidates = _prompt_existing(existing)
+    handled = handles(existing)
+    candidates = _prompt_existing(handled)
     prompt = prompts.render_merge(new_story.place, new_story.title, new_claims, candidates)
 
-    answer, raw, judge_model = _ask_judge(emit, new_story, client, prompt)
-    problems = answer_problems(answer, claims, existing)
+    answer, raw, judge_model = _ask_judge(emit, new_story, client, prompt, 1)
+    problems = answer_problems(answer, claims, handled)
     if problems:
         emit(
             "merge_reasked",
@@ -514,10 +581,11 @@ def merge(
         redo = prompts.render_merge_redo(
             new_story.place, new_story.title, new_claims, candidates, raw, problems
         )
-        answer, raw, judge_model = _ask_judge(emit, new_story, client, redo)
-        problems = answer_problems(answer, claims, existing)
+        answer, raw, judge_model = _ask_judge(emit, new_story, client, redo, 2)
+        problems = answer_problems(answer, claims, handled)
         if problems:
             hold(emit, new_story, "P6", "answer: " + "; ".join(problems))
+    answer = resolve_handles(answer, handled)
 
     hint = signature_hint(claims, existing)
     disagreed = disagreements(answer, hint)
@@ -540,14 +608,38 @@ def merge(
         )
 
     beat = next((b for b in existing if b.beat_id == answer["beat_id"]), None)
-    outcomes = _decide_claims(answer, claims, beat)
+    outcomes = _decide_claims(answer, claims, existing, beat)
+    story: StoryOutcome
     if beat is None:
-        story: StoryOutcome = "new"
-        rerun: list[str] = []
+        story = "new"
     else:
         story = "supersedes" if any(o.outcome == "supersedes" for o in outcomes) else "same"
-        changes = any(o.outcome in _RESOLVED_TEXTS_CHANGE for o in outcomes)
-        rerun = [beat.beat_id] if changes else []
+    changed = {
+        beat.beat_id if o.outcome == "new" else o.existing_beat_id
+        for o in outcomes
+        if o.outcome in _RESOLVED_TEXTS_CHANGE and (o.outcome != "new" or beat is not None)
+    }
+    rerun = [b.beat_id for b in existing if b.beat_id in changed]
+    texts = {c.draft.claim_id: c for c in claims}
+    for o in outcomes:
+        if o.existing_beat_id is None:
+            continue
+        held_by = next(b for b in existing if b.beat_id == o.existing_beat_id)
+        emit(
+            "merge_folded",
+            {
+                "story_slug": new_story.story_slug,
+                "claim_id": o.claim_id,
+                "text": texts[o.claim_id].draft.text,
+                "span": texts[o.claim_id].draft.source.span,
+                "outcome": o.outcome,
+                "existing_beat_id": o.existing_beat_id,
+                "existing_claim_id": o.existing_claim_id,
+                "existing_text": next(
+                    c.text for c in held_by.claims if c.claim_id == o.existing_claim_id
+                ),
+            },
+        )
     emit(
         "merge_decided",
         {
@@ -558,6 +650,7 @@ def merge(
                 {
                     "claim_id": o.claim_id,
                     "outcome": o.outcome,
+                    "existing_beat_id": o.existing_beat_id,
                     "existing_claim_id": o.existing_claim_id,
                 }
                 for o in outcomes
@@ -611,56 +704,57 @@ def apply(outcome: MergeOutcome, beats: Sequence[model.Beat]) -> list[model.Beat
     """Materialize `outcome` over `beats`; see the module docstring.
 
     Returns a new list — the caller's beats are never mutated. A held
-    outcome cannot be applied (ValueError: it is a queue item); a `new`
-    story returns the beats unchanged (its record is the runner's to
-    assemble). The matched beat must be among `beats`.
+    outcome cannot be applied (ValueError: it is a queue item). Every
+    matched claim lands in the beat that holds its match, whatever the
+    story verdict; a `new` claim joins the story's matched beat, or — when
+    the story is new — stays with the story, whose record is the runner's
+    to assemble. Every beat the outcome names must be among `beats`.
     """
     if outcome.held:
         raise ValueError(f"held outcome for story {outcome.story_slug!r} cannot be applied")
-    if outcome.story == "new" or outcome.beat_id is None:
-        return list(beats)
-    if not any(b.beat_id == outcome.beat_id for b in beats):
-        raise ValueError(f"beat {outcome.beat_id!r} is not among the beats given")
+    targets = {o.existing_beat_id for o in outcome.claims if o.existing_beat_id is not None}
+    if outcome.beat_id is not None:
+        targets.add(outcome.beat_id)
+    for beat_id in sorted(targets - {b.beat_id for b in beats}):
+        raise ValueError(f"beat {beat_id!r} is not among the beats given")
 
     judged = {c.draft.claim_id: c for c in outcome.judged}
-    result: list[model.Beat] = []
-    for beat in beats:
-        if beat.beat_id != outcome.beat_id:
-            result.append(beat)
+    claims_of = {
+        b.beat_id: [c.model_copy(deep=True) for c in b.claims]
+        for b in beats
+        if b.beat_id in targets
+    }
+    for item in outcome.claims:
+        new = judged[item.claim_id]
+        if item.outcome == "new":
+            if outcome.beat_id is not None:
+                claims_of[outcome.beat_id].append(
+                    _new_claim(new, item.applied_claim_id, item.new_value)
+                )
             continue
-        claims = [c.model_copy(deep=True) for c in beat.claims]
-        by_id = {c.claim_id: i for i, c in enumerate(claims)}
-        for item in outcome.claims:
-            new = judged[item.claim_id]
-            if item.outcome == "new":
-                claims.append(_new_claim(new, item.applied_claim_id, item.new_value))
-                continue
-            old = claims[by_id[item.existing_claim_id or item.applied_claim_id]]
-            if item.outcome == "same":
-                old.sources.append(
-                    new.draft.source.model_copy(update={"stated_value": item.new_value})
-                )
-                if old.resolution is None:
-                    old.resolution = model.Resolution(by="corroborated")
-                old.verdict = _rebound(old)
-            elif item.outcome == "contested":
-                for source in old.sources:
-                    if source.stated_value is None:
-                        source.stated_value = item.existing_value
-                old.sources.append(
-                    new.draft.source.model_copy(update={"stated_value": item.new_value})
-                )
-                old.status = "contested"
-                old.resolved_value = None
-                old.resolution = None
-                old.verdict = _rebound(old)
-            elif item.outcome == "supersedes":
-                old.kind = "belief"
-                old.status = "superseded"
-                claims.append(_new_claim(new, item.applied_claim_id, item.new_value))
-            else:  # superseded: the new claim arrives as a dated belief
-                claims.append(
-                    _new_claim(new, item.applied_claim_id, item.new_value, superseded=True)
-                )
-        result.append(beat.model_copy(update={"claims": claims}))
-    return result
+        claims = claims_of[item.existing_beat_id]
+        old = next(c for c in claims if c.claim_id == item.existing_claim_id)
+        if item.outcome == "same":
+            old.sources.append(new.draft.source.model_copy(update={"stated_value": item.new_value}))
+            if old.resolution is None:
+                old.resolution = model.Resolution(by="corroborated")
+            old.verdict = _rebound(old)
+        elif item.outcome == "contested":
+            for source in old.sources:
+                if source.stated_value is None:
+                    source.stated_value = item.existing_value
+            old.sources.append(new.draft.source.model_copy(update={"stated_value": item.new_value}))
+            old.status = "contested"
+            old.resolved_value = None
+            old.resolution = None
+            old.verdict = _rebound(old)
+        elif item.outcome == "supersedes":
+            old.kind = "belief"
+            old.status = "superseded"
+            claims.append(_new_claim(new, item.applied_claim_id, item.new_value))
+        else:  # superseded: the new claim arrives as a dated belief
+            claims.append(_new_claim(new, item.applied_claim_id, item.new_value, superseded=True))
+    return [
+        b.model_copy(update={"claims": claims_of[b.beat_id]}) if b.beat_id in claims_of else b
+        for b in beats
+    ]

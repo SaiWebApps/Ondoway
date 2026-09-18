@@ -229,11 +229,14 @@ def _story(title: str, claim_ids: list[str], beat_type: str = "anecdote") -> gro
     )
 
 
-def _sink_and_events():
+def _sink_and_events(*, answers: bool = False):
+    """A sink and the events it received; `merge_answered` (the raw judge
+    answer, asserted by its own test) is kept only when `answers`."""
     events: list[tuple[str, dict]] = []
 
     def sink(kind: str, payload: dict) -> None:
-        events.append((kind, payload))
+        if answers or kind != "merge_answered":
+            events.append((kind, payload))
 
     return events, sink
 
@@ -326,7 +329,7 @@ def test_same_claim_appends_source_not_beat(tmp_path):
     claims = [_judged(unit, "c01", COMPLETED_FR)]
     story = _story("The 1959 building", ["c01"])
     existing = _existing()
-    answer = _answer("same", ORIGINS_ID, [_claim_verdict("c01", "same", "c02", "1959", "1959")])
+    answer = _answer("same", "b1", [_claim_verdict("c01", "same", "b1.c02", "1959", "1959")])
     recorder = _RecordingClient(_armed_judge([answer], claims))
     events, sink = _sink_and_events()
 
@@ -338,7 +341,7 @@ def test_same_claim_appends_source_not_beat(tmp_path):
     assert COMPLETED_FR["text"] in call["prompt"]
     assert COMPLETED["text"] in call["prompt"]
     assert HOURS_2023["text"] in call["prompt"]
-    assert ORIGINS_ID in call["prompt"] and VISITING_ID in call["prompt"]
+    assert 'beat b1 "' in call["prompt"] and 'beat b2 "' in call["prompt"]  # by handle
     assert COMPLETED_FR["span"] not in call["prompt"]  # the judge reads claims, not spans
 
     assert outcome.held is False and outcome.reason is None
@@ -349,9 +352,9 @@ def test_same_claim_appends_source_not_beat(tmp_path):
         ("c01", "same", "c02")
     ]
     assert outcome.rerun == []
-    assert [kind for kind, _ in events] == ["merge_decided"]
-    assert events[0][1]["story_slug"] == story.story_slug
-    assert events[0][1]["story"] == "same"
+    assert [kind for kind, _ in events] == ["merge_folded", "merge_decided"]
+    assert events[1][1]["story_slug"] == story.story_slug
+    assert events[1][1]["story"] == "same"
 
     merged = merge.apply(outcome, existing)
 
@@ -393,9 +396,9 @@ def test_new_claim_joins_the_matched_beat_and_marks_it_for_rerun(tmp_path):
     existing = _existing()
     answer = _answer(
         "same",
-        ORIGINS_ID,
+        "b1",
         [
-            _claim_verdict("c01", "same", "c02", "1959", "1959"),
+            _claim_verdict("c01", "same", "b1.c02", "1959", "1959"),
             _claim_verdict("c02", "new", reason="no claim mentions Muschamp"),
         ],
     )
@@ -434,22 +437,19 @@ def test_new_claim_joins_the_matched_beat_and_marks_it_for_rerun(tmp_path):
 
 
 def test_judge_and_signature_disagree_holds_new_story():
-    """The spec's proving node (D7): the merge judge and the deterministic
-    signature hint must agree before anything is applied. Here the judge
-    calls the Muschamp claim a conflict with the completion claim, whose
-    signature shares nothing with it: the new story is held as a review
-    queue item — `held`, the disagreement spelled out, `beat_held` emitted
-    for P6, no second judge call (the judge is never re-asked toward the
-    hint), and apply() refuses it. The corpus is untouched."""
+    """The spec's proving node (D7, amended in slice 10): the signature hint
+    is a one-way tripwire. It holds a story only on POSITIVE evidence
+    against the judge — here the completion claim's signature matches LP's
+    c02 while the judge calls it `new`. The story is held as a review queue
+    item — `held`, the disagreement spelled out, `beat_held` emitted for P6,
+    no second judge call (the judge is never re-asked toward the hint), and
+    apply() refuses it. The corpus is untouched. A judge naming a DIFFERENT
+    claim than the one the signature matches is held the same way."""
     unit = _fr_unit()
-    claims = [_judged(unit, "c01", MUSCHAMP)]
-    story = _story("The critic", ["c01"])
+    claims = [_judged(unit, "c01", COMPLETED_FR)]
+    story = _story("The 1959 building", ["c01"])
     existing = _existing()
-    answer = _answer(
-        "same",
-        ORIGINS_ID,
-        [_claim_verdict("c01", "conflict", "c02", "praised", "finished in 1959")],
-    )
+    answer = _answer("new", "", [_claim_verdict("c01", "new", reason="nothing like it")])
     recorder = _RecordingClient(_armed_judge([answer], claims))
     events, sink = _sink_and_events()
 
@@ -458,13 +458,12 @@ def test_judge_and_signature_disagree_holds_new_story():
     assert len(recorder.sync_calls) == 1
     assert outcome.held is True
     assert outcome.story is None and outcome.beat_id is None
-    assert outcome.judge_story == "same"
+    assert outcome.judge_story == "new"
     assert outcome.claims == []
     assert outcome.rerun == []
     assert outcome.reason == (
-        "judge and signature disagree: story: judge says same as beat "
-        f"{ORIGINS_ID}; signature matches no beat; "
-        "claim c01: judge says conflict with c02; signature matches nothing"
+        f"judge and signature disagree: claim c01: judge says new; signature matches c02 of "
+        f"{ORIGINS_ID}"
     )
     assert events == [
         ("beat_held", {"story_slug": story.story_slug, "phase": "P6", "reason": outcome.reason})
@@ -473,16 +472,86 @@ def test_judge_and_signature_disagree_holds_new_story():
         merge.apply(outcome, existing)
     assert [len(b.claims) for b in existing] == [2, 2]
 
-    # The mirror image: the signature matches, the judge says new — held too.
-    claims = [_judged(unit, "c01", COMPLETED_FR)]
-    story = _story("The 1959 building", ["c01"])
-    answer = _answer("new", "", [_claim_verdict("c01", "new", reason="nothing like it")])
+    answer = _answer(
+        "same", "b2", [_claim_verdict("c01", "same", "b2.c02", "1959", "1959")]
+    )
     outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims))
     assert outcome.held is True
     assert outcome.reason == (
-        "judge and signature disagree: story: judge says new; signature matches beat "
-        f"{ORIGINS_ID}; claim c01: judge says new; signature matches c02"
+        f"judge and signature disagree: claim c01: judge says same with c02 of {VISITING_ID}; "
+        f"signature matches c02 of {ORIGINS_ID}"
     )
+
+
+RECEPTION_ID = "new_york/guggenheim-museum/derided-and-hailed-the-ziggurat-debate"
+# Job 2's real "critics rejected it" pair: LP c03 and Frommer's c148. The
+# signatures share only "critics" and "museum" — invisible to the hint.
+DERIDED: dict = {
+    "text": (
+        "Even before the Guggenheim Museum opened, its inverted ziggurat structure "
+        "was derided by some critics but hailed by others."
+    ),
+    "kind": "event",
+    "span": (
+        "Even before it opened, the inverted ziggurat structure was derided by\n"
+        "some critics but hailed by others"
+    ),
+}
+SAVAGED: dict = {
+    "text": "The Guggenheim Museum structure was savaged by the New York Times.",
+    "kind": "event",
+    "span": "The structure was savaged by the New York Times",
+}
+CRITICS_FR: dict = {
+    "text": (
+        "The museum's earliest critics rejected it, and Newsweek ran a review under "
+        'the headline "Museum or Cupcake?"'
+    ),
+    "kind": "event",
+    "span": (
+        "Early critics dismissed the museum (Newsweek\u2019s insipid review was "
+        "headlined \u201cMuseum or Cupcake?\u201d)"
+    ),
+}
+
+
+def test_a_judge_match_the_signature_cannot_see_applies(tmp_path):
+    """Slice 10, the merge trio's second and third defects: across job 2's
+    12 judged stories the lexical signature matched ONE claim, while the
+    judge named four correct matches — and hold-on-disagreement held or
+    re-asked every one away. A signature finding nothing is not evidence
+    against the judge (a paraphrase shares no tokens), so the judge's match
+    applies: Frommer's "earliest critics rejected it" corroborates LP's
+    "derided by some critics", one claim with both sources."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", CRITICS_FR)]
+    story = _story("Museum or cupcake", ["c01"])
+    reception = _beat(
+        RECEPTION_ID,
+        "derided-and-hailed-the-ziggurat-debate",
+        "Derided and hailed: the ziggurat debate",
+        "anecdote",
+        [_lp_claim("c01", DERIDED), _lp_claim("c02", SAVAGED)],
+        "Even before it opened, critics derided the ziggurat and others hailed it. "
+        "The New York Times savaged it.",
+    )
+    assert model.validate([reception]) == []
+    existing = [*_existing(), model.Beat.model_validate(reception)]
+    answer = _answer(
+        "same",
+        "b3",
+        [_claim_verdict("c01", "same", "b3.c01", "rejected by critics", "derided by critics")],
+    )
+    assert merge.signature_hint(claims, existing).matches == {"c01": None}
+
+    outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims))
+
+    assert outcome.held is False
+    assert outcome.story == "same" and outcome.beat_id == RECEPTION_ID
+    assert _decided(outcome) == [("c01", "same", "c01", "c01")]
+    merged = merge.apply(outcome, existing)
+    assert [s.source_id for s in merged[2].claims[0].sources] == [LP_SOURCE, FR_SOURCE]
+    assert model.validate(_records(merged), chunks_root=_chunks_root(tmp_path)) == []
 
 
 SECOND_SOURCE = "second-source"
@@ -532,7 +601,7 @@ def test_conflict_between_event_claims_is_contested_never_superseded(tmp_path):
     story = _story("Finished in 1960", ["c01"])
     existing = _existing()
     answer = _answer(
-        "same", ORIGINS_ID, [_claim_verdict("c01", "conflict", "c02", "1960", "1959")]
+        "same", "b1", [_claim_verdict("c01", "conflict", "b1.c02", "1960", "1959")]
     )
 
     outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims))
@@ -604,8 +673,8 @@ def test_supersedes_rekinds_old_claim_as_dated_belief(tmp_path):
     existing = _existing()
     answer = _answer(
         "supersedes",
-        VISITING_ID,
-        [_claim_verdict("c01", "conflict", "c02", "6pm to 8pm", "5pm to 8pm")],
+        "b2",
+        [_claim_verdict("c01", "conflict", "b2.c02", "6pm to 8pm", "5pm to 8pm")],
     )
 
     outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims))
@@ -672,7 +741,8 @@ def test_new_story_is_reported_not_applied():
                 "story_slug": story.story_slug,
                 "story": "new",
                 "beat_id": None,
-                "claims": [{"claim_id": "c01", "outcome": "new", "existing_claim_id": None}],
+                "claims": [{"claim_id": "c01", "outcome": "new", "existing_beat_id": None,
+                            "existing_claim_id": None}],
                 "rerun": [],
             },
         )
@@ -700,7 +770,7 @@ def test_merge_judge_may_never_be_the_author():
     with pytest.raises(llm.JudgeIsAuthor):
         llm.MockClient(sink, roles={**llm.ROLE_MODEL, "merge_judge": llm.ROLE_MODEL["author"]})
 
-    text = _answer("same", ORIGINS_ID, [_claim_verdict("c01", "same", "c02", "1959", "1959")]).text
+    text = _answer("same", "b1", [_claim_verdict("c01", "same", "b1.c02", "1959", "1959")]).text
     authored = llm.MockAnswer(text=text, model_id="claude-opus-5-20260601")
     events, sink = _sink_and_events()
     with pytest.raises(llm.JudgeIsAuthor):
@@ -743,7 +813,7 @@ def test_transport_failure_and_unreadable_answer_hold_the_beat():
         "schema: the merge judge's answer was not valid JSON matching the P6 merge schema"
     )
 
-    good = _answer("same", ORIGINS_ID, [_claim_verdict("c01", "same", "c02", "1959", "1959")])
+    good = _answer("same", "b1", [_claim_verdict("c01", "same", "b1.c02", "1959", "1959")])
     _events, sink = _sink_and_events()
     unarmed = llm.MockClient(sink, answers={"merge_judge": [good]})
     with pytest.raises(llm.EstimateNotPrinted):
@@ -761,8 +831,8 @@ def test_an_answer_naming_unknown_ids_is_reasked_once_then_held():
     claims = [_judged(unit, "c01", COMPLETED_FR)]
     story = _story("The 1959 building", ["c01"])
     existing = _existing()
-    bad = _answer("same", ORIGINS_ID, [_claim_verdict("c01", "same", "c09", "1959", "1959")])
-    good = _answer("same", ORIGINS_ID, [_claim_verdict("c01", "same", "c02", "1959", "1959")])
+    bad = _answer("same", "b1", [_claim_verdict("c01", "same", "b1.c09", "1959", "1959")])
+    good = _answer("same", "b1", [_claim_verdict("c01", "same", "b1.c02", "1959", "1959")])
     recorder = _RecordingClient(_armed_judge([bad, good], claims))
     events, sink = _sink_and_events()
 
@@ -771,15 +841,15 @@ def test_an_answer_naming_unknown_ids_is_reasked_once_then_held():
     assert outcome.held is False
     assert _decided(outcome) == [("c01", "same", "c02", "c02")]
     assert len(recorder.sync_calls) == 2
-    problem = f"claim c01: existing_claim_id 'c09' is not a claim of beat {ORIGINS_ID}"
+    problem = "claim c01: existing_claim_id 'b1.c09' is not a claim at this place"
     redo = recorder.sync_calls[1]["prompt"]
     assert bad.text in redo
     assert f"- {problem}" in redo
     assert COMPLETED_FR["span"] not in redo
-    assert [kind for kind, _ in events] == ["merge_reasked", "merge_decided"]
+    assert [kind for kind, _ in events] == ["merge_reasked", "merge_folded", "merge_decided"]
     assert events[0][1] == {"story_slug": story.story_slug, "problems": [problem]}
 
-    still_bad = _answer("same", ORIGINS_ID, [_claim_verdict("c01", "conflict", "c02", "1960", "")])
+    still_bad = _answer("same", "b1", [_claim_verdict("c01", "conflict", "b1.c02", "1960", "")])
     mock = _armed_judge([bad, still_bad], claims)
     events, sink = _sink_and_events()
     with pytest.raises(narrate.BeatHeld) as held:
@@ -788,6 +858,182 @@ def test_an_answer_naming_unknown_ids_is_reasked_once_then_held():
     assert held.value.reason == "answer: claim c01: a conflict must quote both values"
     assert mock.calls == [("merge_judge", "P6"), ("merge_judge", "P6")]
     assert [kind for kind, _ in events] == ["merge_reasked", "beat_held"]
+
+
+def test_every_merge_judge_answer_is_logged_raw():
+    """Slice 10: job 2 held or rewrote every match the judge found and no
+    raw P6 answer reached the job log, so a false `new` could not be told
+    apart from a prompt, id or model cause. Every answer the merge judge
+    gives — first ask and re-ask, usable or not — is emitted verbatim as
+    `merge_answered` the moment it arrives, before anything judges it."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", COMPLETED_FR)]
+    story = _story("The 1959 building", ["c01"])
+    existing = _existing()
+    bad = _answer("same", "b1", [_claim_verdict("c01", "same", "b1.c09", "1959", "1959")])
+    good = _answer("same", "b1", [_claim_verdict("c01", "same", "b1.c02", "1959", "1959")])
+    events, sink = _sink_and_events(answers=True)
+
+    merge.merge(story, claims, existing, _armed_judge([bad, good], claims), events=sink)
+
+    answered = [payload for kind, payload in events if kind == "merge_answered"]
+    assert answered == [
+        {"story_slug": story.story_slug, "attempt": 1, "model": RESPONSE_MERGE_MODEL,
+         "answer": bad.text},
+        {"story_slug": story.story_slug, "attempt": 2, "model": RESPONSE_MERGE_MODEL,
+         "answer": good.text},
+    ]
+
+    unreadable = llm.MockAnswer(text="the same, I think", model_id=RESPONSE_MERGE_MODEL)
+    events, sink = _sink_and_events(answers=True)
+    with pytest.raises(narrate.BeatHeld):
+        merge.merge(story, claims, existing, _armed_judge([unreadable], claims), events=sink)
+    assert events[0] == (
+        "merge_answered",
+        {"story_slug": story.story_slug, "attempt": 1, "model": RESPONSE_MERGE_MODEL,
+         "answer": "the same, I think"},
+    )
+
+
+def test_the_judge_names_beats_and_claims_by_handle():
+    """Slice 10: the judge retyped `new-york/` for `new_york/` in a beat id
+    (job 2's Met story), and two beats at one place both hold `c01`, so a
+    bare claim id cannot say which beat's claim it means. The prompt shows
+    each candidate beat as `b1`, `b2`, ... and each of its claims as
+    `b1.c01` — never a beat id — and the answer names them the same way;
+    the outcome carries the real ids back. A handle the place does not
+    have is re-asked once, like any unknown id."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", COMPLETED_FR)]
+    story = _story("The 1959 building", ["c01"])
+    existing = _existing()
+    bad = _answer("same", "b3", [_claim_verdict("c01", "same", "b1.c02", "1959", "1959")])
+    good = _answer("same", "b1", [_claim_verdict("c01", "same", "b1.c02", "1959", "1959")])
+    recorder = _RecordingClient(_armed_judge([bad, good], claims))
+    events, sink = _sink_and_events()
+
+    outcome = merge.merge(story, claims, existing, recorder, events=sink)
+
+    prompt = recorder.sync_calls[0]["prompt"]
+    assert 'beat b1 "How the museum came to be":' in prompt
+    assert 'beat b2 "Visiting the Guggenheim":' in prompt
+    assert f"- b1.c02 [event, resolved, 2023]: {COMPLETED['text']}" in prompt
+    assert f"- b2.c01 [state, resolved, 2023]: {ADDRESS['text']}" in prompt
+    assert ORIGINS_ID not in prompt and VISITING_ID not in prompt
+    assert events[0] == (
+        "merge_reasked",
+        {"story_slug": story.story_slug, "problems": ["beat_id 'b3' is not a beat at this place"]},
+    )
+    assert outcome.held is False
+    assert outcome.beat_id == ORIGINS_ID
+    assert _decided(outcome) == [("c01", "same", "c02", "c02")]
+
+
+BUILDING_ID = "new_york/guggenheim-museum/the-building-that-upstages-its-art"
+# Job 2's real pair at the Guggenheim: LP's c01 and Frommer's c141.
+WRIGHT: dict = {
+    "text": "The Guggenheim Museum building was designed by architect Frank Lloyd Wright.",
+    "kind": "state",
+    "span": (
+        "this building by architect Frank Lloyd Wright almost overshadows the "
+        "collection of 20th-century art inside"
+    ),
+}
+OVERSHADOWS: dict = {
+    "text": (
+        "The Guggenheim Museum building almost overshadows the collection of "
+        "20th-century art inside it."
+    ),
+    "kind": "state",
+    "span": "almost overshadows the collection of 20th-century art inside",
+}
+SPIRAL_FR: dict = {
+    "text": (
+        "The Guggenheim is a spiral-shaped building designed by Frank Lloyd Wright "
+        "that stands amid the tall buildings lining Fifth Avenue."
+    ),
+    "kind": "state",
+    "span": (
+        "Until you get to the Guggenheim, that is. Frank Lloyd Wright\u2019s delirious "
+        "spiral of a museum sits among the towers of Fifth Avenue"
+    ),
+}
+
+
+def _existing_with_building() -> list[model.Beat]:
+    """`_existing()` plus a third LP beat whose claim ids are ALSO `c01`, `c02`."""
+    building = _beat(
+        BUILDING_ID,
+        "the-building-that-upstages-its-art",
+        "The building that upstages its art",
+        "establishing",
+        [_lp_claim("c01", WRIGHT), _lp_claim("c02", OVERSHADOWS)],
+        "Frank Lloyd Wright designed the Guggenheim Museum building, and it almost "
+        "overshadows the art inside.",
+    )
+    assert model.validate([building]) == []
+    return [*_existing(), model.Beat.model_validate(building)]
+
+
+def test_a_new_storys_matched_claim_folds_into_the_beat_that_holds_it(tmp_path):
+    """Slice 10, the merge trio's first defect: job 2's judge was only
+    allowed a claim match inside the ONE beat the whole story matched, so a
+    new story sharing a fact with a differently cut existing story came out
+    all-`new` — the Guggenheim ended up voicing "designed by Frank Lloyd
+    Wright" twice. Now each claim may match any claim at the place, whatever
+    the story verdict: the story is `new` (its own beat, assembled by the
+    runner from its unmatched claims), while its Wright claim FOLDS into the
+    third beat's `c01` — one claim, both sources, corroborated — and the
+    visiting beat's own `c01` is untouched. Every fold is logged with both
+    texts and the new span so a wrong `same` can be audited."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", SPIRAL_FR), _judged(unit, "c02", MUSCHAMP)]
+    story = _story("A spiral among the boxes", ["c01", "c02"])
+    existing = _existing_with_building()
+    answer = _answer(
+        "new",
+        "",
+        [
+            _claim_verdict("c01", "same", "b3.c01", "Frank Lloyd Wright", "Frank Lloyd Wright"),
+            _claim_verdict("c02", "new", reason="no claim mentions Muschamp"),
+        ],
+    )
+    recorder = _RecordingClient(_armed_judge([answer], claims))
+    events, sink = _sink_and_events()
+
+    outcome = merge.merge(story, claims, existing, recorder, events=sink)
+
+    assert len(recorder.sync_calls) == 1  # no re-ask
+    assert "a claim of ANY beat at this place" in recorder.sync_calls[0]["prompt"]
+    assert "even when the story is new" in recorder.sync_calls[0]["prompt"]
+    assert outcome.held is False
+    assert outcome.story == "new" and outcome.beat_id is None
+    assert [
+        (c.claim_id, c.outcome, c.existing_beat_id, c.existing_claim_id, c.applied_claim_id)
+        for c in outcome.claims
+    ] == [("c01", "same", BUILDING_ID, "c01", "c01"), ("c02", "new", None, None, "c02")]
+    assert outcome.rerun == []  # a corroboration changes no resolved text
+    assert ("merge_folded", {
+        "story_slug": story.story_slug,
+        "claim_id": "c01",
+        "text": SPIRAL_FR["text"],
+        "span": SPIRAL_FR["span"],
+        "outcome": "same",
+        "existing_beat_id": BUILDING_ID,
+        "existing_claim_id": "c01",
+        "existing_text": WRIGHT["text"],
+    }) in events
+
+    merged = merge.apply(outcome, existing)
+
+    assert merged[:2] == existing[:2]  # b2.c01 (the address) is not the c01 meant
+    wright = merged[2].claims[0]
+    assert [(s.source_id, s.span, s.stated_value) for s in wright.sources] == [
+        (LP_SOURCE, WRIGHT["span"], None),
+        (FR_SOURCE, SPIRAL_FR["span"], "Frank Lloyd Wright"),
+    ]
+    assert wright.resolution == model.Resolution(by="corroborated")
+    assert model.validate(_records(merged), chunks_root=_chunks_root(tmp_path)) == []
 
 
 def _fr_claim(claim_id: str, item: dict) -> dict:
@@ -828,7 +1074,7 @@ def test_an_older_source_arriving_second_is_appended_as_a_superseded_belief(tmp_
     claims = [_judged(_lp_unit(), "c01", HOURS_2023)]
     story = _story("Saturday hours", ["c01"], beat_type="stop_orientation")
     answer = _answer(
-        "same", VISITING_ID, [_claim_verdict("c01", "conflict", "c01", "5pm to 8pm", "6pm to 8pm")]
+        "same", "b1", [_claim_verdict("c01", "conflict", "b1.c01", "5pm to 8pm", "6pm to 8pm")]
     )
 
     outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims))

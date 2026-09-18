@@ -29,21 +29,23 @@ _MERGE_RULES = (
     '- "story": "same" if an existing beat tells this story (the same episode: '
     'the same who, what, when and why); "supersedes" if it tells the same story '
     "from a newer source whose facts replace what an older source believed or "
-    'stated; "new" if no existing beat tells it. "beat_id" names that beat, and '
-    "is empty for a new story.\n"
-    '- For every new claim, in order: "same" when a claim of that beat states the '
-    'same fact with the same values; "conflict" when it states the same fact with '
-    'a different name, date, number, place or cause; "new" when no claim of that '
-    'beat states it. "existing_claim_id" names the matched claim and is empty for '
-    '"new". "new_value" and "existing_value" quote the value each side states - a '
-    'date, a number, a name - as short strings, and are empty for "new".\n'
+    'stated; "new" if no existing beat tells it. "beat_id" names that beat by its '
+    "handle (b1, b2, ...), and is empty for a new story.\n"
+    '- For every new claim, in order: "same" when a claim of ANY beat at this place '
+    "states the same fact with the same values - even when the story is new, because "
+    'two books cut the same facts into different stories; "conflict" when it states '
+    'the same fact with a different name, date, number, place or cause; "new" when '
+    'no claim at this place states it. "existing_claim_id" names the matched claim '
+    'by its handle (b1.c02) and is empty for "new". "new_value" and "existing_value" '
+    "quote the value each side states - a date, a number, a name - as short strings, "
+    'and are empty for "new".\n'
     "- Wording never matters; only the facts do. A newer source is never right by "
     "default: report the difference, never resolve it."
 )
 
 _MERGE_SHAPE = (
-    '{"story": "same", "beat_id": "...", "claims": [{"claim_id": "c01", '
-    '"verdict": "same", "existing_claim_id": "c02", "new_value": "1959", '
+    '{"story": "same", "beat_id": "b1", "claims": [{"claim_id": "c01", '
+    '"verdict": "same", "existing_claim_id": "b1.c02", "new_value": "1959", '
     '"existing_value": "1959", "reason": "..."}]}'
 )
 
@@ -107,10 +109,12 @@ def _existing_lines(existing: Sequence[Mapping[str, object]]) -> str:
         return "(none - the corpus holds no beat at this place yet)"
     blocks: list[str] = []
     for beat in existing:
-        lines = [f'beat {beat["beat_id"]} "{beat["title"]}":']
+        handle = beat["handle"]
+        lines = [f'beat {handle} "{beat["title"]}":']
         for c in beat["claims"]:  # type: ignore[union-attr]
             years = ", ".join(str(y) for y in c["as_of"])
-            line = f"  - {c['claim_id']} [{c['kind']}, {c['status']}, {years}]: {c['text']}"
+            ref = f"{handle}.{c['claim_id']}"
+            line = f"  - {ref} [{c['kind']}, {c['status']}, {years}]: {c['text']}"
             values = c.get("stated_values") or []
             if values:
                 line += " (stated: " + ", ".join(str(v) for v in values) + ")"
@@ -141,9 +145,12 @@ def render_merge(
     """Render MERGE_PROMPT (str.replace).
 
     `new_claims`: `{claim_id, text, kind, as_of}` per new claim. `existing`:
-    `{beat_id, title, claims: [{claim_id, text, kind, status, as_of: [years],
-    stated_values: [values]}]}` per candidate beat. Texts only — the caller
-    never passes a span.
+    `{handle, title, claims: [{claim_id, text, kind, status, as_of: [years],
+    stated_values: [values]}]}` per candidate beat. A beat is shown by its
+    handle (`b1`) and each of its claims as `b1.c02` — never by beat id,
+    which the judge retyped wrong in slice 9, and never by a bare claim id,
+    which two beats at one place can share. Texts only — the caller never
+    passes a span.
     """
     return _render_body(MERGE_PROMPT, place, title, new_claims, existing)
 
@@ -152,8 +159,8 @@ MERGE_REDO_PROMPT = (
     'Your answer for the new story "{title}" at {place} could not be applied:\n\n'
     "Your answer:\n{answer}\n\n"
     "Problems:\n{problems}\n\n"
-    "Answer again from the start, fixing every problem: name only the beat ids "
-    "and claim ids listed below, and give both values whenever you report a "
+    "Answer again from the start, fixing every problem: name only the beat and "
+    "claim handles listed below, and give both values whenever you report a "
     "conflict.\n\n"
     f"{_MERGE_RULES}\n\n"
     "Answer as JSON only, matching this shape exactly:\n"

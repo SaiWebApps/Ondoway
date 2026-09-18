@@ -112,13 +112,13 @@ the gates that enforce them.
 | D4 | Narration derived from claims, every sentence traceable, no framing (engine owns glue) | `generation.py`: "Glue is the only place generation invents text" |
 | D5 | Lenses are a list on the story | Same reception story tagged `historic_arch` in one book, `local_legends` in another |
 | D6 | Structural beats (orientation, transit, sidebar) exempt from the arc rule | Practical guidance has no arc; the types already exist |
-| D7 | Extraction is corpus-blind; merge is a separate per-place pass with a non-author judge plus a deterministic signature hint; disagreement goes to a person | Judge may never include the author; small candidate sets per place |
+| D7 | Extraction is corpus-blind; merge is a separate per-place pass with a non-author judge plus a deterministic signature hint; the signature's positive evidence against the judge goes to a person (amended in slice 10: a signature that matches nothing is no evidence, so it no longer vetoes a judge's match) | Judge may never include the author; small candidate sets per place. Slice 10: across job 2's 12 judged stories the lexical signature matched 1 claim while the judge named 4 correct matches, and hold-on-any-disagreement held or re-asked every one of them away |
 | D8 | Status lives on the claim: resolved / contested / superseded. Contested claims are not voiced; the story still ships | 29 stories dark today for one claim each |
 | D9 | Every source has an as-of date; claims have a temporal kind (event / state / belief). Recency resolves state claims only. Supersession is a merge outcome, not a contest. Fact-check becomes a staleness pass | Richard III: both sources right as of their date |
 | D10 | Re-extract everything; do not migrate. 1,835 verdicts discarded | Proof chunk found 42 stories where migration would keep 24 |
 | D11 | Engine in code; all model calls via the API; model-client seam kept for a subscription worker later | One place to upload and watch; nothing depends on a chat window |
 | D12 | Books are chunked once by `/book-prep` in the Claude interface; the chunk folder plus manifest (with as-of and rights basis) is the job input. Websites are one unit, split mechanically at headings only when over the unit ceiling | Simple, inspectable, one-time per book |
-| D13 | Review queue blocks only: merge disagreement (new story held), narration flagged after second ask (beat held), new place (its beats held). Contested claims queue without blocking. Everything else is a log line | Workbench design: 30-second reads cannot see the defects |
+| D13 | Review queue blocks only: merge disagreement (new story held; since slice 10 also a new story left below its arc minimum once its matched claims fold away), narration flagged after second ask (beat held), new place (its beats held). Contested claims queue without blocking. Everything else is a log line | Workbench design: 30-second reads cannot see the defects |
 | D14 | Graph swap is files first, publisher converge second, tour bar third, cloud last, all at once per city | Publisher never withdraws; mixed old/new would seat one story twice |
 
 ## 2. The record
@@ -218,7 +218,7 @@ failed job resumes at its last completed phase.
 | P3 judge claims | judge | per claim: entailed yes/no and the temporal kind read from the span (slice 9: a wrongly kinded claim is re-kinded, never refused); per unit: facts no claim carries | a claim refused once is re-asked with the judge's reason quoted back; refused twice is dropped and logged; an omission finding re-asks P1 once for that unit |
 | P4 narrate | author, sees claims only | narration text | no lift vs any span; no leak; no framing regex (`imagine`, `picture`, `envision`); duration computed |
 | P5 judge narration | judge | per sentence entailed yes/no | a failing sentence re-asks P4 once with the sentence quoted back; still failing → `narration.flags` set, `review.held = true` |
-| P6 merge | merge judge + signature | per new story: same / new / supersedes; per claim: new / same / conflict | judge and signature agree → apply; disagree → hold the new story, queue item; conflict → both claims `contested`; same → one claim, sources appended; supersedes → old claim `belief`, dated; any claim change → P4/P5 rerun for that beat |
+| P6 merge | merge judge + signature | per new story: same / new / supersedes; per claim, against ANY claim at the place whatever the story verdict: new / same / conflict — candidate beats and claims named by handle (`b1`, `b1.c02`), never by id | the signature is a one-way tripwire: a signature match on a claim the judge called `new`, or on a different claim than the judge named, holds the new story (queue item); a judge match the signature cannot see applies. Every raw answer is logged (`merge_answered`), every matched claim logged with both texts and the new span (`merge_folded`). A matched claim FOLDS into the claim that holds it: conflict → the D9 kind rules (`contested`, or supersedes → old claim `belief`, dated); same → one claim, sources appended. A `new` story's own beat keeps only its unmatched claims and is narrated again; left below its arc minimum it is a queue item; fully folded it writes nothing (`merge_absorbed`). Any claim change → P4/P5 rerun for that beat |
 | P7 commit | none | `beats_io.commit` | the slice-1 validator, extended; nothing reaches disk otherwise |
 
 Refusal loop: exactly one re-ask per phase per item, then drop or hold. No item is padded,
@@ -435,6 +435,10 @@ list[Beat]` is pure and refuses a held outcome. The calibration classes `contest
 **Proves:** `tests/test_ingest_merge.py::test_judge_and_signature_disagree_holds_new_story`,
 `::test_supersedes_rekinds_old_claim_as_dated_belief`,
 `::test_same_claim_appends_source_not_beat`.
+*(Slice 10 amended D7 and rebuilt P6's matching; the text above is slice 6 as built. The
+first node now proves the tripwire — a signature match the judge calls `new`, or matches
+elsewhere, is held — and a judge match the signature cannot see applies; the judge answers
+by handle and a claim may match in any beat at the place. See §3's P6 row and slice 10.)*
 
 ### Slice 7: Job runner, front door, review queue
 
