@@ -548,3 +548,26 @@ def test_the_coverage_check_flags_a_compound_claim_and_leaves_a_stated_relation_
         fixture, REPO_ROOT / "Books", client="mock", scripted=judge_flagging(True)).rows}
     assert rows["compound_claim"].caught == 1 and rows["stated_relation"].caught == 0
 
+
+def test_every_detector_verdict_reaches_the_run_sink_tagged_with_its_class():
+    """The judge's PROVE-FIRST before the step-2 live calibration: the report
+    prints a bare caught/total, so a live 0/1 would carry no evidence — no
+    flagged ids, no bundled facts, no merge answer — and invite a second
+    paid run "to see why". Each detector's evidence events (the coverage
+    check's compound_found / compound_unknown / omissions_found /
+    omission_ungrounded, the merge's merge_answered / merge_folded) now
+    reach the run's event sink, each tagged with the class it belongs to."""
+    events: list[tuple[str, dict]] = []
+    calibrate.run(
+        _fixture(), REPO_ROOT / "Books", client="mock",
+        events=lambda kind, payload: events.append((kind, payload)),
+    )
+    tagged = [(kind, payload["class"]) for kind, payload in events if "class" in payload]
+    assert ("compound_found", "compound_claim") in tagged
+    assert ("omissions_found", "omitted_fact") in tagged
+    assert ("merge_answered", "same_fact") in tagged
+    assert ("merge_folded", "same_fact") in tagged
+    found = next(p for k, p in events if k == "compound_found" and p["class"] == "compound_claim")
+    assert [c["claim_id"] for c in found["claims"]] == ["c01"]
+    assert all(c == "compound_claim" for k, c in tagged if k == "compound_found")
+

@@ -407,7 +407,20 @@ def _precision(events: list[tuple[str, dict]], planted_id: str | None) -> tuple[
     return false_refusals, dropped, tuple(details)
 
 
-def _detect(record: DefectRecord, unit: Unit, client: llm.ModelClient | None) -> _Detection:
+#: A detector's own evidence, forwarded to the run's sink tagged with the
+#: class, so a live miss can be diagnosed from the log instead of re-paid.
+EVIDENCE_EVENTS: frozenset[str] = frozenset({
+    "compound_found", "compound_unknown", "omissions_found", "omission_ungrounded",
+    "merge_answered", "merge_folded",
+})
+
+
+def _detect(
+    record: DefectRecord,
+    unit: Unit,
+    client: llm.ModelClient | None,
+    evidence: llm.EventSink | None = None,
+) -> _Detection:
     """Run the record's detector. `caught` None = pending."""
     if record.detector == "pending":
         return _Detection(None, record.planted.get("pending_phase", ""))
@@ -430,6 +443,8 @@ def _detect(record: DefectRecord, unit: Unit, client: llm.ModelClient | None) ->
 
     def record_event(kind: str, payload: dict) -> None:
         events.append((kind, payload))
+        if evidence is not None and kind in EVIDENCE_EVENTS:
+            evidence(kind, {"class": record.defect_class, **payload})
 
     planted_id = record.planted.get("claim_id")
     if record.detector == "merge":
@@ -575,7 +590,7 @@ def run(
             mock = llm.MockClient(sink, answers={"merge_judge": [scripted_merge(record, unit)]})
             _arm(mock, [record], unit)
             per_record_client = mock
-        found = _detect(record, unit, per_record_client)
+        found = _detect(record, unit, per_record_client, sink)
         rows.append(
             ClassRow(
                 record.defect_class,
