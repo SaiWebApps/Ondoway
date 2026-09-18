@@ -239,7 +239,10 @@ paragraph to the built behaviour when that design lands.
 hand-read) with planted defects, one per record: a fabricated date, a deleted claim, a
 wrongly attached cause, an 8-word lift, a guidebook attribution, a framing sentence, a
 state claim kinded as event, a contested value, a superseded belief, an omitted fact in
-the unit. The `ingest-calibrate` target runs the judge phases over them and prints caught /
+the unit — and, since slice 10, two merge classes that pin the judge's `same` from both sides:
+a second source sharing only an element (a date) with a claim, which must stay `new`
+(`shared_element`), and a true paraphrase no signature can see, which must fold as `same`
+(`same_fact`). The `ingest-calibrate` target runs the judge phases over them and prints caught /
 missed per class. A judge prompt change that lowers a class's catch rate fails the target.
 
 ## 5. Front door and review queue
@@ -693,6 +696,36 @@ reverted fold queues the whole story although its remainder beat was written; a
 `beat_id_collision` drops a remainder after its folds landed; a remainder queue item carries
 the first-pass narration; a P5-held story that then merges leaves its pre-merge
 `narration_held` item in the queue, stale). The stop's shippability is the panel's separate verdict.
+
+*Guggenheim replay result (2026-09-18 UTC, owner go; two runs, $0.053 + $0.061): FAIL.* PC0 held in
+both (the live file untouched) and PC4 in run 1 (17 claims, one disposition each), but PC1,
+PC2 and PC3 failed. The now-logged raw answers show two causes. Precision: in BOTH runs the
+judge folded c145 into LP c23 and c146 into LP c13 ("both reference the same 1959 date") —
+`same` on a shared element. Granularity: P1 emits compound claims against CONTEXT.md's "one
+atomic factual statement" (c141 = Wright + spiral + the towers of Fifth Avenue; c148 = critics
++ Newsweek; c149 is inside c148, c155 inside c156), so for them `same` drops content and `new`
+trips the tripwire, and the verdict flipped between runs: c141 folded in run 1 and was held in
+run 2; c148 folded in run 2, and in run 1 the judge named c148 as c149's match — a claim of the
+new story, which the contract cannot express — and the story was held. Fix, owner-approved in
+two steps: (1) the merge prompt defines `same` as containment (the existing claim states
+EVERYTHING the new claim states; sharing a date, name, place or word is not sharing a fact),
+names only listed claims, carries a worked example from another city, and calibration gains
+`shared_element` (precision) and `same_fact` (recall — a stricter `same` must not bring back
+slice 9's false `new` on real duplicates); (2) atomic claims at P1, with a re-extraction of both chunks (owner go on the
+cost owed). Step-1 confirmation replay criteria, registered before it runs (two fresh
+sandboxes, each claim judged on its FINAL answer after any re-ask): S1 c145 and c146 come out
+`new` in both runs; S2 no P6 answer-contract hold; S3 PC0 and PC4 hold; S4 recall, which the
+replay cannot measure (its only same-fact pairs are compound claims): one live calibration run
+under the new prompt catches `same_fact`, `shared_element`, `contested_value` and
+`superseded_belief` (owner go owed; the latter two have never been measured live). The
+`same_fact` plant (a restatement of "both Wright and Guggenheim had died before it was
+completed" with no shared name) does not copy the worked example's shape; `shared_element`
+shares it on purpose — it replicates c146's shared-year failure — so its catch is not evidence
+of precision beyond that shape. If S1-S4
+pass, the claim is "c145/c146 no longer fold and a true paraphrase still does", not "precision
+fixed" — the worked example shares c146's shape. Expected and accepted until step 2: compound c141 and c148 come out `new`, so c141's
+signature match holds its story (the tripwire doing its job on a compound claim), and no
+Guggenheim merge completes — PC1 waits for atomic claims.
 
 ### Slice 11: Cleanup
 

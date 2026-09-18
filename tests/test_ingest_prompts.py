@@ -383,6 +383,25 @@ def test_no_live_client_in_this_file():
                 )
 
 
+def test_p6_prompt_defines_same_as_containment_and_names_only_existing_claims():
+    """Slice 10's Guggenheim replay (2026-09-18): in both runs the merge
+    judge folded "this 1959 masterpiece" (a claim about walking the ramps)
+    into "completed in 1959" and "begins on the top floor" into Wright's
+    INTENDED route — `same` on a shared date or word, which silently drops
+    the new claim's content (a fold keeps the existing text). And in run 1 it
+    named another claim of the NEW story as a match, which no answer can
+    express. The rules now say `same` means the existing claim states
+    everything the new claim states, that sharing an element is not sharing
+    a fact, and that existing_claim_id only ever names a listed claim — with
+    a worked example from outside every calibration and replay place."""
+    for rendered in (prompts.MERGE_PROMPT, prompts.MERGE_REDO_PROMPT):
+        assert "states EVERYTHING the new claim states" in rendered
+        assert "sharing a date, a name, a place or a word is not sharing a fact" in rendered
+        assert "never another claim of the new story" in rendered
+        assert "Eiffel Tower" in rendered  # the worked example: not a New York place
+        assert "Guggenheim" not in rendered
+
+
 def test_p6_merge_schema_stays_in_the_structured_output_subset_and_prompt_pins_the_rules():
     """Slice 6: the merge judge's answer schema lives inside the same
     structured-output subset as P1-P5's, with the story and claim verdict

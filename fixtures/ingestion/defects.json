@@ -1,5 +1,5 @@
 {
-  "_comment": "Calibration by defect injection (Docs/ingestion/rebuild-spec.md §4): ten hand-read beats from slice 9's first real job on the Lonely Planet Upper East Side chunk (2026-09-12), one planted defect per record. Spans are verbatim in the chunk; `planted` carries what a correct detector must find. `detector` names the phase that catches the class.",
+  "_comment": "Calibration by defect injection (Docs/ingestion/rebuild-spec.md §4): hand-read beats from slice 9's first real job on the Lonely Planet Upper East Side chunk (2026-09-12), one planted defect per record (an eleventh and twelfth class, shared_element and same_fact, added in slice 10). Spans are verbatim in the chunk; `planted` carries what a correct detector must find. `detector` names the phase that catches the class.",
   "unit": {
     "city": "new_york",
     "source_id": "lonely-planet-new-york-city",
@@ -459,6 +459,96 @@
       "planted": {
         "fact": "A renovation in the early 1990s added an eight-story tower to the east with 50,000 square feet of exhibition space.",
         "span": "A renovation in the early 1990s added an eight-story tower to the east, which seamlessly provided an extra 50,000 sq ft of exhibition space."
+      }
+    },
+    {
+      "class": "shared_element",
+      "detector": "merge",
+      "note": "A second source shares the record's 1959 but states another fact (touring the ramps); a correct merge judge answers new and nothing folds (slice 10: the Guggenheim replay folded exactly this shape in both runs).",
+      "story": {
+        "title": "A building finished in 1959",
+        "place": "Solomon R. Guggenheim Museum",
+        "beat_type": "establishing",
+        "lenses": [
+          "historic_arch",
+          "modern_design",
+          "visual_art"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "Construction of the Guggenheim was finally completed in 1959.",
+          "kind": "event",
+          "span": "Construction was finally completed in 1959"
+        },
+        {
+          "claim_id": "c02",
+          "text": "Both Wright and Guggenheim had passed away before the museum's construction was completed.",
+          "kind": "event",
+          "span": "after both Wright and\nGuggenheim had passed away"
+        }
+      ],
+      "planted": {
+        "claim_id": "c01",
+        "second_source": {
+          "source_id": "second-source",
+          "chunk": "calibration",
+          "as_of": 2024,
+          "rights_basis": "own_work",
+          "text": "Visitors tour the 1959 Guggenheim by walking up the ramps of its curving halls.",
+          "kind": "state"
+        },
+        "expected": "new"
+      }
+    },
+    {
+      "class": "same_fact",
+      "detector": "merge",
+      "note": "A second source restates the record's c02 (both men died before completion) in other words, no shared name; a correct merge judge answers same and the claim gains the second source (slice 10: the recall side of the containment rule, deliberately NOT the shape of the prompt's worked example).",
+      "story": {
+        "title": "Neither lived to see it",
+        "place": "Solomon R. Guggenheim Museum",
+        "beat_type": "establishing",
+        "lenses": [
+          "historic_arch",
+          "modern_design",
+          "visual_art"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "Construction of the Guggenheim was finally completed in 1959.",
+          "kind": "event",
+          "span": "Construction was finally completed in 1959"
+        },
+        {
+          "claim_id": "c02",
+          "text": "Both Wright and Guggenheim had passed away before the museum's construction was completed.",
+          "kind": "event",
+          "span": "after both Wright and\nGuggenheim had passed away"
+        }
+      ],
+      "planted": {
+        "claim_id": "c02",
+        "second_source": {
+          "source_id": "second-source",
+          "chunk": "calibration",
+          "as_of": 2024,
+          "rights_basis": "own_work",
+          "text": "Neither the architect nor the patron lived to see the museum finished.",
+          "kind": "event"
+        },
+        "expected": "same"
       }
     }
   ]

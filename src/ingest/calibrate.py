@@ -1,7 +1,8 @@
 """Calibration by defect injection — Docs/ingestion/rebuild-spec.md §4.
 
-`fixtures/ingestion/defects.json` holds ten hand-read records over one
-unit, one planted defect each, in the ten classes §4 names. `run()` sends
+`fixtures/ingestion/defects.json` holds hand-read records over one unit,
+one planted defect each, one per class §4 names (ten, plus slice 10's
+shared_element and same_fact). `run()` sends
 each record through the detector its class names — the P1 gates
 (`gates.claim_gates`), the P3 claim judge (`judge_claims.judge_claims`),
 the omission check (`judge_claims.omissions`) or the P4 narration code
@@ -9,7 +10,8 @@ gate (`narrate.narration_gates` over the record's planted narration; the
 class is caught when the reason list names the planted gate) or the P6
 merge (`merge.merge` of the planted second source against the record's own
 claims as the beat the corpus holds; caught when the planted claim reaches
-the planted outcome, contested or supersedes) — and tallies caught/missed
+the planted outcome, contested, supersedes or same — or, for shared_element,
+when nothing folds at all) — and tallies caught/missed
 per class. A class whose detector lands in a later slice (state-as-event
 has no detector until the owner rules) is reported `pending`, never
 `missed`.
@@ -281,6 +283,29 @@ def scripted_merge_answer(record: DefectRecord, unit: Unit) -> llm.MockAnswer:
     claim, both stated values quoted. What the conflict BECOMES (contested
     or supersedes) is the code's, by kind and date — never the judge's."""
     planted = record.planted
+    if planted["expected"] == "new":
+        # shared_element: the second source shares an element, not a fact.
+        answer = {
+            "story": "new",
+            "beat_id": "",
+            "claims": [
+                {"claim_id": "n01", "verdict": "new", "existing_claim_id": "",
+                 "new_value": "", "existing_value": "", "reason": record.note}
+            ],
+        }
+        return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
+    if planted["expected"] == "same":
+        # same_fact: the second source restates the planted claim.
+        answer = {
+            "story": "same",
+            "beat_id": "b1",
+            "claims": [
+                {"claim_id": "n01", "verdict": "same",
+                 "existing_claim_id": f"b1.{planted['claim_id']}",
+                 "new_value": "", "existing_value": "", "reason": record.note}
+            ],
+        }
+        return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
     values = planted["stated_values"]
     # The record's beat is P6's only candidate, so its handle is b1.
     answer = {
@@ -407,9 +432,13 @@ def _detect(record: DefectRecord, unit: Unit, client: llm.ModelClient | None) ->
         if outcome.held:
             return _Detection(False, f"held: {outcome.reason}")
         expected = record.planted["expected"]
-        hit = any(
-            c.existing_claim_id == planted_id and c.outcome == expected for c in outcome.claims
-        )
+        if expected == "new":  # shared_element: caught only when nothing folds
+            hit = bool(outcome.claims) and all(c.outcome == "new" for c in outcome.claims)
+        else:
+            hit = any(
+                c.existing_claim_id == planted_id and c.outcome == expected
+                for c in outcome.claims
+            )
         note = "; ".join(
             f"{c.claim_id} {c.outcome} {c.existing_claim_id or '-'}" for c in outcome.claims
         )

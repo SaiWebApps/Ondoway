@@ -23,7 +23,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = REPO_ROOT / "fixtures" / "ingestion" / "defects.json"
 BASELINE = REPO_ROOT / "fixtures" / "ingestion" / "calibration-baseline.json"
 
-#: The ten defect classes §4 names, in its order.
+#: The defect classes §4 names, in its order (the eleventh and twelfth,
+#: shared_element and same_fact, added in slice 10: the precision and the
+#: recall side of the merge judge's `same`).
 CLASSES = (
     "fabricated_date",
     "deleted_claim",
@@ -35,6 +37,8 @@ CLASSES = (
     "contested_value",
     "superseded_belief",
     "omitted_fact",
+    "shared_element",
+    "same_fact",
 )
 
 
@@ -47,7 +51,7 @@ def _unit(fixture: calibrate.Fixture) -> unit_mod.Unit:
 
 
 def test_fixture_has_one_record_per_class_and_only_the_planted_defect():
-    """Fixture pins: exactly the ten §4 classes, one record each; every
+    """Fixture pins: exactly the §4 classes, one record each; every
     unplanted claim passes the real P1 gates against the real unit; every
     planted span is verbatim in the unit; a mechanical class's planted
     claim trips exactly the gate it names and nothing else."""
@@ -95,7 +99,19 @@ def test_fixture_has_one_record_per_class_and_only_the_planted_defect():
         if "corrected" in record.planted:
             corrected = record.planted["corrected"]
             assert gates.claim_gates(corrected["text"], corrected["span"], unit.text) == []
-        if record.detector == "merge":
+        if record.detector == "merge" and record.planted["expected"] in ("new", "same"):
+            # shared_element: the plant shares an element, not a fact, so the
+            # signature must NOT match it either — else the tripwire would hold
+            # a correct judge's `new` and the harness would measure a hold.
+            # same_fact: a paraphrase the signature cannot see, so the class
+            # measures the judge's recall and nothing else.
+            from src.ingest import merge
+
+            planted = next(c for c in record.claims if c["claim_id"] == planted_claim_id)
+            beat = merge._signature(planted["text"])
+            second = merge._signature(record.planted["second_source"]["text"])
+            assert merge._overlap(beat, second) < merge.SIGNATURE_MATCH_MIN, record.defect_class
+        elif record.detector == "merge":
             # The planted second source must state the SAME fact as the planted
             # claim by the signature test P6 applies, or the hint would call
             # it new and the harness would measure a hold, not the detector.
@@ -384,3 +400,81 @@ def test_a_merge_judge_the_signature_contradicts_is_held_and_counts_as_missed():
     by_class = {row.defect_class: row for row in clean.rows}
     assert by_class["contested_value"].note == "n01 contested c01"
     assert by_class["superseded_belief"].note == "n01 supersedes c01"
+
+
+def test_a_claim_sharing_only_a_date_is_new_and_a_judge_that_folds_it_misses():
+    """Slice 10's Guggenheim replay folded "this 1959 masterpiece" (a claim
+    about walking the ramps) into "completed in 1959" in both runs. The
+    shared_element class plants exactly that shape: a second source sharing
+    the record's date but stating another fact. A correct judge answers
+    `new` and nothing folds — caught; a judge that answers `same` folds a
+    different fact into the record's claim — MISSED, with the fold named."""
+    import src.ingest.llm as llm
+
+    fixture = _fixture()
+    record = next(r for r in fixture.records if r.defect_class == "shared_element")
+    assert record.detector == "merge"
+    assert record.planted["expected"] == "new"
+
+    report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock")
+    row = next(r for r in report.rows if r.defect_class == "shared_element")
+    assert (row.caught, row.total) == (1, 1)
+    assert row.note == "n01 new -"
+
+    def folding(rec: calibrate.DefectRecord, u) -> llm.MockAnswer:
+        if rec.defect_class != "shared_element":
+            return calibrate.scripted_merge_answer(rec, u)
+        planted = rec.planted
+        answer = {
+            "story": "new",
+            "beat_id": "",
+            "claims": [
+                {"claim_id": "n01", "verdict": "same",
+                 "existing_claim_id": f"b1.{planted['claim_id']}",
+                 "new_value": "1959", "existing_value": "1959",
+                 "reason": "both reference the same 1959 date"}
+            ],
+        }
+        return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
+
+    report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock", scripted_merge=folding)
+    row = next(r for r in report.rows if r.defect_class == "shared_element")
+    assert (row.caught, row.total) == (0, 1)
+    assert row.note == f"n01 same {record.planted['claim_id']}"
+
+
+def test_a_true_paraphrase_folds_and_a_judge_that_calls_it_new_misses():
+    """The recall side of slice 10's containment rule: a stricter `same` must
+    not bring back slice 9's false `new` on real duplicates (0 merges of 12).
+    same_fact plants a second source that restates the record's claim in
+    other words — a signature cannot see it, so only the judge can fold it.
+    A correct judge answers `same` and the claim gains the second source —
+    caught; a judge that answers `new` leaves it unmerged — MISSED."""
+    import src.ingest.llm as llm
+
+    fixture = _fixture()
+    record = next(r for r in fixture.records if r.defect_class == "same_fact")
+    assert record.detector == "merge"
+    assert record.planted["expected"] == "same"
+
+    report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock")
+    row = next(r for r in report.rows if r.defect_class == "same_fact")
+    assert (row.caught, row.total) == (1, 1)
+    assert row.note == f"n01 same {record.planted['claim_id']}"
+
+    def splitting(rec: calibrate.DefectRecord, u) -> llm.MockAnswer:
+        if rec.defect_class != "same_fact":
+            return calibrate.scripted_merge_answer(rec, u)
+        answer = {
+            "story": "new",
+            "beat_id": "",
+            "claims": [
+                {"claim_id": "n01", "verdict": "new", "existing_claim_id": "",
+                 "new_value": "", "existing_value": "", "reason": "worded differently"}
+            ],
+        }
+        return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
+
+    report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock", scripted_merge=splitting)
+    row = next(r for r in report.rows if r.defect_class == "same_fact")
+    assert (row.caught, row.total) == (0, 1)

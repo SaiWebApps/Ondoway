@@ -32,13 +32,22 @@ _MERGE_RULES = (
     'stated; "new" if no existing beat tells it. "beat_id" names that beat by its '
     "handle (b1, b2, ...), and is empty for a new story.\n"
     '- For every new claim, in order: "same" when a claim of ANY beat at this place '
-    "states the same fact with the same values - even when the story is new, because "
-    'two books cut the same facts into different stories; "conflict" when it states '
-    'the same fact with a different name, date, number, place or cause; "new" when '
-    'no claim at this place states it. "existing_claim_id" names the matched claim '
-    'by its handle (b1.c02) and is empty for "new". "new_value" and "existing_value" '
-    "quote the value each side states - a date, a number, a name - as short strings, "
-    'and are empty for "new".\n'
+    "states EVERYTHING the new claim states, with the same values - even when the story "
+    "is new, because two books cut the same facts into different stories. A new claim "
+    'that says more than the existing claim, or something else, is not "same": sharing '
+    "a date, a name, a place or a word is not sharing a fact. \"conflict\" when the two "
+    "state the same fact with a different name, date, number, place or cause. \"new\" "
+    'when no claim at this place states it. "existing_claim_id" names the matched claim '
+    'by its handle (b1.c02), never another claim of the new story (a new claim that '
+    'repeats another new claim is judged on its own against the existing beats), and is '
+    'empty for "new". "new_value" and "existing_value" quote the value each side states '
+    '- a date, a number, a name - as short strings, and are empty for "new".\n'
+    "- Worked example, from another city: an existing claim says \"The Eiffel Tower was "
+    "completed in 1889.\" A new claim \"Work on the Eiffel Tower ended in 1889.\" is "
+    "\"same\"; \"The Eiffel Tower was finished in 1887.\" is \"conflict\" (1887 vs "
+    "1889); \"The Eiffel Tower was built for the 1889 World's Fair.\" is \"new\" (it "
+    "shares the year, not the fact); \"Gustave Eiffel's company built the tower, "
+    "completing it in 1889.\" is \"new\" (it says more than the existing claim).\n"
     "- Wording never matters; only the facts do. A newer source is never right by "
     "default: report the difference, never resolve it."
 )
