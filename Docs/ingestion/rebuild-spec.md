@@ -727,6 +727,19 @@ fixed" — the worked example shares c146's shape. Expected and accepted until s
 signature match holds its story (the tripwire doing its job on a compound claim), and no
 Guggenheim merge completes — PC1 waits for atomic claims.
 
+*Step-1 confirmation (2026-09-18 UTC, owner go, on AC): PASS on S1-S4.* One live calibration
+run under the new prompt caught all twelve classes, the four merge classes each 1/1 — the
+first live measurement of `contested_value` and `superseded_belief` (projection $0.63; the
+harness prints no actual). Two replays from fresh preps ($0.039 + $0.053): c145 and c146 came
+out `new` in both (the judge: c146 "combines the 1959 completion date with a description of
+touring via curving ramps, more than" LP c13); no answer-contract hold; the live file untouched
+and all 17 claims placed exactly once in both. The claim is exactly that — "c145/c146 no
+longer fold and a true paraphrase still does" — not "precision fixed". As registered, no
+Guggenheim merge completed: compound c141 came out `new` and its signature match held its
+story in both runs, and compound c148 came out `new`. One residue: in run 2's FIRST answer the
+judge again named c148 as c149's match despite the rule; the re-ask fixed it. PC1 now waits on
+step 2 — atomic claims at P1 and a re-extraction of both chunks.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
