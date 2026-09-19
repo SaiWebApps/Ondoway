@@ -63,9 +63,14 @@ publish path. What does not carry:
 1. **`narrative_function` is free prose** ("Sets the geography and social texture…") where
    `src/tour/beat_select.py:46-52` expects hook|establishing|deepen|climax|callback. All 42 beats sort
    last. (Kickoff defect #4, open since slice 9.)
-2. **`physical_cues` changed shape** — `list[str]` against the engine's `{cue, direction,
-   feature_type}`; the exporter zeroes them, so the tour's openers lose their input.
-3. **`practicalities` beats are refused by the uploader** — 7 of 42 never reach the graph.
+2. **`physical_cues` and `pronunciation` are NOT exported — deliberately.** `_export_view`
+   (`upload_paris.py:445-447`) zeroes both because unjudged author enrichment is not served
+   (proof-chunk panel, 2026-09-13). POLICY, not a defect; changing it needs a judging step and
+   an owner ruling. The shape also differs (`list[str]` against the engine's
+   `{cue, direction, feature_type}`), which is moot while the field is withheld.
+3. **`practicalities` beats are fenced at publish — deliberately.** `_beat_blocked`
+   (`upload_paris.py:105-111`), owner ruling 2026-09-13: prices and hours wait for an engine
+   channel that does not voice them in the bare present. 7 of 42. POLICY, not a defect.
 4. **`sub_location` is free prose** — see ADR-0002; it is exported and feeds the trigger.
 5. **Minor losses:** claim ids, source passage/chunk and `subject_tag` are not written, which
    leaves the graph-side duplicate lane inert.
@@ -76,10 +81,14 @@ Rigor: **Tier 1 for $0 code** (test-first, undo-test, `make lint` by exit code, 
 before each commit). Full Judge Protocol for anything paid, any write outside the scratch graph,
 any deletion, and any claim of proof. Owner go before every paid step.
 
-1. **Close gaps 1–4** ($0, test-first, one commit each).
+1. **Close the REAL gaps** ($0, test-first, one commit each): gap 1 (done, `0784a7b`), gap 4.
+   Gaps 2 and 3 are recorded policy — measured 2026-09-19, not fixed, not defects.
 2. **Stand up the scratch graph** ($0): a spare local Neo4j, POIs seeded from `poi-raw.json`,
    the 42 new beats published as the WHOLE city file — existing publish semantics withdraw
    everything else, so no partial-swap code is needed and the dev graph is never touched.
+   The 42 beats already produced carry PROSE `narrative_function` values (the gap-1 fix
+   binds future extractions only), so that graph is **not ordering-representative** — do not
+   read a tour built from it as evidence about beat order.
 3. **The corpus comparison report** ($0): coverage, density, lens diversity, and the trust
    properties, legacy against new, at the same 12 POIs. This is the deliverable.
 4. **Then throughput** — the parked transport design

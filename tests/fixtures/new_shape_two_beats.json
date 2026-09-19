@@ -1,0 +1,210 @@
+[
+  {
+    "beat_id": "new_york/upper-east-side/coffee-cold-cuts-and-the-old-yorkville-palate",
+    "city_name": "new_york",
+    "poi_name": "Upper East Side",
+    "story_slug": "coffee-cold-cuts-and-the-old-yorkville-palate",
+    "title": "Coffee, Cold Cuts and the Old Yorkville Palate",
+    "beat_type": "sensory_observation",
+    "lenses": [
+      "markets_street_food",
+      "historic_cuisine"
+    ],
+    "sub_location": "Yorkville",
+    "trigger_address": "Second Ave at E 86th St, New York, NY",
+    "claims": [
+      {
+        "claim_id": "c21",
+        "text": "Irving Farm Roasters is a cafe on the Upper East Side serving coffee and pastries.",
+        "kind": "state",
+        "status": "resolved",
+        "sources": [
+          {
+            "source_id": "lonely-planet-new-york-city",
+            "chunk": "chunk-07-upper-east-side",
+            "span": "Indulge in a freshly drawn macchiato and a pastry at cafes like Sant\nAmbroeus and Irving Farm Roasters.",
+            "as_of": 2022,
+            "rights_basis": "owned_copy",
+            "stated_value": null,
+            "article_title": null,
+            "url": null,
+            "revision_id": null,
+            "section": null,
+            "retrieved_at": null
+          }
+        ],
+        "resolved_value": null,
+        "resolution": null,
+        "verdict": {
+          "judge_model": "claude-haiku-4-5-20251001",
+          "entailed": true,
+          "bound_to": "b546be4c65746fb9fc3ca196988c91e6e8bc978d29b6ba89a73b9f90a2644e76"
+        }
+      },
+      {
+        "claim_id": "c22",
+        "text": "Schaller & Weber is an old-time delicatessen on the Upper East Side.",
+        "kind": "state",
+        "status": "resolved",
+        "sources": [
+          {
+            "source_id": "lonely-planet-new-york-city",
+            "chunk": "chunk-07-upper-east-side",
+            "span": "Assemble your own charcuterie at old-time deli\nSchaller & Weber.",
+            "as_of": 2022,
+            "rights_basis": "owned_copy",
+            "stated_value": null,
+            "article_title": null,
+            "url": null,
+            "revision_id": null,
+            "section": null,
+            "retrieved_at": null
+          }
+        ],
+        "resolved_value": null,
+        "resolution": null,
+        "verdict": {
+          "judge_model": "claude-haiku-4-5-20251001",
+          "entailed": true,
+          "bound_to": "408bbb01e993e716945dffabf95be988bee24b3d6b9e25b58b9b3c6b5dade9d1"
+        }
+      }
+    ],
+    "narration": {
+      "text": "Irving Farm Roasters sits here on the Upper East Side, a cafe pouring coffee and setting out pastries. Down the way stands Schaller & Weber, an old-time delicatessen of this same neighborhood.",
+      "claims_hash": "10a59fe7911ae375b91ab12744fcf3be6e5f0bb2d903abd8d0f329f03fca1b11",
+      "author_model": "claude-opus-5",
+      "verdict": {
+        "judge_model": "claude-haiku-4-5-20251001",
+        "sentences_entailed": 2,
+        "sentences_total": 2,
+        "bound_to": "d574febf72762406642119fdb98bac5ad9c7abcfb8f5d1043a14d82dc4067038"
+      },
+      "flags": []
+    },
+    "physical_cues": [
+      "espresso steam and pastry cases",
+      "hanging sausages behind a deli counter"
+    ],
+    "entities": [
+      "Irving Farm Roasters",
+      "Schaller & Weber"
+    ],
+    "narrative_function": "Grounds the neighborhood in everyday tastes beyond the museums",
+    "emotional_register": "warm, appetising",
+    "sensory_anchor": true,
+    "inline_foreign_phrases": [],
+    "pronunciation": "Schaller & Weber: SHAH-ler and VAY-ber",
+    "kid_friendly": "yes",
+    "duration_sec": 13,
+    "review": {
+      "held": false,
+      "reason": null
+    }
+  },
+  {
+    "beat_id": "new_york/central-park/cedar-hill-where-the-sleds-come-out",
+    "city_name": "new_york",
+    "poi_name": "Central Park",
+    "story_slug": "cedar-hill-where-the-sleds-come-out",
+    "title": "Cedar Hill, Where the Sleds Come Out",
+    "beat_type": "anecdote",
+    "lenses": [
+      "parks_gardens",
+      "local_legends"
+    ],
+    "sub_location": "Cedar Hill",
+    "trigger_address": "E 79th St and Fifth Ave, New York, NY",
+    "claims": [
+      {
+        "claim_id": "c10",
+        "text": "Cedar Hill in Central Park lies just south of the 79th St Transverse.",
+        "kind": "state",
+        "status": "resolved",
+        "sources": [
+          {
+            "source_id": "lonely-planet-new-york-city",
+            "chunk": "chunk-07-upper-east-side",
+            "span": "Enter\nCentral Park just south of the 79th St Tranverse and join the hordes\npicnicking or lying about Cedar Hill",
+            "as_of": 2022,
+            "rights_basis": "owned_copy",
+            "stated_value": null,
+            "article_title": null,
+            "url": null,
+            "revision_id": null,
+            "section": null,
+            "retrieved_at": null
+          }
+        ],
+        "resolved_value": null,
+        "resolution": null,
+        "verdict": {
+          "judge_model": "claude-haiku-4-5-20251001",
+          "entailed": true,
+          "bound_to": "8af346f7ba659fcf288a5bf6880146a61781d4a7b801b57c0a168169481abd2b"
+        }
+      },
+      {
+        "claim_id": "c12",
+        "text": "Central Park contains a sculpture of Alice in Wonderland that children can climb on.",
+        "kind": "state",
+        "status": "resolved",
+        "sources": [
+          {
+            "source_id": "lonely-planet-new-york-city",
+            "chunk": "chunk-07-upper-east-side",
+            "span": "the sculpture of Alice in Wonderland – a great\nphoto op for kids to clamber over",
+            "as_of": 2022,
+            "rights_basis": "owned_copy",
+            "stated_value": null,
+            "article_title": null,
+            "url": null,
+            "revision_id": null,
+            "section": null,
+            "retrieved_at": null
+          }
+        ],
+        "resolved_value": null,
+        "resolution": null,
+        "verdict": {
+          "judge_model": "claude-haiku-4-5-20251001",
+          "entailed": true,
+          "bound_to": "55b1f08a32abb887ac3cac7c069b315ef98bcb2224cce2a1a067c2b7eecc672e"
+        }
+      }
+    ],
+    "narration": {
+      "text": "Cedar Hill rises here, just south of the 79th Street Transverse. Elsewhere in Central Park stands a sculpture of Alice in Wonderland, made for children to climb on.",
+      "claims_hash": "f96340c4212639dd9b89efc474666ace72087268267cfb69ddc9fde30c587030",
+      "author_model": "claude-opus-5",
+      "verdict": {
+        "judge_model": "claude-haiku-4-5-20251001",
+        "sentences_entailed": 2,
+        "sentences_total": 2,
+        "bound_to": "965ff3eb41884040ed5a4066424669b5db8bb12be1a5a9dea1bd1314c1492aad"
+      },
+      "flags": []
+    },
+    "physical_cues": [
+      "broad grassy slope",
+      "79th St Transverse below",
+      "bronze Alice polished by climbing hands"
+    ],
+    "entities": [
+      "Cedar Hill",
+      "79th St Transverse",
+      "Alice in Wonderland sculpture"
+    ],
+    "narrative_function": "Shows the park as the neighborhood's backyard for children",
+    "emotional_register": "playful, nostalgic",
+    "sensory_anchor": true,
+    "inline_foreign_phrases": [],
+    "pronunciation": null,
+    "kid_friendly": "yes",
+    "duration_sec": 11,
+    "review": {
+      "held": false,
+      "reason": null
+    }
+  }
+]

@@ -64,6 +64,7 @@ def _assert_upload_target_allowed(allow_cloud: bool) -> None:
 
 
 VALIDATOR = Path(__file__).resolve().parent / "validate_beats.py"
+_REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # Generous per-city bounding boxes (city + inner edges): reject gross coordinate
 # errors (a Boston POI, (0,0), or out-of-city leaks) without clipping legitimate
@@ -128,9 +129,18 @@ def _assert_beats_valid(beats_path: Path) -> None:
     """Run the full validate_beats gate before any DB write (AC-9). Aborts the
     upload if the beats file fails — so grounding, verification-freshness,
     uniqueness, and status checks all gate the upload, not just extraction."""
-    result = subprocess.run(
-        [sys.executable, str(VALIDATOR), str(beats_path)], capture_output=True, text=True
-    )
+    # `validate_beats._derive_chunks_root` finds `Books/<city>` by walking
+    # exactly three parents up, which only holds for `<repo>/<root>/<city>/
+    # beats.json`. A nested data root — the ingest sandboxes, or any
+    # INGEST_DATA_ROOT the front door is pointed at — lands somewhere with no
+    # `Books` beside it, and a new-shape file then fails the gate before any
+    # of its own rules run. The city a beats file belongs to is its parent
+    # directory's name wherever it sits, so name the repo's own chunks for it.
+    argv = [sys.executable, str(VALIDATOR), str(beats_path)]
+    chunks_root = _REPO_ROOT / "Books" / beats_path.resolve().parent.name
+    if chunks_root.is_dir():
+        argv += ["--chunks-root", str(chunks_root)]
+    result = subprocess.run(argv, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(
             "Refusing to upload: validate_beats rejected the beats file.\n"

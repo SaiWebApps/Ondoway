@@ -739,6 +739,13 @@ validate-beats: ## Validate one city's committed beats before upload.
 	@$(PREFLIGHT) --label validate-beats $(PRE_PY)
 	@$(LOCAL_EXEC) uv run python scripts/validate_beats.py data/$(or $(CITY),paris)/beats.json
 
+ingest-publish-scratch: ## Publish ONE new-shape beats file into the SCRATCH dev3 graph (:7693) — never the 7687 dev graph, never cloud. Usage: make ingest-publish-scratch CITY=new_york DATA_ROOT=data-ingest/sandboxes/step2b. $0.
+	@test -n "$(CITY)" || { echo "ERROR: CITY is required." >&2; exit 2; }
+	@test -n "$(DATA_ROOT)" || { echo "ERROR: DATA_ROOT is required (a dir holding <CITY>/beats.json and <CITY>/poi-raw.json)." >&2; exit 2; }
+	@test -f "$(DATA_ROOT)/$(CITY)/beats.json" || { echo "ERROR: no $(DATA_ROOT)/$(CITY)/beats.json." >&2; exit 2; }
+	@$(PREFLIGHT) --label ingest-publish-scratch $(PRE_PY) db-dev3
+	@$(ENV_EXEC) --profile local3 -- env ONBOARD_DATA_ROOT="$(abspath $(DATA_ROOT))" uv run python -m scripts.upload_paris $(CITY)
+
 deploy: ## Deploy one city. Local by default; cloud requires TARGET=cloud CONFIRM_CLOUD_WRITE=1.
 	@test -n "$(CITY)" || { echo "ERROR: CITY is required." >&2; exit 2; }
 	@case "$(TARGET)" in \

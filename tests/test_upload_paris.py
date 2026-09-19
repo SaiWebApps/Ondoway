@@ -111,6 +111,24 @@ def test_assert_beats_valid_raises_on_invalid(tmp_path):
         _assert_beats_valid(p)
 
 
+def test_assert_beats_valid_grounds_a_new_shape_file_outside_the_data_tree(tmp_path):
+    """District port plan, step 2: publishing the sandbox corpus refused with
+    "cannot locate a chunks root". `validate_beats._derive_chunks_root` walks
+    exactly three parents up to find `Books/<city>`, which only holds for
+    `<repo>/<root>/<city>/beats.json`; a nested root (the ingest sandboxes, and
+    any INGEST_DATA_ROOT the front door is pointed at) resolves to a directory
+    with no `Books` beside it. The gate must ground a new-shape file by the
+    city its path names, wherever that path is.
+    """
+    city_dir = tmp_path / "sandboxes" / "step2b" / "new_york"
+    city_dir.mkdir(parents=True)
+    fixture = _REPO_ROOT / "tests" / "fixtures" / "new_shape_two_beats.json"
+    beats = json.loads(fixture.read_text())
+    p = city_dir / "beats.json"
+    p.write_text(json.dumps(beats[:2]))
+    _assert_beats_valid(p)  # must not raise
+
+
 # ---------------------------------------------------------------------------
 # Step 4.0 — provenance fields (source_passage / source_chunk_slug / key_claims)
 # ---------------------------------------------------------------------------
