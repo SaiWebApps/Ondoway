@@ -41,6 +41,7 @@ from collections.abc import Sequence
 
 from src.ingest.model import BEAT_TYPE_VALUES
 from src.schema.definitions import TAGGABLE_LENSES
+from src.tour.beat_select import NARRATIVE_FUNCTION_ORDER
 
 
 class TieBreakMissing(ValueError):  # noqa: N818 — pinned name is the spec/test contract
@@ -77,6 +78,19 @@ GROUP_AMBIGUITY_CLASSES = (
     _AMBIGUITY_PERSON_VS_PLACE,
 )
 
+#: The tour engine orders a POI's beats by `narrative_function`, and anything
+#: outside `src/tour/beat_select.py`'s NARRATIVE_FUNCTION_ORDER falls into its
+#: leftover bucket and plays LAST. Job A's 42 beats were all free prose
+#: ("Sets the geography and social texture of the neighborhood…"), so the
+#: vocabulary is named in the prompt as well as pinned in the schema, and it is
+#: IMPORTED from the engine so the two cannot drift.
+_NARRATIVE_FUNCTION_SENTENCE = (
+    "narrative_function says where the story sits in a place's arc, and must "
+    f"be exactly one of: {', '.join(NARRATIVE_FUNCTION_ORDER)}. A hook opens, "
+    "establishing sets the place up, deepen adds to it, climax is its peak, "
+    "and callback closes by answering something earlier."
+)
+
 GROUP_PROMPT_TEMPLATE = (
     "You are grouping factual claims about one guidebook passage into "
     "stories.\n\n"
@@ -97,6 +111,7 @@ GROUP_PROMPT_TEMPLATE = (
     "and one claim is enough. transit moves the listener between places; "
     "sidebar digresses. Every other type is a told story of at least two "
     "claims.\n\n"
+    f"{_NARRATIVE_FUNCTION_SENTENCE}\n\n"
     "Claims:\n{claims}\n\n"
     "Answer as JSON only."
 )
@@ -151,7 +166,10 @@ P2_RESPONSE_SCHEMA: dict = {
                                 "type": "array",
                                 "items": {"type": "string"},
                             },
-                            "narrative_function": {"type": "string"},
+                            "narrative_function": {
+                                "type": "string",
+                                "enum": list(NARRATIVE_FUNCTION_ORDER),
+                            },
                             "emotional_register": {"type": "string"},
                             "sensory_anchor": {"type": "boolean"},
                             "inline_foreign_phrases": {

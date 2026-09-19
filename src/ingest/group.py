@@ -122,6 +122,7 @@ from src.ingest.gates import (
 )
 from src.ingest.unit import Unit
 from src.schema.definitions import TAGGABLE_LENSES
+from src.tour.beat_select import NARRATIVE_FUNCTION_ORDER
 
 #: Output tokens requested for a P2 call — both the first ask and the
 #: re-ask use the same cap.
@@ -306,9 +307,14 @@ def _valid_enrichment_item(item: Any) -> bool:
         value = item[key]
         if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
             return False
-    for key in ("narrative_function", "emotional_register", "pronunciation"):
+    for key in ("emotional_register", "pronunciation"):
         if not isinstance(item[key], str):
             return False
+    # The engine orders a place's beats by this value and plays anything
+    # outside its vocabulary last, so P2's own answer is held to the enum the
+    # response schema pins (district port plan, gap 1) — no blank sentinel.
+    if item["narrative_function"] not in NARRATIVE_FUNCTION_ORDER:
+        return False
     if not isinstance(item["sensory_anchor"], bool):
         return False
     if item["kid_friendly"] not in _KID_FRIENDLY_RESPONSE_VALUES:

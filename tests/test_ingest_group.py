@@ -71,7 +71,11 @@ def _real_unit():
 _CLEAN_ENRICHMENT: dict = {
     "physical_cues": [],
     "entities": [],
-    "narrative_function": "",
+    # No blank sentinel here: unlike the other free-text fields,
+    # narrative_function is REQUIRED to be one of the engine's five values
+    # (district port plan, gap 1) — the engine orders by it and plays anything
+    # else last, so "nothing to say" is not an answer P2 may give.
+    "narrative_function": "establishing",
     "emotional_register": "",
     "sensory_anchor": False,
     "inline_foreign_phrases": [],
@@ -983,3 +987,40 @@ def test_group_shows_the_candidate_places_and_asks_for_the_exact_name():
     assert "- Solomon R. Guggenheim Museum" in redo
     assert "write its name exactly as listed" in redo
 
+
+
+def test_p2_pins_the_engines_narrative_function_vocabulary():
+    """District port plan, gap 1 (2026-09-19): job A's 42 beats carried free
+    prose ("Sets the geography and social texture of the neighborhood…") where
+    `src/tour/beat_select.py`'s NARRATIVE_FUNCTION_ORDER is the engine's
+    vocabulary, so every one of them fell into the leftover bucket and sorted
+    LAST in every tour. The P2 schema now pins that enum — IMPORTED from the
+    engine, never copied, so the two cannot drift — and a prose answer is
+    refused like any other schema violation, buying exactly one re-ask.
+    """
+    from src.tour.beat_select import NARRATIVE_FUNCTION_ORDER
+
+    enrichment = prompts.P2_RESPONSE_SCHEMA["properties"]["stories"]["items"]["properties"][
+        "enrichment"
+    ]
+    assert tuple(enrichment["properties"]["narrative_function"]["enum"]) == (
+        NARRATIVE_FUNCTION_ORDER
+    )
+    assert "narrative_function" in prompts.GROUP_PROMPT_TEMPLATE
+    for value in NARRATIVE_FUNCTION_ORDER:
+        assert value in prompts.GROUP_PROMPT_TEMPLATE, value
+
+    unit = _real_unit()
+    claims = _claim_drafts(unit)
+    prose = {
+        **CLEAN_STORY_ANSWERS[0],
+        "enrichment": {
+            **_CLEAN_ENRICHMENT,
+            "narrative_function": "Sets the geography and social texture of the neighborhood",
+        },
+    }
+    result, events, mock, proxy = _refuse_then_clean(unit, claims, [prose, CLEAN_STORY_ANSWERS[1]])
+    payload = _assert_one_re_ask_then_clean(result, events, mock, proxy)
+    assert payload["reasons"], payload
+    assert all(r.startswith("schema:") for r in payload["reasons"]), payload["reasons"]
+    assert all(story.enrichment.narrative_function in NARRATIVE_FUNCTION_ORDER for story in result)
