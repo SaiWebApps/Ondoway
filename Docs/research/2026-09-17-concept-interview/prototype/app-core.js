@@ -10,6 +10,13 @@ function chipHtml(id, { on = false, sm = false, attrs = "" } = {}) {
   const l = lensOf(id);
   return `<button class="lchip${on ? " on" : ""}${sm ? " sm static" : ""}" style="--c:${l.color}" ${attrs}>${icon(l.icon)}${esc(l.label)}${on && !sm ? icon("check") : ""}</button>`;
 }
+// A photo slot from CONTENT.img, or a labelled placeholder until the photos are approved.
+// `fill` makes it cover its box (the box sets the size).
+function pic(slot, label, { cls = "", style = "" } = {}) {
+  const src = C.img[slot];
+  return src ? `<img class="pic ${cls}" src="${esc(src)}" alt="${esc(label)}" style="${style}" draggable="false">`
+    : `<div class="pic placeholder-img ${cls}" style="${style}"><span>${esc(label)}</span></div>`;
+}
 const fmtSecs = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 
 // ---------------------------------------------------------------- Story player
@@ -128,6 +135,8 @@ const App = {
     ispyFound: {},
     cuts: {},
     replanChoice: null,
+    addedMustSees: [],   // [{name, day, why}] from the 2.1 add sheet
+    echoesLeft: {},      // stop key → echo text
   },
   log: [],
   t0: Date.now(),

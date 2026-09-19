@@ -19,13 +19,13 @@ const PARTS = [
 ];
 const STEPS = {
   0: { name: "Opening screen", min: 0, qs: ["Say nothing. Let them read."] },
-  1: { name: "Step 1 · Lenses", min: 3, qs: ["After they finish picking: What do you think those choices will change?", "Were any of these obviously not you?"] },
+  1: { name: "Step 1 · Lenses", min: 2, qs: ["After they finish picking: What do you think those choices will change?", "Were any of these obviously not you?"] },
   2: { name: "Step 2 · Planning the day", min: 6, h: "H4", qs: ["On the Friday plan, wait. Let them read.", "What's your reaction to this?", "Where do you think these stops came from? (listen for 'ads' / 'someone paid')", "On the Skip advice card: How do you feel about it telling you to skip that?", "Would you have found these in-between stops yourself?", "COMFORT: Would you be comfortable letting something plan your day like this? What would you need to see to trust it?"] },
-  3: { name: "Step 3 · The walk", min: 7, h: "H5 · H6", qs: ["Say nothing while the story plays. Watch: listen or skip?", "After the Federal Hall pair: What do you make of that — the two of them standing in the same spot?", "→ Would that be good or bad for your group? Why?", "Do NOT mention Ask or the levers. If never touched by end of step 4: Was there anything you wanted to know that it didn't tell you? → P"] },
+  3: { name: "Step 3 · The walk", min: 7, h: "H5 · H6", qs: ["Say nothing while the story plays. Watch: listen or skip?", "After the Federal Hall pair: What do you make of that — the two of them standing in the same spot?", "→ Would that be good or bad for your group? Why?", "Do NOT mention the Ask button, the Echoes camera or the levers. If Ask is never touched by end of step 4: Was there anything you wanted to know that it didn't tell you? → P"] },
   4: { name: "Step 4 · The day changes", min: 3, qs: ["After the re-plan: What just happened?", "Is that what you'd want it to do? What would you have done without it?"] },
-  5: { name: "Step 5 · Deep dive + Echoes", min: 6, h: "H7 · H8", qs: ["After a minute of the Deep dive: Would you play this out loud, standing in the Statue of Liberty ferry line?", "After Echoes: Would you leave one?", "If these were only on a map, not in the camera, would you still bother?", "Would you want to write anything you like here? Would you want your kids seeing what strangers wrote?"] },
+  5: { name: "Step 5 · Deep dive + Echoes", min: 5, h: "H7 · H8", qs: ["After a minute of the Deep dive: Would you play this out loud, standing in the Statue of Liberty ferry line?", "After Echoes: Would you leave one?", "If these were only on a map, not in the camera, would you still bother?", "Would you want to write anything you like here? Would you want your kids seeing what strangers wrote?"] },
   6: { name: "Step 6 · I Spy", min: 2, h: "H9", qs: ["On your last trip, what did the kids do while you were looking at things? (skip if answered in part 2)", "Would this change that?"] },
-  7: { name: "Step 7 · Day + Trip recap", min: 3, h: "H3 · H10", qs: ["Photo prompt: note what they chose and what they said before choosing.", "What would you do with this?", "Is this something you'd look at at dinner, or later, or never?", "Would you share it? Where?"] },
+  7: { name: "Step 7 · Day + Trip recap", min: 5, h: "H3 · H10", qs: ["Photo prompt: note what they chose and what they said before choosing.", "Before the sharing question, press \"I just asked\" (a Share tap after it codes P).", "What would you do with this?", "Is this something you'd look at at dinner, or later, or never?", "Would you share it? Where?"] },
 };
 const HYP = [
   ["H1", "Planning overwhelm", "overwhelm / ranking pain raised U in part 1", "no planning pain unprompted"],
@@ -107,7 +107,7 @@ const Interviewer = {
     const cutHint = document.getElementById("cut-hint");
     if (cutHint) {
       const over = this.partMs("p3") / 60000 - 30 * (this.progress3());
-      cutHint.textContent = over > 2 ? `Walkthrough running ~${Math.round(over)} min behind plan. Next cut: ${!s.cuts.echo ? "Leave an echo" : !s.cuts.trip ? "Trip recap" : !s.cuts.ispy1 ? "I Spy → first find only" : "nothing left to cut"}.` : "On time.";
+      cutHint.textContent = over > 2 ? `Walkthrough running ~${Math.round(over)} min behind plan. Next cut: ${!s.cuts.echo ? "Leave an echo" : !s.cuts.ispy1 ? "I Spy → first find only" : !s.cuts.trip ? "Trip recap" : "nothing left to cut"}.` : "On time.";
     }
   },
   progress3() { // share of the 30-minute walkthrough the traveller has reached, by step budget
@@ -148,7 +148,7 @@ const Interviewer = {
           ${Object.entries(STEPS).filter(([k]) => +k > 0).map(([k, st]) => `<div class="steprow${step === +k ? " on" : ""}"><span>${esc(st.name)}</span><span class="mono" id="st-${k}"></span></div>`).join("")}
           <div class="eyebrow" style="margin-top:14px">Cuts (in order)</div>
           <p id="cut-hint" class="small"></p>
-          ${[["echo", "Cut 5.4 Leave an echo"], ["trip", "Cut 7.3 Trip recap"], ["ispy1", "I Spy → first find only"]].map(([k, l]) => `<label class="cut"><input type="checkbox" data-cut="${k}" ${s.cuts[k] ? "checked" : ""}> ${l}</label>`).join("")}
+          ${[["echo", "Cut 5.4 Leave an echo"], ["ispy1", "I Spy → first find only"], ["trip", "Cut 7.3 Trip recap"]].map(([k, l]) => `<label class="cut"><input type="checkbox" data-cut="${k}" ${s.cuts[k] ? "checked" : ""}> ${l}</label>`).join("")}
           <p class="small">Never cut: parts 1–2, Skip advice, the Federal Hall moment, the Day recap, the close.</p>
         </aside>
         <main class="iv-col wide">

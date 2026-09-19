@@ -72,21 +72,17 @@ sharply (architecture vs. the Revolution).
 **1.1 What are you curious about?** — *= Lens picker (`lens_selection_page.dart`)*
 - Eyebrow "WELCOME, MAYA". Title "What are you curious about?". Progress bar to 3.
 - All 21 lens chips as in the app. Maya's three are pre-selected.
-- **New, below the chips — "What you'd hear at Federal Hall":** a card that changes as
-  lenses change, showing the opening line of the real Federal Hall story for the most
-  recently selected lens:
-
-  | Lens | Opening line shown (real beat) |
-  |---|---|
-  | Historic Architecture | "On the northeast corner of Nassau and Wall stands Federal Hall National Memorial, dubbed the 'Parthenon of Wall Street.'" |
-  | War & Conflict | "Before its federal function, the building on this site teemed with the birth pangs of the republic." |
-  | Social Change | "In this former British City Hall — transformed into 'Federal Hall' when the Brits quit the city…" |
-  | Dark History | "Note the austere building across the street; it was the headquarters of banker J. P. Morgan…" |
-  | Hidden History | "Inside, visitors can see the Bible that Washington used for his oath of office…" |
-  | any other lens | "Your tours will lean toward [lens]. At this stop, Maya's other lenses lead." |
-
+- **Lens explanation (revised 2026-09-18, reviewer feedback: "explain what each lens means"):**
+  a docked card below the chips explains the most recently tapped lens (on or off) in one
+  plain line, e.g. "Historic Architecture — how buildings were designed and built: the
+  architects, materials and styles." ⚑ 21 one-liners, rewritten for travellers from the
+  extraction definitions in `.claude/commands/beat-from-book.md`; they say only what that
+  lens's stories are about.
+- ~~"What you'd hear at Federal Hall" opening-line card~~ — **dropped 2026-09-18 (founder).**
+  3.3 carries "same place, different story" with real audio, and without the sample the
+  step 1 question "What do you think those choices will change?" actually tests understanding.
 - Footer "3 selected" · **Continue**.
-- Caption: *"Pick what you're into. Watch how the same place tells a different story."*
+- Caption: *"Pick what you're into. Tap any lens to see what it covers."* (revised 2026-09-18)
 - Log: every chip toggled.
 
 **1.2 Who's coming?** — *new screen in the app's style (from the journey spec's "Profile &
@@ -94,6 +90,17 @@ people")*
 - Title "Who's coming?". Four rows: avatar circle (accent, initial), name, their lens chips
   (small), and for Ava a pill "I Spy". Dan and Leo show "Joined ✓".
 - Caption: *"Everyone brings their own phone and their own interests."*
+- **How and why (revised 2026-09-18, reviewer feedback: "make it clearer how users are added
+  and why it matters"):**
+  - Under the title: "Invite your party with a link. Each person joins on their own phone and
+    picks their own lenses."
+  - Row status in words: Dan "Joined · picked 3 lenses", Leo "Joined · picked 2 lenses",
+    Ava "Joined · kids' view with I Spy".
+  - **+ Invite someone** → pretend share sheet (Messages · WhatsApp · Copy link); nothing is
+    sent; closes with "Invite ready — in the real app this sends a link." Logged.
+  - Card: "Why invite them? At the same stop, each of you hears the story that fits you."
+  - Deliberately absent: price or the household pass (would anchor H11's "who would it need to
+    cover?") and comparing stories at dinner (tested by 7.2 and the step 7 questions, H3).
 
 ---
 
@@ -104,6 +111,17 @@ people")*
 - **Must-sees** (Maya's, pre-filled chips): 9/11 Memorial · Statue of Liberty · The Met ·
   Central Park. A faint "+ Add" chip.
 - **Booked:** "Statue of Liberty ferry · Fri 2:00 PM" (a ticket row).
+- **Adding a must-see (revised 2026-09-18, reviewer feedback: "let the user see what adding a
+  must-see looks like"):** "+ Add" opens a search sheet ("Search New York…") over a fixed list
+  of ~8 corpus landmarks; typing filters it; tapping one adds a chip with a small pop.
+  Every option lands on a day other than Friday (Friday stays scripted) ⚑:
+  Empire State Building, Grand Central Terminal, The High Line → Thu; Solomon R. Guggenheim
+  Museum, American Museum of Natural History → Sat; Brooklyn Bridge Park → Sun. Top of the Rock
+  and the Brooklyn Bridge are already planned, so they answer "Already on Thursday/Sunday"
+  instead of being added twice. Anything typed that is not listed: "Try one of these for the
+  demo." The four pre-filled must-sees cannot be removed. On 2.3 the added place
+  shows as a ★ on its day card with a one-line why, e.g. "Added to Thursday — it's near your
+  Midtown arrival." Log: sheet opened, search text, place added.
 - Button **Build my trip**.
 - Caption: *"Tell it what you already want to see. It plans everything around that."*
 
@@ -176,7 +194,7 @@ people")*
 - **Shorter day** → a sheet: "Want to finish earlier? We'd drop Fraunces Tavern and walk
   straight to the ferry." with **Do it** / **Not now** (either returns to the walk; the
   path continues as scripted) ⚑.
-- **Ask about this** → see 3.4.
+- ~~**Ask about this**~~ → no longer a lever; it is its own always-visible button (3.4). *(Revised 2026-09-18, reviewer feedback: Ask vanished between stops and read as "waiting to be prompted".)*
 - None are announced. Log every tap with the stop and time.
 - ⚑ "Find me coffee" was dropped: the corpus has no café data and the prototype must not
   invent any.
@@ -193,7 +211,16 @@ people")*
     Revolutionary War."
 - Caption: *"Dan is standing right next to you. He's hearing a completely different story."*
 
-**3.4 Ask about this** — *a sheet from the now-playing card*
+**3.4 Ask about this** — *a persistent round Ask button, top right of the walk map (opposite
+the close X), opening a sheet* — **revised 2026-09-18**
+- Visible on every on-the-ground screen: walking between stops, at a stop, the walk-past, the
+  Deep dive (5.2), the Echoes camera (5.3–5.4) and Maya's phone in 6.1. Not on the planning
+  screens (steps 1–2): trip-level Q&A would be a new feature.
+- A Sourced answer is always about a place, so the sheet names the nearest one: at a stop, that
+  stop; between stops, the stop being walked to; in the ferry line, Castle Clinton and the Statue
+  of Liberty. Suggested chips stay; the field reads "or ask your own".
+- Never announced (interview guide rule unchanged): H6 still measures whether they use it,
+  but not whether they can find it.
 - Field "Ask about Federal Hall…" plus three suggested chips. Each answer is real corpus
   text, shown with "From our notes on Federal Hall":
 
@@ -260,6 +287,22 @@ and "Playing out loud · 4 listening"*
   player).
 - Caption: *"The whole family hears this together, from one phone."*
 
+**Echoes everywhere (revised 2026-09-18, reviewer feedback: "why can I only add or see an
+echo at that one point")**
+- The walk map (3.1–4.2) shows an echo count badge at every stop.
+- A camera button sits beside the Ask button on every walk screen. At any stop it opens that
+  stop's camera view: a royalty-free photo of the place with 1–2 Echoes over it, the same
+  reactions, and **Leave an echo** (5.4). Logged: camera opened, stop, reactions.
+- ⚑ About 2 Echoes per stop, built only from the templates and word lists and grounded in
+  that stop's beats; drafted by Claude for founder review.
+- 5.3 stays the scripted moment at Castle Clinton (it opens as part of the flow) and is where
+  the H8 questions are asked.
+- **Camera simulation (founder, 2026-09-18):** each camera view is a wide landscape photo
+  behind a portrait viewfinder that pans slowly left and right, as if the phone were moving.
+  Echoes are pinned to points in the photo, so they drift with the scene and slide in and
+  out at the edges like AR labels. The traveller can drag to look around; the auto-pan
+  resumes after a few seconds. Viewfinder chrome (corner brackets) marks it as the camera.
+
 **5.3 Look around — Echoes** — *camera view: a real photo of the Castle Clinton courtyard
 and harbor as the "camera feed" ⚑ source: public-domain / Wikimedia*
 - Three Echoes float over the scene, each a small card with its reaction counts:
@@ -307,7 +350,10 @@ and harbor as the "camera feed" ⚑ source: public-domain / Wikimedia*
   photos. Log the choice.
 - Caption: *"This part uses your own photos — if you let it."*
 
-**7.2 Friday, told back** — *the Day recap, one scrolling screen, evening colours*
+**7.2 Friday, told back** — *revised 2026-09-18: real photos in the strip and a photo behind
+the header stats; otherwise unchanged and calm — it is the dinner screen (H3). No stickers or music.*
+
+**7.2 (original spec)** — *the Day recap, one scrolling screen, evening colours*
 - Header "Friday · Lower Manhattan" · 3.1 mi · 6 stops · 14 stories ⚑.
 - Photo strip matched to stops (placeholder family-trip photos, labelled by stop and time).
 - **Same spot, four stories** (the main block) — Federal Hall:
@@ -320,6 +366,29 @@ and harbor as the "camera feed" ⚑ source: public-domain / Wikimedia*
   suggested ones, shown as Maya's).
 - **Your echo:** the one left in 5.4, "found by 3 people so far" ⚑.
 - Caption: *"Tonight at dinner: what everyone heard, side by side."*
+
+**7.3 is the showpiece (decided 2026-09-18, reviewer feedback: "make the wrap-up pop"):**
+story-style full-screen cards with photo backgrounds behind the stats, stickers, a tap-to-change
+filter, music underneath and a pretend share. Details below as decided.
+- **Stickers and filters (2026-09-18):** cards 1–4 each get a full-bleed photo and one or two
+  stickers that pop in. Sticker text comes only from this trip, never invented ⚑: "Parthenon of
+  Wall Street" (Maya's Federal Hall story), "7 points!" (Ava's I Spy), "Hamilton's grave ✓"
+  (Trinity), "11.4 mi 👟", "41 stories", and their own echo if they left one. Card 5 (share)
+  is a small editor: a filter row under the collage (Original · Golden hour · Harbor · Mono,
+  applied live) and a sticker tray from the same set (tap to add, drag to place, tap again to
+  remove). Logged: filter chosen, stickers added and removed, time spent editing (H10 signal).
+- **Music (founder, 2026-09-18): no audio track for now.** The share-card editor has an
+  **♪ Add music** button → a pretend picker, "Add a song from your library" (Apple Music ·
+  Spotify); choosing adds a "♪ Your song" chip with the note "In the real app, this plays a
+  song from your library under your recap." No sound, no track names, nothing to license.
+  Logged.
+- **Share (2026-09-18):** opens a share sheet of plain labelled options, never a copy of any
+  platform's interface: **Send to your party** (Dan, Leo & Ava) first, then Instagram Story ·
+  TikTok · WhatsApp · Messages · Copy link. Choosing one shows the edited card in a neutral
+  9:16 story frame with a small "made with Ondoway" mark and "Ready to post — in this demo
+  nothing is shared." Party share shows "Sent to Dan, Leo & Ava (demo)" with three avatars
+  ticking. **Keep it** ("Make it a keepsake", no price, no format) stays beside Share. Logged:
+  Share tapped, option chosen; the interviewer's "I just asked" mark codes it U or P for H10.
 
 **7.3 Your trip, the whole thing** — *the Trip recap, flourish: 5 full-screen cards, tap
 to advance*
@@ -357,17 +426,21 @@ once."
 
 | Step | Min |
 |---|---|
-| 1 Lenses | 3 |
+| 1 Lenses | 2 |
 | 2 Planning | 6 |
 | 3 Walk + companion + Ask | 7 |
 | 4 Day changes | 3 |
-| 5 Deep dive + Echoes | 6 |
+| 5 Deep dive + Echoes | 5 |
 | 6 I Spy | 2 |
-| 7 Recap | 3 |
+| 7 Recap | 5 |
 | **Total** | **30** |
 
-Cut order when over time: **5.4 Leave an echo** → **7.3 Trip recap** → **step 6 to its
-first find only**. Never cut 2.4 (Skip advice), 3.3 (companion) or 7.2 (Day recap).
+*Revised 2026-09-18: step 1 −1 (no sample line to read), step 5 −1 (echoes met on the walk),
+step 7 +2 (the 7.3 editor and share). The interview guide matches these numbers.*
+
+Cut order when over time: **5.4 Leave an echo** → **step 6 to its first find only** →
+**7.3 Trip recap** (revised 2026-09-18: 7.3 is now the showpiece, so it is cut last). Never cut
+2.4 (Skip advice), 3.3 (companion) or 7.2 (Day recap).
 
 ## What gets logged
 
@@ -375,6 +448,23 @@ Per session, exportable from the interviewer view: every tap with screen id and
 timestamp; lens toggles (1.1); lever taps and Ask use with text (3.2, 3.4); re-plan
 choice (4.1); line length (5.1); Echo reactions and the echo left (5.3–5.4); I Spy finds
 (6.1); photo permission (7.1); time on each screen; the final ranking order.
+
+## Photos (decided 2026-09-18, reviewer feedback: "royalty-free photos throughout")
+
+- **Slots:** 0.1 hero (family on a city street); 2.3 day cards and 2.4 stop cards (small
+  thumbnail of each place); the now-playing card (the stop's photo replaces the headphones
+  tile); every stop's camera view (wide landscape, see Echoes everywhere); 5.2 Deep dive art
+  (the statue); 7.2 and 7.3 stand-ins for Maya's own photos (family-at-landmark, not postcards).
+- **Sources:** landmarks from Wikimedia Commons, public domain or CC0 only; people and family
+  shots from Unsplash or Pexels. Files stored in `prototype/img/`, never hot-linked;
+  `prototype/CREDITS.md` records source URL and licence per image.
+- **Process:** Claude searches and shows a contact sheet (thumbnail, source, licence, size);
+  the founder approves before anything is downloaded.
+- **Chosen 2026-09-18** (founder: "all recommended, plus both suggestions"): 16 photos in
+  `prototype/img/`, credited in `prototype/CREDITS.md`. The Castle Clinton camera uses a CC0
+  Statue of Liberty harbor panorama (no free photo shows the fort with the harbor). The
+  Charging Bull has no free photo, so the Bowling Green echo "Best photo: the bull" became
+  "Look up at the old Standard Oil building" (grounded in the Bowling Green beats).
 
 ## Content still owed before the pilot
 

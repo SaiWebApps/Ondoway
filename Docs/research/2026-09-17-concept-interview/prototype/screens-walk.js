@@ -12,7 +12,7 @@ function stopScreen({ leg, story, more, where, meta, time }) {
     render({ maya }) {
       Walk.dropped = false;
       Walk.pos = PATHS[leg][0].slice();
-      const w = walkScaffold(maya);
+      const w = walkScaffold(maya, { where });
       setWalking(w, true);
       let moreUsed = false;
       // If "Tell me more" started during the hold, its own end moves the walk on.
@@ -25,7 +25,7 @@ function stopScreen({ leg, story, more, where, meta, time }) {
         playOn(w, C.stories[more], meta + " · more", () => finish());
       };
       wirePlayer(w, { onNext: () => App.next(), onPrev: playMain, onReplay: playMain });
-      wireLevers(maya, w, { more: playMore, where });
+      wireLevers(maya, w, { more: playMore });
       Walk.move(maya, PATHS[leg], LEG_MS, () => { App.record("system", "arrived", { stop: C.stories[story].poi }); playMain(); });
     },
   };
@@ -40,7 +40,7 @@ App.def("3.3", {
   render({ maya, dan }) {
     Walk.dropped = false;
     Walk.pos = PATHS["3.3"][0].slice();
-    const wm = walkScaffold(maya);
+    const wm = walkScaffold(maya, { where: "federal" });
     const wd = walkScaffold(dan, { levers: false, closeX: false });
     setWalking(wm, true); setWalking(wd, true);
     wd.insertAdjacentHTML("afterbegin", `<div class="whose">${icon("person")}Dan's phone</div>`);
@@ -63,7 +63,6 @@ App.def("3.3", {
     $(".np-play", wm).onclick = () => { if (Player.active && Player.story === fm) App.togglePause(); else playMaya(); };
     wireLevers(maya, wm, {
       more: () => { focus("maya"); playOn(wm, C.stories.fh_more, "Stop 3 of 6 · more", () => { played.maya = true; if (!played.dan) playDan(); else done(); }); },
-      where: "federal",
     });
     Walk.move(maya, PATHS["3.3"], LEG_MS, () => { App.record("system", "arrived", { stop: "Federal Hall" }); playMaya(); });
   },
@@ -76,7 +75,7 @@ App.def("4.1", {
   render({ maya }) {
     Walk.dropped = false;
     Walk.pos = PTS.federal.slice();
-    const w = walkScaffold(maya, { levers: false });
+    const w = walkScaffold(maya, { levers: false, where: "federal" });
     setWalking(w, true);
     $(".walkbar span:not(.ms)", w).textContent = "Still at Federal Hall";
     const r = C.replan;
@@ -109,13 +108,13 @@ App.def("4.2", {
   render({ maya }) {
     Walk.dropped = true;
     Walk.pos = PTS.federal.slice();
-    const w = walkScaffold(maya);
+    const w = walkScaffold(maya, { where: "bowling" });
     setWalking(w, true);
     let storyDone = false, arrived = false;
     const maybeNext = () => storyDone && arrived && wait(1500, () => App.next("4.2"));
     const s = C.stories.bowling;
     wirePlayer(w, { onNext: () => App.next(), onPrev: () => playOn(w, s, "On the way · walking past", null), onReplay: () => playOn(w, s, "On the way · walking past", null) });
-    wireLevers(maya, w, { more: () => toast(maya, "That's every story here in your lenses."), where: "bowling" });
+    wireLevers(maya, w, { more: () => toast(maya, "That's every story here in your lenses.") });
     Walk.move(maya, PATHS["4.2a"], 5000, () => {
       playOn(w, s, "On the way · walking past", () => { storyDone = true; maybeNext(); });
       w.classList.add("passing");

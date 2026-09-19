@@ -21,10 +21,12 @@ const Walk = {
   mapSvg() {
     const pin = (k, label, n, opts = {}) => {
       const [x, y] = PTS[k];
+      const ec = C.stopNames[k] ? echoCount(k) : 0;
       return `<g class="pin${opts.dim ? " dim" : ""}${opts.must ? " must" : ""}" transform="translate(${x},${y})">
         <circle r="${opts.must ? 11 : 9}"/>${n ? `<text y="4" text-anchor="middle">${n}</text>` : ""}
         <text class="plabel" x="${opts.left ? -15 : 15}" y="4" text-anchor="${opts.left ? "end" : "start"}">${label}</text>
-        ${opts.dim ? `<line x1="-10" y1="-10" x2="10" y2="10"/>` : ""}</g>`;
+        ${opts.dim ? `<line x1="-10" y1="-10" x2="10" y2="10"/>` : ""}
+        ${ec ? `<g class="ebadge" transform="translate(${opts.left ? 6 : -30},-26)"><rect width="26" height="16" rx="8"/><text x="13" y="12" text-anchor="middle">◉ ${ec}</text></g>` : ""}</g>`;
     };
     const route = [PTS.start, [132, 128], PTS.memorial, [140, 214], [160, 262], PTS.trinity, [204, 286], PTS.federal,
       ...(this.dropped ? [[240, 350], [214, 430], PTS.bowling] : [[256, 360], PTS.fraunces, [214, 480], PTS.bowling]),
@@ -83,17 +85,19 @@ function wait(ms, fn) {
 }
 
 // ---- Walk screen scaffold: map + walking bar + (levers + now-playing card)
-function walkScaffold(el, { levers = true, closeX = true } = {}) {
+const POI_IMG = { "9/11 Memorial": "memorial_wide", "Trinity Church": "trinity_wide", "Federal Hall": "federal_wide", "Bowling Green": "bowling_wide", "Castle Clinton": "castle_wide", "Statue of Liberty": "liberty" };
+// `where` = the stop Ask and the camera are about: the stop you're at or walking to.
+function walkScaffold(el, { levers = true, closeX = true, where = null } = {}) {
   el.insertAdjacentHTML("beforeend", `<div class="walk">
     ${Walk.mapSvg()}
     ${closeX ? `<button class="walk-x" data-log="Close walk (X)">${icon("close")}</button>` : ""}
+    ${where ? `<div class="map-tools"><button class="tool ask-btn" data-log="Ask button" data-detail='{"where":"${where}"}'>${icon("forum", "fill")}<span>Ask</span></button><button class="tool cam-btn" data-log="Camera button" data-detail='{"where":"${where}"}'>${icon("photo_camera", "fill")}<span>Echoes</span></button></div>` : ""}
     <div class="walkbar">${icon("directions_walk")}<span>Walk to the next stop — audio starts on arrival</span></div>
     <div class="np-wrap">
       ${levers ? `<div class="levers">
         <button data-lever="more" data-log="Lever: Tell me more">${icon("add_circle")}Tell me more</button>
         <button data-lever="skip" data-log="Lever: Skip this stop">${icon("skip_next")}Skip this stop</button>
         <button data-lever="short" data-log="Lever: Shorter day">${icon("schedule")}Shorter day</button>
-        <button data-lever="ask" data-log="Ask about this (opened)">${icon("forum")}Ask about this</button>
       </div>` : ""}
       <div class="np card">
         <div class="np-top">
@@ -116,12 +120,15 @@ function walkScaffold(el, { levers = true, closeX = true } = {}) {
   const tx = $(".np-tx", w);
   $(".np-text", w).onclick = () => { tx.hidden = !tx.hidden; $(".np-text", w).classList.toggle("on", !tx.hidden); };
   $(".walk-x", w) && ($(".walk-x", w).onclick = () => toast(el, "The walk keeps going — this is the only route in the prototype."));
+  if (where) wireTools(el, w, where);
   return w;
 }
 function setWalking(w, walking) { w.classList.toggle("walking", walking); }
 // Fill the card for a story and play it. Returns nothing; onEnd fires when it finishes.
 function playOn(w, story, meta, onEnd) {
   const l = lensOf(story.lens);
+  const slot = POI_IMG[story.poi];
+  $(".np-tile", w).innerHTML = slot && C.img[slot] ? pic(slot, story.poi) : icon("headphones");
   $(".np-lens", w).textContent = l.label;
   $(".np-name", w).textContent = story.poi;
   $(".np-stop", w).textContent = meta;
@@ -178,8 +185,9 @@ function askSheet(el, where) {
   const a = C.ask[where] || { place: Player.story ? Player.story.poi : "this place", chips: [] };
   withStoryHeld((resume) => {
     const s = sheet(el, `<div class="eyebrow">Ask about this</div>
-      <form class="askf" id="askf"><input id="askq" autocomplete="off" placeholder="Ask about ${esc(a.place)}…"><button class="askgo" data-log="Ask: send typed">${icon("arrow_upward")}</button></form>
+      <h2 class="h2" style="margin-top:4px">${esc(a.place)}</h2>
       <div class="chips" style="margin-top:12px">${a.chips.map((c, i) => `<button class="askchip" data-i="${i}" data-log="Ask chip" data-detail='${JSON.stringify({ q: c.q }).replace(/'/g, "&#39;")}'>${esc(c.q)}</button>`).join("")}</div>
+      <form class="askf" id="askf"><input id="askq" autocomplete="off" placeholder="Or ask your own about ${esc(a.place)}…"><button class="askgo" data-log="Ask: send typed">${icon("arrow_upward")}</button></form>
       <div id="askans"></div>`, resume);
     const ans = $("#askans", s.scrim);
     const show = (q, text, sourced) => {
@@ -204,6 +212,19 @@ function wireLevers(el, w, { more, where }) {
     if (k === "more") more();
     if (k === "skip") { Player.stop(); App.next(); }
     if (k === "short") shorterDaySheet(el);
-    if (k === "ask") askSheet(el, where);
   }));
+}
+
+// Ask + camera buttons on the map (revised 2026-09-18): always visible on the ground.
+function wireTools(el, w, where) {
+  $(".ask-btn", w).onclick = () => askSheet(el, where);
+  $(".cam-btn", w).onclick = () => openStopCamera(el, where);
+}
+function openStopCamera(el, where) {
+  const stop = where === "memorial" || where === "trinity" || where === "federal" || where === "bowling" || where === "castle" ? where : "castle";
+  App.record("system", "camera opened", { stop });
+  cameraView(el, stop, { overlay: true, onClose: () => {
+    // Echo counts on the map may have changed.
+    document.querySelectorAll(".map").forEach((m) => { const pos = Walk.pos; m.outerHTML = Walk.mapSvg(); Walk.pos = pos; });
+  } });
 }

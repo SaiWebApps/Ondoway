@@ -104,18 +104,19 @@ records what they touched; you record what they *said*.
 - **Comfort question:** "Would you be comfortable letting something plan your day like
   this? What would you need to see to trust it?" — probe any "no" to the reason.
 
-**Step 3 · The walk (8 min)** — tests **H5: different stories per person**, **H6: Ask**
+**Step 3 · The walk (7 min)** — tests **H5: different stories per person**, **H6: Ask**
 - Say nothing while the story plays. Watch whether they listen or skip.
 - After the Federal Hall pair: "What do you make of that — the two of them standing in
   the same spot?" → "Would that be good or bad for your group? Why?"
-- Do **not** mention "Ask about this" or the lever buttons. If never touched by the end of
+- Do **not** mention the Ask button, the camera button or the lever buttons (Ask is always
+  visible from 2026-09-18, so H6 measures use, not discovery). If never touched by the end of
   step 4: "Was there anything you wanted to know that it didn't tell you?" → code **P**.
 
 **Step 4 · The day changes (3 min)**
 - After the re-plan: "What just happened?" (tests whether it explained itself)
 - "Is that what you'd want it to do? What would you have done without it?"
 
-**Step 5 · In line — Deep dive + Echoes (6 min)** — tests **H7**, **H8**
+**Step 5 · In line — Deep dive + Echoes (5 min)** — tests **H7**, **H8**
 - After a minute of the Deep dive: "Would you play this out loud, standing in the Statue
   of Liberty ferry line?" → probe the reason either way.
 - After Echoes: "Would you leave one?" · "If these were only on a map, not in the camera,
@@ -127,10 +128,12 @@ records what they touched; you record what they *said*.
   already answered in part 2)
 - "Would this change that?"
 
-**Step 7 · The day and trip recap (3 min)** — tests **H3** (prompted), **H10**
+**Step 7 · The day and trip recap (5 min)** — tests **H3** (prompted), **H10**
 - The photo-permission prompt: note what they chose and what they said before choosing.
 - "What would you do with this?"
 - "Is this something you'd look at at dinner, or later, or never?"
+- Before asking about sharing, press **I just asked** in the interviewer view: a Share tap
+  after it is coded P, before it U.
 - "Would you share it? Where?"
 
 ---

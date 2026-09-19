@@ -24,7 +24,8 @@ never narrates a screen or clicks anything for them.
 | 3 | Walkthrough, 7 steps (screen by screen: `script.md`) | 30 | 1 Lenses · 2 Planning the day (Stop reasons, Skip advice) · 3 Walk with real audio + text, companion at Federal Hall, Ask · 4 Day changes (timed ferry) · 5 In line: Deep dive + Echoes · 6 I Spy · 7 Day + Trip recap. Questions: `interview-guide.md`. |
 | — | Close, **off the phone**, plain shared screen | 7 | Rank the feature cards → "what would you use instead?" → unanchored "what's it worth for your trip?" → show Solo/Pair $12–19 vs Household $29–49 → "who would it need to cover?" → "would the others in your party install it?" |
 
-**Cut order when over time:** Leave an echo → Trip recap → I Spy to one find.
+**Cut order when over time:** Leave an echo → I Spy to one find → Trip recap (revised
+2026-09-18: the Trip recap became the showpiece, so it is cut last).
 **Never cut:** parts 1–2, the Skip advice, the Federal Hall companion moment, the Day
 recap, the close. Cut steps still appear as ranking cards.
 

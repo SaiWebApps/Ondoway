@@ -44,16 +44,6 @@ window.CONTENT = {
     ["science_tech", "Science & Technology", "#3D6EA6", "science"],
   ],
 
-  // 1.1 — "What you'd hear at Federal Hall", opening line per lens (real beats).
-  federalHallPreview: {
-    historic_arch: "On the northeast corner of Nassau and Wall stands Federal Hall National Memorial, dubbed the “Parthenon of Wall Street.”",
-    war_conflict: "Before its federal function, the building on this site teemed with the birth pangs of the republic.",
-    social_change: "In this former British City Hall — transformed into ‘Federal Hall’ when the Brits quit the city…",
-    dark_history: "Note the austere building across the street; it was the headquarters of banker J. P. Morgan…",
-    hidden_history: "Inside, visitors can see the Bible that Washington used for his oath of office…",
-    other: "Your tours will lean toward {lens}. At this stop, Maya's other lenses lead.",
-  },
-
   // 2.1
   plan: {
     city: "New York",
@@ -199,11 +189,11 @@ window.CONTENT = {
     ],
   },
 
-  // 5.3 Echoes (traveller-made, never voiced). Counts ⚑.
+  // 5.3 Echoes (traveller-made, never voiced). Counts ⚑. x/y are % positions in the panorama.
   echoes: [
-    { kind: "Look right →", text: "Ellis Island — the four little spires", x: 48, y: 36, counts: { found: 214, worth: 0, ha: 0 } },
-    { kind: "Worth it:", text: "the round walls — this was a fort in 1812", x: 16, y: 58, counts: { found: 0, worth: 88, ha: 0 } },
-    { kind: "Best photo:", text: "the statue, from the railing", x: 20, y: 17, counts: { found: 0, worth: 140, ha: 3 } },
+    { kind: "Look right →", text: "Ellis Island — the four little spires", x: 84, y: 58, counts: { found: 214, worth: 0, ha: 0 } },
+    { kind: "Worth it:", text: "the round walls — this was a fort in 1812", x: 38, y: 80, counts: { found: 0, worth: 88, ha: 0 } },
+    { kind: "Best photo:", text: "the statue, from the railing", x: 30, y: 30, counts: { found: 0, worth: 140, ha: 3 } },
   ],
   // 5.4
   echoTemplates: ["Look ___ at ___", "Worth it: ___", "Skip: ___", "Best photo: ___", "Don't miss ___"],
@@ -255,7 +245,7 @@ window.CONTENT = {
   // Captions — the one line under each screen. Product copy from script.md, in full.
   captions: {
     "0.1": "Click through as if this were your phone. Think out loud.",
-    "1.1": "Pick what you're into. Watch how the same place tells a different story.",
+    "1.1": "Pick what you're into. Tap any lens to see what it covers.",
     "1.2": "Everyone brings their own phone and their own interests.",
     "2.1": "Tell it what you already want to see. It plans everything around that.",
     "2.2": "Tell it what you already want to see. It plans everything around that.",
@@ -277,3 +267,177 @@ window.CONTENT = {
     "7.4": "",
   },
 };
+
+// ---------------------------------------------------------------- Revision 2026-09-18
+// Decisions from the 2026-09-18 grilling (script.md, dated 'revised 2026-09-18').
+// ⚑ = drafted by Claude for founder review. Ask answers below are generated verbatim from
+// data/new_york/beats.json by beat id.
+Object.assign(window.CONTENT.ask, {
+ "memorial": {
+  "place": "the 9/11 Memorial",
+  "chips": [
+   {
+    "q": "What's in the museum?",
+    "beat": "newyork_9_11_memorial_and_museum_hidden_history_frommers-nyc-2024_ground_zero_cross",
+    "a": "Among the artifacts museumgoers encounter is the famous Ground Zero cross — a severed chunk of metal beams that accidentally formed this Christian symbol — alongside a squashed fire truck. A thought-provoking section explores the rise of Al Qaeda; you can even see a brick from Bin Laden's Abbottabad compound. The Memorial Room tells the story and shows the face of every person who died on 9/11."
+   },
+   {
+    "q": "What's the white building?",
+    "beat": "new_york_9_11_memorial_and_museum_modern_design_lonely-planet-new-york-city_calatrava_oculus",
+    "a": "The image of a flying dove allegedly inspired Santiago Calatrava's dramatic white Oculus above the new WTC Transportation Hub. Made from 36,500 tons of steel, the arresting structure streams natural light into the $3.9-billion transit center, which serves 250,000 train commuters daily. A whopping 2.5 times bigger than Grand Central Terminal, it also features multiple levels of retail and dining space. Every year on September 11, the central skylight is opened for 102 minutes, the length of time from the first attack to the collapse of the second tower."
+   }
+  ]
+ },
+ "bowling": {
+  "place": "Bowling Green",
+  "chips": [
+   {
+    "q": "What's the bull about?",
+    "beat": "newyork_bowling_green_park_visual_art_frommers-nyc-2024_charging_bull_guerrilla",
+    "a": "At the uptown end of the park stands Charging Bull. In 1989, a recession inspired artist Arturo Di Modica to create the sculpture as a symbol of bull markets to come. The city hadn't asked for this work of boosterism: Di Modica trucked it over to Wall Street in the dead of night and dumped it below a giant Christmas tree in front of the New York Stock Exchange. The seven-thousand-pound statue proved so popular that the city decided to let the 'gift' stay — though not in its original spot."
+   },
+   {
+    "q": "Why is it called Bowling Green?",
+    "beat": "newyork_bowling_green_park_parks_gardens_frommers-nyc-2024_first_park_fort_george",
+    "a": "This was the city's first official park, established in 1733. Had you been a soldier during the British Colonial era, you'd have been stationed at the fort that once stood here, Fort George, and likely passed your leisure time lawn bowling where the park now stands — hence the name, Bowling Green Park."
+   }
+  ]
+ },
+ "castle": {
+  "place": "Castle Clinton and the Statue of Liberty",
+  "chips": [
+   {
+    "q": "Can we climb to the crown?",
+    "beat": "new_york_statue_of_liberty_local_legends_lonely-planet-new-york-city_crown_162_steps",
+    "a": "Visitors who reserve in advance can climb the steep 162 steps from the pedestal level up to Lady Liberty's crown, where the city and harbor views are breathtaking. Crown access is extremely limited, with up to a six-month lead time, a maximum of four tickets per customer, and children required to be at least 42in (3.5ft) tall."
+   },
+   {
+    "q": "What was this fort for?",
+    "beat": "newyork_castle_clinton_war_conflict_frommers-nyc-2024_west_battery_fort_1807",
+    "a": "This circular stone structure — taller in some earlier incarnations — has been at the center of New York life over the years. In 1807, the West Battery, as it was then called, was built as a fort on a landfill island in the water off Manhattan, to ward off British invasions. It never saw action, however: during the War of 1812 the British attacked Washington, D.C., instead. In 1817 it was renamed Castle Clinton in honor of Mayor De Witt Clinton, and in 1823 the federal government ceded the site to the city."
+   }
+  ]
+ }
+});
+
+Object.assign(window.CONTENT, {
+  // 1.1 — ⚑ one line per lens, rewritten for travellers from the extraction definitions in
+  // .claude/commands/beat-from-book.md. They say only what that lens's stories are about.
+  lensInfo: {
+    hidden_history: "The surprising stories most visitors never hear — the “I had no idea” details.",
+    war_conflict: "Battles, sieges, occupations and resistance: what was fought over here.",
+    dark_history: "Crime, scandal, disaster and tragedy: the unsettling side of a place.",
+    social_change: "Protests, movements and power shifts: where people changed the rules.",
+    historic_arch: "How buildings were designed and built: the architects, materials and styles.",
+    modern_design: "Architecture and city design from the 20th century on, and the thinking behind it.",
+    music_heritage: "The musicians, performances and sounds tied to a place.",
+    visual_art: "Paintings, sculpture and the artists behind them.",
+    street_art: "Murals, graffiti and the art out on the street itself.",
+    film_tv: "The films and shows shot right here: the scene, the director, the story behind it.",
+    historic_cuisine: "Legendary restaurants and chefs, and where famous dishes began.",
+    markets_street_food: "Markets and street food, and the people who made them.",
+    local_legends: "Folklore, myths, ghost stories and the tales locals love to tell.",
+    literary_heritage: "Writers, and the books, poems and plays tied to a place.",
+    famous_residents: "The people who lived and worked here, and what happened to them.",
+    historic_worship: "The history of houses of worship and the communities around them.",
+    sacred_traditions: "Rituals, pilgrimages and spiritual practices tied to a place.",
+    parks_gardens: "The history and character of parks and green spaces.",
+    waterways_views: "Rivers, harbors, bridges — and the best views.",
+    historic_markets: "Shopping streets, trade and the business of the city.",
+    science_tech: "Inventions, discoveries and engineering firsts.",
+  },
+
+  // 1.2 — party copy
+  partyHow: "Invite your party with a link. Each person joins on their own phone and picks their own lenses.",
+  partyWhy: "Why invite them? At the same stop, each of you hears the story that fits you.",
+  partyStatus: { dan: "Joined · picked 3 lenses", leo: "Joined · picked 2 lenses", ava: "Joined · kids' view with I Spy" },
+  inviteVia: ["Messages", "WhatsApp", "Copy link"],
+  inviteDone: "Invite ready — in the real app this sends a link.",
+
+  // 2.1 — ⚑ must-sees that can be added; each lands on a day other than Friday.
+  mustSeeOptions: [
+    { name: "Empire State Building", day: "Thu", why: "Added to Thursday — it's near your Midtown arrival." },
+    { name: "Grand Central Terminal", day: "Thu", why: "Added to Thursday — it's near your Midtown arrival." },
+    { name: "Top of the Rock", day: "Thu", why: "Already on Thursday — it's your sunset.", already: true },
+    { name: "The High Line", day: "Thu", why: "Added to Thursday — its north end is a short walk from Midtown." },
+    { name: "Solomon R. Guggenheim Museum", day: "Sat", why: "Added to Saturday — it's on Fifth Avenue, by the Park and the Met." },
+    { name: "American Museum of Natural History", day: "Sat", why: "Added to Saturday — it's just across Central Park." },
+    { name: "Brooklyn Bridge", day: "Sun", why: "Already on Sunday — you walk it on the way to DUMBO.", already: true },
+    { name: "Brooklyn Bridge Park", day: "Sun", why: "Added to Sunday — it's right under the bridge." },
+  ],
+  mustSeeNotFound: "Try one of these for the demo.",
+
+  // Echoes at every stop ⚑ — templates + word lists only, grounded in each stop's beats.
+  // x/y are % positions IN THE PHOTO (the camera pans across it).
+  stopNames: { memorial: "9/11 Memorial", trinity: "Trinity Church", federal: "Federal Hall", bowling: "Bowling Green", castle: "Castle Clinton" },
+  stopEchoes: {
+    memorial: [
+      { kind: "Don't miss", text: "the names", x: 18, y: 62, counts: { found: 0, worth: 312, ha: 0 } },
+      { kind: "Look left", text: "at the Oculus", x: 4, y: 18, counts: { found: 96, worth: 0, ha: 0 } },
+    ],
+    trinity: [
+      { kind: "Don't miss", text: "the bronze doors", x: 50, y: 82, counts: { found: 0, worth: 131, ha: 0 } },
+      { kind: "Look behind you", text: "at Hamilton's grave", x: 10, y: 50, counts: { found: 203, worth: 0, ha: 0 } },
+    ],
+    federal: [
+      { kind: "Worth it:", text: "the rotunda", x: 50, y: 62, counts: { found: 0, worth: 177, ha: 0 } },
+      { kind: "Look behind you", text: "at the J. P. Morgan building", x: 70, y: 20, counts: { found: 88, worth: 0, ha: 4 } },
+    ],
+    bowling: [
+      { kind: "Don't miss", text: "the fence", x: 22, y: 38, counts: { found: 0, worth: 64, ha: 0 } },
+      { kind: "Look up", text: "at the old Standard Oil building", x: 58, y: 12, counts: { found: 97, worth: 0, ha: 0 } }, // founder 2026-09-18: the Charging Bull has no free photo
+    ],
+  },
+  echoThingsByStop: {
+    memorial: ["the pools", "the names", "the oak trees", "the Oculus", "the museum"],
+    trinity: ["the spire", "the bronze doors", "Hamilton's grave", "the churchyard", "the ship-shaped tomb"],
+    federal: ["Washington's statue", "the steps", "the rotunda", "the J. P. Morgan building", "the columns"],
+    bowling: ["the bull", "the fence", "the park", "the old Standard Oil building"],
+    castle: ["the statue", "the fort", "the harbor", "Ellis Island", "the ferry", "the view"],
+  },
+
+  // 7.3 — ⚑ stickers: only things that happened on this trip.
+  stickers: [
+    { id: "parthenon", text: "Parthenon of Wall Street", card: 2 },
+    { id: "crown", text: "7 points!", card: 3 },
+    { id: "hamilton", text: "Hamilton's grave ✓", card: 3 },
+    { id: "miles", text: "11.4 mi 👟", card: 1 },
+    { id: "stories", text: "41 stories", card: 1 },
+    { id: "architect", text: "The Architect", card: 2 },
+    { id: "echo", text: "My echo", card: 4, fromEcho: true },
+  ],
+  filters: [
+    { id: "original", label: "Original", css: "none" },
+    { id: "golden", label: "Golden hour", css: "sepia(.35) saturate(1.35) brightness(1.05) hue-rotate(-8deg)" },
+    { id: "harbor", label: "Harbor", css: "saturate(.85) hue-rotate(12deg) brightness(1.02) contrast(1.05)" },
+    { id: "mono", label: "Mono", css: "grayscale(1) contrast(1.1)" },
+  ],
+  musicServices: ["Apple Music", "Spotify"],
+  musicNote: "In the real app, this plays a song from your library under your recap.",
+  shareOptions: ["Send to your party", "Instagram Story", "TikTok", "WhatsApp", "Messages", "Copy link"],
+  shareDone: "Ready to post — in this demo nothing is shared.",
+  sharePartyDone: "Sent to Dan, Leo & Ava (demo)",
+
+  // Photo slots — approved by the founder 2026-09-18 from the contact sheet; sources and
+  // licences in CREDITS.md. null draws a labelled placeholder. *_wide and castle_camera are
+  // panned in the camera view (castle_camera = the harbor view from Castle Clinton).
+  img: {
+    hero_family: "img/hero_family.jpg",
+    memorial_wide: "img/memorial_wide.jpg",
+    trinity_wide: "img/trinity_wide.jpg",
+    federal_wide: "img/federal_wide.jpg",
+    fraunces_thumb: "img/fraunces_thumb.jpg",
+    bowling_wide: "img/bowling_wide.jpg",
+    castle_wide: "img/castle_wide.jpg",
+    liberty: "img/liberty.jpg",
+    day_thu: "img/day_thu.jpg",
+    day_sat: "img/day_sat.jpg",
+    day_sun: "img/day_sun.jpg",
+    recap_family_ferry: "img/recap_family_ferry.jpg",
+    recap_family_landmark: "img/recap_family_landmark.jpg",
+    recap_family_street: "img/recap_family_street.jpg",
+    recap_kid_looking: "img/recap_kid_looking.jpg",
+    castle_camera: "img/castle_camera.jpg",
+  },
+  imgAspect: {memorial_wide: 2.222, trinity_wide: 0.75, federal_wide: 1.333, bowling_wide: 1.333, castle_wide: 1.5, castle_camera: 2.292}, // width/height of each camera photo
+});
