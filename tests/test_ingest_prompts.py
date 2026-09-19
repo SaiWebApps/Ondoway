@@ -517,3 +517,33 @@ def test_decompose_asks_for_one_fact_per_claim_with_a_worked_example_from_rome()
         assert "Pantheon" in rendered
         assert "Guggenheim" not in rendered and "Eiffel" not in rendered
 
+
+def test_the_reask_prompt_carries_every_rule_the_first_ask_does():
+    """Slice 10 job A: the one omission re-ask regenerated the whole unit
+    under a REDO_PROMPT holding only the problems and the one-fact paragraph —
+    none of the first ask's rules — and came back with 424 claims (from 190),
+    16 phone numbers and websites as claims, and places the first pass had
+    named correctly now misnamed. A re-ask answers under exactly the rules the
+    first ask set: every pinned sentence, the kind and span sentences, the
+    one-fact rule — only the problems are added."""
+    redo = prompts.render_redo(UNIT_TEXT, ["omission: a fact"])
+    for sentence in PINNED_SENTENCES:
+        assert sentence in redo, sentence
+    for kind_word in PINNED_KIND_WORDS:
+        assert kind_word in redo, kind_word
+    assert "The span must be copied exactly from the passage below" in redo
+    assert "Every claim states exactly one fact about one subject" in redo
+    assert "- omission: a fact" in redo
+
+
+def test_the_tie_break_makes_a_room_inside_a_place_a_sub_location():
+    """Owner ruling B (2026-09-19): "the more specific place wins over its
+    parent" was read as licence to write "Metropolitan Museum of Art —
+    Egyptian galleries" as a place (job A's re-grouped pass made seven), each
+    then held as a new place. The rule now says a room, gallery, floor or
+    court inside a place is that place's sub_location, never a place — the
+    specific-place rule applies only between places of their own."""
+    assert "sub_location, never a place of its own" in prompts.TIE_BREAK
+    assert "only between places that are places in their own right" in prompts.TIE_BREAK
+    assert prompts.TIE_BREAK.startswith("The arc wins")
+

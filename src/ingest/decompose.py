@@ -32,11 +32,14 @@ survived rather than re-asking the model for a clean answer.
 the actual ClaimDraft construction) landed in steps 6-8, below.
 
 Slice 7 added `decompose(..., omitted=)`: the job runner's one P1 re-ask
-for a unit whose P3 omission check found facts no claim carries. With
-`omitted` given, the only ask is the re-ask (`prompts.render_redo` under
-`unit.custom_id(2)`, each fact quoted back as a problem), graded with
-attempt-2 semantics, so the unit's single re-ask is spent there and a
-third ask never happens.
+for a unit whose P3 omission check found facts no claim carries. Since
+slice 10 (owner ruling A, 2026-09-19) that ask is ADDITIVE: with `omitted`
+given, the only ask is `prompts.render_supplement` under `unit.custom_id(2)`
+— the first pass's claims (`existing=`) shown, claims asked for the omitted
+facts only — graded with attempt-2 semantics, returning only the new claims
+numbered after the existing ones; the unit's single re-ask is spent there
+and a third ask never happens. (Before, it regenerated the whole unit
+under a rule-less re-ask prompt and threw a good first pass away.)
 
 Step 6 added `decompose()`'s happy path: one `complete_batch()`
 call of exactly one prompt under `unit.custom_id(1)`, `parse_claims()` over
@@ -225,8 +228,9 @@ def parse_claims(text: str) -> list[dict] | None:
     return claims
 
 
-def _drafts(unit: Unit, items: list[dict]) -> list[ClaimDraft]:
-    """Build one ClaimDraft per item, numbered `c01`, `c02`, ... in order.
+def _drafts(unit: Unit, items: list[dict], start: int = 1) -> list[ClaimDraft]:
+    """Build one ClaimDraft per item, numbered `c01`, `c02`, ... in order
+    (from `c{start}` for the claims an omission re-ask adds).
 
     Numbering is applied AFTER any attempt-2 drop, so the ids a caller sees
     are always contiguous — a gap would read as a claim that went missing
@@ -239,7 +243,7 @@ def _drafts(unit: Unit, items: list[dict]) -> list[ClaimDraft]:
             kind=default_kind(item["kind"]),
             source=unit.source(item["span"]),
         )
-        for index, item in enumerate(items, start=1)
+        for index, item in enumerate(items, start=start)
     ]
 
 
@@ -249,15 +253,18 @@ def decompose(
     *,
     events: llm.EventSink | None = None,
     omitted: Sequence[str] = (),
+    existing: Sequence[ClaimDraft] = (),
 ) -> list[ClaimDraft]:
     """Turn one Unit's passage into a list of ClaimDraft via P1.
 
-    `omitted` is the runner's one P3 omission re-ask (spec §3): the facts
-    the judge found no claim carries. When given, the ONLY ask is the
-    re-ask — `prompts.render_redo` under `unit.custom_id(2)` with each
-    fact quoted back as a problem — and it is graded with attempt-2
-    semantics (a still-failing claim is dropped, never asked again), so
-    the unit's one P1 re-ask is spent here and a third ask never happens.
+    `omitted` is the runner's one P3 omission re-ask (spec §3, amended in
+    slice 10 by owner ruling A): the facts the judge found no claim
+    carries. When given, the ONLY ask is `prompts.render_supplement` under
+    `unit.custom_id(2)` — the `existing` claims shown, claims asked for the
+    omitted facts ONLY — graded with attempt-2 semantics (a failing claim is
+    dropped, never asked again), so the unit's one P1 re-ask is spent here
+    and a third ask never happens. It returns ONLY the new claims, numbered
+    after the highest existing id; the caller appends them.
 
     One `client.complete_batch()` call of exactly one prompt under
     `unit.custom_id(1)`; a clean answer (`parse_claims` succeeds) is
@@ -295,16 +302,18 @@ def decompose(
         if events is not None:
             events(kind, payload)
 
-    reasons: list[str] | None = (
-        [f"omission: the passage also states {fact!r} and no claim carries it" for fact in omitted]
-        or None
-    )
-    for attempt in (2,) if reasons else (1, 2):
-        prompt = (
-            prompts.render_decompose(unit.text)
-            if attempt == 1
-            else prompts.render_redo(unit.text, reasons)
-        )
+    supplement = bool(omitted)
+    start = 1 + max((int(c.claim_id[1:]) for c in existing), default=0)
+    reasons: list[str] | None = None
+    for attempt in (2,) if supplement else (1, 2):
+        if supplement:
+            prompt = prompts.render_supplement(
+                unit.text, [c.text for c in existing], list(omitted)
+            )
+        elif attempt == 1:
+            prompt = prompts.render_decompose(unit.text)
+        else:
+            prompt = prompts.render_redo(unit.text, reasons or [])
         custom_id = unit.custom_id(attempt)
         try:
             batch_result = client.complete_batch(
@@ -377,6 +386,6 @@ def decompose(
                     "reason": "; ".join(item_reasons),
                 },
             )
-        return _drafts(unit, [item for item, item_reasons in graded if not item_reasons])
+        return _drafts(unit, [item for item, item_reasons in graded if not item_reasons], start)
 
     raise AssertionError("unreachable: every attempt returns, continues, or raises")

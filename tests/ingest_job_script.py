@@ -337,6 +337,29 @@ def stories_answer(*, place: str = PLACE, claim_ids: list[str] | None = None) ->
     )
 
 
+TICKET_STORY_TITLE = "Fifty cents at the door"
+TICKET_BEAT_ID = f"{CITY}/{model.slug(PLACE)}/{model.slug(TICKET_STORY_TITLE)}"
+
+
+def ticket_story_answer(claim_id: str = "c04") -> llm.MockAnswer:
+    """P2's answer over ONLY the claim an omission re-ask added: one
+    structural story (a single claim is allowed for a sidebar)."""
+    return _author(
+        {
+            "stories": [
+                {
+                    "title": TICKET_STORY_TITLE,
+                    "place": PLACE,
+                    "beat_type": "sidebar",
+                    "lenses": ["hidden_history"],
+                    "claim_ids": [claim_id],
+                    "enrichment": ENRICHMENT,
+                }
+            ]
+        }
+    )
+
+
 #: The kind a CORRECT judge reads for each scripted claim, by id (c01-c03
 #: are CLAIMS in order; c04 is the TICKET claim the omission re-ask adds).
 KINDS: dict[str, str] = {

@@ -113,6 +113,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from src.ingest import llm, model, prompts
 from src.ingest.decompose import ClaimDraft, UnitHeld
 from src.ingest.gates import (
+    candidate_places,
     claim_floor,
     every_claim_once,
     lenses_valid,
@@ -506,15 +507,16 @@ def group(
         return []
 
     claim_pairs = [(claim.claim_id, claim.text) for claim in claims]
+    places = candidate_places(pois, unit.text)
     claim_ids = [claim.claim_id for claim in claims]
 
     reasons: list[str] | None = None
     raw_stories: list[dict] | None = None
     for attempt in (1, 2):
         prompt = (
-            prompts.render_group(claim_pairs)
+            prompts.render_group(claim_pairs, places=places)
             if attempt == 1
-            else prompts.render_group_redo(claim_pairs, reasons)
+            else prompts.render_group_redo(claim_pairs, reasons, places=places)
         )
         try:
             completion = client.complete(

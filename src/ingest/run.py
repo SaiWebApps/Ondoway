@@ -24,9 +24,11 @@ what those modules deliberately left to the runner.
 - P1 decompose, P2 group per unit.
 - P3 judge claims per story, then the unit's omission check; an
   omission finding re-asks P1 ONCE for that unit (`decompose(...,
-  omitted=)`), and P2/P3 run again over the re-asked claims — with no
-  second omission check. Exactly one re-ask per phase per item: the
-  phases enforce their own budgets; the runner never adds a retry.
+  omitted=, existing=)`) for the omitted facts ONLY, whose new claims
+  are grouped and judged on their own and appended to the first pass
+  (owner ruling A, slice 10) — with no second omission check. Exactly
+  one re-ask per phase per item: the phases enforce their own budgets;
+  the runner never adds a retry.
 - P4 narrate, P5 judge narration per story, `publishers=` passed.
 - P6 merge per story against the beats already at its place in the
   city's file: no beat there → the story is new without a merge call
@@ -530,6 +532,17 @@ def _dump(obj: Any) -> Any:
     return obj.model_dump(mode="json")
 
 
+def _unique_slug(story: Story, taken: set[str]) -> Story:
+    """`story`, its slug suffixed `-2`, `-3`, ... if the unit already has it
+    (an omission re-ask's story grouped apart from the first pass); `taken`
+    gains the slug used."""
+    slug, n = story.story_slug, 2
+    while slug in taken:
+        slug, n = f"{story.story_slug}-{n}", n + 1
+    taken.add(slug)
+    return story if slug == story.story_slug else story.model_copy(update={"story_slug": slug})
+
+
 def _story_key(unit: Unit, story: Story) -> str:
     return f"{unit.key}:{story.story_slug}"
 
@@ -685,16 +698,30 @@ class _Run:
             except UnitHeld:
                 found = []
             if found:
-                # One P1 re-ask for the unit with the omissions quoted back,
-                # then P2 and P3 again over the re-asked claims; no second
+                # One P1 re-ask for the unit, for the omitted facts ONLY
+                # (owner ruling A, slice 10): the new claims are grouped and
+                # judged on their own and appended; the first pass is never
+                # re-run, and a re-ask that fails keeps it. No second
                 # omission check (one re-ask per phase per item).
                 reasked.append(unit.key)
                 try:
-                    unit_claims = decompose(unit, self.client, events=self.emit, omitted=found)
-                    unit_stories = group(unit_claims, unit, pois, self.client, events=self.emit)
+                    added = decompose(
+                        unit, self.client, events=self.emit, omitted=found, existing=unit_claims
+                    )
+                    added_stories = (
+                        group(added, unit, pois, self.client, events=self.emit) if added else []
+                    )
                 except UnitHeld:
-                    continue
-                unit_judged = self._judge_stories(unit, unit_claims, unit_stories)
+                    added, added_stories = [], []
+                taken = {story.story_slug for story in unit_stories}
+                added_stories = [_unique_slug(story, taken) for story in added_stories]
+                if added_stories:
+                    unit_judged = {
+                        **unit_judged,
+                        **self._judge_stories(unit, added, added_stories),
+                    }
+                    unit_claims = [*unit_claims, *added]
+                    unit_stories = [*unit_stories, *added_stories]
             final_stories[unit.key] = unit_stories
             judged[unit.key] = unit_judged
         self.done(

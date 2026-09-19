@@ -33,6 +33,7 @@ from src.ingest.gates import (
 )
 from src.ingest.group import Story
 from src.ingest.unit import Unit
+from src.tour.claim_dedup import _signature
 
 #: Output tokens requested for one P3 verdict — a boolean and a sentence.
 P3_MAX_TOKENS: int = 400
@@ -532,9 +533,24 @@ def omissions(
     if bundled:
         emit("compound_found", {"unit_key": unit.key, "claims": bundled})
 
+    # A finding whose salient words are exactly a listed claim's is not an
+    # omission (slice 10 job A: one such finding re-ran the whole unit).
+    # Equality, never the overlap coefficient: a longer finding that adds a
+    # fact contains a claim's words and must still come back.
+    signatures = [(c.claim_id, _signature(c.text)) for c in claims]
     facts: list[str] = []
     spans: list[str] = []
     for finding in findings:
+        fact_signature = _signature(finding["fact"])
+        carrier = next(
+            (cid for cid, sig in signatures if len(sig) >= 2 and sig == fact_signature), None
+        )
+        if carrier is not None:
+            emit(
+                "omission_already_carried",
+                {"unit_key": unit.key, "fact": finding["fact"], "claim_id": carrier},
+            )
+            continue
         located = locate_span(finding["span"], unit.text)
         if located is None:
             reason = span_in_unit(finding["span"], unit.text) or (

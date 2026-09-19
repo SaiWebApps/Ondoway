@@ -936,3 +936,50 @@ def test_no_live_client_in_this_file():
                 assert forbidden_env_var not in sub.value, (
                     "this file must never read ANTHROPIC_API_KEY"
                 )
+
+
+def _real_pois() -> list[dict]:
+    raw = json.loads((REPO_ROOT / "data" / "new_york" / "poi-raw.json").read_text("utf-8"))
+    return raw["pois"] if isinstance(raw, dict) else raw
+
+
+def test_candidate_places_finds_every_listed_place_the_passage_names():
+    """Slice 10 job A named the Guggenheim "Guggenheim Museum", Neue Galerie
+    "Neue Galerie" and Cooper Hewitt "Cooper-Hewitt" — each held as a new
+    place though poi-raw holds all three under longer names. The candidates
+    shown to P2 are every POI whose distinctive name words (hyphens split,
+    generic words like "museum" or "new york" ignored) occur in the passage:
+    on the real Upper East Side chunk and the real city file, all five
+    listed places it names are found, and a place it never names is not."""
+    unit = _real_unit()
+    found = gates.candidate_places(_real_pois(), unit.text)
+    for name in (
+        "Solomon R. Guggenheim Museum",
+        "Metropolitan Museum of Art",
+        "Neue Galerie New York",
+        "Cooper Hewitt National Design Museum",
+        "Frick Collection",
+    ):
+        assert name in found, name
+    assert "Statue of Liberty" not in found
+
+
+def test_group_shows_the_candidate_places_and_asks_for_the_exact_name():
+    """The P2 prompt — first ask and re-ask alike — lists the unit's
+    candidate places and requires a story at one of them to carry its name
+    exactly as listed, so resolve_place finds it."""
+    unit = _real_unit()
+    claims = _claim_drafts(unit)
+    proxy = _RecordingClient(_armed_group_mock(CLEAN_STORY_ANSWERS))
+
+    group.group(claims, unit, _real_pois(), proxy)
+
+    prompt = proxy.calls[0]["prompt"]
+    assert "- Solomon R. Guggenheim Museum" in prompt
+    assert "write its name exactly as listed" in prompt
+    redo = prompts.render_group_redo(
+        [("c01", "t")], ["x"], places=["Solomon R. Guggenheim Museum"]
+    )
+    assert "- Solomon R. Guggenheim Museum" in redo
+    assert "write its name exactly as listed" in redo
+

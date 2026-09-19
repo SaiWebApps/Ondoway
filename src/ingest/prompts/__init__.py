@@ -19,6 +19,7 @@ from src.ingest.prompts.decompose import (
     REDO_PROMPT,
     render_decompose,
     render_redo,
+    render_supplement,
 )
 from src.ingest.prompts.group import (
     GROUP_AMBIGUITY_CLASSES,
@@ -103,4 +104,5 @@ __all__ = [
     "render_omissions",
     "render_redo",
     "render_restate",
+    "render_supplement",
 ]

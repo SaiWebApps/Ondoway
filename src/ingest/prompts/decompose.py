@@ -70,9 +70,11 @@ _ONE_FACT = (
 #: in the `{source}` / `{problems}` slots elsewhere in the prompt.
 _ANSWER_SHAPE = '{"claims": [{"text": "...", "kind": "...", "span": "..."}]}'
 
-DECOMPOSE_PROMPT = (
-    "You are extracting standalone factual claims from a guidebook passage "
-    "about a place.\n\n"
+#: Every extraction rule, shared verbatim by the first ask and the re-ask.
+#: Slice 10 job A: the re-ask carried only the one-fact paragraph, and the
+#: one omission re-ask regenerated the unit with none of these rules — 424
+#: claims from 190, phone numbers and websites as claims, places renamed.
+_RULES = (
     f"Every claim {_STANDS_ALONE}: a reader who has never seen the passage "
     "must be able to understand it with no other claim beside it, so "
     f"{_NO_DANGLING_REFERENCE}. If a claim needs a pronoun, name the actual "
@@ -83,7 +85,13 @@ DECOMPOSE_PROMPT = (
     f"speaker. {_SPAN_SENTENCE}\n\n"
     f"{_NO_BOOK_CLAIMS} — no page numbers, no walk directions, no "
     '"the guide recommends".\n\n'
-    f"{_KIND_SENTENCE}\n\n"
+    f"{_KIND_SENTENCE}"
+)
+
+DECOMPOSE_PROMPT = (
+    "You are extracting standalone factual claims from a guidebook passage "
+    "about a place.\n\n"
+    f"{_RULES}\n\n"
     "Answer as JSON only, matching this shape exactly:\n"
     f"{_ANSWER_SHAPE}\n\n"
     "Passage:\n{source}"
@@ -92,8 +100,24 @@ DECOMPOSE_PROMPT = (
 REDO_PROMPT = (
     "Your previous answer had problems:\n{problems}\n\n"
     "Fix every one of them and answer again from the start — do not just "
-    "patch the flagged claims.\n\n"
-    f"{_ONE_FACT}\n\n"
+    "patch the flagged claims — under the same rules as before:\n\n"
+    f"{_RULES}\n\n"
+    "Answer as JSON only, matching this shape exactly:\n"
+    f"{_ANSWER_SHAPE}\n\n"
+    "Passage:\n{source}"
+)
+
+#: The omission re-ask (spec §3 P3, amended in slice 10 by owner ruling A):
+#: claims for the omitted facts ONLY, the first pass's claims shown so none
+#: is repeated — never a regeneration of the unit, which in job A threw a
+#: good first pass away (424 claims from 190, places renamed).
+SUPPLEMENT_PROMPT = (
+    "These claims have already been extracted from the guidebook passage "
+    "below:\n{existing}\n\n"
+    "The passage also states these facts, which no claim carries:\n{facts}\n\n"
+    "Write claims ONLY for those facts — never repeat or restate a claim listed "
+    "above — under the same rules as before:\n\n"
+    f"{_RULES}\n\n"
     "Answer as JSON only, matching this shape exactly:\n"
     f"{_ANSWER_SHAPE}\n\n"
     "Passage:\n{source}"
@@ -147,3 +171,17 @@ def render_redo(unit_text: str, problems: list[str]) -> str:
     problem_lines = "\n".join(f"- {problem}" for problem in problems)
     rendered = REDO_PROMPT.replace("{problems}", problem_lines)
     return rendered.replace("{source}", unit_text)
+
+
+def render_supplement(unit_text: str, existing: list[str], facts: list[str]) -> str:
+    """Render SUPPLEMENT_PROMPT: the claims already extracted and the omitted
+    facts, one per line. Raises ValueError with no fact: a supplement with
+    nothing to add is a caller bug."""
+    if not facts:
+        raise ValueError("render_supplement requires at least one omitted fact")
+    rendered = SUPPLEMENT_PROMPT.replace(
+        "{existing}", "\n".join(f"- {text}" for text in existing) or "- (none)"
+    )
+    rendered = rendered.replace("{facts}", "\n".join(f"- {fact}" for fact in facts))
+    return rendered.replace("{source}", unit_text)
+

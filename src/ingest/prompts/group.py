@@ -37,6 +37,8 @@ misparsed as a format field.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from src.ingest.model import BEAT_TYPE_VALUES
 from src.schema.definitions import TAGGABLE_LENSES
 
@@ -50,11 +52,15 @@ class TieBreakMissing(ValueError):  # noqa: N818 — pinned name is the spec/tes
 
 #: The owner's Rule-A tie-break sentence, pasted verbatim from
 #: decisions.rule_a_tie_break_value (owner said "go, tie-break: (A) the
-#: arc wins" in chat on 2026-09-10 after judge pass 3).
+#: arc wins" in chat on 2026-09-10 after judge pass 3), clarified by owner
+#: ruling B (2026-09-19): "the more specific place wins" had been read as
+#: licence to write a museum's galleries as places of their own.
 TIE_BREAK: str = (
     "The arc wins: the claim goes to the story whose cause-and-consequence "
-    "it advances; the more specific place wins over its parent; a person "
-    "claim stays at the place the passage sets it in."
+    "it advances; the more specific place wins over its parent only between "
+    "places that are places in their own right — a room, gallery, floor or "
+    "court inside a place is that place's sub_location, never a place of its "
+    "own; a person claim stays at the place the passage sets it in."
 )
 
 #: Pinned ambiguity-class descriptions (see AC-22) — kept as their own
@@ -83,6 +89,7 @@ GROUP_PROMPT_TEMPLATE = (
     f"- {_AMBIGUITY_SUBPLACE}\n"
     f"- {_AMBIGUITY_PERSON_VS_PLACE}\n\n"
     "When one of these comes up, apply this rule:\n{tie_break}\n\n"
+    "{places}"
     "Give each story a beat_type. stop_orientation is SPATIAL: where the "
     "listener stands, what they face, where the entrance, the ramp or the "
     "fountain is, which way to walk — never a listing. practicalities holds "
@@ -99,6 +106,7 @@ GROUP_REDO_TEMPLATE = (
     "Fix every one of them and answer again from the start — do not just "
     "patch the flagged stories.\n\n"
     "Apply this rule when ambiguity comes up:\n{tie_break}\n\n"
+    "{places}"
     "Claims:\n{claims}\n\n"
     "Answer as JSON only."
 )
@@ -190,7 +198,25 @@ P2_RESPONSE_SCHEMA: dict = {
 }
 
 
-def render_group(claims: list[tuple[str, str]], *, tie_break: str | None = None) -> str:
+def _places_block(places: Sequence[str]) -> str:
+    """The candidate places a story's `place` must be written as — empty
+    when there are none (slice 10: job A's stories named the Guggenheim
+    "Guggenheim Museum" and were held as a new place)."""
+    if not places:
+        return ""
+    lines = "\n".join(f"- {name}" for name in places)
+    return (
+        "Known places this passage names — when a story is at one of them, "
+        f"write its name exactly as listed:\n{lines}\n\n"
+    )
+
+
+def render_group(
+    claims: list[tuple[str, str]],
+    *,
+    tie_break: str | None = None,
+    places: Sequence[str] = (),
+) -> str:
     """Render GROUP_PROMPT_TEMPLATE with the claim lines and tie-break rule
     substituted in.
 
@@ -208,6 +234,7 @@ def render_group(claims: list[tuple[str, str]], *, tie_break: str | None = None)
         raise TieBreakMissing("render_group requires a non-empty tie-break rule")
     claim_lines = "\n".join(f"{claim_id}: {text}" for claim_id, text in claims)
     rendered = GROUP_PROMPT_TEMPLATE.replace("{tie_break}", resolved)
+    rendered = rendered.replace("{places}", _places_block(places))
     return rendered.replace("{claims}", claim_lines)
 
 
@@ -216,6 +243,7 @@ def render_group_redo(
     problems: list[str],
     *,
     tie_break: str | None = None,
+    places: Sequence[str] = (),
 ) -> str:
     """Render GROUP_REDO_TEMPLATE, quoting every story-refusal reason back
     verbatim.
@@ -233,4 +261,5 @@ def render_group_redo(
     claim_lines = "\n".join(f"{claim_id}: {text}" for claim_id, text in claims)
     rendered = GROUP_REDO_TEMPLATE.replace("{problems}", problem_lines)
     rendered = rendered.replace("{tie_break}", resolved)
+    rendered = rendered.replace("{places}", _places_block(places))
     return rendered.replace("{claims}", claim_lines)

@@ -741,3 +741,47 @@ def test_a_refusal_logs_the_claim_text_and_span_it_judged():
     refused = [p for k, p in events if k == "claim_refused"]
     assert refused and refused[0]["claim_text"] == COMPLETED_CLAIM["text"]
     assert refused[0]["span"] == COMPLETED_CLAIM["span"]
+
+
+def test_an_omission_a_claim_already_states_is_discarded_and_a_near_miss_is_kept():
+    """Slice 10 job A: the omission check reported "The Guggenheim Museum has
+    a spiral ramp" — a listed claim, word for word — and that one false
+    finding re-ran the whole unit (424 claims, the Wright claim regrouped
+    into an itinerary, places renamed). A finding whose salient words are
+    EXACTLY a listed claim's (claim_dedup's signature, compared for equality
+    — never the overlap coefficient, which calls a longer finding "carried"
+    by any claim whose words it contains) is dropped and logged
+    `omission_already_carried`; a near-miss that adds a fact still returns."""
+    unit = _real_unit()
+    claims = [_draft(unit, "c01", ADDRESS_CLAIM), _draft(unit, "c02", COMPLETED_CLAIM)]
+    carried = {
+        "fact": (
+            "the guggenheim building was finished in 1959 - by which time both "
+            "Frank Lloyd Wright and Solomon Guggenheim were dead"
+        ),
+        "span": "Construction was finally completed in 1959",
+    }
+    near_miss = {
+        "fact": (
+            "The Guggenheim building was finished in 1959, by which time both Frank "
+            "Lloyd Wright and Solomon Guggenheim were dead, after a 13-year delay."
+        ),
+        "span": "Construction was delayed for almost 13 years",
+    }
+    answer = llm.MockAnswer(
+        text=json.dumps({"omitted": [carried, near_miss], "compound": []}),
+        model_id=RESPONSE_JUDGE_MODEL,
+    )
+    _events, sink = _sink_and_events()
+    mock = llm.MockClient(sink, batch_answers={judge_claims.omissions_custom_id(unit): answer})
+    mock.estimate([unit.text], list(judge_claims.OMISSIONS_PLAN))
+    events, sink = _sink_and_events()
+
+    facts = judge_claims.omissions(unit, claims, mock, sink)
+
+    assert facts == [near_miss["fact"]]
+    assert [(k, p) for k, p in events if k == "omission_already_carried"] == [
+        ("omission_already_carried",
+         {"unit_key": unit.key, "fact": carried["fact"], "claim_id": "c02"})
+    ]
+

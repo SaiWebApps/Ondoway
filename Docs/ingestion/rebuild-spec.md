@@ -214,8 +214,8 @@ failed job resumes at its last completed phase.
 |---|---|---|---|
 | P0 intake | none | units of text with `source_id`, `as_of`, rights basis | manifest fields present; a website unit over the ceiling is split at headings and the job logs it |
 | P1 decompose | author | claims `{text, kind, span}` per unit, one fact each (slice 10: a relation the source states is one claim naming both sides; a list is one claim per item) | span verbatim in unit; NO lift test on claims (owner ruling 2026-09-13 — a claim is never spoken; the lift gate is P4's); no book furniture (leak regex); self-contained (no bare pronoun subject); `kind` present, default `state` when the judge marks it ambiguous |
-| P2 group | author | stories `{title, place, lenses, beat_type, enrichment, claim_ids}` | every claim in exactly one story; place resolves to `poi-raw.json` or is flagged `new_poi`; structural types allowed 1 claim, others ≥2 |
-| P3 judge claims | judge | per claim: entailed yes/no and the temporal kind read from the span (slice 9: a wrongly kinded claim is re-kinded, never refused); per unit: facts no claim carries, and (slice 10) claims that state more than one fact — logged as `compound_found`, no re-ask yet | a claim refused once is re-asked with the judge's reason quoted back; refused twice is dropped and logged; an omission finding re-asks P1 once for that unit |
+| P2 group | author, shown the unit's candidate places (slice 10: every `poi-raw.json` name whose distinctive words all occur in the passage, to be written exactly) | stories `{title, place, lenses, beat_type, enrichment, claim_ids}`; a room, gallery, floor or court inside a place is its `sub_location`, never a place (owner ruling B, 2026-09-19) | every claim in exactly one story; place resolves to `poi-raw.json` or is flagged `new_poi`; structural types allowed 1 claim, others ≥2 |
+| P3 judge claims | judge | per claim: entailed yes/no and the temporal kind read from the span (slice 9: a wrongly kinded claim is re-kinded, never refused); per unit: facts no claim carries, and (slice 10) claims that state more than one fact — logged as `compound_found`, no re-ask yet | a claim refused once is re-asked with the judge's reason quoted back; refused twice is dropped and logged; an omission finding that no claim already states (a finding whose signature equals a claim's is dropped, `omission_already_carried`) re-asks P1 once for that unit — since slice 10 (owner ruling A, 2026-09-19) for the omitted facts ONLY, the first pass's claims shown; the new claims are appended, grouped and judged on their own, and a re-ask that fails keeps the first pass |
 | P4 narrate | author, sees claims only | narration text | no lift vs any span; no leak; no framing regex (`imagine`, `picture`, `envision`); duration computed |
 | P5 judge narration | judge | per sentence entailed yes/no | a failing sentence re-asks P4 once with the sentence quoted back; still failing → `narration.flags` set, `review.held = true` |
 | P6 merge | merge judge + signature | per new story: same / new / supersedes; per claim, against ANY claim at the place whatever the story verdict: new / same / conflict — candidate beats and claims named by handle (`b1`, `b1.c02`), never by id | the signature is a one-way tripwire: a signature match on a claim the judge called `new`, or on a different claim than the judge named, holds the new story (queue item); a judge match the signature cannot see applies. Every raw answer is logged (`merge_answered`), every matched claim logged with both texts and the new span (`merge_folded`). A matched claim FOLDS into the claim that holds it: conflict → the D9 kind rules (`contested`, or supersedes → old claim `belief`, dated); same → one claim, sources appended. A `new` story's own beat keeps only its unmatched claims and is narrated again; left below its arc minimum it is a queue item; fully folded it writes nothing (`merge_absorbed`). Any claim change → P4/P5 rerun for that beat |
@@ -839,6 +839,39 @@ merge failure — and the next step is a $0 diagnosis of that drop, not another 
   claims P1 emits against slice 9 (Frommer's 76); every `compound_found` hand-classified correct
   or false (the flag's precision on real output).
 The stop's shippability is a separate panel verdict, not part of this pass.
+
+*Re-extraction job A (2026-09-18 17:16 → 2026-09-19 05:02 UTC, owner go, sandbox
+`data-ingest/sandboxes/step2`, job `bd214b83…`): committed, but the gate for job B FAILED and job B
+was not run.* Spend $6.07 against an expected $2.95 (2.06x); 424 judged claims in 44 stories;
+every Guggenheim story held as a new place; no Guggenheim beat for a merge to reach. R0 passed
+(the live file untouched). R6 failed as registered (31 drops of 190: 16 phone numbers and
+websites, 4 other listings, 7 judge refusals, 2 spans, 1 claim twice). Root cause, $0 from the
+job's own files and corrected at the judge's STOP: the FIRST pass was good — 190 one-fact claims
+including "The Guggenheim Museum building was designed by architect Frank Lloyd Wright", nine
+stories resolved to "Solomon R. Guggenheim Museum", the Met not split. One FALSE omission ("The
+Guggenheim Museum has a spiral ramp", a listed claim word for word) triggered the runner's
+omission re-ask, which regenerated the whole unit under a re-ask prompt carrying none of the
+first ask's rules but the one-fact paragraph, then re-grouped it: 424 claims, the listings, the
+Wright claim filed under an itinerary story at a new place "Museum Mile" and held at P4, the
+Guggenheim renamed "Guggenheim Museum", Met galleries invented as places — the same signature as
+slice 9 job 2's 9.4-hour second pass. Neue Galerie and Cooper Hewitt were name mismatches
+("Neue Galerie New York", "Cooper Hewitt National Design Museum"); only the Met Breuer is absent
+from `poi-raw.json`. Fixed test-first ($0): the re-ask prompt carries every first-ask rule; an
+omission finding whose signature EQUALS a listed claim's is dropped (equality, never the overlap
+coefficient, which would call a longer finding "carried" by any claim inside it); the omission
+re-ask asks for the omitted facts only and appends (ruling A); P2 is shown the unit's candidate
+places and the tie-break makes a room inside a place its sub_location (ruling B). Candidate places
+are broad by design (73 for the Lonely Planet chunk — "Wall Street" matches "wall") but hold
+every name job A missed and exclude a place the passage never names. A re-run of job A needs a
+fresh sandbox and an owner go; R0-R7 and the gate for job B stand as registered. Known estimate
+gaps, recorded not fixed: P1's re-ask row prices `REDO_PROMPT`'s length, not the supplement's
+(which lists every existing claim, ~4.7k tokens for 190) — offset by pricing 9,000 output tokens
+for an answer that now covers a few facts; P2's cost rows do not include the candidate-places
+block (a few hundred tokens a call). Advisory for the re-run: `omission_already_carried` is not
+among calibration's forwarded evidence events, nothing in code stops a supplement restating an
+existing claim (only the prompt forbids it), and a noisy candidate list can snap a story to a
+sibling place ("Museum of Jewish Heritage" beside "The Jewish Museum") — silently, since it now
+resolves — so sample story places against their spans.
 
 ### Slice 11: Cleanup
 

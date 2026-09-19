@@ -407,6 +407,46 @@ def claim_gates(text: str, span: str, unit_text: str) -> list[str]:
     return reasons
 
 
+#: Words too common in place names to identify one (slice 10: candidate
+#: places for P2). A POI is a candidate only through a word NOT in here.
+_GENERIC_PLACE_WORDS: frozenset[str] = frozenset({
+    "museum", "museums", "park", "new", "york", "city", "street", "avenue", "center", "centre",
+    "house", "building", "church", "hall", "library", "gallery", "galleries", "collection",
+    "national", "design", "art", "arts", "society", "square", "garden", "gardens", "memorial",
+    "institute", "theater", "theatre", "university", "bridge", "station", "island", "upper",
+    "lower", "east", "west", "north", "south", "fifth",
+})
+
+
+def _name_words(text: str) -> set[str]:
+    return set(re.findall(r"[a-z0-9]+", text.lower()))
+
+
+def candidate_places(pois: Sequence[Mapping[str, object]], unit_text: str) -> list[str]:
+    """The canonical names of every POI the passage names — a POI with a
+    name or name variation whose distinctive words (four letters or more,
+    not a generic place word; hyphens split, so "Cooper-Hewitt" finds
+    "Cooper Hewitt") ALL occur in the passage. All, not any: one shared word
+    would offer "Museum of Jewish Heritage" for a Jewish Museum passage, and
+    P2 picks from this list. P2 is shown these so a story's place is written
+    the way `resolve_place` resolves it."""
+    text_words = _name_words(unit_text)
+    found: list[str] = []
+    for poi in pois:
+        names = [str(poi["name"]), *(str(v) for v in poi.get("name_variations", []) or [])]
+        for name in names:
+            distinctive = {
+                word
+                for word in _name_words(name)
+                if len(word) >= 4 and word not in _GENERIC_PLACE_WORDS
+            }
+            if distinctive and distinctive <= text_words:
+                if poi["name"] not in found:
+                    found.append(str(poi["name"]))
+                break
+    return found
+
+
 def resolve_place(place: str, pois: Sequence[Mapping[str, object]]) -> tuple[str, bool]:
     """Resolve a claim's cited place to a POI's canonical name.
 

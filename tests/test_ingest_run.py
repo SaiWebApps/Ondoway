@@ -209,38 +209,43 @@ def test_each_phase_output_lands_before_the_next_and_a_job_resumes_where_it_died
     assert model.validate(records, chunks_root=chunks.parent) == []
 
 
-def test_an_omission_finding_reasks_p1_once_for_that_unit(tmp_path):
-    """§3 P3: an omission finding re-asks P1 once for that unit. The
-    judge's omission check cites the 50-cent ticket line no claim
-    carries; the runner asks the author ONCE more, under the unit's
-    re-ask custom_id with the omitted fact quoted back, and P2 and P3
-    run again over the re-asked claims — with no second omission check
-    and no third P1 ask. The committed beat carries the fourth claim."""
+def test_an_omission_finding_adds_claims_for_the_omitted_facts_and_keeps_the_first_pass(tmp_path):
+    """§3 P3, as amended in slice 10 (owner ruling A, 2026-09-19): job A's one
+    omission re-ask regenerated the whole unit and re-grouped it, throwing
+    away a good first pass (the Wright claim regrouped into an itinerary and
+    held, the Guggenheim renamed, the claim count doubled). The re-ask now
+    asks ONLY for the omitted facts — the claims already extracted are shown
+    so they are not repeated — and the new claims are numbered after the
+    first pass, grouped on their own and judged on their own. The first
+    pass's claims and story are untouched: one P1 re-ask, no second P2 or P3
+    over the first pass, and both stories reach the file."""
     chunks = script_mod.chunk_dir(tmp_path)
     data_root = script_mod.data_dir(tmp_path)
     store = jobs.IngestJobStore()
     job = _book_job(store, chunks)
     unit = script_mod.unit(chunks)
     _events, sink = _sink_and_events()
-    four = [*script_mod.CLAIMS, script_mod.TICKET]
-    ids = ["c01", "c02", "c03", "c04"]
-    narration = script_mod.NARRATION + " " + script_mod.TICKET_SENTENCE
+    first = [c["text"] for c in script_mod.CLAIMS]
     scripted = {
         "answers": {
             "author": [
                 script_mod.stories_answer(),
-                script_mod.stories_answer(claim_ids=ids),
-                script_mod.narration_answer(narration),
+                script_mod.ticket_story_answer("c04"),
+                script_mod.narration_answer(),
+                script_mod.narration_answer(script_mod.TICKET_SENTENCE),
             ]
         },
         "batch_answers": {
             unit.custom_id(1): script_mod.claims_answer(),
-            unit.custom_id(2): script_mod.claims_answer(four),
-            **script_mod.verdicts(unit, ids),
+            unit.custom_id(2): script_mod.claims_answer([script_mod.TICKET]),
+            **script_mod.verdicts(unit, ["c01", "c02", "c03", "c04"]),
             **script_mod.omissions_answer(
                 unit, [{"fact": script_mod.TICKET["text"], "span": script_mod.TICKET["span"]}]
             ),
-            **script_mod.sentence_verdicts([c["text"] for c in four], narration),
+            **script_mod.sentence_verdicts(first),
+            **script_mod.sentence_verdicts(
+                [script_mod.TICKET["text"]], script_mod.TICKET_SENTENCE
+            ),
         },
     }
     recorder = _RecordingClient(llm.MockClient(sink, **scripted))
@@ -249,20 +254,65 @@ def test_an_omission_finding_reasks_p1_once_for_that_unit(tmp_path):
 
     snap = store.snapshot(job.id)
     assert snap.status == "committed", snap.error
+    # Exactly one omission check, then one supplement: P1 → P2 → P3 judge →
+    # P3 omissions → P1 supplement → P2 over the added claims only → P3 over
+    # them only → P4/P5 per story. A second omission check would show here.
     assert [phase for _role, phase in recorder.calls] == [
-        "P1", "P2", "P3", "P3", "P1", "P2", "P3", "P4", "P5"
+        "P1", "P2", "P3", "P3", "P1", "P2", "P3", "P4", "P4", "P5", "P5"
     ]
+    omission_checks = [cids for phase, cids, _ in recorder.batches if phase == "P3"
+                       and judge_claims.omissions_custom_id(unit) in cids]
+    assert len(omission_checks) == 1
+    assert [e.message for e in snap.events if e.kind == "info"].count("omissions_found") == 1
     p1_batches = [(cids, prompts) for phase, cids, prompts in recorder.batches if phase == "P1"]
     assert [cids for cids, _ in p1_batches] == [[unit.custom_id(1)], [unit.custom_id(2)]]
-    assert script_mod.TICKET["text"] in p1_batches[1][1][0]
+    supplement = p1_batches[1][1][0]
+    assert script_mod.TICKET["text"] in supplement
+    assert all(text in supplement for text in first)  # shown, so not repeated
+    assert "Write claims ONLY for" in supplement
+    p3_judged = [cids for phase, cids, _ in recorder.batches if phase == "P3"]
+    judged_ids = [cid for batch in p3_judged for cid in batch]
+    assert judged_ids.count(judge_claims.judge_custom_id(unit, "c01", 1)) == 1  # never re-judged
+    assert judge_claims.judge_custom_id(unit, "c04", 1) in judged_ids
     assert store.phase_output(job.id, "P3")["reasked_units"] == [unit.key]
-    logged = [e.message for e in snap.events if e.kind == "info"]
-    assert logged.count("omissions_found") == 1
 
     records = json.loads((data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8"))
-    assert [c["text"] for c in records[0]["claims"]] == [c["text"] for c in four]
-    assert records[0]["narration"]["text"] == narration
+    assert [r["beat_id"] for r in records] == [script_mod.BEAT_ID, script_mod.TICKET_BEAT_ID]
+    assert [c["text"] for c in records[0]["claims"]] == first
+    assert [(c["claim_id"], c["text"]) for c in records[1]["claims"]] == [
+        ("c04", script_mod.TICKET["text"])
+    ]
     assert model.validate(records, chunks_root=chunks.parent) == []
+
+
+def test_an_omission_reask_that_fails_keeps_the_first_pass(tmp_path):
+    """Owner ruling A's other half: before slice 10 an omission re-ask whose
+    answer could not be read dropped the WHOLE unit (`continue`), so one
+    unreadable supplement threw away every good claim of the first pass. It
+    now costs only the omitted fact: the first pass's story is committed."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(unit)
+    scripted["batch_answers"].update(
+        script_mod.omissions_answer(
+            unit, [{"fact": script_mod.TICKET["text"], "span": script_mod.TICKET["span"]}]
+        )
+    )
+    scripted["batch_answers"][unit.custom_id(2)] = llm.MockAnswer(
+        text="not json", model_id=script_mod.RESPONSE_AUTHOR_MODEL
+    )
+
+    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    records = json.loads((data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8"))
+    assert [r["beat_id"] for r in records] == [script_mod.BEAT_ID]
+    assert [c["text"] for c in records[0]["claims"]] == [c["text"] for c in script_mod.CLAIMS]
 
 
 def _claim_verdict(claim_id: str, verdict: str, existing_claim_id: str = "",
