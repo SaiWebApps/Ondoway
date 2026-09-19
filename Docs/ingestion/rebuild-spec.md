@@ -873,6 +873,51 @@ existing claim (only the prompt forbids it), and a noisy candidate list can snap
 sibling place ("Museum of Jewish Heritage" beside "The Jewish Museum") — silently, since it now
 resolves — so sample story places against their spans.
 
+*Re-extraction job A, re-run (2026-09-19 13:22 → 17:03 UTC, owner go "go, let it finish", fresh
+sandbox `data-ingest/sandboxes/step2b`, job `32d5c8de…`, HEAD 37f782e): committed; the gate for job
+B FAILED on R1 and job B was not run.* Stop conditions registered with the owner before launch
+(judge-ruled; none fired, per the session's watcher): kill if the first pass exceeded 260 claims, if requests after
+`omissions_found` exceeded max(40, 8n) at P3 or max(4, 2+n) at P1, or if the batch-request floor
+reached $4.28. Result: 42 beats, spend $2.6840 against an expected $2.9504 (0.91x, gate (i) passes).
+The fixes held where job A broke: P1's first pass gave 207 one-fact claims; the omission re-ask added
+2 claims (1 P1 and 2 P3 requests, against job A's 26 and 454), and the equality discard dropped one
+real duplicate (the Neue Galerie address); every story resolved (0 `place_unresolved`, against 31),
+all ten Guggenheim stories at "Solomon R. Guggenheim Museum", and Neue Galerie, Cooper Hewitt and The
+Jewish Museum by their `poi-raw` names. Gate (ii)'s content is present in written, unheld beats: "The
+Guggenheim Museum building was designed by architect Frank Lloyd Wright" and two critics claims ("some
+critics derided its design while others welcomed it"; "The New York Times harshly criticized the
+Guggenheim Museum building"). R0 passed (run before the post-run backup rsync); R6 passed at 5 drops
+of 209 (2.4%: two one-claim factoid stories, one `’`→newline span, one "guidebook" leak, one judge
+refusal). **R1's Lonely Planet half FAILED, which fails the gate:** the registered elevator sentence
+was split ("…makes this difficult." and "Exhibitions, therefore, are installed from bottom to top"
+became two claims, the "therefore" lost; the same sentence the coverage judge split at calibration),
+and seven Guggenheim claims are compound by the P1 rule against a cap of two for both books — two
+lists (postcards/TV/films; the velour walls, music and incense), a relative clause (Rebay "who served
+as" adviser), an appositive (Peggy, "niece of…"), adult and child prices in one claim, a sequence of
+two events (completed 1959 "after both … had passed away"), and the renovation claim (below). The
+contrast "derided by some critics but hailed by others" is ONE fact by the rule, not compound. R7
+(measured): P1 output 18,586 tokens (15,714 text + 2,872 thinking, `make ingest-batch
+BATCH=msgbatch_01Mir62…`) against `P1_EXPECTED_OUTPUT_TOKENS` 9,000; 207 claims against ~82; the
+compound flag named 21 claims of which about 5 are compound by the rule and missed four (the lists and
+prices, the relative clause), so it stays log-only. P6 was not exercised (0 merges judged, 42 skipped
+with no beat at the place — expected for the first job; it proves nothing about the merge).
+Found, not fixed: (1) both omission findings were FALSE again (the 1939 opening and the 1943
+commission, stated by listed claims in other words, so equality could not drop them), and the
+supplement restated them as two claims in a new Guggenheim story — contained, but a duplicate the
+prompt forbids and nothing in code prevents; (2) the claim re-ask after a P3 refusal rewrote the
+renovation claim as "According to the passage, a renovation … which included building an eight-story
+tower …, yielded 50,000 additional square feet" — apparatus plus a relative clause restating another
+claim — and the leak gate passed it, as it passed "Lonely Planet's tip describes the Upper East Side
+as…"; (3) the Museum of the City of New York story was placed at "Upper East Side" although that
+museum is in `poi-raw.json` (ruling B's more-specific-wins, violated), and the Met Breuer (945 Madison
+Ave, absent from `poi-raw.json`) at the Metropolitan Museum of Art; (4) one Guggenheim beat held at P5
+("this museum" not entailed). Per the registration job B does not run on this gate. Owner decision
+owed: fix P1's surviving compound shapes first (a prompt change is provable only live: a red-first test
+on a held-out passage, a paid calibration re-run, a fresh job A with owner go), or override the
+registered FAIL and run job B with R1 recorded failed (both anchor pairs have atomic Lonely Planet sides,
+so R2 stays readable for them; a Frommer's-side compound would leave a fold failure unattributable).
+**Owner ruling (2026-09-19): fix P1 first.** No override; job B waits for a fresh job A.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
