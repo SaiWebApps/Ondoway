@@ -5195,6 +5195,9 @@ class TestOnboardPanel:
         page.locator("#onboardSlug").fill("london")
         page.locator("#onboardDisplayName").fill("London")
         page.locator("#onboardBbox").fill(LONDON_BBOX)
+        # The country its opening hours read holidays against: registration
+        # refuses a city without one, so the page asks for it up front.
+        page.locator("#onboardCountry").fill("GB")
         page.locator("#onboardStartBtn").click()
 
         # (c) The consult feed streams every source line-by-line, each with a URL.

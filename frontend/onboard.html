@@ -232,6 +232,9 @@
     <label class="field-label" for="onboardBbox">Bounding box</label>
     <input type="text" id="onboardBbox" placeholder="min_lat, max_lat, min_lon, max_lon" autocomplete="off" spellcheck="false">
 
+    <label class="field-label" for="onboardCountry">Country (two letters — the public holidays its opening hours are read against)</label>
+    <input type="text" id="onboardCountry" placeholder="GB" maxlength="2" autocomplete="off" spellcheck="false">
+
     <div class="modes">
       <label><input type="checkbox" id="mode-license_clean" checked> License-clean web auto-ingest</label>
       <label class="disabled"><input type="checkbox" id="mode-shadow_discovery_only" disabled> Shadow-library discovery only (later slice)</label>
@@ -418,6 +421,14 @@ document.getElementById('onboardStartBtn').addEventListener('click', async () =>
     feedLine('bbox must be 4 numbers: min_lat, max_lat, min_lon, max_lon', 'error');
     return;
   }
+  // A city registers with the country its opening hours read holidays against;
+  // the upload refuses without one, so the form refuses here, where the operator
+  // is watching, rather than at the last step.
+  const country = document.getElementById('onboardCountry').value.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(country)) {
+    feedLine('country must be a two-letter code (FR, GB, US)', 'error');
+    return;
+  }
 
   let resp;
   try {
@@ -425,6 +436,7 @@ document.getElementById('onboardStartBtn').addEventListener('click', async () =>
       slug,
       display_name: displayName,
       bbox,
+      country,
       modes: ['license_clean'],
     });
   } catch (err) {
@@ -445,6 +457,7 @@ document.getElementById('onboardStartBtn').addEventListener('click', async () =>
   document.getElementById('onboardSlug').disabled = true;
   document.getElementById('onboardDisplayName').disabled = true;
   document.getElementById('onboardBbox').disabled = true;
+  document.getElementById('onboardCountry').disabled = true;
   document.getElementById('mode-license_clean').disabled = true;
   document.getElementById('onboardStartBtn').disabled = true;
 
