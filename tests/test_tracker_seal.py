@@ -215,3 +215,25 @@ def test_unapproved_features_keep_working_as_before(db: Path) -> None:
     assert run(db, "issue-add", "--story", "S1", "--id", "S1.M2",
                "--name", "pre-approval growth is shaping, not spinning",
                "--test-command", "true", "--files", "x")[0] == 0
+
+
+def test_feature_delete_removes_only_an_empty_unapproved_feature(db: Path) -> None:
+    """A feature that carries nothing — no story, no issue, no approval — can be
+    removed, so a row written by mistake does not sit on the dashboard forever.
+    One that carries work is refused by name: deleting it would erase the record
+    the owner approved."""
+    assert run(db, "init")[0] == 0
+    assert run(db, "feature-add", "--slug", "stray", "--title", "T",
+               "--for-whom", "owner", "--tier", "1")[0] == 0
+    code, payload = run(db, "feature-delete", "--slug", "stray")
+    assert code == 0, payload
+    assert "stray" not in {f["slug"] for f in payload["features"]}
+    # A feature carrying a story is not deletable.
+    seed(db)
+    code, payload = run(db, "feature-delete", "--slug", "f")
+    assert code == 1
+    assert "S1" in payload["refused"]
+    # An unknown feature is refused rather than silently "deleted".
+    code, payload = run(db, "feature-delete", "--slug", "nobody")
+    assert code == 1
+    assert "nobody" in payload["refused"]

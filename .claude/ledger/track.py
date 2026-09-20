@@ -388,6 +388,29 @@ def cmd_feature_add(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
     emit(conn)
 
 
+def cmd_feature_delete(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
+    """Remove a feature that carries nothing: no story, no issue, no approval.
+    A row written by mistake would otherwise sit on the dashboard forever; a
+    feature carrying work is refused by name, because deleting it would erase
+    the record the owner approved."""
+    if not conn.execute("SELECT 1 FROM features WHERE slug=?", (args.slug,)).fetchone():
+        raise Refused(f"no feature {args.slug!r}")
+    stories = [
+        row["id"]
+        for row in conn.execute("SELECT id FROM stories WHERE feature=?", (args.slug,))
+    ]
+    if stories:
+        raise Refused(
+            f"feature {args.slug!r} carries stories {', '.join(stories)}; only a feature "
+            "with nothing under it can be deleted"
+        )
+    if approval_of(conn, args.slug) is not None:
+        raise Refused(f"feature {args.slug!r} was approved; an approval is never erased")
+    conn.execute("DELETE FROM features WHERE slug=?", (args.slug,))
+    record(conn, "feature_deleted", who=args.who, detail=args.slug)
+    emit(conn)
+
+
 def cmd_story_add(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
     if not conn.execute("SELECT 1 FROM features WHERE slug=?", (args.feature,)).fetchone():
         raise Refused(f"no feature {args.feature!r}; add the feature before its stories")
@@ -1047,6 +1070,7 @@ def cmd_serve(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
 HANDLERS = {
     "init": cmd_init,
     "feature-add": cmd_feature_add,
+    "feature-delete": cmd_feature_delete,
     "story-add": cmd_story_add,
     "issue-add": cmd_issue_add,
     "issue-set": cmd_issue_set,
@@ -1089,6 +1113,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--title", required=True)
     p.add_argument("--for-whom", required=True, dest="for_whom")
     p.add_argument("--tier", type=int, required=True)
+
+    p = sub.add_parser("feature-delete", parents=[common])
+    p.add_argument("--slug", required=True)
 
     p = sub.add_parser("story-add", parents=[common])
     p.add_argument("--feature", required=True)
