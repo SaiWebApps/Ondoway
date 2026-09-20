@@ -414,6 +414,110 @@ def test_mutation_guard_rejects_direct_workflow_state_edits(tmp_path):
         )
 
 
+def test_mutation_guard_protects_the_process_files_without_any_run(tmp_path):
+    """The law is not editable by the party it polices. A past commit reads
+    'a guard that is absent stops blocking': deleting or editing the guard,
+    the settings that register it, or the tracker's code must be refused even
+    when no teamflow run is active."""
+    guard = _load_mutation_guard()
+    for target in (
+        ".agents/team/mutation_guard.py",
+        ".agents/team/teamflow.py",
+        ".agents/skills/team/SKILL.md",
+        ".claude/ledger/track.py",
+        ".claude/settings.json",
+    ):
+        with pytest.raises(guard.MutationRefusedError, match="release window"):
+            guard.refuse_protected(
+                {"tool_name": "Edit", "tool_input": {"file_path": str(tmp_path / target)}},
+                cwd=tmp_path,
+            )
+
+
+def test_mutation_guard_refuses_direct_tracker_database_writes(tmp_path):
+    guard = _load_mutation_guard()
+    with pytest.raises(guard.MutationRefusedError, match=r"track\.py"):
+        guard.refuse_protected(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": 'sqlite3 .claude/ledger/tracker.db "UPDATE issues '
+                               "SET status='completed'\""
+                },
+            },
+            cwd=tmp_path,
+        )
+
+
+def test_mutation_guard_refuses_shell_edits_of_protected_files(tmp_path):
+    guard = _load_mutation_guard()
+    with pytest.raises(guard.MutationRefusedError, match="release window"):
+        guard.refuse_protected(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": "sed -i '' 's/deny/allow/' .agents/team/mutation_guard.py"
+                },
+            },
+            cwd=tmp_path,
+        )
+
+
+def test_mutation_guard_leaves_product_code_alone(tmp_path):
+    guard = _load_mutation_guard()
+    guard.refuse_protected(
+        {"tool_name": "Edit", "tool_input": {"file_path": str(tmp_path / "src/tour/x.py")}},
+        cwd=tmp_path,
+    )
+    guard.refuse_protected(
+        {"tool_name": "Bash", "tool_input": {"command": "python3 .claude/ledger/track.py show"}},
+        cwd=tmp_path,
+    )
+    # Invoking a process tool with redirected output is reading, not editing:
+    # the protected path sits before the marker, and nothing after it is protected.
+    guard.refuse_protected(
+        {
+            "tool_name": "Bash",
+            "tool_input": {
+                "command": "python3 .claude/ledger/track.py step-status --id X > /dev/null"
+            },
+        },
+        cwd=tmp_path,
+    )
+
+
+def test_mutation_guard_release_window_opens_the_door_and_is_read_aloud(tmp_path):
+    """Process changes happen between stories through a recorded window: a file
+    naming the owner's words. With it present the edit passes; the file itself
+    is the audit trail."""
+    guard = _load_mutation_guard()
+    window = tmp_path / ".teamflow" / "release-window.json"
+    window.parent.mkdir(parents=True)
+    window.write_text(json.dumps({"owner": "owner", "why": "pipeline release per approval"}))
+    guard.refuse_protected(
+        {
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(tmp_path / ".agents/team/teamflow.py")},
+        },
+        cwd=tmp_path,
+    )
+
+
+def test_mutation_guard_release_window_must_name_owner_and_why(tmp_path):
+    guard = _load_mutation_guard()
+    window = tmp_path / ".teamflow" / "release-window.json"
+    window.parent.mkdir(parents=True)
+    window.write_text(json.dumps({"note": "no owner, no why"}))
+    with pytest.raises(guard.MutationRefusedError, match="owner"):
+        guard.refuse_protected(
+            {
+                "tool_name": "Edit",
+                "tool_input": {"file_path": str(tmp_path / ".agents/team/teamflow.py")},
+            },
+            cwd=tmp_path,
+        )
+
+
 def test_writer_transfer_requires_suspension_and_rotates_fencing(teamflow):
     state = {"leases": {}, "fencing_generation": 0}
     teamflow.acquire_lease(

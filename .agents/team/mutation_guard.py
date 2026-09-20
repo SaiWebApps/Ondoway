@@ -91,6 +91,78 @@ def authorize_mutation(payload: dict[str, Any], *, run_dir: Path, runtime: str, 
             raise MutationRefusedError(f"{target} is outside the active writer lease")
 
 
+#: The files that are the law: the workflow core, its skill, the tracker's own
+#: code, and the settings that register this hook. Refused always — with or
+#: without an active run — so the party being policed cannot edit its police.
+PROTECTED_PREFIXES = (
+    ".agents/team/",
+    ".agents/skills/team/",
+    ".claude/ledger/",
+    ".claude/commands/team.md",
+    ".claude/settings.json",
+)
+
+
+def _release_window(cwd: Path) -> dict[str, Any] | None:
+    """A process change happens between stories through a recorded window:
+    `.teamflow/release-window.json` naming the owner and the owner's reason.
+    The file is local state, never committed; its presence is the audit trail
+    and removing it closes the window."""
+    path = cwd / ".teamflow" / "release-window.json"
+    if not path.exists():
+        return None
+    try:
+        window = json.loads(path.read_text())
+    except (ValueError, OSError):
+        return None
+    return window if isinstance(window, dict) else None
+
+
+def refuse_protected(payload: dict[str, Any], *, cwd: Path) -> None:
+    """Refuse edits to the process files and direct tracker-database writes."""
+    tool = payload.get("tool_name", "")
+    tool_input = payload.get("tool_input") or {}
+    if tool in {"Edit", "Write", "MultiEdit"}:
+        target = _relative(str(tool_input.get("file_path", "")), cwd)
+        touched = [p for p in PROTECTED_PREFIXES if target == p.rstrip("/") or target.startswith(p)]
+    elif tool == "Bash":
+        command = str(tool_input.get("command", ""))
+        if "tracker.db" in command and not command.lstrip().startswith("python3"):
+            raise MutationRefusedError(
+                "the tracker database is written only through track.py, whose "
+                "commands re-derive what they record; a direct write is a claim "
+                "nobody checked"
+            )
+        # A protected path AFTER a mutating marker is the file being written
+        # (`sed -i ... .agents/team/x.py`, `> .claude/settings.json`). A path
+        # before one is an invocation (`python3 .claude/ledger/track.py show
+        # > /dev/null`) and stays free.
+        padded = f" {command}"
+        touched = [
+            prefix
+            for marker in MUTATING_SHELL_MARKERS
+            for at in range(len(padded))
+            if padded.startswith(marker, at)
+            for prefix in PROTECTED_PREFIXES
+            if prefix.rstrip("/") in padded[at + len(marker):]
+        ]
+    else:
+        return
+    if not touched:
+        return
+    window = _release_window(cwd)
+    if window is None:
+        raise MutationRefusedError(
+            f"{touched[0]} is a process file. The pipeline changes only between "
+            "stories, with the owner's word recorded: open a release window at "
+            ".teamflow/release-window.json naming owner and why"
+        )
+    if not window.get("owner") or not window.get("why"):
+        raise MutationRefusedError(
+            "the release window must name the owner and the owner's reason"
+        )
+
+
 def _active_run(cwd: Path) -> Path | None:
     explicit = os.getenv("ONDOWAY_TEAMFLOW_RUN_DIR")
     if explicit:
@@ -108,6 +180,7 @@ def main() -> int:
     try:
         payload = json.load(sys.stdin)
         cwd = Path(payload.get("cwd") or Path.cwd())
+        refuse_protected(payload, cwd=cwd)
         run_dir = _active_run(cwd)
         if run_dir is not None:
             authorize_mutation(payload, run_dir=run_dir, runtime="claude", cwd=cwd)
