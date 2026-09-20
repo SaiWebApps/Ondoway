@@ -653,17 +653,14 @@ class _Run:
     def _judge_stories(
         self, unit: Unit, claims: Sequence[ClaimDraft], stories: Sequence[Story]
     ) -> dict[str, list[JudgedClaim]]:
-        by_id = {c.claim_id: c for c in claims}
-        judged: dict[str, list[JudgedClaim]] = {}
-        for story in stories:
-            drafts = [by_id[cid] for cid in story.claim_ids if cid in by_id]
-            try:
-                judged[story.story_slug] = judge_claims.judge_claims(
-                    story, drafts, unit, self.client, events=self.emit
-                )
-            except UnitHeld:
-                continue
-        return judged
+        # ONE round per stage for the whole unit, not one per story: judging
+        # story by story bought a P3 batch round each time, and a round costs
+        # about 1.3 minutes whatever it carries (job 32d5c8de…, 2026-09-19:
+        # 52 P3 rounds, 2h12 of a 3h41 chunk). Same requests, same discount.
+        try:
+            return judge_claims.judge_unit(stories, claims, unit, self.client, events=self.emit)
+        except UnitHeld:
+            return {}
 
     def p3(
         self,

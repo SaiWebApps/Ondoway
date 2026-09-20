@@ -785,3 +785,146 @@ def test_an_omission_a_claim_already_states_is_discarded_and_a_near_miss_is_kept
          {"unit_key": unit.key, "fact": carried["fact"], "claim_id": "c02"})
     ]
 
+
+
+class _RoundCountingClient:
+    """Wraps a MockClient and counts complete_batch ROUNDS (the mock itself
+    records one entry per request, which cannot tell one round of two from
+    two rounds of one)."""
+
+    def __init__(self, inner: llm.MockClient) -> None:
+        self._inner = inner
+        self.rounds: list[tuple[str, str]] = []
+
+    def complete_batch(self, role, prompts, schema, *, phase, max_tokens):
+        self.rounds.append((role, phase))
+        return self._inner.complete_batch(
+            role, prompts, schema, phase=phase, max_tokens=max_tokens
+        )
+
+    def complete(self, *a, **k):
+        return self._inner.complete(*a, **k)
+
+    def estimate(self, *a, **k):
+        return self._inner.estimate(*a, **k)
+
+    def count_tokens(self, *a, **k):
+        return self._inner.count_tokens(*a, **k)
+
+
+def _named_story(slug: str, claim_ids: list[str]) -> group.Story:
+    return group.Story(
+        title=slug.replace("-", " ").title(),
+        story_slug=slug,
+        place="Guggenheim Museum",
+        new_poi=False,
+        lenses=["hidden_history"],
+        beat_type="anecdote",
+        enrichment=group.Enrichment(),
+        claim_ids=claim_ids,
+    )
+
+
+def test_every_story_of_a_unit_is_judged_in_one_round():
+    """Throughput (2026-09-19): `run._judge_stories` judged stories ONE AT A
+    TIME, so every story bought its own P3 batch round — the 43-story job
+    32d5c8de… made 52 P3 rounds at a median 1.2 min each, 2h12 of a 3h41
+    chunk. Stories are independent and claim ids are unique within a unit
+    (the `every_claim_once` gate), so one round judges the whole unit.
+    """
+    unit = _real_unit()
+    first = _draft(unit, "c01", ADDRESS_CLAIM)
+    second = _draft(unit, "c02", COMPLETED_CLAIM)
+    mock = _armed_mock(
+        {
+            judge_claims.judge_custom_id(unit, "c01", 1): _entailed(),
+            judge_claims.judge_custom_id(unit, "c02", 1): _entailed(kind="event"),
+        },
+        unit,
+    )
+    client = _RoundCountingClient(mock)
+    _events, sink = _sink_and_events()
+    stories = [_named_story("the-address", ["c01"]), _named_story("the-opening", ["c02"])]
+
+    judged = judge_claims.judge_unit(stories, [first, second], unit, client, sink)
+
+    assert sorted(judged) == ["the-address", "the-opening"]
+    assert [c.draft.claim_id for c in judged["the-address"]] == ["c01"]
+    assert [c.draft.claim_id for c in judged["the-opening"]] == ["c02"]
+    assert client.rounds == [("claim_judge", "P3")], client.rounds
+
+
+def test_one_failed_request_holds_its_story_not_the_whole_unit():
+    """Blast radius of the round collapse. Per story, a `BatchFailure` raised
+    `UnitHeld` and `run._judge_stories` caught it PER STORY, so one dead
+    request cost one story. With every story in one round, holding the unit
+    would cost all 43 — so a per-request transport failure now holds only the
+    story that owns the claim (`story_held`), and the rest of the unit is
+    judged. A whole-round transport error still holds the unit: that is the
+    batch itself failing, not one request in it.
+    """
+    unit = _real_unit()
+    good = _draft(unit, "c01", ADDRESS_CLAIM)
+    doomed = _draft(unit, "c02", COMPLETED_CLAIM)
+    mock = _armed_mock(
+        {
+            judge_claims.judge_custom_id(unit, "c01", 1): _entailed(),
+            judge_claims.judge_custom_id(unit, "c02", 1): llm.MockFailure(
+                result_type="errored", error_message="boom"
+            ),
+        },
+        unit,
+    )
+    events, sink = _sink_and_events()
+    stories = [_named_story("the-address", ["c01"]), _named_story("the-opening", ["c02"])]
+
+    judged = judge_claims.judge_unit(stories, [good, doomed], unit, mock, sink)
+
+    assert [c.draft.claim_id for c in judged["the-address"]] == ["c01"]
+    assert judged.get("the-opening") == []
+    held = [p for kind, p in events if kind == "story_held"]
+    assert [p["story_slug"] for p in held] == ["the-opening"], events
+    assert "boom" in held[0]["reason"]
+    assert not any(kind == "unit_held" for kind, _ in events), events
+
+
+def test_a_failed_restate_or_re_judge_holds_only_its_story_too():
+    """The judge's PROVE-FIRST on the round collapse: isolating round 1 alone
+    left the restate (P1) and the re-judge (attempt 2) still holding the whole
+    unit — strictly WORSE than the per-story loop, where run._judge_stories
+    caught UnitHeld per story. Every P3 hold on record (jobs e4572c53…,
+    f3213d91…, five of them) is a per-request transport failure, and one can
+    land in any round. Story A is judged clean in round 1; story B's claim is
+    refused and then its restate — or its re-judge — dies.
+    """
+    unit = _real_unit()
+    good = _draft(unit, "c01", ADDRESS_CLAIM)
+    bad = _draft(unit, "c02", COMPLETED_CLAIM)
+    stories = [_named_story("the-address", ["c01"]), _named_story("the-opening", ["c02"])]
+    boom = llm.MockFailure(result_type="errored", error_message="boom")
+    restated_item = {**COMPLETED_CLAIM, "text": "The museum was completed in 1959."}
+
+    legs = {
+        "restate": {
+            judge_claims.judge_custom_id(unit, "c01", 1): _entailed(),
+            judge_claims.judge_custom_id(unit, "c02", 1): _refused("the span says 1959"),
+            judge_claims.restate_custom_id(unit, "c02"): boom,
+        },
+        "re_judge": {
+            judge_claims.judge_custom_id(unit, "c01", 1): _entailed(),
+            judge_claims.judge_custom_id(unit, "c02", 1): _refused("the span says 1959"),
+            judge_claims.restate_custom_id(unit, "c02"): _restated(restated_item),
+            judge_claims.judge_custom_id(unit, "c02", 2): boom,
+        },
+    }
+    for leg, batch_answers in legs.items():
+        events, sink = _sink_and_events()
+        mock = _armed_mock(batch_answers, unit)
+
+        judged = judge_claims.judge_unit(stories, [good, bad], unit, mock, sink)
+
+        assert [c.draft.claim_id for c in judged["the-address"]] == ["c01"], leg
+        assert judged["the-opening"] == [], leg
+        held = [p for kind, p in events if kind == "story_held"]
+        assert [p["story_slug"] for p in held] == ["the-opening"], (leg, events)
+        assert not any(kind == "unit_held" for kind, _ in events), (leg, events)

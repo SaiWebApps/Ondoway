@@ -1224,3 +1224,65 @@ def test_no_live_client_in_this_file():
                 assert forbidden_env_var not in sub.value, (
                     f"{forbidden_env_var!r} must not appear in this file"
                 )
+
+
+def test_a_unit_with_two_stories_judges_them_in_one_p3_round(tmp_path):
+    """Throughput (2026-09-19): `_judge_stories` judged story by story, so a
+    43-story chunk bought 52 P3 batch rounds at a median 1.2 minutes each —
+    2h12 of a 3h41 run (job 32d5c8de…). The rounds carry the whole unit now:
+    two stories, ONE P3 round holding both stories' claim ids.
+    """
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    two_stories = script_mod._author(
+        {
+            "stories": [
+                {
+                    "title": script_mod.STORY_TITLE,
+                    "place": script_mod.PLACE,
+                    "beat_type": "anecdote",
+                    "lenses": ["hidden_history", "visual_art"],
+                    "claim_ids": ["c01", "c02"],
+                    "enrichment": script_mod.ENRICHMENT,
+                },
+                {
+                    "title": "The doors open",
+                    "place": script_mod.PLACE,
+                    "beat_type": "sidebar",
+                    "lenses": ["hidden_history"],
+                    "claim_ids": ["c03"],
+                    "enrichment": script_mod.ENRICHMENT,
+                },
+            ]
+        }
+    )
+    first_two = [script_mod.CLAIMS[0]["text"], script_mod.CLAIMS[1]["text"]]
+    third = [script_mod.CLAIMS[2]["text"]]
+    scripted = {
+        "answers": {
+            "author": [
+                two_stories,
+                script_mod.narration_answer(),
+                script_mod.narration_answer(),
+            ]
+        },
+        "batch_answers": {
+            unit.custom_id(1): script_mod.claims_answer(),
+            **script_mod.verdicts(unit, ["c01", "c02", "c03"]),
+            **script_mod.omissions_answer(unit),
+            **script_mod.sentence_verdicts(first_two),
+            **script_mod.sentence_verdicts(third),
+        },
+    }
+    _events, sink = _sink_and_events()
+    recorder = _RecordingClient(llm.MockClient(sink, **scripted))
+
+    run.run_job(job.id, store, recorder, data_root=data_root)
+
+    p3_rounds = [ids for phase, ids, _prompts in recorder.batches if phase == "P3"]
+    judging = [ids for ids in p3_rounds if all(cid.endswith(("-j1", "-j2")) for cid in ids)]
+    assert len(judging) == 1, p3_rounds
+    assert len(judging[0]) == 3, judging

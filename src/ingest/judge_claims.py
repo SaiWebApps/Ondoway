@@ -219,12 +219,19 @@ def _batch(
     schema: dict,
     phase: str,
     max_tokens: int,
+    failures: dict[str, str] | None = None,
 ) -> dict[str, llm.Completion]:
     """One batch round with the same failure contract as decompose(): an
     `llm.EmptyCompletion`/`llm.TruncatedCompletion`, a raw (non-LlmError)
     `ValueError`, or a `BatchFailure` for any unit holds the unit; any other
     `llm.LlmError` (EstimateNotPrinted, MockScriptExhausted, JudgeIsAuthor,
-    ...) is a programming error and propagates as itself."""
+    ...) is a programming error and propagates as itself.
+
+    When `failures` is given, a `BatchFailure` for ONE request is recorded
+    there (custom_id -> reason) and left out of the result instead of holding
+    the unit — the round now carries every story of the unit, so one dead
+    request must not cost the other 42. A failure of the ROUND itself still
+    holds the unit either way."""
     try:
         results = client.complete_batch(
             role=role, prompts=prompts_, schema=schema, phase=phase, max_tokens=max_tokens
@@ -241,7 +248,12 @@ def _batch(
         answer = results[custom_id]
         if isinstance(answer, llm.BatchFailure):
             detail = f": {answer.error_message}" if answer.error_message else ""
-            _hold(emit, unit, f"transport: batch unit {custom_id!r} {answer.result_type}{detail}")
+            reason = f"transport: batch unit {custom_id!r} {answer.result_type}{detail}"
+            if failures is None:
+                _hold(emit, unit, reason)  # NoReturn
+            else:
+                failures[custom_id] = reason
+                continue
         completions[custom_id] = answer
     return completions
 
@@ -252,6 +264,7 @@ def _judge_round(
     unit: Unit,
     client: llm.ModelClient,
     attempt: int,
+    failures: dict[str, str] | None = None,
 ) -> dict[str, dict]:
     """One P3 batch round over `drafts`; returns each claim id's parsed
     verdict (plus the response's model id). An unreadable verdict holds
@@ -272,10 +285,13 @@ def _judge_round(
         schema=prompts.P3_VERDICT_SCHEMA,
         phase="P3",
         max_tokens=P3_MAX_TOKENS,
+        failures=failures,
     )
     verdicts: dict[str, dict] = {}
     for draft in drafts:
-        answer = completions[judge_custom_id(unit, draft.claim_id, attempt)]
+        answer = completions.get(judge_custom_id(unit, draft.claim_id, attempt))
+        if answer is None:  # its request failed and was isolated by `failures`
+            continue
         parsed = parse_verdict(answer.text)
         if parsed is None:
             _hold(
@@ -293,10 +309,13 @@ def _restate_round(
     refused: Sequence[tuple[ClaimDraft, str]],
     unit: Unit,
     client: llm.ModelClient,
+    failures: dict[str, str] | None = None,
 ) -> list[ClaimDraft]:
     """The single author re-ask for every refused claim, in one P1 batch.
     An unreadable restate holds the unit, same as an unreadable P1 answer
-    on its second attempt would."""
+    on its second attempt would. With `failures`, a per-request transport
+    failure is isolated to its story by the caller instead (the round now
+    carries every story of the unit)."""
     completions = _batch(
         emit,
         unit,
@@ -312,10 +331,13 @@ def _restate_round(
         schema=prompts.P3_RESTATE_SCHEMA,
         phase="P1",
         max_tokens=P3_RESTATE_MAX_TOKENS,
+        failures=failures,
     )
     restated: list[ClaimDraft] = []
     for draft, _reason in refused:
-        answer = completions[restate_custom_id(unit, draft.claim_id)]
+        answer = completions.get(restate_custom_id(unit, draft.claim_id))
+        if answer is None:  # its request failed and was isolated by `failures`
+            continue
         item = parse_restated(answer.text)
         if item is None:
             _hold(
@@ -362,6 +384,32 @@ def _judged(draft: ClaimDraft, verdict: dict) -> JudgedClaim:
     )
 
 
+def judge_unit(
+    stories: Sequence[Story],
+    claims: Sequence[ClaimDraft],
+    unit: Unit,
+    client: llm.ModelClient,
+    events: llm.EventSink | None = None,
+) -> dict[str, list[JudgedClaim]]:
+    """Judge EVERY story of a unit, in one round per stage, and return each
+    story's judged claims by `story_slug`.
+
+    The rounds and their semantics are exactly `judge_claims`'s — round 1,
+    one restate of each refusal, round 2 of the survivors, a claim refused
+    twice dropped — but the unit's stories share them. The runner used to
+    call `judge_claims` per story, so a 43-story chunk bought 52 P3 rounds at
+    a median 1.2 minutes each (job `32d5c8de…`, 2026-09-19: 2h12 of a 3h41
+    run). Claim ids are unique within a unit (`gates.every_claim_once`), so
+    the per-claim `custom_id`s never collide across stories and one round
+    answers the whole unit. Same requests, same Batch API discount — only
+    fewer round trips.
+
+    A story whose claims are ALL dropped keeps its key with an empty list —
+    the shape `judge_claims` returned for the same case — and P4 skips it.
+    """
+    return _judge_many(stories, claims, unit, client, events, isolate=True)
+
+
 def judge_claims(
     story: Story,
     claims: Sequence[ClaimDraft],
@@ -369,7 +417,7 @@ def judge_claims(
     client: llm.ModelClient,
     events: llm.EventSink | None = None,
 ) -> list[JudgedClaim]:
-    """Judge the story's claims; see the module docstring.
+    """Judge ONE story's claims; see the module docstring.
 
     Round 1 judges every claim of the story in one P3 batch. Each refused
     claim emits `claim_refused` and is restated ONCE by the author (one P1
@@ -377,26 +425,91 @@ def judge_claims(
     each restated claim must pass `gates.claim_gates` (a failing one is
     dropped with the gate's reasons and never judged again); the survivors
     are judged in a second P3 batch and the round-two verdict is what comes
-    out, bound to the restated text. A
-    claim refused twice is dropped and logged (`claim_dropped`, the
-    judge's second reason); a third call never happens. Surviving claims
-    keep their ids — stories already reference them, so P3 never
-    renumbers.
+    out, bound to the restated text. A claim refused twice is dropped and
+    logged (`claim_dropped`, the judge's second reason); a third call never
+    happens. Surviving claims keep their ids — stories already reference
+    them, so P3 never renumbers.
+
+    One story is the degenerate case of `judge_unit`, which shares these
+    rounds across every story of the unit; this signature is kept for
+    calibration (`calibrate.py`'s `judge_claims` detector) and for callers
+    that hold a single story.
     """
+    # isolate=False: one story is the whole round, so a failed request IS a
+    # failed unit — the contract this signature has always had.
+    return _judge_many([story], claims, unit, client, events, isolate=False).get(
+        story.story_slug, []
+    )
+
+
+def _judge_many(
+    stories: Sequence[Story],
+    claims: Sequence[ClaimDraft],
+    unit: Unit,
+    client: llm.ModelClient,
+    events: llm.EventSink | None = None,
+    *,
+    isolate: bool,
+) -> dict[str, list[JudgedClaim]]:
+    """The rounds themselves, over one story or every story of a unit.
+
+    `isolate` decides what a per-request transport failure costs: the story
+    that owns the claim (the unit round, where the alternative is losing every
+    story) or the whole unit (one story, the historical contract)."""
 
     def emit(kind: str, payload: dict) -> None:
         if events is not None:
             events(kind, payload)
 
-    drafts = [draft for draft in claims if draft.claim_id in story.claim_ids]
-    by_id = {draft.claim_id: draft for draft in drafts}
-    verdicts = _judge_round(emit, drafts, unit, client, attempt=1)
+    ids_by_story: dict[str, list[str]] = {}
+    by_id: dict[str, ClaimDraft] = {}
+    drafts: list[ClaimDraft] = []
+    for story in stories:
+        own = [draft for draft in claims if draft.claim_id in story.claim_ids]
+        ids_by_story[story.story_slug] = [draft.claim_id for draft in own]
+        for draft in own:
+            if draft.claim_id not in by_id:  # a claim belongs to exactly one story
+                by_id[draft.claim_id] = draft
+                drafts.append(draft)
+    if not drafts:
+        return {slug: [] for slug in ids_by_story}
+
+    # Every round carries every story, so ONE dead request must not cost the
+    # unit: isolate it to the story that owns the claim — the effect the
+    # per-story loop had, where run._judge_stories caught UnitHeld per story.
+    # EVERY round needs this, not just the first: the only P3 holds on record
+    # (jobs e4572c53…, f3213d91…, five of them) are per-request transport
+    # failures, and they can land in the restate or the re-judge just as well.
+    story_of = {
+        claim_id: slug for slug, claim_ids in ids_by_story.items() for claim_id in claim_ids
+    }
+    held: dict[str, str] = {}
+
+    def absorb(failed: dict[str, str], claim_of: dict[str, str]) -> None:
+        """Move this round's per-request failures onto their stories."""
+        for custom_id, reason in failed.items():
+            claim_id = claim_of.get(custom_id)
+            if claim_id is None or story_of[claim_id] in held:
+                continue
+            slug = story_of[claim_id]
+            held[slug] = reason
+            emit("story_held", {"unit_key": unit.key, "story_slug": slug, "reason": reason})
+
+    def surviving(items: Sequence[ClaimDraft]) -> list[ClaimDraft]:
+        return [draft for draft in items if story_of[draft.claim_id] not in held]
+
+    failures: dict[str, str] = {}
+    isolated = failures if isolate else None
+    verdicts = _judge_round(emit, drafts, unit, client, attempt=1, failures=isolated)
+    absorb(failures, {judge_custom_id(unit, d.claim_id, 1): d.claim_id for d in drafts})
+    drafts = surviving(drafts)
     _rekind(emit, unit, by_id, verdicts)
 
+    judgeable = {draft.claim_id for draft in drafts}
     refused = [
         (by_id[claim_id], verdict["reason"])
         for claim_id, verdict in verdicts.items()
-        if not verdict["entailed"]
+        if not verdict["entailed"] and claim_id in judgeable
     ]
     for draft, reason in refused:
         emit(
@@ -413,7 +526,15 @@ def judge_claims(
     dropped: set[str] = set()
     if refused:
         restated = []
-        for draft in _restate_round(emit, refused, unit, client):
+        restate_failures: dict[str, str] = {}
+        restate_answers = _restate_round(
+            emit, refused, unit, client, failures=restate_failures if isolate else None
+        )
+        absorb(
+            restate_failures,
+            {restate_custom_id(unit, d.claim_id): d.claim_id for d, _reason in refused},
+        )
+        for draft in surviving(restate_answers):
             by_id[draft.claim_id] = draft
             gate_reasons = claim_gates(draft.text, draft.source.span, unit.text)
             if gate_reasons:
@@ -430,7 +551,20 @@ def judge_claims(
                 continue
             restated.append(draft)
         if restated:
-            second = _judge_round(emit, restated, unit, client, attempt=2)
+            second_failures: dict[str, str] = {}
+            second = _judge_round(
+                emit,
+                restated,
+                unit,
+                client,
+                attempt=2,
+                failures=second_failures if isolate else None,
+            )
+            absorb(
+                second_failures,
+                {judge_custom_id(unit, d.claim_id, 2): d.claim_id for d in restated},
+            )
+            restated = surviving(restated)
             verdicts.update(second)
             _rekind(emit, unit, by_id, second)
         for draft in restated:
@@ -459,11 +593,16 @@ def judge_claims(
             )
             dropped.add(draft.claim_id)
 
-    return [
-        _judged(by_id[draft.claim_id], verdicts[draft.claim_id])
-        for draft in drafts
-        if draft.claim_id not in dropped
-    ]
+    return {
+        slug: [
+            _judged(by_id[claim_id], verdicts[claim_id])
+            for claim_id in claim_ids
+            if claim_id not in dropped and claim_id in verdicts
+        ]
+        if slug not in held
+        else []
+        for slug, claim_ids in ids_by_story.items()
+    }
 
 
 def omissions(
