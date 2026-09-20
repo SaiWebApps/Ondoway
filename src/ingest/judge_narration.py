@@ -238,6 +238,193 @@ def _emit_refusals(emit: Emit, story: Story, attempt: int, refusals: Sequence[tu
         )
 
 
+def _round_many(
+    emit: Emit,
+    items: Sequence[tuple[str, Story, NarrationDraft, Sequence[str]]],
+    client: llm.ModelClient,
+    attempt: int,
+) -> tuple[dict[str, list[dict]], dict[str, str]]:
+    """One P5 batch round over EVERY item's sentences; returns each key's
+    verdicts in order, and the keys this round could not answer with the
+    reason (a per-request transport failure or an unreadable verdict).
+
+    A story that cannot be judged is held on its own — the shape
+    `judge_narration` already had, since `run.p5` caught `BeatHeld` per
+    story — so one dead request never costs the other stories in the round.
+    A failure of the round ITSELF holds every story in it, for the same
+    reason: none of them was judged.
+    """
+    split: dict[str, list[str]] = {}
+    prompts_: list[tuple[str, str]] = []
+    for key, _story, draft, texts in items:
+        pieces = sentences(draft.text)
+        split[key] = pieces
+        for index, sentence in enumerate(pieces):
+            prompts_.append(
+                (
+                    sentence_custom_id(draft, index, attempt),
+                    prompts.render_judge_sentence(sentence, texts),
+                )
+            )
+    if not prompts_:
+        return {}, {}
+    try:
+        completions = client.complete_batch(
+            role="narration_judge",
+            prompts=prompts_,
+            schema=prompts.P5_VERDICT_SCHEMA,
+            phase="P5",
+            max_tokens=P5_MAX_TOKENS,
+        )
+    except (llm.EmptyCompletion, llm.TruncatedCompletion, ValueError) as exc:
+        if isinstance(exc, llm.LlmError) and not isinstance(
+            exc, llm.EmptyCompletion | llm.TruncatedCompletion
+        ):
+            raise
+        return {}, {key: f"transport: {exc}" for key, _story, _draft, _texts in items}
+
+    verdicts: dict[str, list[dict]] = {}
+    held: dict[str, str] = {}
+    for key, _story, draft, _texts in items:
+        answers: list[dict] = []
+        for index, sentence in enumerate(split[key]):
+            answer = completions[sentence_custom_id(draft, index, attempt)]
+            if isinstance(answer, llm.BatchFailure):
+                detail = f": {answer.error_message}" if answer.error_message else ""
+                held[key] = (
+                    f"transport: batch unit "
+                    f"{sentence_custom_id(draft, index, attempt)!r} "
+                    f"{answer.result_type}{detail}"
+                )
+                break
+            parsed = parse_sentence_verdict(answer.text)
+            if parsed is None:
+                held[key] = (
+                    f"schema: the judge's answer for sentence {sentence!r} was not valid "
+                    "JSON matching the P5 verdict schema"
+                )
+                break
+            answers.append({**parsed, "sentence": sentence, "model_id": answer.model_id})
+        if key not in held:
+            verdicts[key] = answers
+    return verdicts, held
+
+
+def judge_narration_unit(
+    items: Sequence[tuple[str, Story, NarrationDraft, Sequence[JudgedClaim]]],
+    client: llm.ModelClient,
+    events: llm.EventSink | None = None,
+    publishers: Sequence[str] = (),
+) -> tuple[dict[str, JudgedNarration], dict[str, tuple[Story, Sequence[JudgedClaim], str]]]:
+    """Judge EVERY story's narration, one round per stage.
+
+    ONE unit's stories — `run.p5` calls this per unit, as every other phase
+    iterates, so a failed round costs at most one chunk.
+
+    Returns `(judged by key, held by key)`, the held entry carrying what
+    `run.p5` needs to queue it. The stages are `judge_narration`'s own —
+    round 1, one author rewrite per refused story, round 2 — but the two
+    JUDGE rounds carry the whole unit, where `run.p5` used to spend one
+    round per story: 49 of them at a median 1.2 minutes, 1h18 of a 3h41
+    chunk (job 32d5c8de…). The rewrites stay per story because they are
+    sync author calls, seconds each, not batch rounds.
+
+    `sentence_custom_id` is content-derived (the draft's claims_hash), so two
+    stories whose resolved claim TEXTS are byte-identical would share ids.
+    `gates.every_claim_once` makes the claim sets disjoint, so it cannot
+    happen today — but nothing enforces the texts themselves.
+    """
+    emit = emitter(events)
+    texts = {key: resolved_claim_texts(claims) for key, _story, _draft, claims in items}
+    by_key = {key: (story, draft, claims) for key, story, draft, claims in items}
+
+    judged: dict[str, JudgedNarration] = {}
+    held: dict[str, tuple[Story, Sequence[JudgedClaim], str]] = {}
+
+    round_one = [(key, story, draft, texts[key]) for key, story, draft, _claims in items]
+    verdicts, failed = _round_many(emit, round_one, client, attempt=1)
+    for key, reason in failed.items():
+        story, _draft, claims = by_key[key]
+        hold_reason = f"P5 {reason}"
+        emit("beat_held", {"story_slug": story.story_slug, "phase": "P5", "reason": hold_reason})
+        held[key] = (story, claims, hold_reason)
+
+    rewritten: list[tuple[str, Story, NarrationDraft, Sequence[str]]] = []
+    first_refusals: dict[str, list[tuple[str, str]]] = {}
+    for key, story_verdicts in verdicts.items():
+        story, draft, claims = by_key[key]
+        refusals = _refusals(story_verdicts)
+        if not refusals:
+            judged[key] = _judged(draft, story_verdicts, [])
+            continue
+        _emit_refusals(emit, story, 1, refusals)
+        first_refusals[key] = refusals
+        text, author_model = ask_author(
+            emit,
+            story,
+            client,
+            prompts.render_narrate_revise(
+                story.place, story.title, texts[key], draft.text, refusals
+            ),
+            phase="P5",
+        )
+        rewrite = draft_from(text, claims, author_model)
+        gate_reasons = narration_gates(rewrite.text, claim_spans(claims), publishers)
+        if gate_reasons:
+            emit(
+                "narration_refused",
+                {"story_slug": story.story_slug, "attempt": 2, "reasons": list(gate_reasons)},
+            )
+            flags = [f"not_entailed: {sentence!r}: {reason}" for sentence, reason in refusals]
+            flags.extend(f"gate: {reason}" for reason in gate_reasons)
+            # The round-ONE text with its round-one verdict: the only text a
+            # judge actually saw.
+            judged[key] = _judged(draft, story_verdicts, flags)
+            emit(
+                "beat_held",
+                {
+                    "story_slug": story.story_slug,
+                    "phase": "P5",
+                    "reason": judged[key].review.reason,
+                },
+            )
+            continue
+        rewritten.append((key, story, rewrite, texts[key]))
+
+    if rewritten:
+        second, failed_two = _round_many(emit, rewritten, client, attempt=2)
+        for key, reason in failed_two.items():
+            story, _draft, claims = by_key[key]
+            hold_reason = f"P5 {reason}"
+            emit(
+                "beat_held",
+                {"story_slug": story.story_slug, "phase": "P5", "reason": hold_reason},
+            )
+            held[key] = (story, claims, hold_reason)
+        for key, _story, rewrite, _texts in rewritten:
+            if key not in second:
+                continue
+            story, _first_draft, _claims = by_key[key]
+            story_verdicts = second[key]
+            refusals = _refusals(story_verdicts)
+            if not refusals:
+                judged[key] = _judged(rewrite, story_verdicts, [])
+                continue
+            _emit_refusals(emit, story, 2, refusals)
+            flags = [f"not_entailed: {sentence!r}: {reason}" for sentence, reason in refusals]
+            judged[key] = _judged(rewrite, story_verdicts, flags)
+            emit(
+                "beat_held",
+                {
+                    "story_slug": story.story_slug,
+                    "phase": "P5",
+                    "reason": judged[key].review.reason,
+                },
+            )
+
+    return judged, held
+
+
 def judge_narration(
     story: Story,
     draft: NarrationDraft,

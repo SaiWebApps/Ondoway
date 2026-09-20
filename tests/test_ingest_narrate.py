@@ -851,3 +851,91 @@ def test_a_proper_name_shared_with_the_source_is_not_a_lift():
     phrasing = "He was an avid collector of Asian art and later sold it."
     reasons = narrate.narration_gates(phrasing, [phrasing_span])
     assert reasons and reasons[0].startswith("lift"), reasons
+
+
+def _named_story(slug: str, claim_ids: list[str]) -> group.Story:
+    return group.Story(
+        title=slug.replace("-", " ").title(),
+        story_slug=slug,
+        place="Guggenheim Museum",
+        new_poi=False,
+        lenses=["hidden_history"],
+        beat_type="anecdote",
+        enrichment=group.Enrichment(),
+        claim_ids=claim_ids,
+    )
+
+
+def test_every_narration_of_a_unit_is_judged_in_one_p5_round():
+    """Throughput (2026-09-19): `run.p5` judged story by story, so each one
+    bought its own P5 batch round — 49 rounds at a median 1.2 min, 1h18 of a
+    3h41 chunk (job 32d5c8de…). Sentence custom ids are keyed by the DRAFT's
+    own hash, so one round carries every story's sentences.
+    """
+    unit = _real_unit()
+    claims = [_judged(unit, "c01", ADDRESS_CLAIM), _judged(unit, "c02", COMPLETED_CLAIM)]
+    first = _draft(CLEAN_NARRATION, claims)
+    second = _draft(CLEAN_NARRATION, claims[:1])
+    mock = _armed_judge(
+        {
+            judge_narration.sentence_custom_id(first, 0, 1): _sentence_verdict(True, "c01"),
+            judge_narration.sentence_custom_id(first, 1, 1): _sentence_verdict(True, "c02"),
+            judge_narration.sentence_custom_id(second, 0, 1): _sentence_verdict(True, "c01"),
+            judge_narration.sentence_custom_id(second, 1, 1): _sentence_verdict(True, "c01"),
+        },
+        [],
+        CLEAN_SENTENCES,
+    )
+    recorder = _RecordingClient(mock)
+    items = [
+        ("key-a", _named_story("the-address", ["c01", "c02"]), first, claims),
+        ("key-b", _named_story("the-opening", ["c01"]), second, claims[:1]),
+    ]
+
+    judged, held = judge_narration.judge_narration_unit(items, recorder)
+
+    assert held == {}
+    assert sorted(judged) == ["key-a", "key-b"]
+    assert [(c["role"], c["phase"]) for c in recorder.batch_calls] == [("narration_judge", "P5")]
+    assert len(recorder.batch_calls[0]["prompts"]) == 4
+
+
+def test_a_failed_sentence_request_holds_its_story_not_the_others():
+    """The P5 collapse's blast radius. Per story, a `BatchFailure` raised
+    `BeatHeld` and `run.p5` caught it per story. With every story's sentences
+    in ONE round, holding the round would cost them all, so a per-request
+    failure holds only the story whose sentence died — and the caller gets it
+    back to queue, exactly as `run.p5` did with the exception.
+    """
+    unit = _real_unit()
+    claims = [_judged(unit, "c01", ADDRESS_CLAIM), _judged(unit, "c02", COMPLETED_CLAIM)]
+    first = _draft(CLEAN_NARRATION, claims)
+    second = _draft(CLEAN_NARRATION, claims[:1])
+    mock = _armed_judge(
+        {
+            judge_narration.sentence_custom_id(first, 0, 1): _sentence_verdict(True, "c01"),
+            judge_narration.sentence_custom_id(first, 1, 1): _sentence_verdict(True, "c02"),
+            judge_narration.sentence_custom_id(second, 0, 1): llm.MockFailure(
+                result_type="errored", error_message="boom"
+            ),
+            judge_narration.sentence_custom_id(second, 1, 1): _sentence_verdict(True, "c01"),
+        },
+        [],
+        CLEAN_SENTENCES,
+    )
+    events, sink = _sink_and_events()
+    story_b = _named_story("the-opening", ["c01"])
+    items = [
+        ("key-a", _named_story("the-address", ["c01", "c02"]), first, claims),
+        ("key-b", story_b, second, claims[:1]),
+    ]
+
+    judged, held = judge_narration.judge_narration_unit(items, mock, sink)
+
+    assert sorted(judged) == ["key-a"]
+    assert sorted(held) == ["key-b"]
+    held_story, held_claims, reason = held["key-b"]
+    assert held_story.story_slug == "the-opening"
+    assert [c.draft.claim_id for c in held_claims] == ["c01"]
+    assert "boom" in reason and "transport" in reason
+    assert [p["story_slug"] for k, p in events if k == "beat_held"] == ["the-opening"]

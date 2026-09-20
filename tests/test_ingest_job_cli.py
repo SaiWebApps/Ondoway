@@ -606,3 +606,33 @@ def test_a_resume_that_could_repay_or_corrupt_is_refused_before_any_call(
     assert "resume refused" in out and expected in out, out
     assert (city_dir / "beats.json").read_bytes() == before
     assert "phase P3" not in out
+
+
+def test_the_summary_names_a_story_held_by_an_isolated_transport_failure(tmp_path):
+    """The round collapse made a per-request transport failure hold ONE story
+    (`story_held`) instead of the unit — so a job can now finish `committed`
+    with a story silently missing. The summary is the only place a reader
+    would see it, and it counted `beat_held` alone.
+    """
+    store = ingest_job._PrintingStore(tmp_path / "jobs")
+    job = store.create(
+        city="new_york", source={"kind": "book", "chunk_dir": "x"}, as_of=2022,
+        rights_basis="owned_copy",
+    )
+    store.append_event(
+        job.id,
+        "info",
+        "story_held",
+        data={
+            "unit_key": "lonely-planet-chunk-07",
+            "story_slug": "derided-then-adored",
+            "reason": "transport: batch unit 'lp-c61-j1' errored: boom",
+        },
+    )
+    store.set_phase(job.id, "P7", {"written": 41})
+    finished = store.get(job.id)
+
+    text = ingest_job.summary(finished, tmp_path / "x.jsonl")
+
+    assert "stories_held (P3)=1" in text, text
+    assert "derided-then-adored" in text and "errored" in text, text

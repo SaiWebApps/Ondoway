@@ -772,22 +772,27 @@ class _Run:
         saved = self.output("P5")
         if saved is not None:
             return {k: JudgedNarration.model_validate(n) for k, n in saved["narrations"].items()}
+        # ONE round per stage for the unit, not one per story: 49 P5 rounds at
+        # a median 1.2 min were 1h18 of a 3h41 chunk (job 32d5c8de…). A story
+        # the judge cannot answer is still held on its own, never the job
+        # (slice 9 job 2 attempt 3 died on an uncaught hold in P6).
         narrations: dict[str, JudgedNarration] = {}
-        for unit in units:
-            for story in stories.get(unit.key, []):
-                key = _story_key(unit, story)
-                if key not in drafts:
-                    continue
-                claims = judged[unit.key][story.story_slug]
-                try:
-                    narrations[key] = judge_narration.judge_narration(
-                        story, drafts[key], claims, self.client, events=self.emit,
-                        publishers=publishers,
-                    )
-                except BeatHeld as held:
-                    # One story the judge cannot answer is held, never the job
-                    # (slice 9 job 2 attempt 3 died on an uncaught hold in P6).
-                    self._queue_held_narration(story, claims, held.reason, phase="P5")
+        for unit in units:  # per UNIT, like every other phase: a failed round
+            # can then cost at most one chunk, never the whole job.
+            items = [
+                (_story_key(unit, story), story, drafts[_story_key(unit, story)],
+                 judged[unit.key][story.story_slug])
+                for story in stories.get(unit.key, [])
+                if _story_key(unit, story) in drafts
+            ]
+            if not items:
+                continue
+            unit_narrations, held_narrations = judge_narration.judge_narration_unit(
+                items, self.client, events=self.emit, publishers=publishers
+            )
+            narrations.update(unit_narrations)
+            for story, claims, reason in held_narrations.values():
+                self._queue_held_narration(story, claims, reason, phase="P5")
         self.done("P5", {"narrations": {k: _dump(n) for k, n in narrations.items()}})
         return narrations
 

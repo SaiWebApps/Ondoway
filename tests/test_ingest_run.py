@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from src.ingest import jobs, judge_claims, llm, model, narrate, run
+from src.ingest import jobs, judge_claims, judge_narration, llm, model, narrate, run
 from tests import ingest_job_script as script_mod
 
 
@@ -256,9 +256,12 @@ def test_an_omission_finding_adds_claims_for_the_omitted_facts_and_keeps_the_fir
     assert snap.status == "committed", snap.error
     # Exactly one omission check, then one supplement: P1 → P2 → P3 judge →
     # P3 omissions → P1 supplement → P2 over the added claims only → P3 over
-    # them only → P4/P5 per story. A second omission check would show here.
+    # them only → P4 per story → ONE P5 round for both. A second omission
+    # check would show here. (P4 stays per story: it is a sync author call,
+    # seconds each. P5 was per story until the round collapse of 2026-09-19 —
+    # 49 rounds at ~1.2 min were 1h18 of a 3h41 chunk.)
     assert [phase for _role, phase in recorder.calls] == [
-        "P1", "P2", "P3", "P3", "P1", "P2", "P3", "P4", "P4", "P5", "P5"
+        "P1", "P2", "P3", "P3", "P1", "P2", "P3", "P4", "P4", "P5"
     ]
     omission_checks = [cids for phase, cids, _ in recorder.batches if phase == "P3"
                        and judge_claims.omissions_custom_id(unit) in cids]
@@ -1226,7 +1229,7 @@ def test_no_live_client_in_this_file():
                 )
 
 
-def test_a_unit_with_two_stories_judges_them_in_one_p3_round(tmp_path):
+def test_a_unit_with_two_stories_judges_them_in_one_p3_and_one_p5_round(tmp_path):
     """Throughput (2026-09-19): `_judge_stories` judged story by story, so a
     43-story chunk bought 52 P3 batch rounds at a median 1.2 minutes each —
     2h12 of a 3h41 run (job 32d5c8de…). The rounds carry the whole unit now:
@@ -1286,3 +1289,9 @@ def test_a_unit_with_two_stories_judges_them_in_one_p3_round(tmp_path):
     judging = [ids for ids in p3_rounds if all(cid.endswith(("-j1", "-j2")) for cid in ids)]
     assert len(judging) == 1, p3_rounds
     assert len(judging[0]) == 3, judging
+    # P5 the same: one round for both stories' sentences, not one per story.
+    p5_rounds = [ids for phase, ids, _prompts in recorder.batches if phase == "P5"]
+    assert len(p5_rounds) == 1, p5_rounds
+    assert len(p5_rounds[0]) == len(
+        judge_narration.sentences(script_mod.NARRATION)
+    ) * 2, p5_rounds

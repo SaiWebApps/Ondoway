@@ -348,10 +348,13 @@ class _PrintingStore(jobs.IngestJobStore):
 
 def summary(snap: jobs.IngestJob, log_path: Path) -> str:
     """The slice-9 measurements, read off the job log: the P6 hold rate
-    with every `beat_held` reason, and the P3 precision counters."""
+    with every `beat_held` reason, the stories P3 held on their own
+    (`story_held` — an isolated transport failure inside the unit round,
+    which does not stop the job), and the P3 precision counters."""
     events = [(e.message, e.data) for e in snap.events if e.kind == "info"]
     p6 = snap.phases.get("P6") or {}
     held = [d for m, d in events if m == "beat_held"]
+    story_held = [d for m, d in events if m == "story_held"]
     held_p6 = [d for d in held if d.get("phase") == "P6"]
     skipped = sum(1 for m, _d in events if m == "merge_skipped")
     decided = sum(1 for m, _d in events if m == "merge_decided")
@@ -372,6 +375,11 @@ def summary(snap: jobs.IngestJob, log_path: Path) -> str:
         f"skipped_no_beat={skipped} new_place={new_place} hold_rate={rate}",
         "holds (beat_held): " + ("none" if not held else ""),
         *(f"  [{d.get('phase')}] {d.get('story_slug')}: {d.get('reason')}" for d in held),
+        # A story whose P3 round lost one request is held on its own, and the
+        # job still commits every other story — so without this line a missing
+        # story leaves no trace in the summary a reader actually reads.
+        f"stories_held (P3)={len(story_held)}",
+        *(f"  {d.get('story_slug')}: {d.get('reason')}" for d in story_held),
         f"claims: refused_attempt1={len(refused1)} dropped={len(dropped)} "
         f"leak_gate_drops={len(leak_drops)}",
         *(f"  refused: {d.get('claim_id')}: {d.get('reason')}" for d in refused1),
