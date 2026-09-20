@@ -466,6 +466,50 @@ class _QuestionPanel extends StatelessWidget {
   static String _cap(String s) =>
       s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
 
+  /// Apply the arm on the phone, then — when the question was a held answer
+  /// at a SHUT door — report the answer to the server: the guess is marked for
+  /// the next walker, the shut door leaves the stored day, and the standby the
+  /// walker chose is seated in it, so a reconnect brings back the day being
+  /// walked and not the one with the locked door still on it. The report rides
+  /// after the answer, never before it: nothing waits on a round trip.
+  Future<void> _answer(BuildContext context, String arm) async {
+    final held = entry;
+    engine.answerQuestion(arm);
+    if (held == null || held.kind != 'door_closed') return;
+    final shut = held.triggerStopId;
+    final tripId = engine.session?.tripId;
+    final token = context.read<AuthService>().accessToken;
+    if (shut == null || tripId == null || token == null) return;
+    final chosen = arm == 'shorten' && held.alternateStopIds.isNotEmpty
+        ? held.alternateStopIds
+        : held.stopIds;
+    final tripService = context.read<TripService>();
+    final at = engine.currentStop;
+    try {
+      final session = await tripService.replanSession(
+        tripId,
+        token,
+        lat: at?.lat ?? 0,
+        lng: at?.lng ?? 0,
+        wallElapsedSeconds: engine.wallElapsedSeconds,
+        tourElapsedSeconds: engine.tourElapsedSeconds,
+        observedPace: engine.observedPace,
+        listeningRate: engine.listeningRate,
+        nextStopIndex: engine.currentStopIndex,
+        phoneNextStopHhmm: engine.phoneNextStopHhmm,
+        closedStopId: shut,
+        keptStopIds: chosen,
+      );
+      engine.holdSession(session);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not report — try again.')),
+        );
+      }
+    }
+  }
+
   List<Widget> _arms(BuildContext context) {
     final body = question.endsWith('?')
         ? question.substring(0, question.length - 1)
@@ -475,7 +519,7 @@ class _QuestionPanel extends StatelessWidget {
       return [
         FilledButton(
           key: const Key('session-arm-default'),
-          onPressed: () => engine.answerQuestion(entry?.defaultArm ?? 'keep'),
+          onPressed: () => _answer(context, entry?.defaultArm ?? 'keep'),
           child: const Text('Carry on as planned'),
         ),
       ];
@@ -507,7 +551,7 @@ class _QuestionPanel extends StatelessWidget {
                       foregroundColor:
                           Theme.of(context).colorScheme.onSecondaryContainer,
                     ),
-              onPressed: () => engine.answerQuestion(arm),
+              onPressed: () => _answer(context, arm),
               child: Text(
                 arm == entry?.defaultArm
                     ? '${_cap(label)} — this happens if you do nothing'

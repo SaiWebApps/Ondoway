@@ -132,6 +132,7 @@ class _FixedTokenAuthService extends AuthService {
 class _MockTripService extends TripService {
   SessionPlan? replanResult;
   String? capturedClosedStopId;
+  List<String>? capturedKeptStopIds;
 
   @override
   Future<SessionPlan> replanSession(
@@ -146,8 +147,10 @@ class _MockTripService extends TripService {
     int nextStopIndex = 0,
     String? phoneNextStopHhmm,
     String? closedStopId,
+    List<String>? keptStopIds,
   }) async {
     capturedClosedStopId = closedStopId;
+    capturedKeptStopIds = keptStopIds;
     return replanResult!;
   }
 }
@@ -870,7 +873,14 @@ void main() {
       ],
     ));
 
-    final trips = _MockTripService();
+    final trips = _MockTripService()
+      ..replanResult = SessionPlan(
+        tripId: 'trip-1',
+        planVersion: 2,
+        stops: [standby, nextStop],
+        retimeToleranceSeconds: 180,
+        dayStartHhmm: '09:00',
+      );
     await tester.pumpWidget(_closedDoorHarness(
       loc: gps,
       audio: audio,
@@ -896,6 +906,15 @@ void main() {
     final walked = service.plannedStops.map((s) => s.poiId).toList();
     expect(walked, contains('cluny'));
     expect(walked, isNot(contains('orangerie')));
+
+    // The answer, once given, REACHES the server: the shut door is reported so
+    // the guess is marked and the stored day drops it, and the standby the
+    // walker chose is named so the server seats it in the day it stores.
+    expect(trips.capturedClosedStopId, 'orangerie',
+        reason: 'the report rides after the answer, never before it');
+    expect(trips.capturedKeptStopIds, ['cluny', 'poi-1']);
+    expect(service.session?.planVersion, 2,
+        reason: 'the server\'s version of the walked day is held');
     await tester.pumpWidget(const SizedBox());
   });
 }

@@ -495,6 +495,12 @@ class SessionReplanRequest(BaseModel):
     #: the day it replans and counts the report on the place, so the next walker
     #: with a guess there hears it. None: an ordinary replan.
     closed_stop_id: str | None = None
+    #: With ``closed_stop_id``: the answer the phone already applied from a held
+    #: `door_closed` entry — the stops it is now keeping to, in order, each one a
+    #: stop or a standby the session holds. The server replans THAT remainder and
+    #: seats any standby in it, so the stored day is the day being walked. None:
+    #: the server chooses the remainder itself.
+    kept_stop_ids: list[str] | None = None
 
 
 class TripPreviewRequest(BaseModel):

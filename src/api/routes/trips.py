@@ -2090,6 +2090,7 @@ def _finish_session_set(
         day_start_hhmm=day.day_start_hhmm,
         listening_rate=listening_rate,
     )
+    full = _hold_only_voiced_standbys(full, day)
     with driver.session() as session:
         inputs = get_trip_compose_inputs(session, trip_id)
         if inputs is None or int(inputs["plan_version"] or 0) != day.plan_version:
@@ -2466,6 +2467,7 @@ def replan_trip_session(
     k = min(body.next_stop_index, len(current.stops))
     remaining, visited = current.stops[k:], current.stops[:k]
     remaining, visited = _without_the_shut_door(body.closed_stop_id, remaining, visited)
+    remaining, seated_standbys = _kept_by_the_walker(body.kept_stop_ids, current, remaining)
     finish = (
         tour_input.end
         if tour_input.end is not None
@@ -2493,9 +2495,18 @@ def replan_trip_session(
     snapshot = load_paris_corpus(driver, city_slug=tour_input.city_slug)
     remaining_ids = tuple(st.poi_id for st in remaining)
     protected = tuple(
-        pid
-        for pid in _person_protected(tour_input, _stops_as_route_pois(remaining, snapshot))
-        if pid in remaining_ids
+        dict.fromkeys(
+            [
+                *(
+                    pid
+                    for pid in _person_protected(
+                        tour_input, _stops_as_route_pois(remaining, snapshot)
+                    )
+                    if pid in remaining_ids
+                ),
+                *seated_standbys,
+            ]
+        )
     )
     ctx = ReplanContext(
         protected_poi_ids=protected,
@@ -2531,7 +2542,9 @@ def replan_trip_session(
         )
         record_routing_degradations(route, component="trips.replan_trip_session")
 
-    by_poi = {st.poi_id: st for st in current.stops}
+    # A standby the walker took at a shut door is a stop of the new day, item and
+    # audio riding along; every other stop is one of the day's own.
+    by_poi = {st.poi_id: st for st in [*current.stops, *current.standbys]}
     kept = [
         by_poi[p.id].model_copy(update={"sort_order": i + 1})
         for i, p in enumerate(route.pois)
@@ -2573,6 +2586,12 @@ def replan_trip_session(
         plan_version=plan_version,
         policy=policy,
         at_stop=visited[-1].poi_id if visited else (remaining[0].poi_id if remaining else None),
+    )
+    # The held standbys ride into the reply BEFORE the carry-forward reads it: a
+    # door entry names a standby the day does not walk, and a reply holding none
+    # would drop every one of them the moment the day replans.
+    session_plan = session_plan.model_copy(
+        update={"standbys": _standbys_still_held(current, new_stops)}
     )
     session_plan = session_plan.model_copy(
         update={
@@ -2631,6 +2650,81 @@ def _without_the_shut_door(
             },
         )
     return [st for st in remaining if st.poi_id != closed_stop_id], [*visited, *shut]
+
+
+def _kept_by_the_walker(
+    kept_stop_ids: list[str] | None,
+    current: SessionPlan,
+    remaining: list[GeneratedStop],
+) -> tuple[list[GeneratedStop], tuple[str, ...]]:
+    """The answer the phone applied from a held door entry, as the remainder the
+    server keeps to: each id resolved against the day AND the held standbys, in the
+    order given, and every standby among them named as protected so the planner
+    seats it rather than weighing it. None: the remainder the server split itself.
+    An id the session does not hold is refused by name, never silently dropped."""
+    if kept_stop_ids is None:
+        return remaining, ()
+    held = {st.poi_id: st for st in [*current.stops, *current.standbys]}
+    unknown = [pid for pid in kept_stop_ids if pid not in held]
+    if unknown:
+        raise HTTPException(
+            422,
+            {
+                "reason": "kept_stop_not_held",
+                "detail": f"{unknown} are not stops or standbys this session holds",
+            },
+        )
+    standby_ids = {st.poi_id for st in current.standbys}
+    kept = [held[pid] for pid in kept_stop_ids]
+    return kept, tuple(pid for pid in kept_stop_ids if pid in standby_ids)
+
+
+def _standbys_still_held(
+    previous: SessionPlan, new_stops: list[GeneratedStop]
+) -> list[GeneratedStop]:
+    """The previous version's standbys that the new day does not walk: a standby the
+    walker took at a shut door is a stop now, the rest stay held beside the day."""
+    walked = {st.poi_id for st in new_stops}
+    return [st for st in previous.standbys if st.poi_id not in walked]
+
+
+def _hold_only_voiced_standbys(full: SessionPlan, previous: SessionPlan) -> SessionPlan:
+    """The full set rebuilt after a live replan names its standbys as fresh stops
+    with no item and no audio. A standby the previous version already composed is
+    held with its item, so its voice rides along; a door entry whose standby was
+    never composed is dropped and reported, and that door keeps M5's simpler
+    answer — a walker is never sent to a place that plays nothing."""
+    voiced = {st.poi_id: st for st in previous.standbys if st.stop_id}
+    walked = {st.poi_id for st in full.stops}
+    standbys = [
+        voiced[st.poi_id]
+        for st in full.standbys
+        if st.poi_id in voiced and st.poi_id not in walked
+    ]
+    held = walked | {st.poi_id for st in standbys}
+    kept: list[SessionContingency] = []
+    dropped: list[dict] = []
+    for entry in full.contingencies:
+        if entry.trigger.get("kind") == "door_closed" and not set(entry.stop_ids) <= held:
+            dropped.append(
+                {
+                    "kind": STANDBY_DROPPED_DEGRADATION,
+                    "stop_id": entry.trigger.get("stop_id"),
+                    "human": (
+                        "The stand-in place for a door that might be shut has no recording "
+                        "yet, so that door keeps its simpler answer."
+                    ),
+                }
+            )
+            continue
+        kept.append(entry)
+    return full.model_copy(
+        update={
+            "standbys": standbys,
+            "contingencies": kept,
+            "degradations": [*full.degradations, *dropped],
+        }
+    )
 
 
 def _count_closed_report(driver: Driver, poi_id: str) -> None:

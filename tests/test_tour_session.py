@@ -10,6 +10,7 @@ locked rulings (phase5-ledger.md, "LOCKED RULINGS", all eleven personas,
 from __future__ import annotations
 
 import math
+from datetime import timedelta
 
 import pytest
 
@@ -1279,3 +1280,224 @@ def test_a_standby_whose_name_cannot_sit_in_one_sentence_is_skipped_not_raised()
         f"a name that breaks one sentence is skipped; got {dc[0].stop_ids}"
     )
     assert "St. Denis" not in (dc[0].question or ""), dc[0].question
+
+
+def _standby_day(closes_minutes_after_door: int):
+    """A guessed interior door on the day and ONE map-sourced standby a real walk
+    away from it, whose map hours close ``closes_minutes_after_door`` minutes after
+    the walker reaches the door. Returns (base, request, snap, standby id, door id,
+    the door's arrival clock)."""
+    from src.tour.contingency import stop_clocks
+    from src.tour.selection import select_route
+
+    stand_map = _stand(_at(PDV, 150.0, 20.0, "stand-map", tier=5, beat_count=5), 14)
+    guess = _interior(
+        _at(PDV, 320.0, 60.0, "guess-far", tier=5, beat_count=5), outside_min=5, inside_min=7
+    )
+    guess = guess.model_copy(
+        update={
+            "opening_hours": "Mo-Su 09:00-18:00",
+            "opening_hours_source": "guess",
+            "place_category": "museum",
+        }
+    )
+    bench = _bench(_at(PDV, 460.0, 80.0, "bench-far"), 10)
+    stand_end = _stand(_at(PDV, 620.0, 90.0, "stand-end-far", tier=5, beat_count=5), 20)
+    end = _at(PDV, 1500.0, 95.0, "end-far")
+    request = TourInput(
+        start=PDV,
+        end=(end.lat, end.lng),
+        duration_min=110,
+        city_slug="paris",
+        round_trip=False,
+        start_datetime="2026-08-19T14:00",
+        end_hardness="wall",
+        rest_cadence_minutes=6,
+    )
+    without = select_route(request, _snap([stand_map, guess, bench, stand_end]))
+    door_arrival = next(arr for p, arr, _d in stop_clocks(without, request) if p.id == guess.id)
+    closes = door_arrival + timedelta(minutes=closes_minutes_after_door)
+    # Far enough off the door that reaching it takes several minutes on foot.
+    standby = _stand(_at(PDV, 1100.0, 40.0, "standby-far", tier=3, beat_count=3), 10)
+    standby = standby.model_copy(
+        update={
+            "opening_hours": f"Mo-Su 06:00-{closes:%H:%M}",
+            "opening_hours_source": "map",
+        }
+    )
+    snap = _snap([stand_map, guess, bench, stand_end, standby])
+    return select_route(request, snap), request, snap, standby.id, guess.id, door_arrival
+
+
+def test_a_standby_is_open_when_the_walker_reaches_it_not_when_the_door_was_found_shut():
+    """Docs/adr/0006 rule 4: "a map-sourced place open at arrival" — arrival at the
+    STANDBY. Checked at the shut door's own clock, a place that closes during the
+    walk over is offered and the walker is sent to a second locked door.
+
+    UNDO: check `_clock_exclusion_reason` at the door's arrival only -> RED (the
+    entry is built for a standby whose map hours close before the walker arrives).
+    """
+    from src.tour.contingency import build_contingency_set
+    from src.tour.contract import ReplanContext
+
+    def door_entries(closes_after: int):
+        base, request, snap, standby_id, door_id, _ = _standby_day(closes_after)
+        assert door_id in {p.id for p in base.pois}, "premise: the guessed door is on the day"
+        assert standby_id not in {p.id for p in base.pois}, "premise: the standby is off it"
+        cset = build_contingency_set(
+            base, request, snap, routing_client=None, person=ReplanContext()
+        )
+        return [
+            e
+            for e in cset.entries
+            if e.trigger.get("kind") == "door_closed" and e.trigger.get("stop_id") == door_id
+        ], standby_id
+
+    # Control: open for an hour after the door — the standby is offered.
+    offered, standby_id = door_entries(60)
+    assert offered and standby_id in offered[0].stop_ids, (
+        f"premise: an open standby is offered; got {[e.stop_ids for e in offered]}"
+    )
+    # Closing three minutes after the door is found shut: open at the DOOR's clock,
+    # shut by the time the walker has crossed to it — never offered.
+    shut_on_arrival, standby_id = door_entries(3)
+    assert not any(standby_id in e.stop_ids for e in shut_on_arrival), (
+        "a standby whose door is shut when the walker reaches it was offered: "
+        f"{[e.question for e in shut_on_arrival]}"
+    )
+
+
+def _held_stop(pid: str, stop_id: str | None = None):
+    from src.api.models.trips import GeneratedStop
+
+    return GeneratedStop(
+        sort_order=1,
+        poi_id=pid,
+        poi_name=pid,
+        lat=48.85,
+        lng=2.35,
+        duration_min=5,
+        importance_tier=3,
+        start_time="",
+        stop_id=stop_id,
+    )
+
+
+def _door_entry(cid: str, door: str, standby: str, *, version: int = 2):
+    from src.api.models.trips import SessionContingency
+
+    q = f"Keep the day going at {standby} and be at the end about 15:38, or carry on by 15:28?"
+    return SessionContingency(
+        contingency_id=cid,
+        trigger={"kind": "door_closed", "stop_id": door},
+        plan_version=version,
+        stop_ids=[standby, "after"],
+        screen_text=q,
+        question=q,
+        default_arm="keep",
+        alternate_stop_ids=["after"],
+    )
+
+
+def test_a_replan_holds_only_the_standbys_that_already_have_a_voice():
+    """P10H-S2: "every guessed stop carries a standby ... composed and voiced". The
+    full set computed after a live replan rebuilds its standbys as fresh stops with
+    no item and no audio; a walker offered one of those is sent to a place that
+    plays nothing. The rebuilt set keeps the standbys the previous version had
+    already composed (their items and audio ride along) and drops a door entry
+    whose standby has no voice, reporting the drop.
+
+    UNDO: return `full` unchanged from `_hold_only_voiced_standbys` -> RED.
+    """
+    from src.api.models.trips import SessionPlan
+    from src.api.routes.trips import STANDBY_DROPPED_DEGRADATION, _hold_only_voiced_standbys
+
+    previous = SessionPlan(
+        trip_id="t",
+        plan_version=2,
+        stops=[_held_stop("door-a", "item-a"), _held_stop("after", "item-after")],
+        standbys=[_held_stop("voiced", "item-voiced")],
+        retime_tolerance_seconds=180,
+    )
+    full = SessionPlan(
+        trip_id="t",
+        plan_version=2,
+        stops=[_held_stop("door-a", "item-a"), _held_stop("after", "item-after")],
+        # Rebuilt fresh: no item ids. One the previous version already voiced, one new.
+        standbys=[_held_stop("voiced"), _held_stop("silent")],
+        retime_tolerance_seconds=180,
+        contingencies=[
+            _door_entry("v2-1", "door-a", "voiced"),
+            _door_entry("v2-2", "door-b", "silent"),
+        ],
+    )
+    held = _hold_only_voiced_standbys(full, previous)
+    assert [(s.poi_id, s.stop_id) for s in held.standbys] == [("voiced", "item-voiced")], (
+        f"only the voiced standby is held, with its item: {held.standbys}"
+    )
+    assert [e.contingency_id for e in held.contingencies] == ["v2-1"], (
+        "the door whose standby has no voice keeps M5's simpler answer, not a silent place"
+    )
+    dropped = [d for d in held.degradations if d.get("kind") == STANDBY_DROPPED_DEGRADATION]
+    assert dropped and dropped[0].get("stop_id") == "door-b", (
+        f"the drop is reported: {held.degradations}"
+    )
+
+
+def test_the_live_replan_reply_carries_the_standbys_the_walker_still_holds():
+    """P10H-S2: the reply to a live replan is built with the set deferred, and a
+    reply with no standbys makes every carried door entry fail its "all stops
+    ahead" test — the standbys vanish from the phone the moment the day replans.
+    The reply carries the previous version's standbys, minus any the new day walks.
+
+    UNDO: stop passing `standbys` into the deferred reply -> RED.
+    """
+    from src.api.models.trips import SessionPlan
+    from src.api.routes.trips import _standbys_still_held
+
+    previous = SessionPlan(
+        trip_id="t",
+        plan_version=1,
+        stops=[_held_stop("door-a", "item-a"), _held_stop("after", "item-after")],
+        standbys=[_held_stop("voiced", "item-voiced"), _held_stop("taken", "item-taken")],
+        retime_tolerance_seconds=180,
+    )
+    # The walker took "taken" at a shut door: it is a stop of the new day now.
+    new_day = [_held_stop("taken", "item-taken"), _held_stop("after", "item-after")]
+    assert [s.poi_id for s in _standbys_still_held(previous, new_day)] == ["voiced"]
+
+
+def test_the_walkers_answer_at_a_shut_door_is_the_remainder_the_server_replans():
+    """P10H-S2: the phone answers a held door question offline, then REPORTS the
+    answer it applied. The server takes that answer as the remainder to keep to —
+    resolved against the day AND the held standbys, in the order given — and seats
+    the standby among them as protected, so the stored day matches what the walker
+    is walking. An id the session does not hold is refused by name.
+
+    UNDO: resolve `kept_stop_ids` against `current.stops` only -> RED.
+    """
+    import pytest
+    from fastapi import HTTPException
+
+    from src.api.models.trips import SessionPlan
+    from src.api.routes.trips import _kept_by_the_walker
+
+    current = SessionPlan(
+        trip_id="t",
+        plan_version=1,
+        stops=[_held_stop("door-a", "item-a"), _held_stop("after", "item-after")],
+        standbys=[_held_stop("cluny", "item-cluny")],
+        retime_tolerance_seconds=180,
+    )
+    remaining = [current.stops[1]]  # the door already left the remainder
+    kept, protected = _kept_by_the_walker(["cluny", "after"], current, remaining)
+    assert [s.poi_id for s in kept] == ["cluny", "after"]
+    assert [s.stop_id for s in kept] == ["item-cluny", "item-after"], (
+        "the standby's item rides along"
+    )
+    assert protected == ("cluny",), "the standby the walker chose is seated, not optional"
+    # No answer reported: the remainder is untouched.
+    assert _kept_by_the_walker(None, current, remaining) == (remaining, ())
+    with pytest.raises(HTTPException) as refused:
+        _kept_by_the_walker(["louvre"], current, remaining)
+    assert "louvre" in str(refused.value.detail)

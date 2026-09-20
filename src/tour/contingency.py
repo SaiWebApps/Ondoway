@@ -786,7 +786,9 @@ def build_contingency_set(
             continue
         # Nearest first: the standby is the closest open map-sourced place off the
         # day, and the next one along is tried when the closest cannot be seated
-        # or cannot be said in one plain sentence.
+        # or cannot be said in one plain sentence. A place shut for the whole of
+        # the rest of the day is out before any tail is planned; whether it is
+        # open when the walker REACHES it is checked on the arm's own clock below.
         candidates = sorted(
             (
                 c
@@ -795,7 +797,7 @@ def build_contingency_set(
                 and c.opening_hours_source == HOURS_SOURCE_MAP
                 and _is_story_stop(c)
                 and _clock_exclusion_reason(
-                    c.opening_hours, c.opening_hours_source, arrival, 1, country=country
+                    c.opening_hours, c.opening_hours_source, arrival, left, country=country
                 )
                 is None
             ),
@@ -810,6 +812,34 @@ def build_contingency_set(
             )
             with_standby = replan(tail_request, ctx)
             if with_standby is None or standby.id not in {p.id for p in with_standby.pois}:
+                continue
+            # "Open at arrival" is arrival AT THE STANDBY: the walker crosses to it
+            # from the shut door, and a place that closes during that walk is a
+            # second locked door, not an answer.
+            standby_arrival = next(
+                (
+                    arr
+                    for p, arr, _dep in stop_clocks(
+                        with_standby,
+                        tail_request,
+                        clock_start=arrival,
+                        listening_rate=person.listening_rate,
+                        audio_seconds_by_id=audio_seconds_by_id,
+                    )
+                    if p.id == standby.id
+                ),
+                None,
+            )
+            if standby_arrival is None or (
+                _clock_exclusion_reason(
+                    standby.opening_hours,
+                    standby.opening_hours_source,
+                    standby_arrival,
+                    1,
+                    country=country,
+                )
+                is not None
+            ):
                 continue
             keep_clock = finish_clock_of(with_standby, arrival)
             if keep_clock is None:
