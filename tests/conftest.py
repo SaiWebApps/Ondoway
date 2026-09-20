@@ -209,7 +209,12 @@ _XDIST_WORKER_DB = {
     1: {"port": 7690, "password": "ondoway_test2_2026"},
     2: {"port": 7691, "password": "ondoway_test3_2026"},
 }
-_DB_FIXTURES = frozenset({"driver", "clean_driver", "client", "live_neo4j"})
+#: Every fixture name that opens a database driver. The auto-tagger below reads
+#: this set, and tests/test_suite_isolation.py fails any driver-opening fixture
+#: that is not in it: an untagged one runs in the pure track's eight workers,
+#: whose numbers fold onto the database track's three graphs, and the two then
+#: wipe each other mid-seed.
+_DB_FIXTURES = frozenset({"driver", "clean_driver", "client", "live_neo4j", "seeded_driver"})
 
 
 def pytest_collection_modifyitems(config, items):
