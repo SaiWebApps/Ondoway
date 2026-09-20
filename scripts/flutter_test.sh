@@ -509,7 +509,20 @@ run_once() {
   fi
 }
 
-[ -n "$CHROME" ] && export CHROME_EXECUTABLE="$CHROME"
+# The browser is handed to flutter through a WRAPPER that appends
+# --use-mock-keychain: a test Chrome with a fresh profile otherwise asks the
+# macOS login keychain for its "Chromium Safe Storage" key, popping a password
+# dialog on the owner's screen every run. The tests store nothing worth
+# encrypting, so the mock keychain is correct as well as quiet.
+if [ -n "$CHROME" ]; then
+  _wrap_dir="$(mktemp -d)"
+  # Chain onto the runner's own EXIT handler; a bare trap here would replace it.
+  trap 'rm -rf "$_wrap_dir"; finish' EXIT
+  printf '#!/usr/bin/env bash\nexec "%s" --use-mock-keychain "$@"\n' "$CHROME" \
+    > "$_wrap_dir/chrome-quiet"
+  chmod +x "$_wrap_dir/chrome-quiet"
+  export CHROME_EXECUTABLE="$_wrap_dir/chrome-quiet"
+fi
 
 # The VM pass, first. Tests tagged @Tags(['vm']) cannot run under chrome — the
 # chrome pass above excludes them — so they run here on flutter's native engine.
