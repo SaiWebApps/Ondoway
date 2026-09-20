@@ -233,3 +233,11 @@ out from between its neighbours.
 **Incident:** During the Phase 10 close-out audit, cross-track database contamination surfaced. Instead of registering it in the tracker and fixing it, the session flagged it as a suggested-task chip for the owner to click later. The owner ruled this deferral a disease: the fix took twenty minutes once actually attempted, and the chip had converted a mechanical pipeline into a queue waiting on a human.
 
 **Rule:** A finding surfaced mid-run is dispositioned in the same run: registered in the tracker and built, or explicitly dropped with the reason logged. The suggested-task mechanism is never used. The owner approves shapes and verdicts, not work queues.
+
+---
+
+## 28. Blame needs a differential, and the owner's hands are the last resort
+
+**Incident:** The audit's browser tests wedged. A registered network extension was found, correlation was declared causation, and the owner was sent to System Settings, then toward a system-integrity detour, across several angry rounds — an interrupt spent on machine surgery. The decisive experiment had been available the whole time: the same engine under a different binary identity fetched freely, proving the block was identity-selective and handing a fix that needed nothing from the owner. Run first, it would have cost two minutes.
+
+**Rule:** Before naming an environmental culprit or asking the owner to touch their machine, run the differential: change exactly one variable that separates the suspect from innocence, and let the result speak. An unproven attribution is a guess wearing a diagnosis. And when any fix exists that needs nothing from the owner, it is taken first; the owner's hands are the last resort, not the next step.

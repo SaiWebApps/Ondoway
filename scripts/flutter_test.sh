@@ -175,7 +175,14 @@ elapsed_total() { echo $(( $(date +%s) - STARTED_AT )); }
 # build, and pinning is what keeps a golden-image suite reproducible.
 CHROME="${CHROME_EXECUTABLE:-}"
 if [ -z "$CHROME" ]; then
-  for _c in "$HOME/Library/Caches/ms-playwright/"chromium-[0-9]*"/chrome-mac"*"/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" \
+  # The headless shell leads the search: it is the same engine under a binary
+  # identity that browser-targeting content filters ignore. A filter on this
+  # machine drops every socket of the branded Chrome for Testing at connect()
+  # while the shell fetches freely — and a headless test needs nothing the
+  # shell lacks.
+  for _c in "$HOME/Library/Caches/ms-playwright/"chromium_headless_shell-[0-9]*"/chrome-headless-shell-mac"*"/chrome-headless-shell" \
+            "$HOME/Library/Caches/ms-playwright/"chromium-[0-9]*"/chrome-mac"*"/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" \
+            "$HOME/.cache/ms-playwright/"chromium_headless_shell-[0-9]*"/chrome-headless-shell-linux/chrome-headless-shell" \
             "$HOME/.cache/ms-playwright/"chromium-[0-9]*"/chrome-linux/chrome" \
             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
             "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" \
