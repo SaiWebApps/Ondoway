@@ -156,6 +156,60 @@ def test_owner_change_token_is_single_use(db: Path) -> None:
     assert code == 1, "a spent token authorizes nothing further"
 
 
+def _approve_with_criteria(db: Path, **flags: str) -> None:
+    seed(db)
+    assert run(db, "criterion-add", "--story", "S1", "--id", "S1.C1",
+               "--text", "c", "--test-command", "true")[0] == 0
+    extra: list[str] = []
+    for key, value in flags.items():
+        extra += [f"--{key.replace('_', '-')}", value]
+    code, payload = run(db, "approve", "--feature", "f", "--by", "owner", *extra)
+    assert code == 0, payload
+
+
+def test_interrupts_are_budgeted_at_three(db: Path) -> None:
+    """A story may cost the owner three questions. The fourth parks it: the
+    refusal says so, the park is recorded, and the run moves on."""
+    _approve_with_criteria(db)
+    for n in range(3):
+        code, payload = run(db, "interrupt", "--story", "S1",
+                            "--question", f"question {n + 1}")
+        assert code == 0, payload
+        assert payload["interrupts_left"] == 2 - n
+    code, payload = run(db, "interrupt", "--story", "S1", "--question", "one too many")
+    assert code == 1
+    assert "parked" in payload["refused"]
+    code, health = run(db, "health")
+    assert code == 0
+    assert health["replan_required"] is True
+    assert "parked" in health["reason"]
+
+
+def test_the_clock_parks_a_story_at_twice_its_budget(db: Path) -> None:
+    """The seal records the commit budget and the measured minutes-per-commit
+    rate. A feature twice over its clock is flagged for the owner instead of
+    grinding on."""
+    _approve_with_criteria(db, budget_commits="2", rate_minutes="18")
+    import sqlite3
+
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "UPDATE approvals SET approved_at = datetime('now', '-100 minutes')")
+    conn.commit()
+    conn.close()
+    code, health = run(db, "health")
+    assert code == 0
+    assert health["replan_required"] is True
+    assert "clock" in health["reason"]
+
+
+def test_a_feature_inside_its_clock_is_not_flagged(db: Path) -> None:
+    _approve_with_criteria(db, budget_commits="8", rate_minutes="18")
+    code, health = run(db, "health")
+    assert code == 0
+    assert health["replan_required"] is False
+
+
 def test_unapproved_features_keep_working_as_before(db: Path) -> None:
     seed(db)
     assert run(db, "issue-add", "--story", "S1", "--id", "S1.M2",

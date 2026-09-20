@@ -146,7 +146,9 @@ CREATE TABLE IF NOT EXISTS approvals (
     feature     TEXT NOT NULL REFERENCES features(slug),
     approved_by TEXT NOT NULL,
     approved_at TEXT NOT NULL,
-    seal        TEXT NOT NULL DEFAULT ''
+    seal        TEXT NOT NULL DEFAULT '',
+    budget_commits INTEGER NOT NULL DEFAULT 0,
+    rate_minutes   INTEGER NOT NULL DEFAULT 0
 );
 """
 
@@ -155,7 +157,13 @@ CREATE TABLE IF NOT EXISTS approvals (
 MIGRATIONS = (
     ("criteria", "test_command", "TEXT NOT NULL DEFAULT ''"),
     ("approvals", "seal", "TEXT NOT NULL DEFAULT ''"),
+    ("approvals", "budget_commits", "INTEGER NOT NULL DEFAULT 0"),
+    ("approvals", "rate_minutes", "INTEGER NOT NULL DEFAULT 0"),
 )
+
+#: Questions a story may cost the owner between approval and Done. The next
+#: one parks the story instead of asking.
+INTERRUPT_BUDGET = 3
 
 
 def _migrate(conn: sqlite3.Connection) -> None:
@@ -602,11 +610,36 @@ def cmd_approve(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
         )
     seal = feature_shape(conn, args.feature)
     conn.execute(
-        "INSERT INTO approvals (feature, approved_by, approved_at, seal) VALUES (?,?,?,?)",
-        (args.feature, args.by, now(), seal),
+        "INSERT INTO approvals (feature, approved_by, approved_at, seal, "
+        "budget_commits, rate_minutes) VALUES (?,?,?,?,?,?)",
+        (args.feature, args.by, now(), seal, args.budget_commits, args.rate_minutes),
     )
     record(conn, "approved", who=args.by, detail=f"{args.feature}: {seal[:16]}")
     emit(conn, {"seal": seal})
+
+
+def cmd_interrupt(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
+    """A question to the owner, counted. The budget is three per story; the
+    fourth parks the story so the run moves on instead of queueing on a human."""
+    if not conn.execute("SELECT 1 FROM stories WHERE id=?", (args.story,)).fetchone():
+        raise Refused(f"no story {args.story!r} to interrupt on")
+    spent = conn.execute(
+        "SELECT COUNT(*) FROM events WHERE kind='interrupt' AND story=?", (args.story,)
+    ).fetchone()[0]
+    if spent >= INTERRUPT_BUDGET:
+        record(conn, "story_parked", who=args.who, story=args.story,
+               detail=f"interrupt budget spent; last question: {args.question}")
+        raise Refused(
+            f"story {args.story} has spent its {INTERRUPT_BUDGET} interrupts and is "
+            "parked. Write the one-paragraph state for the owner and move to the "
+            "next approved story."
+        )
+    record(conn, "interrupt", who=args.who, story=args.story, detail=args.question)
+    print(json.dumps({
+        "story": args.story,
+        "question": args.question,
+        "interrupts_left": INTERRUPT_BUDGET - spent - 1,
+    }))
 
 
 def cmd_show(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
@@ -673,6 +706,44 @@ def health_of(conn: sqlite3.Connection, feature: str | None = None) -> dict:
         if row:
             reason = f"issue {row['id']} has {row['attempts']} attempts and no state change"
             story = row["story"]
+
+    # 4. A story parked on a spent interrupt budget, still not Done.
+    if not reason:
+        row = conn.execute(
+            "SELECT e.story FROM events e JOIN stories s ON e.story = s.id "
+            "WHERE e.kind='story_parked' AND s.state != 'Done'" +
+            (" AND s.feature=?" if feature else "") + " ORDER BY e.id DESC",
+            scope_args).fetchone()
+        if row:
+            reason = f"story {row['story']} is parked and waits on the owner"
+            story = row["story"]
+
+    # 5. A feature twice over its clock. The seal recorded the commit budget and
+    # the measured minutes-per-commit rate; past 2x, grinding on is the failure.
+    if not reason:
+        for approval in conn.execute(
+            "SELECT feature, approved_at, budget_commits, rate_minutes FROM approvals "
+            "WHERE budget_commits > 0 AND rate_minutes > 0"
+            + (" AND feature=?" if feature else "") + " ORDER BY id DESC",
+            scope_args,
+        ):
+            unfinished = conn.execute(
+                "SELECT 1 FROM stories WHERE feature=? AND state != 'Done'",
+                (approval["feature"],)).fetchone()
+            if not unfinished:
+                continue
+            approved_at = datetime.fromisoformat(approval["approved_at"])
+            if approved_at.tzinfo is None:
+                approved_at = approved_at.replace(tzinfo=timezone.utc)
+            elapsed = (datetime.now(timezone.utc) - approved_at).total_seconds() / 60
+            budget = approval["budget_commits"] * approval["rate_minutes"]
+            if elapsed > 2 * budget:
+                reason = (
+                    f"feature {approval['feature']} is over twice its clock "
+                    f"({round(elapsed)}m spent, {budget}m budgeted) — park it "
+                    "for the owner"
+                )
+                break
 
     return {
         "progress": progress,
@@ -982,6 +1053,7 @@ HANDLERS = {
     "criterion-add": cmd_criterion_add,
     "owner-change": cmd_owner_change,
     "seal-check": cmd_seal_check,
+    "interrupt": cmd_interrupt,
     "step-status": cmd_step_status,
     "story-state": cmd_story_state,
     "approve": cmd_approve,
@@ -1072,6 +1144,15 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("approve", parents=[common])
     p.add_argument("--feature", required=True)
     p.add_argument("--by", required=True)
+    p.add_argument("--budget-commits", type=int, default=0, dest="budget_commits",
+                   help="how many commits the seal budgets; 0 leaves the clock off")
+    p.add_argument("--rate-minutes", type=int, default=0, dest="rate_minutes",
+                   help="the measured minutes per commit behind the budget")
+
+    p = sub.add_parser("interrupt", parents=[common])
+    p.add_argument("--story", required=True)
+    p.add_argument("--question", required=True,
+                   help="the question in plain words; it lands in the event log")
 
     p = sub.add_parser("note", parents=[common])
     p.add_argument("--text", required=True,
