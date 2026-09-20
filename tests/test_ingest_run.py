@@ -14,11 +14,13 @@ from __future__ import annotations
 
 import ast
 import json
+import shutil
 from pathlib import Path
 
 import pytest
 
 from src.ingest import jobs, judge_claims, judge_narration, llm, model, narrate, run
+from src.ingest import unit as unit_mod
 from tests import ingest_job_script as script_mod
 
 
@@ -1295,3 +1297,78 @@ def test_a_unit_with_two_stories_judges_them_in_one_p3_and_one_p5_round(tmp_path
     assert len(p5_rounds[0]) == len(
         judge_narration.sentences(script_mod.NARRATION)
     ) * 2, p5_rounds
+
+
+def test_two_units_get_their_own_rounds_never_one_shared_round(tmp_path):
+    """The judge's gap on the round collapse: P5 was flattened across UNITS,
+    so a 386-chunk job would have submitted every chunk's sentences in one
+    batch and one failed round would have held every narration in the job.
+    The rounds are per unit now, and a second chunk whose text matches the
+    first proves it deterministically: `sentence_custom_id` is content-derived
+    (`n{claims_hash}-s{i}-j{a}`, no unit key), so two units that narrate the
+    same claims produce the SAME sentence ids — a shared round would raise the
+    Batch API's duplicate-custom_id refusal, while per-unit rounds are legal.
+    """
+    chunks = script_mod.chunk_dir(tmp_path)
+    second = "chunk-08-upper-west-side-central-park"
+    shutil.copyfile(chunks / f"{script_mod.LP_CHUNK}.txt", chunks / f"{second}.txt")
+    manifest = json.loads((chunks / "manifest.json").read_text())
+    manifest["chunks"].append(
+        {"chunk_number": 8, "filename": f"{second}.txt", "section_title": "Upper West Side"}
+    )
+    (chunks / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    data_root = script_mod.data_dir(tmp_path)
+    store = jobs.IngestJobStore()
+    job = store.create(
+        city=script_mod.CITY,
+        source={"kind": "book", "chunk_dir": str(chunks), "chunks": None},
+        as_of=2022,
+        rights_basis="owned_copy",
+    )
+    unit_a = script_mod.unit(chunks, as_of=2022)
+    unit_b = unit_mod.load_unit(
+        chunks.parent, city=script_mod.CITY, source_id=script_mod.LP_SOURCE, chunk=second,
+        as_of=2022, rights_basis="owned_copy",
+    )
+    claim_ids = [f"c{i:02d}" for i in range(1, len(script_mod.CLAIMS) + 1)]
+    scripted = {
+        "answers": {
+            # P2 runs for BOTH units before P4 does, so the author's answers
+            # are drawn stories, stories, narration, narration.
+            "author": [
+                script_mod.stories_answer(), script_mod.stories_answer(),
+                script_mod.narration_answer(), script_mod.narration_answer(),
+            ]
+        },
+        "batch_answers": {
+            unit_a.custom_id(1): script_mod.claims_answer(),
+            unit_b.custom_id(1): script_mod.claims_answer(),
+            **script_mod.verdicts(unit_a, claim_ids),
+            **script_mod.verdicts(unit_b, claim_ids),
+            **script_mod.omissions_answer(unit_a),
+            **script_mod.omissions_answer(unit_b),
+            **script_mod.sentence_verdicts([c["text"] for c in script_mod.CLAIMS]),
+        },
+    }
+    _events, sink = _sink_and_events()
+    recorder = _RecordingClient(llm.MockClient(sink, **scripted))
+
+    run.run_job(job.id, store, recorder, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    # Two units, so two of every per-unit round — never one shared round.
+    p3_judging = [
+        ids for phase, ids, _p in recorder.batches
+        if phase == "P3" and all(cid.endswith(("-j1", "-j2")) for cid in ids)
+    ]
+    p5_rounds = [ids for phase, ids, _p in recorder.batches if phase == "P5"]
+    assert len(p3_judging) == 2, p3_judging
+    assert len(p5_rounds) == 2, p5_rounds
+    # Each P3 round carries ONE unit's claims: its ids share one unit prefix.
+    for ids in p3_judging:
+        prefixes = {cid.rsplit("-c", 1)[0] for cid in ids}
+        assert len(prefixes) == 1, ids
+    # The identical sentence ids across the two units are the discriminator.
+    assert p5_rounds[0] == p5_rounds[1], (p5_rounds[0], p5_rounds[1])
