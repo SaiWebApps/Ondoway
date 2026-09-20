@@ -241,3 +241,11 @@ out from between its neighbours.
 **Incident:** The audit's browser tests wedged. A registered network extension was found, correlation was declared causation, and the owner was sent to System Settings, then toward a system-integrity detour, across several angry rounds — an interrupt spent on machine surgery. The decisive experiment had been available the whole time: the same engine under a different binary identity fetched freely, proving the block was identity-selective and handing a fix that needed nothing from the owner. Run first, it would have cost two minutes.
 
 **Rule:** Before naming an environmental culprit or asking the owner to touch their machine, run the differential: change exactly one variable that separates the suspect from innocence, and let the result speak. An unproven attribution is a guess wearing a diagnosis. And when any fix exists that needs nothing from the owner, it is taken first; the owner's hands are the last resort, not the next step.
+
+---
+
+## 29. The owner never runs a command, and a milestone is not done while its track is unrun
+
+**Incident:** A production step was closed out by handing the owner the deploy command to press; the owner ruled that laziness and an evasion of responsibility. In the same run, a milestone had been marked complete while the browser track of the suite was wedged and unrun; the day the track ran again it found that milestone's page could not register a city at all.
+
+**Rule:** Every step, cloud writes included, is run by the session, verified, and reported as an outcome; a step too risky to run is one of the budgeted interrupts, never a command handed back. A milestone whose proof lives in a track that did not run is not complete: the claim waits until that track runs, or the story is parked and the reason written.
