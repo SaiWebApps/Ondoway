@@ -284,10 +284,14 @@ requirements: ## Regenerate requirements.txt from uv.lock.
 # ════════════════════════════════════════════════════════════════════════════
 ##@ CODE QUALITY
 
-lint: ## Run the Python linter and the process-file lint.
+lint: ## Run the Python linter, the process-file lint, and the clone detector.
 	@$(PREFLIGHT) --label lint $(PRE_PY)
 	uv run ruff check $(LINT_PATHS)
 	uv run python scripts/lint_process_files.py
+	#: A changed src/ function that is byte-for-byte another function under new
+	# names is a parallel implementation, and the two drift the moment either is
+	# edited. Reads the uncommitted diff, so it fails before the copy can land.
+	uv run python .agents/team/teamflow.py verify single-authority
 
 dedup-review: ## Find one question this codebase answers in two places.
 	@$(PREFLIGHT) --label dedup-review $(PRE_PY) render-key
