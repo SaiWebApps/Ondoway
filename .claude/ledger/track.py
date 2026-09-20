@@ -85,10 +85,11 @@ CREATE TABLE IF NOT EXISTS stories (
 );
 
 CREATE TABLE IF NOT EXISTS criteria (
-    id        TEXT PRIMARY KEY,
-    story     TEXT NOT NULL REFERENCES stories(id),
-    text      TEXT NOT NULL,
-    negative  INTEGER NOT NULL DEFAULT 0
+    id           TEXT PRIMARY KEY,
+    story        TEXT NOT NULL REFERENCES stories(id),
+    text         TEXT NOT NULL,
+    negative     INTEGER NOT NULL DEFAULT 0,
+    test_command TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS issues (
@@ -144,13 +145,33 @@ CREATE TABLE IF NOT EXISTS approvals (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     feature     TEXT NOT NULL REFERENCES features(slug),
     approved_by TEXT NOT NULL,
-    approved_at TEXT NOT NULL
+    approved_at TEXT NOT NULL,
+    seal        TEXT NOT NULL DEFAULT ''
 );
 """
 
+#: Columns added after tables already existed in real databases. CREATE TABLE
+#: IF NOT EXISTS never alters, so each is applied by `_migrate` when absent.
+MIGRATIONS = (
+    ("criteria", "test_command", "TEXT NOT NULL DEFAULT ''"),
+    ("approvals", "seal", "TEXT NOT NULL DEFAULT ''"),
+)
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    for table, column, spec in MIGRATIONS:
+        present = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if present and column not in present:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {spec}")
+
 
 class Refused(Exception):
-    """A claim this command declines to record. Carries what to say about it."""
+    """A claim this command declines to record. Carries what to say about it,
+    and optionally structured fields for the caller (`extra`)."""
+
+    def __init__(self, message: str, extra: dict | None = None):
+        super().__init__(message)
+        self.extra = extra or {}
 
 
 def now() -> str:
@@ -229,6 +250,90 @@ def emit(conn: sqlite3.Connection, extra: dict | None = None) -> None:
     print(json.dumps(payload, indent=2))
 
 
+# ----------------------------------------------------------------- the seal
+#
+# Approval freezes a feature's shape. 16 approved milestones became 44 built
+# because nothing refused the 28 additions; now the tracker itself does. The
+# seal is a hash over the feature's stories, criteria and issues. It cannot
+# stop a direct sqlite3 write (nothing here can), but `seal-check` recomputes
+# it, so tampering is visible the next time anything is claimed.
+
+
+def feature_shape(conn: sqlite3.Connection, feature: str) -> str:
+    """The approved shape: every story, criterion and issue id, text and proof
+    command under the feature, hashed canonically."""
+    import hashlib
+
+    shape: dict = {"stories": [], "criteria": [], "issues": []}
+    for row in conn.execute(
+        "SELECT id, text FROM stories WHERE feature=? ORDER BY id", (feature,)
+    ):
+        shape["stories"].append([row["id"], row["text"]])
+    for row in conn.execute(
+        "SELECT c.id, c.text, c.test_command FROM criteria c "
+        "JOIN stories s ON c.story = s.id WHERE s.feature=? ORDER BY c.id",
+        (feature,),
+    ):
+        shape["criteria"].append([row["id"], row["text"], row["test_command"]])
+    for row in conn.execute(
+        "SELECT i.id, i.name, i.test_command FROM issues i "
+        "JOIN stories s ON i.story = s.id WHERE s.feature=? ORDER BY i.id",
+        (feature,),
+    ):
+        shape["issues"].append([row["id"], row["name"], row["test_command"]])
+    payload = json.dumps(shape, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def approval_of(conn: sqlite3.Connection, feature: str) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT id, seal, approved_by FROM approvals WHERE feature=? ORDER BY id DESC",
+        (feature,),
+    ).fetchone()
+
+
+def feature_of_story(conn: sqlite3.Connection, story_id: str) -> str | None:
+    row = conn.execute("SELECT feature FROM stories WHERE id=?", (story_id,)).fetchone()
+    return row["feature"] if row else None
+
+
+def consume_owner_change(conn: sqlite3.Connection, feature: str, token: str | None,
+                         *, who: str, action: str) -> None:
+    """Refuse a post-approval shape change unless `token` names an unspent
+    owner-change row for this feature; spend it and re-seal afterwards is the
+    caller's job via `reseal`."""
+    if token is None:
+        raise Refused(
+            f"feature {feature!r} is approved and sealed. {action} changes the approved "
+            "shape, and only the owner changes an approved shape: record one with "
+            "`owner-change --feature ... --by owner --why ...` and pass its id "
+            "as --owner-change."
+        )
+    row = conn.execute(
+        "SELECT id, detail FROM events WHERE id=? AND kind='owner_change'", (token,)
+    ).fetchone()
+    if not row or not row["detail"].startswith(f"{feature}:"):
+        raise Refused(f"--owner-change {token!r} names no owner change for {feature!r}")
+    spent = conn.execute(
+        "SELECT 1 FROM events WHERE kind='owner_change_used' AND detail=?", (token,)
+    ).fetchone()
+    if spent:
+        raise Refused(
+            f"owner change {token} is already spent. One change, one token: "
+            "ask the owner again."
+        )
+    record(conn, "owner_change_used", who=who, detail=token)
+
+
+def reseal(conn: sqlite3.Connection, feature: str, *, who: str) -> None:
+    approval = approval_of(conn, feature)
+    if approval is None:
+        return
+    seal = feature_shape(conn, feature)
+    conn.execute("UPDATE approvals SET seal=? WHERE id=?", (seal, approval["id"]))
+    record(conn, "resealed", who=who, detail=f"{feature}: {seal[:16]}")
+
+
 # ------------------------------------------------ the part that cannot be faked
 
 
@@ -296,6 +401,10 @@ def cmd_issue_add(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
             "the story is the unit at every level, and an issue without one is invisible "
             "on the dashboard."
         )
+    feature = feature_of_story(conn, args.story)
+    if feature and approval_of(conn, feature) is not None:
+        consume_owner_change(conn, feature, args.owner_change, who=args.who,
+                             action=f"adding issue {args.id!r}")
     conn.execute(
         "INSERT INTO issues (id, story, name, status, test_command, files, depends_on, "
         "attempts, created) VALUES (?,?,?,'pending',?,?,?,0,?)",
@@ -304,7 +413,55 @@ def cmd_issue_add(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
     )
     record(conn, "issue_added", who=args.who, story=args.story, issue=args.id,
            detail=args.name)
+    if feature:
+        reseal(conn, feature, who=args.who)
     emit(conn)
+
+
+def cmd_criterion_add(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
+    """A criterion is the owner's acceptance line as a runnable proof. Sealed
+    with the feature at approval; adding one afterwards is an owner change."""
+    if not conn.execute("SELECT 1 FROM stories WHERE id=?", (args.story,)).fetchone():
+        raise Refused(f"no story {args.story!r}; add the story before its criteria")
+    feature = feature_of_story(conn, args.story)
+    if feature and approval_of(conn, feature) is not None:
+        consume_owner_change(conn, feature, args.owner_change, who=args.who,
+                             action=f"adding criterion {args.id!r}")
+    conn.execute(
+        "INSERT INTO criteria (id, story, text, negative, test_command) VALUES (?,?,?,?,?)",
+        (args.id, args.story, args.text, 1 if args.negative else 0, args.test_command),
+    )
+    record(conn, "criterion_added", who=args.who, story=args.story, detail=args.text)
+    if feature:
+        reseal(conn, feature, who=args.who)
+    emit(conn)
+
+
+def cmd_owner_change(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
+    """The owner's recorded word that the approved shape may change once."""
+    if approval_of(conn, args.feature) is None:
+        raise Refused(
+            f"feature {args.feature!r} has no approval to change; before approval "
+            "the shape is simply edited"
+        )
+    record(conn, "owner_change", who=args.by, detail=f"{args.feature}: {args.why}")
+    token = conn.execute("SELECT last_insert_rowid() AS id").fetchone()["id"]
+    print(json.dumps({"owner_change": str(token), "why": args.why}))
+
+
+def cmd_seal_check(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
+    """Recompute the approved shape and compare with the stored seal."""
+    approval = approval_of(conn, args.feature)
+    if approval is None:
+        raise Refused(f"feature {args.feature!r} is not approved, so it has no seal")
+    intact = feature_shape(conn, args.feature) == approval["seal"]
+    if not intact:
+        raise Refused(
+            f"the shape of {args.feature!r} no longer matches its seal: something "
+            "changed the stories, criteria or issues without an owner change",
+            extra={"seal_intact": False},
+        )
+    print(json.dumps({"seal_intact": True, "seal": approval["seal"]}))
 
 
 def cmd_issue_set(conn: sqlite3.Namespace, args: argparse.Namespace) -> None:
@@ -428,12 +585,28 @@ def cmd_note(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
 def cmd_approve(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
     if not conn.execute("SELECT 1 FROM features WHERE slug=?", (args.feature,)).fetchone():
         raise Refused(f"no feature {args.feature!r}")
+    # Approval without criteria is a signature on a blank page: the owner would
+    # be sealing a shape with no runnable definition of done.
+    bare = [
+        row["id"]
+        for row in conn.execute(
+            "SELECT id FROM stories WHERE feature=? AND id NOT IN "
+            "(SELECT story FROM criteria)",
+            (args.feature,),
+        )
+    ]
+    if bare:
+        raise Refused(
+            f"stories without criteria: {', '.join(bare)}. Every story carries at "
+            "least one criterion with a test command before the owner approves it."
+        )
+    seal = feature_shape(conn, args.feature)
     conn.execute(
-        "INSERT INTO approvals (feature, approved_by, approved_at) VALUES (?,?,?)",
-        (args.feature, args.by, now()),
+        "INSERT INTO approvals (feature, approved_by, approved_at, seal) VALUES (?,?,?,?)",
+        (args.feature, args.by, now(), seal),
     )
-    record(conn, "approved", who=args.by, detail=args.feature)
-    emit(conn)
+    record(conn, "approved", who=args.by, detail=f"{args.feature}: {seal[:16]}")
+    emit(conn, {"seal": seal})
 
 
 def cmd_show(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
@@ -806,6 +979,9 @@ HANDLERS = {
     "story-add": cmd_story_add,
     "issue-add": cmd_issue_add,
     "issue-set": cmd_issue_set,
+    "criterion-add": cmd_criterion_add,
+    "owner-change": cmd_owner_change,
+    "seal-check": cmd_seal_check,
     "step-status": cmd_step_status,
     "story-state": cmd_story_state,
     "approve": cmd_approve,
@@ -856,6 +1032,27 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--test-command", required=True, dest="test_command")
     p.add_argument("--files", required=True, nargs="+")
     p.add_argument("--depends-on", nargs="*", dest="depends_on")
+    p.add_argument("--owner-change", default=None, dest="owner_change",
+                   help="an owner-change id; required once the feature is approved")
+
+    p = sub.add_parser("criterion-add", parents=[common])
+    p.add_argument("--story", required=True)
+    p.add_argument("--id", required=True)
+    p.add_argument("--text", required=True,
+                   help="the acceptance line in the owner's words")
+    p.add_argument("--test-command", required=True, dest="test_command",
+                   help="the runnable proof; red before the build, green at Done")
+    p.add_argument("--negative", action="store_true")
+    p.add_argument("--owner-change", default=None, dest="owner_change")
+
+    p = sub.add_parser("owner-change", parents=[common])
+    p.add_argument("--feature", required=True)
+    p.add_argument("--by", required=True)
+    p.add_argument("--why", required=True,
+                   help="the owner's reason, in the owner's words")
+
+    p = sub.add_parser("seal-check", parents=[common])
+    p.add_argument("--feature", required=True)
 
     p = sub.add_parser("issue-set", parents=[common])
     p.add_argument("--id", required=True)
@@ -896,6 +1093,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command != "init":
             conn.executescript(SCHEMA)
+        _migrate(conn)
         HANDLERS[args.command](conn, args)
         conn.commit()
         return 0
@@ -903,6 +1101,7 @@ def main(argv: list[str] | None = None) -> int:
         conn.commit()  # the evidence of a refusal is kept, not rolled back
         payload = state_of(conn)
         payload["refused"] = str(refusal)
+        payload.update(refusal.extra)
         print(json.dumps(payload, indent=2))
         return 1
     except sqlite3.DatabaseError as exc:

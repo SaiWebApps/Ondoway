@@ -48,8 +48,7 @@ These are coding rules, not a process. They bind every file under `src/`, `mobil
    question, a status update — uses everyday words and short sentences: no project
    jargon, no codenames, no internal shorthand, one idea per sentence. If a term
    would need explaining, explain it or don't use it. Reports use the shared team
-   skill's concise outcome, evidence, obligation and decision shape; no editor agent
-   is required.
+   skill's concise outcome, evidence, obligation and decision shape.
 
 9. **Comments and rules are written in the present tense.** A comment, rule file, or agent
    definition states the constraint that holds now — never the incident that motivated it.
