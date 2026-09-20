@@ -3033,7 +3033,10 @@ def _preview_day_notes(route, body) -> list[str]:
     on whether the place is actually ON this route, which only this reader
     knows — "we will see it from the outside" was printed for a Montmartre
     cabaret on a Tuileries→Notre-Dame day (W4.12, Julien: "I live here. These
-    are checkable, and they are false.").
+    are checkable, and they are false."). A door the day never reaches gets
+    NO sentence at all (owner ruling, P10H-M11): the notes answer this day,
+    and a true line about a place the walker never goes near is noise that
+    buries the lines they can act on.
 
     Hours that are not the map's NAME the stops (Paulo: "gated" is jargon, an
     unnamed count "is worse than silence").
@@ -3048,14 +3051,8 @@ def _preview_day_notes(route, body) -> list[str]:
                 # A disclosure about a stop that STAYED (the after-dusk finish):
                 # the planner's sentence is already the whole story.
                 notes.append(f"{ex.name} — {ex.reason}")
-        elif ex.kept_outside:
-            # The closure did NOT remove this place — it stayed in the pool
-            # from the outside and the day simply went elsewhere — so the
-            # trailer states the absence without claiming the closure caused
-            # it (a guessed closure never removes a place, Docs/adr/0006).
-            notes.append(f"{ex.name} — {ex.reason}, and it is not in this day")
-        else:
-            notes.append(f"{ex.name} — {ex.reason}, so it is not in your day")
+        # An exclusion whose place is off the route is recorded, not spoken:
+        # the day's notes name only the doors the day actually reaches.
 
     if body.category_minus:
         asked = sorted(set(body.category_minus))

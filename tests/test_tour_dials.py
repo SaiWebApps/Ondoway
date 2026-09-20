@@ -390,15 +390,15 @@ def test_the_queue_note_names_the_longest_wait_that_remains():
     assert note.endswith("no waits in this day."), note
 
 
-def test_a_closure_note_only_promises_the_outside_of_a_place_that_is_on_the_route():
-    """The planner records the closure FACT and its pool DECISION as a flag
-    (ClockExclusion.kept_outside); the traveller's sentence is composed at the
-    wire from whether the place actually ended up ON the route. A closed
-    facade the greedy never picked is "not in your day" — never "we will see it
-    from the outside".
+def test_a_closure_note_names_only_the_doors_the_day_actually_reaches():
+    """Owner ruling, 2026-09-19 (P10H-M11): the day's notes answer the day. A
+    shut door the route visits is named, with the outside promise when it is
+    kept at outside price. A shut door the day never goes near answers a
+    question nobody asked — a Tuileries day once trailed a Montmartre cabaret
+    — so an off-route exclusion produces no note at all.
 
-    UNDO TEST: make the wire print `f"{ex.name} — {ex.reason}"` for every
-    exclusion (the old code) -> the off-route arm loses "not in your day" -> RED.
+    UNDO TEST: restore the off-route arms ("and it is not in this day" /
+    "so it is not in your day") -> the no-off-route-note assertions go RED.
     """
     from src.api.routes.trips import _preview_day_notes
     from src.tour.contract import ClockExclusion
@@ -425,12 +425,13 @@ def test_a_closure_note_only_promises_the_outside_of_a_place_that_is_on_the_rout
         _wire_day(market, square, clock_exclusions=exclusions), _dial_body()
     )
     assert "Marche Bastille — closed all day Wednesday — we will see it from the outside" in notes
-    # Kept in the pool from the outside and simply not chosen: the closure did
-    # not remove it, so the trailer must not say it did.
-    assert "Lapin Agile — closed all day Wednesday, and it is not in this day" in notes
-    assert "Crypte — closed all day Wednesday, so it is not in your day" in notes
-    assert not any("Lapin Agile" in n and "outside" in n for n in notes), (
-        "a place that is not on the route was promised from the outside"
+    # Off the route entirely: true but noisy, and the owner ruled the notes
+    # name only doors the day touches. No sentence for either arm.
+    assert not any("Lapin Agile" in n for n in notes), (
+        "a door the day never reaches was named in its notes"
+    )
+    assert not any("Crypte" in n for n in notes), (
+        "a door the day never reaches was named in its notes"
     )
 
 
