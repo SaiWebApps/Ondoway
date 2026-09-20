@@ -1,11 +1,4 @@
 {
-  "worktree": {
-    "baseRef": "head"
-  },
-  "advisorModel": "opus",
-  "env": {
-    "CLAUDE_CODE_ENABLE_EXPERIMENTAL_ADVISOR_TOOL": "1"
-  },
   "hooks": {
     "PreToolUse": [
       {
@@ -13,18 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'g=\"$CLAUDE_PROJECT_DIR/.claude/hooks/walk_receipts.py\"; [ -f \"$g\" ] || exit 0; exec python3 \"$g\"'"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Read|Bash|Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh -c 'g=\"$CLAUDE_PROJECT_DIR/.claude/hooks/walk_receipts.py\"; [ -f \"$g\" ] || exit 0; exec python3 \"$g\"'"
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.agents/team/mutation_guard.py\""
           }
         ]
       }

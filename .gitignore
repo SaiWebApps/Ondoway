@@ -323,10 +323,19 @@ data/certification/tour-batch-v*/**/attempt-*.json
 # only thing that separates them is this rule.
 data/certification/*-superseded-*/
 
-# Vendored third-party skill bundles dropped in by tooling. Not this project's
-# code, carry their own licences, and 146 files would otherwise be swept in by
-# any `git add -A`.
-.agents/
+# Vendored third-party skill bundles dropped in by tooling stay ignored. The
+# shared teamflow core and its project skill are source and remain tracked.
+.agents/*
+!.agents/team/
+!.agents/team/**
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/team/
+!.agents/skills/team/**
+.agents/team/__pycache__/
+
+# Teamflow run state and active-writer pointer are local workflow state.
+.teamflow/
 
 # Plans and specs are the agent's own scratch, never committed. A /team run
 # writes its context to `.claude/runs/{date}-{slug}`, already excluded by the

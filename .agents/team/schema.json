@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ondoway.local/teamflow/v1/schema.json",
+  "title": "Ondoway Teamflow Records",
+  "type": "object",
+  "$defs": {
+    "PhaseCharter": {
+      "type": "object",
+      "required": ["phase_id", "version", "outcomes", "invariants", "criteria", "slots", "capabilities"]
+    },
+    "CapabilityOwner": {
+      "type": "object",
+      "required": ["id", "canonical_entrypoint", "owned_rules", "consumers", "status"],
+      "properties": {
+        "status": {"enum": ["ACTIVE", "RETIRED"]},
+        "parity": {"enum": ["CANONICAL_OWNER", "SAME_MODULE_DOORS"]}
+      }
+    },
+    "SliceSlot": {
+      "type": "object",
+      "required": ["id", "archetype", "outcomes", "max_attempts", "change_intent", "behavior_owner", "consumers", "searched_existing_paths"]
+    },
+    "Attempt": {
+      "type": "object",
+      "required": ["state", "attempt", "max_attempts", "repair_rounds", "probe_rounds"]
+    },
+    "Lease": {
+      "type": "object",
+      "required": ["slot_id", "writer_id", "runtime", "allowed_resources", "acquired_at", "expires_at", "heartbeat_at", "fencing_generation", "status"]
+    },
+    "EvidenceEnvelope": {
+      "type": "object",
+      "required": ["kind", "actor", "slot_id", "content"]
+    },
+    "ReachabilityReceipt": {
+      "type": "object",
+      "required": ["symbols", "dead_symbols", "untested_symbols"]
+    },
+    "ReviewFinding": {
+      "type": "object",
+      "required": ["id", "disposition", "evidence"],
+      "properties": {
+        "disposition": {"enum": ["BLOCK", "EVIDENCE_REQUIRED", "OUTSIDE_CONTRACT"]}
+      }
+    },
+    "ReleaseManifest": {
+      "type": "object",
+      "required": ["source_ref", "artifacts", "configuration", "data_versions", "feature_flags", "targets", "evidence"]
+    }
+  },
+  "required": ["schema_version", "phase_id", "version", "outcomes", "non_goals", "invariants", "baseline", "criteria", "risk", "rollback", "budgets", "slots", "defect_reserve_slots", "capabilities"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "phase_id": {"type": "string", "minLength": 1},
+    "version": {"type": "integer", "minimum": 1},
+    "outcomes": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "non_goals": {"type": "array", "items": {"type": "string"}},
+    "invariants": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "baseline": {"type": "object"},
+    "criteria": {"type": "array", "minItems": 1},
+    "external_assumptions": {"type": "array"},
+    "risk": {"type": "object"},
+    "rollback": {"type": "string", "minLength": 1},
+    "budgets": {"type": "object"},
+    "slots": {"type": "array", "minItems": 1},
+    "defect_reserve_slots": {"type": "integer", "minimum": 0},
+    "capabilities": {"type": "array", "minItems": 1},
+    "baseline_exceptions": {"type": "array"}
+  },
+  "additionalProperties": true
+}

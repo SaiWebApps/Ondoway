@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "capabilities": [
+    {
+      "id": "tour-route-selection",
+      "canonical_entrypoint": "src.tour.selection:select_route",
+      "stage_module": "src/tour/selection.py",
+      "parity": "SAME_MODULE_DOORS",
+      "owned_rules": ["route selection", "tourability", "stop density"],
+      "consumers": ["mobile", "workbench"],
+      "adapters": ["src.api.routes.trips:generate_trip", "src.api.routes.trips:preview_trip"],
+      "status": "ACTIVE"
+    },
+    {
+      "id": "tour-planning",
+      "canonical_entrypoint": "src.tour.premium_tour:plan_premium_tour",
+      "stage_module": "src/tour/premium_tour.py",
+      "parity": "SAME_MODULE_DOORS",
+      "owned_rules": ["tour planning", "authoring plan construction"],
+      "consumers": ["mobile", "workbench"],
+      "adapters": ["src.api.routes.trips:generate_trip", "src.api.routes.trips:preview_trip"],
+      "status": "ACTIVE"
+    },
+    {
+      "id": "tour-script-generation",
+      "canonical_entrypoint": "src.tour.generation:generate",
+      "stage_module": "src/tour/generation.py",
+      "parity": "CANONICAL_OWNER",
+      "owned_rules": ["script stitching", "narration ordering", "script de-duplication"],
+      "consumers": ["mobile", "workbench"],
+      "adapters": ["src.tour.premium_tour:plan_premium_tour"],
+      "status": "ACTIVE"
+    },
+    {
+      "id": "tour-stop-interleave",
+      "canonical_entrypoint": "src.tour.options:build_route_option",
+      "stage_module": "src/tour/options.py",
+      "parity": "SAME_MODULE_DOORS",
+      "owned_rules": ["stop and leg interleave"],
+      "consumers": ["mobile", "workbench"],
+      "adapters": ["src.api.routes.trips:generate_trip", "src.api.routes.trips:preview_trip"],
+      "status": "ACTIVE"
+    },
+    {
+      "id": "audio-generation",
+      "canonical_entrypoint": "src.audio.pipeline:generate_stop_audio",
+      "stage_module": "src/audio/pipeline.py",
+      "parity": "SAME_MODULE_DOORS",
+      "owned_rules": ["audio generation", "audio duration", "storage key construction"],
+      "consumers": ["mobile", "workbench"],
+      "adapters": ["src.api.routes.audio:generate_stop_audio_for_trip", "src.api.routes.audio:preview_audio"],
+      "status": "ACTIVE"
+    },
+    {
+      "id": "voice-resolution",
+      "canonical_entrypoint": "src.audio.provider:get_provider_with_fallback",
+      "stage_module": "src/audio/provider.py",
+      "parity": "SAME_MODULE_DOORS",
+      "owned_rules": ["provider selection", "provider fallback"],
+      "consumers": ["mobile", "workbench"],
+      "adapters": ["src.audio.pipeline:generate_stop_audio"],
+      "status": "ACTIVE"
+    },
+    {
+      "id": "audio-storage",
+      "canonical_entrypoint": "src.audio.storage:get_storage",
+      "stage_module": "src/audio/storage.py",
+      "parity": "SAME_MODULE_DOORS",
+      "owned_rules": ["audio storage provider selection"],
+      "consumers": ["mobile", "workbench"],
+      "adapters": ["src.audio.pipeline:generate_stop_audio"],
+      "status": "ACTIVE"
+    }
+  ],
+  "dynamic_entrypoints": []
+}

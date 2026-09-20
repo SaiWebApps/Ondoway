@@ -53,6 +53,7 @@ from __future__ import annotations
 
 import ast
 import collections
+import json
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -61,16 +62,20 @@ PHONE_SOURCES = sorted((REPO / "mobile" / "lib" / "services").glob("*.dart"))
 WORKBENCH_SOURCES = sorted((REPO / "frontend").glob("*.html"))
 ROUTES_DIR = REPO / "src" / "api" / "routes"
 
-#: The stages of the tour flow, in order, each named by the module that owns it.
-#: These are the product's real pipeline, and the ONLY thing written down here —
-#: which functions implement each stage is derived, never listed.
-STAGES = (
-    ("route selection", "src/tour/selection.py"),
-    ("planning and authoring", "src/tour/premium_tour.py"),
-    ("stop interleave", "src/tour/options.py"),
-    ("audio pipeline", "src/audio/pipeline.py"),
-    ("voice resolution", "src/audio/provider.py"),
-    ("audio storage", "src/audio/storage.py"),
+OWNERSHIP = json.loads((REPO / ".agents" / "team" / "ownership.json").read_text())
+
+#: Shared stages come from the same registry the delivery gate validates. Adding a
+#: shared capability without adding its surface-parity proof is therefore impossible.
+STAGES = tuple(
+    (
+        capability["id"],
+        capability["stage_module"],
+        capability["canonical_entrypoint"].split(":", 1)[1],
+        capability.get("parity", "CANONICAL_OWNER"),
+    )
+    for capability in OWNERSHIP["capabilities"]
+    if capability["status"] == "ACTIVE"
+    and {"mobile", "workbench"}.issubset(capability["consumers"])
 )
 
 HTTP_VERBS = ("get", "post", "put", "patch", "delete")
@@ -298,11 +303,27 @@ def test_both_surfaces_enter_every_shared_stage_by_the_same_door():
     assert bench_entries, "no workbench request matched a route; the derivation is broken"
 
     problems = []
-    for stage, module in STAGES:
+    phone_reachable = reachable(phone_entries, calls, defined_in)
+    bench_reachable = reachable(bench_entries, calls, defined_in)
+    for stage, module, owner, parity in STAGES:
+        if owner not in phone_reachable:
+            problems.append(
+                f"  {stage}  [{module}]\n"
+                f"      canonical owner: {owner}\n"
+                "      THE PHONE CANNOT REACH THE SHARED OWNER"
+            )
+            continue
+        if owner not in bench_reachable:
+            problems.append(
+                f"  {stage}  [{module}]\n"
+                f"      canonical owner: {owner}\n"
+                "      THE WORKBENCH CANNOT REACH THE SHARED OWNER"
+            )
+            continue
+        if parity != "SAME_MODULE_DOORS":
+            continue
         phone_doors = doors_into(module, phone_entries, calls, defined_in)
         bench_doors = doors_into(module, bench_entries, calls, defined_in)
-        if not phone_doors:
-            continue  # the tourist never uses this stage; nothing to reproduce
 
         # THE RULE IS DIRECTIONAL (owner ruling 2026-08-29): the workbench must
         # match the phone identically, and where the phone does MORE the
@@ -326,9 +347,33 @@ def test_both_surfaces_enter_every_shared_stage_by_the_same_door():
         "THE SURFACES ENTER A SHARED STAGE BY DIFFERENT DOORS (CLAUDE.md rule 1).\n\n"
         + "\n".join(problems)
         + "\n\nOne surface gets behaviour the other does not. Everything the two "
-          "share must be ONE function called by both — a second door is a defect "
-          "even when it behaves identically today, because the two drift the "
-          "moment either is edited.\n"
-          f"\n  phone endpoints:     {sorted(phone_entries)}"
-          f"\n  workbench endpoints: {sorted(bench_entries)}"
+        "share must be ONE function called by both — a second door is a defect "
+        "even when it behaves identically today, because the two drift the "
+        "moment either is edited.\n"
+        f"\n  phone endpoints:     {sorted(phone_entries)}"
+        f"\n  workbench endpoints: {sorted(bench_entries)}"
     )
+
+
+def test_every_registered_capability_owner_exists():
+    """The registry cannot claim a single owner that does not exist in production."""
+    missing = []
+    for capability in OWNERSHIP["capabilities"]:
+        if capability["status"] != "ACTIVE":
+            continue
+        module, symbol = capability["canonical_entrypoint"].split(":", 1)
+        path = REPO / (module.replace(".", "/") + ".py")
+        if not path.exists():
+            missing.append(f"{capability['id']}: missing module {path.relative_to(REPO)}")
+            continue
+        tree = ast.parse(path.read_text())
+        names = {
+            node.name
+            for node in ast.iter_child_nodes(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        }
+        if symbol not in names:
+            missing.append(
+                f"{capability['id']}: missing symbol {capability['canonical_entrypoint']}"
+            )
+    assert not missing, "capability ownership registry has dead owners:\n" + "\n".join(missing)
