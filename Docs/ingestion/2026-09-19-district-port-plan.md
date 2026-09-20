@@ -91,13 +91,52 @@ any deletion, and any claim of proof. Owner go before every paid step.
    read a tour built from it as evidence about beat order.
 3. **The corpus comparison report** ($0): coverage, density, lens diversity, and the trust
    properties, legacy against new, at the same 12 POIs. This is the deliverable.
-4. **Then throughput** — the parked transport design
-   (`Docs/ingestion/2026-09-14-ingest-transport-and-resume-design.md`), taken up BEFORE any bulk
-   run. At the current shape the full 386 chunks are ~$1,000–2,300 and on the order of 1,000
-   hours of sequential batch waiting; wall-clock, not money, is the binding constraint.
+4. **Then throughput** — DONE 2026-09-19: the round collapse, built and
+   measured (section below). It SUPERSEDES the parked transport design
+   (`Docs/ingestion/2026-09-14-ingest-transport-and-resume-design.md`), which is not needed and
+   is not to be re-opened. Bulk-run wall time, recomputed from what was measured: 386 chunks x
+   ~10 rounds is about 3,860 rounds, so on the order of 120 hours at the 1.9-minute median this
+   run saw — but per-round latency is the unknown (the control's slowest round was 20.7 min), so
+   plan in rounds, not hours. The ~$1,000-2,300 money range is unchanged by this.
 5. **Then the second book** (Frommer's `chunk-05-ch05-uptown`), which is also the merge test:
    fold when confident, queue the doubtful for human review, never block a publish, and report
    the duplicate rate with `make claim-conflicts`.
+
+## Throughput: the round collapse (built and measured 2026-09-19)
+
+**Diagnosis, from job `32d5c8de…`'s own log:** 3h41 for one chunk, ~97% of it WAITING on 112
+sequential batch rounds at a median 1.2 min (P1 11, P3 52 / 2h12, P5 49 / 1h18). The cause was a
+LOOP, not the transport: `run._judge_stories` and `run.p5` judged stories one at a time and each
+bought its own round. Fix (`31860c1`, `c1d738e`): `judge_claims.judge_unit` and
+`judge_narration.judge_narration_unit` share the rounds across ONE unit's stories — claim ids are
+unique per unit (`gates.every_claim_once`) and `sentence_custom_id` is the draft's claims_hash, so
+custom ids never collide. P4 rewrites stay per story: sync author calls of seconds, not rounds.
+**This supersedes `2026-09-14-ingest-transport-and-resume-design.md`** (sync judge rounds): that
+gives up the Batch discount for +$270-660 across the slice and does not reduce round count.
+
+**PROVEN (job `c7c39a79…`, same chunk, fresh sandbox `step2c`, HEAD c1d738e, criteria registered
+before the run):** rounds P1 11→**4**, P3 52→**4**, P5 49→**2**, total 112→**10**. The primary
+metric is deterministic — round counts come from the code path, not the model.
+**Observed once, not proven:** 3h41 → **34m46** (6.4x). The two runs sampled different Batch queue
+windows (13:22-17:03 UTC against 01:28-02:03), and per-round latency moved with them (median
+1.2→1.9 min, max 20.7→8.4). What survives the confound is a BOUND: round count fell 11.2x while
+per-round latency rose ~1.6x, so a large win is robust; the multiplier is n=1 at night. Plan the
+bulk run as rounds-per-chunk times an unknown per-round latency, never as 6.4x.
+**Cost:** at least $2.6072 (the run printed `unmetered_calls=1`, usage unknown, so it is a lower
+bound) against $2.9507 expected and the control's $2.6840 — the same requests at the same discount.
+**Trade, visible and growing with chunk size:** P1 3:57 → 8:46, one first-pass round now returning
+214 claims in a single longer answer.
+**Integrity:** 47 beats, 214 first-pass claims, 0 `place_unresolved`, 5 `claim_dropped`, R0 PASS
+(live sha 556830a5342e178c unchanged). Held beats 5→3 and narration refusals 19→9 are VARIANCE, not
+the collapse: attempt-1 refusals are emitted in the untouched P4 path, the reason classes are the
+same, and the two runs share only 3 story slugs of 42 and 47 — P2's grouping is stochastic, so they
+narrate different stories. That also bounds what the output comparison can show: no new defect
+class, which is weaker than "the same output by a different route".
+**First live exercise of `0784a7b`:** `narrative_function` is in the engine's vocabulary for 47/47
+beats, against 0/42 in the control.
+**NOT proven:** multi-unit behaviour (one chunk here; the per-unit scoping is covered by tests
+only), the per-story isolation path (`story_held` never fired live), and transfer to the 386-chunk
+slice.
 
 ## What this plan deliberately does not do
 
