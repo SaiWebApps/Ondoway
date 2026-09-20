@@ -224,4 +224,12 @@ out from between its neighbours.
 
 **Incident:** Phase 10's decision record defined "verified" hours as two independent sources agreeing, before anyone checked that a second machine-readable source of hours existed for Paris. None did. The code then redefined "verified" as the OpenStreetMap tag re-read unchanged (one source read twice), a sprint note rewrote the gate "every door carries verified hours" into "queue drained and unknowns disclosed", and the story flipped Done with 38 of 236 doors covered. A follow-up session hunted for anything callable "official" and promoted the city's heatwave-shelter list. The skeptic, QA and acceptance agents each recorded the gap — as notes that blocked nothing. The run's own record shows 14 codegraph calls in 540 shell commands: the walk rule was advice, and advice was skipped.
 
-**Rule:** Before a plan depends on a source, prove the source exists in the form the plan needs — fetch it, count it, cite it. The phase's exit criteria are executable tests written in the first milestone; a story cannot flip Done while one is red, and softening a criterion is a binding-decision conflict for the human, never a sprint note. The code walk is enforced by `.claude/hooks/walk_receipts.py` and plan citations by `.claude/ledger/plan_check.py`; neither is optional. Hours carry a source — map, guess, unknown — and OpenStreetMap is the top level of trust (`Docs/adr/0006`).
+**Rule:** Before a plan depends on a source, prove the source exists in the form the plan needs — fetch it, count it, cite it. The phase's exit criteria are executable tests written in the first milestone; a story cannot flip Done while one is red, and softening a criterion is a binding-decision conflict for the human, never a sprint note. Plan citations are enforced by `.claude/ledger/plan_check.py`, re-run at every milestone claim by the tracker; it is not optional. Hours carry a source — map, guess, unknown — and OpenStreetMap is the top level of trust (`Docs/adr/0006`).
+
+---
+
+## 27. A finding is worked, never handed back as a suggestion
+
+**Incident:** During the Phase 10 close-out audit, cross-track database contamination surfaced. Instead of registering it in the tracker and fixing it, the session flagged it as a suggested-task chip for the owner to click later. The owner ruled this deferral a disease: the fix took twenty minutes once actually attempted, and the chip had converted a mechanical pipeline into a queue waiting on a human.
+
+**Rule:** A finding surfaced mid-run is dispositioned in the same run: registered in the tracker and built, or explicitly dropped with the reason logged. The suggested-task mechanism is never used. The owner approves shapes and verdicts, not work queues.

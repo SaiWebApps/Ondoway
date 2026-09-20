@@ -85,6 +85,9 @@ python3 .claude/ledger/track.py story-state --id <S> --state Done
 - One candidate receives one review, at most five findings, one evidence
   probe, and one repair. A finding without a runnable reproduction is dropped
   and logged, never left hanging.
+- A finding is worked in the same run: registered in the tracker and built,
+  or dropped with the reason logged. Never handed back to the owner as a
+  suggested task — the owner approves shapes and verdicts, not work queues.
 - A reviewer may reject a broken promise but may not add a promise.
 - Costs are reported, never silently acted on. No gate trades quality for
   spend without the owner deciding it.
