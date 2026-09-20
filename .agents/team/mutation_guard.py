@@ -6,6 +6,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -133,18 +134,21 @@ def refuse_protected(payload: dict[str, Any], *, cwd: Path) -> None:
                 "commands re-derive what they record; a direct write is a claim "
                 "nobody checked"
             )
-        # A protected path AFTER a mutating marker is the file being written
-        # (`sed -i ... .agents/team/x.py`, `> .claude/settings.json`). A path
-        # before one is an invocation (`python3 .claude/ledger/track.py show
-        # > /dev/null`) and stays free.
-        padded = f" {command}"
+        # A protected path AFTER a mutating marker IN THE SAME SEGMENT is the
+        # file being written (`sed -i ... .agents/team/x.py`). A path before
+        # the marker is an invocation (`python3 .claude/ledger/track.py show
+        # > /dev/null`), and a path in a LATER segment is its own command —
+        # `echo x > /dev/null && python3 .claude/ledger/plan_check.py p.md`
+        # writes nothing protected — so the marker's reach ends at the next
+        # `&&`, `||`, `;` or `|`.
+        segments = re.split(r"&&|\|\||;|\|", command)
         touched = [
             prefix
+            for segment in segments
             for marker in MUTATING_SHELL_MARKERS
-            for at in range(len(padded))
-            if padded.startswith(marker, at)
+            if marker in f" {segment}"
             for prefix in PROTECTED_PREFIXES
-            if prefix.rstrip("/") in padded[at + len(marker):]
+            if prefix.rstrip("/") in f" {segment}".split(marker, 1)[1]
         ]
     else:
         return

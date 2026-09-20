@@ -484,6 +484,28 @@ def test_mutation_guard_leaves_product_code_alone(tmp_path):
         },
         cwd=tmp_path,
     )
+    # A marker's reach ends at the next command separator: a redirect in one
+    # segment does not taint a later segment that merely names a process tool.
+    guard.refuse_protected(
+        {
+            "tool_name": "Bash",
+            "tool_input": {
+                "command": "sed -i '' 's/a/b/' notes.md && "
+                           "python3 .claude/ledger/plan_check.py plan.md"
+            },
+        },
+        cwd=tmp_path,
+    )
+    guard.refuse_protected(
+        {
+            "tool_name": "Bash",
+            "tool_input": {
+                "command": "echo done > /dev/null; "
+                           "python3 .agents/team/teamflow.py status --run-dir r"
+            },
+        },
+        cwd=tmp_path,
+    )
 
 
 def test_mutation_guard_release_window_opens_the_door_and_is_read_aloud(tmp_path):
