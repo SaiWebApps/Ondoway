@@ -547,3 +547,21 @@ def test_the_tie_break_makes_a_room_inside_a_place_a_sub_location():
     assert "only between places that are places in their own right" in prompts.TIE_BREAK
     assert prompts.TIE_BREAK.startswith("The arc wins")
 
+
+
+def test_the_claim_judge_writes_its_reason_before_its_verdict():
+    """Job B (75b8f292): three P3 refusals end by arguing the claim IS
+    entailed ("the entailment is actually true", "making the claim
+    entailed") — the boolean came first and the reason argued afterwards.
+    The schema's property order and the prompt's example shape both put
+    `reason` before `entailed`, so the verdict is written after the
+    reasoning (structured output follows the schema's order)."""
+    import json
+
+    from src.ingest.prompts import judge as judge_prompts
+
+    assert list(prompts.P3_VERDICT_SCHEMA["properties"]) == ["reason", "entailed", "kind"]
+    assert prompts.P3_VERDICT_SCHEMA["required"] == ["reason", "entailed", "kind"]
+    shape = json.loads(judge_prompts._VERDICT_SHAPE)
+    assert list(shape) == ["reason", "entailed", "kind"]
+    assert judge_prompts._VERDICT_SHAPE in prompts.JUDGE_CLAIM_PROMPT

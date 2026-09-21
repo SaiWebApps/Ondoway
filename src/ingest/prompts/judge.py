@@ -48,7 +48,9 @@ _KIND_RULE = (
     "entailment verdict is; a wrong kind is never a reason to refuse."
 )
 
-_VERDICT_SHAPE = '{"entailed": true, "reason": "...", "kind": "event"}'
+#: `reason` first (job B, 2026-09-21): three refusals argued AFTER a false
+#: boolean that the claim was entailed; structured output follows this order.
+_VERDICT_SHAPE = '{"reason": "...", "entailed": true, "kind": "event"}'
 
 JUDGE_CLAIM_PROMPT = (
     "You are checking one factual claim extracted from a guidebook passage "
@@ -70,11 +72,11 @@ JUDGE_CLAIM_PROMPT = (
 P3_VERDICT_SCHEMA: dict = {
     "type": "object",
     "properties": {
-        "entailed": {"type": "boolean"},
         "reason": {"type": "string"},
+        "entailed": {"type": "boolean"},
         "kind": {"type": "string", "enum": ["event", "state", "belief"]},
     },
-    "required": ["entailed", "reason", "kind"],
+    "required": ["reason", "entailed", "kind"],
     "additionalProperties": False,
 }
 

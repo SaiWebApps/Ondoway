@@ -1062,6 +1062,49 @@ case the per-claim contract cannot express going to a person is D7 working, not 
 the kind fixed above. Across job B the new measure holds 3 stories where the old one held 8; the
 panel called 2 of the 3 false (P05, P08) — better, not solved.
 
+*P3 refusals and restates — blind labels (2026-09-21, owner: "yes, start steps 1 and 2"; $0).*
+After two TDD-grounded plan reviews (opus, fable) the owner approved a revised order: ground truth
+first, then deterministic fixes, then any paid measurement. Two labelers — Sonnet and fable, never
+Haiku (P3's judge) nor Opus (P1's and the restate's author) — read only the Frommer's chunk and
+51 shuffled items: the 38 claims P3 refused on the first attempt (text and span from P1.json; c189,
+a supplement claim, from its refusal event's claim_text and span) and the 13 restates it then kept
+(original from P1.json, rewrite from P3.json). No item carried a refusal reason. Each labeler
+labeled every item; both outputs and the item key are kept under
+`$HOME/ondoway-ingest-backup-2026-09-13/labels-p3-2026-09-21/`. **They
+agreed on all 38: 37 SUPPORTED as written, 1 PARTLY (c149, "among taller towers" — the passage says
+"among the towers").** So 37 of Haiku's 38 first-attempt refusals were false, and the restate round
+they triggered is where job B lost 22 claims and gained its compounds. Of the 13 kept restates the
+two agree on every compound call — 9 compound (c45, c69, c75, c89, c119, c122, c143, c149, c154) —
+on c75 no longer stating its original fact (one-hour tours → docents, free, five times a day), on
+c75, c124 ("ground floor") and c126 (fable: the museum's name; Sonnet: "twin") losing facts, and on c131 as apparatus
+("the address given for"); c126 as apparatus is disputed (fable yes, Sonnet no); only c152 is
+clean. Among the 38 originals both flag c154 compound; Sonnet alone flags c82. Consequence for the bars the owner
+will be shown before any spend: a fix is judged by whether SUPPORTED claims survive with their P1
+text and the PARTLY one does not pass unchanged — never by drop counts alone.
+
+*P3 step 2, built test-first ($0, 2026-09-21).* Four deterministic changes, each with a red node
+built from job B's own logged text and an undo test (mutant red, restored green):
+(a) a restate whose span does not ground keeps the ORIGINAL claim's span — which P1's gates already
+grounded — and is re-judged, logged `restate_span_replaced` (job B lost c46, c48, c147, c157, c172
+this way; c46's span was garbled rather than escaped, which only this fallback recovers); every
+other gate failure on a restate still drops it without a re-judge. (c) `APPARATUS_RE` also matches
+the listing apparatus job B's restates wrote ("the address given for", "this listing", "the
+guide's author", "In the author's rundown", "listed hours/admission", "visitor information for");
+"the author" stays clean before "of". Over 1,113 real claims (step2b-d beats, every sandbox P1,
+the calibration fixture) it newly matches exactly one — c131, the kept apparatus restate. (d) A
+claim refused on the first look is judged once more AS WRITTEN (its own custom id, `-k1`) before
+any restate; cleared, it keeps its P1 text with a real entailed verdict (`claim_rejudged`), and
+only a claim refused twice as written is restated, with the latest reason quoted back.
+`claim_refused` keeps its meaning (attempt 1 = the first look, attempt 2 = the restated text).
+P3's cost plan prices the second look (fire rate 0.09, the measured rate; job B saw 0.20), and
+calibration now scores a planted fabrication the second look clears as MISSED, never caught. (e)
+The claim judge's schema and example shape put `reason` before `entailed`, so the verdict is
+written after the reasoning — which makes the slice-4 live calibration baseline no longer
+comparable. Not built: (b), a gate rejecting a restate that adds a number, date, price or name the
+original lacked — owner decision owed on its fallback (dropping the claim loses a fact the labels
+say was true; keeping the original needs a verdict). None of this is measured live yet; step 3's
+bars come to the owner before any spend.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,

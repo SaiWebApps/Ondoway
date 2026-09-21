@@ -272,7 +272,11 @@ def lift(text: str, unit_text: str, run_length: int = LIFT_RUN_LENGTH) -> str | 
 APPARATUS_RE = re.compile(
     r"\b(guidebook|guide ?book|this walk|the walk|walking tour|itinerary"
     r"|step \d+|point [A-Z]|page \d+|pp?\. \d+|the author (advises|suggests|recommends|says)"
-    r"|numbered (entry|entries|point|step))\b",
+    r"|numbered (entry|entries|point|step)"
+    # Job B's restates (2026-09-21): claims about the book's LISTING, not the
+    # place. "the author" is apparatus unless it names someone's work ("of").
+    r"|the (?:guide(?:book)?'s )?author(?:'s)?(?!\s+of\b)|address given (?:for|in)|this listing"
+    r"|listed (?:visiting )?(?:hours|admission|visitor information)|visitor information for)\b",
     re.I,
 )
 

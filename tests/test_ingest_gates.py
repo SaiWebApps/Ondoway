@@ -141,6 +141,46 @@ def test_leak_catches_apparatus_and_listing_furniture():
     assert gates.leak(clean) is None
 
 
+
+def test_leak_catches_the_listing_apparatus_job_b_restates_wrote():
+    """Job B (75b8f292, 2026-09-21): P3's restates wrote claims about the
+    BOOK's listing rather than the place, and none matched the gate — the
+    kept c131 ("The address given for …") reached the corpus. Each text
+    below is one the job logged, verbatim; ordinary claims about the same
+    facts must still pass."""
+    logged = [
+        "The address given for the Museum of the City of New York is 1220 Fifth Ave., "
+        "at the corner of 103rd Street.",
+        "The address given in this listing is 1048 Fifth Avenue, at the corner of 86th Street.",
+        "In describing the Met's European paintings, the guide's author characterizes "
+        "Velazquez's subject Juan de Pareja as enslaved.",
+        "In the author's rundown of highlights from the Met's second-floor European "
+        "paintings galleries, twenty paintings by Rembrandt are cited.",
+        "The Metropolitan Museum of Art's listed hours include 10am to 9pm on Fridays "
+        "and Saturdays.",
+        "The American Folk Art Museum's listed visiting hours run from 11:30am to 6pm "
+        "on Tuesdays through Sundays.",
+        "According to the Neue Galerie New York's listed admission information, children "
+        "aged 12 or younger are not permitted.",
+        "The visitor information for the Neue Galerie New York lists its hours as 11am to 5pm.",
+        "At the American Folk Art Museum, quilts are probably among the objects visitors "
+        "like best, though the author personally favors the sculptures.",
+    ]
+    for text in logged:
+        reason = gates.leak(text)
+        assert reason and reason.startswith("leak"), text
+
+    ordinary = [
+        "The Museum of the City of New York is located at 1220 Fifth Ave. at 103rd Street.",
+        "The Metropolitan Museum of Art is open Friday and Saturday from 10am to 9pm.",
+        "Admission to the Neue Galerie New York is free on the first Friday of the month.",
+        "Architecture critic Herbert Muschamp wrote of the Guggenheim that it spirals "
+        "toward the center like an enigma.",
+        "The Frick Collection lists works by Vermeer among its holdings.",
+    ]
+    for text in ordinary:
+        assert gates.leak(text) is None, text
+
 def test_provenance_leak_names_book_furniture_and_publishers():
     """Slice 5: a narration must never reveal it was read from a book
     (CONTEXT.md "Provenance leak"). The fixed phrases are caught in any

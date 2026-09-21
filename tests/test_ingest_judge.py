@@ -150,17 +150,19 @@ def _restated(item: dict) -> llm.MockAnswer:
 
 
 def test_refused_once_is_restated_by_the_author_with_the_reason_quoted_back():
-    """P3's one re-ask: the judge refuses, the AUTHOR is asked once to
-    restate that claim with the judge's reason quoted back, and the
-    restated claim's round-two verdict is what comes out — bound to the
-    NEW text, not the refused one."""
+    """P3's one re-ask: the judge refuses, the claim is judged once more as
+    written and refused again, the AUTHOR is asked once to restate it with
+    the LATEST refusal's reason quoted back, and the restated claim's
+    round-two verdict is what comes out — bound to the NEW text, not the
+    refused one."""
     unit = _real_unit()
     fabricated = {**COMPLETED_CLAIM, "text": "The Guggenheim building was finished in 1961."}
     draft = _draft(unit, "c02", fabricated)
     reason = "the span says 1959, not 1961"
     mock = _armed_mock(
         {
-            judge_claims.judge_custom_id(unit, "c02", 1): _refused(reason),
+            judge_claims.rejudge_custom_id(unit, "c02"): _refused(reason),
+            judge_claims.judge_custom_id(unit, "c02", 1): _refused("the year looks wrong"),
             judge_claims.restate_custom_id(unit, "c02"): _restated(COMPLETED_CLAIM),
             judge_claims.judge_custom_id(unit, "c02", 2): _entailed(kind="event"),
         },
@@ -171,13 +173,14 @@ def test_refused_once_is_restated_by_the_author_with_the_reason_quoted_back():
 
     judged = judge_claims.judge_claims(_story(["c02"]), [draft], unit, recorder, events=sink)
 
-    assert [call["phase"] for call in recorder.batch_calls] == ["P3", "P1", "P3"]
+    assert [call["phase"] for call in recorder.batch_calls] == ["P3", "P3", "P1", "P3"]
     assert [call["role"] for call in recorder.batch_calls] == [
+        "claim_judge",
         "claim_judge",
         "author",
         "claim_judge",
     ]
-    restate_prompt = recorder.batch_calls[1]["prompts"][0][1]
+    restate_prompt = recorder.batch_calls[2]["prompts"][0][1]
     assert reason in restate_prompt
     assert fabricated["text"] in restate_prompt
     assert COMPLETED_CLAIM["span"] in restate_prompt
@@ -187,10 +190,14 @@ def test_refused_once_is_restated_by_the_author_with_the_reason_quoted_back():
             "unit_key": unit.key,
             "claim_id": "c02",
             "attempt": 1,
-            "reason": reason,
+            "reason": "the year looks wrong",
             "claim_text": fabricated["text"],
             "span": fabricated["span"],
         },
+    ) in events
+    assert (
+        "claim_rejudged",
+        {"unit_key": unit.key, "claim_id": "c02", "entailed": False, "reason": reason},
     ) in events
 
     assert len(judged) == 1
@@ -238,6 +245,9 @@ def test_refused_twice_is_dropped_and_logged_with_ids_unchanged():
     mock = _armed_mock(
         {
             judge_claims.judge_custom_id(unit, "c01", 1): _entailed(),
+            judge_claims.rejudge_custom_id(unit, "c02"): _refused(
+                "still refused on a second look"
+            ),
             judge_claims.judge_custom_id(unit, "c02", 1): _refused("the span says 1959"),
             judge_claims.restate_custom_id(unit, "c02"): _restated(still_bad),
             judge_claims.judge_custom_id(unit, "c02", 2): _refused("still not 1959"),
@@ -251,8 +261,10 @@ def test_refused_twice_is_dropped_and_logged_with_ids_unchanged():
     assert [claim.draft.claim_id for claim in judged] == ["c01"]
     assert all(claim.verdict.entailed for claim in judged)
     # MockClient records one entry per batch UNIT: two claims judged in
-    # round 1, one restated, one re-judged — and nothing after that.
+    # round 1, the refused one judged again as written, restated, re-judged —
+    # and nothing after that.
     assert mock.calls == [
+        ("claim_judge", "P3"),
         ("claim_judge", "P3"),
         ("claim_judge", "P3"),
         ("author", "P1"),
@@ -294,16 +306,24 @@ def test_refused_twice_is_dropped_and_logged_with_ids_unchanged():
 
 
 def test_restated_claim_failing_the_gates_is_dropped_not_rejudged():
-    """A restate that trips a P1 gate (here: a span that is not in the
-    unit) is dropped with the gate's own reason, logged, and never sent to
+    """A restate that trips a P1 gate (here: guidebook apparatus in its
+    text) is dropped with the gate's own reason, logged, and never sent to
     the judge again — the gates stand between the author and the judge on
-    the re-ask exactly as they do on the first ask."""
+    the re-ask exactly as they do on the first ask. (A span that does not
+    ground is the one exception: it falls back to the original's span —
+    test_a_restated_span_that_does_not_ground_falls_back_to_the_original_span.)"""
     unit = _real_unit()
     fabricated = {**COMPLETED_CLAIM, "text": "The Guggenheim building was finished in 1961."}
     bad = _draft(unit, "c02", fabricated)
-    off_span = {**COMPLETED_CLAIM, "span": "Construction was finally completed in 1961."}
+    off_span = {
+        **COMPLETED_CLAIM,
+        "text": "The guidebook says the Guggenheim building was finished in 1959.",
+    }
     mock = _armed_mock(
         {
+            judge_claims.rejudge_custom_id(unit, "c02"): _refused(
+                "still refused on a second look"
+            ),
             judge_claims.judge_custom_id(unit, "c02", 1): _refused("the span says 1959"),
             judge_claims.restate_custom_id(unit, "c02"): _restated(off_span),
             # No round-2 judge answer scripted: reaching it would raise
@@ -316,12 +336,12 @@ def test_restated_claim_failing_the_gates_is_dropped_not_rejudged():
     judged = judge_claims.judge_claims(_story(["c02"]), [bad], unit, mock, sink)
 
     assert judged == []
-    assert mock.calls == [("claim_judge", "P3"), ("author", "P1")]
+    assert mock.calls == [("claim_judge", "P3"), ("claim_judge", "P3"), ("author", "P1")]
     dropped = [payload for kind, payload in events if kind == "claim_dropped"]
     assert len(dropped) == 1
     assert dropped[0]["claim_id"] == "c02"
     assert dropped[0]["claim_text"] == off_span["text"]
-    assert dropped[0]["reason"].startswith("span_not_in_unit")
+    assert dropped[0]["reason"].startswith("leak")
 
 
 def test_restated_claim_with_a_straightened_dash_is_grounded_and_rejudged():
@@ -339,6 +359,9 @@ def test_restated_claim_with_a_straightened_dash_is_grounded_and_rejudged():
     assert ascii_dash["span"] != COMPLETED_CLAIM["span"]
     mock = _armed_mock(
         {
+            judge_claims.rejudge_custom_id(unit, "c02"): _refused(
+                "still refused on a second look"
+            ),
             judge_claims.judge_custom_id(unit, "c02", 1): _refused("the span says 1959"),
             judge_claims.restate_custom_id(unit, "c02"): _restated(ascii_dash),
             judge_claims.judge_custom_id(unit, "c02", 2): _entailed(kind="event"),
@@ -350,12 +373,95 @@ def test_restated_claim_with_a_straightened_dash_is_grounded_and_rejudged():
     judged = judge_claims.judge_claims(_story(["c02"]), [draft], unit, mock, sink)
 
     assert [kind for kind, _ in events if kind == "claim_dropped"] == []
-    assert mock.calls == [("claim_judge", "P3"), ("author", "P1"), ("claim_judge", "P3")]
+    assert mock.calls == [
+        ("claim_judge", "P3"),
+        ("claim_judge", "P3"),
+        ("author", "P1"),
+        ("claim_judge", "P3"),
+    ]
     assert len(judged) == 1
     assert judged[0].draft.source.span == COMPLETED_CLAIM["span"]
     assert judged[0].verdict.bound_to == model.bind(
         COMPLETED_CLAIM["text"], COMPLETED_CLAIM["span"]
     )
+
+
+def test_a_refused_claim_is_judged_once_more_as_written_before_any_restate():
+    """Job B (75b8f292): Haiku refused 38 claims on the first look and two
+    blind labelers (Sonnet, fable) found 37 of them SUPPORTED as written;
+    the restate those refusals triggered lost 22 claims and made 9 of the
+    13 it kept compound. So a refused claim is judged a second time AS
+    WRITTEN (its own custom id, `-k1`) before the author is asked: cleared
+    there, it keeps its P1 text and span with a real entailed verdict, and
+    no restate is requested (none is scripted — reaching one would raise)."""
+    unit = _real_unit()
+    draft = _draft(unit, "c01", ADDRESS_CLAIM)
+    mock = _armed_mock(
+        {
+            judge_claims.judge_custom_id(unit, "c01", 1): _refused(
+                "the span does not say corner", kind="state"
+            ),
+            judge_claims.rejudge_custom_id(unit, "c01"): _entailed(),
+        },
+        unit,
+    )
+    events, sink = _sink_and_events()
+
+    judged = judge_claims.judge_claims(_story(["c01"]), [draft], unit, mock, sink)
+
+    assert mock.calls == [("claim_judge", "P3"), ("claim_judge", "P3")]
+    assert len(judged) == 1
+    assert judged[0].draft.text == ADDRESS_CLAIM["text"]
+    assert judged[0].draft.source.span == ADDRESS_CLAIM["span"]
+    assert judged[0].verdict.entailed is True
+    assert [kind for kind, _ in events if kind in ("claim_dropped", "restate_span_replaced")] == []
+    second = [payload for kind, payload in events if kind == "claim_rejudged"]
+    assert [(p["claim_id"], p["entailed"]) for p in second] == [("c01", True)]
+
+
+def test_a_restated_span_that_does_not_ground_falls_back_to_the_original_span():
+    """Job B (75b8f292, 2026-09-21): five restates were dropped as
+    span_not_in_unit because the author wrote literal escape text into the
+    span ("Thurs/u2013Sun", "curators\\ru2019") or garbled it ("Thurs
+    4\\ninisters") — facts the first pass had cited correctly. A restate
+    whose span does not ground keeps the ORIGINAL claim's span, which P1's
+    gates already grounded, and is judged in round two like any restate;
+    the swap is logged."""
+    unit = _real_unit()
+    draft = _draft(unit, "c02", COMPLETED_CLAIM)
+    escaped = {
+        **COMPLETED_CLAIM,
+        "text": "The Guggenheim building was completed in 1959.",
+        "span": COMPLETED_CLAIM["span"].replace("\u2013", "/u2013"),
+    }
+    assert "/u2013" in escaped["span"]
+    mock = _armed_mock(
+        {
+            judge_claims.rejudge_custom_id(unit, "c02"): _refused(
+                "still refused on a second look"
+            ),
+            judge_claims.judge_custom_id(unit, "c02", 1): _refused("the span does not name Wright"),
+            judge_claims.restate_custom_id(unit, "c02"): _restated(escaped),
+            judge_claims.judge_custom_id(unit, "c02", 2): _entailed(kind="event"),
+        },
+        unit,
+    )
+    events, sink = _sink_and_events()
+
+    judged = judge_claims.judge_claims(_story(["c02"]), [draft], unit, mock, sink)
+
+    assert [kind for kind, _ in events if kind == "claim_dropped"] == []
+    assert mock.calls == [
+        ("claim_judge", "P3"),
+        ("claim_judge", "P3"),
+        ("author", "P1"),
+        ("claim_judge", "P3"),
+    ]
+    assert len(judged) == 1
+    assert judged[0].draft.text == "The Guggenheim building was completed in 1959."
+    assert judged[0].draft.source.span == COMPLETED_CLAIM["span"]
+    replaced = [payload for kind, payload in events if kind == "restate_span_replaced"]
+    assert [(p["claim_id"], p["restated_span"]) for p in replaced] == [("c02", escaped["span"])]
 
 
 def test_transport_failure_or_unreadable_answer_holds_the_unit_in_p3():
@@ -371,6 +477,7 @@ def test_transport_failure_or_unreadable_answer_holds_the_unit_in_p3():
     story = _story(["c01"])
     j1 = judge_claims.judge_custom_id(unit, "c01", 1)
     r1 = judge_claims.restate_custom_id(unit, "c01")
+    k1 = judge_claims.rejudge_custom_id(unit, "c01")
 
     scripts = {
         "batch_failure": {j1: llm.MockFailure(result_type="errored", error_message="boom")},
@@ -384,6 +491,7 @@ def test_transport_failure_or_unreadable_answer_holds_the_unit_in_p3():
         },
         "unreadable_restate": {
             j1: _refused("not in the span"),
+            k1: _refused("still not in the span"),
             r1: llm.MockAnswer(text="Sure! Here is a better claim.", model_id="claude-opus-5"),
         },
     }
@@ -546,7 +654,8 @@ def test_the_coverage_check_logs_compound_claims_by_id_and_changes_nothing_else(
 
 
 def test_p3_plans_price_the_real_prompts():
-    """P3_PLAN (per claim: judge, restate ceiling, re-judge ceiling) and
+    """P3_PLAN (per claim: judge, restate ceiling, re-judge ceiling, and the
+    second look at a refused claim as written, added after job B) and
     OMISSIONS_PLAN (per unit) carry the real prompt lengths, never a
     made-up overhead number, and price as batch rows under their roles."""
     import src.ingest.prompts as prompts
@@ -556,10 +665,12 @@ def test_p3_plans_price_the_real_prompts():
         ("P3", "claim_judge"),
         ("P1", "author"),
         ("P3", "claim_judge"),
+        ("P3", "claim_judge"),
     ]
     assert rows[0].overhead_tokens == max(1, len(prompts.JUDGE_CLAIM_PROMPT) // 4)
     assert rows[1].overhead_tokens == max(1, len(prompts.RESTATE_PROMPT) // 4)
     assert rows[2].overhead_tokens == rows[0].overhead_tokens
+    assert rows[3].overhead_tokens == rows[0].overhead_tokens
     assert all(r.calls_per_unit == 1 for r in rows)
 
     (omissions_row,) = judge_claims.OMISSIONS_PLAN
@@ -573,6 +684,7 @@ def test_p3_plans_price_the_real_prompts():
     assert [r.model_id for r in estimate.rows] == [
         "claude-haiku-4-5",
         "claude-opus-5",
+        "claude-haiku-4-5",
         "claude-haiku-4-5",
         "claude-haiku-4-5",
     ]
@@ -731,6 +843,9 @@ def test_a_refusal_logs_the_claim_text_and_span_it_judged():
     mock = llm.MockClient(
         sink,
         batch_answers={
+            judge_claims.rejudge_custom_id(unit, "c02"): _refused(
+                "still refused on a second look"
+            ),
             judge_claims.judge_custom_id(unit, "c02", 1): _refused("nope"),
             judge_claims.restate_custom_id(unit, "c02"): _restated(COMPLETED_CLAIM),
             judge_claims.judge_custom_id(unit, "c02", 2): _entailed(kind="event"),
@@ -907,11 +1022,17 @@ def test_a_failed_restate_or_re_judge_holds_only_its_story_too():
     legs = {
         "restate": {
             judge_claims.judge_custom_id(unit, "c01", 1): _entailed(),
+            judge_claims.rejudge_custom_id(unit, "c02"): _refused(
+                "still refused on a second look"
+            ),
             judge_claims.judge_custom_id(unit, "c02", 1): _refused("the span says 1959"),
             judge_claims.restate_custom_id(unit, "c02"): boom,
         },
         "re_judge": {
             judge_claims.judge_custom_id(unit, "c01", 1): _entailed(),
+            judge_claims.rejudge_custom_id(unit, "c02"): _refused(
+                "still refused on a second look"
+            ),
             judge_claims.judge_custom_id(unit, "c02", 1): _refused("the span says 1959"),
             judge_claims.restate_custom_id(unit, "c02"): _restated(restated_item),
             judge_claims.judge_custom_id(unit, "c02", 2): boom,

@@ -112,6 +112,7 @@ CAPS: tuple[int, ...] = (
     P3_MAX_TOKENS,
     P3_RESTATE_MAX_TOKENS,
     P3_MAX_TOKENS,
+    P3_MAX_TOKENS,
     *(P3_OMISSIONS_MAX_TOKENS for _row in OMISSIONS_PLAN),
     *(P4_MAX_TOKENS for _row in P4_PLAN),
     P5_MAX_TOKENS,
@@ -130,7 +131,7 @@ CAPS: tuple[int, ...] = (
 REASK_RATES: tuple[float, ...] = (
     1.0, 1.0,  # P1 first ask, omission re-ask
     1.0, 1.0,  # P2 group, redo
-    1.0, 0.09, 0.09,  # P3 judge, restate, re-judge
+    1.0, 0.09, 0.09, 0.09,  # P3 judge, restate, re-judge, second look (job B saw 0.20)
     1.0,  # omissions
     1.0, 0.0,  # P4 narrate, redo
     1.0, 0.07, 0.07,  # P5 judge, revise, re-judge
@@ -183,6 +184,7 @@ INPUT_BASIS: tuple[str, ...] = (
     "unit",  # P3 judge
     "unit",  # P3 restate (the author sees the passage)
     "unit",  # P3 re-judge
+    "unit",  # P3 second look at a refused claim as written
     *("unit" for _row in OMISSIONS_PLAN),
     *("claims_story" for _row in P4_PLAN),
     *("claims_story" for _row in P5_PLAN),

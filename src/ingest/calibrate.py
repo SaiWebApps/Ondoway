@@ -172,6 +172,10 @@ def scripted_answers(record: DefectRecord, unit: Unit) -> dict[str, llm.MockAnsw
             answers[judge_claims.judge_custom_id(unit, claim["claim_id"], 1)] = llm.MockAnswer(
                 text=json.dumps(verdict), model_id=judge_model
             )
+            if refused:  # a correct detector refuses it again on the second look
+                answers[judge_claims.rejudge_custom_id(unit, claim["claim_id"])] = llm.MockAnswer(
+                    text=json.dumps(verdict), model_id=judge_model
+                )
         corrected = record.planted.get("corrected")
         if corrected is not None:
             answers[judge_claims.restate_custom_id(unit, planted_id)] = llm.MockAnswer(
@@ -495,8 +499,20 @@ def _detect(
                     and payload["attempt"] == 1
                     and payload["claim_id"] == planted_id
                 ]
-                caught = bool(refused)
-                note = refused[0]["reason"] if refused else "not refused"
+                # A plant the second look clears survives as written: missed.
+                cleared = [
+                    payload
+                    for kind, payload in events
+                    if kind == "claim_rejudged"
+                    and payload["claim_id"] == planted_id
+                    and payload["entailed"]
+                ]
+                caught = bool(refused) and not cleared
+                note = (
+                    f"cleared on the second look: {cleared[0]['reason']}"
+                    if cleared
+                    else refused[0]["reason"] if refused else "not refused"
+                )
         else:
             judge_claims.omissions(unit, _drafts(record, unit), client, record_event)
             expected = record.planted.get("expected")

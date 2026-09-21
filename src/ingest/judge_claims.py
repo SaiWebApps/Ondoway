@@ -69,9 +69,10 @@ class JudgedClaim(BaseModel):
 
 
 #: The P3 cost-estimate plan, priced PER CLAIM (estimate it over the
-#: claims' texts): the first judge call, the author's restate, and the
-#: re-judge. The last two rows are a CEILING — every claim is priced as if
-#: refused once — until slice 9 measures live refusal rates.
+#: claims' texts): the first judge call, the author's restate, the
+#: re-judge, and the second look at a refused claim as written. The last
+#: three rows are a CEILING — every claim is priced as if refused once;
+#: run.REASK_RATES weights them by the measured refusal rate.
 P3_PLAN: tuple[llm.PhaseCall, ...] = (
     llm.PhaseCall(
         phase="P3",
@@ -87,6 +88,15 @@ P3_PLAN: tuple[llm.PhaseCall, ...] = (
         overhead_tokens=max(1, len(prompts.RESTATE_PROMPT) // 4),
         expected_output_tokens=P3_RESTATE_EXPECTED_OUTPUT_TOKENS,
     ),
+    llm.PhaseCall(
+        phase="P3",
+        role="claim_judge",
+        calls_per_unit=1,
+        overhead_tokens=max(1, len(prompts.JUDGE_CLAIM_PROMPT) // 4),
+        expected_output_tokens=P3_MAX_TOKENS,
+    ),
+    # The second look at a refused claim AS WRITTEN, before any restate
+    # (job B, 2026-09-21: 37 of 38 first refusals were SUPPORTED).
     llm.PhaseCall(
         phase="P3",
         role="claim_judge",
@@ -111,6 +121,13 @@ OMISSIONS_PLAN: tuple[llm.PhaseCall, ...] = (
 def judge_custom_id(unit: Unit, claim_id: str, attempt: int) -> str:
     """The Batch API custom_id for judging one claim on one attempt."""
     return f"{unit.key[:_CUSTOM_ID_KEY_CAP]}-{claim_id}-j{attempt}"
+
+
+def rejudge_custom_id(unit: Unit, claim_id: str) -> str:
+    """The Batch API custom_id for judging a refused claim a second time AS
+    WRITTEN, before any restate — its own suffix, so batch recovery and a
+    resume never confuse it with the restated claim's `-j2`."""
+    return f"{unit.key[:_CUSTOM_ID_KEY_CAP]}-{claim_id}-k1"
 
 
 def restate_custom_id(unit: Unit, claim_id: str) -> str:
@@ -265,11 +282,17 @@ def _judge_round(
     client: llm.ModelClient,
     attempt: int,
     failures: dict[str, str] | None = None,
+    custom_id: Callable[[str], str] | None = None,
 ) -> dict[str, dict]:
     """One P3 batch round over `drafts`; returns each claim id's parsed
     verdict (plus the response's model id). An unreadable verdict holds
     the unit: a judge that cannot answer the schema is a broken judge, not
     a refused claim."""
+    def id_of(claim_id: str) -> str:
+        if custom_id is not None:
+            return custom_id(claim_id)
+        return judge_custom_id(unit, claim_id, attempt)
+
     completions = _batch(
         emit,
         unit,
@@ -277,7 +300,7 @@ def _judge_round(
         role="claim_judge",
         prompts_=[
             (
-                judge_custom_id(unit, draft.claim_id, attempt),
+                id_of(draft.claim_id),
                 prompts.render_judge_claim(draft.text, draft.source.span, unit.text),
             )
             for draft in drafts
@@ -289,7 +312,7 @@ def _judge_round(
     )
     verdicts: dict[str, dict] = {}
     for draft in drafts:
-        answer = completions.get(judge_custom_id(unit, draft.claim_id, attempt))
+        answer = completions.get(id_of(draft.claim_id))
         if answer is None:  # its request failed and was isolated by `failures`
             continue
         parsed = parse_verdict(answer.text)
@@ -523,6 +546,44 @@ def _judge_many(
                 "span": draft.source.span,
             },
         )
+    if refused:
+        # Job B: 37 of 38 first refusals were SUPPORTED as written (blind
+        # labels, Sonnet + fable). Judge the claim once more as written
+        # before asking the author to rewrite it — the rewrite is where the
+        # job lost facts and gained compounds.
+        second_look_failures: dict[str, str] = {}
+        second_look = _judge_round(
+            emit,
+            [draft for draft, _reason in refused],
+            unit,
+            client,
+            attempt=1,
+            failures=second_look_failures if isolate else None,
+            custom_id=lambda claim_id: rejudge_custom_id(unit, claim_id),
+        )
+        absorb(
+            second_look_failures,
+            {rejudge_custom_id(unit, d.claim_id): d.claim_id for d, _reason in refused},
+        )
+        still_refused = []
+        for draft, _reason in refused:
+            verdict = second_look.get(draft.claim_id)
+            if verdict is None:  # its request failed; its story is held
+                continue
+            emit(
+                "claim_rejudged",
+                {
+                    "unit_key": unit.key,
+                    "claim_id": draft.claim_id,
+                    "entailed": verdict["entailed"],
+                    "reason": verdict["reason"],
+                },
+            )
+            if verdict["entailed"]:
+                verdicts[draft.claim_id] = verdict
+            else:
+                still_refused.append((draft, verdict["reason"]))
+        refused = [(d, r) for d, r in still_refused if story_of[d.claim_id] not in held]
     dropped: set[str] = set()
     if refused:
         restated = []
@@ -534,7 +595,24 @@ def _judge_many(
             restate_failures,
             {restate_custom_id(unit, d.claim_id): d.claim_id for d, _reason in refused},
         )
+        original_of = {d.claim_id: d for d, _reason in refused}
         for draft in surviving(restate_answers):
+            if span_in_unit(draft.source.span, unit.text) is not None:
+                # Job B: five restates wrote literal escapes or garbage into a
+                # span P1 had cited correctly. Keep the original's grounded
+                # span; the round-two judge still decides the new text.
+                emit(
+                    "restate_span_replaced",
+                    {
+                        "unit_key": unit.key,
+                        "claim_id": draft.claim_id,
+                        "restated_span": draft.source.span,
+                        "span": original_of[draft.claim_id].source.span,
+                    },
+                )
+                draft = draft.model_copy(
+                    update={"source": original_of[draft.claim_id].source}
+                )
             by_id[draft.claim_id] = draft
             gate_reasons = claim_gates(draft.text, draft.source.span, unit.text)
             if gate_reasons:

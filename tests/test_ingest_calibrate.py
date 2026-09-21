@@ -344,6 +344,13 @@ def test_precision_counts_clean_claims_refused_and_claims_dropped_with_reasons()
                 ),
                 model_id=llm.ROLE_MODEL["claim_judge"],
             )
+            answers[judge_claims.rejudge_custom_id(u, clean_id)] = llm.MockAnswer(
+                text=(
+                    '{"entailed": false, "reason": "the span does not say sixties",'
+                    ' "kind": "event"}'
+                ),
+                model_id=llm.ROLE_MODEL["claim_judge"],
+            )
             answers[judge_claims.restate_custom_id(u, clean_id)] = llm.MockAnswer(
                 text=json.dumps(leaking_restate), model_id=llm.ROLE_MODEL["author"]
             )
@@ -379,6 +386,49 @@ def test_precision_counts_clean_claims_refused_and_claims_dropped_with_reasons()
     }
     assert calibrate.baseline_from(report)["lift"] == {"caught": 1, "total": 1}
 
+
+
+def test_a_plant_the_second_look_clears_counts_as_missed():
+    """A refused claim is now judged once more as written before any
+    restate (job B, 2026-09-21). A planted fabrication the first look
+    refuses but the second look CLEARS survives into the corpus, so it is
+    MISSED — the harness must never score a first refusal as a catch when
+    the claim then went through. The default script refuses it twice."""
+    import src.ingest.judge_claims as judge_claims
+    import src.ingest.llm as llm
+
+    fixture = _fixture()
+    refusal_classes = [
+        r.defect_class for r in fixture.records
+        if r.detector == "judge_claims" and r.planted.get("expected_kind") is None
+    ]
+    assert refusal_classes, "the fixture carries claim-judge refusal plants"
+    real = calibrate.scripted_answers
+
+    def cleared_on_second_look(record, unit):
+        answers = real(record, unit)
+        if record.detector == "judge_claims" and record.planted.get("expected_kind") is None:
+            answers[judge_claims.rejudge_custom_id(unit, record.planted["claim_id"])] = (
+                llm.MockAnswer(
+                    text=json.dumps(
+                        {"entailed": True, "reason": "the span states it", "kind": "event"}
+                    ),
+                    model_id=llm.ROLE_MODEL["claim_judge"],
+                )
+            )
+        return answers
+
+    report = calibrate.run(
+        fixture, REPO_ROOT / "Books", client="mock", scripted=cleared_on_second_look
+    )
+    by_class = {row.defect_class: row for row in report.rows}
+    for name in refusal_classes:
+        assert (by_class[name].caught, by_class[name].total) == (0, 1), name
+
+    clean = calibrate.run(fixture, REPO_ROOT / "Books", client="mock")
+    by_class = {row.defect_class: row for row in clean.rows}
+    for name in refusal_classes:
+        assert (by_class[name].caught, by_class[name].total) == (1, 1), name
 
 def test_a_merge_judge_the_signature_contradicts_is_held_and_counts_as_missed():
     """The merge classes measure P6 end to end: a scripted judge that calls
