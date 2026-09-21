@@ -918,6 +918,37 @@ registered FAIL and run job B with R1 recorded failed (both anchor pairs have at
 so R2 stays readable for them; a Frommer's-side compound would leave a fold failure unattributable).
 **Owner ruling (2026-09-19): fix P1 first.** No override; job B waits for a fresh job A.
 
+*Job B on step2c — registered before the run (2026-09-20, amended at the judge's PROVE-FIRST).*
+Job B merges into `data-ingest/sandboxes/step2c/` (job `c7c39a79…`, the round-collapse run of
+the same Lonely Planet chunk; 47 beats, sha `fa549e1db77b8463`, frozen copy
+`$HOME/ondoway-ingest-backup-2026-09-13/step2c-pre-jobB-2026-09-20`), not a fresh job A. That run
+was a throughput proof, never scored against gate (ii) or R1, and P1 is unchanged since the
+2026-09-19 ruling above, so running job B on it is an owner OVERRIDE of that ruling: shown the
+ruling verbatim, that supersession is untestable here, that R1 stands failed and that step2c's
+cost is a floor, the owner answered "go" (2026-09-20). R1 stays failed as registered; its Frommer's half is
+hand-audited BEFORE R2 is scored, because a compound on the Frommer's side leaves a failed fold
+unattributable. step2c's gate-(ii) content is present in nine unheld, narrated Guggenheim beats:
+the atomic Wright claim, two critics claims (the contrast "derided … while others welcomed it" and
+the Times "savaged … but others quickly celebrated"), Kandinsky, Brancusi, the 1959 completion and
+the October 1959 opening, Mapplethorpe's photographs in the holdings, adult admission $25.
+Job A upstream drops, found $0 in c7c39a79's own files: the passage's practicalities block (in
+the unit, P0) states the Saturday pay-what-you-wish 5-8pm, the opening hours and the 4/5/6 to
+86th St, and P1 emitted none of them — its admission claim cites the whole line as its span and
+states only "$25". No `claim_dropped` names them and the omission check did not find them; its
+one finding was the address, already claim c05, whose supplement became duplicate c215 (the
+carried false-omission defect). Consequences, registered: the two conflict pairs and the subway
+pair are "unproven: LP upstream drop (never emitted at P1)"; **supersession is therefore NOT
+tested by this run** — at most the `same` folds, the additive new-fact path and re-narration
+are. The address pair passes if Frommer's address folds into c05 or c215; into neither is a
+FAIL; a Frommer's address claim folding into both (it cannot by construction — one match per
+claim) would be a code defect. The carried `’`/`–` span corruption threatens Frommer's Wright
+("Wright’s delirious spiral") and practicalities ("Sat 6–8pm") spans; a pair lost to it is
+"unproven: upstream drop (span corruption)", not a merge failure. Estimate at HEAD b9a8750:
+expected $3.4288, first-pass $2.4040, cap-bound $95.9443; registered gate 1.5x = $5.14. Reaching
+the gate mid-run means the owner is asked, not an automatic kill: P3 persists only on
+completion, so a kill re-pays the phase. The step2c run's own cost ($2.6072) is a floor
+(`unmetered_calls=1`). No automated kill-switch; hand-watching at phase boundaries only.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
