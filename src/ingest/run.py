@@ -81,6 +81,10 @@ from src.ingest.unit import Unit, load_unit
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATA_ROOT = REPO_ROOT / "data"
 
+#: Validator codes P7 holds per beat instead of refusing the whole file
+#: (owner ruling 2026-09-21, after job B lost nine folds to three beats).
+HOLDABLE_AT_COMMIT: tuple[str, ...] = ("ARC_TOO_FEW_CLAIMS", "NARRATION_LIFT")
+
 #: Every phase's plan with the FAN-OUT its rows are priced by (the phase
 #: modules document it: P3 per claim, P4/P6 per story, P5 per sentence,
 #: P1/P2/omissions per unit). Slice 9's judge caught the runner pricing
@@ -1082,6 +1086,46 @@ class _Run:
         return records, per_unit
 
     # -- P7 --
+    def _holdable_at_commit(
+        self, raw: list[dict[str, Any]], errors: Sequence[str]
+    ) -> dict[str, list[str]]:
+        """The NEW beats of `raw` that fail only checks in HOLDABLE_AT_COMMIT,
+        by beat_id with their errors (owner ruling 2026-09-21) — or {} when
+        any other error is present or a failing beat is already on disk
+        (holding it would delete it), so the whole file is still refused.
+        Pure: P7 queues them only once the file without them validates."""
+        failing: dict[str, list[str]] = {}
+        for error in errors:
+            code, _, rest = error.partition(" ")
+            label = rest.split(":", 1)[0]
+            if code not in HOLDABLE_AT_COMMIT:
+                return {}
+            failing.setdefault(label, []).append(error)
+        ids = {r.get("beat_id") for r in raw}
+        on_disk = (
+            {r.get("beat_id") for r in json.loads(self.beats_path.read_text(encoding="utf-8"))}
+            if self.beats_path.is_file()
+            else set()
+        )
+        if not set(failing) <= ids or set(failing) & on_disk:
+            return {}
+        return failing
+
+    def _queue_held_at_commit(
+        self, record: dict[str, Any], beat_errors: Sequence[str]
+    ) -> None:
+        self.store.queue(
+            job_id=self.job.id, city=self.job.city, kind="commit_held",
+            story_slug=record["story_slug"], place=record["poi_name"],
+            reason="; ".join(beat_errors),
+            shown={"beat": record, "errors": list(beat_errors)},
+            held_back={
+                "claims": len(record.get("claims", [])),
+                "duration_sec": record.get("duration_sec") or 0,
+            },
+        )
+        self.emit("commit_held", {"beat_id": record["beat_id"], "errors": list(beat_errors)})
+
     def p7(
         self, records: list[dict[str, Any]], per_unit: dict[str, dict[str, Any]],
         chunks_root: Path,
@@ -1096,6 +1140,12 @@ class _Run:
             self.done("P7", {"beats_path": str(self.beats_path), "written": 0})
             return
         errors = model.validate(raw, chunks_root=chunks_root)
+        held: dict[str, list[str]] = {}
+        if errors:
+            held = self._holdable_at_commit(raw, errors)
+            if held:
+                raw = [r for r in raw if r.get("beat_id") not in held]
+                errors = model.validate(raw, chunks_root=chunks_root)
         if errors:
             raise RuntimeError(
                 f"the validator refused the file ({len(errors)} error(s)); nothing reached "
@@ -1123,6 +1173,9 @@ class _Run:
             raw, log, beats_path=self.beats_path, log_path=self.log_path,
             chunks_root=chunks_root,
         )
+        records_by_id = {r.get("beat_id"): r for r in records}
+        for beat_id, beat_errors in held.items():
+            self._queue_held_at_commit(records_by_id[beat_id], beat_errors)
         self.done("P7", {"beats_path": str(self.beats_path), "written": len(raw)})
 
     def run(self) -> None:

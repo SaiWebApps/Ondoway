@@ -1372,3 +1372,179 @@ def test_two_units_get_their_own_rounds_never_one_shared_round(tmp_path):
         assert len(prefixes) == 1, ids
     # The identical sentence ids across the two units are the discriminator.
     assert p5_rounds[0] == p5_rounds[1], (p5_rounds[0], p5_rounds[1])
+
+
+def _finished_job_then_p7_with(tmp_path, extra_records: list[dict], on_disk=()):
+    """A committed mock job's P0-P6 outputs copied onto a second job, with
+    `extra_records` appended to P6's records, then run_job again: every
+    phase is already done, so only P7 runs — the shape of `--resume` on
+    job B (75b8f292…), whose P6 records carried three beats P7 refused."""
+    first_root = tmp_path / "first"
+    first_root.mkdir()
+    chunks = script_mod.chunk_dir(first_root)
+    store = jobs.IngestJobStore()
+    first = _book_job(store, chunks)
+    _events, sink = _sink_and_events()
+    client = llm.MockClient(sink, **script_mod.script(script_mod.unit(chunks)))
+    run.run_job(first.id, store, client, data_root=script_mod.data_dir(first_root))
+    assert store.snapshot(first.id).status == "committed"
+
+    data_root = script_mod.data_dir(tmp_path)
+    if on_disk:
+        script_mod.seed_beats(data_root, list(on_disk))
+    second = _book_job(store, chunks)
+    for phase in ("P0", "P1", "P2", "P3", "P4", "P5"):
+        store.set_phase(second.id, phase, store.phase_output(first.id, phase))
+    p6 = dict(store.phase_output(first.id, "P6"))
+    p6["records"] = [*p6["records"], *extra_records]
+    store.set_phase(second.id, "P6", p6)
+    run.run_job(second.id, store, llm.MockClient(sink), data_root=data_root)
+    beats_path = data_root / script_mod.CITY / "beats.json"
+    written = json.loads(beats_path.read_text(encoding="utf-8")) if beats_path.is_file() else None
+    return store, store.snapshot(second.id), written, chunks
+
+
+def test_a_new_beat_below_its_arc_minimum_at_p7_is_held_and_the_rest_commits(tmp_path):
+    """Job B's P7 refused the WHOLE file for one anecdote left with a single
+    claim after P3 dropped its partner — and nine merge folds were lost with
+    it. Owner ruling 2026-09-21: a new beat failing ARC_TOO_FEW_CLAIMS is held
+    to the review queue (kind commit_held, carrying the record and the
+    validator's error) and every other beat commits, validated."""
+    lonely_id = f"{script_mod.CITY}/{model.slug(script_mod.PLACE)}/a-lonely-anecdote"
+    lonely = script_mod._beat(
+        lonely_id, "a-lonely-anecdote", "A lonely anecdote", "anecdote",
+        [script_mod._lp_claim("c01", script_mod.COLLECTING)],
+        "Solomon Guggenheim started buying abstract art late in life on the advice "
+        "of Hilla Rebay.",
+    )
+
+    store, snap, written, chunks = _finished_job_then_p7_with(tmp_path, [lonely])
+
+    assert snap.status == "committed", snap.error
+    assert [r["beat_id"] for r in written] == [script_mod.BEAT_ID]
+    assert model.validate(written, chunks_root=chunks.parent) == []
+    items = store.undecided(script_mod.CITY)
+    assert [(i.kind, i.story_slug) for i in items] == [("commit_held", "a-lonely-anecdote")]
+    assert items[0].reason.startswith("ARC_TOO_FEW_CLAIMS")
+    assert items[0].shown["beat"]["beat_id"] == lonely_id
+
+
+def test_a_new_beat_whose_narration_lifts_its_span_at_p7_is_held_and_the_rest_commits(
+    tmp_path,
+):
+    """Job B's third refusal: a narration sharing an 8-word run with its span
+    (a proper name P4's lift gate exempts and P7's check does not). Held the
+    same way, kind commit_held, the rest committed."""
+    lifted_id = f"{script_mod.CITY}/{model.slug(script_mod.PLACE)}/a-lifted-narration"
+    lifted = script_mod._beat(
+        lifted_id, "a-lifted-narration", "A lifted narration", "anecdote",
+        [script_mod._lp_claim("c01", script_mod.COLLECTING),
+         script_mod._lp_claim("c02", script_mod.OPENED_1939)],
+        script_mod.OPENED_1939["span"],
+    )
+
+    store, snap, written, chunks = _finished_job_then_p7_with(tmp_path, [lifted])
+
+    assert snap.status == "committed", snap.error
+    assert [r["beat_id"] for r in written] == [script_mod.BEAT_ID]
+    assert model.validate(written, chunks_root=chunks.parent) == []
+    items = store.undecided(script_mod.CITY)
+    assert [(i.kind, i.story_slug) for i in items] == [("commit_held", "a-lifted-narration")]
+    assert items[0].reason.startswith("NARRATION_LIFT")
+
+
+def test_any_other_validator_error_at_p7_still_refuses_the_whole_file(tmp_path):
+    """The hold is exactly two classes (owner ruling 2026-09-21). A stale
+    narration hash beside a holdable beat is still a refused file: nothing
+    written, nothing queued — the hold must never quietly swallow an error
+    it was not approved for."""
+    lonely = script_mod._beat(
+        f"{script_mod.CITY}/{model.slug(script_mod.PLACE)}/a-lonely-anecdote",
+        "a-lonely-anecdote", "A lonely anecdote", "anecdote",
+        [script_mod._lp_claim("c01", script_mod.COLLECTING)],
+        "Solomon Guggenheim started buying abstract art late in life on the advice "
+        "of Hilla Rebay.",
+    )
+    stale = script_mod._beat(
+        f"{script_mod.CITY}/{model.slug(script_mod.PLACE)}/a-stale-narration",
+        "a-stale-narration", "A stale narration", "anecdote",
+        [script_mod._lp_claim("c01", script_mod.COLLECTING),
+         script_mod._lp_claim("c02", script_mod.COMPLETED)],
+        script_mod.ORIGINS_NARRATION,
+    )
+    stale["narration"]["claims_hash"] = "0" * 64
+
+    store, snap, written, _chunks = _finished_job_then_p7_with(tmp_path, [lonely, stale])
+
+    assert snap.status == "error"
+    assert "NARRATION_HASH_STALE" in (snap.error or "")
+    assert written is None
+    assert store.undecided(script_mod.CITY) == []
+
+
+def test_a_failing_beat_already_on_disk_is_never_held_away_the_file_is_refused(tmp_path):
+    """Holding means "not written yet", never "deleted": a beat already in
+    beats.json that comes back failing a holdable check (e.g. a re-run that
+    left it short) cannot be dropped from the file, so the whole file is
+    refused and the file on disk is left as it was."""
+    old_id = f"{script_mod.CITY}/{model.slug(script_mod.PLACE)}/an-old-anecdote"
+    on_disk = script_mod._beat(
+        old_id, "an-old-anecdote", "An old anecdote", "anecdote",
+        [script_mod._lp_claim("c01", script_mod.COLLECTING),
+         script_mod._lp_claim("c02", script_mod.COMPLETED)],
+        script_mod.ORIGINS_NARRATION,
+    )
+    shrunk = script_mod._beat(
+        old_id, "an-old-anecdote", "An old anecdote", "anecdote",
+        [script_mod._lp_claim("c01", script_mod.COLLECTING)],
+        "Solomon Guggenheim started buying abstract art late in life on the advice "
+        "of Hilla Rebay.",
+    )
+
+    store, snap, written, _chunks = _finished_job_then_p7_with(
+        tmp_path, [shrunk], on_disk=[on_disk]
+    )
+
+    assert snap.status == "error"
+    assert "ARC_TOO_FEW_CLAIMS" in (snap.error or "")
+    assert "COLLISION" not in (snap.error or "")
+    assert written == [on_disk]
+    assert store.undecided(script_mod.CITY) == []
+
+
+def test_held_beats_are_queued_only_once_the_rest_of_the_file_validates(tmp_path, monkeypatch):
+    """Queue AFTER the re-validation, never before: if the file without the
+    held beats is still refused, the review queue must not claim a beat was
+    "held" from a commit that never happened. The second validate() is made
+    to fail (today's per-record validator cannot surface a new error by
+    removing records, so the wrapper stands in for a future cross-beat
+    check)."""
+    real_validate = model.validate
+    lonely_id = f"{script_mod.CITY}/{model.slug(script_mod.PLACE)}/a-lonely-anecdote"
+    seen: list[bool] = []
+
+    def validate_then_refuse(records, chunks_root=None):
+        errors = real_validate(records, chunks_root=chunks_root)
+        ids = {r.get("beat_id") for r in records}
+        if lonely_id in ids:
+            seen.append(True)
+        elif seen:  # the file again, with the held beat taken out
+            errors = [*errors, "SOME_CROSS_BEAT_CHECK #0: refused after the hold"]
+        return errors
+
+    lonely = script_mod._beat(
+        lonely_id,
+        "a-lonely-anecdote", "A lonely anecdote", "anecdote",
+        [script_mod._lp_claim("c01", script_mod.COLLECTING)],
+        "Solomon Guggenheim started buying abstract art late in life on the advice "
+        "of Hilla Rebay.",
+    )
+    monkeypatch.setattr(run.model, "validate", validate_then_refuse)
+
+    store, snap, written, _chunks = _finished_job_then_p7_with(tmp_path, [lonely])
+
+    assert snap.status == "error"
+    assert "SOME_CROSS_BEAT_CHECK" in (snap.error or "")
+    assert written is None
+    assert store.undecided(script_mod.CITY) == []
+    assert "commit_held" not in [e.message for e in snap.events]

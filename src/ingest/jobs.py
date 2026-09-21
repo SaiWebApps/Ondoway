@@ -51,7 +51,7 @@ IngestStatus = Literal["created", "running", "committed", "error"]
 #: disagreed on, a narration still refused after its one revise (or one
 #: that failed the code gate twice), or a story at a place the city's
 #: POI file does not name.
-ReviewKind = Literal["merge_held", "narration_held", "new_place"]
+ReviewKind = Literal["merge_held", "narration_held", "new_place", "commit_held"]
 
 Decision = Literal["accept", "reject"]
 
