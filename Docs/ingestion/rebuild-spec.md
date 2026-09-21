@@ -112,7 +112,7 @@ the gates that enforce them.
 | D4 | Narration derived from claims, every sentence traceable, no framing (engine owns glue) | `generation.py`: "Glue is the only place generation invents text" |
 | D5 | Lenses are a list on the story | Same reception story tagged `historic_arch` in one book, `local_legends` in another |
 | D6 | Structural beats (orientation, transit, sidebar) exempt from the arc rule | Practical guidance has no arc; the types already exist |
-| D7 | Extraction is corpus-blind; merge is a separate per-place pass with a non-author judge plus a deterministic signature hint; the signature's positive evidence against the judge goes to a person (amended in slice 10: a signature that matches nothing is no evidence, so it no longer vetoes a judge's match) | Judge may never include the author; small candidate sets per place. Slice 10: across job 2's 12 judged stories the lexical signature matched 1 claim while the judge named 4 correct matches, and hold-on-any-disagreement held or re-asked every one of them away |
+| D7 | Extraction is corpus-blind; merge is a separate per-place pass with a non-author judge plus a deterministic signature hint; the signature's positive evidence against the judge goes to a person (amended in slice 10: a signature that matches nothing is no evidence, so it no longer vetoes a judge's match; amended 2026-09-21: a signature matches only when the existing claim covers at least 0.7 of the NEW claim's tokens — the merge contract's direction — never by the overlap coefficient, under which a short existing claim inside a longer new one "matched") | Judge may never include the author; small candidate sets per place. Slice 10: across job 2's 12 judged stories the lexical signature matched 1 claim while the judge named 4 correct matches, and hold-on-any-disagreement held or re-asked every one of them away |
 | D8 | Status lives on the claim: resolved / contested / superseded. Contested claims are not voiced; the story still ships | 29 stories dark today for one claim each |
 | D9 | Every source has an as-of date; claims have a temporal kind (event / state / belief). Recency resolves state claims only. Supersession is a merge outcome, not a contest. Fact-check becomes a staleness pass | Richard III: both sources right as of their date |
 | D10 | Re-extract everything; do not migrate. 1,835 verdicts discarded | Proof chunk found 42 stories where migration would keep 24 |
@@ -218,7 +218,7 @@ failed job resumes at its last completed phase.
 | P3 judge claims | judge | per claim: entailed yes/no and the temporal kind read from the span (slice 9: a wrongly kinded claim is re-kinded, never refused); per unit: facts no claim carries, and (slice 10) claims that state more than one fact — logged as `compound_found`, no re-ask yet | a claim refused once is re-asked with the judge's reason quoted back; refused twice is dropped and logged; an omission finding that no claim already states (a finding whose signature equals a claim's is dropped, `omission_already_carried`) re-asks P1 once for that unit — since slice 10 (owner ruling A, 2026-09-19) for the omitted facts ONLY, the first pass's claims shown; the new claims are appended, grouped and judged on their own, and a re-ask that fails keeps the first pass |
 | P4 narrate | author, sees claims only | narration text | no lift vs any span; no leak; no framing regex (`imagine`, `picture`, `envision`); duration computed |
 | P5 judge narration | judge | per sentence entailed yes/no | a failing sentence re-asks P4 once with the sentence quoted back; still failing → `narration.flags` set, `review.held = true` |
-| P6 merge | merge judge + signature | per new story: same / new / supersedes; per claim, against ANY claim at the place whatever the story verdict: new / same / conflict — candidate beats and claims named by handle (`b1`, `b1.c02`), never by id | the signature is a one-way tripwire: a signature match on a claim the judge called `new`, or on a different claim than the judge named, holds the new story (queue item); a judge match the signature cannot see applies. Every raw answer is logged (`merge_answered`), every matched claim logged with both texts and the new span (`merge_folded`). A matched claim FOLDS into the claim that holds it: conflict → the D9 kind rules (`contested`, or supersedes → old claim `belief`, dated); same → one claim, sources appended. A `new` story's own beat keeps only its unmatched claims and is narrated again; left below its arc minimum it is a queue item; fully folded it writes nothing (`merge_absorbed`). Any claim change → P4/P5 rerun for that beat |
+| P6 merge | merge judge + signature | per new story: same / new / supersedes; per claim, against ANY claim at the place whatever the story verdict: new / same / conflict — candidate beats and claims named by handle (`b1`, `b1.c02`), never by id | the signature is a one-way tripwire, measured in the contract's direction (`merge.covered`: the existing claim covers ≥0.7 of the new claim's tokens): a signature match on a claim the judge called `new`, or on a different claim than the judge named, holds the new story (queue item); a judge match the signature cannot see applies. Every raw answer is logged (`merge_answered`), every matched claim logged with both texts and the new span (`merge_folded`). A matched claim FOLDS into the claim that holds it: conflict → the D9 kind rules (`contested`, or supersedes → old claim `belief`, dated); same → one claim, sources appended. A `new` story's own beat keeps only its unmatched claims and is narrated again; left below its arc minimum it is a queue item; fully folded it writes nothing (`merge_absorbed`). Any claim change → P4/P5 rerun for that beat |
 | P7 commit | none | `beats_io.commit` | the slice-1 validator, extended; nothing reaches disk otherwise |
 
 Refusal loop: exactly one re-ask per phase per item, then drop or hold. No item is padded,
@@ -1028,6 +1028,21 @@ at the Frick, the Met, the MCNY, the Jewish Museum and the Neue Galerie, not the
 and R5 stay failed as registered (a resume under a changed contract cannot pass R5 retroactively).
 Owed: nothing acts on accepting a `commit_held` item; the book log's per-chunk counts include the
 held beats; the tripwire's precision (7 false holds of 8) is now the thing blocking merges.
+
+*Tripwire precision (2026-09-21, owner: "go with option 1, build it and run the replay").* Root
+cause: the signature scored pairs by the tour engine's overlap coefficient (|a∩b|/min), which also
+fires when a SHORT existing claim sits inside a longer new one — a new claim that says more, `new`
+by the contract. Measured $0 on job B's 36 judged stories (the real tokenizer; a reconstruction
+that reproduces the run's 8 holds exactly): the contract's direction (existing covers ≥0.7 of the
+new claim's tokens) holds 3 — the one real catch (Cooper Hewitt, panel 2-1 same) and two the panel
+called false — and changes no judge-named match; the Guggenheim story is no longer held. Limits,
+stated to the owner before the ruling: recall rests on ONE true positive; measured on the chunk it
+was chosen on (no independent held-out data exists — slice 9 job 2 logged no per-claim answers and
+the replays are the same Guggenheim job); a longer paraphrase of an existing fact now passes
+unheld, and costs a duplicate claim. Built test-first in `merge.covered` (the tour engine's
+`claim_dedup` untouched): the two Guggenheim pairs match nothing, the Cooper Hewitt pair still
+matches, the slice-6 tripwire node still holds; undo-tested (overlap coefficient, reversed
+direction, tripwire off).
 
 ### Slice 11: Cleanup
 

@@ -122,7 +122,7 @@ def test_fixture_has_one_record_per_class_and_only_the_planted_defect():
             planted = next(c for c in record.claims if c["claim_id"] == planted_claim_id)
             beat = merge._signature(planted["text"])
             second = merge._signature(record.planted["second_source"]["text"])
-            assert merge._overlap(beat, second) < merge.SIGNATURE_MATCH_MIN, record.defect_class
+            assert merge.covered(second, beat) < merge.SIGNATURE_MATCH_MIN, record.defect_class
         elif record.detector == "merge":
             # The planted second source must state the SAME fact as the planted
             # claim by the signature test P6 applies, or the hint would call
@@ -132,7 +132,7 @@ def test_fixture_has_one_record_per_class_and_only_the_planted_defect():
             planted = next(c for c in record.claims if c["claim_id"] == planted_claim_id)
             beat = merge._signature(planted["text"])
             second = merge._signature(record.planted["second_source"]["text"])
-            assert merge._overlap(beat, second) >= merge.SIGNATURE_MATCH_MIN, record.defect_class
+            assert merge.covered(second, beat) >= merge.SIGNATURE_MATCH_MIN, record.defect_class
             assert record.planted["expected"] in ("contested", "supersedes"), record.defect_class
             assert set(record.planted["stated_values"]) == {
                 unit.source_id,

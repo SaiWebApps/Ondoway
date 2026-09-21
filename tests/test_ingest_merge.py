@@ -483,6 +483,77 @@ def test_judge_and_signature_disagree_holds_new_story():
     )
 
 
+# Job B's (75b8f292) real pairs, 2026-09-21. LP's short claim sits INSIDE the
+# longer Frommer's claims, so the overlap coefficient scored them 0.75 and 1.0
+# and held the Guggenheim story, although each Frommer's claim says MORE —
+# `new` by the merge contract; the blind panel sided with the judge (3-0, 2-1).
+SPIRAL_RAMP: dict = {
+    "text": "The Guggenheim Museum has a spiral ramp.",
+    "kind": "state",
+    "span": "the Guggenheim Museum has a spiral ramp",
+}
+AMONG_THE_TOWERS: dict = {
+    "text": (
+        "Frank Lloyd Wright's spiral-shaped Guggenheim Museum is located among the "
+        "tower buildings of Fifth Avenue."
+    ),
+    "kind": "state",
+    "span": "delirious spiral of a museum sits among the towers of Fifth Avenue",
+}
+ATRIUM: dict = {
+    "text": "The Solomon R. Guggenheim Museum's atrium centers on a huge spiral ramp.",
+    "kind": "state",
+    "span": "an atrium with a huge spiral ramp",
+}
+# The run's one real catch (panel 2-1 same): the judge called it new.
+SMITHSONIAN_LP: dict = {
+    "text": (
+        "The Cooper-Hewitt Smithsonian Design Museum is part of the Smithsonian "
+        "Institution in Washington DC."
+    ),
+    "kind": "state",
+    "span": "Part of the Smithsonian Institution in Washington DC",
+}
+SMITHSONIAN_FR: dict = {
+    "text": "The Cooper Hewitt National Design Museum is the design division of the Smithsonian.",
+    "kind": "state",
+    "span": "the design division\nof the Smithsonian",
+}
+
+
+def _one_claim_beat(beat_id: str, slug: str, item: dict) -> model.Beat:
+    return model.Beat.model_validate(
+        _beat(beat_id, slug, slug.replace("-", " ").capitalize(), "sidebar",
+              [_lp_claim("c01", item)], item["text"])
+    )
+
+
+def test_a_new_claim_that_says_more_than_a_short_existing_one_is_no_signature_match():
+    """The tripwire measures the merge contract's own direction: the
+    existing claim must state (nearly) everything the NEW claim states.
+    A short existing claim contained in a longer new one is not evidence
+    the judge's `new` is wrong — the new claim says more (owner ruling
+    2026-09-21, D7's measure). Both of job B's Guggenheim hold pairs."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", AMONG_THE_TOWERS), _judged(unit, "c02", ATRIUM)]
+    existing = [_one_claim_beat(f"new_york/guggenheim-museum/{slug}", slug, SPIRAL_RAMP)
+                for slug in ("the-inverted-ziggurat",)]
+
+    assert merge.signature_hint(claims, existing).matches == {"c01": None, "c02": None}
+
+
+def test_an_existing_claim_that_states_what_the_new_one_states_still_trips():
+    """What the tripwire is for, kept: job B's Cooper Hewitt pair, where
+    LP's claim already says Cooper Hewitt is the Smithsonian's design
+    museum and the judge called Frommer's restatement `new`."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", SMITHSONIAN_FR)]
+    beat_id = "new_york/cooper-hewitt-national-design-museum/the-smithsonian-s-design-museum"
+    existing = [_one_claim_beat(beat_id, "the-smithsonian-s-design-museum", SMITHSONIAN_LP)]
+
+    assert merge.signature_hint(claims, existing).matches == {"c01": (beat_id, "c01")}
+
+
 RECEPTION_ID = "new_york/guggenheim-museum/derided-and-hailed-the-ziggurat-debate"
 # Job 2's real "critics rejected it" pair: LP c03 and Frommer's c148. The
 # signatures share only "critics" and "museum" — invisible to the hint.

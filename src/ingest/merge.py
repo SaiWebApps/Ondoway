@@ -86,7 +86,7 @@ from src.ingest import llm, model, prompts
 from src.ingest.group import Story
 from src.ingest.judge_claims import JudgedClaim
 from src.ingest.narrate import Emit, emitter, hold
-from src.tour.claim_dedup import CLAIM_DEDUP_THRESHOLD, MIN_SHARED_TOKENS, _overlap, _signature
+from src.tour.claim_dedup import CLAIM_DEDUP_THRESHOLD, MIN_SHARED_TOKENS, _signature
 
 #: Output tokens requested for one merge answer (a verdict per new claim).
 P6_MAX_TOKENS: int = 16_000  # thinking-inclusive; tests/test_ingest_output_caps.py
@@ -95,9 +95,10 @@ P6_MAX_TOKENS: int = 16_000  # thinking-inclusive; tests/test_ingest_output_caps
 #: per claim plus thinking at ~1x (Sonnet).
 P6_EXPECTED_OUTPUT_TOKENS: int = 4_000
 
-#: Two claim signatures state the same fact at or above this overlap
-#: coefficient with at least this many shared tokens — the tour engine's
-#: own dedup thresholds (src/tour/claim_dedup.py), reused not re-tuned.
+#: An existing claim's signature matches a new claim's when it covers at
+#: least this share of the NEW claim's tokens, sharing at least this many —
+#: the tour engine's dedup thresholds (src/tour/claim_dedup.py), measured in
+#: the merge contract's direction (`covered`), not by its overlap coefficient.
 SIGNATURE_MATCH_MIN: float = CLAIM_DEDUP_THRESHOLD
 SIGNATURE_MIN_SHARED: int = MIN_SHARED_TOKENS
 
@@ -235,6 +236,19 @@ class Hint(BaseModel):
     matches: dict[str, ClaimRef | None]
 
 
+def covered(new: frozenset[str], existing: frozenset[str]) -> float:
+    """The share of the NEW claim's signature the existing claim's covers:
+    |new & existing| / |new|, 0.0 for an empty new signature.
+
+    The merge contract's own direction — `same` only when the existing
+    claim states everything the new one states. The overlap coefficient
+    (|a & b| / min) also fires when a SHORT existing claim sits inside a
+    longer new one, which says more and is `new` by the contract: job B
+    (75b8f292) held 8 stories on it, 7 of them against a correct judge,
+    the Guggenheim's among them (owner ruling 2026-09-21, D7's measure)."""
+    return len(new & existing) / len(new) if new else 0.0
+
+
 def _best_match(text: str, existing: Sequence[model.Beat]) -> ClaimRef | None:
     signature = _signature(text)
     best: ClaimRef | None = None
@@ -242,7 +256,7 @@ def _best_match(text: str, existing: Sequence[model.Beat]) -> ClaimRef | None:
     for beat in existing:
         for claim in beat.claims:
             other = _signature(claim.text)
-            score = _overlap(signature, other)
+            score = covered(signature, other)
             if (
                 score >= SIGNATURE_MATCH_MIN
                 and len(signature & other) >= SIGNATURE_MIN_SHARED
