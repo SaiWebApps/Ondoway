@@ -1004,6 +1004,31 @@ validator error still refuses the file), then job B is resumed ($0, P7 only, R0 
 which rescues the output but cannot retroactively pass R5 as registered; the address/$25 pair
 stays FAIL by the letter.
 
+*Job B, panel and rescue (2026-09-21).* The blind exploratory panel (opus, fable, haiku; Sonnet,
+the merge judge, excluded; opus is also P1's author, so it is less independent on claim wording)
+scored 26 items — the 9 folds, the 4 claims the two joins appended, and the 13 claims the 8 P6
+holds tripped on — and its majority agreed with the merge judge on 24. Folds: 8 of 9 upheld,
+both supersessions included (MCNY 30 against 28 minutes, 2-1 conflict); one false `same`, the
+Frick's "seminal work by El Greco" folded into "displays works by El Greco" (2-1 new). Joins: all
+four appended claims upheld as `new`, Neue c181 2-1 (its stated cause says more than LP's c178).
+Holds: on 7 of the 8 held stories the panel sides with the judge's `new` — the lexical signature,
+not the judge, held them; only Cooper Hewitt ("design division of the Smithsonian") was a real
+missed `same` (2-1). The Guggenheim hold rests on c149 (3-0 new; c162 2-1), so the Wright and
+1959 folds were blocked by a signature false positive. Then 68b87ec (the two-class P7 hold, five
+tests each undo-tested, plus a guard beyond the ruling's words: a failing beat already on disk is
+never held, since holding it would delete it) and a `--resume` that ran P7 alone: actual $0.0000,
+0 calls in every phase, `status=committed`, 79 beats written (47 existing + 32 new), exactly three
+`commit_held` items (the two short new stories and the proper-name lift), the written file valid
+with spans grounded, 7 claims corroborated and 2 superseded on disk, the four re-narrated LP beats
+carrying their fresh `claims_hash`. R0 PASS around the resume (live sha `556830a5342e178c`; nothing
+outside the sandbox newer than the marker); step2c now `5558f031f66bec71`, pre-resume copies kept
+beside it as `*.bak-pre-resume`. What this does and does not show: a second book's facts folded,
+superseded and joined existing beats and the beats were re-narrated, live, for the first time —
+at the Frick, the Met, the MCNY, the Jewish Museum and the Neue Galerie, not the Guggenheim. R2, R4
+and R5 stay failed as registered (a resume under a changed contract cannot pass R5 retroactively).
+Owed: nothing acts on accepting a `commit_held` item; the book log's per-chunk counts include the
+held beats; the tripwire's precision (7 false holds of 8) is now the thing blocking merges.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
