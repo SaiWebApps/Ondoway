@@ -134,6 +134,26 @@ def run(
     return report
 
 
+class EventLog(list):
+    """The client's events: buffered until `attach`, then also appended to
+    that file AS THEY ARRIVE — a run that dies mid-batch (poll ceiling, 404,
+    invalid request) still leaves every batch id it submitted on disk."""
+
+    _path: Path | None = None
+
+    def attach(self, path: Path) -> None:
+        self._path = path
+        with path.open("a", encoding="utf-8") as handle:
+            for event in self:
+                handle.write(json.dumps(event) + "\n")
+
+    def append(self, event: dict) -> None:
+        super().append(event)
+        if self._path is not None:
+            with self._path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(event) + "\n")
+
+
 def _items(job_dir: Path, labels_dir: Path, events_path: Path | None, accepted: bool) -> list[Item]:
     """The claims BOTH labelers labeled alike (texts from P1.json, or from a
     refusal event for a claim P1 never emitted) and a planted negative per
@@ -167,7 +187,15 @@ def _items(job_dir: Path, labels_dir: Path, events_path: Path | None, accepted: 
     return items + negatives_of(items)
 
 
-def main(argv: Sequence[str] | None = None, client: llm.ModelClient | None = None) -> int:
+def main(
+    argv: Sequence[str] | None = None,
+    client: llm.ModelClient | None = None,
+    events: EventLog | None = None,
+) -> int:
+    """`events` is the log the client's sink appends to; after --yes it is
+    attached to <out>/events.jsonl (created before any call) and every event
+    lands there as it arrives. A client carrying a meter (`usd`) has its
+    actual spend printed even when the run dies."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--job-dir", type=Path, required=True)
     parser.add_argument("--labels-dir", type=Path, required=True)
@@ -182,10 +210,14 @@ def main(argv: Sequence[str] | None = None, client: llm.ModelClient | None = Non
     raw = json.loads((args.job_dir / "P0.json").read_text(encoding="utf-8"))["units"][0]
     unit = Unit(**{**raw, "path": Path(raw["path"])})
     items = _items(args.job_dir, args.labels_dir, args.events, args.accepted)
+    if events is None:
+        events = EventLog()
     if client is None:
         from src.ingest.run import client_from_env
 
-        client = client_from_env(lambda kind, payload: None)
+        client = client_from_env(
+            lambda kind, payload: events.append({"event": kind, "data": payload})
+        )
     estimate = client.estimate([unit.text] * (2 * args.samples * len(items)), [P3_PLAN[0]])
     labels = sorted({item.label for item in items})
     print(
@@ -195,8 +227,18 @@ def main(argv: Sequence[str] | None = None, client: llm.ModelClient | None = Non
     if not args.yes:
         print("run refused: re-run with --yes to spend this.")
         return 2
-    report = run(unit, items, samples=args.samples, client=client, arm=False)
     args.out.mkdir(parents=True, exist_ok=False)
+    events.attach(args.out / "events.jsonl")
+    try:
+        report = run(unit, items, samples=args.samples, client=client, arm=False)
+    finally:
+        usd = getattr(client, "usd", None)
+        if usd is not None:
+            unmetered = sum(getattr(client, "unmetered", {}).values())
+            print(
+                f"spend: actual=${usd:.4f} (estimate ${estimate.total_usd:.4f} at most)"
+                + (f"; {unmetered} call(s) unmetered: actual is a LOWER BOUND" if unmetered else "")
+            )
     (args.out / "rejudge-report.json").write_text(
         json.dumps(
             {

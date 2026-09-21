@@ -1148,6 +1148,34 @@ bounds $1.3852 + $1.2021), recall on anything but a number swap, and any of this
 (the restate still runs for a claim refused twice: this shows fewer claims are sent to it, not
 that it became safe). A paid harness that cannot report its own spend is a defect to fix before
 the next paid run.
+The rejudge harness now writes its client's events — every live batch id — to
+`<out>/events.jsonl` and, through the same meter `make ingest-job` uses, prints its actual spend.
+
+*Merge step 4 — c148 flip rate, registered before any spend (2026-09-21, owner: "yes to both, commit
+it and go ahead"; amended at the judge's PROVE-FIRST).* The only thing between job B's Frommer's story
+`a-building-brought-back-from-a-dream` and a Guggenheim fold is the merge judge's verdict on c148
+("Frank Lloyd Wright designed the spiral Solomon R. Guggenheim Museum"). Measurement: ten more
+replays of that place, run one after another from fresh `jobB-replay-gugg-rN` sandboxes prepared
+($0) off the frozen pre-job copy, R0 around the whole set. A resume prints the WHOLE job's estimate
+($3.4288), not a replay's; the replay at 99990d9 measured $0.0660 for its three Sonnet merge calls,
+so ten cost about $0.66, and each run prints its actual. Counted: c148's and c151's verdicts in the
+replay at 99990d9 (c148 `new`, c151 `same`) and the ten new runs — eleven answers under current
+code. Job B's `same` came from code before the direction fix (8c72e30) and is history, never
+counted. Decision rule, fixed now, first match wins:
+- if c151 — the control, matched `same` both times so far — is ever not `same`, the merge judge
+  itself is unstable, whatever c148 does: the next step is merge-judge stability (several judged
+  samples per story, majority), not the compound;
+- if c148 comes out both `same` and `new` among the eleven, the per-claim contract leaves it to
+  chance: the next step is a merge verdict for a claim covered by several existing claims together
+  (c01 + c03), with the `same` rate reported;
+- if c148 is `new` in all eleven, the fold can only come from P1 splitting the claim, and that is
+  the next step — a lean, not proof: at a true `same` rate of 20%, eleven `new` in a row happens by
+  chance about 9% of the time.
+Stop rule, per run, because nothing caps a replay's spend mechanically: after each run its printed
+actual is read before the next starts. A run with no fold above $0.13 (twice the measured $0.066),
+or one with a fold above $0.25 (a fold re-narrates the LP target beat: one Opus P4 draft and a P5
+judge round on top), stops the set; so does a set total above $2.00 — the hard ceiling the owner's
+go is asked against.
 
 ### Slice 11: Cleanup
 

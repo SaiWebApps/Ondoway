@@ -200,7 +200,9 @@ def test_cli_scores_agreed_labels_plus_negatives_and_writes_only_under_out(tmp_p
          "accepted": 0, "accepted_refused_first": 0, "accepted_lost": 0}
     ]
     after = sorted(p.relative_to(tmp_path) for p in tmp_path.rglob("*"))
-    assert [p for p in after if p not in before] == [Path("out"), Path("out/rejudge-report.json")]
+    assert [p for p in after if p not in before] == [
+        Path("out"), Path("out/events.jsonl"), Path("out/rejudge-report.json"),
+    ]
 
 
 def test_the_accepted_pass_judges_only_the_unlabeled_claims(tmp_path):
@@ -225,3 +227,79 @@ def test_the_accepted_pass_judges_only_the_unlabeled_claims(tmp_path):
     assert report["labels"] == {"c03": "ACCEPTED"}
     assert report["per_sample"][0]["accepted"] == 1
     assert report["per_sample"][0]["supported"] == report["per_sample"][0]["negatives"] == 0
+
+
+def test_a_paid_run_keeps_its_client_events_and_prints_actual_spend(tmp_path, capsys):
+    """The first live rejudge (2026-09-21) could not report its own spend:
+    its client's events — where the live client puts every batch id — went
+    to a no-op sink. The events a run's client emitted land in
+    <out>/events.jsonl (batch ids included on a live client, so every round
+    is recoverable with `make ingest-batch`), and a metered client's actual
+    spend is printed."""
+    job, labels = _job(tmp_path)
+    out = tmp_path / "out"
+    ids = rejudge.custom_ids
+    events = rejudge.EventLog()
+
+    class Metered:
+        usd = 0.0123
+
+        def __init__(self, inner):
+            self._inner = inner
+
+        def __getattr__(self, name):
+            return getattr(self._inner, name)
+
+    client = Metered(llm.MockClient(
+        lambda kind, payload: events.append({"event": kind, "data": payload}),
+        batch_answers={
+            ids(1, "c05", 1): _verdict(True),
+            ids(1, "c05n", 1): _verdict(False), ids(1, "c05n", 2): _verdict(False),
+        },
+    ))
+
+    code = rejudge.main(
+        ["--job-dir", str(job), "--labels-dir", str(labels), "--samples", "1",
+         "--out", str(out), "--yes"],
+        client=client, events=events,
+    )
+
+    assert code == 0
+    logged = [json.loads(line) for line in (out / "events.jsonl").read_text().splitlines()]
+    assert [e["event"] for e in logged][:1] == ["cost_estimate"]
+    assert "actual=$0.0123" in capsys.readouterr().out
+
+
+def test_a_run_that_dies_mid_batch_still_leaves_its_batch_ids_on_disk(tmp_path):
+    """Batch ids matter most when a run DIES (poll ceiling, 404, invalid
+    request — all on record): each event is written to <out>/events.jsonl as
+    it arrives, and --out exists before the first call, so a run that raises
+    after submitting still leaves the batch id `make ingest-batch` needs.
+    The error still propagates — nothing is swallowed."""
+    job, labels = _job(tmp_path)
+    out = tmp_path / "out"
+    log = rejudge.EventLog()
+
+    class DiesAfterSubmitting:
+        def __init__(self):
+            self._inner = llm.MockClient(
+                lambda kind, payload: log.append({"event": kind, "data": payload}),
+                batch_answers={},
+            )
+
+        def __getattr__(self, name):
+            return getattr(self._inner, name)
+
+        def complete_batch(self, *args, **kwargs):
+            log.append({"event": "batch_submitted", "data": {"batch_id": "msgbatch_dies"}})
+            raise RuntimeError("poll ceiling reached")
+
+    with pytest.raises(RuntimeError, match="poll ceiling"):
+        rejudge.main(
+            ["--job-dir", str(job), "--labels-dir", str(labels), "--samples", "1",
+             "--out", str(out), "--yes"],
+            client=DiesAfterSubmitting(), events=log,
+        )
+
+    logged = [json.loads(line) for line in (out / "events.jsonl").read_text().splitlines()]
+    assert {"event": "batch_submitted", "data": {"batch_id": "msgbatch_dies"}} in logged
