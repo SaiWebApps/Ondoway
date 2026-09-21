@@ -626,6 +626,102 @@
         "claim_id": "c02",
         "expected": "atomic"
       }
+    },
+    {
+      "class": "covered_union",
+      "detector": "merge",
+      "note": "A second source states the Wright claim and the spiral-ramp claim in one sentence; the two existing claims together state it, neither alone does (P6 `covered`, owner ruling 2026-09-21).",
+      "story": {
+        "title": "The building that upstages its art",
+        "place": "Solomon R. Guggenheim Museum",
+        "beat_type": "establishing",
+        "lenses": [
+          "historic_arch",
+          "modern_design"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "The Guggenheim Museum building was designed by architect Frank Lloyd Wright.",
+          "kind": "state",
+          "span": "this building by architect Frank Lloyd Wright almost overshadows the collection of 20th-century art inside"
+        },
+        {
+          "claim_id": "c02",
+          "text": "The Guggenheim Museum has a spiral ramp.",
+          "kind": "state",
+          "span": "Walking the spiral ramp"
+        }
+      ],
+      "planted": {
+        "claim_id": "c01",
+        "claim_ids": [
+          "c01",
+          "c02"
+        ],
+        "expected": "covered",
+        "second_source": {
+          "source_id": "second-source",
+          "chunk": "calibration",
+          "as_of": 2024,
+          "rights_basis": "own_work",
+          "text": "The Guggenheim Museum, with its spiral ramp, was designed by Frank Lloyd Wright.",
+          "kind": "state"
+        }
+      }
+    },
+    {
+      "class": "shared_union",
+      "detector": "merge",
+      "note": "A second source shares the words of both existing claims but states another fact (a first sketch for cars); it must stay `new` (the precision side of `covered`).",
+      "story": {
+        "title": "The building that upstages its art",
+        "place": "Solomon R. Guggenheim Museum",
+        "beat_type": "establishing",
+        "lenses": [
+          "historic_arch",
+          "modern_design"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "The Guggenheim Museum building was designed by architect Frank Lloyd Wright.",
+          "kind": "state",
+          "span": "this building by architect Frank Lloyd Wright almost overshadows the collection of 20th-century art inside"
+        },
+        {
+          "claim_id": "c02",
+          "text": "The Guggenheim Museum has a spiral ramp.",
+          "kind": "state",
+          "span": "Walking the spiral ramp"
+        }
+      ],
+      "planted": {
+        "claim_id": "c01",
+        "claim_ids": [
+          "c01",
+          "c02"
+        ],
+        "expected": "new",
+        "second_source": {
+          "source_id": "second-source",
+          "chunk": "calibration",
+          "as_of": 2024,
+          "rights_basis": "own_work",
+          "text": "The spiral ramp of Frank Lloyd Wright's Guggenheim Museum was first sketched for cars.",
+          "kind": "state"
+        }
+      }
     }
   ]
 }

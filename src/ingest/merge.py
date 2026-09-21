@@ -103,8 +103,8 @@ SIGNATURE_MATCH_MIN: float = CLAIM_DEDUP_THRESHOLD
 SIGNATURE_MIN_SHARED: int = MIN_SHARED_TOKENS
 
 StoryOutcome = Literal["same", "new", "supersedes"]
-ClaimVerdict = Literal["new", "same", "conflict"]
-ClaimOutcomeKind = Literal["new", "same", "contested", "supersedes", "superseded"]
+ClaimVerdict = Literal["new", "same", "conflict", "covered"]
+ClaimOutcomeKind = Literal["new", "same", "contested", "supersedes", "superseded", "covered"]
 
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.S)
 _CLAIM_ID_RE = re.compile(r"^c(\d+)$")
@@ -133,6 +133,9 @@ class ClaimOutcome(BaseModel):
     new_value: str | None
     existing_value: str | None
     reason: str
+    #: `covered` only: every existing claim that TOGETHER states the new
+    #: claim (the first is also `existing_*`); empty for every other verdict.
+    covered_by: tuple[tuple[str, str], ...] = ()
 
 
 class MergeOutcome(BaseModel):
@@ -324,6 +327,9 @@ def answer_problems(
             if item["existing_claim_id"]:
                 problems.append(f'claim {cid}: verdict "new" must leave existing_claim_id empty')
             continue
+        if item["verdict"] == "covered":
+            problems.extend(_covered_problems(cid, item, handled))
+            continue
         if _claim_ref(item["existing_claim_id"], handled) is None:
             problems.append(
                 f"claim {cid}: existing_claim_id {item['existing_claim_id']!r} is not a "
@@ -340,6 +346,24 @@ def answer_problems(
     return problems
 
 
+def _covered_problems(cid: str, item: dict, handled: dict[str, model.Beat]) -> list[str]:
+    """A `covered` answer names two or more distinct claims at the place,
+    `+`-joined, and quotes no values (a covered claim carries none)."""
+    parts = item["existing_claim_id"].split("+")
+    problems = [
+        f"claim {cid}: {part!r} in existing_claim_id is not a claim at this place"
+        for part in parts
+        if _claim_ref(part, handled) is None
+    ]
+    if len(set(parts)) < 2:
+        problems.append(
+            f'claim {cid}: "covered" must name at least two different claims, joined by "+"'
+        )
+    if item["new_value"] or item["existing_value"]:
+        problems.append(f'claim {cid}: "covered" quotes no values')
+    return problems
+
+
 def resolve_handles(answer: dict, handled: dict[str, model.Beat]) -> dict:
     """The answer with every handle replaced by real ids: `beat_id` the
     story's beat id, and per claim `existing_beat_id` + `existing_claim_id`.
@@ -347,12 +371,15 @@ def resolve_handles(answer: dict, handled: dict[str, model.Beat]) -> dict:
     beat = handled.get(answer["beat_id"])
     claims = []
     for item in answer["claims"]:
-        ref = _claim_ref(item["existing_claim_id"], handled) if item["existing_claim_id"] else None
+        parts = item["existing_claim_id"].split("+") if item["existing_claim_id"] else []
+        refs = [_claim_ref(part, handled) for part in parts]
+        ref = refs[0] if refs else None
         claims.append(
             {
                 **item,
                 "existing_beat_id": ref[0] if ref else "",
                 "existing_claim_id": ref[1] if ref else "",
+                "covered_by": refs if item["verdict"] == "covered" else [],
             }
         )
     return {**answer, "beat_id": beat.beat_id if beat else "", "claims": claims}
@@ -379,6 +406,15 @@ def disagreements(answer: dict, hint: Hint) -> list[str]:
         if item["verdict"] == "new":
             if hinted is not None:
                 found.append(f"claim {cid}: judge says new; signature matches {_ref_text(hinted)}")
+            continue
+        if item["verdict"] == "covered":
+            # A match to ANY claim the judge named together is agreement.
+            if hinted is not None and hinted not in item["covered_by"]:
+                found.append(
+                    f"claim {cid}: judge says covered by "
+                    f"{', '.join(_ref_text(r) for r in item['covered_by'])}; "
+                    f"signature matches {_ref_text(hinted)}"
+                )
             continue
         named = (item["existing_beat_id"], item["existing_claim_id"])
         if hinted is not None and hinted != named:
@@ -539,6 +575,8 @@ def _decide_claims(
             )
         elif verdict == "same":
             outcome, applied = "same", item["existing_claim_id"]
+        elif verdict == "covered":
+            outcome, applied = "covered", item["existing_claim_id"]
         else:
             old = next(c for c in beats[beat_id].claims if c.claim_id == existing_id)
             outcome = conflict_outcome(
@@ -559,6 +597,7 @@ def _decide_claims(
                 new_value=new_value,
                 existing_value=existing_value,
                 reason=item["reason"],
+                covered_by=tuple(tuple(ref) for ref in item.get("covered_by", [])),
             )
         )
     return outcomes
@@ -637,6 +676,29 @@ def merge(
     texts = {c.draft.claim_id: c for c in claims}
     for o in outcomes:
         if o.existing_beat_id is None:
+            continue
+        if o.outcome == "covered":
+            emit(
+                "merge_covered",
+                {
+                    "story_slug": new_story.story_slug,
+                    "claim_id": o.claim_id,
+                    "text": texts[o.claim_id].draft.text,
+                    "span": texts[o.claim_id].draft.source.span,
+                    "covered_by": [
+                        {
+                            "beat_id": beat_id,
+                            "claim_id": claim_id,
+                            "text": next(
+                                c.text
+                                for b in existing if b.beat_id == beat_id
+                                for c in b.claims if c.claim_id == claim_id
+                            ),
+                        }
+                        for beat_id, claim_id in o.covered_by
+                    ],
+                },
+            )
             continue
         held_by = next(b for b in existing if b.beat_id == o.existing_beat_id)
         emit(
@@ -740,6 +802,10 @@ def apply(outcome: MergeOutcome, beats: Sequence[model.Beat]) -> list[model.Beat
     }
     for item in outcome.claims:
         new = judged[item.claim_id]
+        if item.outcome == "covered":
+            # Absorbed, not written: the new claim sits inside the union of
+            # the named claims, none of which its source states in full.
+            continue
         if item.outcome == "new":
             if outcome.beat_id is not None:
                 claims_of[outcome.beat_id].append(

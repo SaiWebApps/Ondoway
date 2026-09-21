@@ -22,7 +22,7 @@ from collections.abc import Mapping, Sequence
 #: The three story-level answers and the three claim-level answers the
 #: judge may give (Docs/ingestion/rebuild-spec.md §3, P6 row).
 STORY_VERDICTS: tuple[str, str, str] = ("same", "new", "supersedes")
-CLAIM_VERDICTS: tuple[str, str, str] = ("new", "same", "conflict")
+CLAIM_VERDICTS: tuple[str, ...] = ("new", "same", "conflict", "covered")
 
 _MERGE_RULES = (
     "Decide:\n"
@@ -36,18 +36,27 @@ _MERGE_RULES = (
     "is new, because two books cut the same facts into different stories. A new claim "
     'that says more than the existing claim, or something else, is not "same": sharing '
     "a date, a name, a place or a word is not sharing a fact. \"conflict\" when the two "
-    "state the same fact with a different name, date, number, place or cause. \"new\" "
-    'when no claim at this place states it. "existing_claim_id" names the matched claim '
-    'by its handle (b1.c02), never another claim of the new story (a new claim that '
-    'repeats another new claim is judged on its own against the existing beats), and is '
-    'empty for "new". "new_value" and "existing_value" quote the value each side states '
-    '- a date, a number, a name - as short strings, and are empty for "new".\n'
+    "state the same fact with a different name, date, number, place or cause. "
+    '"covered" when no single claim states everything the new claim states, but two or '
+    "more claims at this place TOGETHER state everything the new claim states, with the "
+    'same values: name every one of them in "existing_claim_id", joined by "+" '
+    '(b1.c02+b1.c05); sharing words across claims is not sharing a fact, and a claim '
+    'with a different value in any part is "conflict" with that claim, never "covered". '
+    '"new" when no claim at this place states it, alone or together. "existing_claim_id" '
+    "names the matched claim by its handle (b1.c02), never another claim of the new story "
+    "(a new claim that repeats another new claim is judged on its own against the "
+    'existing beats), and is empty for "new". "new_value" and "existing_value" quote the '
+    "value each side states - a date, a number, a name - as short strings, and are empty "
+    'for "new" and "covered".\n'
     "- Worked example, from another city: an existing claim says \"The Eiffel Tower was "
     "completed in 1889.\" A new claim \"Work on the Eiffel Tower ended in 1889.\" is "
     "\"same\"; \"The Eiffel Tower was finished in 1887.\" is \"conflict\" (1887 vs "
     "1889); \"The Eiffel Tower was built for the 1889 World's Fair.\" is \"new\" (it "
     "shares the year, not the fact); \"Gustave Eiffel's company built the tower, "
-    "completing it in 1889.\" is \"new\" (it says more than the existing claim).\n"
+    "completing it in 1889.\" is \"new\" (it says more than the existing claim). If a "
+    "second existing claim says \"The Eiffel Tower is made of wrought iron.\", then \"The "
+    "wrought-iron Eiffel Tower was completed in 1889.\" is \"covered\" (the two together "
+    "state it; neither alone does).\n"
     "- Wording never matters; only the facts do. A newer source is never right by "
     "default: report the difference, never resolve it."
 )

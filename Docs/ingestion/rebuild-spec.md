@@ -1220,6 +1220,36 @@ owner chooses. In every branch the `covered` merge verdict (design note
 `Docs/ingestion/2026-09-21-covered-verdict-design.md`, not built) stays an equal candidate: the
 judge's own reason names c01 + c03 together.
 
+*P6 `covered` — built test-first ($0, 2026-09-21; owner: "yes to 3" — build it, apply rather than
+hold; design note `Docs/ingestion/2026-09-21-covered-verdict-design.md`).* The merge judge may
+answer `covered` for a new claim no single existing claim states but two or more at the place state
+TOGETHER with the same values, naming every one (`b1.c01+b1.c02`); sharing words is not sharing a
+fact and a differing value is `conflict`. A malformed `covered` (one claim, a duplicate, an unknown
+handle, quoted values) earns the one re-ask, then holds. Applying it absorbs the new claim: no
+existing claim changes and no source is appended — the new source never states every named claim
+in full — so nothing is re-narrated, and the runner no longer re-serialises the named beats (a
+covered fold had come back as a changed record while no claim changed; fixed test-first). The
+tripwire accepts a signature match anywhere inside the named set and still holds on one outside
+it. Each is logged `merge_covered` with the new claim's text and span and every named claim's text.
+The prompt defines it with an Eiffel example, never the Guggenheim. Calibration gains
+`covered_union` (recall: the LP Wright and spiral-ramp claims, a second source stating both) and
+`shared_union` (precision: a second source sharing 0.7 of its words with the pair's union — 0.5
+and 0.4 against each alone — but stating another fact, which must stay `new`); a judge answering
+`covered` there MISSES it. Every node red first or undo-tested (mutants: `covered` not a verdict,
+hint skipped, two-claim check, value check, apply writes it, runner re-dumps named beats, logged as
+`merge_folded`, prompt rule removed, scripted judge never covers, precision scorer accepts covered).
+Nothing is measured live yet.
+*Live measurement — registered before any spend.* (1) Ten Guggenheim replays of job B from fresh
+`jobB-replay-cov-rN` sandboxes (the frozen pre-job copy, as in step 4), one after another, R0 around
+the set: c148 comes out `covered` by LP c01 + c03 (the Wright and spiral claims) in at least 8 of 10;
+c151 stays `same` LP c21 in 10 of 10; no other Guggenheim claim comes out `covered`; the story is
+not held on c148; each fold completes (committed, the story's remainder beat re-narrated, every LP
+beat byte-identical except the `same` source on c21). (2) One `make ingest-calibrate-live` run
+(price printed first): `covered_union` caught and `shared_union` NOT folded, with every other class
+at or above its live baseline. Stop rules: a replay without a fold above $0.13, with one above
+$0.30 (the remainder beat's P4/P5 included), or the set above $2.50, stops the set — checked by the
+loop and by hand after each run.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,

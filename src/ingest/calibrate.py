@@ -307,6 +307,18 @@ def scripted_merge_answer(record: DefectRecord, unit: Unit) -> llm.MockAnswer:
             ],
         }
         return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
+    if planted["expected"] == "covered":
+        # covered_union: the record's claims together state the second source.
+        answer = {
+            "story": "new",
+            "beat_id": "",
+            "claims": [
+                {"claim_id": "n01", "verdict": "covered",
+                 "existing_claim_id": "+".join(f"b1.{cid}" for cid in planted["claim_ids"]),
+                 "new_value": "", "existing_value": "", "reason": record.note}
+            ],
+        }
+        return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
     if planted["expected"] == "same":
         # same_fact: the second source restates the planted claim.
         answer = {
@@ -462,13 +474,21 @@ def _detect(
         expected = record.planted["expected"]
         if expected == "new":  # shared_element: caught only when nothing folds
             hit = bool(outcome.claims) and all(c.outcome == "new" for c in outcome.claims)
+        elif expected == "covered":  # covered_union: covered by exactly the planted claims
+            hit = any(
+                c.outcome == "covered"
+                and sorted(ref[1] for ref in c.covered_by) == sorted(record.planted["claim_ids"])
+                for c in outcome.claims
+            )
         else:
             hit = any(
                 c.existing_claim_id == planted_id and c.outcome == expected
                 for c in outcome.claims
             )
         note = "; ".join(
-            f"{c.claim_id} {c.outcome} {c.existing_claim_id or '-'}" for c in outcome.claims
+            f"{c.claim_id} {c.outcome} "
+            + ("+".join(ref[1] for ref in c.covered_by) or c.existing_claim_id or "-")
+            for c in outcome.claims
         )
         return _Detection(hit, note)
     try:

@@ -42,6 +42,8 @@ CLASSES = (
     "same_fact",
     "compound_claim",
     "stated_relation",
+    "covered_union",
+    "shared_union",
 )
 
 
@@ -123,6 +125,32 @@ def test_fixture_has_one_record_per_class_and_only_the_planted_defect():
             beat = merge._signature(planted["text"])
             second = merge._signature(record.planted["second_source"]["text"])
             assert merge.covered(second, beat) < merge.SIGNATURE_MATCH_MIN, record.defect_class
+            if "claim_ids" in record.planted:
+                # shared_union: no single claim covers it (no hold), but their
+                # union does — the lexical trap a careless `covered` falls into.
+                union = frozenset().union(*(
+                    merge._signature(c["text"]) for c in record.claims
+                    if c["claim_id"] in record.planted["claim_ids"]
+                ))
+                singles = [merge.covered(second, merge._signature(c["text"]))
+                           for c in record.claims]
+                assert max(singles) < merge.SIGNATURE_MATCH_MIN, record.defect_class
+                assert merge.covered(second, union) >= merge.SIGNATURE_MATCH_MIN, (
+                    record.defect_class
+                )
+        elif record.detector == "merge" and record.planted["expected"] == "covered":
+            # covered_union: the signature's best match must be INSIDE the
+            # planted pair, or the tripwire would hold a correct judge.
+            from src.ingest import merge
+
+            second = merge._signature(record.planted["second_source"]["text"])
+            scores = {
+                c["claim_id"]: merge.covered(second, merge._signature(c["text"]))
+                for c in record.claims
+            }
+            best = max(scores, key=scores.get)
+            assert scores[best] >= merge.SIGNATURE_MATCH_MIN, record.defect_class
+            assert best in record.planted["claim_ids"], record.defect_class
         elif record.detector == "merge":
             # The planted second source must state the SAME fact as the planted
             # claim by the signature test P6 applies, or the hint would call
@@ -621,3 +649,34 @@ def test_every_detector_verdict_reaches_the_run_sink_tagged_with_its_class():
     assert [c["claim_id"] for c in found["claims"]] == ["c01"]
     assert all(c == "compound_claim" for k, c in tagged if k == "compound_found")
 
+
+
+
+def test_a_claim_two_claims_state_together_is_covered_and_one_sharing_their_words_is_not():
+    """The `covered` verdict's two sides (owner ruling 2026-09-21): recall —
+    a second source stating the Wright claim and the spiral-ramp claim
+    together comes out `covered` by exactly that pair; precision — one that
+    shares their words but states another fact (sketched for cars) stays
+    `new`. A judge that answers `covered` on the precision plant MISSES it."""
+    import src.ingest.llm as llm
+
+    fixture = _fixture()
+    clean = calibrate.run(fixture, REPO_ROOT / "Books", client="mock")
+    by_class = {row.defect_class: row for row in clean.rows}
+    assert (by_class["covered_union"].caught, by_class["covered_union"].total) == (1, 1)
+    assert by_class["covered_union"].note == "n01 covered c01+c02"
+    assert (by_class["shared_union"].caught, by_class["shared_union"].total) == (1, 1)
+
+    def over_folding(rec: calibrate.DefectRecord, u) -> llm.MockAnswer:
+        answer = {
+            "story": "new", "beat_id": "",
+            "claims": [{"claim_id": "n01", "verdict": "covered",
+                        "existing_claim_id": "b1.c01+b1.c02", "new_value": "",
+                        "existing_value": "", "reason": "together they cover it"}],
+        }
+        return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
+
+    report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock", scripted_merge=over_folding)
+    by_class = {row.defect_class: row for row in report.rows}
+    assert (by_class["shared_union"].caught, by_class["shared_union"].total) == (0, 1)
+    assert (by_class["covered_union"].caught, by_class["covered_union"].total) == (1, 1)

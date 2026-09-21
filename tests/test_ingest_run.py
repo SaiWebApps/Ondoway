@@ -1548,3 +1548,48 @@ def test_held_beats_are_queued_only_once_the_rest_of_the_file_validates(tmp_path
     assert written is None
     assert store.undecided(script_mod.CITY) == []
     assert "commit_held" not in [e.message for e in snap.events]
+
+
+def test_a_covered_claim_is_absorbed_and_its_story_keeps_the_rest(tmp_path):
+    """Owner ruling 2026-09-21 (design note 2026-09-21-covered-verdict-
+    design.md): the new story's completion claim is COVERED by the sidebar's
+    two claims together. It is absorbed — the corpus beats come back exactly
+    as they were on disk, nothing is re-narrated, nothing is queued — and
+    the story's own beat is its two unmatched claims, narrated again."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    beats_path = script_mod.seed_beats(data_root, script_mod.folding_records())
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(unit)
+    scripted["answers"]["author"].append(
+        script_mod.narration_answer(script_mod.REMAINDER_NARRATION)
+    )
+    scripted["answers"]["merge_judge"] = [
+        script_mod.merge_answer(
+            "new", "",
+            [
+                _claim_verdict("c01", "new", reason="no claim mentions collecting"),
+                _claim_verdict("c02", "new", reason="no claim mentions 1939"),
+                _claim_verdict("c03", "covered", "b2.c01+b2.c02",
+                               reason="b2.c01 and b2.c02 together state it"),
+            ],
+        )
+    ]
+    remainder = [script_mod.COLLECTING["text"], script_mod.OPENED_1939["text"]]
+    scripted["batch_answers"].update(
+        script_mod.sentence_verdicts(remainder, script_mod.REMAINDER_NARRATION)
+    )
+
+    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    assert [e for e in snap.events if e.message in ("rerun", "rerun_reverted")] == []
+    records = json.loads(beats_path.read_text(encoding="utf-8"))
+    assert records[:2] == script_mod.folding_records()
+    assert [c["text"] for c in records[2]["claims"]] == remainder
+    assert store.undecided(script_mod.CITY) == []
+    assert model.validate(records, chunks_root=chunks.parent) == []

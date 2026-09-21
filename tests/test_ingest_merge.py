@@ -1206,3 +1206,143 @@ def test_no_live_client_in_this_file():
                 assert forbidden_env_var not in sub.value, (
                     f"{forbidden_env_var!r} must not appear in this file"
                 )
+
+
+# ── `covered`: one new claim stated by several existing claims together ─────
+# Owner-approved 2026-09-21 (design note Docs/ingestion/2026-09-21-covered-
+# verdict-design.md). Job B's c148 against the LP beat's Wright and spiral
+# claims: the judge answered `new` 11 of 12 times ("no single existing claim
+# combines design authorship with the spiral shape (b1.c01 + b1.c03)").
+SPIRAL_LP: dict = {
+    "text": "The Guggenheim Museum has a spiral ramp.",
+    "kind": "state",
+    "span": "Walking the spiral ramp",
+}
+C148: dict = {
+    "text": "Frank Lloyd Wright designed the spiral Solomon R. Guggenheim Museum.",
+    "kind": "event",
+    "span": "delirious spiral of a museum sits among the towers of Fifth Avenue",
+}
+ZIGGURAT_ID = "new_york/guggenheim-museum/the-inverted-ziggurat"
+
+
+def _ziggurat() -> list[model.Beat]:
+    record = _beat(
+        ZIGGURAT_ID, "the-inverted-ziggurat", "The inverted ziggurat", "establishing",
+        [_lp_claim("c01", WRIGHT), _lp_claim("c02", SPIRAL_LP)],
+        "Frank Lloyd Wright designed this building, and a spiral ramp winds up inside it.",
+    )
+    assert model.validate([record]) == []
+    return [model.Beat.model_validate(record)]
+
+
+def test_a_claim_two_existing_claims_state_together_is_covered_not_held():
+    """The judge answers `covered` naming both claims; the signature's match
+    (c01, which covers most of c148's words) is inside the named set, so it
+    is no disagreement: nothing is held, the outcome records both claims,
+    and nothing is re-narrated — no existing text changes."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", C148)]
+    story = _story("A building brought back from a dream", ["c01"])
+    existing = _ziggurat()
+    answer = _answer(
+        "new", "", [_claim_verdict("c01", "covered", "b1.c01+b1.c02",
+                                   reason="c01 states Wright designed it; c02 the spiral")],
+    )
+    assert merge.signature_hint(claims, existing).matches == {"c01": (ZIGGURAT_ID, "c01")}
+
+    outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims))
+
+    assert outcome.held is False
+    assert [(c.claim_id, c.outcome) for c in outcome.claims] == [("c01", "covered")]
+    assert outcome.claims[0].covered_by == ((ZIGGURAT_ID, "c01"), (ZIGGURAT_ID, "c02"))
+    assert outcome.rerun == []
+
+
+def test_applying_a_covered_claim_changes_no_existing_claim(tmp_path):
+    """Absorbed, not written: the named claims stay byte-identical — no
+    source appended (c148's span states c01's fact but never c03's "ramp"),
+    no status or resolution change — and the file still validates."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", C148)]
+    story = _story("A building brought back from a dream", ["c01"])
+    existing = _ziggurat()
+    answer = _answer("new", "", [_claim_verdict("c01", "covered", "b1.c01+b1.c02")])
+    outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims))
+
+    merged = merge.apply(outcome, existing)
+
+    assert _records(merged) == _records(existing)
+    assert model.validate(_records(merged), chunks_root=_chunks_root(tmp_path)) == []
+
+
+def test_a_signature_match_outside_the_covered_set_still_holds():
+    """The tripwire keeps its one-way force: c148's signature matches c01,
+    so a `covered` answer that names other claims (the spiral and the
+    completion) and not c01 is positive evidence against the judge."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", C148)]
+    story = _story("A building brought back from a dream", ["c01"])
+    existing = [*_ziggurat(), *_existing()]
+    answer = _answer("new", "", [_claim_verdict("c01", "covered", "b1.c02+b2.c02")])
+
+    outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims))
+
+    assert outcome.held is True
+    assert "judge says covered by" in outcome.reason
+    assert f"signature matches c01 of {ZIGGURAT_ID}" in outcome.reason
+
+
+@pytest.mark.parametrize(
+    ("existing_claim_id", "new_value", "problem"),
+    [
+        ("b1.c01", "", "at least two different claims"),
+        ("b1.c01+b1.c01", "", "at least two different claims"),
+        ("b1.c01+b1.c09", "", "'b1.c09' in existing_claim_id is not a claim at this place"),
+        ("b1.c01+b1.c02", "1959", '"covered" quotes no values'),
+    ],
+)
+def test_a_malformed_covered_answer_is_reasked_once_then_held(
+    existing_claim_id, new_value, problem
+):
+    import src.ingest.narrate as narrate_mod
+
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", C148)]
+    story = _story("A building brought back from a dream", ["c01"])
+    bad = _answer("new", "", [_claim_verdict("c01", "covered", existing_claim_id, new_value)])
+    client = _armed_judge([bad, bad], claims)
+
+    with pytest.raises(narrate_mod.BeatHeld) as held:
+        merge.merge(story, claims, _ziggurat(), client)
+
+    assert problem in held.value.reason
+    assert len([c for c in client.calls if c[0] == "merge_judge"]) == 2
+
+
+def test_a_covered_claim_is_logged_with_every_claim_that_covers_it():
+    """The review trail: `merge_covered` carries the new claim's text and
+    span and EVERY named claim with its text — never the single-claim
+    `merge_folded`, which would show only the first and read as `same`."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", C148)]
+    story = _story("A building brought back from a dream", ["c01"])
+    answer = _answer("new", "", [_claim_verdict("c01", "covered", "b1.c01+b1.c02")])
+    events, sink = _sink_and_events()
+
+    merge.merge(story, claims, _ziggurat(), _armed_judge([answer], claims), events=sink)
+
+    assert [kind for kind, _ in events if kind == "merge_folded"] == []
+    covered = [payload for kind, payload in events if kind == "merge_covered"]
+    assert covered == [
+        {
+            "story_slug": story.story_slug,
+            "claim_id": "c01",
+            "text": C148["text"],
+            "span": C148["span"],
+            "covered_by": [
+                {"beat_id": ZIGGURAT_ID, "claim_id": "c01", "text": WRIGHT["text"]},
+                {"beat_id": ZIGGURAT_ID, "claim_id": "c02", "text": SPIRAL_LP["text"]},
+            ],
+        }
+    ]

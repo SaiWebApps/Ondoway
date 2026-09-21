@@ -70,6 +70,14 @@
       "total": 1,
       "false_refusals": 0,
       "dropped": 0
+    },
+    "covered_union": {
+      "caught": 1,
+      "total": 1
+    },
+    "shared_union": {
+      "caught": 1,
+      "total": 1
     }
   },
   "live": {
@@ -100,7 +108,9 @@
     "omitted_fact": {
       "caught": 1,
       "total": 1
-    }
+    },
+    "covered_union": null,
+    "shared_union": null
   },
   "_runs": {
     "mock": {

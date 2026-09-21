@@ -982,7 +982,8 @@ class _Run:
                 if outcome is not None and (outcome.story != "new" or folds):
                     existing = merge.apply(outcome, existing)
                     applied.append(story.story_slug)
-                    targets = {o.existing_beat_id for o in folds}
+                    # A covered claim changes no existing beat: never re-dump it.
+                    targets = {o.existing_beat_id for o in folds if o.outcome != "covered"}
                     if outcome.beat_id:
                         targets.add(outcome.beat_id)
                     for target in sorted(targets):

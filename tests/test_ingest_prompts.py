@@ -413,9 +413,9 @@ def test_p6_merge_schema_stays_in_the_structured_output_subset_and_prompt_pins_t
     _walk_schema(prompts.P6_MERGE_SCHEMA)
     assert prompts.P6_MERGE_SCHEMA["properties"]["story"]["enum"] == ["same", "new", "supersedes"]
     item = prompts.P6_MERGE_SCHEMA["properties"]["claims"]["items"]
-    assert item["properties"]["verdict"]["enum"] == ["new", "same", "conflict"]
+    assert item["properties"]["verdict"]["enum"] == ["new", "same", "conflict", "covered"]
     assert prompts.STORY_VERDICTS == ("same", "new", "supersedes")
-    assert prompts.CLAIM_VERDICTS == ("new", "same", "conflict")
+    assert prompts.CLAIM_VERDICTS == ("new", "same", "conflict", "covered")
     assert "A newer source is never right by default" in prompts.MERGE_PROMPT
 
     new_claims = [
@@ -565,3 +565,22 @@ def test_the_claim_judge_writes_its_reason_before_its_verdict():
     shape = json.loads(judge_prompts._VERDICT_SHAPE)
     assert list(shape) == ["reason", "entailed", "kind"]
     assert judge_prompts._VERDICT_SHAPE in prompts.JUDGE_CLAIM_PROMPT
+
+
+def test_the_merge_prompt_defines_covered_with_an_example_from_another_city():
+    """Owner ruling 2026-09-21: `covered` — no single claim states everything
+    but two or more TOGETHER do, same values — named by every handle joined
+    with "+", never for shared words, never over a differing value (that is
+    `conflict`), no values quoted. The worked example is Eiffel, never the
+    Guggenheim, so calibration cannot score a copy of it."""
+    rules = prompts.MERGE_PROMPT
+    assert '"covered" when no single claim states everything' in rules
+    assert "TOGETHER state everything the new claim states, with the same values" in rules
+    assert 'joined by "+"' in rules
+    assert 'is "conflict" with that claim, never "covered"' in rules
+    assert (
+        '"The wrought-iron Eiffel Tower was completed in 1889." is "covered"' in rules
+    )
+    assert "Guggenheim" not in rules
+    assert "covered" in prompts.P6_MERGE_SCHEMA["properties"]["claims"]["items"][
+        "properties"]["verdict"]["enum"]
