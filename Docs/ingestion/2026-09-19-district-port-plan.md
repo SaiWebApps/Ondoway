@@ -158,6 +158,39 @@ Per-unit or per-round P3 persistence is the fix; recorded, not built.
 **Still NOT proven:** transfer to the 386-chunk slice, and the per-story isolation path
 (`story_held` has never fired live).
 
+## The branch's full bar is RED BY DESIGN — read this before running `make test`
+
+`corpus-workbench` is pushed with `make test` knowingly red, and has been since slice 0. Every
+commit on it was gated on the SMALLER bar instead: the touched files green by exit code
+(`make test-file FILE=…`) plus `make lint` exit 0. That is deliberate — the rebuild replaces the
+pipeline the old suite pins — but it means a fetcher cannot tell recorded debt from a new break.
+
+**Which half of this is verified:** the GREEN list below was verified by RUNNING each shard on
+2026-09-20 at commit 9b78c0a — 23 files, all passed. The KNOWN-RED list is reconstructed from what
+this branch changed, NOT from a run, and stays unverified until someone runs the full bar.
+
+Known-red (reconstructed, unverified), with the slice that closes each:
+- The golden-tour and persona shards read the 7687 dev corpus, which still holds LEGACY beats;
+  they go green when a city is swapped to the new shape (slice 10's swap, owner ruling 2026-09-19:
+  every legacy beat is to be replaced).
+- The tour-grade and invariant shards score that same legacy corpus.
+- GREEN, verified by running them at 9b78c0a on 2026-09-20 (23 files): `tests/test_preflight.py`
+  (57), `tests/test_validate_beats_shape.py` (4), the three `tests/test_upload_*.py` (27, 17, 3)
+  and all eighteen `tests/test_ingest_*.py`. These are the shards this rebuild owns — run them to
+  check the rebuild itself.
+
+**NEXT WORK ITEM (registered 2026-09-20, at the push):** run the full `make test`, triage it
+against this list, and either fix or record every shard that is red for a reason NOT named above.
+Until that is done, nobody should read a red suite on this branch as evidence about these commits.
+
+## Owner decision owed: the manifests' `source_file` provenance
+
+`Books/**/manifest.json` records each PDF's origin, and several name **Anna's Archive** — a pirate
+library — while the ingestion records `rights_basis: owned_copy` for the same book. Both statements
+are in the repo and they contradict each other. This predates these commits and is already on the
+remote; no commit here adds one. It is an owner call (correct the field forward, or accept what it
+says), not something to fix quietly inside a slice.
+
 ## What this plan deliberately does not do
 
 - It does not gate on the Guggenheim merge. R0–R7 stay recorded as the registration they were;
