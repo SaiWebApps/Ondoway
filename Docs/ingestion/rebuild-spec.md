@@ -1177,6 +1177,49 @@ or one with a fold above $0.25 (a fold re-narrates the LP target beat: one Opus 
 judge round on top), stops the set; so does a set total above $2.00 — the hard ceiling the owner's
 go is asked against.
 
+*Merge step 4 — result (2026-09-21, owner go "yes to both, commit and run them"; HEAD b0e6869;
+sandboxes `data-ingest/sandboxes/jobB-replay-gugg-r1` … `-r10`, log `flip-runs.log`; R0 PASS — live
+`556830a5342e178c`, step2c `5558f031f66bec71`, the source copy `fa549e1db77b8463`, nothing outside
+those sandboxes newer than the marker).* Ten runs, $0.5833 in all (per run $0.0526-$0.0647, no fold,
+none near a stop limit). c148 came out `new` in all ten — eleven of eleven under current code — and
+the control c151 `same` in all eleven; the tripwire held the story in every run on c148 (LP c01
+covers 0.75 of it). By the rule fixed beforehand, the third branch: the judge was stable on the two
+registered claims, so c148's verdict is not chance, and the rule picks P1 splitting "designed the
+spiral … Museum" into its two facts — a lean, not proof (at a true `same` rate of 20%, eleven `new`
+in a row happens about 9% of the time). The judge's own reason each run ("no single existing claim
+combines design authorship with the spiral shape (b1.c01 + b1.c03)") supports the covered-by-several
+verdict equally; the data does not exclude it — the registered rule chose. Not registered, and
+reported: the story-level answer varied (`same` 7, `new` 3) while every claim-level verdict held. Process defect, recorded: the run loop's stop check mis-parsed a
+zero fold count, so on no-fold runs the $0.13 per-run and $2.00 set limits were checked by hand
+after each run instead of by the loop (no run exceeded $0.0647).
+**Correction (same day, found at the judge's review of the P1 probe, before any commit of this
+record): the rule's exclusion of job B's answer rested on a false premise.** Between job B's code
+(8c72e30) and the replays the merge judge's prompt and inputs are identical — `git diff 8c72e30
+HEAD -- src/ingest/prompts/merge.py` is empty, and the only change to `src/ingest/merge.py` is the
+signature measure, which runs after the judge answers; the replays reused job B's own P0-P5 and its
+starting beats. So job B's answer (seq 3197: c148 `same` b1.c01, "Both state Wright designed the
+museum building") is a valid twelfth sample of the same judge on the same input: c148 is `same` in
+1 of 12 and `new` in 11 — rare, not never. With the premise corrected the evidence falls in the
+rule's second branch (both verdicts seen: the per-claim contract leaves c148 to chance), and the
+next step it names is the `covered` merge verdict; the P1-split lean above does not stand.
+
+*P1-split probe — registered before any spend (2026-09-21, owner: "go ahead").* `make ingest-p1probe`
+runs ONLY P1's first ask (the unchanged DECOMPOSE_PROMPT) K=10 times in one batch round on job B's
+own unit — the whole Frommer's chunk P1 saw, since c148 came from that first ask (its single-request
+round; the supplement came later as c189) and a smaller passage would make a split easier than it
+was. Each sample is classified SPLIT (a Guggenheim claim naming Wright and "design…" without
+"spiral", plus a separate Guggenheim claim stating the spiral), BUNDLED (Wright + design + spiral in
+one claim) or NEITHER (the source says "Wright's … spiral", never "designed", so a faithful claim may
+name Wright another way); the keyword classes are a first pass and every sample's Wright claims are
+hand-audited, which decides. Printed estimate $1.3343 (output priced thinking-inclusive); metered,
+batch ids logged as they arrive. Decision rule over the ten, fixed now: BUNDLED ≥ 8 → the current
+prompt reliably bundles this shape and an attributive-adjective rule is worth probing against this
+baseline (another K=10); SPLIT ≥ 8 → c148 was an unlucky sample of a prompt that usually splits, and
+a split still has to earn a P6 `same` before this lever counts; anything else, or NEITHER ≥ 3 → the
+owner chooses. In every branch the `covered` merge verdict (design note
+`Docs/ingestion/2026-09-21-covered-verdict-design.md`, not built) stays an equal candidate: the
+judge's own reason names c01 + c03 together.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
