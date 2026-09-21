@@ -1044,6 +1044,24 @@ unheld, and costs a duplicate claim. Built test-first in `merge.covered` (the to
 matches, the slice-6 tripwire node still holds; undo-tested (overlap coefficient, reversed
 direction, tripwire off).
 
+*Guggenheim replay under the contract-direction tripwire (2026-09-21, owner go; HEAD 99990d9;
+sandbox `data-ingest/sandboxes/jobB-replay-gugg`, prepared from the frozen pre-job copy whose sha
+equals job B's `beats_sha256`, the replay tool's own check passing; one paid run, $0.0660, three P6
+calls).* Registered beforehand, split as the judge required: deterministic — c149 and c162 no
+longer match, so they cannot hold the story; model-dependent — c148 folds into LP c01 and c151 into
+LP c21. Result: the deterministic half held (the hold names neither). The judge, resampled, again
+matched c151 `same` LP c21 (1959), but this time called c148 ("designed the *spiral* … Museum")
+`new` — "combines design attribution with a shape descriptor"; that fits the per-claim contract,
+since no single existing claim covers c148, though c01 (Wright) and c03 (spiral) together do — and
+the signature, now in the contract's direction, found LP c01 covering 6 of its 8 tokens (0.75), so
+the story was held for a person. Committed 49 beats (the two unmatched Frommer's
+Guggenheim stories new); R0 PASS. No Guggenheim fold completed. What now blocks it is c148 being
+compound — most likely the R1 defect, on the evidence of one claim in two runs — which left the
+judge's verdict to chance (`same` in job B, `new` here): that instability is the merge's too. A
+case the per-claim contract cannot express going to a person is D7 working, not a false positive of
+the kind fixed above. Across job B the new measure holds 3 stories where the old one held 8; the
+panel called 2 of the 3 false (P05, P08) — better, not solved.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
