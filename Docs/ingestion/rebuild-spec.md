@@ -949,6 +949,61 @@ the gate mid-run means the owner is asked, not an automatic kill: P3 persists on
 completion, so a kill re-pays the phase. The step2c run's own cost ($2.6072) is a floor
 (`unmetered_calls=1`). No automated kill-switch; hand-watching at phase boundaries only.
 
+*Job B result (2026-09-21 02:30 → 11:25 UTC, job `75b8f292…`, HEAD 8c72e30; corrected at the
+judge's STOP): no Guggenheim fold, and nothing committed.* The job ended `status=error`,
+`beats_written=0`: P7's validator refused the whole file for three beats none of which is a merge
+beat — two new Frommer's stories left below their `beat_type`'s claim minimum after P3 dropped
+claims (`the-servant-velazquez-freed`, anecdote with 1; `self-taught-genius-and-the-quilts`,
+factoid with 1), and one narration (`a-431-million-addition`) sharing an 8-word proper-name run
+with its span, which P4's lift gate exempts (`gates.py`) and P7's check (`model.py`) does not.
+step2c's beats are unchanged (`fa549e1db77b8463`); P0-P6 are persisted, so a `--resume` runs P7
+alone ($0). R0 PASS. Spend $3.3887 against $3.4288 expected (0.99x). Wall clock ~9 h, ~8 of it
+one 37-request P1 re-ask batch queued at 0/37 for 28,535 s (API status operational).
+Upstream: P1 gave 188 claims; Frommer's "early critics dismissed the museum" was never emitted
+(only the Newsweek headline), nor the hours, subway or senior price. P3 refused 38 claims on the
+first attempt (several with reasons that say the span supports the claim) and dropped 22, all
+three blockbuster retrospectives among them; re-ask spans carried literal escapes (`\ru2019`,
+`/u2013`) and re-ask texts apparatus ("In the author's rundown…"). **`story_held` fired live for
+the first time**, on `guggenheim-admission-and-pay-what-you-wish`, for a transport
+`invalid_request_error` on one request — isolation held the rest of the unit.
+- R1 FAIL (Frommer's half, audited before R2): the dismissal never emitted; compounds c148
+  (Wright designed the *spiral* museum — by the letter), c149 (a re-ask rewrite: Wright + spiral
+  + among the towers) and c154 (no suicides and no accidental deaths); the blockbuster sentence
+  split one claim per show as registered (the P3 re-ask then turned c156 into a list claim of the
+  same class as c149's before it was dropped).
+- R2 FAIL: of five Frommer's Guggenheim stories, three reached P6 and resolved to the `poi-raw`
+  place; two never did (the retrospectives story lost every claim at P3; the admission story was
+  `story_held`). No pair folded. The judge matched both registered pairs it saw correctly — c148 Wright `same` LP c01
+  and c151 1959 `same` LP c21 — and the tripwire then held the story (c149 and c162 judged new,
+  signature matched LP c03 "has a spiral ramp"). Critics: upstream P1 omission. Address and $25:
+  their story was held at P3 on the transport error; by the letter a FAIL (the address folded into
+  neither c05 nor c215), and stays FAIL by the owner's ruling below.
+  Conflicts and subway: unproven, LP upstream drop (registered). Kandinsky and Brancusi stayed
+  `new` (registered acceptable); the top-floor and walking-the-ramps traps did not fold.
+- R3: no Guggenheim fold to panel. R4 FAIL: a P6 tripwire hold at the Guggenheim. R5 FAIL: not
+  committed.
+Elsewhere, unregistered and unverified — decided in P6 (four LP beats re-narrated), never written: 9
+`merge_folded` (7 `same` → corroborated, sources 1→2; 2 `supersedes`: the Met's "more than 3
+million works" over "more than two million individual objects", the MCNY Tucci 30-minute film over
+"Timescapes lasts 28 minutes"), two additive joins (`a-collection-in-exile` into
+`the-2020-restoration`: the closure and the Whitney-building move; `too-racy-for-children` into
+`visiting-the-neue-galerie`), and `rerun` on four LP beats, each re-narrated with a fresh
+`claims_hash` speaking the new or superseding fact, no `rerun_reverted`. Defects in that output:
+the Neue join added c181 ("children 11 and under are barred") beside LP c178 ("does not admit
+children younger than 12") — a missed `same`, the fact now twice in one beat; 8 P6 tripwire holds,
+one of them (`neue-galerie-admission-and-hours`) matching a claim this same job had appended
+moments earlier; claim ids collide file-wide after the merge (the job's c01… against Lonely
+Planet's), e.g. the restoration beat's appended c150 beside `visiting-the-frick`'s c150.
+**Owner rulings (2026-09-21, "I will follow all of your recommendations"):** this record is
+committed without `make test` (docs only; the branch's bar is red by design and includes paid
+shards); a blind exploratory panel (opus, fable, haiku; never Sonnet, the merge judge) scores the 9
+folds, the 2 joins and the judge's `new` verdicts on the claims the 8 holds tripped on; P7 is
+changed test-first to hold a beat failing exactly two validator classes, `ARC_TOO_FEW_CLAIMS`
+and `NARRATION_LIFT`, into the review queue instead of refusing the whole file (every other
+validator error still refuses the file), then job B is resumed ($0, P7 only, R0 repeated around it) —
+which rescues the output but cannot retroactively pass R5 as registered; the address/$25 pair
+stays FAIL by the letter.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
