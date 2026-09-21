@@ -1133,6 +1133,22 @@ items x 3 x 2 looks); accepted pass $1.2021 at most (151 items x 1 x 2 looks); b
 the second look runs only on refusals. Owner go owed before `--yes`; R0 around each run; outputs
 only under new `data-ingest/sandboxes/rejudge-*` dirs.
 
+*P3 step 3 — result (2026-09-21, owner go "yes to both, commit and run them"; HEAD e461a05; outputs
+`data-ingest/sandboxes/rejudge-k3/`, `rejudge-accepted/`; R0 PASS — live `556830a5342e178c`, step2c
+`5558f031f66bec71`, nothing outside those dirs newer than the marker).* Every registered bar passed.
+S1: 37, 36 and 34 of the 37 SUPPORTED survived both looks with their P1 text (bar 30). S2: 20 of the
+20 planted negatives were refused on both looks in every sample (bar 18) — number swaps only, per
+S2's stated ceiling; at 20/20 the bar cannot tell a good judge from an excellent one. S3: 2 of the 151 ACCEPTED were lost after both looks (c153, c30; bar 3), and 6
+were refused at look 1. c149 (PARTLY) was refused on both looks in all three samples (reported).
+SUPPORTED claims lost: c117, c147, c155, c82 — each in exactly one sample (4 losses = 0 + 1 + 3). At
+look 1 alone the judge refused 2, 2 and 6 of the 37 — against 38 of 38 in job B, but that set was
+selected for having been refused, so the change cannot be split between reason-first, the second
+look and regression to the mean. Not measured: actual spend (the harness logs no batch ids; upper
+bounds $1.3852 + $1.2021), recall on anything but a number swap, and any of this inside a full job
+(the restate still runs for a claim refused twice: this shows fewer claims are sent to it, not
+that it became safe). A paid harness that cannot report its own spend is a defect to fix before
+the next paid run.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
