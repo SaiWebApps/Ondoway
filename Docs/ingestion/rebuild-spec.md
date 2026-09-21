@@ -1105,6 +1105,34 @@ original lacked — owner decision owed on its fallback (dropping the claim lose
 say was true; keeping the original needs a verdict). None of this is measured live yet; step 3's
 bars come to the owner before any spend.
 
+*P3 step 3 — measurement registered before any spend (2026-09-21).* `make ingest-rejudge` re-runs
+only P3's two judge looks (first look; second look as written; never the author's restate) on job
+B's claims under the current code, K samples, and prints its own estimate, refusing without `--yes`.
+Items: the 38 claims both labelers labeled alike (37 SUPPORTED, c149 PARTLY), plus 20 planted
+NEGATIVES — each SUPPORTED claim that states a number, with its first number changed (a year by 3,
+anything else by 7) and the original span — because a second look is a second roll of the dice for
+every refused claim and raises survival whether or not the judge improved; and, in a separate
+one-sample pass (`--accepted`, which judges ONLY those claims, never the labeled items or the
+negatives again, and is never pooled into the K=3 spread), the 151 claims job B's first look
+ACCEPTED, so the reason-first
+schema cannot buy precision by refusing claims that used to pass. Labels are model-made (Sonnet,
+fable), not the owner's. Job B's own figures are not a baseline for the 38: they were selected
+because they were refused once, so some clear on any resample (regression to the mean).
+Bars, per sample, reported as the spread across K=3, never a single number:
+- S1 survival: ≥ 30 of the 37 SUPPORTED survive both looks with their P1 text.
+- S2 false clears: ≥ 18 of the 20 NEGATIVES are refused on both looks (a per-look catch rate near
+  0.95, squared) — a SUPPORTED gain bought by clearing negatives fails here. Its ceiling, stated
+  in advance: every negative is a NUMBER swapped, the easiest fabrication to catch; a pass says
+  nothing about a wrong cause, a wrong kind or an altered name, so it is never a general recall
+  claim.
+- S3 accepted: ≤ 3 of the 151 ACCEPTED are lost after both looks (one sample); first-look refusals
+  among them reported.
+- c149 (PARTLY, n=1): reported, never gated.
+Estimates as printed ($0 dry runs at HEAD plus the harness): K=3 labeled pass $1.3852 at most (58
+items x 3 x 2 looks); accepted pass $1.2021 at most (151 items x 1 x 2 looks); both upper bounds —
+the second look runs only on refusals. Owner go owed before `--yes`; R0 around each run; outputs
+only under new `data-ingest/sandboxes/rejudge-*` dirs.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
