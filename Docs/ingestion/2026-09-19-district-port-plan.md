@@ -134,9 +134,29 @@ narrate different stories. That also bounds what the output comparison can show:
 class, which is weaker than "the same output by a different route".
 **First live exercise of `0784a7b`:** `narrative_function` is in the engine's vocabulary for 47/47
 beats, against 0/42 in the control.
-**NOT proven:** multi-unit behaviour (one chunk here; the per-unit scoping is covered by tests
-only), the per-story isolation path (`story_held` never fired live), and transfer to the 386-chunk
-slice.
+**TWO-unit scoping PROVEN 2026-09-20 — at two units; more units untested** (job `ac320e5d…`, sandbox `step2d`, two Lonely Planet
+chunks: chunk-05 157 claims, chunk-08 186). $0 first: `test_two_units_get_their_own_rounds_never_one_shared_round` (commit f18af9b) drives a two-unit job through a recording client — 2 P3 and 2 P5
+rounds, never 1 shared; undo-tested by flattening `run.p5`, which goes RED printing the same
+sentence id twice in one batch. Then live, to the registered bar: all 16 rounds recovered with
+`make ingest-batch`, **635 of 635 ids resolved (100%), 0 rounds carrying two units** — P3 4 rounds
+per unit (157/6/1/3 and 186/10/1/2), P5 2 per unit (121/15 and 104/9), inside the bars of 5 and 3.
+A job-wide design would have shown one 343-claim round; it never appeared. Both omission checks
+were additive (1 fact → 1 supplement request; 2 facts → 1), so the reroll case was exercised, not
+assumed. Committed: 60 beats over 27 POIs, `narrative_function` 60/60 in vocabulary, 5 held,
+`stories_held (P3)=0`, R0 PASS (live sha 556830a5342e178c).
+**COST, and the incident behind it (owner-overridden 2026-09-20):** expected $4.4051, registered
+gate $6.61, ACTUAL ~$7.2 across THREE attempts. The owner was shown the projected
+overrun (~$7.5, past the gate) BEFORE deciding, and answered "finish it, override the gate". Attempts 1 and 2 were killed by MY OWN watcher,
+never by a real fault. Root cause, a fact about this system rather than a mis-set number: **the job
+log is cumulative across attempts and `batch_submitted` carries no unit key**, so any threshold read
+from it must be split at the `resumed` marker and cannot be attributed to a unit. Kill 1 read the
+next unit's ordinary 186-request round as the previous unit's supplement (188 > 80); kill 2 read
+attempt 1's 5 P3 rounds plus the resume's 6 as 11 > 10. The automated killer was then REMOVED and
+the run watched by hand. **New carried defect: P3 persists only on completion**, so every kill
+re-pays the whole phase for every unit — that is what turned two mistakes into ~$4.8 of the total.
+Per-unit or per-round P3 persistence is the fix; recorded, not built.
+**Still NOT proven:** transfer to the 386-chunk slice, and the per-story isolation path
+(`story_held` has never fired live).
 
 ## What this plan deliberately does not do
 
