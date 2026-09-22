@@ -1250,6 +1250,37 @@ at or above its live baseline. Stop rules: a replay without a fold above $0.13, 
 $0.30 (the remainder beat's P4/P5 included), or the set above $2.50, stops the set — checked by the
 loop and by hand after each run.
 
+*P6 `covered` — live replay result (2026-09-21, owner go "yes to both, commit and run them"; HEAD
+aa08f10; sandboxes `data-ingest/sandboxes/jobB-replay-cov-r1` … `-r10`, log `cov-runs.log`; R0 PASS —
+live `556830a5342e178c`, step2c `5558f031f66bec71`, the source copy `fa549e1db77b8463`, nothing outside
+those sandboxes newer than the marker; corrected at the judge's PROVE-FIRST).* Ten runs, $0.7645.
+The judge ANSWERED c148 `covered` by LP c01 + c03 and c151 `same` LP c21 in all ten, but the answers
+were APPLIED in only five: the story committed in r1, r3, r7, r9 and r10 and was held in r2, r4, r5,
+r6 and r8, every hold by our own contract ("covered quotes no values"). The judge put values on
+`covered` in its FIRST answer in 9 of the 10 runs — 14 of 19 attempts broke the instruction — and 4
+of the 5 folds landed only on the re-ask; the fold is fragile, passing on 4 of the 9
+re-asks. Scored as registered: c148 `covered` ≥ 8/10 FAIL (applied 5/10, answered 10/10); c151 `same`
+10/10 FAIL (applied 5/10, answered 10/10); no other Guggenheim claim `covered` PASS (0 in every
+run); story not held FAIL (5/10); each fold completes FAIL (5/10); LP beats byte-identical except
+c21's source FAIL (r3). Observation for the owner, not scored: the judge called the story `same` as
+the ziggurat beat (b1) in 4 of the 10 runs — r3, r5, r6 and r8 — on both attempts each time; only
+r3 was applied, because the value rule held the other three. In r3 the story's three other claims
+(c149 "Frank Lloyd Wright's spiral-shaped Guggenheim Museum is located among the tower buildings of
+Fifth Avenue.", c152, c162) joined that beat, which was re-narrated with a fresh hash, and c162
+"The Solomon R. Guggenheim Museum's atrium centers on a huge spiral ramp." now sits beside c03
+"The Guggenheim Museum has a spiral ramp." In r6 the judge
+also answered c162 `same` LP c03 on both attempts, with unequal values. Every `merge_covered` line
+was read: c148 is absorbed against c01 (Wright's design) and c03 (the spiral ramp). That no fact of
+c148 is lost is the author's reading only, not blind-labelled: c03 ("The Guggenheim Museum has a spiral ramp.") names
+an interior feature and does not strictly state that the museum itself is spiral. This is the first
+time a Guggenheim fold has completed in any run. The values carried a fact signal in 0 of the 14
+value-carrying attempts: every `new_value` restates c148 and every `existing_value` restates c01
+and c03 (twice with `(b1.c01)` annotations). In these runs the judge echoed the claims into the
+values, so the values gave a rule nothing to catch. All 14 attempts concern one claim in one story;
+this shows the values added no signal here, not that a rule on the values could never catch a new
+claim that adds a fact. `make ingest-calibrate-live` printed
+$0.8267, above the $0.70 stated to the owner — not run; owner decision owed.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
