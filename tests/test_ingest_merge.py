@@ -216,11 +216,13 @@ def _judged(unit: unit_mod.Unit, claim_id: str, item: dict) -> judge_claims.Judg
     )
 
 
-def _story(title: str, claim_ids: list[str], beat_type: str = "anecdote") -> group.Story:
+def _story(
+    title: str, claim_ids: list[str], beat_type: str = "anecdote", place: str = PLACE
+) -> group.Story:
     return group.Story(
         title=title,
         story_slug=model.slug(title),
-        place=PLACE,
+        place=place,
         new_poi=False,
         lenses=["hidden_history"],
         beat_type=beat_type,
@@ -1224,6 +1226,9 @@ C148: dict = {
     "span": "delirious spiral of a museum sits among the towers of Fifth Avenue",
 }
 ZIGGURAT_ID = "new_york/guggenheim-museum/the-inverted-ziggurat"
+#: The place as job B's P2 resolved it (poi-raw's name), whose words the
+#: covered guard discounts.
+GUGG_PLACE = "Solomon R. Guggenheim Museum"
 
 
 def _ziggurat() -> list[model.Beat]:
@@ -1243,7 +1248,7 @@ def test_a_claim_two_existing_claims_state_together_is_covered_not_held():
     and nothing is re-narrated — no existing text changes."""
     unit = _fr_unit()
     claims = [_judged(unit, "c01", C148)]
-    story = _story("A building brought back from a dream", ["c01"])
+    story = _story("A building brought back from a dream", ["c01"], place=GUGG_PLACE)
     existing = _ziggurat()
     answer = _answer(
         "new", "", [_claim_verdict("c01", "covered", "b1.c01+b1.c02",
@@ -1265,7 +1270,7 @@ def test_applying_a_covered_claim_changes_no_existing_claim(tmp_path):
     no status or resolution change — and the file still validates."""
     unit = _fr_unit()
     claims = [_judged(unit, "c01", C148)]
-    story = _story("A building brought back from a dream", ["c01"])
+    story = _story("A building brought back from a dream", ["c01"], place=GUGG_PLACE)
     existing = _ziggurat()
     answer = _answer("new", "", [_claim_verdict("c01", "covered", "b1.c01+b1.c02")])
     outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims))
@@ -1282,7 +1287,7 @@ def test_a_signature_match_outside_the_covered_set_still_holds():
     completion) and not c01 is positive evidence against the judge."""
     unit = _fr_unit()
     claims = [_judged(unit, "c01", C148)]
-    story = _story("A building brought back from a dream", ["c01"])
+    story = _story("A building brought back from a dream", ["c01"], place=GUGG_PLACE)
     existing = [*_ziggurat(), *_existing()]
     answer = _answer("new", "", [_claim_verdict("c01", "covered", "b1.c02+b2.c02")])
 
@@ -1294,23 +1299,20 @@ def test_a_signature_match_outside_the_covered_set_still_holds():
 
 
 @pytest.mark.parametrize(
-    ("existing_claim_id", "new_value", "problem"),
+    ("existing_claim_id", "problem"),
     [
-        ("b1.c01", "", "at least two different claims"),
-        ("b1.c01+b1.c01", "", "at least two different claims"),
-        ("b1.c01+b1.c09", "", "'b1.c09' in existing_claim_id is not a claim at this place"),
-        ("b1.c01+b1.c02", "1959", '"covered" quotes no values'),
+        ("b1.c01", "at least two different claims"),
+        ("b1.c01+b1.c01", "at least two different claims"),
+        ("b1.c01+b1.c09", "'b1.c09' in existing_claim_id is not a claim at this place"),
     ],
 )
-def test_a_malformed_covered_answer_is_reasked_once_then_held(
-    existing_claim_id, new_value, problem
-):
+def test_a_malformed_covered_answer_is_reasked_once_then_held(existing_claim_id, problem):
     import src.ingest.narrate as narrate_mod
 
     unit = _fr_unit()
     claims = [_judged(unit, "c01", C148)]
-    story = _story("A building brought back from a dream", ["c01"])
-    bad = _answer("new", "", [_claim_verdict("c01", "covered", existing_claim_id, new_value)])
+    story = _story("A building brought back from a dream", ["c01"], place=GUGG_PLACE)
+    bad = _answer("new", "", [_claim_verdict("c01", "covered", existing_claim_id)])
     client = _armed_judge([bad, bad], claims)
 
     with pytest.raises(narrate_mod.BeatHeld) as held:
@@ -1326,7 +1328,7 @@ def test_a_covered_claim_is_logged_with_every_claim_that_covers_it():
     `merge_folded`, which would show only the first and read as `same`."""
     unit = _fr_unit()
     claims = [_judged(unit, "c01", C148)]
-    story = _story("A building brought back from a dream", ["c01"])
+    story = _story("A building brought back from a dream", ["c01"], place=GUGG_PLACE)
     answer = _answer("new", "", [_claim_verdict("c01", "covered", "b1.c01+b1.c02")])
     events, sink = _sink_and_events()
 
@@ -1340,6 +1342,8 @@ def test_a_covered_claim_is_logged_with_every_claim_that_covers_it():
             "claim_id": "c01",
             "text": C148["text"],
             "span": C148["span"],
+            "new_value": None,
+            "existing_value": None,
             "covered_by": [
                 {"beat_id": ZIGGURAT_ID, "claim_id": "c01", "text": WRIGHT["text"]},
                 {"beat_id": ZIGGURAT_ID, "claim_id": "c02", "text": SPIRAL_LP["text"]},
@@ -1428,3 +1432,95 @@ def test_a_same_answer_with_one_value_writes_no_stated_value():
 
     merged = merge.apply(outcome, existing)
     assert [s.stated_value for s in merged[0].claims[1].sources] == [None, None]
+
+
+def test_a_covered_answer_that_quotes_values_is_applied_without_a_reask():
+    """Live r2's FIRST answer (2026-09-21), values and all: the judge echoes
+    the claims into the value fields (14 of 19 attempts), so the values are
+    no signal and are no longer a reason to re-ask. The fold applies on the
+    first answer and the values are kept on `merge_covered` for audit."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", C148)]
+    story = _story("A building brought back from a dream", ["c01"], place=GUGG_PLACE)
+    answer = _answer(
+        "new", "",
+        [_claim_verdict("c01", "covered", "b1.c01+b1.c02",
+                        "Frank Lloyd Wright designed the spiral Guggenheim Museum",
+                        "designed by Frank Lloyd Wright; has a spiral ramp")],
+    )
+    client = _armed_judge([answer], claims)
+    events, sink = _sink_and_events()
+
+    outcome = merge.merge(story, claims, _ziggurat(), client, events=sink)
+
+    assert outcome.held is False
+    assert [(c.claim_id, c.outcome) for c in outcome.claims] == [("c01", "covered")]
+    assert len([c for c in client.calls if c[0] == "merge_judge"]) == 1
+    [covered] = [payload for kind, payload in events if kind == "merge_covered"]
+    assert (covered["new_value"], covered["existing_value"]) == (
+        "Frank Lloyd Wright designed the spiral Guggenheim Museum",
+        "designed by Frank Lloyd Wright; has a spiral ramp",
+    )
+
+
+def test_a_covered_claim_that_adds_a_fact_is_held_naming_the_words_left_over():
+    """The precision guard that replaces the value rule. A `covered` claim
+    must be fully stated by the named claims, so once the place's own name
+    and every named claim's signature words are taken away, nothing should
+    be left. Here the new claim adds "his last major work" and the judge
+    quotes no values, which the old value rule could never see: the words
+    left over hold the story, and the reason names them for the reviewer."""
+    unit = _fr_unit()
+    adds = {**C148, "text": (
+        "Frank Lloyd Wright designed the spiral Solomon R. Guggenheim Museum "
+        "as his last major work."
+    )}
+    claims = [_judged(unit, "c01", adds)]
+    story = _story("A building brought back from a dream", ["c01"], place=GUGG_PLACE)
+    answer = _answer("new", "", [_claim_verdict("c01", "covered", "b1.c01+b1.c02")])
+
+    outcome = merge.merge(story, claims, _ziggurat(), _armed_judge([answer], claims))
+
+    assert outcome.held is True
+    assert "covered leaves words no named claim states" in outcome.reason
+    assert "last, major, work" in outcome.reason
+
+
+def test_a_covered_claim_no_signature_sees_is_still_checked_for_an_added_fact():
+    """The calibration's `shared_union` trap: the text shares words with
+    both named claims but states another fact (a sketch for cars). No
+    single claim matches its signature, so the tripwire has nothing to say
+    and — before the leftover guard — a `covered` answer here had no
+    deterministic check at all. The words left over hold it."""
+    unit = _fr_unit()
+    sketch = {**C148, "text": (
+        "Frank Lloyd Wright first sketched the Guggenheim's spiral as a ramp for cars."
+    )}
+    claims = [_judged(unit, "c01", sketch)]
+    story = _story("A building brought back from a dream", ["c01"], place=GUGG_PLACE)
+    answer = _answer("new", "", [_claim_verdict("c01", "covered", "b1.c01+b1.c02")])
+    assert merge.signature_hint(claims, _ziggurat()).matches == {"c01": None}
+
+    outcome = merge.merge(story, claims, _ziggurat(), _armed_judge([answer], claims))
+
+    assert outcome.held is True
+    assert outcome.reason == (
+        "claim c01: covered leaves words no named claim states: cars, sketched"
+    )
+
+
+def test_a_covered_claim_naming_the_place_by_a_longer_name_than_p2s_is_held():
+    """Characterization of the guard's known false hold (judge, 2026-09-22):
+    the same correct c148 fold, but with the place given as the shorter
+    "Guggenheim Museum", leaves "solomon" over and is held. A name the
+    place string and the named claims lack is indistinguishable from an
+    added fact; it queues for review, it never folds wrongly."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", C148)]
+    story = _story("A building brought back from a dream", ["c01"], place=PLACE)
+    answer = _answer("new", "", [_claim_verdict("c01", "covered", "b1.c01+b1.c02")])
+
+    outcome = merge.merge(story, claims, _ziggurat(), _armed_judge([answer], claims))
+
+    assert outcome.held is True
+    assert outcome.reason == "claim c01: covered leaves words no named claim states: solomon"

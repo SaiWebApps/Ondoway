@@ -348,7 +348,10 @@ def answer_problems(
 
 def _covered_problems(cid: str, item: dict, handled: dict[str, model.Beat]) -> list[str]:
     """A `covered` answer names two or more distinct claims at the place,
-    `+`-joined, and quotes no values (a covered claim carries none)."""
+    `+`-joined. Its values are not checked: live, the judge echoed the
+    claims into them (14 of 19 attempts, 2026-09-21), so they carried no
+    signal and the rule only held correct folds; they go to the
+    `merge_covered` event for audit."""
     parts = item["existing_claim_id"].split("+")
     problems = [
         f"claim {cid}: {part!r} in existing_claim_id is not a claim at this place"
@@ -359,8 +362,6 @@ def _covered_problems(cid: str, item: dict, handled: dict[str, model.Beat]) -> l
         problems.append(
             f'claim {cid}: "covered" must name at least two different claims, joined by "+"'
         )
-    if item["new_value"] or item["existing_value"]:
-        problems.append(f'claim {cid}: "covered" quotes no values')
     return problems
 
 
@@ -421,6 +422,41 @@ def disagreements(answer: dict, hint: Hint) -> list[str]:
             found.append(
                 f"claim {cid}: judge says {item['verdict']} with {_ref_text(named)}; "
                 f"signature matches {_ref_text(hinted)}"
+            )
+    return found
+
+
+def covered_leftovers(
+    answer: dict, claims: Sequence[JudgedClaim], existing: Sequence[model.Beat], place: str
+) -> list[str]:
+    """Where a `covered` claim says something its named claims do not
+    (handles resolved): the signature words of the new claim left once the
+    place's own name and every named claim's words are taken away. A
+    covered claim is stated in FULL by the named set, so any word left is
+    positive evidence of an added fact ("his last major work", "sketched
+    ... for cars") and holds the story, named for the reviewer.
+
+    It replaces the value rule, which the judge's echoed values made blind
+    (2026-09-21). Its blind spot: a claim that recombines words the named
+    claims already hold into a different fact. Its false holds (queued,
+    never a false fold): a word-form the named claims phrase differently
+    ("design" / "designed"), and a name the place and the named claims
+    lack — a longer official name, an alias ("the Met"); c148 folds only
+    because P2's place is "Solomon R. Guggenheim Museum"."""
+    texts = {c.draft.claim_id: c.draft.text for c in claims}
+    claim_text = {(b.beat_id, c.claim_id): c.text for b in existing for c in b.claims}
+    found: list[str] = []
+    for item in answer["claims"]:
+        if item["verdict"] != "covered":
+            continue
+        stated = _signature(place).union(
+            *(_signature(claim_text[tuple(ref)]) for ref in item["covered_by"])
+        )
+        left = sorted(_signature(texts[item["claim_id"]]) - stated)
+        if left:
+            found.append(
+                f"claim {item['claim_id']}: covered leaves words no named claim states: "
+                + ", ".join(left)
             )
     return found
 
@@ -649,8 +685,12 @@ def merge(
 
     hint = signature_hint(claims, existing)
     disagreed = disagreements(answer, hint)
-    if disagreed:
-        reason = "judge and signature disagree: " + "; ".join(disagreed)
+    leftovers = covered_leftovers(answer, claims, existing, new_story.place)
+    if disagreed or leftovers:
+        reason = "; ".join(
+            ([("judge and signature disagree: " + "; ".join(disagreed))] if disagreed else [])
+            + leftovers
+        )
         emit(
             "beat_held",
             {"story_slug": new_story.story_slug, "phase": "P6", "reason": reason},
@@ -692,6 +732,8 @@ def merge(
                     "claim_id": o.claim_id,
                     "text": texts[o.claim_id].draft.text,
                     "span": texts[o.claim_id].draft.source.span,
+                    "new_value": o.new_value,
+                    "existing_value": o.existing_value,
                     "covered_by": [
                         {
                             "beat_id": beat_id,
