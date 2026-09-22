@@ -1346,3 +1346,85 @@ def test_a_covered_claim_is_logged_with_every_claim_that_covers_it():
             ],
         }
     ]
+
+
+def test_a_new_claims_values_are_never_written_as_a_stated_value(tmp_path):
+    """A `new` claim states no value to compare, so whatever the judge puts
+    in its value fields is ignored — not re-asked (a harmless field must not
+    hold a story) and never written. The live replays (2026-09-21, r5, r6,
+    r8, r10) filled them with prose, e.g. c152 "seeing it involves trudging
+    up ramps of curving halls"; written, that prose became the joined
+    claim's `stated_value` and was shown as `(stated: ...)` in every later
+    P6 prompt at the place."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", COMPLETED_FR), _judged(unit, "c02", MUSCHAMP)]
+    story = _story("The 1959 building and its critic", ["c01", "c02"])
+    existing = _existing()
+    answer = _answer(
+        "same",
+        "b1",
+        [
+            _claim_verdict("c01", "same", "b1.c02", "1959", "1959"),
+            _claim_verdict("c02", "new", new_value="Herbert Muschamp praised the building's look",
+                           reason="no claim mentions Muschamp"),
+        ],
+    )
+    client = _armed_judge([answer], claims)
+
+    outcome = merge.merge(story, claims, existing, client)
+
+    assert outcome.held is False
+    assert len([c for c in client.calls if c[0] == "merge_judge"]) == 1  # no re-ask
+    added = merge.apply(outcome, existing)[0].claims[2]
+    assert added.text == MUSCHAMP["text"]
+    assert [s.stated_value for s in added.sources] == [None]
+
+
+def test_a_same_answer_with_two_different_values_folds_but_writes_no_stated_value(tmp_path):
+    """The judge paraphrases in the value fields: live, a panel-upheld fold
+    quoted 'rejected by critics' against 'derided by critics', and r6
+    (2026-09-21) quoted 'atrium centers on a huge spiral ramp' against 'has
+    a spiral ramp'. Unequal values are no evidence against `same`, so the
+    answer is not re-asked (that would hold correct folds, as the covered
+    value rule did) — but prose is not a value: the appended source gets no
+    stated_value. Equal values ("1959") are still written, see
+    test_same_claim_appends_source_not_beat."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", COMPLETED_FR)]
+    story = _story("The 1959 building", ["c01"])
+    existing = _existing()
+    answer = _answer(
+        "same", "b1",
+        [_claim_verdict("c01", "same", "b1.c02", "finished in 1959",
+                        "finished in 1959 after both men died")],
+    )
+    client = _armed_judge([answer], claims)
+
+    outcome = merge.merge(story, claims, existing, client)
+
+    assert outcome.held is False
+    assert len([c for c in client.calls if c[0] == "merge_judge"]) == 1  # no re-ask
+    merged = merge.apply(outcome, existing)
+    assert [(s.source_id, s.stated_value) for s in merged[0].claims[1].sources] == [
+        (LP_SOURCE, None),
+        (FR_SOURCE, None),
+    ]
+    assert model.validate(_records(merged), chunks_root=_chunks_root(tmp_path)) == []
+
+
+def test_a_same_answer_with_one_value_writes_no_stated_value():
+    """A lone value on `same` has nothing to agree with, so it is not
+    written: the path a prose value would otherwise slip through."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", COMPLETED_FR)]
+    existing = _existing()
+    answer = _answer(
+        "same", "b1", [_claim_verdict("c01", "same", "b1.c02", new_value="finished in 1959")]
+    )
+
+    outcome = merge.merge(
+        _story("The 1959 building", ["c01"]), claims, existing, _armed_judge([answer], claims)
+    )
+
+    merged = merge.apply(outcome, existing)
+    assert [s.stated_value for s in merged[0].claims[1].sources] == [None, None]

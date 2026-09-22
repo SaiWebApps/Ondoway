@@ -569,11 +569,18 @@ def _decide_claims(
         new_value = item["new_value"] or None
         existing_value = item["existing_value"] or None
         if verdict == "new":
+            # Nothing to compare, so no value: the judge's fields here are
+            # prose (live 2026-09-21) and would be written as stated_value.
+            new_value = existing_value = None
             outcome: ClaimOutcomeKind = "new"
             applied = (
                 fresh_id(story_beat.beat_id) if story_beat is not None else judged.draft.claim_id
             )
         elif verdict == "same":
+            if new_value != existing_value:
+                # A paraphrase ('rejected' / 'derided by critics'), not a
+                # value; not re-asked, since it is no evidence against same.
+                new_value = existing_value = None
             outcome, applied = "same", item["existing_claim_id"]
         elif verdict == "covered":
             outcome, applied = "covered", item["existing_claim_id"]
