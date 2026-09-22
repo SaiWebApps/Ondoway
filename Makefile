@@ -401,6 +401,14 @@ ingest-merge-replay: ## Prepare a sandbox to replay a finished job's P6 under th
 	@$(PREFLIGHT) --label ingest-merge-replay $(PRE_PY)
 	@$(LOCAL_EXEC) uv run python scripts/ingest_merge_replay.py --city $(CITY) --job $(JOB) $(if $(PLACE),--place "$(PLACE)") $(ARGS)
 
+ingest-merge-offline: ## Re-measure P6 on finished replay sandboxes with the answers they recorded ($0, no model call): every story merged again under the current code over the file the job started from (refused unless its sha matches), unmeasured where the code asks more than was recorded; prints a JSON report. Usage: make ingest-merge-offline CITY=new_york JOB=<job_id> START=<beats.json> RUNS="<sandbox> <sandbox> ..."
+	@test -n "$(CITY)" || { echo "ERROR: CITY is required." >&2; exit 2; }
+	@test -n "$(JOB)" || { echo "ERROR: JOB (a data-ingest job id) is required." >&2; exit 2; }
+	@test -n "$(START)" || { echo "ERROR: START (the beats file the job started from) is required." >&2; exit 2; }
+	@test -n "$(RUNS)" || { echo "ERROR: RUNS (replay sandbox roots) is required." >&2; exit 2; }
+	@$(PREFLIGHT) --label ingest-merge-offline $(PRE_PY)
+	@$(LOCAL_EXEC) uv run python scripts/ingest_merge_offline.py --city $(CITY) --job $(JOB) --start "$(START)" $(foreach r,$(RUNS),--run "$(r)") $(ARGS)
+
 ingest-lift-report: ## Narration lift report over a new-shape beats file ($0): per beat the longest run shared with its spans, proper-name or not, and refusals at the gate's run length with/without the name exemption. Usage: make ingest-lift-report FILE=data-ingest/new_york/beats.json [ARGS="--run 6"]
 	@test -n "$(FILE)" || { echo "ERROR: FILE is required (a new-shape beats.json)." >&2; exit 2; }
 	@$(PREFLIGHT) --label ingest-lift-report $(PRE_PY)

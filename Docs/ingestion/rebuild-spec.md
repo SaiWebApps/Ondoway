@@ -1301,6 +1301,40 @@ Every proving node red first or undo-tested. Not built: the empty-value prompt e
 change gets its own calibration); a held item from an answer that never passed its checks still
 shows no answer. Nothing measured live.
 
+*Offline re-measure — registered before measuring ($0, 2026-09-22; handoff step 4).*
+`make ingest-merge-offline` (scripts/ingest_merge_offline.py, test-first) merges every story in the
+ten `jobB-replay-cov-r1` … `-r10` sandboxes again under the code at 14c3de0 plus this tool, the judge
+answering ONLY with that run's recorded `merge_answered` answers, in order, over the file job B
+started from (`$HOME/ondoway-ingest-backup-2026-09-13/step2c-pre-jobB-2026-09-20/new_york/beats.json`,
+sha `fa549e1db77b8463`, equal to every run's recorded `beats_sha256`). A story the code asks more of
+than was recorded is `unmeasured`; stories applied one after another as P6 does. It measures the
+merge DECISION only — not P4/P5 re-narration or P7. Scored on the Guggenheim story
+`a-building-brought-back-from-a-dream` (c148), exactly as follows, "answered" (the recorded answers,
+known: c148 `covered` c01+c03 and c151 `same` c21 in 10/10) reported apart from "applied" (this
+run): (B1) `applied` in at least 9 of 10 runs — `unmeasured` counts as not applied; (B2) one judge
+call in each of the 10 runs — no re-ask at all; (B3) across every applied story at the place in all
+ten runs, every `stated_value` written equals both values the judge quoted for that claim — zero
+exceptions. Reported, not scored: c148's and c151's outcomes per run, the story-level verdict
+(expected `same` b1 in r3, r5, r6, r8), every hold and its reason (a leftover-words hold on c148
+would be a registered FAIL of B1, not re-scored), and the two stories with no recorded answer (never
+judged live) as unmeasured.
+*Offline re-measure — result (2026-09-22, $0; report
+`$HOME/ondoway-ingest-backup-2026-09-13/offline-remeasure-2026-09-22.json`, reproducible by the
+registered command).* Scored as registered: (B1) applied 10/10 PASS — c148 `covered` c01+c03 and c151
+`same` c21 in every run; (B2) one judge call in 10/10 PASS — the nine recorded re-asks go unused;
+(B3) 0 exceptions PASS — the only `stated_value` written at the place in all ten runs is c151's
+"1959", quoted "1959" on both sides. Answered 10/10 (recorded) vs applied 10/10 here, against 5/10
+applied live under the old contract. Reported, not scored: story-level `same` b1 in r3, r5, r6 and
+r8, now APPLIED in all four — the Frommer's story's c149, c152 and c162 join the LP ziggurat beat in
+40% of runs and stay their own beat in 60% (the owner's ruling on that shape is owed); in r6 c162
+folds `same` into LP c03 with no value written (the near-duplicate the reviewers doubted); the
+leftover guard held nothing; `museum-or-cupcake` and `kandinsky-s-permanent-home` applied on their one
+recorded answer in every run. Registration error, not re-scored: the two stories said to be
+"reported as unmeasured" are absent — P3 kept 0 claims for each, so they never reached P6 live and
+the tool skips a story with no claims. What this shows: the first answer the judge gave in
+each of the 10 runs now applies; the 9 re-ask answers were not exercised. What it does not: the judge's behaviour on new samples, anything after the
+decision (P4/P5, P7), or the precision of `covered` — still one claim at one place.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
