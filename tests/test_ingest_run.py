@@ -126,7 +126,8 @@ def test_job_runs_p0_to_p7_on_the_mock_and_commits_a_valid_file(tmp_path):
     log = json.loads((data_root / script_mod.CITY / "book-log.json").read_text(encoding="utf-8"))
     entry = next(b for b in log["books_processed"] if b["book_slug"] == script_mod.LP_SOURCE)
     assert entry["chunks_processed"] == [
-        {"chunk": script_mod.LP_CHUNK, "beats_extracted": 1, "pois_touched": [script_mod.PLACE]}
+        {"chunk": script_mod.LP_CHUNK, "beats_extracted": 1, "pois_touched": [script_mod.PLACE],
+         "covered": []}
     ]
 
 
@@ -383,6 +384,95 @@ def test_a_held_merge_is_a_queue_item_and_nothing_of_it_reaches_disk(tmp_path):
     assert item.decision is None
 
 
+def test_a_held_merge_shows_the_reviewer_every_claim_the_judge_named(tmp_path):
+    """A held merge used to show only the reason: nothing said which claims
+    the judge named or what it quoted, so five correct covered folds
+    (2026-09-21) sat in a queue with nothing to review. The item now
+    carries the judge's answer per claim — verdict, every named claim WITH
+    its text, the values and the reason. Here c01 matches the origins
+    beat's c01 and the signature agrees; c03 is called new although the
+    signature matches the completion claim, which holds the story."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    script_mod.seed_beats(data_root, script_mod.existing_records())
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(script_mod.unit(chunks))
+    scripted["answers"]["merge_judge"] = [
+        script_mod.merge_answer(
+            "new", "",
+            [
+                _claim_verdict("c01", "same", "b1.c01", "his sixties", "his sixties",
+                               reason="both say he began collecting in his sixties"),
+                _claim_verdict("c02", "new", reason="no claim mentions 1939"),
+                _claim_verdict("c03", "new", reason="nothing like it"),
+            ],
+        )
+    ]
+
+    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+
+    [item] = store.undecided(script_mod.CITY)
+    assert item.kind == "merge_held"
+    assert item.shown["judge_claims"] == [
+        {
+            "claim_id": "c01", "verdict": "same",
+            "named": [{"beat_id": script_mod.ORIGINS_ID, "claim_id": "c01",
+                       "text": script_mod.COLLECTING["text"]}],
+            "new_value": "his sixties", "existing_value": "his sixties",
+            "reason": "both say he began collecting in his sixties",
+        },
+        {"claim_id": "c02", "verdict": "new", "named": [], "new_value": "",
+         "existing_value": "", "reason": "no claim mentions 1939"},
+        {"claim_id": "c03", "verdict": "new", "named": [], "new_value": "",
+         "existing_value": "", "reason": "nothing like it"},
+    ]
+
+
+def test_a_covered_claim_is_recorded_in_p6_and_the_book_log(tmp_path):
+    """An absorbed claim was recorded only in the job's event stream
+    (2026-09-21), which a reader of the city's book log never sees. The
+    completion claim is covered by the origins beat's two claims together;
+    P6 and the book log's chunk entry now name it and what covered it.
+    (The collecting claim folds `same`; the 1939 claim alone is below the
+    anecdote's arc minimum and is queued — the folds still land.)"""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    script_mod.seed_beats(data_root, script_mod.existing_records())
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(script_mod.unit(chunks))
+    scripted["answers"]["merge_judge"] = [
+        script_mod.merge_answer(
+            "new", "",
+            [
+                _claim_verdict("c01", "same", "b1.c01", "his sixties", "his sixties"),
+                _claim_verdict("c02", "new", reason="no claim mentions 1939"),
+                _claim_verdict("c03", "covered", "b1.c01+b1.c02"),
+            ],
+        )
+    ]
+
+    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    covered = [
+        {
+            "story_slug": script_mod.STORY_SLUG,
+            "claim_id": "c03",
+            "text": script_mod.COMPLETED["text"],
+            "covered_by": [[script_mod.ORIGINS_ID, "c01"], [script_mod.ORIGINS_ID, "c02"]],
+        }
+    ]
+    assert store.phase_output(job.id, "P6")["covered"] == covered
+    log = json.loads((data_root / script_mod.CITY / "book-log.json").read_text(encoding="utf-8"))
+    [entry] = log["books_processed"][-1]["chunks_processed"]
+    assert entry["covered"] == covered
+
+
 def test_ids_in_rerun_get_p4_and_p5_again_before_p7(tmp_path):
     """§3 P6: any claim change → P4/P5 rerun for that beat. The judge and
     the hint agree the story is the origins beat's: two claims are the
@@ -451,7 +541,8 @@ def test_ids_in_rerun_get_p4_and_p5_again_before_p7(tmp_path):
 
     log = json.loads((data_root / script_mod.CITY / "book-log.json").read_text(encoding="utf-8"))
     assert log["books_processed"][-1]["chunks_processed"] == [
-        {"chunk": script_mod.LP_CHUNK, "beats_extracted": 0, "pois_touched": [script_mod.PLACE]}
+        {"chunk": script_mod.LP_CHUNK, "beats_extracted": 0, "pois_touched": [script_mod.PLACE],
+         "covered": []}
     ]
 
 
@@ -583,7 +674,19 @@ def test_one_failing_item_never_ends_the_job(tmp_path, case):
         assert records == script_mod.existing_records()
 
 
-def test_a_reverted_merge_is_queued_as_the_incoming_story_and_counts_as_nothing(tmp_path):
+@pytest.mark.parametrize(
+    "completion",
+    [
+        _claim_verdict("c03", "same", "b1.c02", "1959", "1959"),
+        # A covered claim of a dropped merge was absorbed nowhere: P6 must
+        # not record it (the job is commit_skipped, so no log is written).
+        _claim_verdict("c03", "covered", "b1.c01+b1.c02"),
+    ],
+    ids=["same", "covered"],
+)
+def test_a_reverted_merge_is_queued_as_the_incoming_story_and_counts_as_nothing(
+    tmp_path, completion
+):
     """Judge, checkpoint 14: when a merged beat's re-narration is held the beat
     stays as it was on disk — but the review item named the EXISTING beat's
     story (built from the beat), not the book's story whose merge was
@@ -628,7 +731,7 @@ def test_a_reverted_merge_is_queued_as_the_incoming_story_and_counts_as_nothing(
             [
                 _claim_verdict("c01", "same", "b1.c01", "his sixties", "his sixties"),
                 _claim_verdict("c02", "new", reason="no claim mentions 1939"),
-                _claim_verdict("c03", "same", "b1.c02", "1959", "1959"),
+                completion,
             ],
         )
     ]
@@ -656,6 +759,8 @@ def test_a_reverted_merge_is_queued_as_the_incoming_story_and_counts_as_nothing(
     assert p6["applied"] == []
     assert p6["changed"] is False
     assert p6["per_unit"][unit.key]["pois_touched"] == []
+    assert p6["per_unit"][unit.key]["covered"] == []
+    assert p6["covered"] == []
     assert beats_path.read_bytes() == before
     assert "commit_skipped" in [e.message for e in snap.events]
 

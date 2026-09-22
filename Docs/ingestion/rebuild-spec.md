@@ -253,7 +253,9 @@ missed per class. A judge prompt change that lowers a class's catch rate fails t
 as_of, rights_basis}` → 202 + job id. `GET /ingest/jobs/{id}` snapshot; `GET
 /ingest/jobs/{id}/stream` SSE of phase events. `GET /ingest/review?city=` lists held items
 ranked by content held back; `POST /ingest/review/decision` records `{item_id, decision,
-decided_by}` bound to the hash of what was shown. `POST /ingest/publish?city=&target=`
+decided_by}` bound to the hash of what was shown; a merge held after the judge answered shows
+that answer per claim (`shown.judge_claims`: verdict, every named claim with its text, the values,
+the reason). `POST /ingest/publish?city=&target=`
 refuses while any held item is undecided. All served by the existing FastAPI app beside
 `/onboard/*`, reusing `JobStore`. The workbench page shows jobs, phases, the queue and the
 publish button; nothing else.
@@ -1280,6 +1282,24 @@ values, so the values gave a rule nothing to catch. All 14 attempts concern one 
 this shows the values added no signal here, not that a rule on the values could never catch a new
 claim that adds a fact. `make ingest-calibrate-live` printed
 $0.8267, above the $0.70 stated to the owner — not run; owner decision owed.
+
+*P6 `covered` made safe — built test-first ($0, 2026-09-22; handoff
+`$HOME/ondoway-handoffs/2026-09-21-covered-verdict-next-session.md` Part 1 steps 2-3).* (1) The
+judge's value fields are never written as prose: a `new` claim's values are ignored, and a `same`
+writes `stated_value` only when both values are given and equal — unequal or one-sided values fold
+with none and are NOT re-asked (the literal "must be equal, re-ask" rule held a live panel-upheld
+fold whose values were paraphrases). (2) The covered value hold is gone (values go to
+`merge_covered` for audit); in its place a covered claim's signature words, less the place name's
+and every named claim's, must leave nothing — any word left holds the story and is named in the
+reason. Blind to a recombination of existing words; its false holds (queued, never a false fold)
+are word-form variants and a place name shorter than the claim's (c148 folds because P2's place is
+"Solomon R. Guggenheim Museum"). (3) A held merge's review item shows the judge's per-claim answer
+(§5). (4) Each chunk entry of the book log, and P6's output, carries `covered`: the absorbed claims
+(story, claim id, text, the claims that cover it), empty when none and dropped when the story's
+merge was reverted; `scripts/rebuild_book_log.py` carries the field, since no beat records it.
+Every proving node red first or undo-tested. Not built: the empty-value prompt example (a prompt
+change gets its own calibration); a held item from an answer that never passed its checks still
+shows no answer. Nothing measured live.
 
 ### Slice 11: Cleanup
 

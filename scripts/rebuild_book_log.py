@@ -43,7 +43,9 @@ from typing import Any
 from scripts.wipe_beats import LEGACY_AMBIGUOUS, same_book
 
 #: Fields a beat cannot prove. Carried across from the old log when its entry is found.
-CARRIED_FIELDS = ("processed_at", "pois_created", "pois_mentioned_no_content", "new_pois_flagged")
+CARRIED_FIELDS = (
+    "processed_at", "pois_created", "pois_mentioned_no_content", "new_pois_flagged", "covered"
+)
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 

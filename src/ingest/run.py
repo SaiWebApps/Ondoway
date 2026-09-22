@@ -860,6 +860,7 @@ class _Run:
             "judged_claims": [_dump(c) for c in claims],
             "narration": narration.narration.text,
             "judge_story": outcome.judge_story,
+            "judge_claims": outcome.answered,
             "reason": outcome.reason,
         }
         self.store.queue(
@@ -929,6 +930,9 @@ class _Run:
         # which beat — so a merge dropped by a failed rerun counts as nothing.
         touched_by: dict[str, dict[str, set[str]]] = {}
         merged_into: dict[str, list[tuple[str, Story, list[JudgedClaim], JudgedNarration]]] = {}
+        # Claims absorbed as `covered`, per unit: recorded in P6 and the book
+        # log, not only the event stream.
+        covered_by_unit: dict[str, list[dict[str, Any]]] = {}
         for unit in units:
             touched = touched_by.setdefault(unit.key, {})
             extracted = 0
@@ -982,6 +986,17 @@ class _Run:
                 if outcome is not None and (outcome.story != "new" or folds):
                     existing = merge.apply(outcome, existing)
                     applied.append(story.story_slug)
+                    texts = {c.draft.claim_id: c.draft.text for c in claims}
+                    covered_by_unit.setdefault(unit.key, []).extend(
+                        {
+                            "story_slug": story.story_slug,
+                            "claim_id": o.claim_id,
+                            "text": texts[o.claim_id],
+                            "covered_by": [list(ref) for ref in o.covered_by],
+                        }
+                        for o in folds
+                        if o.outcome == "covered"
+                    )
                     # A covered claim changes no existing beat: never re-dump it.
                     targets = {o.existing_beat_id for o in folds if o.outcome != "covered"}
                     if outcome.beat_id:
@@ -1069,6 +1084,10 @@ class _Run:
             entry["pois_touched"] = sorted(
                 place for place, slugs in touched_by.get(unit_key, {}).items() if slugs
             )
+            # A merge dropped by a reverted rerun absorbed nothing.
+            entry["covered"] = [
+                c for c in covered_by_unit.get(unit_key, []) if c["story_slug"] in applied
+            ]
         changed_ids.update(rerun)
         changed_ids -= reverted
         records = [
@@ -1082,6 +1101,7 @@ class _Run:
                 "per_unit": per_unit,
                 "new": [b.beat_id for b in new_records],
                 "applied": applied,
+                "covered": [c for entry in per_unit.values() for c in entry["covered"]],
                 "rerun": rerun,
                 "changed": bool(new_records or applied or set(rerun) - reverted),
             },

@@ -139,3 +139,15 @@ def test_the_rebuild_carries_what_only_the_log_knows() -> None:
     # And the count is the corpus's, not the old log's claim about it.
     assert entry["beats_extracted"] == 2
     assert any("carried" in n for n in notes)
+
+
+def test_the_rebuild_carries_the_claims_p6_absorbed_as_covered() -> None:
+    """A `covered` claim lives in no beat — it was absorbed by claims
+    already there — so the log is its only lasting record, and a rebuild
+    from the beats must carry it across, never drop it (judge, 2026-09-22)."""
+    covered = [{"story_slug": "a-building-brought-back-from-a-dream", "claim_id": "c148",
+                "text": "Frank Lloyd Wright designed the spiral Solomon R. Guggenheim Museum.",
+                "covered_by": [["b-ziggurat", "c01"], ["b-ziggurat", "c03"]]}]
+    log = {"lonely-planet-new-york-city": {"chunk-07": {"covered": covered}}}
+    rebuilt, _notes = rebuild("new_york", _BEATS, log)
+    assert rebuilt["books_processed"][0]["chunks_processed"][0]["covered"] == covered

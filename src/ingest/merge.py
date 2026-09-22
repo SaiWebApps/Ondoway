@@ -159,6 +159,9 @@ class MergeOutcome(BaseModel):
     claims: list[ClaimOutcome] = []
     judged: list[JudgedClaim] = []
     rerun: list[str] = []
+    #: A held outcome only: the judge's answer per claim, every named claim
+    #: with its text, so the reviewer sees what was decided and on what.
+    answered: list[dict] = []
 
 
 #: The P6 cost-estimate plan, priced PER NEW STORY (estimate it over the
@@ -461,6 +464,32 @@ def covered_leftovers(
     return found
 
 
+def _answered(answer: dict, existing: Sequence[model.Beat]) -> list[dict]:
+    """The judge's resolved answer per claim, as a reviewer reads it."""
+    claim_text = {(b.beat_id, c.claim_id): c.text for b in existing for c in b.claims}
+    rows = []
+    for item in answer["claims"]:
+        refs = item["covered_by"] or (
+            [(item["existing_beat_id"], item["existing_claim_id"])]
+            if item["existing_claim_id"] else []
+        )
+        rows.append(
+            {
+                "claim_id": item["claim_id"],
+                "verdict": item["verdict"],
+                "named": [
+                    {"beat_id": beat_id, "claim_id": claim_id,
+                     "text": claim_text[(beat_id, claim_id)]}
+                    for beat_id, claim_id in refs
+                ],
+                "new_value": item["new_value"],
+                "existing_value": item["existing_value"],
+                "reason": item["reason"],
+            }
+        )
+    return rows
+
+
 # ── Kind rules (D9) ─────────────────────────────────────────────────────────
 
 
@@ -705,6 +734,7 @@ def merge(
             held=True,
             reason=reason,
             judged=list(claims),
+            answered=_answered(answer, existing),
         )
 
     beat = next((b for b in existing if b.beat_id == answer["beat_id"]), None)

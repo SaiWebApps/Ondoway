@@ -1524,3 +1524,33 @@ def test_a_covered_claim_naming_the_place_by_a_longer_name_than_p2s_is_held():
 
     assert outcome.held is True
     assert outcome.reason == "claim c01: covered leaves words no named claim states: solomon"
+
+
+def test_a_held_covered_answer_lists_every_named_claim_for_the_reviewer():
+    """The live dead end (2026-09-21): a held covered story showed neither
+    the claims the judge named nor its values. The held outcome now carries
+    them — both named claims with their texts, the values as quoted."""
+    unit = _fr_unit()
+    adds = {**C148, "text": (
+        "Frank Lloyd Wright designed the spiral Solomon R. Guggenheim Museum "
+        "as his last major work."
+    )}
+    claims = [_judged(unit, "c01", adds)]
+    story = _story("A building brought back from a dream", ["c01"], place=GUGG_PLACE)
+    answer = _answer("new", "", [_claim_verdict("c01", "covered", "b1.c01+b1.c02", "x", "y",
+                                                reason="c01 the design, c02 the spiral")])
+
+    outcome = merge.merge(story, claims, _ziggurat(), _armed_judge([answer], claims))
+
+    assert outcome.held is True
+    assert outcome.answered == [
+        {
+            "claim_id": "c01", "verdict": "covered",
+            "named": [
+                {"beat_id": ZIGGURAT_ID, "claim_id": "c01", "text": WRIGHT["text"]},
+                {"beat_id": ZIGGURAT_ID, "claim_id": "c02", "text": SPIRAL_LP["text"]},
+            ],
+            "new_value": "x", "existing_value": "y",
+            "reason": "c01 the design, c02 the spiral",
+        }
+    ]
