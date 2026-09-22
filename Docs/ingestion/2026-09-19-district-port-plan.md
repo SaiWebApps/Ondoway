@@ -98,6 +98,12 @@ any deletion, and any claim of proof. Owner go before every paid step.
    ~10 rounds is about 3,860 rounds, so on the order of 120 hours at the 1.9-minute median this
    run saw — but per-round latency is the unknown (the control's slowest round was 20.7 min), so
    plan in rounds, not hours. The ~$1,000-2,300 money range is unchanged by this.
+4a. **Claim retrieval and identity** (added 2026-09-21, from Sai's vector-DB proposal):
+   `2026-09-21-claim-retrieval-plan.md`. After the in-flight `covered` merge work and before
+   the next multi-book job: a permanent `claim_uid` (replaces the claim-id band-aid in the
+   covered handoff), an embedder seam, place matching by meaning, then a recall-gated merge
+   candidate pre-filter, then beat + POI vectors under a Neo4j vector index at publish (Voyage
+   embeddings). No new database; pgvector considered and declined.
 5. **Then the second book** (Frommer's `chunk-05-ch05-uptown`), which is also the merge test:
    fold when confident, queue the doubtful for human review, never block a publish, and report
    the duplicate rate with `make claim-conflicts`.
