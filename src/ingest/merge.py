@@ -49,9 +49,11 @@ cannot read values). What a conflict BECOMES is the code's, by claim kind
 A matched claim FOLDS into the claim that holds it, in whichever beat that
 is: `same` → ONE claim with the second source appended (never a sibling
 claim, never a sibling beat), `resolution.by = corroborated`; a conflict →
-the kind rules above. A `new` claim of a matched story is appended to the
-story's beat under a fresh id (the new story's ids would collide). A `new`
-story's unmatched claims are not applied here: assembling its record needs
+the kind rules above. Where the STORY lives is not the judge's to decide
+(owner ruling 2026-09-22): its verdict is recorded as `judge_story`, and
+the story's unmatched claims always become its own beat, so the same book
+against the same corpus always gives the same shape. Unmatched claims are
+not applied here: assembling its record needs
 the narration the job runner holds (slice 7), and the runner narrates it
 again over those claims alone. Every fold is emitted as `merge_folded` with
 both texts and the new span, so a wrong `same` can be audited.
@@ -118,8 +120,8 @@ class ClaimOutcome(BaseModel):
     for `new`). `applied_claim_id` is the id the fact carries afterwards —
     the existing claim's for `same` and `contested`; a fresh id in the
     matched claim's beat for `supersedes` (the new claim) and `superseded`
-    (the new claim, appended as a dated belief); for `new`, a fresh id in
-    the story's matched beat, or the story's own id when the story is new.
+    (the new claim, appended as a dated belief); for `new`, the story's own
+    id — an unmatched claim stays with its story.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -361,6 +363,20 @@ def _covered_problems(cid: str, item: dict, handled: dict[str, model.Beat]) -> l
         for part in parts
         if _claim_ref(part, handled) is None
     ]
+    for part in parts:
+        ref = _claim_ref(part, handled)
+        if ref is None:
+            continue
+        beat = handled[part.partition(".")[0]]
+        named = next(c for c in beat.claims if c.claim_id == ref[1])
+        if named.status != "resolved":
+            # Absorbed, the new claim is written nowhere: a superseded
+            # claim states what the corpus no longer holds and a contested
+            # one's value is in dispute, so either would lose a live fact.
+            problems.append(
+                f"claim {cid}: {ref[1]} of {ref[0]} is {named.status}; "
+                f'"covered" names only resolved claims'
+            )
     if len(set(parts)) < 2:
         problems.append(
             f'claim {cid}: "covered" must name at least two different claims, joined by "+"'
@@ -614,7 +630,6 @@ def _decide_claims(
     answer: dict,
     claims: Sequence[JudgedClaim],
     existing: Sequence[model.Beat],
-    story_beat: model.Beat | None,
 ) -> list[ClaimOutcome]:
     by_id = {c.draft.claim_id: c for c in claims}
     beats = {b.beat_id: b for b in existing}
@@ -638,9 +653,7 @@ def _decide_claims(
             # prose (live 2026-09-21) and would be written as stated_value.
             new_value = existing_value = None
             outcome: ClaimOutcomeKind = "new"
-            applied = (
-                fresh_id(story_beat.beat_id) if story_beat is not None else judged.draft.claim_id
-            )
+            applied = judged.draft.claim_id
         elif verdict == "same":
             if new_value != existing_value:
                 # A paraphrase ('rejected' / 'derided by critics'), not a
@@ -737,17 +750,18 @@ def merge(
             answered=_answered(answer, existing),
         )
 
-    beat = next((b for b in existing if b.beat_id == answer["beat_id"]), None)
-    outcomes = _decide_claims(answer, claims, existing, beat)
-    story: StoryOutcome
-    if beat is None:
-        story = "new"
-    else:
-        story = "supersedes" if any(o.outcome == "supersedes" for o in outcomes) else "same"
+    # Where the story LIVES is ours, not the judge's (owner ruling
+    # 2026-09-22): its unmatched claims always make its own beat, so the
+    # same book against the same corpus always gives the same shape. Live,
+    # the judge joined an existing beat in 4 of 10 replays of one story and
+    # kept it separate in 6. Its verdict is kept as `judge_story`, and
+    # claim-level folds are untouched — a repeated fact still merges.
+    outcomes = _decide_claims(answer, claims, existing)
+    story: StoryOutcome = "new"
     changed = {
-        beat.beat_id if o.outcome == "new" else o.existing_beat_id
+        o.existing_beat_id
         for o in outcomes
-        if o.outcome in _RESOLVED_TEXTS_CHANGE and (o.outcome != "new" or beat is not None)
+        if o.outcome in _RESOLVED_TEXTS_CHANGE and o.outcome != "new"
     }
     rerun = [b.beat_id for b in existing if b.beat_id in changed]
     texts = {c.draft.claim_id: c for c in claims}
@@ -800,7 +814,7 @@ def merge(
         {
             "story_slug": new_story.story_slug,
             "story": story,
-            "beat_id": beat.beat_id if beat is not None else None,
+            "beat_id": None,
             "claims": [
                 {
                     "claim_id": o.claim_id,
@@ -819,7 +833,7 @@ def merge(
         judge_story=answer["story"],
         judge_model=judge_model,
         story=story,
-        beat_id=beat.beat_id if beat is not None else None,
+        beat_id=None,
         claims=outcomes,
         judged=list(claims),
         rerun=rerun,
@@ -861,14 +875,16 @@ def apply(outcome: MergeOutcome, beats: Sequence[model.Beat]) -> list[model.Beat
     Returns a new list — the caller's beats are never mutated. A held
     outcome cannot be applied (ValueError: it is a queue item). Every
     matched claim lands in the beat that holds its match, whatever the
-    story verdict; a `new` claim joins the story's matched beat, or — when
-    the story is new — stays with the story, whose record is the runner's
-    to assemble. Every beat the outcome names must be among `beats`.
+    story verdict; a `new` claim stays with the story, whose record is the
+    runner's to assemble. Every beat the outcome names must be among
+    `beats`.
     """
     if outcome.held:
         raise ValueError(f"held outcome for story {outcome.story_slug!r} cannot be applied")
     targets = {o.existing_beat_id for o in outcome.claims if o.existing_beat_id is not None}
     if outcome.beat_id is not None:
+        # `merge` never sets beat_id now (the story is always its own beat);
+        # kept because `apply` is public and may be handed a built outcome.
         targets.add(outcome.beat_id)
     for beat_id in sorted(targets - {b.beat_id for b in beats}):
         raise ValueError(f"beat {beat_id!r} is not among the beats given")
@@ -886,10 +902,8 @@ def apply(outcome: MergeOutcome, beats: Sequence[model.Beat]) -> list[model.Beat
             # the named claims, none of which its source states in full.
             continue
         if item.outcome == "new":
-            if outcome.beat_id is not None:
-                claims_of[outcome.beat_id].append(
-                    _new_claim(new, item.applied_claim_id, item.new_value)
-                )
+            # Nothing to write: an unmatched claim stays with its story,
+            # whose record the runner assembles (owner ruling 2026-09-22).
             continue
         claims = claims_of[item.existing_beat_id]
         old = next(c for c in claims if c.claim_id == item.existing_claim_id)

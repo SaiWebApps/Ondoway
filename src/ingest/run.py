@@ -999,8 +999,6 @@ class _Run:
                     )
                     # A covered claim changes no existing beat: never re-dump it.
                     targets = {o.existing_beat_id for o in folds if o.outcome != "covered"}
-                    if outcome.beat_id:
-                        targets.add(outcome.beat_id)
                     for target in sorted(targets):
                         changed_ids.add(target)
                         merged_into.setdefault(target, []).append(
@@ -1013,6 +1011,28 @@ class _Run:
                         # Its matched claims now live in the beats that hold
                         # them; its own beat is the rest, narrated again.
                         unmatched = {o.claim_id for o in outcome.claims if o.outcome == "new"}
+                        absorbed = [o.claim_id for o in outcome.claims if o.outcome == "covered"]
+                        if absorbed and unmatched and model.arc_too_short(
+                            story.beat_type, len(unmatched)
+                        ):
+                            # An absorbed claim is written NOWHERE, so a story
+                            # left below its arc minimum would lose its
+                            # remainder to a queue (owner ruling 2026-09-22).
+                            # Keeping a claim the corpus already states beats
+                            # losing one it does not.
+                            self.emit(
+                                "merge_covered_refused",
+                                {"story_slug": story.story_slug, "place": story.place,
+                                 "claim_ids": absorbed, "kept": len(unmatched),
+                                 "beat_type": story.beat_type},
+                            )
+                            unmatched |= set(absorbed)
+                            covered_rows = covered_by_unit.get(unit.key, [])
+                            covered_by_unit[unit.key] = [
+                                c for c in covered_rows
+                                if not (c["story_slug"] == story.story_slug
+                                        and c["claim_id"] in set(absorbed))
+                            ]
                         kept = [c for c in claims if c.draft.claim_id in unmatched]
                         new_story = story.model_copy(
                             update={"claim_ids": [c.draft.claim_id for c in kept]}
@@ -1034,7 +1054,13 @@ class _Run:
                             )
                             continue
                     beat = assemble_record(self.job.city, new_story, kept, narration)
-                    if folds:
+                    if folds and len(kept) != len(claims):
+                        # With folds present, kept == claims holds IFF the
+                        # refusal above fired (every other fold kind drops its
+                        # claim from `unmatched`), so the story's content is
+                        # exactly what P4/P5 already narrated — and a covered
+                        # fold changes no existing beat. Narrating again would
+                        # buy a paid call for a byte-identical result.
                         renarrated, reason = self._rerun(beat, publishers)
                         if renarrated is None:
                             self._queue_unmerged(
@@ -1048,6 +1074,15 @@ class _Run:
                         self.emit(
                             "beat_id_collision",
                             {"story_slug": story.story_slug, "beat_id": beat.beat_id},
+                        )
+                        # Never a bare drop: its claims are judged and
+                        # narrated, and a story never joins the beat it
+                        # collides with any more (owner ruling 2026-09-22).
+                        self._queue_unmerged(
+                            new_story, kept,
+                            f"the place already holds a beat with this story's slug "
+                            f"({beat.beat_id})",
+                            narration,
                         )
                         continue
                     new_records.append(beat)

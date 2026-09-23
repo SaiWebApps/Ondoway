@@ -432,25 +432,32 @@ def test_a_held_merge_shows_the_reviewer_every_claim_the_judge_named(tmp_path):
 
 def test_a_covered_claim_is_recorded_in_p6_and_the_book_log(tmp_path):
     """An absorbed claim was recorded only in the job's event stream
-    (2026-09-21), which a reader of the city's book log never sees. The
-    completion claim is covered by the origins beat's two claims together;
-    P6 and the book log's chunk entry now name it and what covered it.
-    (The collecting claim folds `same`; the 1939 claim alone is below the
-    anecdote's arc minimum and is queued — the folds still land.)"""
+    (2026-09-21), which a reader of the city's book log never sees. Here the
+    completion claim is covered by the sidebar's two claims together; P6 and
+    the book log's chunk entry name it and what covers it. The story keeps
+    its other two claims, so the absorption stands (below the arc minimum it
+    would be refused), and its beat is narrated over what it kept."""
     chunks = script_mod.chunk_dir(tmp_path)
     data_root = script_mod.data_dir(tmp_path)
-    script_mod.seed_beats(data_root, script_mod.existing_records())
+    beats_path = script_mod.seed_beats(data_root, script_mod.folding_records())
     store = jobs.IngestJobStore()
     job = _book_job(store, chunks)
     _events, sink = _sink_and_events()
     scripted = script_mod.script(script_mod.unit(chunks))
+    scripted["answers"]["author"].append(
+        script_mod.narration_answer(script_mod.REMAINDER_NARRATION)
+    )
+    remainder = [script_mod.COLLECTING["text"], script_mod.OPENED_1939["text"]]
+    scripted["batch_answers"].update(
+        script_mod.sentence_verdicts(remainder, script_mod.REMAINDER_NARRATION)
+    )
     scripted["answers"]["merge_judge"] = [
         script_mod.merge_answer(
             "new", "",
             [
-                _claim_verdict("c01", "same", "b1.c01", "his sixties", "his sixties"),
+                _claim_verdict("c01", "new", reason="no claim mentions collecting"),
                 _claim_verdict("c02", "new", reason="no claim mentions 1939"),
-                _claim_verdict("c03", "covered", "b1.c01+b1.c02"),
+                _claim_verdict("c03", "covered", "b2.c01+b2.c02"),
             ],
         )
     ]
@@ -464,50 +471,113 @@ def test_a_covered_claim_is_recorded_in_p6_and_the_book_log(tmp_path):
             "story_slug": script_mod.STORY_SLUG,
             "claim_id": "c03",
             "text": script_mod.COMPLETED["text"],
-            "covered_by": [[script_mod.ORIGINS_ID, "c01"], [script_mod.ORIGINS_ID, "c02"]],
+            "covered_by": [[script_mod.COMPLETION_ID, "c01"], [script_mod.COMPLETION_ID, "c02"]],
         }
     ]
     assert store.phase_output(job.id, "P6")["covered"] == covered
     log = json.loads((data_root / script_mod.CITY / "book-log.json").read_text(encoding="utf-8"))
     [entry] = log["books_processed"][-1]["chunks_processed"]
     assert entry["covered"] == covered
+    records = json.loads(beats_path.read_text(encoding="utf-8"))
+    own = records[2]
+    assert [c["text"] for c in own["claims"]] == remainder  # the absorbed claim is not written
+    assert records[:2] == script_mod.folding_records()  # nothing changed in the sidebar
 
-
-def test_ids_in_rerun_get_p4_and_p5_again_before_p7(tmp_path):
-    """§3 P6: any claim change → P4/P5 rerun for that beat. The judge and
-    the hint agree the story is the origins beat's: two claims are the
-    same (a second source appended), the 1939 claim is new and joins the
-    beat — so its resolved texts changed and P6 names it for a rerun. The
-    runner narrates the beat again from its resolved claims, judges every
-    sentence, and only then commits: the file holds the same two beats,
-    the origins beat carries three claims and the new narration, and its
-    claims_hash is fresh (the validator is clean). No new record; the
-    book log records the chunk touching the place."""
+def test_a_covered_fold_is_refused_when_it_would_orphan_the_remainder(tmp_path):
+    """Owner ruling 2026-09-22: absorbing a claim writes it nowhere, so a
+    story whose remainder would fall below its beat type's arc minimum
+    keeps its covered claims instead — the story stays whole and nothing is
+    lost. Here two of three claims come back `covered`, leaving one claim
+    (the 1939 opening), which alone would be queued and never written. The
+    absorption is refused for this story: its beat carries all three
+    claims, nothing is queued, and P6 records no covered claim (none was
+    absorbed). The cost is a claim the corpus already states, visible in
+    the beat, against a fact lost to a queue nobody applies."""
     chunks = script_mod.chunk_dir(tmp_path)
     data_root = script_mod.data_dir(tmp_path)
     beats_path = script_mod.seed_beats(data_root, script_mod.existing_records())
     store = jobs.IngestJobStore()
     job = _book_job(store, chunks)
-    unit = script_mod.unit(chunks)
     _events, sink = _sink_and_events()
-    scripted = script_mod.script(unit)
-    scripted["answers"]["author"].append(script_mod.narration_answer(script_mod.RERUN_NARRATION))
+    scripted = script_mod.script(script_mod.unit(chunks))
+    title = "Rebay's museum before the spiral"  # its own slug, not the origins beat's
+    scripted["answers"]["author"][0] = script_mod._author(
+        {"stories": [{"title": title, "place": script_mod.PLACE, "beat_type": "anecdote",
+                      "lenses": ["hidden_history", "visual_art"],
+                      "claim_ids": ["c01", "c02", "c03"],
+                      "enrichment": script_mod.ENRICHMENT}]}
+    )
     scripted["answers"]["merge_judge"] = [
         script_mod.merge_answer(
-            "same",
-            "b1",
+            "new", "",
             [
-                _claim_verdict("c01", "same", "b1.c01", "his sixties", "his sixties"),
+                _claim_verdict("c01", "covered", "b1.c01+b1.c02"),
                 _claim_verdict("c02", "new", reason="no claim mentions 1939"),
-                _claim_verdict("c03", "same", "b1.c02", "1959", "1959"),
+                _claim_verdict("c03", "covered", "b1.c01+b1.c02"),
             ],
         )
     ]
-    merged_texts = [
-        script_mod.COLLECTING["text"], script_mod.COMPLETED["text"], script_mod.OPENED_1939["text"]
+
+    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    records = json.loads(beats_path.read_text(encoding="utf-8"))
+    own_id = f"{script_mod.CITY}/{model.slug(script_mod.PLACE)}/{model.slug(title)}"
+    assert [r["beat_id"] for r in records] == [
+        script_mod.ORIGINS_ID, script_mod.VISITING_ID, own_id
     ]
+    own = records[2]
+    assert [c["text"] for c in own["claims"]] == [c["text"] for c in script_mod.CLAIMS]
+    assert store.undecided(script_mod.CITY) == []
+    assert store.phase_output(job.id, "P6")["covered"] == []
+    assert [e.data for e in snap.events if e.message == "merge_covered_refused"] == [
+        {"story_slug": model.slug(title), "place": script_mod.PLACE,
+         "claim_ids": ["c01", "c03"], "kept": 1, "beat_type": "anecdote"}
+    ]
+    assert own["narration"]["text"] == script_mod.NARRATION  # not narrated again
+    assert model.validate(records, chunks_root=chunks.parent) == []
+
+def test_ids_in_rerun_get_p4_and_p5_again_before_p7(tmp_path):
+    """§3 P6: a fold that changes a beat's resolved texts → P4/P5 rerun for
+    that beat before P7. The incoming completion claim conflicts with the
+    sidebar's (event vs event → contested, both values kept), so the
+    sidebar must be narrated again; the story's two unmatched claims become
+    its own beat, narrated over them alone (owner ruling 2026-09-22: the
+    story never joins an existing beat, so a rerun now comes from the fold,
+    not from a claim moving). Both beats' claims_hash are fresh and the
+    validator is clean."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    beats_path = script_mod.seed_beats(data_root, script_mod.folding_records())
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(unit)
+    # A contested claim is not `resolved`, so the rerun narrates the
+    # sidebar's other claim alone (judged_of_beat, run.py).
+    contested_narration = "A ticket cost fifty cents when the doors opened in October 1959."
+    scripted["answers"]["author"].extend([
+        script_mod.narration_answer(script_mod.REMAINDER_NARRATION),
+        script_mod.narration_answer(contested_narration),
+    ])
+    scripted["answers"]["merge_judge"] = [
+        script_mod.merge_answer(
+            "new", "",
+            [
+                _claim_verdict("c01", "new", reason="no claim mentions collecting"),
+                _claim_verdict("c02", "new", reason="no claim mentions 1939"),
+                _claim_verdict("c03", "conflict", "b2.c01", "1959", "1960"),
+            ],
+        )
+    ]
+    remainder = [script_mod.COLLECTING["text"], script_mod.OPENED_1939["text"]]
     scripted["batch_answers"].update(
-        script_mod.sentence_verdicts(merged_texts, script_mod.RERUN_NARRATION)
+        script_mod.sentence_verdicts(remainder, script_mod.REMAINDER_NARRATION)
+    )
+    scripted["batch_answers"].update(
+        script_mod.sentence_verdicts([script_mod.TICKET["text"]], contested_narration)
     )
     recorder = _RecordingClient(llm.MockClient(sink, **scripted))
 
@@ -515,36 +585,34 @@ def test_ids_in_rerun_get_p4_and_p5_again_before_p7(tmp_path):
 
     snap = store.snapshot(job.id)
     assert snap.status == "committed", snap.error
-    assert recorder.calls[-3:] == [
-        ("merge_judge", "P6"), ("author", "P4"), ("narration_judge", "P5")
+    assert [e.data for e in snap.events if e.message == "rerun"] == [
+        {"beat_ids": [script_mod.COMPLETION_ID]}
     ]
-    rerun = [e.data for e in snap.events if e.message == "rerun"]
-    assert rerun == [{"beat_ids": [script_mod.ORIGINS_ID]}]
+    # P4/P5 ran three times: the story's first narration, its remainder
+    # after the fold, and the sidebar's rerun.
+    assert [c for c in recorder.calls if c[1] == "P4"].count(("author", "P4")) == 3
     assert store.undecided(script_mod.CITY) == []
 
     records = json.loads(beats_path.read_text(encoding="utf-8"))
-    assert [r["beat_id"] for r in records] == [script_mod.ORIGINS_ID, script_mod.VISITING_ID]
-    origins = records[0]
-    assert [(c["claim_id"], c["text"]) for c in origins["claims"]] == [
-        ("c01", script_mod.COLLECTING["text"]),
-        ("c02", script_mod.COMPLETED["text"]),
-        ("c03", script_mod.OPENED_1939["text"]),
+    assert [r["beat_id"] for r in records] == [
+        script_mod.VISITING_ID, script_mod.COMPLETION_ID, script_mod.BEAT_ID
     ]
-    assert len(origins["claims"][0]["sources"]) == 2
-    assert origins["narration"]["text"] == script_mod.RERUN_NARRATION
-    assert origins["narration"]["claims_hash"] == model.claims_hash(origins["claims"])
-    assert origins["narration"]["verdict"]["sentences_total"] == 3
-    assert origins["duration_sec"] == narrate.duration_sec(script_mod.RERUN_NARRATION)
-    assert origins["review"] == {"held": False, "reason": None}
-    assert records[1] == script_mod.existing_records()[1]
+    completion = records[1]
+    contested = completion["claims"][0]
+    assert contested["status"] == "contested"
+    assert [s["stated_value"] for s in contested["sources"]] == ["1960", "1959"]
+    assert completion["narration"]["text"] == contested_narration
+    assert completion["narration"]["claims_hash"] == model.claims_hash(completion["claims"])
+    own = records[2]
+    assert [c["claim_id"] for c in own["claims"]] == ["c01", "c02"]
+    assert own["narration"]["text"] == script_mod.REMAINDER_NARRATION
     assert model.validate(records, chunks_root=chunks.parent) == []
 
     log = json.loads((data_root / script_mod.CITY / "book-log.json").read_text(encoding="utf-8"))
     assert log["books_processed"][-1]["chunks_processed"] == [
-        {"chunk": script_mod.LP_CHUNK, "beats_extracted": 0, "pois_touched": [script_mod.PLACE],
+        {"chunk": script_mod.LP_CHUNK, "beats_extracted": 1, "pois_touched": [script_mod.PLACE],
          "covered": []}
     ]
-
 
 def _unreadable(model_id: str) -> llm.MockAnswer:
     return llm.MockAnswer(text="not json", model_id=model_id)
@@ -600,31 +668,42 @@ def _inject_one_item_failure(case: str, unit, scripted: dict, data_root: Path) -
         )
         answers["merge_judge"] = [invalid, invalid]
         return "P6"
-    # P6-rerun(-P4): the merge joins the origins beat, and its re-narration
-    # is unreadable to the sentence judge (or copies the source twice).
-    if case == "P6-rerun-P4":
-        answers["author"].extend(
-            [script_mod.narration_answer(_LIFTED), script_mod.narration_answer(_LIFTED_AGAIN)]
-        )
-    else:
-        answers["author"].append(script_mod.narration_answer(script_mod.RERUN_NARRATION))
+    # P6-rerun(-P4): the incoming completion claim CONFLICTS with the
+    # sidebar's, so that beat is re-narrated (a story never joins an
+    # existing beat, owner ruling 2026-09-22) — and its re-narration is
+    # unreadable to the sentence judge (or copies the source twice).
+    script_mod.seed_beats(data_root, script_mod.folding_records())
     answers["merge_judge"] = [
         script_mod.merge_answer(
-            "same", "b1",
+            "new", "",
             [
-                _claim_verdict("c01", "same", "b1.c01", "his sixties", "his sixties"),
+                _claim_verdict("c01", "new", reason="no claim mentions collecting"),
                 _claim_verdict("c02", "new", reason="no claim mentions 1939"),
-                _claim_verdict("c03", "same", "b1.c02", "1959", "1959"),
+                _claim_verdict("c03", "conflict", "b2.c01", "1959", "1960"),
             ],
         )
     ]
-    merged = [
-        script_mod.COLLECTING["text"], script_mod.COMPLETED["text"], script_mod.OPENED_1939["text"]
-    ]
-    rerun_verdicts = script_mod.sentence_verdicts(merged, script_mod.RERUN_NARRATION)
-    batch.update(rerun_verdicts)
+    remainder = [script_mod.COLLECTING["text"], script_mod.OPENED_1939["text"]]
+    answers["author"].append(script_mod.narration_answer(script_mod.REMAINDER_NARRATION))
+    batch.update(script_mod.sentence_verdicts(remainder, script_mod.REMAINDER_NARRATION))
+    # The contested claim is no longer `resolved`, so the rerun narrates the
+    # sidebar's ticket claim alone.
     if case == "P6-rerun-P4":
+        # Both attempts copy a run of the TICKET claim's own span.
+        answers["author"].extend([
+            script_mod.narration_answer(
+                "Its doors in October 1959, the ticket price was 50\u00a2, the sidebar notes."
+            ),
+            script_mod.narration_answer(
+                "When it opened its doors in October 1959, the ticket price was 50\u00a2."
+            ),
+        ])
         return "P4"
+    answers["author"].append(script_mod.narration_answer(script_mod.TICKET_SENTENCE))
+    rerun_verdicts = script_mod.sentence_verdicts(
+        [script_mod.TICKET["text"]], script_mod.TICKET_SENTENCE
+    )
+    batch.update(rerun_verdicts)
     batch[next(iter(rerun_verdicts))] = _unreadable(judge)
     return "P5"
 
@@ -671,22 +750,13 @@ def test_one_failing_item_never_ends_the_job(tmp_path, case):
         records = json.loads(
             (data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8")
         )
-        assert records == script_mod.existing_records()
+        # The beat that could not be re-narrated is kept exactly as it was;
+        # the story's own beat (its unmatched claims) is still written.
+        assert records[:2] == script_mod.folding_records()
+        assert [c["claim_id"] for c in records[2]["claims"]] == ["c01", "c02"]
 
 
-@pytest.mark.parametrize(
-    "completion",
-    [
-        _claim_verdict("c03", "same", "b1.c02", "1959", "1959"),
-        # A covered claim of a dropped merge was absorbed nowhere: P6 must
-        # not record it (the job is commit_skipped, so no log is written).
-        _claim_verdict("c03", "covered", "b1.c01+b1.c02"),
-    ],
-    ids=["same", "covered"],
-)
-def test_a_reverted_merge_is_queued_as_the_incoming_story_and_counts_as_nothing(
-    tmp_path, completion
-):
+def test_a_reverted_merge_is_queued_as_the_incoming_story_and_counts_as_nothing(tmp_path):
     """Judge, checkpoint 14: when a merged beat's re-narration is held the beat
     stays as it was on disk — but the review item named the EXISTING beat's
     story (built from the beat), not the book's story whose merge was
@@ -727,18 +797,22 @@ def test_a_reverted_merge_is_queued_as_the_incoming_story_and_counts_as_nothing(
     ]
     scripted["answers"]["merge_judge"] = [
         script_mod.merge_answer(
-            "same", "b1",
+            "new", "",
             [
-                _claim_verdict("c01", "same", "b1.c01", "his sixties", "his sixties"),
+                # A conflict re-narrates the origins beat (a story never
+                # joins one, owner ruling 2026-09-22), and that re-narration
+                # is what the sentence judge cannot answer below.
+                _claim_verdict("c01", "conflict", "b1.c01", "his fifties", "his sixties"),
                 _claim_verdict("c02", "new", reason="no claim mentions 1939"),
-                completion,
+                _claim_verdict("c03", "same", "b1.c02", "1959", "1959"),
             ],
         )
     ]
-    merged = [
-        script_mod.COLLECTING["text"], script_mod.COMPLETED["text"], script_mod.OPENED_1939["text"]
-    ]
-    rerun_verdicts = script_mod.sentence_verdicts(merged, script_mod.RERUN_NARRATION)
+    # The contested claim is no longer `resolved`: the rerun narrates the
+    # origins beat's completion claim alone.
+    rerun_verdicts = script_mod.sentence_verdicts(
+        [script_mod.COMPLETED["text"]], script_mod.RERUN_NARRATION
+    )
     scripted["batch_answers"].update(rerun_verdicts)
     scripted["batch_answers"][next(iter(rerun_verdicts))] = _unreadable(
         script_mod.RESPONSE_JUDGE_MODEL
@@ -752,8 +826,17 @@ def test_a_reverted_merge_is_queued_as_the_incoming_story_and_counts_as_nothing(
         {"beat_ids": [script_mod.ORIGINS_ID]}
     ]
     items = store.undecided(script_mod.CITY)
-    assert [(i.kind, i.story_slug) for i in items] == [("merge_held", incoming_slug)]
-    kept = [judge_claims.JudgedClaim.model_validate(c) for c in items[0].shown["judged_claims"]]
+    # TWO items for one story, both about the same claims (a consequence of
+    # the 2026-09-22 ruling, recorded for the owner): its remainder is one
+    # claim, below the anecdote's arc minimum, AND its folds were dropped
+    # when the re-narration was held.
+    assert [(i.kind, i.story_slug) for i in items] == [
+        ("merge_held", incoming_slug), ("merge_held", incoming_slug)
+    ]
+    reasons = sorted(i.reason for i in items)
+    assert any("arc" in r for r in reasons) and any("dropped" in r for r in reasons)
+    [dropped] = [i for i in items if "dropped" in i.reason]
+    kept = [judge_claims.JudgedClaim.model_validate(c) for c in dropped.shown["judged_claims"]]
     assert sorted(c.draft.text for c in kept) == sorted(c["text"] for c in script_mod.CLAIMS)
     p6 = store.phase_output(job.id, "P6")
     assert p6["applied"] == []
@@ -764,6 +847,162 @@ def test_a_reverted_merge_is_queued_as_the_incoming_story_and_counts_as_nothing(
     assert beats_path.read_bytes() == before
     assert "commit_skipped" in [e.message for e in snap.events]
 
+
+
+
+def test_a_story_whose_every_claim_is_absorbed_stays_absorbed(tmp_path):
+    """The refusal exists to save a story's REMAINDER, so a story with no
+    remainder at all is not refused into existence: every claim is stated
+    by the corpus already, nothing is lost, and the story vanishes as
+    `merge_absorbed` — no beat, no queue item. (Judge, 2026-09-22: written
+    as `kept + absorbed >= the minimum` the refusal would fire here and
+    write back claims the corpus already holds.)"""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    fifty_fourth = script_mod._beat(
+        f"{script_mod.CITY}/{model.slug(script_mod.PLACE)}/the-54th-street-museum",
+        "the-54th-street-museum", "The 54th Street museum", "sidebar",
+        [script_mod._lp_claim("c01", script_mod.OPENED_1939)],
+        script_mod.OPENED_1939["text"],
+    )
+    beats_path = script_mod.seed_beats(
+        data_root, [*script_mod.existing_records(), fifty_fourth]
+    )
+    before = beats_path.read_bytes()
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(script_mod.unit(chunks))
+    scripted["answers"]["merge_judge"] = [
+        script_mod.merge_answer(
+            "new", "",
+            [
+                _claim_verdict("c01", "covered", "b1.c01+b1.c02"),
+                _claim_verdict("c02", "covered", "b3.c01+b1.c01"),
+                _claim_verdict("c03", "covered", "b1.c01+b1.c02"),
+            ],
+        )
+    ]
+
+    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    assert [e.data for e in snap.events if e.message == "merge_absorbed"] == [
+        {"story_slug": script_mod.STORY_SLUG, "place": script_mod.PLACE}
+    ]
+    assert [e.message for e in snap.events if e.message == "merge_covered_refused"] == []
+    assert beats_path.read_bytes() == before
+    assert store.undecided(script_mod.CITY) == []
+
+def test_a_covered_claim_of_a_reverted_merge_is_not_recorded(tmp_path):
+    """The other half of the record: a merge dropped because its
+    re-narration was held absorbed nothing, so P6 must not report its
+    covered claim. The story is a `sidebar` (a structural beat type, no arc
+    minimum), so one kept claim is legal and the absorption is not refused;
+    its completion claim conflicts with the origins beat's, that beat's
+    rerun is unreadable to the sentence judge, and the merge is reverted."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    script_mod.seed_beats(data_root, script_mod.existing_records())
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(script_mod.unit(chunks))
+    title = "Rebay's museum before the spiral"
+    scripted["answers"]["author"][0] = script_mod._author(
+        {"stories": [{"title": title, "place": script_mod.PLACE, "beat_type": "sidebar",
+                      "lenses": ["hidden_history", "visual_art"],
+                      "claim_ids": ["c01", "c02", "c03"],
+                      "enrichment": script_mod.ENRICHMENT}]}
+    )
+    one_claim = (
+        "In 1939 Hilla Rebay ran a temporary museum for him on 54th Street, named for "
+        "non-objective painting."
+    )
+    scripted["answers"]["author"].extend([
+        script_mod.narration_answer(one_claim),
+        script_mod.narration_answer(script_mod.RERUN_NARRATION),
+    ])
+    scripted["batch_answers"].update(
+        script_mod.sentence_verdicts([script_mod.OPENED_1939["text"]], one_claim)
+    )
+    rerun_verdicts = script_mod.sentence_verdicts(
+        [script_mod.COMPLETED["text"]], script_mod.RERUN_NARRATION
+    )
+    scripted["batch_answers"].update(rerun_verdicts)
+    scripted["batch_answers"][next(iter(rerun_verdicts))] = _unreadable(
+        script_mod.RESPONSE_JUDGE_MODEL
+    )
+    scripted["answers"]["merge_judge"] = [
+        script_mod.merge_answer(
+            "new", "",
+            [
+                _claim_verdict("c01", "conflict", "b1.c01", "his fifties", "his sixties"),
+                _claim_verdict("c02", "new", reason="no claim mentions 1939"),
+                _claim_verdict("c03", "covered", "b1.c01+b1.c02"),
+            ],
+        )
+    ]
+
+    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    assert [e.data for e in snap.events if e.message == "rerun_reverted"] == [
+        {"beat_ids": [script_mod.ORIGINS_ID]}
+    ]
+    p6 = store.phase_output(job.id, "P6")
+    assert p6["applied"] == [] and p6["covered"] == []
+    assert p6["per_unit"][script_mod.unit(chunks).key]["covered"] == []
+    assert [i.kind for i in store.undecided(script_mod.CITY)] == ["merge_held"]
+
+
+def test_a_story_whose_beat_id_already_exists_is_queued_never_dropped(tmp_path):
+    """A story whose slug already names a beat at its place cannot be
+    written — beat ids are city/place/slug. It used to be dropped with a
+    `beat_id_collision` event and NO review item, so its judged, narrated
+    claims reached neither disk nor queue; the 2026-09-22 ruling (a story
+    never joins an existing beat) made that the default path for every
+    re-ingest producing the same slug. It is now a review item like every
+    other thing P6 cannot apply. Here the place already holds a beat with
+    the incoming story's slug (a prior job's) whose claims are unrelated,
+    so nothing folds."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    twin = script_mod._beat(
+        f"{script_mod.CITY}/{model.slug(script_mod.PLACE)}/{script_mod.STORY_SLUG}",
+        script_mod.STORY_SLUG, script_mod.STORY_TITLE, "anecdote",
+        [script_mod._lp_claim("c01", script_mod.ADDRESS),
+         script_mod._lp_claim("c02", script_mod.HOURS_2023)],
+        script_mod.VISITING_NARRATION,
+    )
+    beats_path = script_mod.seed_beats(data_root, [twin])
+    before = beats_path.read_bytes()
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(script_mod.unit(chunks))
+    scripted["answers"]["merge_judge"] = [
+        script_mod.merge_answer(
+            "new", "",
+            [_claim_verdict(c, "new", reason="nothing like it") for c in ("c01", "c02", "c03")],
+        )
+    ]
+
+    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    assert [e.data for e in snap.events if e.message == "beat_id_collision"] == [
+        {"story_slug": script_mod.STORY_SLUG, "beat_id": twin["beat_id"]}
+    ]
+    assert beats_path.read_bytes() == before  # nothing written
+    [item] = store.undecided(script_mod.CITY)
+    assert (item.kind, item.story_slug) == ("merge_held", script_mod.STORY_SLUG)
+    assert "already holds" in item.reason and twin["beat_id"] in item.reason
+    kept = [judge_claims.JudgedClaim.model_validate(c) for c in item.shown["judged_claims"]]
+    assert sorted(c.draft.text for c in kept) == sorted(c["text"] for c in script_mod.CLAIMS)
 
 def test_a_new_storys_beat_holds_only_its_unmatched_claims_renarrated(tmp_path):
     """Slice 10: a claim of a NEW story that the judge matches in an

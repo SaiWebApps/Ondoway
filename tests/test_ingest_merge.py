@@ -347,8 +347,8 @@ def test_same_claim_appends_source_not_beat(tmp_path):
     assert COMPLETED_FR["span"] not in call["prompt"]  # the judge reads claims, not spans
 
     assert outcome.held is False and outcome.reason is None
-    assert outcome.story == "same"
-    assert outcome.beat_id == ORIGINS_ID
+    assert (outcome.story, outcome.beat_id) == ("new", None)  # placement is ours
+    assert outcome.judge_story == "same"
     assert outcome.judge_model == RESPONSE_MERGE_MODEL
     assert [(c.claim_id, c.outcome, c.existing_claim_id) for c in outcome.claims] == [
         ("c01", "same", "c02")
@@ -356,7 +356,7 @@ def test_same_claim_appends_source_not_beat(tmp_path):
     assert outcome.rerun == []
     assert [kind for kind, _ in events] == ["merge_folded", "merge_decided"]
     assert events[1][1]["story_slug"] == story.story_slug
-    assert events[1][1]["story"] == "same"
+    assert events[1][1]["story"] == "new"
 
     merged = merge.apply(outcome, existing)
 
@@ -383,59 +383,6 @@ def test_same_claim_appends_source_not_beat(tmp_path):
     assert len(existing[0].claims[1].sources) == 1
 
     assert model.validate(_records(merged), chunks_root=_chunks_root(tmp_path)) == []
-
-
-def test_new_claim_joins_the_matched_beat_and_marks_it_for_rerun(tmp_path):
-    """A claim of the same story that no existing claim states is appended
-    to the matched beat under a fresh id (the new story's own ids would
-    collide), resolved, carrying its own P3 verdict. The beat's resolved
-    texts changed, so the outcome names it for a P4/P5 rerun and its
-    narration.claims_hash is stale by design: validate reports exactly
-    that line and nothing else — the runner, not P6, re-narrates."""
-    unit = _fr_unit()
-    claims = [_judged(unit, "c01", COMPLETED_FR), _judged(unit, "c02", MUSCHAMP)]
-    story = _story("The 1959 building and its critic", ["c01", "c02"])
-    existing = _existing()
-    answer = _answer(
-        "same",
-        "b1",
-        [
-            _claim_verdict("c01", "same", "b1.c02", "1959", "1959"),
-            _claim_verdict("c02", "new", reason="no claim mentions Muschamp"),
-        ],
-    )
-    mock = _armed_judge([answer], claims)
-
-    outcome = merge.merge(story, claims, existing, mock)
-
-    assert outcome.held is False
-    assert outcome.story == "same"
-    assert _decided(outcome) == [
-        ("c01", "same", "c02", "c02"),
-        ("c02", "new", None, "c03"),
-    ]
-    assert outcome.rerun == [ORIGINS_ID]
-
-    merged = merge.apply(outcome, existing)
-
-    assert [b.beat_id for b in merged] == [ORIGINS_ID, VISITING_ID]
-    beat = merged[0]
-    assert [c.claim_id for c in beat.claims] == ["c01", "c02", "c03"]
-    added = beat.claims[2]
-    assert added.text == MUSCHAMP["text"]
-    assert added.kind == "belief" and added.status == "resolved"
-    assert [(s.source_id, s.span, s.as_of, s.stated_value) for s in added.sources] == [
-        (FR_SOURCE, MUSCHAMP["span"], 2024, None)
-    ]
-    assert added.verdict == claims[1].verdict
-    assert added.resolution is None
-    assert beat.narration == existing[0].narration  # untouched: stale by design
-
-    errors = model.validate(_records(merged), chunks_root=_chunks_root(tmp_path))
-    assert errors == [
-        f"NARRATION_HASH_STALE {ORIGINS_ID}: narration.claims_hash does not match "
-        "a fresh recomputation over this beat's claims"
-    ]
 
 
 def test_judge_and_signature_disagree_holds_new_story():
@@ -620,7 +567,8 @@ def test_a_judge_match_the_signature_cannot_see_applies(tmp_path):
     outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims))
 
     assert outcome.held is False
-    assert outcome.story == "same" and outcome.beat_id == RECEPTION_ID
+    assert (outcome.story, outcome.beat_id) == ("new", None)
+    assert outcome.judge_story == "same"
     assert _decided(outcome) == [("c01", "same", "c01", "c01")]
     merged = merge.apply(outcome, existing)
     assert [s.source_id for s in merged[2].claims[0].sources] == [LP_SOURCE, FR_SOURCE]
@@ -680,7 +628,7 @@ def test_conflict_between_event_claims_is_contested_never_superseded(tmp_path):
     outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims))
 
     assert outcome.held is False
-    assert outcome.story == "same"
+    assert (outcome.story, outcome.judge_story) == ("new", "same")
     assert _decided(outcome) == [
         ("c01", "contested", "c02", "c02")
     ]
@@ -753,9 +701,9 @@ def test_supersedes_rekinds_old_claim_as_dated_belief(tmp_path):
     outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims))
 
     assert outcome.held is False
-    assert outcome.story == "supersedes"
+    # The story is its own beat; the supersede is a CLAIM-level outcome.
+    assert (outcome.story, outcome.beat_id) == ("new", None)
     assert outcome.judge_story == "supersedes"
-    assert outcome.beat_id == VISITING_ID
     assert _decided(outcome) == [
         ("c01", "supersedes", "c02", "c03")
     ]
@@ -998,7 +946,7 @@ def test_the_judge_names_beats_and_claims_by_handle():
         {"story_slug": story.story_slug, "problems": ["beat_id 'b3' is not a beat at this place"]},
     )
     assert outcome.held is False
-    assert outcome.beat_id == ORIGINS_ID
+    assert outcome.beat_id is None  # the handle resolved; placement is ours
     assert _decided(outcome) == [("c01", "same", "c02", "c02")]
 
 
@@ -1152,7 +1100,7 @@ def test_an_older_source_arriving_second_is_appended_as_a_superseded_belief(tmp_
 
     outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims))
 
-    assert outcome.story == "same"
+    assert (outcome.story, outcome.judge_story) == ("new", "same")
     assert _decided(outcome) == [("c01", "superseded", "c01", "c02")]
     assert outcome.rerun == []
 
@@ -1379,9 +1327,14 @@ def test_a_new_claims_values_are_never_written_as_a_stated_value(tmp_path):
 
     assert outcome.held is False
     assert len([c for c in client.calls if c[0] == "merge_judge"]) == 1  # no re-ask
-    added = merge.apply(outcome, existing)[0].claims[2]
-    assert added.text == MUSCHAMP["text"]
-    assert [s.stated_value for s in added.sources] == [None]
+    [muschamp] = [c for c in outcome.claims if c.claim_id == "c02"]
+    assert (muschamp.outcome, muschamp.new_value, muschamp.existing_value) == ("new", None, None)
+    # The story's own beat is the runner's to assemble from the judged
+    # claims, whose sources P3 wrote — the judge's prose reaches neither:
+    # apply writes only the c01 fold's appended source.
+    applied = json.dumps(_records(merge.apply(outcome, existing)))
+    assert "Herbert Muschamp praised" not in applied
+    assert MUSCHAMP["text"] not in applied
 
 
 def test_a_same_answer_with_two_different_values_folds_but_writes_no_stated_value(tmp_path):
@@ -1554,3 +1507,66 @@ def test_a_held_covered_answer_lists_every_named_claim_for_the_reviewer():
             "reason": "c01 the design, c02 the spiral",
         }
     ]
+
+
+def test_a_covered_answer_naming_a_superseded_claim_is_reasked_once_then_held():
+    """`covered` absorbs the new claim: it is written nowhere, because the
+    named claims already state it. A superseded claim states what the
+    corpus no longer holds, and a contested one's value is in dispute, so
+    absorbing a current claim into either loses a live fact. The answer
+    earns the one re-ask (the judge may name a current claim instead),
+    then holds."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", C148)]
+    story = _story("A building brought back from a dream", ["c01"], place=GUGG_PLACE)
+    record = _beat(
+        ZIGGURAT_ID, "the-inverted-ziggurat", "The inverted ziggurat", "establishing",
+        [{**_lp_claim("c01", WRIGHT), "kind": "belief", "status": "superseded"},
+         _lp_claim("c02", SPIRAL_LP)],
+        "Frank Lloyd Wright designed this building, and a spiral ramp winds up inside it.",
+    )
+    assert model.validate([record]) == []
+    existing = [model.Beat.model_validate(record)]
+    bad = _answer("new", "", [_claim_verdict("c01", "covered", "b1.c01+b1.c02")])
+    client = _armed_judge([bad, bad], claims)
+
+    with pytest.raises(narrate.BeatHeld) as held:
+        merge.merge(story, claims, existing, client)
+
+    assert "c01 of " in held.value.reason and "is superseded" in held.value.reason
+    assert len([c for c in client.calls if c[0] == "merge_judge"]) == 2
+
+
+def test_the_judges_story_verdict_never_moves_the_new_storys_claims(tmp_path):
+    """Owner ruling 2026-09-22 (option B): where the incoming story LIVES is
+    ours to decide, not the judge's. Live, the same book against the same
+    corpus joined the existing beat in 4 of 10 runs and stayed its own beat
+    in 6 — a coin flip over the corpus shape. Now the story is always its
+    own beat: its unmatched claims never join the matched beat, which keeps
+    its texts and needs no re-narration, while claim-level folds are
+    untouched. The judge's verdict is still recorded as `judge_story`."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", COMPLETED_FR), _judged(unit, "c02", MUSCHAMP)]
+    story = _story("The 1959 building and its critic", ["c01", "c02"])
+    existing = _existing()
+    answer = _answer(
+        "same", "b1",
+        [
+            _claim_verdict("c01", "same", "b1.c02", "1959", "1959"),
+            _claim_verdict("c02", "new", reason="no claim mentions Muschamp"),
+        ],
+    )
+
+    outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims))
+
+    assert outcome.judge_story == "same"
+    assert (outcome.story, outcome.beat_id) == ("new", None)
+    assert _decided(outcome) == [("c01", "same", "c02", "c02"), ("c02", "new", None, "c02")]
+    assert outcome.rerun == []
+
+    merged = merge.apply(outcome, existing)
+
+    assert [c.claim_id for c in merged[0].claims] == ["c01", "c02"]  # no claim joined
+    assert merged[0].narration == existing[0].narration
+    assert len(merged[0].claims[1].sources) == 2  # the fold still landed
+    assert model.validate(_records(merged), chunks_root=_chunks_root(tmp_path)) == []

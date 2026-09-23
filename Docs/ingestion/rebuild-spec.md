@@ -1334,6 +1334,47 @@ recorded answer in every run. Registration error, not re-scored: the two stories
 the tool skips a story with no claims. What this shows: the first answer the judge gave in
 each of the 10 runs now applies; the 9 re-ask answers were not exercised. What it does not: the judge's behaviour on new samples, anything after the
 decision (P4/P5, P7), or the precision of `covered` — still one claim at one place.
+*Blind labels on the two folds (2026-09-22, $0, two agents: opus and fable — never Sonnet, the merge
+judge).* Five items, each a new claim against the existing claims at the place, no hint of which the
+pipeline answered or how; three were controls. Both labellers got all three controls right (Wright +
+1959 COVERED; the car-sketch text ADDS; "rises six storeys" ADDS), so the task reads as intended.
+**c148 vs c01 + c03: SPLIT 1-1**, both high confidence — fable COVERED ("calling the museum 'spiral'
+adds no fact beyond B"), opus ADDS ("neither states that the spiral itself was Wright's design; the
+new claim links the designer to the spiral"). The Guggenheim fold this slice made reliable is
+therefore NOT confirmed correct; the author's reading and the merge judge agree with one labeller
+only. **c162 vs c03: ADDS, 2-0, both high confidence** — "huge" and the atrium relation are not in
+"has a spiral ramp". So r6's `same` fold of c162 into c03 is a false fold, and nothing catches it:
+the leftover-words guard runs on `covered` only. Extending it to `same` as it stands would hold a
+known-correct fold — job 2's panel-upheld "earliest critics rejected it" / "derided by some critics"
+pair leaves "earliest" and "rejected" over — so the `same` precision gap is recorded, not patched.
+Owner decisions owed: the `covered` fold under a split label, the false `same` fold, and the story
+shape (join the ziggurat beat in ~40% of runs, own beat in ~60%).
+*Owner rulings on the merge shape — built test-first ($0, 2026-09-22).* (1) **Where a story lives is
+ours, not the judge's.** Its story-level verdict is recorded as `judge_story` and nothing else: the
+incoming story's unmatched claims always become its OWN beat, so the same book against the same
+corpus always gives the same shape (live, the judge joined an existing beat in 4 of 10 replays of
+one story and kept it separate in 6). Claim-level folds are untouched — a repeated fact still folds,
+a conflict still contests — and a story that loses claims is still re-narrated, while one that keeps
+them all is not (a paid call saved). The join path (`apply` appending a `new` claim to the matched
+beat, fresh ids for it) became unreachable and is deleted; `MergeOutcome.story` is always `new` and
+`beat_id` always None. (2) **`covered` keeps applying** under the split blind label, because every
+absorption is recorded (`merge_covered`, P6, the book log) and reviewable; precision evidence comes
+from the plants next. (3) **An absorption that would orphan the story's remainder is refused**: if
+the claims left after folding fall below the beat type's arc minimum, the covered claims stay in the
+story (`merge_covered_refused`, and no covered row is recorded). A claim the corpus already states,
+visible in a beat, beats a fact lost to a queue nothing applies. (4) The false `same` fold the blind
+labels caught (c162 into c03) is RECORDED, not patched: the leftover-words guard extended to `same`
+would hold job 2's panel-upheld "earliest critics rejected it" fold. Measure first, in the plants.
+(5) A `covered` answer naming a `superseded` or `contested` claim earns the one re-ask, then holds:
+absorbing a current claim into what the corpus no longer holds, or into a disputed value, loses a
+live fact. **Two consequences found while building.** FIXED at the judge's STOP: a story whose slug
+already names a beat at its place was dropped with a `beat_id_collision` event and NO queue item —
+its judged, narrated claims reached neither disk nor queue — and the ruling made that the default
+path for every re-ingest producing the same slug, since such a story used to join the beat it
+collides with; it is now a review item like everything else P6 cannot apply. RECORDED, owed a
+decision: a reverted merge can queue the SAME story twice (once as a remainder below the arc
+minimum, once as a dropped merge) — a duplicate item is visible and recoverable, a dropped claim is
+not.
 
 ### Slice 11: Cleanup
 
