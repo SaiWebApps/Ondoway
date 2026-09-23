@@ -78,6 +78,22 @@
     "shared_union": {
       "caught": 1,
       "total": 1
+    },
+    "adds_a_date": {
+      "caught": 1,
+      "total": 1
+    },
+    "recombined_union": {
+      "caught": 1,
+      "total": 1
+    },
+    "negated_fact": {
+      "caught": 1,
+      "total": 1
+    },
+    "covered_union_elsewhere": {
+      "caught": 1,
+      "total": 1
     }
   },
   "live": {
@@ -110,7 +126,11 @@
       "total": 1
     },
     "covered_union": null,
-    "shared_union": null
+    "shared_union": null,
+    "adds_a_date": null,
+    "recombined_union": null,
+    "negated_fact": null,
+    "covered_union_elsewhere": null
   },
   "_runs": {
     "mock": {

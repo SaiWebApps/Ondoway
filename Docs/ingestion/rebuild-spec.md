@@ -1273,9 +1273,9 @@ Fifth Avenue.", c152, c162) joined that beat, which was re-narrated with a fresh
 "The Guggenheim Museum has a spiral ramp." In r6 the judge
 also answered c162 `same` LP c03 on both attempts, with unequal values. Every `merge_covered` line
 was read: c148 is absorbed against c01 (Wright's design) and c03 (the spiral ramp). That no fact of
-c148 is lost is the author's reading only, not blind-labelled: c03 ("The Guggenheim Museum has a spiral ramp.") names
-an interior feature and does not strictly state that the museum itself is spiral. This is the first
-time a Guggenheim fold has completed in any run. The values carried a fact signal in 0 of the 14
+c148 is lost is the author's reading only, not blind-labelled: c03 ("The Guggenheim Museum has a
+spiral ramp.") names an interior feature and does not strictly state that the museum itself is
+spiral. This is the first time a Guggenheim fold has completed in any run. The values carried a fact signal in 0 of the 14
 value-carrying attempts: every `new_value` restates c148 and every `existing_value` restates c01
 and c03 (twice with `(b1.c01)` annotations). In these runs the judge echoed the claims into the
 values, so the values gave a rule nothing to catch. All 14 attempts concern one claim in one story;
@@ -1332,8 +1332,9 @@ leftover guard held nothing; `museum-or-cupcake` and `kandinsky-s-permanent-home
 recorded answer in every run. Registration error, not re-scored: the two stories said to be
 "reported as unmeasured" are absent — P3 kept 0 claims for each, so they never reached P6 live and
 the tool skips a story with no claims. What this shows: the first answer the judge gave in
-each of the 10 runs now applies; the 9 re-ask answers were not exercised. What it does not: the judge's behaviour on new samples, anything after the
-decision (P4/P5, P7), or the precision of `covered` — still one claim at one place.
+each of the 10 runs now applies; the 9 re-ask answers were not exercised. What it does not: the
+judge's behaviour on new samples, anything after the decision (P4/P5, P7), or the precision of
+`covered` — still one claim at one place.
 *Blind labels on the two folds (2026-09-22, $0, two agents: opus and fable — never Sonnet, the merge
 judge).* Five items, each a new claim against the existing claims at the place, no hint of which the
 pipeline answered or how; three were controls. Both labellers got all three controls right (Wright +
@@ -1375,6 +1376,31 @@ collides with; it is now a review item like everything else P6 cannot apply. REC
 decision: a reverted merge can queue the SAME story twice (once as a remainder below the arc
 minimum, once as a dropped merge) — a duplicate item is visible and recoverable, a dropped claim is
 not.
+*Precision plants beyond one place — built test-first ($0, 2026-09-22; handoff step 6).* Every
+`covered` measurement so far was one claim at one museum. Four plants added to
+`fixtures/ingestion/defects.json`, each with its existing claims' spans verbatim in the LP chunk:
+`adds_a_date` (the Frick — the second source states both claims AND "since 1938"; must stay `new`),
+`recombined_union` (the Met — the second source uses only the two claims' own words, recombined into
+a MISATTRIBUTION: the shop displays the hippo, when one claim puts it in Gallery 111 and the other
+has the shop selling figurines. It cannot coexist with that claim, so the correct answer is a
+conflict on WHERE, which by kind and date supersedes the 2022 state — expecting `new` here, as the
+first draft did, would have scored a CORRECT judge as a regression on the first paid run, caught by
+the judge before it cost anything. Its signature is deliberately silent, declared `hint: silent` and
+pinned both ways), `negated_fact` (the Neue Galerie — the second source NEGATES a state claim it
+shares nearly every word with; correct is a conflict, which by kind and date supersedes) and
+`covered_union_elsewhere` (the Met — two claims together state the second source, so `covered` is
+right; recall is not a one-museum trick). A plant now declares what the leftover-words guard does to
+it (`planted.guard`), asserted mechanically: `catches` means words are left over, `blind` means none
+are. Proven, not argued: a judge that wrongly answers `covered` on `adds_a_date` is HELD by the
+guard naming "since" and "1938", while the same wrong answer on `recombined_union` is APPLIED (wrong
+under either reading of that plant) — every mechanical check passes and only the judge could have
+caught it. The correct answers catch all four — `new`, `supersedes`, `supersedes` and `covered`
+respectively. Mutants, each red and each restored byte-identical: the blind plant declared
+`catches`; the date removed from the plant; the guard switched off; `hint: silent` deleted from the
+plant whose signature really is silent; and `hint: silent` claimed for a plant whose signature
+fires. Baseline rows added for the four classes (mock measured, live never run). Nothing measured
+live yet; the paid calibration run must first register how a HOLD is scored, since `calibrate`
+counts any merge hold as MISSED — which is exactly what the guard produces on `adds_a_date`.
 
 ### Slice 11: Cleanup
 

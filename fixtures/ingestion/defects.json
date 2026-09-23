@@ -720,6 +720,208 @@
           "rights_basis": "own_work",
           "text": "The spiral ramp of Frank Lloyd Wright's Guggenheim Museum was first sketched for cars.",
           "kind": "state"
+        },
+        "guard": "catches"
+      }
+    },
+    {
+      "class": "adds_a_date",
+      "detector": "merge",
+      "note": "Precision beyond one place (2026-09-22): a second source states both Frick claims AND a year neither states. The union of their words covers it, so a careless `covered` folds it and the date is lost; it must stay `new`. The leftover-words guard catches this shape.",
+      "story": {
+        "title": "Sunday concerts in a beaux-arts mansion",
+        "place": "The Frick Collection",
+        "beat_type": "anecdote",
+        "lenses": [
+          "historic_arch",
+          "music_heritage"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "The Frick Collection sits in a beaux-arts mansion surrounded by priceless paintings and sculptures.",
+          "kind": "state",
+          "span": "in a beaux-arts mansion surrounded by priceless paintings and\nsculptures"
+        },
+        {
+          "claim_id": "c02",
+          "text": "The Frick Collection has hosted classical music concerts on Sunday evenings.",
+          "kind": "state",
+          "span": "Listening to classical music on a Sunday\n\nevening"
+        }
+      ],
+      "planted": {
+        "claim_id": "c01",
+        "claim_ids": [
+          "c01",
+          "c02"
+        ],
+        "expected": "new",
+        "guard": "catches",
+        "second_source": {
+          "source_id": "second-source",
+          "chunk": "calibration",
+          "as_of": 2024,
+          "rights_basis": "own_work",
+          "text": "The Frick Collection's beaux-arts mansion has hosted classical music concerts on Sunday evenings since 1938.",
+          "kind": "state"
+        }
+      }
+    },
+    {
+      "class": "recombined_union",
+      "detector": "merge",
+      "note": "The leftover-words guard's OWN blind spot, planted so it is measured (2026-09-22, judge-corrected): the second source uses only words the two Met claims already hold, recombined into a MISATTRIBUTION — the shop displays the hippo, when c01 puts it in Gallery 111 and c02 has the shop selling figurines. It cannot coexist with c01, so it is a conflict on WHERE, which by kind and date supersedes the 2022 state. Nothing is left over, so the guard cannot see it and a wrong `covered` is applied; only the judge can catch this shape. The signature is deliberately silent (both singles 0.556 < 0.7), so the class measures the judge, not the tripwire.",
+      "story": {
+        "title": "The hippo and the shop",
+        "place": "Metropolitan Museum of Art",
+        "beat_type": "anecdote",
+        "lenses": [
+          "hidden_history",
+          "visual_art"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "In Gallery 111 the Met displays a small, blue-glazed faience hippopotamus.",
+          "kind": "state",
+          "span": "In Gallery 111 you’ll find a small, blue-glazed faience hippopotamus"
+        },
+        {
+          "claim_id": "c02",
+          "text": "The Met's museum shop on the 1st floor sells bright-blue William figurines.",
+          "kind": "state",
+          "span": "to the museum shop on the 1st floor, where you can buy bright-blue William figurines"
+        }
+      ],
+      "planted": {
+        "claim_id": "c01",
+        "claim_ids": [
+          "c01",
+          "c02"
+        ],
+        "expected": "supersedes",
+        "guard": "blind",
+        "second_source": {
+          "source_id": "second-source",
+          "chunk": "calibration",
+          "as_of": 2024,
+          "rights_basis": "own_work",
+          "text": "The museum shop on the 1st floor displays the blue-glazed faience hippopotamus.",
+          "kind": "state"
+        },
+        "hint": "silent",
+        "superseded_by": "the hippopotamus is displayed in the museum shop",
+        "stated_values": {
+          "lonely-planet-new-york-city": "in Gallery 111",
+          "second-source": "in the museum shop on the 1st floor"
+        }
+      }
+    },
+    {
+      "class": "negated_fact",
+      "detector": "merge",
+      "note": "Precision beyond one place (2026-09-22): the second source NEGATES an existing state claim. It shares nearly every word with it, so a judge reading words rather than the fact folds it as `same` and the corpus keeps serving a dish the museum stopped serving. Correct: a conflict, which by kind and date supersedes the 2022 state.",
+      "story": {
+        "title": "Klimt and a Viennese lunch",
+        "place": "Neue Galerie",
+        "beat_type": "anecdote",
+        "lenses": [
+          "visual_art",
+          "historic_cuisine"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "The Neue Galerie's elegant cafe serves Viennese specialties.",
+          "kind": "state",
+          "span": "a leisurely lunch of Viennese specialties at the museum’s\nelegant cafe"
+        },
+        {
+          "claim_id": "c02",
+          "text": "The Neue Galerie shows lush, gilded paintings by Gustav Klimt.",
+          "kind": "state",
+          "span": "the lush, gilded paintings of Gustav Klimt"
+        }
+      ],
+      "planted": {
+        "claim_id": "c01",
+        "expected": "supersedes",
+        "superseded_by": "the cafe no longer serves Viennese specialties",
+        "stated_values": {
+          "lonely-planet-new-york-city": "serves Viennese specialties",
+          "second-source": "no longer serves Viennese specialties"
+        },
+        "second_source": {
+          "source_id": "second-source",
+          "chunk": "calibration",
+          "as_of": 2024,
+          "rights_basis": "own_work",
+          "text": "The Neue Galerie's elegant cafe no longer serves Viennese specialties.",
+          "kind": "state"
+        }
+      }
+    },
+    {
+      "class": "covered_union_elsewhere",
+      "detector": "merge",
+      "note": "Recall beyond the Guggenheim (2026-09-22): two Met claims — where the hippo is and what it is nicknamed — together state a second source's single sentence, so it is `covered` and absorbed. Measures that the verdict is not a one-museum trick.",
+      "story": {
+        "title": "William the hippo",
+        "place": "Metropolitan Museum of Art",
+        "beat_type": "anecdote",
+        "lenses": [
+          "hidden_history",
+          "visual_art"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "In Gallery 111 the Met displays a small, blue-glazed faience hippopotamus.",
+          "kind": "state",
+          "span": "In Gallery 111 you’ll find a small, blue-glazed faience hippopotamus"
+        },
+        {
+          "claim_id": "c02",
+          "text": "The Met nicknamed the hippopotamus William.",
+          "kind": "state",
+          "span": "Nicknamed\n‘William,’ he’s the Met’s unofficial mascot"
+        }
+      ],
+      "planted": {
+        "claim_id": "c01",
+        "claim_ids": [
+          "c01",
+          "c02"
+        ],
+        "expected": "covered",
+        "second_source": {
+          "source_id": "second-source",
+          "chunk": "calibration",
+          "as_of": 2024,
+          "rights_basis": "own_work",
+          "text": "The Met's small, blue-glazed faience hippopotamus is nicknamed William.",
+          "kind": "state"
         }
       }
     }

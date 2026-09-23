@@ -44,6 +44,10 @@ CLASSES = (
     "stated_relation",
     "covered_union",
     "shared_union",
+    "adds_a_date",
+    "recombined_union",
+    "negated_fact",
+    "covered_union_elsewhere",
 )
 
 
@@ -160,12 +164,41 @@ def test_fixture_has_one_record_per_class_and_only_the_planted_defect():
             planted = next(c for c in record.claims if c["claim_id"] == planted_claim_id)
             beat = merge._signature(planted["text"])
             second = merge._signature(record.planted["second_source"]["text"])
-            assert merge.covered(second, beat) >= merge.SIGNATURE_MATCH_MIN, record.defect_class
+            if record.planted.get("hint") == "silent":
+                # Declared exception: this plant recombines the claims' own
+                # words, so no single claim reaches the threshold and the
+                # tripwire says nothing BY DESIGN — the class measures the
+                # judge alone. Pinned, so a plant cannot drift into silence.
+                assert merge.covered(second, beat) < merge.SIGNATURE_MATCH_MIN, (
+                    record.defect_class
+                )
+            else:
+                assert merge.covered(second, beat) >= merge.SIGNATURE_MATCH_MIN, (
+                    record.defect_class
+                )
             assert record.planted["expected"] in ("contested", "supersedes"), record.defect_class
             assert set(record.planted["stated_values"]) == {
                 unit.source_id,
                 record.planted["second_source"]["source_id"],
             }
+
+        if record.detector == "merge" and "guard" in record.planted:
+            # What the leftover-words guard (merge.covered_leftovers) would do
+            # to this plant if the judge wrongly answered `covered`:
+            # "catches" = words are left over, so the story holds; "blind" =
+            # the plant only recombines the named claims' own words into a
+            # different fact, which the guard cannot see (recorded 2026-09-22,
+            # not fixed — a precision gap the plants now measure).
+            from src.ingest import merge
+
+            stated = merge._signature(record.story["place"]).union(*(
+                merge._signature(c["text"]) for c in record.claims
+                if c["claim_id"] in record.planted["claim_ids"]
+            ))
+            left = merge._signature(record.planted["second_source"]["text"]) - stated
+            assert bool(left) == (record.planted["guard"] == "catches"), (
+                record.defect_class, sorted(left)
+            )
 
 
 def test_mock_run_reports_a_rate_per_class_with_pending_detectors_marked():
@@ -680,3 +713,50 @@ def test_a_claim_two_claims_state_together_is_covered_and_one_sharing_their_word
     by_class = {row.defect_class: row for row in report.rows}
     assert (by_class["shared_union"].caught, by_class["shared_union"].total) == (0, 1)
     assert (by_class["covered_union"].caught, by_class["covered_union"].total) == (1, 1)
+
+
+def test_a_judge_that_wrongly_covers_a_precision_plant_always_misses():
+    """What the two new precision plants measure (2026-09-22). A judge that
+    answers `covered` naming both claims is wrong in each: `adds_a_date`
+    adds a year neither claim states, and `recombined_union` recombines
+    their own words into a MISATTRIBUTION that cannot coexist with c01 (it
+    moves the hippo out of Gallery 111). Both are MISSED, but for different
+    reasons, and the notes say which: the leftover-words guard holds the
+    first (its words are left over) while the second passes every mechanical
+    check and is absorbed — the guard's blind spot, measured rather than
+    argued. Their correct answers differ — `new` for `adds_a_date`,
+    `supersedes` for the misattribution — and both are caught below."""
+    import src.ingest.llm as llm
+
+    fixture = _fixture()
+
+    def covers(rec: calibrate.DefectRecord, u) -> llm.MockAnswer:
+        if rec.defect_class not in ("adds_a_date", "recombined_union"):
+            return calibrate.scripted_merge_answer(rec, u)  # every other class answered right
+        ids = "+".join(f"b1.{cid}" for cid in rec.planted.get("claim_ids", []))
+        answer = {
+            "story": "new", "beat_id": "",
+            "claims": [
+                {"claim_id": "n01", "verdict": "covered", "existing_claim_id": ids,
+                 "new_value": "", "existing_value": "",
+                 "reason": "the two together state it"}
+            ],
+        }
+        return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
+
+    report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock", scripted_merge=covers)
+    by_class = {row.defect_class: row for row in report.rows}
+
+    adds = by_class["adds_a_date"]
+    assert (adds.caught, adds.total) == (0, 1)
+    assert adds.note.startswith("held: claim n01: covered leaves words no named claim states")
+    assert "1938" in adds.note and "since" in adds.note
+
+    blind = by_class["recombined_union"]
+    assert (blind.caught, blind.total) == (0, 1)
+    assert blind.note == "n01 covered c01+c02"  # applied: nothing mechanical objected
+
+    clean = calibrate.run(fixture, REPO_ROOT / "Books", client="mock")
+    by_class = {row.defect_class: row for row in clean.rows}
+    for name in ("adds_a_date", "recombined_union", "negated_fact", "covered_union_elsewhere"):
+        assert (by_class[name].caught, by_class[name].total) == (1, 1), name
