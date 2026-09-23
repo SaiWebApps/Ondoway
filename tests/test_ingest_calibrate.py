@@ -760,3 +760,163 @@ def test_a_judge_that_wrongly_covers_a_precision_plant_always_misses():
     by_class = {row.defect_class: row for row in clean.rows}
     for name in ("adds_a_date", "recombined_union", "negated_fact", "covered_union_elsewhere"):
         assert (by_class[name].caught, by_class[name].total) == (1, 1), name
+
+
+def test_a_hold_is_reported_apart_from_a_wrong_fold():
+    """Registered before the paid run (2026-09-22): the harness counts any
+    merge hold as MISSED, which measures the JUDGE — but a hold and a wrong
+    fold are not the same event for the corpus. A hold writes nothing and
+    queues the story for a human; a wrong fold changes the corpus silently.
+    The row now says which happened (`held`), so the paid run's bars can be
+    read mechanically instead of by eye: the guard correctly holding a
+    wrongly-`covered` story must never be read as a corpus defect."""
+    import src.ingest.llm as llm
+
+    fixture = _fixture()
+
+    def covers(rec: calibrate.DefectRecord, u) -> llm.MockAnswer:
+        if rec.defect_class not in ("adds_a_date", "recombined_union"):
+            return calibrate.scripted_merge_answer(rec, u)
+        ids = "+".join(f"b1.{cid}" for cid in rec.planted.get("claim_ids", []))
+        answer = {
+            "story": "new", "beat_id": "",
+            "claims": [
+                {"claim_id": "n01", "verdict": "covered", "existing_claim_id": ids,
+                 "new_value": "", "existing_value": "", "reason": "the two together state it"}
+            ],
+        }
+        return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
+
+    by_class = {
+        row.defect_class: row
+        for row in calibrate.run(
+            fixture, REPO_ROOT / "Books", client="mock", scripted_merge=covers
+        ).rows
+    }
+    # Both missed; only one of them changed the corpus.
+    assert (by_class["adds_a_date"].caught, by_class["adds_a_date"].held) == (0, True)
+    assert (by_class["recombined_union"].caught, by_class["recombined_union"].held) == (0, False)
+
+    clean = {row.defect_class: row for row in
+             calibrate.run(fixture, REPO_ROOT / "Books", client="mock").rows}
+    assert [name for name, row in clean.items() if row.held] == []
+    assert clean["adds_a_date"].caught == 1
+
+
+def test_the_printout_marks_a_hold_so_it_is_never_read_as_a_wrong_fold():
+    """A 0/1 in the printout means two different things, and the paid run's
+    reader must not have to guess: a held class prints HELD and the reason,
+    so a working guard is never read as a corpus defect."""
+    rows = [
+        calibrate.ClassRow("adds_a_date", "merge", 0, 1, False,
+                           "held: claim n01: covered leaves words no named claim states: 1938, "
+                           "since", held=True),
+        calibrate.ClassRow("recombined_union", "merge", 0, 1, False, "n01 covered c01+c02"),
+    ]
+    out = calibrate.format_report(calibrate.Report(client="live", rows=rows))
+
+    adds = next(line for line in out.splitlines() if line.startswith("adds_a_date"))
+    blind = next(line for line in out.splitlines() if line.startswith("recombined_union"))
+    assert "HELD" in adds and "HELD" not in blind
+    assert "held (nothing written, queued for review):" in out
+    assert "adds_a_date: claim n01: covered leaves words" in out
+
+
+def test_a_wrong_fold_is_named_in_the_row_and_the_printout():
+    """Bar (1) of the paid run — zero wrong folds — must be readable from
+    the report, not from the raw event stream (judge, 2026-09-22): for
+    seven of the ten merge classes a bare 0/1 cannot tell a wrong fold
+    (the corpus changed) from a plain miss (the judge said `new`, nothing
+    folded). The row says `wrong_fold` and the line says WRONG FOLD."""
+    import src.ingest.llm as llm
+
+    fixture = _fixture()
+
+    def folds(rec: calibrate.DefectRecord, u) -> llm.MockAnswer:
+        # `same` into the planted claim: wrong for a `new` plant (it folds),
+        # and for a `covered` plant (the wrong shape) — both change the
+        # corpus. Every other class answers correctly.
+        if rec.defect_class not in ("shared_union", "covered_union"):
+            return calibrate.scripted_merge_answer(rec, u)
+        answer = {
+            "story": "new", "beat_id": "",
+            "claims": [
+                {"claim_id": "n01", "verdict": "same",
+                 "existing_claim_id": f"b1.{rec.planted['claim_id']}",
+                 "new_value": "", "existing_value": "", "reason": "same fact"}
+            ],
+        }
+        return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
+
+    report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock", scripted_merge=folds)
+    by_class = {row.defect_class: row for row in report.rows}
+
+    assert (by_class["shared_union"].caught, by_class["shared_union"].wrong_fold) == (0, True)
+    assert (by_class["covered_union"].caught, by_class["covered_union"].wrong_fold) == (0, True)
+    # A correct run folds nothing wrongly, anywhere.
+    clean = calibrate.run(fixture, REPO_ROOT / "Books", client="mock")
+    assert [r.defect_class for r in clean.rows if r.wrong_fold] == []
+
+    # And the distinction the bar rests on: a MISS that folded nothing left
+    # the corpus untouched, so it is not a wrong fold. `recombined_union` is
+    # the plant for it — its signature is silent by design, so a `new`
+    # answer is not held by the tripwire and really does reach the corpus
+    # check having written nothing.
+    def says_new(rec: calibrate.DefectRecord, u) -> llm.MockAnswer:
+        if rec.defect_class != "recombined_union":
+            return calibrate.scripted_merge_answer(rec, u)
+        answer = {
+            "story": "new", "beat_id": "",
+            "claims": [
+                {"claim_id": "n01", "verdict": "new", "existing_claim_id": "",
+                 "new_value": "", "existing_value": "", "reason": "nothing states it"}
+            ],
+        }
+        return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
+
+    missed = {
+        row.defect_class: row
+        for row in calibrate.run(
+            fixture, REPO_ROOT / "Books", client="mock", scripted_merge=says_new
+        ).rows
+    }
+    row = missed["recombined_union"]
+    assert (row.caught, row.wrong_fold, row.held) == (0, False, False)
+
+    out = calibrate.format_report(report)
+    assert "WRONG FOLD" in next(
+        line for line in out.splitlines() if line.startswith("shared_union")
+    )
+    assert "wrong folds (the corpus changed):" in out
+    assert "shared_union: n01 same" in out
+
+
+def test_a_unit_held_class_is_marked_held_too():
+    """The other hold path (judge, 2026-09-22): a claim-judge class whose
+    whole unit is held prints a bare 0/1 like any miss, though nothing was
+    judged at all. It is marked HELD with its reason, so bar (3) — every
+    held row read — cannot skip it."""
+    import src.ingest.llm as llm
+
+    fixture = _fixture()
+
+    def unreadable(rec: calibrate.DefectRecord, u) -> dict[str, llm.MockAnswer]:
+        if rec.defect_class != "fabricated_date":
+            return calibrate.scripted_answers(rec, u)
+        return {
+            custom_id: llm.MockAnswer(text="not json", model_id=llm.ROLE_MODEL["claim_judge"])
+            for custom_id in calibrate.scripted_answers(rec, u)
+        }
+
+    by_class = {
+        row.defect_class: row
+        for row in calibrate.run(
+            fixture, REPO_ROOT / "Books", client="mock", scripted=unreadable
+        ).rows
+    }
+
+    row = by_class["fabricated_date"]
+    assert (row.caught, row.held, row.wrong_fold) == (0, True, False)
+    assert row.note.startswith("unit held: ")
+    out = calibrate.format_report(calibrate.Report(client="mock", rows=[row]))
+    assert "HELD" in out and "held (nothing written, queued for review):" in out

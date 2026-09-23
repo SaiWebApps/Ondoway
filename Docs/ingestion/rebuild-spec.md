@@ -1401,6 +1401,35 @@ plant whose signature really is silent; and `hint: silent` claimed for a plant w
 fires. Baseline rows added for the four classes (mock measured, live never run). Nothing measured
 live yet; the paid calibration run must first register how a HOLD is scored, since `calibrate`
 counts any merge hold as MISSED — which is exactly what the guard produces on `adds_a_date`.
+*How a HOLD is scored, and the paid calibration run's bars — registered before any spend ($0,
+2026-09-22, corrected at the judge's PROVE-FIRST).* `calibrate` counts a merge class the pipeline
+HELD as MISSED, which is right for measuring the JUDGE — it answered wrongly — but a hold and a
+wrong fold are not the same event for the corpus: a hold writes nothing and queues the story for a
+human, a wrong fold changes the corpus silently, and a miss where every claim came out `new` changes
+nothing at all. A bare 0/1 cannot tell them apart, and for seven of the ten merge classes it never
+could. The row and the printout now say which: `ClassRow.held` → `HELD` plus a "held (nothing
+written, queued for review)" block, `ClassRow.wrong_fold` (a miss that folded something) → `WRONG
+FOLD` plus a "wrong folds (the corpus changed)" block quoting the outcome per claim. Both hold paths
+are marked, the merge hold and the unit hold. **The bars, fixed now.** (1) CORPUS, the bar that must
+pass: no row is marked WRONG FOLD. Read mechanically off the report, not from the event stream. A
+HOLD never fails this bar. (2) JUDGE: `regressions()` IS a gate — `scripts/ingest_calibrate.py`
+exits 1 on any class below its committed live baseline, and that stays. Measured 2026-09-22, it
+covers exactly six classes: fabricated_date, deleted_claim, wrong_cause, lift,
+guidebook_attribution, omitted_fact. Ten live rows are null and four classes (shared_element,
+same_fact, compound_claim, stated_relation) are absent, so NO merge class is gated by it — this run
+records the first live numbers for every merge class, including all four added today, and they
+cannot regress because nothing exists to regress against. Say that plainly rather than reading an
+ungated class as a pass. (3) Every HELD row is read and its reason quoted in the result, and a 0/1 with NEITHER marker is
+named in the result too — it means the judge missed and nothing was written (a bar (1) pass), which
+is also the shape of a judge that answered nothing, so it is never left unremarked. **The
+command is `make ingest-calibrate-live ARGS="--yes"`. NEVER `--update-baseline` on this run**: it
+short-circuits the comparison, exits 0 and overwrites the live baseline with whatever the run
+produced — which would also pin `adds_a_date` at 0/1 and make a future wrong fold there
+unregressable. Baselining is a separate step, after the bars pass, with its own judge consult.
+Registered consequence, so it is not re-litigated afterwards: `adds_a_date` is EXPECTED to report
+0/1 HELD whenever the judge answers `covered` there, because the leftover-words guard is doing its
+job; scoring that as a regression would be the same error as expecting `new` on `recombined_union` —
+reading a working guard as a defect.
 
 ### Slice 11: Cleanup
 

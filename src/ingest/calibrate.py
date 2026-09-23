@@ -80,6 +80,15 @@ class ClassRow:
     false_refusals: int | None = None
     dropped: int | None = None
     details: tuple[str, ...] = ()
+    #: A merge class the pipeline HELD rather than applied. A hold is scored
+    #: MISSED — the judge was wrong — but it wrote nothing and queued the
+    #: story for a human, so it is not the corpus defect a wrong fold is.
+    held: bool = False
+    #: A merge class MISSED with something folded: the corpus changed on a
+    #: wrong answer. This, not the catch rate, is the paid run's bar (1) —
+    #: a bare 0/1 cannot be read without it (a miss where nothing folded
+    #: leaves the corpus untouched).
+    wrong_fold: bool = False
 
 
 @dataclass(frozen=True)
@@ -399,6 +408,8 @@ class _Detection:
     false_refusals: int | None = None
     dropped: int | None = None
     details: tuple[str, ...] = ()
+    held: bool = False
+    wrong_fold: bool = False
 
 
 def _precision(events: list[tuple[str, dict]], planted_id: str | None) -> tuple[int, int, tuple]:
@@ -468,9 +479,9 @@ def _detect(
         try:
             outcome = merge.merge(story, [judged], [_beat(record, unit)], client, record_event)
         except narrate.BeatHeld as held:
-            return _Detection(False, f"beat held: {held.reason}")
+            return _Detection(False, f"beat held: {held.reason}", held=True)
         if outcome.held:
-            return _Detection(False, f"held: {outcome.reason}")
+            return _Detection(False, f"held: {outcome.reason}", held=True)
         expected = record.planted["expected"]
         if expected == "new":  # shared_element: caught only when nothing folds
             hit = bool(outcome.claims) and all(c.outcome == "new" for c in outcome.claims)
@@ -490,7 +501,13 @@ def _detect(
             + ("+".join(ref[1] for ref in c.covered_by) or c.existing_claim_id or "-")
             for c in outcome.claims
         )
-        return _Detection(hit, note)
+        # A miss that folded something CHANGED the corpus; a miss where every
+        # claim came out `new` left it exactly as it was. Sound only while a
+        # record plants ONE claim (`_second_source` builds one, asserted
+        # below): with two, a caught row could hide a wrong fold on the other.
+        assert len(outcome.claims) <= 1, "wrong_fold assumes one judged claim per record"
+        folded = any(c.outcome != "new" for c in outcome.claims)
+        return _Detection(hit, note, wrong_fold=not hit and folded)
     try:
         if record.detector == "judge_claims":
             judge_claims.judge_claims(
@@ -559,10 +576,11 @@ def _detect(
             hit = [span for span in spans if _overlaps(span, record.planted["span"])]
             caught = bool(hit)
             note = hit[0] if hit else f"{len(spans)} grounded finding(s), none on the span"
+        unit_held = False
     except UnitHeld as held:
-        caught, note = False, f"unit held: {held.reason}"
+        caught, note, unit_held = False, f"unit held: {held.reason}", True
     false_refusals, dropped, details = _precision(events, planted_id)
-    return _Detection(caught, note, false_refusals, dropped, details)
+    return _Detection(caught, note, false_refusals, dropped, details, held=unit_held)
 
 
 def _live_client(events: llm.EventSink) -> llm.ModelClient:
@@ -638,6 +656,8 @@ def run(
                 found.false_refusals,
                 found.dropped,
                 found.details,
+                found.held,
+                found.wrong_fold,
             )
         )
     return Report(client=client, rows=rows)
@@ -661,7 +681,21 @@ def format_report(report: Report) -> str:
         lines.append(
             f"{row.defect_class:<24}{row.detector:<16}{tally:<14}{_rate(row):<10}"
             f"{false_ref:<11}{dropped}"
+            + ("   HELD" if row.held else "")
+            + ("   WRONG FOLD" if row.wrong_fold else "")
         )
+    # A 0/1 means two different things: the pipeline HELD (nothing written,
+    # a review item) or it APPLIED a wrong answer (the corpus changed).
+    holds = [(row.defect_class, row.note) for row in report.rows if row.held]
+    if holds:
+        lines.append("held (nothing written, queued for review):")
+        lines.extend(
+            f"  {name}: {note.split('held: ', 1)[-1]}" for name, note in holds
+        )
+    folds = [(row.defect_class, row.note) for row in report.rows if row.wrong_fold]
+    if folds:
+        lines.append("wrong folds (the corpus changed):")
+        lines.extend(f"  {name}: {note}" for name, note in folds)
     details = [(row.defect_class, d) for row in report.rows for d in row.details]
     if details:
         lines.append("details (every refusal and drop, in order):")
