@@ -140,6 +140,31 @@ REASK_RATES: tuple[float, ...] = (
 )
 
 
+#: A job may stop after these phases (`run_job(stop_after=)`): the plan rows
+#: each stop runs are the first N of PLAN — P3's stage includes the omission
+#: check, and P3's own plan carries the author's restate row.
+STOP_AFTER_ROWS: dict[str, int] = {
+    "P3": len(P1_PLAN) + len(P2_PLAN) + len(P3_PLAN) + len(OMISSIONS_PLAN),
+}
+
+
+def stage_spend(estimate: llm.CostEstimate, stop_after: str) -> dict[str, float]:
+    """The projection, first pass, expectation and cap bound of the plan rows
+    a job stopping after `stop_after` runs — the same arithmetic as the whole
+    job's figures, over its first rows only."""
+    n = STOP_AFTER_ROWS[stop_after]
+    rows = estimate.rows[:n]
+    caps = dict(zip((id(row) for row in rows), CAPS[:n], strict=True))
+    return {
+        "projected": _price_rows(rows, lambda row: row.output_tokens),
+        "first_pass": sum(
+            row.usd for row, first in zip(rows, FIRST_PASS[:n], strict=True) if first
+        ),
+        "expected": sum(row.usd * rate for row, rate in zip(rows, REASK_RATES[:n], strict=True)),
+        "cap_bound": _price_rows(rows, lambda row: row.calls * caps[id(row)]),
+    }
+
+
 def expected_usd(estimate: llm.CostEstimate) -> float:
     """What a run is expected to cost: every row at its expected output,
     weighted by how often its call fires (REASK_RATES)."""
@@ -1362,16 +1387,20 @@ class _Run:
             self._queue_held_at_commit(records_by_id[beat_id], beat_errors)
         self.done("P7", {"beats_path": str(self.beats_path), "written": len(raw)})
 
-    def run(self) -> None:
+    def run(self, stop_after: str | None = None) -> bool:
+        """Run every phase; True when it stopped early after `stop_after`."""
         units, publishers, chunks_root = self.p0()
         pois = load_pois(self.data_root, self.job.city)
         claims = self.p1(units)
         stories = self.p2(units, claims, pois)
         stories, judged = self.p3(units, claims, stories, pois)
+        if stop_after == "P3":
+            return True
         drafts = self.p4(units, stories, judged, publishers)
         narrations = self.p5(units, stories, judged, drafts, publishers)
         records, per_unit = self.p6(units, stories, judged, narrations, publishers)
         self.p7(records, per_unit, chunks_root)
+        return False
 
 
 def run_job(
@@ -1380,19 +1409,28 @@ def run_job(
     client: llm.ModelClient,
     *,
     data_root: Path | str | None = None,
+    stop_after: str | None = None,
 ) -> None:
     """Run (or resume) the job; see the module docstring. Never raises: a
     failure ends the job in `error` with the message on the job and an
-    `error` event, the completed phases kept for a later resume."""
+    `error` event, the completed phases kept for a later resume.
+    `stop_after="P3"` ends it after P3 with status `stopped`: nothing is
+    written, P1-P3's output is kept."""
+    if stop_after not in (None, *STOP_AFTER_ROWS):
+        raise ValueError(f"stop_after must be one of {sorted(STOP_AFTER_ROWS)}, got {stop_after!r}")
     job = store.get(job_id)
     if job is None:
         raise KeyError(job_id)
     root = Path(data_root) if data_root is not None else data_root_from_env()
     store.set_status(job_id, "running")
     try:
-        _Run(job, store, client, root).run()
+        stopped = _Run(job, store, client, root).run(stop_after)
     except Exception as exc:  # any failure MUST end the job cleanly
         store.append_event(job_id, "error", str(exc))
         store.set_status(job_id, "error", error=str(exc))
+        return
+    if stopped:
+        store.append_event(job_id, "info", "stopped", data={"after": stop_after})
+        store.set_status(job_id, "stopped")
         return
     store.set_status(job_id, "committed")

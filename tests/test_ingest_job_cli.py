@@ -243,7 +243,7 @@ def test_the_job_log_survives_a_run_that_dies_mid_way(tmp_path, monkeypatch):
     does not catch), and the line is on disk when `main` propagates it."""
     ws = _mock_env(tmp_path, monkeypatch)
 
-    def dying_run_job(job_id, store, client, *, data_root=None):
+    def dying_run_job(job_id, store, client, *, data_root=None, stop_after=None):
         store.append_event(job_id, "info", "batch_submitted", data={"phase": "P1"})
         raise KeyboardInterrupt
 
@@ -636,3 +636,38 @@ def test_the_summary_names_a_story_held_by_an_isolated_transport_failure(tmp_pat
 
     assert "stories_held (P3)=1" in text, text
     assert "derided-then-adored" in text and "errored" in text, text
+
+
+def test_stop_after_p3_runs_only_p1_to_p3_prices_only_them_and_writes_no_beat(
+    tmp_path, monkeypatch, capsys
+):
+    """A measurement of P1's claims needs P1-P3 exactly as a job runs them,
+    and nothing after: `--stop-after P3` ends the job after P3 with status
+    `stopped` (never `committed`: nothing was written), keeps P1-P3's saved
+    output for a later look, calls no P4, P5 or P6, and prints what P1-P3
+    alone are projected to cost beside the whole job's figure — a go must be
+    asked against the run's own price."""
+    ws = _mock_env(tmp_path, monkeypatch)
+
+    rc = ingest_job.main([*ws["argv"], "--stop-after", "P3", "--yes"])
+
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert "summary: status=stopped" in out
+    stop_line = next(line for line in out.splitlines() if line.startswith("stop-after P3:"))
+    spend_line = next(line for line in out.splitlines() if line.startswith("spend:"))
+    stage = float(stop_line.split("projected=$")[1].split()[0])
+    whole = float(spend_line.split("projected=$")[1].split()[0])
+    assert 0 < stage < whole
+    assert "cap_bound=$" in stop_line and "expected=$" in stop_line
+    calls_line = next(line for line in out.splitlines() if line.startswith("calls:"))
+    for phase in ("P4", "P5", "P6"):
+        assert f"{phase} est=" in calls_line
+        assert f"{phase} est=" not in calls_line or calls_line.split(f"{phase} est=")[1].split(
+            "act="
+        )[1].split()[0] == "0", calls_line
+    assert "act=4" in calls_line.split("P3 est=")[1].split("|")[0]
+    city_dir = ws["data_root"] / script_mod.CITY
+    assert json.loads((city_dir / "beats.json").read_text(encoding="utf-8")) == []
+    (job_dir,) = [p for p in (city_dir / "jobs").iterdir() if p.is_dir()]
+    assert (job_dir / "P3.json").is_file() and not (job_dir / "P4.json").exists()

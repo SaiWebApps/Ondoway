@@ -1843,6 +1843,73 @@ passage does not make (every judgment word in a claim present in the passage), i
 example words; the P1 lift-gate drop rate and the P3 refusal and hold rates against job B's, so that
 keeping judgments is never paid for with fewer claims; and P3's treatment of an unattributed opinion
 (the "belief" kind), since a claim may not say "Frommer's calls it …".
+*`--stop-after P3` — built test-first ($0, 2026-09-24).* Measuring P1's claims needs P1-P3 exactly as
+a job runs them, and nothing after. `run_job(stop_after="P3")` and `make ingest-job ARGS="…
+--stop-after P3"` end the job after P3 with a new status `stopped` (never `committed`: nothing is
+written), keep P1-P3's saved output, call no P4, P5 or P6, and print a `stop-after P3:` line that
+prices only the plan rows the run can reach (`run.stage_spend`, the first rows of PLAN: P1, P2, P3 and
+the omission check), beside the whole job's figures. Test on the scripted Guggenheim job: the status,
+no P4-P6 call, P3's act=4, an empty beats file, P3.json kept and no P4.json, and a stage price
+strictly below the whole job's. Mutants, each red and restored: the runner ignores the stop, the
+stage priced over the whole plan (`10.7179 < 10.7179`), a stopped job marked committed. The ingest
+API's terminal statuses stay `committed` and `error`: it serves only the live data root and never
+sets `stop_after`, so a `stopped` job exists only in a sandbox (a known limit, not a defect today).
+*P1 keep-judgments measurement — registered before any spend (2026-09-24).* The rule committed in
+a0a5cf1, measured on the unit job B measured: Frommer's `chunk-05-ch05-uptown`, P1-P3 only, in a fresh
+sandbox `data-ingest/sandboxes/p1keep-r1` holding a copy of job B's start (`beats.json` sha
+`fa549e1db77b8463` and its `poi-raw.json`, from
+`$HOME/ondoway-ingest-backup-2026-09-13/step2c-pre-jobB-2026-09-20/new_york/`), by `make ingest-job
+CITY=new_york CHUNK_DIR=Books/new_york/frommers-nyc-2024 ARGS="--chunk chunk-05-ch05-uptown --as-of
+2024 --data-root data-ingest/sandboxes/p1keep-r1 --stop-after P3 --yes"`, under the commit recording
+this paragraph; R0 around it; backup rsynced after. **Spend**, printed $0 on a throwaway copy:
+`stop-after P3: projected=$6.3700 first_pass=$0.6052 expected=$1.3114 cap_bound=$17.8675`. The go is
+asked against expected $1.31, with $17.87 the true ceiling. Nothing stops a run while it runs, and a
+P1 or P3 batch may sit in the queue for hours (job B's did). **Scored** by the pinned
+`$HOME/ondoway-ingest-backup-2026-09-13/p1-evaluative/p1keep_score.py` (sha256
+`0e7000a3cba7653cc05fd271d586189e9b86dce2d975f5d678d50267a5de8293`, reading `lost_by_place.json`
+sha256 `975cca27…` and `judgment_tokens.json` sha256
+`b316747cd93eb011793bc1f1c0a92de0ace2da2b2535b071dc58b2db684f60a1`), which scores job B's own P1-P3 at 0 of 29 retained, 188 P1 claims, 164 kept,
+55 refused, 22 dropped and 1 story held — the baseline.
+(K1) Retention, the rule's purpose: of the 29 measured losses, the number now carried — a kept claim
+at the same place, whose span shares a four-word run with the old span, whose text holds one of the
+loss's pinned judgment-only tokens (`judgment_tokens.json`: chosen by the author from the labellers'
+quoted words, keeping only the words that carry the judgment — "museum", "history", "long", "life" and
+the like are left out, because a first version counted them and could have passed K1 on ordinary
+words, which the judge caught). At least 15 of 29 passes. A judgment carried under a span that
+shares no four words with the old one is missed, and one carried in a synonym is missed; the
+unmatched items are listed and read, never re-scored.
+(K2) No invented judgment, must pass: zero kept claims using one of the rule's example words
+("celebrated", "vast", "finest", "much-loved", "panned") the unit never uses; and zero claims
+labelled INVENTED by both labellers. Every kept claim is labelled by the Agent tool's `opus` and
+`fable` (a reply whose model is P1's author or P3's judge under `llm.same_model` is void), with the
+pinned `p1-evaluative/label_invented_prompt.txt` (sha256
+`ba68fb2ace987a2bb6308cdb2171a98b06ce12bc0b205ed4ea18a515ff7f9ae3`), which has the labeller read the
+whole chunk because a judgment made elsewhere in the passage is sourced. Batches of at most 41 by
+sha256 of the claim text, the four controls sorted in the same way: SOURCED — job B's c96 "The
+American Collection at the Metropolitan Museum of Art is the most comprehensive in the world." / "The
+American Collection, the most comprehensive in the world" and c97 "The Metropolitan Museum of Art's
+American Collection features masterworks by Sargent." / "featuring masterworks by Sargent";
+INVENTED — plants built from job B's c111 and c80 by one added word the chunk never uses: "The
+legendary Metropolitan Museum of Art is located on Fifth Avenue at 82nd Street." / "Fifth Ave. (at
+82nd St.)" and "The Metropolitan Museum of Art's breathtaking European paintings collection comprises
+some 700 works." / "encompassing some 700 works". A population claim equal to a control's text is
+shown once, as the control, and not counted. One missed control voids that labeller's batch with no
+substitute. Both INVENTED is INVENTED, both SOURCED is SOURCED, anything else UNDECIDED, reported
+and not counted either way, every one quoted. K2 is INCONCLUSIVE, never a pass, if any batch is void
+or more than 5 claims are UNDECIDED: labels nobody gave cannot show that nothing was invented.
+(K3) No fewer claims, must pass: at least 148 kept (90% of 164), at most 28 dropped (22 plus a
+quarter), at most 2 stories held.
+Reported, not scored: P1's claim count, P3's refusals against 55, every refused or dropped claim
+that carries one of the 29 judgments' tokens (P3's treatment of an unattributed opinion), and the
+metered actual. **Consequence, fixed now, first match wins:** K2 fails, so the rule is withdrawn or reworded before
+any P1 run; K2 INCONCLUSIVE, so the owner decides and the P1 gate stays shut; K3 fails, so the
+rule's cost in claims goes to the owner before anything else (K3's floors are unmeasured run-to-run
+noise, which is why a human reads it); K1 fails, so a stronger wording is next, under its own
+registration; all three pass, so the rule stands and the P1 gate lifts. **Stop-loss and void runs:**
+the job log is watched, and a batch still unfinished 24 hours after submission voids the run. A run
+that errors or is voided is recorded as such, and the owner decides; it is not re-run, and a
+`--resume` from its saved phase files is a re-run, allowed only by a new owner go after R0 checks the
+sandbox. No re-score under this registration.
 
 ### Slice 11: Cleanup
 

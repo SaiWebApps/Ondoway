@@ -439,6 +439,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--resume", default=None, metavar="JOB_ID",
                         help="continue a job from its phase files instead of starting one")
     parser.add_argument("--yes", action="store_true", help="proceed past the estimate and spend")
+    parser.add_argument("--stop-after", choices=sorted(run.STOP_AFTER_ROWS), default=None,
+                        help="end the job after this phase: nothing written, its output kept")
     args = parser.parse_args(argv)
     if args.resume is None and (args.chunk_dir is None or args.as_of is None):
         parser.error("a new job needs --chunk-dir and --as-of")
@@ -484,6 +486,13 @@ def main(argv: list[str] | None = None) -> int:
           f"[{', '.join(u.chunk for u in units)}] as_of={job.as_of} rights={job.rights_basis}")
     estimate = run.estimate_job(client, units)
     _print_estimate(estimate)
+    if args.stop_after is not None:
+        stage = run.stage_spend(estimate, args.stop_after)
+        print(
+            f"stop-after {args.stop_after}: projected=${stage['projected']:.4f} "
+            f"first_pass=${stage['first_pass']:.4f} expected=${stage['expected']:.4f} "
+            f"cap_bound=${stage['cap_bound']:.4f} (only the rows this run can reach)"
+        )
     if not args.yes:
         print("run refused: re-run with ARGS=\"... --yes\" to spend this.")
         return 2
@@ -492,14 +501,15 @@ def main(argv: list[str] | None = None) -> int:
         store.append_event(job.id, "info", "resumed", data={"phases": resumed_phases})
     else:
         store.write_job_file(job, units, paths["beats"])
-    run.run_job(job.id, store, client, data_root=data_root)
+    run.run_job(job.id, store, client, data_root=data_root, stop_after=args.stop_after)
     finished = store.get(job.id)
     if finished is None:  # the store never forgets a job it created
         raise KeyError(job.id)
     log_path = store.log_path(job.id)
     print(summary(finished, log_path))
     print("\n".join(_spend_lines(estimate, client)))
-    return 0 if finished.status == "committed" else 1
+    done = "stopped" if args.stop_after is not None else "committed"
+    return 0 if finished.status == done else 1
 
 
 if __name__ == "__main__":

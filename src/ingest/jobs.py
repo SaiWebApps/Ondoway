@@ -45,7 +45,7 @@ PHASES: tuple[str, ...] = ("P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7")
 
 #: Lifecycle: created → running → committed | error. A held item never
 #: stops a job (D13): the rest of the chunk still commits.
-IngestStatus = Literal["created", "running", "committed", "error"]
+IngestStatus = Literal["created", "running", "committed", "stopped", "error"]
 
 #: What the queue holds (D13): a merge the judge and the signature hint
 #: disagreed on, a narration still refused after its one revise (or one
