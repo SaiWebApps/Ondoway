@@ -65,6 +65,23 @@ _ONE_FACT = (
     "passage states, so it stays one claim)."
 )
 
+#: Owner ruling 2026-09-24 (option a): a judgment the passage makes about
+#: what a claim describes stays IN that claim — measured before the rule, 29
+#: of job B's 164 kept claims dropped one ("beloved", "masterpiece") and the
+#: narrator reads claim text only. A judgment is part of the fact it
+#: qualifies, not a second fact, so the one-fact rule never splits it off.
+#: Its examples are words the measurement did not find lost.
+_KEEP_JUDGMENTS = (
+    "Keep the passage's own judgments: when the passage judges what a claim "
+    "describes — its importance, size, quality or reputation, as in "
+    '"celebrated", "vast", "the finest", "much-loved" or "panned" — put that '
+    "judgment in the same claim as the fact it qualifies, so the claim says how "
+    "much the thing matters and what it is like, not only that it exists. A "
+    "judgment is part of the fact it qualifies, not a second fact. Keep the "
+    "passage's sense of it in your own wording, under the eight-word rule "
+    "below, and never add a judgment the passage does not make."
+)
+
 #: The JSON shape both prompts ask for. A plain literal (never an f-string
 #: or `.format` target) so its braces are inert until `str.replace` swaps
 #: in the `{source}` / `{problems}` slots elsewhere in the prompt.
@@ -80,6 +97,7 @@ _RULES = (
     f"{_NO_DANGLING_REFERENCE}. If a claim needs a pronoun, name the actual "
     "person or place instead.\n\n"
     f"{_ONE_FACT}\n\n"
+    f"{_KEEP_JUDGMENTS}\n\n"
     f"{_OWN_WORDING}: the claim's own sentence must never repeat "
     f"{_EIGHT_WORD_RUN} outside a quotation you attribute to a named "
     f"speaker. {_SPAN_SENTENCE}\n\n"

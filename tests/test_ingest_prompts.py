@@ -584,3 +584,39 @@ def test_the_merge_prompt_defines_covered_with_an_example_from_another_city():
     assert "Guggenheim" not in rules
     assert "covered" in prompts.P6_MERGE_SCHEMA["properties"]["claims"]["items"][
         "properties"]["verdict"]["enum"]
+
+
+def test_p1_keeps_the_passages_own_judgments_in_the_claim():
+    """Owner ruling (2026-09-24, option a): a judgment the passage makes about
+    what a claim describes — its importance, size, quality or reputation —
+    goes INTO that claim, with the fact it qualifies. Measured before this
+    rule: 29 of job B's 164 kept claims dropped one ("beloved",
+    "masterpiece", "transporting") and the narrator reads claim text only.
+    The rule forbids inventing a judgment the passage does not make, and its
+    examples are none of the words the measurement found lost, so a later
+    measurement on those claims cannot be passed by copying the examples.
+    The first ask, the re-ask and the omission re-ask all carry it."""
+    import re
+
+    lost_words = {
+        "terrific", "small", "mesmerizing", "famed", "dazzling", "whiz", "bang",
+        "beloved", "fascinating", "overdue", "rare", "stunning", "preserved",
+        "brilliantly", "colorful", "sentimental", "rippingly", "fun", "architectural",
+        "majestic", "truer", "master", "masters", "absorbing", "excellent", "swift",
+        "effective", "transporting", "insipid", "delirious", "masterpiece", "towering",
+        "handsome", "exquisite", "nifty", "painstakingly", "intriguing", "prized",
+    }
+    for rendered in (
+        prompts.DECOMPOSE_PROMPT,
+        prompts.render_redo("P.", ["x"]),
+        prompts.render_supplement("P.", ["an existing claim"], ["a fact"]),
+    ):
+        assert "Keep the passage's own judgments" in rendered
+        for category in ("importance", "size", "quality", "reputation"):
+            assert category in rendered
+        assert "never add a judgment the passage does not make" in rendered
+        assert "in your own wording, under the eight-word rule" in rendered
+        rule = rendered[rendered.index("Keep the passage's own judgments"):]
+        rule = rule[: rule.index("\n\n")]
+        leaked = set(re.findall(r"[a-z]+", rule.lower())) & lost_words
+        assert not leaked, f"the rule's examples name measured words: {sorted(leaked)}"

@@ -1821,6 +1821,28 @@ but its rate was not measured. "small" (c166) counts as a size judgment under th
 both labellers agreed; without it LOST is 28, still far above 9. Integrity: `verdicts.json` sha256
 prefix `1bbd13ef35017ec3`; raw replies batch1 opus `2b03d55c9561ffd0` / fable `8ed7230dd4e33a0c`,
 batch2 `a6b273082f866596` / `7e88e4e2e49c3452`, batch3 `a3bacfe2f935201f` / `df31525b5515a7c6`.
+*P1 keeps the passage's own judgments — rule built test-first, committed UNMEASURED ($0, 2026-09-24;
+owner: "go with (a)").* `_KEEP_JUDGMENTS` joins P1's shared rules, so the first ask, the re-ask and the
+omission supplement all carry it. When the passage judges what a claim describes — its importance,
+size, quality or reputation — the judgment goes in the same claim as the fact it qualifies. It is
+"part of the fact it qualifies, not a second fact", so the one-fact rule never splits it off (option
+(b), a separate judgment claim, was not chosen). Its sense is kept "in your own wording, under the
+eight-word rule", because the first draft's "take it from the passage" invited copying and would have
+traded lost judgments for lift drops (the judge caught it). It never adds a judgment the passage
+does not make. Its examples ("celebrated", "vast", "the finest", "much-loved", "panned") are none of
+the measured lost words; a test fails if any word of the rule is one of them, which include fable's
+"painstakingly" and the controls' "intriguing" and "prized". Mutants, each red at its assertion and
+restored: the rule left out of the shared rules, a measured word used as an example, the
+no-invention clause removed, and the own-wording clause replaced. Green: the prompt, decompose,
+group, output-cap, calibrate, run, p1probe, llm and job-CLI test files. The prompt grows by about
+150 tokens per P1 call; no pinned number moved. **Not measured, and so gated:** no job that runs P1 —
+the P1-split probe (its $1.3343 was printed before this rule and must be printed again) or any full
+job — runs until this rule's own measurement is registered and has a result. That registration
+carries at least these bars: how many of the 29 measured losses a fresh P1 keeps; zero judgments the
+passage does not make (every judgment word in a claim present in the passage), including the rule's
+example words; the P1 lift-gate drop rate and the P3 refusal and hold rates against job B's, so that
+keeping judgments is never paid for with fewer claims; and P3's treatment of an unattributed opinion
+(the "belief" kind), since a claim may not say "Frommer's calls it …".
 
 ### Slice 11: Cleanup
 
