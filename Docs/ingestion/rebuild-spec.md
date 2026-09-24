@@ -1625,6 +1625,85 @@ labels are the author's own, so the author does not decide (i): blind labels do,
 registration, and nothing here is re-scored. Job B's panel-upheld folds of these two pairs are
 disputed on the same reading and need a blind label; if false, what they lose is a venue or dating
 fact, not the evaluative language of the 2026-09-24 ruling — a different defect class.
+*Blind labels on the Frick Madison pairs, and the owner's ruling ($0, 2026-09-24).* Two labellers,
+opus and fable — never Sonnet (the merge judge) or Haiku (the probe) — five items in the same order,
+no hint of any earlier answer, the Frommer's Frick Madison excerpt given as context. Decision rule
+fixed before the answers: ADDS from both with 3/3 controls right relabels, SAME from both sends the
+prompt back, anything else is the owner's call. Controls: the Jewish Museum address SAME, El Greco
+"seminal" ADDS, c151 1959 SAME. Opus: controls 3/3, the Frick pairs ADDS (medium, low) — "Frick
+Madison names the temporary venue at 945 Madison Ave rather than the Fifth Avenue mansion". Fable:
+the Frick pairs ADDS (medium, medium) for the same reason, but it missed the 1959 control, calling
+it ADDS for the museum's full name alone — a labeller that flags a bare name change, which weakens
+its Frick answers. The rule was not met, so it went to the owner, who ruled "go with ADDS, register
+the re-measure". A re-measure was drafted (v1's pairs with the Frick Madison pairs relabelled
+`hold`, plus two name-only plants) and withdrawn before any spend: the judge showed v1 had already
+given the relabelled answer on all four `hold` pairs and on four of the six `fold` pairs (30 of the
+36 scored samples), so it would have measured little beyond the plants. The owner ruled "skip v2, go
+to the P6-only replay". The build question needs `same` pairs the prompt has never answered, and
+that replay produces them.
+*P6-only replay of ALL job B stories — registered before any spend (2026-09-24; rewritten at the
+judge's STOP).* Job B's P6 again, over every story rather than one place, under the current code: 50
+stories, 41 of them at seven places that already have beats (Cooper Hewitt 5, Frick 6, Jewish Museum
+3, Met 12, MCNY 5, Neue Galerie 5, Guggenheim 5) and 9 at four new places. One run in a fresh sandbox
+`data-ingest/sandboxes/jobB-p6all-r1`, prepared ($0) by `make ingest-merge-replay CITY=new_york
+JOB=75b8f292b34e40ff90e5049392976335 ARGS="--source-root data-ingest/sandboxes/jobB-replay-src --out
+data-ingest/sandboxes/jobB-p6all-r1"` (refused unless it rebuilds sha `fa549e1db77b8463`), then the
+resume it prints, under the commit recording this paragraph. R0 around it; backup rsynced after.
+**Spend, stated honestly.** A resume prints the whole job's estimate, not a replay's, and nothing stops
+a run while it runs. P1-P5 are copied and do not re-run; P7 makes no model call. What spends: the P6
+merge judge (Sonnet) — 41 stories, up to two asks each, `P6_MAX_TOKENS` 16,000 thinking included —
+and a P4 (Opus) plus P5 (Haiku) re-narration of every story with a non-covered fold and of every
+start beat a `contested` or `supersedes` fold re-runs. Expected: the first answers come to about
+$0.64-0.70 from the cov2 runs' measured calls (about 4.4k tokens in, 1k out at the Guggenheim)
+scaled by each place's existing claims; with re-asks and 10-15 re-narrations, about $1.0-1.5. The
+arithmetic ceiling of P6 alone, every call at its maximum output, is about $14 plus re-narration.
+The only stop is by hand: the job log is watched and the run interrupted if `merge_answered` events
+pass 70 (41 stories plus 29 re-asks), a proxy, not a meter. The go is asked against expected $1.0-1.5
+with that ceiling stated.
+**Scored** by a pinned scorer outside the repo, `$HOME/ondoway-ingest-backup-2026-09-13/tools/p6all_score.py`,
+sha256 `a00d770d4adce1b902c4604eef8326ffdcc2cd6a1bd7b8efc63182c41db387bc`, which exits 1 on any
+violation. Its rules follow what `merge.apply` and P6 write: a claim named by folds changes only the
+union of its folds' fields — `same` {sources, resolution, verdict}; `contested` {sources, status,
+resolved_value, resolution, verdict}; `supersedes` {kind, status}; `superseded` none; the claims
+added to a start beat are exactly one per `supersedes`/`superseded` fold into it, each with that
+fold's text; a start beat's own fields change only in {narration, duration_sec, review} and only if
+it is in the `rerun` list, and a re-run never leaves a start beat newly held (`review.held` false to
+true is a violation: P5 writes `review` even when it holds); a `rerun_reverted` beat is byte-equal to the start file and folds into it
+do not count; every decided story not held (`merge_held` or `commit_held` in the held sidecar; a
+`narration_held` item is still written) has exactly one new beat of its own whose claim ids are
+exactly its `new` outcomes plus any covered claims whose absorption was refused, and a held story
+has none. Checked for $0: on job B's own output it exits 1 naming exactly job B's two since-deleted
+story joins (two LP beats with appended claims, and the two joined stories with no beat of their
+own); on cov2-r1, cov2-r8 and cov-r2 (a held run) it exits 0; a mutant for each rule on a scratch
+copy of cov2-r1 exits 1 with that rule's message — a claim text changed, a claim appended, a
+re-run field changed on a beat not re-run, a folded claim in the story's beat, a held story with a
+beat, a re-run leaving a start beat newly held — while a synthetic correct re-narration exits 0,
+and a synthetic correct `contested` fold exits 0 while the same fold also changing `kind`
+exits 1. (P1) Corpus, must pass: the job `committed`, the live sha unchanged, the scorer exits 0.
+Reported, not scored: every fold (story, claim, outcome, both texts, reverted or not), every
+`covered` absorption and every refused one, every hold with its reason, the new beats, the actual.
+**Blind labels, fixed now.** Population: every `merge_folded` with outcome `same` and every
+`merge_covered` event, including folds into a reverted beat and absorptions later refused (flagged,
+still labelled). Demoting folds (`contested`, `supersedes`, `superseded`) are listed but not labelled;
+a wrong demotion is a gap this run does not measure. Labellers: the Agent tool's `opus` and `fable`
+aliases, as in every earlier blind label, never Sonnet (merge judge) or Haiku (second look), exact
+model ids recorded in the result as the harness reports them. Prompts, pinned: pairs by
+`tools/label_pair_prompt.txt` (sha256 `7d9cf211b848c2f6163307b3fba92a32a1a2821097c0ed1a3e0ab362d50a4001`),
+covered items by `tools/label_covered_prompt.txt` (sha256
+`28cf3a89b270992c4232442037e4fdd57b302b9ed7b3e9caa9cb63483a1debf9`), both in the backup's `tools/`.
+Every item always shows the incoming claim's SOURCE: the `span` its fold event records. Controls,
+pinned: pairs — job B's El Greco fold (ADDS), job B's Jewish Museum address fold (SAME), c151 into LP
+c21 (SAME), each with its recorded span; covered — the calibration plants `covered_union` (COVERED)
+and `adds_a_date` (ADDS), SOURCE their `second_source.text`. Items and controls are ordered by the
+sha256 of the incoming claim's text. A population item whose (incoming claim, existing claim) pair
+is a control's is shown once, as the control, and reported separately, never counted toward FALSE or
+TRUE — this run may well repeat the El Greco, Jewish Museum or c151 fold. One missed control makes that labeller's whole batch
+UNDECIDED, with no substitute labeller. A `same` fold both label ADDS is FALSE, both SAME is TRUE,
+anything else UNDECIDED; for `covered`, both ADDS is FALSE, both COVERED TRUE. **Consequence, fixed
+now:** at least one FALSE `same` or `covered` here means the unchanged second-look prompt
+(`933a3b4a22087199`) is run over this run's labelled pairs, under its own registration with its
+fixture pinned by sha before it sees them; zero FALSE means the second look is not pursued now and the
+rate is reported as not measured beyond this run.
 
 ### Slice 11: Cleanup
 
