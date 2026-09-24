@@ -5,8 +5,20 @@
 const LEG_MS = 6000;
 const HOLD_MS = 2500;
 
-// A standard stop: walk the leg, play the story, optionally one "Tell me more", move on.
+// The v10 "Running late" .dropcard carries a thumbnail; use the stop's own NYC photo.
+const CHG_IMG = { Fraunces: "fraunces_thumb", "Bowling Green": "bowling_wide", "Castle Clinton": "castle_wide" };
+function chgThumb(was) {
+  const k = Object.keys(CHG_IMG).find((n) => was.includes(n));
+  const src = k && C.img[CHG_IMG[k]];
+  return src ? ` style="background-image:url(${src})"` : "";
+}
+
+// A standard stop: walk the leg, play the story, then "Tell me more" as many times as this
+// stop has stories left. A gravity-5 anchor keeps giving; a walk-by runs out after one.
+// (The engine models this as tier: dwell seconds by tier, and an anchor candidate needs
+// >= 3 active beats — src/tour/routing.py, src/onboard/beat_draft.py.)
 function stopScreen({ leg, story, more, where, meta, time }) {
+  const extras = more == null ? [] : Array.isArray(more) ? more.slice() : [more];
   return {
     theme: "dark", walk: true, time,
     render({ maya }) {
@@ -14,15 +26,19 @@ function stopScreen({ leg, story, more, where, meta, time }) {
       Walk.pos = PATHS[leg][0].slice();
       const w = walkScaffold(maya, { where });
       setWalking(w, true);
-      let moreUsed = false;
+      const queue = extras.filter((k) => C.stories[k]);
+      let told = 0;
       // If "Tell me more" started during the hold, its own end moves the walk on.
       const finish = () => wait(HOLD_MS, () => { if (!Player.active) App.next(leg); });
       const playMain = () => playOn(w, C.stories[story], meta, () => (pendingMore ? null : finish()));
       let pendingMore = false;
       const playMore = () => {
-        if (moreUsed || !C.stories[more]) return toast(maya, "That's every story here in your lenses.");
-        moreUsed = true; pendingMore = true;
-        playOn(w, C.stories[more], meta + " · more", () => finish());
+        if (!queue.length) return toast(maya, "That's every story here in your lenses.");
+        const key = queue.shift();
+        told += 1;
+        pendingMore = true;
+        const label = queue.length ? `${meta} · more ${told} of ${told + queue.length}` : `${meta} · more`;
+        playOn(w, C.stories[key], label, () => finish());
       };
       wirePlayer(w, { onNext: () => App.next(), onPrev: playMain, onReplay: playMain });
       wireLevers(maya, w, { more: playMore });
@@ -31,7 +47,7 @@ function stopScreen({ leg, story, more, where, meta, time }) {
   };
 }
 
-App.def("3.1", stopScreen({ leg: "3.1", story: "memorial", more: "memorial_more", where: "memorial", meta: "Stop 1 of 6", time: "9:30" }));
+App.def("3.1", stopScreen({ leg: "3.1", story: "memorial", more: ["memorial_more", "memorial_trees", "memorial_tree"], where: "memorial", meta: "Stop 1 of 6", time: "9:30" }));
 App.def("3.1b", stopScreen({ leg: "3.1b", story: "trinity", more: "trinity_more", where: "trinity", meta: "Stop 2 of 6", time: "11:15" }));
 
 // ---- 3.3 Federal Hall — same spot, different story (two phones)
@@ -43,7 +59,7 @@ App.def("3.3", {
     const wm = walkScaffold(maya, { where: "federal" });
     const wd = walkScaffold(dan, { levers: false, closeX: false });
     setWalking(wm, true); setWalking(wd, true);
-    wd.insertAdjacentHTML("afterbegin", `<div class="whose">${icon("person")}Dan's phone</div>`);
+    wd.insertAdjacentHTML("afterbegin", `<div class="whose g-next">${icon("person")}Dan's phone</div>`);
     const fm = C.stories.fh_maya, fd = C.stories.fh_dan;
     const phones = () => document.querySelectorAll(".phone-wrap");
     const focus = (who) => phones().forEach((p) => p.classList.toggle("quiet", p.dataset.phone !== who));
@@ -83,13 +99,15 @@ App.def("4.1", {
       App.setClock("12:55", true);
       App.record("system", "re-plan fired", { clock: "12:10 → 12:55" });
       wait(1100, () => {
-        maya.insertAdjacentHTML("beforeend", `<div class="replan"><div class="card">
-          <div class="eyebrow" style="color:var(--spark)">${icon("update")} Your day changed</div>
-          <h2 class="h2" style="margin-top:8px">${esc(r.title)}</h2>
-          <p class="body" style="margin:6px 0 12px">${esc(r.body)}</p>
-          ${r.changes.map((c) => `<div class="chg"><span class="was${c.struck ? " struck" : ""}">${esc(c.was)}</span>${icon("arrow_forward")}<span class="chg-now"><b>${esc(c.now)}</b><br><span class="why">${esc(c.why)}</span></span></div>`).join("")}
+        // v10 "06 · Running late": scrim over the live map, one .sheet, a .dropcard per change.
+        maya.insertAdjacentHTML("beforeend", `<div class="replan late"><div class="scrim"></div><div class="sheet">
+          <div class="tag"><span class="d"></span>Your day changed</div>
+          <h3>${esc(r.title)}</h3>
+          <p>${esc(r.body)}</p>
+          ${r.changes.map((c) => `<div class="dropcard"><span class="th"${chgThumb(c.was)}></span><div><div class="nm"><span class="was${c.struck ? " struck" : ""}">${esc(c.was)}</span>${icon("arrow_forward")}<b>${esc(c.now)}</b></div><div class="mt">${esc(c.why)}</div></div></div>`).join("")}
           <div id="rp-warn"></div>
-          <div style="display:flex;gap:10px;margin-top:14px"><button class="btn" style="flex:1" id="rp-ok" data-log="Re-plan: Sounds good">Sounds good</button><button class="btn quiet" id="rp-keep" data-log="Re-plan: Keep original">Keep original</button></div>
+          <button class="lp" id="rp-ok" data-log="Re-plan: Sounds good">Sounds good</button>
+          <button class="lg" id="rp-keep" data-log="Re-plan: Keep original">Keep original</button>
         </div></div>`);
         $("#rp-ok", maya).onclick = () => { App.st.replanChoice = "sounds good"; App.next(); };
         $("#rp-keep", maya).onclick = () => {

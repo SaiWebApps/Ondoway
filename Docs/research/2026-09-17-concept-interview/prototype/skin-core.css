@@ -1,0 +1,218 @@
+/* skin-core — screen-specific additions in the v10 idiom. Loaded after v10.css.
+   Covers the phone chrome plus screens 0.1 (Meet Maya), 1.1 (lenses) and 1.2 (party).
+   The markup for those three screens lives in screens-plan.js and is owned by another
+   agent, so everything here is applied to the markup as it stands — no v10 class names
+   could be added to it. Selectors are pinned to the ids those screens already carry
+   (#start, #lens-scr, #pcont) via :has(), so nothing leaks into the other screens. */
+
+/* ---------------------------------------------------------------- v10 reconciliation
+   v10.css ships an UNCONDITIONAL dark :root after the light one (it expects the host
+   page to carry data-theme="light"; PROTOTYPE-walkthrough.html has no <html> tag to
+   carry it). It shares five token names with styles.css (--bg --card --ink --line
+   --accent), so without this the whole prototype renders dark-on-dark. Restore the
+   light v10 palette, and keep the prototype's heavier --lift. */
+:root {
+  --bg: #e9e5db; --page-panel: #f6f4f0; --card: #fff;
+  --ink: #20242c; --ink-soft: #3a3f49; --ink-mute: #5b6069;
+  --line: #ded8cb; --line-soft: #e8e3d8;
+  --accent: #2c6cc0; --accent-deep: #1e4f92; --accent-light: #7bb2f5; --accent-ink: #fff;
+  --lift: 0 10px 30px rgba(32,36,44,.18);
+  --lift-lg: 0 22px 50px rgba(32,36,44,.16), 0 4px 10px rgba(32,36,44,.06);
+  /* v10 components read these; the design system's Paris photos are replaced by the
+     prototype's own NYC set (see CREDITS.md). */
+  --img-login: url("img/hero_family.jpg");
+  --img-home: url("img/federal_wide.jpg");
+  --img-stop: url("img/trinity_wide.jpg");
+}
+
+/* v10 restyles the bare .btn for its <div class="btn"> pills (display:flex). The
+   prototype uses <button class="btn"> inline in rows, so give real buttons their
+   inline-flex back; .btn.block still fills its line. */
+button.btn { display: inline-flex; }
+/* v10's .eyebrow is accent blue; on the dark/evening screens use the light accent. */
+.screen.dark .eyebrow, .screen.evening .eyebrow { color: var(--accent-light); }
+
+/* ---------------------------------------------------------------- Phone chrome
+   v10's .statusbar/.homebar are in-flow in a flex .canvas; the prototype's are
+   absolutely positioned over a scrolling .scr, so keep the prototype's stacking and
+   take v10's geometry. v10 centres .homebar with translateX(-50%) while styles.css
+   still carries margin-left:-67px — both apply, so zero the margin. */
+.statusbar { padding: 0 22px 0 26px; z-index: 50; }
+.statusbar .dots { pointer-events: none; }
+.homebar { margin-left: 0; width: 120px; opacity: .42; z-index: 60; }
+.screen.dark .homebar, .screen.evening .homebar { opacity: .5; }
+
+/* ================================================================ 0.1 Meet Maya
+   v10 "01 · Sign in": full-bleed photo, scrim, Fraunces over the bottom, one pill.
+   The prototype's own NYC family photo stands in for the design system's Paris one. */
+.screen:has(#start) .statusbar { color: #fff; }
+.screen:has(#start) .homebar { background: #fff; opacity: .9; }
+.scr:has(#start) {
+  display: flex !important; flex-direction: column !important;
+  padding: 0 !important; gap: 0 !important; overflow: hidden; color: #fff;
+}
+.scr:has(#start) > .pic.hero {          /* the hero photo becomes the whole canvas */
+  position: absolute; inset: 0; z-index: 0;
+  width: 100%; height: 100% !important; border-radius: 0 !important;
+  object-fit: cover; object-position: 50% 30%;
+}
+.scr:has(#start)::after {               /* v10 .login .scrim */
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(16,18,24,.40) 0%, rgba(16,18,24,0) 26%,
+    rgba(16,18,24,.12) 46%, rgba(16,18,24,.72) 74%, rgba(12,14,18,.94) 100%);
+}
+.scr:has(#start) > .eyebrow {           /* v10 .login .eyebrow-l */
+  position: relative; z-index: 2; margin: auto 24px 11px;
+  font: 700 11px var(--mono); letter-spacing: .18em; color: var(--accent-light);
+}
+.scr:has(#start) > .h1 {                /* v10 .login h2 */
+  position: relative; z-index: 2; margin: 0 24px 12px !important;
+  font-family: var(--display); font-variation-settings: 'opsz' 144; font-weight: 540;
+  font-size: 36px !important; line-height: .98; letter-spacing: -.03em; color: #fff;
+}
+.scr:has(#start) > .body {              /* v10 .login .sub */
+  position: relative; z-index: 2; margin: 0 24px 20px !important;
+  font-size: 13.5px !important; line-height: 1.45; color: rgba(255,255,255,.84);
+}
+.scr:has(#start) > div:last-child {     /* v10 .login .auths */
+  position: relative; z-index: 2; margin-top: 0 !important; padding: 0 24px 24px;
+}
+.scr:has(#start) #start {               /* v10 .login .btn-primary */
+  height: 52px; font-size: 15px; box-shadow: 0 10px 24px rgba(44,108,192,.42);
+}
+.scr:has(#start) > .pic.hero.placeholder-img { border-radius: 0 !important; }
+
+/* ================================================================ 1.1 Lens picker
+   v10 "02 · Choose lenses": the genre wall. Each .lchip is dressed as a .gtile — its
+   lens colour drives the tile gradient, its leading .ms glyph becomes the bleed-off
+   .art, and the trailing check (only present when selected) becomes the .chk badge. */
+.screen:has(#lens-scr) { background: var(--page-panel); }
+#lens-scr { padding: 50px 22px 238px !important; }
+#lens-scr > .eyebrow { display: block; margin-bottom: 2px; }
+#lens-scr > .h1 {                       /* v10 .lenses .hd h2 */
+  font-variation-settings: 'opsz' 120; font-weight: 560;
+  font-size: 26px; line-height: 1.04; letter-spacing: -.02em; margin: 4px 0 0;
+}
+#lens-scr > .body {                     /* v10 .lenses .hd p */
+  font-size: 13px !important; color: var(--ink-mute);
+  margin: 9px 0 14px !important;
+}
+#lprog { gap: 5px; margin-top: 12px; max-width: 108px; }
+#lprog i { height: 4px; background: var(--line-soft); }
+#lprog i.on { background: var(--accent); }
+
+#lchips {                               /* v10 .lens-grid */
+  display: grid !important; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+#lchips .lchip {                        /* v10 .gtile */
+  position: relative; height: 92px; border: 0; border-radius: 18px; overflow: hidden;
+  padding: 11px; display: flex; flex-direction: column;
+  justify-content: flex-end; align-items: flex-start; gap: 0;
+  text-align: left; transform: none; transition: filter .18s, outline-color .18s;
+  background: linear-gradient(145deg,
+    color-mix(in srgb, var(--c) 78%, #ffffff 22%),
+    color-mix(in srgb, var(--c) 58%, #000000 42%));
+  box-shadow: 0 8px 20px rgba(32,36,44,.14);
+  color: #fff; font: 700 12.5px/1.14 var(--body); letter-spacing: -.01em;
+  text-shadow: 0 1px 8px rgba(0,0,0,.28);
+  filter: saturate(.8) brightness(.94);
+}
+#lchips .lchip > .ms:first-child {      /* v10 .gtile .art */
+  position: absolute; top: -12px; right: -12px; z-index: 1;
+  font-size: 66px; color: rgba(255,255,255,.22) !important;
+  transform: rotate(16deg); text-shadow: none;
+}
+#lchips .lchip.on {                     /* v10 .gtile.sel */
+  outline: 3px solid var(--accent); outline-offset: -3px;
+  filter: none; box-shadow: 0 10px 24px rgba(32,36,44,.2);
+}
+#lchips .lchip.on > .ms:last-child {    /* v10 .gtile .chk */
+  position: absolute; top: 9px; left: 9px; z-index: 3;
+  width: 21px; height: 21px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent); color: #fff !important; font-size: 14px;
+  transform: none; text-shadow: none; box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+
+/* v10 .lenses .savebar — the dock that holds the live preview and the save pill. */
+.lens-dock {
+  padding: 34px 20px 22px; gap: 11px;
+  background: linear-gradient(180deg, rgba(246,244,240,0), var(--page-panel) 30%);
+}
+.lens-dock .fh-preview, .lens-dock .lenspreview {
+  background: var(--card); border: 1px solid var(--line-soft); border-radius: 18px;
+  padding: 13px 14px; min-height: 102px; box-shadow: var(--lift);
+}
+.lens-dock .lens-info { font: 500 13.5px/1.45 var(--body); margin: 9px 0 0; }
+.lens-dock .fh-preview .mono, .lens-dock .lenspreview .mono {
+  font-size: 9.5px !important; letter-spacing: .12em; color: var(--ink-mute) !important;
+  flex: none; white-space: nowrap;
+}
+.lens-dock .fh-preview .lchip.sm, .lens-dock .lenspreview .lchip.sm {
+  transform: none; white-space: nowrap;
+}
+.lens-foot {                            /* v10 .lenses .save */
+  flex-direction: row-reverse; height: 52px; padding: 0 20px;
+  border-radius: 999px; background: var(--accent); color: #fff;
+  box-shadow: 0 10px 22px rgba(44,108,192,.32); transition: background .2s;
+}
+.lens-foot:has(#lcont[disabled]) {
+  background: color-mix(in srgb, var(--accent) 34%, #cfc8b8); box-shadow: none;
+}
+.lens-foot #lcont {
+  opacity: 1 !important; height: auto; padding: 0; border-radius: 0;
+  background: transparent; box-shadow: none;
+  font: 600 15px var(--body); color: #fff;
+}
+.lens-foot #lcount {
+  font-size: 11px !important; letter-spacing: .1em;
+  color: rgba(255,255,255,.85) !important;
+}
+
+/* ================================================================ 1.2 Who's coming?
+   No v10 screen for this one, so it is assembled from v10 parts: the .tourcard shell
+   (white, hairline, 18px radius, lift), the .home .avatar gradient disc, the .home .lbl
+   mono meta line, and the same blue pill that closes every other v10 screen. */
+.screen:has(#pcont) { background: var(--page-panel); }
+.scr:has(#pcont) { padding: 50px 20px 32px !important; gap: 9px !important; }
+.scr:has(#pcont) > .eyebrow { display: block; margin-bottom: 2px; }
+.scr:has(#pcont) > .h1 {
+  font-variation-settings: 'opsz' 120; font-weight: 560;
+  font-size: 26px; line-height: 1.04; letter-spacing: -.02em; margin: 4px 0 0;
+}
+.scr:has(#pcont) > .body {
+  font-size: 13px !important; color: var(--ink-mute); margin: 7px 0 4px !important;
+}
+.card.person {                          /* v10 .tourcard */
+  background: var(--card); border: 1px solid var(--line-soft);
+  border-radius: 18px; padding: 12px; gap: 12px; box-shadow: var(--lift);
+}
+.card.person .avatar {                  /* v10 .home .avatar */
+  width: 38px; height: 38px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  font: 700 15px var(--body);
+}
+.card.person .h2 {
+  font-size: 17px !important; font-variation-settings: 'opsz' 96;
+  font-weight: 560; letter-spacing: -.015em;
+}
+.card.person .muted { font-size: 11.5px !important; }
+.card.person .pstatus {                 /* v10 .tourcard .info .mt */
+  font: 500 11px var(--body); letter-spacing: 0; margin-top: 3px;
+}
+.card.person .pstatus .ms { font-size: 13px; }
+.card.person .chips { margin-top: 9px !important; gap: 5px !important; }
+.card.person .lchip.sm { font-size: 10px; padding: 3px 8px 3px 6px; gap: 3px; }
+.card.person .lchip.sm .ms { font-size: 13px; }
+.card.person .pill { font-size: 10.5px; padding: 4px 9px; }
+.scr:has(#pcont) .invite {
+  height: 46px; border-width: 1.5px; font: 600 13.5px var(--body); margin-top: 3px;
+}
+.scr:has(#pcont) .why {
+  border-radius: 18px; border-left-width: 5px; padding: 13px 15px;
+  font: 500 13px/1.45 var(--body); box-shadow: var(--lift);
+}
+.scr:has(#pcont) .why .ms { font-size: 19px; }
+.scr:has(#pcont) #pcont {
+  height: 52px; font-size: 15px; box-shadow: 0 10px 22px rgba(44,108,192,.32);
+}

@@ -1,0 +1,158 @@
+/* skin-walk — screen-specific additions in the v10 idiom. Loaded after v10.css. */
+/* Step 3, the walk (3.1 / 3.1b / 3.3 / 4.1 / 4.2)  → v10 "06 · Live guide".
+   Step 4, the re-plan (4.1's card)                 → v10 "06 · Running late".
+   The prototype's .screen is 286×626 CSS px — the same box as a v10 .canvas — so v10's
+   own pixel values are used unscaled. Everything here only re-dresses markup that
+   walk-kit.js / screens-walk.js already emit; no behaviour, copy or wiring is styled in. */
+
+/* ============================================================ 06 · Live guide */
+.walk.guide { background: #12151b; color: #f6f4f0; }
+.walk .g-map .map { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* ---- the map, repainted in the v10 night palette */
+.map .water { fill: #090c11; }
+.map .land { fill: #12151b; }
+.map .streets line { stroke: #1c212a; stroke-width: 3; }
+.map .park { fill: #18241d; }
+.map .water-label { fill: #232833; font: 700 9px var(--mono); letter-spacing: 3px; }
+/* v10 draws the route twice: a wide soft glow under a dotted line. */
+.map .route { stroke: #7bb2f5; stroke-width: 5; stroke-dasharray: 1 12; opacity: 1; }
+.map .route.glow { stroke-width: 14; stroke-dasharray: none; opacity: .16; }
+
+.map .pin circle { fill: #7bb2f5; stroke: #fff; stroke-width: 2; }
+.map .pin text { fill: #12151b; font: 700 9.5px var(--mono); }
+.map .pin.must circle { fill: #2c6cc0; stroke: #fff; stroke-width: 2.5; }
+.map .pin.must text { fill: #fff; }
+.map .pin .plabel { fill: rgba(246,244,240,.92); font: 600 11px var(--body); stroke: #12151b; stroke-width: 3.5px; paint-order: stroke; }
+.map .pin.dim { opacity: .5; }
+.map .pin.dim circle { fill: #20242c; stroke: #d6a960; }
+.map .pin.dim line { stroke: #d6a960; stroke-width: 2.5; }
+.map .pin.dim .plabel { fill: #d6a960; }
+.map .ebadge rect { fill: #e0a877; }
+.map .ebadge text { fill: #12151b; font: 700 9px var(--body); stroke: none; }
+/* the live position, as v10's .g-posdot */
+.map .dot circle { fill: #2c6cc0; stroke: #fff; stroke-width: 3; }
+.map .dot .halo { fill: rgba(44,108,192,.30); stroke: none; }
+
+/* ---- .g-banner: the walking bar becomes v10's turn banner, under the status bar */
+.walkbar.g-banner { top: 54px; bottom: auto; left: 12px; right: 12px; gap: 12px; align-items: center; }
+.walkbar.g-banner .ar { width: 38px; height: 38px; border-radius: 12px; background: #2c6cc0; color: #fff; display: flex; align-items: center; justify-content: center; flex: none; box-shadow: 0 4px 12px rgba(44,108,192,.5); }
+.walkbar.g-banner .ar .ms { color: #fff; font-size: 21px; }
+.walkbar.g-banner .bx { min-width: 0; }
+.walkbar.g-banner .bt { font-family: var(--body); font-size: 14px; font-weight: 600; line-height: 1.18; color: #f6f4f0; }
+.walk:not(.walking) .walkbar.g-banner { transform: translateY(-14px); }
+
+/* ---- .g-dots: the stop counter. v10 floats it over an empty canvas near the top; this map
+   is dense with pin labels up there, so it rides above the player instead — which is also
+   exactly when "Stop N of M" is on screen. */
+.walk .np-wrap .g-dots { position: static; transform: none; width: fit-content; margin: 0 auto 10px; align-items: center; pointer-events: none; }
+.walk .g-dots:empty { display: none; }
+.walk .g-dots i { box-shadow: 0 1px 3px rgba(0,0,0,.6); }
+.walk .g-dots i.done { background: rgba(123,178,245,.55); }
+
+/* ---- map furniture, moved clear of the banner and dressed as v10 frosted chrome */
+.walk .walk-x { top: 120px; left: 12px; width: 38px; height: 38px; border-radius: 50%; background: rgba(23,26,32,.9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.1); color: #f6f4f0; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+.walk .walk-x .ms { font-size: 20px; }
+/* laid out as a row so the stack no longer runs down over the Federal Hall pin label */
+.walk .map-tools { flex-direction: row; top: 120px; right: 12px; gap: 8px; }
+.walk .tool { width: 52px; height: 52px; border-radius: 16px; font: 700 10px var(--body); }
+.walk .tool.ask-btn { background: #2c6cc0; color: #fff; box-shadow: 0 6px 18px rgba(44,108,192,.45); }
+.walk .tool.ask-btn .ms { color: #fff; font-size: 21px; }
+.walk .tool.cam-btn { background: rgba(23,26,32,.9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.1); color: #f6f4f0; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+.walk .tool.cam-btn .ms { color: #7bb2f5; font-size: 21px; }
+/* 3.3's "Dan's phone" badge is v10's .g-next pill */
+.walk .whose.g-next { top: 120px; right: 12px; z-index: 5; }
+.walk .whose.g-next .ms { font-size: 15px; }
+
+/* ---- .g-player: the now-playing card. The stack keeps the z-order over the map tools so
+   the traveller's own controls are never the thing that ends up behind something. */
+.walk .np-wrap { bottom: 20px; z-index: 7; }
+.np.g-player { position: static; left: auto; right: auto; bottom: auto; }
+.np.g-player .gp-top { margin-bottom: 12px; }
+.np-tile.gp-art { width: 56px; height: 56px; border-radius: 14px; background: #2c6cc0; background-image: none; box-shadow: 0 6px 16px rgba(0,0,0,.4); overflow: hidden; }
+.np-tile.gp-art .pic { width: 100%; height: 100%; }
+.np-tile.gp-art .ms { font-size: 24px; color: #fff; }
+.np-lens.gp-lens { font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .07em; line-height: 1.3; text-transform: uppercase; color: #e0a877; }
+.np-name.gp-title { font-family: var(--display); font-variation-settings: 'opsz' 96; font-weight: 600; font-size: 18px; letter-spacing: -.01em; line-height: 1.05; margin-top: 2px; }
+.np-stop.gp-prog { font-family: var(--body); font-weight: 400; font-size: 10.5px; color: rgba(246,244,240,.55); margin-top: 3px; }
+.np-text.gp-txt { width: auto; height: 30px; padding: 0 9px; gap: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,.14); background: transparent; color: rgba(246,244,240,.8); font: 600 11px var(--body); }
+.np-text.gp-txt .ms { font-size: 15px; }
+.np-text.gp-txt.on { background: #f6f4f0; border-color: #f6f4f0; color: #12151b; }
+
+.np.g-player .np-tx { max-height: 130px; margin: 0 0 13px; padding: 11px 4px 0 0; border-top: 1px solid rgba(255,255,255,.08); font: 400 13px/1.55 var(--body); color: rgba(246,244,240,.62); }
+.np.g-player .np-tx[hidden] { display: none; }
+.np.g-player .np-tx .hl { color: #f6f4f0; background: rgba(123,178,245,.18); }
+
+.np.g-player .gp-scrub { display: flex; align-items: center; gap: 9px; margin-bottom: 13px; }
+.gp-scrub .t { font-family: var(--mono); font-size: 10px; color: rgba(246,244,240,.55); flex: none; letter-spacing: 0; text-transform: none; }
+.scrub.gp-track { position: relative; flex: 1; height: 5px; margin-top: 0; border-radius: 3px; background: rgba(255,255,255,.14); overflow: visible; }
+.scrub.gp-track i { position: absolute; left: 0; top: 0; bottom: 0; height: auto; background: #7bb2f5; border-radius: 3px; }
+.scrub.gp-track b { position: absolute; left: 0; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: #fff; transform: translate(-50%,-50%); box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+
+.np-ctl.gp-ctrls { gap: 26px; margin-top: 0; }
+.np-ctl.gp-ctrls .c { width: 44px; height: 44px; color: rgba(246,244,240,.9); }
+.np-ctl.gp-ctrls .c .ms { font-size: 26px; }
+.np-ctl.gp-ctrls .play { width: 56px; height: 56px; border-radius: 50%; background: #2c6cc0; color: #fff; box-shadow: 0 8px 22px rgba(44,108,192,.5); }
+.np-ctl.gp-ctrls .play .ms { font-size: 28px; }
+
+/* ---- the lever bank: no v10 component, so it borrows the .g-next / .g-banner frost */
+.walk .levers { gap: 7px; padding: 0 2px 9px; }
+.walk .levers button { border: 1px solid rgba(255,255,255,.12); background: rgba(23,26,32,.88); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #f6f4f0; border-radius: 999px; padding: 7px 12px 7px 9px; font: 600 11.5px var(--body); box-shadow: 0 6px 18px rgba(0,0,0,.4); }
+.walk .levers button .ms { font-size: 16px; color: #7bb2f5; }
+
+/* ---- the Ask sheet + Shorter day sheet. sheet() is shared with the plan and recap
+   screens, so nothing here touches .sheet itself: the walk's own sheets mark their
+   content with .walksheet and are dressed as in-tour sheets, dark like v10's
+   "Running late" panel, since they open over the night map. */
+.sheet:has(> .walksheet) { background: #20242c; color: #f6f4f0; }
+.sheet:has(> .walksheet) .grab { background: rgba(255,255,255,.2); }
+.walksheet .eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: #e0a877; }
+.walksheet .h2 { font-family: var(--display); font-variation-settings: 'opsz' 96; font-weight: 600; font-size: 21px; letter-spacing: -.01em; color: #f6f4f0; }
+.walksheet .body { color: rgba(246,244,240,.7); font-size: 13.5px; }
+.walksheet .askchip { border: 1px solid rgba(123,178,245,.45); background: rgba(123,178,245,.12); color: #9cc6f8; border-radius: 999px; padding: 8px 13px; font: 600 12.5px var(--body); }
+.walksheet .askf { gap: 8px; margin-top: 12px; }
+.walksheet .askf input { height: 46px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.06); color: #f6f4f0; font: 500 14px var(--body); }
+.walksheet .askf input::placeholder { color: rgba(246,244,240,.45); }
+.walksheet .askgo { width: 46px; height: 46px; background: #2c6cc0; box-shadow: 0 6px 16px rgba(44,108,192,.45); }
+.walksheet .qa .q { font: 600 14px var(--body); color: #f6f4f0; }
+.walksheet .qa .a { border-radius: 16px; padding: 12px 14px; background: rgba(255,255,255,.06); font: 400 13.5px/1.55 var(--body); color: rgba(246,244,240,.78); }
+.walksheet .qa .a.none { background: rgba(214,169,96,.14); color: #e2b878; }
+.walksheet .qa .src { font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .12em; color: #7bb2f5; }
+.walksheet .qa .src .ms { color: #7bb2f5; }
+.walksheet .btn { background: #2c6cc0; color: #fff; box-shadow: 0 8px 22px rgba(44,108,192,.45); }
+.walksheet .btn.quiet { background: rgba(255,255,255,.08); color: #f6f4f0; box-shadow: none; }
+
+/* ============================================================ 06 · Running late */
+/* 4.1's re-plan. Scoped to .replan.late throughout: .replan on its own is also
+   screens-line.js's 5.1 card, and .sheet is the shared bottom-sheet shell. */
+.replan.late { position: absolute; inset: 0; background: transparent; padding: 0; animation: fadeIn .35s; }
+.walk:has(+ .replan.late) .g-map { filter: saturate(.65) brightness(.82); }
+.replan.late .scrim { position: absolute; inset: 0; }
+.replan.late .sheet { position: absolute; left: 12px; right: 12px; bottom: 16px; width: auto; max-height: none; overflow: visible; background: #20242c; border: 1px solid rgba(255,255,255,.08); border-radius: 24px; padding: 17px 18px 18px; color: #f6f4f0; box-shadow: 0 -6px 40px rgba(0,0,0,.5); animation: rise .45s cubic-bezier(.2,.8,.2,1); }
+.replan.late .tag { letter-spacing: 0; text-transform: none; font-family: var(--body); }
+.replan.late .tag .d { animation: latepulse 1.9s ease-in-out infinite; }
+@keyframes latepulse { 50% { opacity: .35; transform: scale(.85) } }
+
+/* three changes, not v10's one, so the sheet is tightened to keep the map in view */
+.replan.late .sheet h3 { font-size: 19px; margin-bottom: 7px; }
+.replan.late .sheet p { font-size: 12.5px; margin-bottom: 13px; }
+.replan.late .dropcard { gap: 11px; padding: 9px; margin-bottom: 8px; }
+.replan.late .dropcard .th { width: 40px; height: 40px; border-radius: 10px; background-size: cover; background-position: center; }
+.replan.late .dropcard > div { min-width: 0; }
+/* was on its own line, then "→ now" — so every row breaks the same way */
+.replan.late .nm { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; font-family: var(--body); font-size: 13px; line-height: 1.25; }
+.replan.late .nm .was { flex-basis: 100%; }
+.replan.late .nm .ms { font-size: 15px; color: rgba(246,244,240,.4); }
+.replan.late .nm b { font-weight: 600; color: #7bb2f5; }
+.replan.late .was { font-weight: 500; color: rgba(246,244,240,.62); }
+.replan.late .was.struck { text-decoration: line-through; }
+.replan.late .mt { font-family: var(--body); font-size: 10.5px; margin-top: 2px; }
+
+.replan.late .warn { display: flex; align-items: center; gap: 8px; margin: 2px 0 12px; padding: 10px 12px; border-radius: 12px; background: rgba(214,169,96,.14); color: #e2b878; font: 600 12.5px var(--body); }
+.replan.late .warn .ms { font-size: 18px; color: #d6a960; }
+
+.replan.late .lp, .replan.late .lg { width: 100%; border: 0; font-family: var(--body); }
+.replan.late .lp { height: 48px; font-size: 14px; }
+.replan.late .lg { height: 46px; font-size: 13.5px; }
+.replan.late .lp { margin-top: 7px; }
+.replan.late .lg { border: 1px solid rgba(255,255,255,.18); background: transparent; }

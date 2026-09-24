@@ -2,6 +2,10 @@
 // A wide photo pans slowly behind a portrait viewfinder, as if the phone were moving; Echoes
 // are pinned to points IN the photo so they drift with the scene. Drag to look around; the
 // auto-pan resumes after a few seconds. Opens at any stop (camera button) and in 5.3/5.4/6.1.
+// Re-skinned 2026-09-22 to the Ondoway v10 design system (v10.css + skin-line.css): v10 has
+// no camera screen, so the chrome borrows the live-guide pills and player and the tour-preview
+// chips; the builder borrows the preview sheet's card, chips and quote rule. Copy, ids,
+// data-log/data-detail, wiring and timings are untouched — re-skin only.
 
 const castleEchoState = C.echoes.map((e) => ({ ...e, counts: { ...e.counts } }));
 const stopEchoState = Object.fromEntries(Object.entries(C.stopEchoes).map(([k, list]) => [k, list.map((e) => ({ ...e, counts: { ...e.counts } }))]));
@@ -45,7 +49,7 @@ function cameraView(el, stop, { overlay = false, leaveBtn = true, fresh = false,
       ${mine ? `<div class="echo mine${fresh ? " fresh" : ""}" style="left:40%;top:54%"><b>Your echo</b> ${esc(mine)}<span class="ecount">0 found — yet</span></div>` : ""}
     </div>
     <div class="vf"><i></i><i></i><i></i><i></i></div>
-    <div class="cam-top">${overlay ? `<button class="cam-x" data-log="Camera: close">${icon("close")}</button>` : ""}<span class="pill cam-pill">${icon("photo_camera", "fill")}Echoes at ${esc(C.stopNames[stop] || "")} · ${echoes.length + (mine ? 1 : 0)}</span>${ask ? `<button class="tool ask-btn cam-ask" data-log="Ask button" data-detail='{"where":"${ask}"}'>${icon("forum", "fill")}<span>Ask</span></button>` : ""}</div>
+    <div class="cam-top">${overlay ? `<button class="cam-x" data-log="Camera: close">${icon("close")}</button>` : ""}<span class="pill cam-pill"><i class="bd"></i>${icon("photo_camera", "fill")}Echoes at ${esc(C.stopNames[stop] || "")} · ${echoes.length + (mine ? 1 : 0)}</span>${ask ? `<button class="tool ask-btn cam-ask" data-log="Ask button" data-detail='{"where":"${ask}"}'>${icon("forum", "fill")}<span>Ask</span></button>` : ""}</div>
     <div class="cam-hint">${icon("swipe")}Drag to look around</div>
     <div class="cam-bottom">${leaveBtn ? `<button class="btn block cam-leave" data-log="Leave an echo" data-detail='{"stop":"${stop}"}'>${icon("add_location_alt")}Leave an echo</button>` : ""}${mini ? miniPlayer() : ""}</div>
   </div>`);
@@ -59,7 +63,7 @@ function cameraView(el, stop, { overlay = false, leaveBtn = true, fresh = false,
     if (open) return;
     const e = echoes[+b.dataset.e];
     b.classList.add("open");
-    b.insertAdjacentHTML("beforeend", `<span class="reacts">${[["found", "Found it"], ["worth", "Worth it"], ["ha", "Ha!"]].map(([k, l]) => `<span class="react" data-k="${k}" data-log="Echo reaction: ${l}" data-detail='${JSON.stringify({ stop, echo: e.kind + " " + e.text }).replace(/'/g, "&#39;")}'>${l}</span>`).join("")}</span>`);
+    b.insertAdjacentHTML("beforeend", `<span class="reacts pv-meta">${[["found", "Found it"], ["worth", "Worth it"], ["ha", "Ha!"]].map(([k, l]) => `<span class="react chip" data-k="${k}" data-log="Echo reaction: ${l}" data-detail='${JSON.stringify({ stop, echo: e.kind + " " + e.text }).replace(/'/g, "&#39;")}'>${l}</span>`).join("")}</span>`);
     b.querySelectorAll(".react").forEach((r) => (r.onclick = () => { e.counts[r.dataset.k]++; r.classList.add("done"); b.querySelector(".ecount").innerHTML = reactionsLine(e.counts); }));
   }));
   const lb = $(".cam-leave", cam);
@@ -120,18 +124,18 @@ function echoBuilder(host, stop, onLeft) {
     const needsDir = st.tpl && st.tpl.startsWith("Look");
     const text = !st.tpl ? "" : needsDir ? `Look ${st.dir || "___"} at ${st.thing || "___"}` : st.tpl.replace("___", st.thing || "___");
     const ready = st.tpl && st.thing && (!needsDir || st.dir);
-    box.innerHTML = `<div class="scr" style="padding-top:64px;padding-bottom:40px">
+    box.innerHTML = `<div class="scr eb">
       <button class="cam-x eb-x" data-log="Leave an echo: cancel">${icon("close")}</button>
-      <div class="eyebrow">Leave an echo · ${esc(C.stopNames[stop] || "")}</div>
-      <h1 class="h1" style="font-size:28px">What should the next family know?</h1>
-      <div class="eyebrow" style="margin-top:18px">1 · Pick one</div>
-      <div class="chips" style="margin-top:8px">${C.echoTemplates.map((t) => `<button class="wchip${st.tpl === t ? " on" : ""}" data-tpl="${esc(t)}" data-log="Echo template: ${esc(t)}">${esc(t)}</button>`).join("")}</div>
-      ${st.tpl ? `<div class="eyebrow" style="margin-top:18px">2 · Pick the words</div>
-        ${needsDir ? `<div class="chips" style="margin-top:8px">${C.echoDirections.map((d) => `<button class="wchip${st.dir === d ? " on" : ""}" data-dir="${esc(d)}" data-log="Echo word: ${esc(d)}">${esc(d)}</button>`).join("")}</div>` : ""}
-        <div class="chips" style="margin-top:8px">${things.map((d) => `<button class="wchip${st.thing === d ? " on" : ""}" data-thing="${esc(d)}" data-log="Echo word: ${esc(d)}">${esc(d)}</button>`).join("")}</div>` : ""}
-      ${st.tpl ? `<div class="card preview"><div class="eyebrow">Preview</div><div class="ptext">${esc(text)}</div></div>` : ""}
-      <button class="btn block" id="pin" style="margin-top:16px;${ready ? "" : "opacity:.4"}" ${ready ? "" : "disabled"} data-log="Leave it here" data-detail='${JSON.stringify({ stop, echo: text }).replace(/'/g, "&#39;")}'>${icon("push_pin")}Leave it here</button>
-      <p class="body muted" style="font-size:13px;margin-top:10px">Only these words — no free text.</p>
+      <div class="eyebrow eb-eye">Leave an echo · ${esc(C.stopNames[stop] || "")}</div>
+      <h1 class="h1 h-serif eb-h">What should the next family know?</h1>
+      <div class="eyebrow eb-step">1 · Pick one</div>
+      <div class="chips">${C.echoTemplates.map((t) => `<button class="wchip${st.tpl === t ? " on" : ""}" data-tpl="${esc(t)}" data-log="Echo template: ${esc(t)}">${esc(t)}</button>`).join("")}</div>
+      ${st.tpl ? `<div class="eyebrow eb-step">2 · Pick the words</div>
+        ${needsDir ? `<div class="chips">${C.echoDirections.map((d) => `<button class="wchip${st.dir === d ? " on" : ""}" data-dir="${esc(d)}" data-log="Echo word: ${esc(d)}">${esc(d)}</button>`).join("")}</div>` : ""}
+        <div class="chips">${things.map((d) => `<button class="wchip${st.thing === d ? " on" : ""}" data-thing="${esc(d)}" data-log="Echo word: ${esc(d)}">${esc(d)}</button>`).join("")}</div>` : ""}
+      ${st.tpl ? `<div class="card lenspreview"><div class="eyebrow">Preview</div><div class="ptext">${esc(text)}</div></div>` : ""}
+      <button class="btn block eb-pin" id="pin" style="${ready ? "" : "opacity:.4"}" ${ready ? "" : "disabled"} data-log="Leave it here" data-detail='${JSON.stringify({ stop, echo: text }).replace(/'/g, "&#39;")}'>${icon("push_pin")}Leave it here</button>
+      <p class="body eb-fine">Only these words — no free text.</p>
     </div>`;
     box.querySelectorAll("[data-tpl]").forEach((b) => (b.onclick = () => { st.tpl = b.dataset.tpl; st.dir = null; draw(); }));
     box.querySelectorAll("[data-dir]").forEach((b) => (b.onclick = () => { st.dir = b.dataset.dir; draw(); }));

@@ -1,0 +1,160 @@
+/* skin-plan — screen-specific additions in the v10 idiom. Loaded after v10.css.
+   Owns only step 2 (2.1 Plan your trip, 2.2 Building, 2.3 Your trip, 2.4 Friday).
+   Every rule is scoped to a .plan-* root so no other screen can be touched.
+   Colours are the v10 literals (#f6f4f0 / #fff / #20242c / #5b6069 / #e8e3d8 /
+   #2c6cc0 / #1e4f92 / #e8934a), never tokens, because v10.css redefines :root to
+   the dark palette unconditionally. */
+
+/* ---------- 0. Light-surface guarantee for these four screens ---------- */
+.plan-v10,
+.screen:has(.plan-v10) {
+  --bg: #E9E5DB; --card: #FFFFFF; --panel: #F6F4F0;
+  --ink: #20242C; --inkSoft: #3A3F49; --inkMute: #5B6069;
+  --line: #DED8CB; --lineSoft: #E8E3D8;
+  --accent: #2C6CC0; --accentDeep: #1E4F92; --accentLight: #7BB2F5; --spark: #E8934A;
+  --lift: 0 4px 14px rgba(32,36,44,.08), 0 1px 2px rgba(32,36,44,.05);
+  color: #20242C;
+}
+.screen:has(.plan-v10) { background: #F6F4F0; }
+.screen:has(.plan-preview) { background: #E7E1D5; }
+.screen:has(.plan-v10) .sheet { background: #fff; color: #20242C; }
+.screen:has(.plan-v10) .homebar { color: #20242C; }
+
+/* Bottom nav → the v10 `03 · Home` float-nav (.home .floatnav .n). */
+.plan-nav .n .ms { font-size: 17px; }
+
+/* ---------- 2.1 Plan your trip → v10 `04 · Build a tour` ---------- */
+.plan-build { padding: 58px 22px 40px; }
+.plan-build .bd-seg { flex: none; }
+.plan-build .bd-hero { justify-content: center; padding: 0; }
+.plan-build .bd-loc { margin-bottom: 8px; }
+.plan-build .bd-q { font-size: 30px; margin: 0 0 15px; }
+.plan-build .pl-block { margin-bottom: 13px; }
+.plan-build .pl-block:last-child { margin-bottom: 0; }
+.plan-build .pl-lbl {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 6px;
+  font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+  letter-spacing: .09em; text-transform: uppercase; color: #5B6069;
+}
+.plan-build .pl-lbl .ms { font-size: 15px; color: #2C6CC0; }
+.plan-build .pl-one { grid-template-columns: 1fr; }
+.plan-build .bd-time { padding: 12px; }
+.plan-build .bd-time .v { font-size: 16.5px; }
+.plan-build .pl-musts { gap: 6px; }
+.plan-build .must {
+  padding: 6px 11px 6px 8px; font-size: 12.5px; font-weight: 600;
+  background: #F2EFE8; border: 1px solid #E8E3D8; color: #3A3F49;
+}
+.plan-build .must .ms { font-size: 14px; color: #E8934A; }
+.plan-build .must.add { background: transparent; border: 1.5px dashed #DED8CB; color: #5B6069; }
+.plan-build .must.add .ms { color: #5B6069; }
+.plan-build .pl-booked {
+  justify-content: flex-start; gap: 8px; margin: 0; padding: 11px 13px;
+  background: #fff; border: 1px solid #E8E3D8; border-radius: 14px;
+  font-size: 12.5px; color: #20242C; text-align: left; white-space: nowrap;
+}
+.plan-build .pl-booked .ms { font-size: 17px; }
+.plan-build .pl-booked .o { font-size: 10.5px; margin-left: auto; }
+.plan-build .foot2 { padding: 12px 0 0; margin-top: auto; }
+.plan-build .bd-gen { border: 0; }
+
+/* ---------- 2.2 Building ---------- */
+.plan-building .pl-buildcard {
+  width: 100%; box-sizing: border-box; padding: 26px 22px;
+  background: #fff; border: 1px solid #E8E3D8; border-radius: 22px;
+  box-shadow: 0 4px 14px rgba(32,36,44,.08), 0 1px 2px rgba(32,36,44,.05);
+}
+.plan-building .spinner { border-color: #ECE7DD; border-top-color: #2C6CC0; }
+.plan-building .bline { font-size: 13.5px; font-weight: 500; color: #20242C; }
+.plan-building .bline .ms { font-size: 18px; color: #2C6CC0; }
+
+/* ---------- 2.3 Your trip → one v10 .tourcard per day ---------- */
+.plan-trip { padding: 58px 20px 40px; }
+.plan-trip .lbl { margin: 0 2px; }
+.plan-trip .bd-q { font-size: 27px; margin: 0 0 4px; }
+.plan-trip .tourcard { padding: 10px; border-radius: 18px; }
+.plan-trip .thumb { width: 58px; height: 58px; border-radius: 14px; overflow: hidden; }
+.plan-trip .dday {
+  height: 20px; font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.plan-trip .info { gap: 1px; }
+.plan-trip .nm { font-size: 14.5px; }
+.plan-trip .dmeta { display: flex; flex-wrap: wrap; gap: 2px 8px; margin-top: 3px; font-size: 11px; color: #5B6069; }
+.plan-trip .dmeta .ms { font-size: 12px; color: #E8934A; }
+.plan-trip .star.added { color: #1E4F92; font-weight: 600; }
+.plan-trip .addwhy { font-size: 11px; line-height: 1.35; color: #1E4F92; margin-top: 3px; }
+.plan-trip .stops { font-size: 9.5px; letter-spacing: .1em; color: #5B6069; margin-top: 5px; }
+.plan-trip .go .ms { font-size: 22px; }
+.plan-trip .day.open { box-shadow: 0 0 0 2px #2C6CC0, 0 8px 20px rgba(44,108,192,.16); }
+.plan-trip .day.locked { opacity: .5; }
+
+/* ---------- 2.4 Friday → v10 `05 · Tour preview` ---------- */
+.plan-preview { padding-bottom: 96px; }
+.plan-preview h3 { margin: 4px 0 10px; }
+.plan-preview .pv-meta .chip .ms { font-size: 13px; }
+.plan-preview .pv-meta .chip b { font-weight: 700; }
+/* The sheet scrolls here (six stops, reasons and the skip card), so the v10 fade
+   mask and flex clip are off — nothing may be hidden from a traveller. */
+.plan-preview .pv-stops { flex: none; overflow: visible; -webkit-mask-image: none; mask-image: none; }
+.plan-preview .pv-stop { align-items: flex-start; flex-wrap: wrap; row-gap: 0; padding: 9px 0; }
+/* The .num badge hangs outside .th, so the photo (not the box) does the clipping. */
+.plan-preview .pv-stop .th .pic { border-radius: 11px; }
+.plan-preview .pv-stop .num { font-family: var(--body); }
+.plan-preview .pv-stop .d .n { display: flex; align-items: center; gap: 5px; }
+.plan-preview .mstar { font-size: 15px; color: #E8934A; }
+.plan-preview .pv-stop.must-stop { background: #F2F7FD; border-radius: 14px; padding: 9px 8px; }
+.plan-preview .pv-stop.must-stop .d .n { color: #1E4F92; }
+/* Stop reason — the sheet's own .pv-why rail, on its own full-width line so the
+   sentence the traveller is meant to read is not squeezed into a 148px column. */
+.plan-preview .pv-stop .pv-why {
+  flex: 0 0 calc(100% - 55px); font-size: 11.5px; font-style: italic; line-height: 1.4;
+  margin: 5px 0 0 55px; padding-left: 9px; border-left-width: 2px;
+}
+.plan-preview .pv-stop .pv-why.plain { font-style: normal; font-weight: 600; color: #1E4F92; }
+.plan-preview .pv-stop > .s { flex: 0 0 calc(100% - 55px); display: flex; align-items: center; gap: 6px; margin: 5px 0 0 55px; }
+.plan-preview .pv-stop > .s .pill { padding: 3px 8px; font-size: 10px; }
+.plan-preview .pv-stop .d .s .pill .ms { font-size: 13px; }
+.plan-preview .pv-stop .dur { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding-top: 2px; }
+.plan-preview .pv-stop .dur .m { color: #8B909B; font-size: 10px; }
+/* "We'd skip" — the spark rail, in the sheet's type. */
+.plan-preview .skip {
+  background: #FDF3EA; border-left: 4px solid #E8934A; border-radius: 14px;
+  padding: 11px 13px; margin: 6px 0 4px;
+}
+.plan-preview .skip-h {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--display); font-variation-settings: 'opsz' 96;
+  font-weight: 600; font-size: 16px; letter-spacing: -.01em; color: #20242C;
+}
+.plan-preview .skip-h .ms { font-size: 18px; color: #E8934A; }
+.plan-preview .skip-b { font-size: 12px; line-height: 1.45; color: #5B6069; margin: 6px 0 0; }
+
+/* Map markers — the v10 preview's own dot / current-stop dot / destination pin. */
+.pv-map .pv-dot, .pv-map .pv-pin { position: absolute; }
+.pv-map .pv-dot {
+  width: 22px; height: 22px; border-radius: 50%; background: #fff;
+  border: 2.5px solid #2C6CC0; color: #2C6CC0;
+  box-shadow: 0 2px 6px rgba(32,36,44,.24);
+  display: flex; align-items: center; justify-content: center;
+  font: 700 10px var(--body);
+}
+.pv-map .pv-dot.start {
+  width: 26px; height: 26px; background: #2C6CC0; border: 3px solid #fff; color: #fff;
+  font-size: 11px; box-shadow: 0 3px 8px rgba(32,36,44,.3);
+}
+.pv-map .pv-pin {
+  width: 16px; height: 16px; border-radius: 50% 50% 50% 0; transform: rotate(45deg);
+  background: #8A6D3B; border: 2px solid #fff; box-shadow: 0 3px 8px rgba(32,36,44,.3);
+}
+.pv-top .pv-back .ms { font-size: 20px; }
+
+/* Start bar — pinned to the screen like the old FAB, so it is never scrolled away. */
+.plan-startbar {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+  padding: 10px 20px 26px; background: #fff;
+}
+.plan-startbar .start { border: 0; padding: 0; }
+.plan-startbar .start .ms { font-size: 19px; }
+.plan-startbar .tune { flex: none; }
+.plan-startbar .tune .ms { font-size: 20px; color: #3A3F49; }

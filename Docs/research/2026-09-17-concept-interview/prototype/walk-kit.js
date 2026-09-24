@@ -42,6 +42,7 @@ const Walk = {
       <path class="park" d="M92 560 L150 600 L182 596 L150 540 L96 530 Z"/>
       <text class="water-label" x="18" y="300" transform="rotate(-86 18 300)">HUDSON RIVER</text>
       <text class="water-label" x="228" y="700">UPPER BAY</text>
+      <polyline class="route glow" points="${route}"/>
       <polyline class="route" points="${route}"/>
       ${pin("memorial", "9/11 Memorial", 1, { must: true, left: false })}
       ${pin("trinity", "Trinity Church", 2, { left: true })}
@@ -88,30 +89,31 @@ function wait(ms, fn) {
 const POI_IMG = { "9/11 Memorial": "memorial_wide", "Trinity Church": "trinity_wide", "Federal Hall": "federal_wide", "Bowling Green": "bowling_wide", "Castle Clinton": "castle_wide", "Statue of Liberty": "liberty" };
 // `where` = the stop Ask and the camera are about: the stop you're at or walking to.
 function walkScaffold(el, { levers = true, closeX = true, where = null } = {}) {
-  el.insertAdjacentHTML("beforeend", `<div class="walk">
-    ${Walk.mapSvg()}
+  // v10 "06 · Live guide": .g-map under a .g-banner, .g-dots and the .g-player card.
+  el.insertAdjacentHTML("beforeend", `<div class="walk guide">
+    <div class="g-map">${Walk.mapSvg()}</div>
     ${closeX ? `<button class="walk-x" data-log="Close walk (X)">${icon("close")}</button>` : ""}
     ${where ? `<div class="map-tools"><button class="tool ask-btn" data-log="Ask button" data-detail='{"where":"${where}"}'>${icon("forum", "fill")}<span>Ask</span></button><button class="tool cam-btn" data-log="Camera button" data-detail='{"where":"${where}"}'>${icon("photo_camera", "fill")}<span>Echoes</span></button></div>` : ""}
-    <div class="walkbar">${icon("directions_walk")}<span>Walk to the next stop — audio starts on arrival</span></div>
+    <div class="walkbar g-banner"><div class="ar">${icon("directions_walk")}</div><div class="bx"><div class="bt"><span>Walk to the next stop — audio starts on arrival</span></div></div></div>
     <div class="np-wrap">
+      <div class="g-dots"></div>
       ${levers ? `<div class="levers">
         <button data-lever="more" data-log="Lever: Tell me more">${icon("add_circle")}Tell me more</button>
         <button data-lever="skip" data-log="Lever: Skip this stop">${icon("skip_next")}Skip this stop</button>
         <button data-lever="short" data-log="Lever: Shorter day">${icon("schedule")}Shorter day</button>
       </div>` : ""}
-      <div class="np card">
-        <div class="np-top">
-          <div class="np-tile">${icon("headphones")}</div>
-          <div style="flex:1;min-width:0"><div class="np-lens"></div><div class="np-name"></div><div class="np-stop"></div></div>
-          <button class="np-text" data-log="Text (transcript) toggle">${icon("notes")}Text</button>
+      <div class="np g-player">
+        <div class="np-top gp-top">
+          <div class="np-tile gp-art">${icon("headphones")}</div>
+          <div class="gp-meta"><div class="np-lens gp-lens"></div><div class="np-name gp-title"></div><div class="np-stop gp-prog"></div></div>
+          <button class="np-text gp-txt" data-log="Text (transcript) toggle">${icon("notes")}Text</button>
         </div>
         <div class="np-tx" hidden></div>
-        <div class="scrub"><i></i></div>
-        <div class="np-times mono"><span class="t0">0:00</span><span class="t1">0:00</span></div>
-        <div class="np-ctl">
-          <button class="np-prev" data-log="Player: previous">${icon("skip_previous")}</button>
-          <button class="np-play" data-log="Player: play/pause">${icon("pause", "fill").replace('class="ms fill"', 'class="ms fill" data-playicon')}</button>
-          <button class="np-next" data-log="Player: next">${icon("skip_next")}</button>
+        <div class="gp-scrub"><span class="t0 t">0:00</span><span class="scrub gp-track"><i></i><b></b></span><span class="t1 t">0:00</span></div>
+        <div class="np-ctl gp-ctrls">
+          <button class="np-prev c" data-log="Player: previous">${icon("skip_previous")}</button>
+          <button class="np-play play" data-log="Player: play/pause">${icon("pause", "fill").replace('class="ms fill"', 'class="ms fill" data-playicon')}</button>
+          <button class="np-next c" data-log="Player: next">${icon("skip_next")}</button>
         </div>
       </div>
     </div>
@@ -124,6 +126,14 @@ function walkScaffold(el, { levers = true, closeX = true, where = null } = {}) {
   return w;
 }
 function setWalking(w, walking) { w.classList.toggle("walking", walking); }
+// v10 .g-dots — the stop counter drawn as dots. Reads the same "Stop N of M" the card
+// already shows; anything else (a walk-past, Dan's copy) leaves the row empty.
+function setStopDots(w, meta) {
+  const gd = $(".g-dots", w);
+  if (!gd) return;
+  const m = /Stop (\d+) of (\d+)/.exec(meta || "");
+  gd.innerHTML = m ? Array.from({ length: +m[2] }, (_, i) => `<i class="${i + 1 === +m[1] ? "on" : i + 1 < +m[1] ? "done" : ""}"></i>`).join("") : "";
+}
 // Fill the card for a story and play it. Returns nothing; onEnd fires when it finishes.
 function playOn(w, story, meta, onEnd) {
   const l = lensOf(story.lens);
@@ -132,6 +142,7 @@ function playOn(w, story, meta, onEnd) {
   $(".np-lens", w).textContent = l.label;
   $(".np-name", w).textContent = story.poi;
   $(".np-stop", w).textContent = meta;
+  setStopDots(w, meta);
   $(".t1", w).textContent = fmtSecs(story.secs);
   const sents = Player.split(story.text);
   $(".np-tx", w).innerHTML = sents.map((s, i) => `<span data-s="${i}">${esc(s)} </span>`).join("");
@@ -141,6 +152,7 @@ function playOn(w, story, meta, onEnd) {
     onEnd,
     onTick(p, si) {
       $(".scrub i", w).style.width = p * 100 + "%";
+      const knob = $(".scrub b", w); if (knob) knob.style.left = p * 100 + "%"; // v10 .gp-track handle
       $(".t0", w).textContent = fmtSecs(p * story.secs);
       if (si !== lastS) {
         w.querySelectorAll(".np-tx span").forEach((s) => s.classList.toggle("hl", +s.dataset.s === si));
@@ -149,7 +161,7 @@ function playOn(w, story, meta, onEnd) {
       }
     },
   });
-  App.record("system", "story started", { beat: story.beat, poi: story.poi, lens: story.lens });
+  App.record("system", "story started", { source: story.source, poi: story.poi, lens: story.lens });
 }
 function wirePlayer(w, { onNext, onPrev, onReplay }) {
   $(".np-play", w).onclick = () => { if (Player.active) App.togglePause(); else onReplay && onReplay(); };
@@ -175,8 +187,8 @@ function withStoryHeld(fn) {
 }
 function shorterDaySheet(el) {
   withStoryHeld((resume) => {
-    const s = sheet(el, `<h2 class="h2">Finish earlier?</h2><p class="body">${esc(C.shorterDay)}</p>
-      <div style="display:flex;gap:10px;margin-top:16px"><button class="btn" data-log="Shorter day: Do it" id="sd-yes">Do it</button><button class="btn quiet" data-log="Shorter day: Not now" id="sd-no">Not now</button></div>`, resume);
+    const s = sheet(el, `<div class="walksheet"><h2 class="h2">Finish earlier?</h2><p class="body">${esc(C.shorterDay)}</p>
+      <div style="display:flex;gap:10px;margin-top:16px"><button class="btn" data-log="Shorter day: Do it" id="sd-yes">Do it</button><button class="btn quiet" data-log="Shorter day: Not now" id="sd-no">Not now</button></div></div>`, resume);
     $("#sd-yes", s.scrim).onclick = () => s.close();
     $("#sd-no", s.scrim).onclick = () => s.close();
   });
@@ -184,11 +196,11 @@ function shorterDaySheet(el) {
 function askSheet(el, where) {
   const a = C.ask[where] || { place: Player.story ? Player.story.poi : "this place", chips: [] };
   withStoryHeld((resume) => {
-    const s = sheet(el, `<div class="eyebrow">Ask about this</div>
+    const s = sheet(el, `<div class="walksheet"><div class="eyebrow">Ask about this</div>
       <h2 class="h2" style="margin-top:4px">${esc(a.place)}</h2>
       <div class="chips" style="margin-top:12px">${a.chips.map((c, i) => `<button class="askchip" data-i="${i}" data-log="Ask chip" data-detail='${JSON.stringify({ q: c.q }).replace(/'/g, "&#39;")}'>${esc(c.q)}</button>`).join("")}</div>
       <form class="askf" id="askf"><input id="askq" autocomplete="off" placeholder="Or ask your own about ${esc(a.place)}…"><button class="askgo" data-log="Ask: send typed">${icon("arrow_upward")}</button></form>
-      <div id="askans"></div>`, resume);
+      <div id="askans"></div></div>`, resume);
     const ans = $("#askans", s.scrim);
     const show = (q, text, sourced) => {
       App.st.asked.push({ q, place: a.place, sourced });

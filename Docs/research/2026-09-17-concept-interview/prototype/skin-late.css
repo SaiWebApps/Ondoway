@@ -1,0 +1,170 @@
+/* skin-late — screen-specific additions in the v10 idiom. Loaded after v10.css.
+   Owns 7.1 (photo permission), 7.2 (Day recap), 7.3 (Trip recap + share card) and the
+   founder's ranking board. Prefers v10 classes; everything here is either a v10 value the
+   ported component CSS does not carry, or a scoped repair.
+
+   NOTE (not ours to fix here): v10.css line ~74 declares an UNCONDITIONAL dark `:root`
+   after its light one, so the shared tokens --card/--ink/--line/--accent resolve to their
+   dark values for the whole prototype (no element sets data-theme). Rules below therefore
+   spell out v10 hex values inside the screens this file owns rather than trusting those
+   four tokens. --spark, --panel, --inkSoft, --dInk* are untouched by the clash and are used
+   as tokens. */
+
+/* ============================================================
+   7.1 / 7.2 — the completion idiom (v10 "07 · Tour complete")
+   ============================================================ */
+.scr.completion { padding: 0; overflow: hidden; display: block; color: #fff; }
+.completion .photo { background: #1B1E2A; }
+.completion .photo .pic { border-radius: 0; }
+/* The NYC header shots are bright at the top; deepen v10's scrim so the title holds. */
+.completion .sc { background: linear-gradient(180deg, rgba(16, 18, 24, .72) 0%, rgba(16, 18, 24, .3) 34%, rgba(16, 18, 24, .1) 52%, rgba(16, 18, 24, .86) 100%); }
+.completion .htop { padding: 52px 24px 0; }
+.completion .cp-h { text-wrap: balance; }
+.cp-eye.spark { color: var(--spark); }
+
+/* The sheet scrolls: the Day recap is much taller than the design-system original. */
+.recap .cp-sheet { overflow-y: auto; overflow-x: hidden; scrollbar-width: none; gap: 16px; }
+.recap .cp-sheet::-webkit-scrollbar { display: none; }
+.recap .cp-handle { margin: 12px auto 2px; flex: none; }
+.recap .cp-stats { margin-bottom: 0; flex: none; }
+.recap .cp-stat { padding: 13px 6px; }
+.recap section { gap: 8px; flex: none; }
+/* skin-core.css carries `.screen.evening .eyebrow` (0,3,0); the sheet is white, not evening. */
+.scr.completion .cp-sheet .eyebrow { color: #5b6069; }
+
+/* 7.1 — the blurred recap behind the iOS permission alert. */
+.scr.completion.behind { filter: blur(3px); opacity: .5; }
+.ios-ic .ms { color: #2c6cc0; }
+
+/* Photo strip, matched to stops. */
+.recap .strip { flex: none; gap: 8px; }
+.recap .thumb { width: 96px; height: 116px; border-radius: 16px; box-shadow: 0 2px 8px rgba(32, 36, 44, .16); }
+.recap .thumb > span { font: 600 10px var(--body); letter-spacing: -.01em; z-index: 2; }
+.recap .thumb .pic { border-radius: 0; }
+.recap .thumb::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 56%; background: linear-gradient(rgba(16, 18, 24, 0), rgba(16, 18, 24, .78)); pointer-events: none; }
+.recap .mapthumb::after { display: none; }
+
+/* "Same spot, four stories" — a v10 page-panel block inside the white sheet. */
+.recap .same { background: #f6f4f0; border: 1px solid #e8e3d8; border-radius: 20px; padding: 16px; }
+.recap .same .cp-q { margin: 4px 0 6px; color: #20242c; }
+.recap .who { border-top: 1px solid #e8e3d8; padding: 11px 0 9px; }
+.recap .who:last-of-type { padding-bottom: 2px; }
+.recap .avatar.sm { background: #2c6cc0; box-shadow: 0 2px 8px rgba(44, 108, 192, .3); }
+.recap .who-n { font-size: 13.5px; color: #20242c; letter-spacing: -.01em; flex-wrap: wrap; gap: 7px; }
+.recap .who-n .pill { font: 700 9px var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 4px 8px; }
+.recap .who-n .lchip.sm { padding: 3px 8px 3px 6px; gap: 3px; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.recap .who-n .lchip.sm .ms { font-size: 12px; }
+.recap .who-l { font-variation-settings: 'opsz' 96; font-weight: 500; font-size: 15px; line-height: 1.32; color: #20242c; }
+.recap .who-l.quiet { font: 400 12.5px/1.4 var(--body); color: #5b6069; }
+.recap .askdan { background: #f6ecd6; color: #8a6224; border-radius: 14px; padding: 11px 13px; font: 500 13px/1.35 var(--body); margin-top: 10px; }
+.recap .askdan b { color: #20242c; font-weight: 700; }
+.recap .askdan .ms { color: #b9852f; font-size: 18px; }
+
+/* "You asked" / "Your echo". */
+.recap .asked { background: #f6f4f0; border: 1px solid #e8e3d8; border-radius: 14px; padding: 11px 13px; font-variation-settings: 'opsz' 96; font-family: var(--display); font-weight: 500; font-size: 15px; line-height: 1.35; color: #20242c; }
+.recap .asked.muted { font: 400 13px var(--body); color: #5b6069; }
+.recap .asked .muted { font: 400 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: #5b6069; }
+
+/* The closing button, in the v10 .cp-done idiom (ink, not accent). */
+.recap .cp-done { flex: none; padding: 10px 0 26px; }
+.recap .cp-done .btn { height: 52px; background: #20242c; color: #fff; box-shadow: none; font-size: 15px; }
+
+/* ============================================================
+   7.3 — Trip recap cards
+   ============================================================ */
+.tr { padding: 66px 24px 46px; }
+.tr-dots { top: 54px; left: 22px; right: 22px; gap: 4px; }
+.tr-dots i { height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .28); }
+.tr-dots i.on { background: #7bb2f5; }
+.tr-big { font-family: var(--display); font-variation-settings: 'opsz' 144; font-weight: 540; font-size: 37px; line-height: .98; letter-spacing: -.03em; }
+.tr-small { font: 400 14px/1.45 var(--body); opacity: .82; margin-top: 10px; max-width: 30ch; }
+.tr-tap { bottom: 40px; left: 24px; font: 400 10px var(--mono); letter-spacing: .16em; opacity: .55; }
+/* Card tints, from the v10 palette: accent-deep, ink, spark-deep, page-panel-dark.
+   Each opens with a short dark stop so the status bar stays legible over a bright sky. */
+.tr0 .tr-bg::after { background: linear-gradient(rgba(16, 18, 24, .5) 0%, rgba(30, 79, 146, .16) 20%, rgba(30, 79, 146, .88) 100%); }
+.tr1 .tr-bg::after { background: linear-gradient(rgba(16, 18, 24, .5) 0%, rgba(32, 36, 44, .18) 20%, rgba(18, 21, 27, .9) 100%); }
+.tr2 .tr-bg::after { background: linear-gradient(rgba(16, 18, 24, .5) 0%, rgba(168, 90, 44, .14) 20%, rgba(146, 74, 34, .9) 100%); }
+.tr3 .tr-bg::after { background: linear-gradient(rgba(16, 18, 24, .5) 0%, rgba(30, 79, 146, .16) 20%, rgba(18, 21, 27, .92) 100%); }
+
+/* Stickers — a v10 card: white, Fraunces, soft lift. (--ink is dark-mode here: spell it out.) */
+.sticker { color: #20242c; border-radius: 14px; padding: 8px 12px; font-family: var(--display); font-variation-settings: 'opsz' 72; font-weight: 600; font-size: 15px; letter-spacing: -.01em; box-shadow: 0 8px 20px rgba(0, 0, 0, .3); }
+.tr-stickers .sticker:nth-child(2) { background: var(--spark); color: #fff; }
+
+/* Card 5 — the share-card editor. */
+/* The editor has to hold collage + filters + tray + actions inside 648px of phone. */
+.tr.editor { background: #12151b; padding: 58px 22px 22px; gap: 10px; }
+.collage-wrap { border-radius: 24px; box-shadow: 0 16px 36px rgba(0, 0, 0, .45); }
+.collage-wrap .collage { gap: 3px; height: 256px; }
+.collage > div { border-radius: 4px; background: #20242c; }
+.collage-title { background: rgba(18, 21, 27, .66); backdrop-filter: blur(10px); border-radius: 999px; padding: 6px 13px; font: 700 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+.music-chip { color: #20242c; border-radius: 999px; padding: 6px 12px; font: 600 11px var(--body); box-shadow: 0 4px 12px rgba(0, 0, 0, .35); }
+.filters { gap: 7px; scrollbar-width: none; }
+.filters::-webkit-scrollbar { display: none; }
+.fchip { border: 1px solid rgba(255, 255, 255, .16); background: rgba(255, 255, 255, .06); color: rgba(246, 244, 240, .82); padding: 6px 11px; font: 600 11px var(--body); }
+.fchip.on { background: #2c6cc0; border-color: #2c6cc0; color: #fff; box-shadow: 0 6px 16px rgba(44, 108, 192, .4); }
+.tray { gap: 7px; }
+.tray .sticker { background: rgba(255, 255, 255, .08); color: rgba(246, 244, 240, .9); border: 1px solid rgba(255, 255, 255, .14); font: 600 11.5px var(--body); font-variation-settings: normal; padding: 6px 11px; border-radius: 999px; box-shadow: none; }
+.music-btn { border: 1px dashed rgba(255, 255, 255, .3); color: rgba(246, 244, 240, .82); border-radius: 999px; padding: 6px 11px; font: 600 11.5px var(--body); }
+.music-btn .ms { font-size: 16px; color: #7bb2f5; }
+.tr-act { gap: 9px; }
+.tr-act .btn { flex: 1; height: 50px; padding: 0 14px; white-space: nowrap; font-size: 14.5px; background: #2c6cc0; box-shadow: 0 10px 24px rgba(44, 108, 192, .4); }
+/* .btn.quiet resolves to panel-on-light-ink under the token clash: unreadable on a dark card. */
+.tr-act .btn.quiet { background: rgba(255, 255, 255, .07); color: #f6f4f0; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18); }
+.tr.editor .tr-small { font: 400 11px/1.4 var(--body); color: rgba(246, 244, 240, .5); opacity: 1; margin-top: 0; max-width: none; text-align: center; }
+
+/* Share / music sheets — a white v10 sheet. Scoped: .shareopt is shared with screens-plan.js. */
+.late-sheet .h2 { font-variation-settings: 'opsz' 120; font-weight: 560; font-size: 21px; letter-spacing: -.02em; color: #20242c; }
+.late-sheet .body { color: #5b6069; font-size: 13.5px; margin: 6px 0 0; line-height: 1.45; }
+.late-sheet .shareopt { background: #f6f4f0; border: 1px solid #e8e3d8; color: #20242c; border-radius: 14px; height: 50px; font-size: 13.5px; }
+.late-sheet .shareopt .ms { color: #2c6cc0; }
+.late-sheet .shareopt.party { background: #2c6cc0; border-color: #2c6cc0; color: #fff; box-shadow: 0 10px 24px rgba(44, 108, 192, .32); }
+.late-sheet .shareopt.party .ms { color: #fff; }
+
+/* The pretend 9:16 share preview. */
+.story { background: #12151b; border-radius: 26px; padding: 16px; }
+.story-top { font: 700 10px var(--mono); letter-spacing: .16em; color: #7bb2f5; opacity: 1; }
+.story-mark { font: 400 9.5px var(--mono); letter-spacing: .16em; text-transform: uppercase; opacity: .55; }
+.story .collage { border-radius: 20px; overflow: hidden; }
+.story-party .av { background: #2c6cc0; font-variation-settings: 'opsz' 72; }
+.story-done { font: 400 13px/1.4 var(--body); color: rgba(246, 244, 240, .74); }
+.story .btn { background: #2c6cc0; height: 50px; font-size: 14.5px; }
+
+/* ============================================================
+   Close — the ranking board (founder's screen, no phone frame)
+   ============================================================ */
+body:has(.board) { background: #e9e5db; }
+.board { background: #e9e5db; color: #20242c; padding: 36px 28px 40px; max-width: 1180px; gap: 24px; }
+.board header { max-width: 22ch; }
+.board .eyebrow { color: #2c6cc0; font-size: 11.5px; letter-spacing: .16em; }
+.board header .h1 { font-variation-settings: 'opsz' 144; font-weight: 540; font-size: clamp(30px, 3.4vw, 46px); line-height: 1; letter-spacing: -.03em; margin-top: 10px; }
+.board .bcols { gap: 22px; }
+.board .bcol { background: #f6f4f0; border: 1px solid #e8e3d8; border-radius: 24px; padding: 18px; gap: 11px; }
+.board .bcol.ranked { background: #fff; border-color: #2c6cc0; box-shadow: 0 0 0 1.5px #2c6cc0, 0 22px 50px rgba(32, 36, 44, .1); }
+.board .bcol .muted { color: #5b6069; font-size: 13.5px; }
+.board .bcol .muted.drop { border: 1.5px dashed #ded8cb; border-radius: 18px; padding: 22px 16px; text-align: center; margin: 0; }
+.board .bcard { background: #fff; border: 1px solid #e8e3d8; border-radius: 18px; padding: 15px 17px; box-shadow: 0 4px 14px rgba(32, 36, 44, .08), 0 1px 2px rgba(32, 36, 44, .05); transition: box-shadow .16s, transform .16s; }
+.board .bcard:hover { box-shadow: 0 10px 24px rgba(32, 36, 44, .13); transform: translateY(-1px); }
+.board .bcard b { display: block; font-family: var(--display); font-variation-settings: 'opsz' 120; font-weight: 560; font-size: 18px; letter-spacing: -.02em; line-height: 1.08; color: #20242c; }
+.board .bcard span { display: block; font: 400 13.5px/1.4 var(--body); color: #5b6069; margin-top: 4px; }
+.board .bcard.dragging { opacity: .35; }
+.board .ranked .bcard { border-color: #cadcf3; }
+.board .rn { background: #2c6cc0; color: #fff; font: 700 14px var(--mono); box-shadow: 0 6px 14px rgba(44, 108, 192, .3); }
+
+/* Price cards — the v10 "08 · Unlock" plan rows, on a dark panel. Hidden until revealed:
+   an author `display` on .prices would otherwise beat the UA [hidden] rule. */
+.board .prices { display: block; background: #12151b; color: #f6f4f0; border-radius: 26px; padding: 22px 24px 20px; box-shadow: 0 22px 50px rgba(32, 36, 44, .2); }
+.board .prices[hidden] { display: none; }
+.board .pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 760px) { .board .pgrid { grid-template-columns: 1fr; } }
+/* Both tiers carry the same weight: the price question is open, so nothing may steer it. */
+.board .paywall .plan { margin-bottom: 0; padding: 16px 18px; border-radius: 18px; border-color: rgba(255, 255, 255, .14); }
+.board .paywall .plan .g { display: flex; flex-direction: column; }
+.board .paywall .plan .peye { margin-bottom: 6px; }
+.board .paywall .plan .t { font-size: 16px; }
+/* styles.css .price is a card; inside a v10 plan row it is just the amount. */
+.board .paywall .plan .price { background: none; box-shadow: none; border-radius: 0; padding: 0; min-width: 0; display: block; font-size: 24px; color: #f6f4f0; }
+.board .paywall .psub { margin: 14px 0 0; text-align: center; max-width: none; align-self: auto; font-size: 12.5px; }
+.board .bfoot { gap: 10px; }
+/* .btn.quiet resolves to light-on-light under the token clash. */
+.board .btn.quiet { background: #fff; color: #20242c; border: 1.5px solid #ded8cb; box-shadow: none; height: 48px; font-size: 14.5px; }
+.board .btn.quiet:hover { border-color: #2c6cc0; color: #1e4f92; }

@@ -28,8 +28,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accentLight
 .phone-wrap { position: relative; transition: transform .5s cubic-bezier(.2,.8,.2,1), opacity .4s; }
 .phone-wrap.enter { transform: translateX(60px); opacity: 0; }
 .phone-label { position: absolute; top: -2px; left: 0; right: 0; text-align: center; font: 700 11px var(--mono); letter-spacing: 2px; text-transform: uppercase; color: var(--inkSoft); transform: translateY(-100%); padding-bottom: 6px; }
-.phone { width: 390px; height: 844px; border-radius: 54px; background: #0B0C0F; padding: 11px; box-sizing: border-box; box-shadow: 0 30px 60px rgba(32,36,44,.28), inset 0 0 0 2px #2a2d33; transform-origin: top left; }
-.screen { position: relative; width: 100%; height: 100%; border-radius: 44px; overflow: hidden; background: var(--bg); }
+.phone { zoom: 1.28; width: 308px; height: 648px; border-radius: 46px; background: #0B0C0F; padding: 11px; box-sizing: border-box; box-shadow: 0 30px 60px rgba(32,36,44,.28), inset 0 0 0 2px #2a2d33; transform-origin: top left; }
+.screen { position: relative; width: 100%; height: 100%; border-radius: 36px; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
 .screen.dark { background: var(--dBg); color: var(--dInk); }
 .screen.evening { background: #1B1E2A; color: var(--dInk); }
 .statusbar { position: absolute; top: 0; left: 0; right: 0; height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 30px 0 34px; font: 600 15px var(--body); z-index: 50; pointer-events: none; }
@@ -260,8 +260,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accentLight
 .mini-play { width: 42px; height: 42px; border-radius: 50%; border: 0; background: var(--accent); color: #fff; flex: none; }
 .wchip { border-radius: 999px; padding: 9px 14px; border: 1.5px solid var(--line); background: var(--card); font: 600 14px var(--body); color: var(--ink); }
 .wchip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-.preview { margin-top: 16px; }
-.preview .ptext { font: 600 20px/1.25 var(--display); margin-top: 6px; }
+.lenspreview { margin-top: 16px; }
+.lenspreview .ptext { font: 600 20px/1.25 var(--display); margin-top: 6px; }
 
 /* ---------- I Spy (6.1) ---------- */
 .kid-screen { background: #FFF3E3; }
@@ -289,7 +289,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accentLight
 .ios-alert button:first-of-type { font-weight: 600; }
 .recap { display: flex; flex-direction: column; gap: 16px; }
 .recap section { display: flex; flex-direction: column; gap: 8px; }
-.rstats { display: flex; gap: 14px; font-size: 11.5px; color: var(--dInkSoft); }
 .strip { display: flex; gap: 8px; overflow-x: auto; margin: 0 -22px; padding: 0 22px; scrollbar-width: none; }
 .thumb { flex: none; width: 104px; height: 124px; border-radius: 16px; font-size: 9px; }
 .mapthumb { position: relative; overflow: hidden; background: #1A1E26; }
@@ -460,10 +459,6 @@ button.must.add { font-family: var(--body); }
 .dd-art { overflow: hidden; }
 .dd-art .pic { border-radius: 28px; }
 /* 7.2 photos */
-.recap-head { position: relative; margin: 0 -22px; height: 250px; overflow: hidden; background: #262A3A; flex: none; }
-.recap-head::after { content: ""; position: absolute; inset: 0; background: linear-gradient(rgba(27,30,42,.1), rgba(27,30,42,.25) 40%, #1B1E2A); }
-.recap-head .rh-in { position: absolute; left: 22px; right: 22px; bottom: 14px; z-index: 1; }
-.recap-head .rstats { color: #fff; margin-top: 8px; }
 .thumb { position: relative; overflow: hidden; background: #262A3A; }
 .thumb > span { position: absolute; left: 6px; right: 6px; bottom: 6px; font: 600 10.5px var(--body); color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
 /* 7.3 showpiece */

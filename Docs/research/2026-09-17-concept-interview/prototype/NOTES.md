@@ -6,6 +6,39 @@ lenses, a planned day with Stop reasons and Skip advice, stories that start wher
 recap — **without the founder explaining or operating anything**? Spec: `../script.md`
 (authority), `../brief.md`, `../interview-guide.md`. Vocabulary: `Docs/traveller/CONTEXT.md`.
 
+## Words: hand-authored, not corpus (2026-09-23)
+
+Every spoken line and every Ask answer in `content.js` was replaced with text written from
+public-domain and government sources (NPS, LOC/HABS, NARA, LPC, NYC Parks). Scripts and
+citations: `../narration.md` (8 walk stories, ~6 min) and `../deep-dive.md` (7 Statue of
+Liberty chapters, 12:23). Research: `../sources/`.
+
+Each story carries `source:` instead of the old `beat:` id, and the session log records it.
+**This audio is not engine output and may never be presented as such.**
+
+To drop a recording in: set that slot's `audio:` from `null` to the filename. The slot ids
+are listed in `../narration.md`.
+
+## Look: the v10 design system
+
+Every phone screen is skinned from **`mobile/design/design-system-v10.html`** (committed
+2026-08-30 as the repo's design source of truth), not from the Flutter code. Its component
+CSS is ported verbatim into `v10.css`; per-area additions live in `skin-*.css`. The frame is
+v10's own 308x648 and is scaled up for the laptop, so the design stays pixel-faithful.
+
+Mapping: opening = `01 Sign in` · lenses = `02 Choose lenses` · plan = `04 Build a tour` ·
+Friday = `05 Tour preview` · walk = `06 Live guide` · re-plan = `06 Running late` ·
+recap = `07 Tour complete` · price cards = `08 Unlock Paris`. The Deep dive, Echoes, I Spy
+and the Ask sheet have no v10 equivalent and are built from its parts.
+
+Two things dropped on purpose in the port: the design-system page's own chrome, and v10's
+`prefers-color-scheme: dark` palette — the walkthrough must look the same on any laptop,
+and the screens that are dark set their own tokens.
+
+Local CSS and JS are injected at load with `?v=<timestamp>`, so a plain static server can
+never serve yesterday's `content.js` after an edit. A new file just needs adding to
+`__assets` in `PROTOTYPE-walkthrough.html`.
+
 ## Run
 
 ```bash

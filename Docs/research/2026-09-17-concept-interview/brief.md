@@ -55,24 +55,28 @@ recap, the close. Cut steps still appear as ranking cards.
   `script.md` is the authority for every screen.
 - **Build first, fill content before the pilot.** Every content slot is a clearly marked
   placeholder in one data block at the top of the file, swappable without touching layout.
-- **Story text now:** pull real `script_body` text from `data/new_york/beats.json` (8–22
-  beats per stop, 3–6 lenses, mostly kid-friendly). Federal Hall: Maya = `historic_arch`,
-  partner = `war_conflict`. Chosen, never edited.
+- **Story text (revised 2026-09-23):** hand-authored to the house standard from
+  public-domain and government sources (NPS, LOC/HABS, NARA, LPC, NYC Parks) — the engine is
+  mid-rebuild, so the demo tests the concept, not the engine. Scripts and citations in
+  `narration.md` and `deep-dive.md`; research in `sources/`. It is recorded there that this
+  audio may never be presented as engine output.
 - **Real audio is required before the pilot.** Hearing the story at the place is the core
   value; a placeholder button leaves nothing to experience. Build with placeholders (browser
   speech is acceptable while building), then voice every slot with the project's real TTS.
 - **Skip advice, I Spy prompts:** placeholder text marked TODO while building; the founder
   writes the real ones before the pilot (verdicts must be ones he would stand behind). Two
   Liberty beats already support "crown tickets sell out months ahead."
-- **Deep dive length:** Liberty beats total under 6 minutes, so whatever line length is
-  chosen the chapter is honest about being ~4 minutes.
+- **Deep dive length:** seven chapters, 12:23, hand-authored from public-domain sources
+  (`deep-dive.md`). Chapters are separate files, so a short queue stops early.
 - **Look:** copy the real Flutter app's screens and tokens (details in `script.md`), so
   people see what the product will actually look like.
 
 ## Caveats to keep in mind
 
-- Current NYC beats are mostly commercial-guidebook sourced; the deck commits NYC to
-  public-domain corpora. Fine for private interviews, not for investor demos.
+- ~~Current NYC beats are commercial-guidebook sourced, so private interviews only.~~
+  **Resolved 2026-09-23:** every spoken word is now written from public-domain and
+  government sources, so the walkthrough can be shown to anyone. The corpus caveat still
+  applies to the product, not to this prototype.
 - A laptop can let someone hear and see the product work; it cannot let them live the
   deck's central bet (a party hearing different stories on the ground, then trading them
   at dinner). The slide 17 Saturday walk remains the evidence for that.

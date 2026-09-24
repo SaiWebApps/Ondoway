@@ -8,9 +8,10 @@ session plan in `brief.md`; terms in `Docs/traveller/CONTEXT.md`.
 written. ✎ = founder writes it (verdicts and child prompts he must stand behind); build
 with a visible TODO placeholder. Everything unmarked is decided or is real corpus text.
 
-**Story text** is real `script_body` from `data/new_york/beats.json`, chosen and never
-edited. **Captions** (the one line under each screen that makes it self-explaining) are
-product copy and are written here in full.
+**Story text** was corpus `script_body` until 2026-09-23; it is now hand-authored from
+public-domain and government sources — full scripts and citations in `narration.md` and
+`deep-dive.md`, and already swapped into `prototype/content.js`. **Captions** (the one line
+under each screen that makes it self-explaining) are product copy, written here in full.
 
 ---
 
@@ -188,6 +189,22 @@ people")*
   3. **Federal Hall** — see 3.3.
 - Caption at 3.1: *"You just walk. Stories start on their own when you get there."*
 
+**Gravity decides how much a stop has to say (added 2026-09-23, owner).** The engine models
+pull as `tier` 1–5 and books dwell from it (`src/tour/routing.py`: tier 5 → 5 min, tier 3 →
+2½ min, tier 2 → 1 min, tier 1 → 0); an anchor candidate needs **≥ 3 active beats**
+(`src/onboard/beat_draft.py`, `ANCHOR_CANDIDATE_BEAT_COUNT_MIN = 3`); and one stop may carry
+at most **850 words** before check C8 calls it gorging. The walkthrough now follows that:
+
+| Stop | Gravity | Stories | Audio |
+|---|---|---|---|
+| 9/11 Memorial | 5 | 4 — the design, the names, the trees, the Survivor Tree | 3:06 |
+| Federal Hall | 4 | 3 — Maya, Dan, the 27th amendment | 2:50 |
+| Trinity Church | 3 | 2 — the third church, the bronze doors | 1:34 |
+| Bowling Green | 2 | 1 — walk-past | 0:56 |
+
+So "Tell me more" keeps giving at a gravity-5 anchor and runs out at a walk-by — the concept
+made touchable, ending in *"That's every story here in your lenses."*
+
 **3.2 While walking — the lever bank** — *a row of pills above the now-playing card*
 - **Tell me more** → plays the next story for this stop in one of Maya's lenses.
 - **Skip this stop** → the dot walks on to the next stop.
@@ -270,18 +287,21 @@ Modica's 7000lb bronze Charging Bull…"
 
 **5.2 Deep dive — "The copper woman"** — *full-screen player, same brand, speaker icon
 and "Playing out loud · 4 listening"*
-- Whatever line length is chosen: "A 4-minute chapter — then it's quiet until the boat."
-  (The corpus holds under 6 minutes of Liberty story; the prototype does not pretend
-  otherwise.)
-- Chapter, in order (real beats; crown-step beats excluded because they disagree):
-  1. Castle Clinton `social_change`, 13 s — "Before Ellis Island, the immigrant landing
-     station at Castle Garden — here at the foot of Manhattan…"
-  2. Liberty `hidden_history` (hook), 30 s — "The statue was dreamed up at a dinner party…"
-  3. Liberty `social_change`, 29 s — "…Joseph Pulitzer finally stepped in…"
-  4. Liberty `hidden_history`, 33 s — repoussé, the seven rays, the tablet
-  5. Liberty `science_tech`, 50 s — Eiffel's frame, 350 pieces in 214 crates
-  6. Liberty `social_change`, 27 s — "Mother of Exiles", Lazarus
-  7. Liberty `social_change` (climax), 36 s — twelve million immigrants
+- Whatever line length is chosen: "Seven chapters, about twelve minutes — then it's quiet
+  until the boat."
+- Chapters (hand-authored 2026-09-23 from public-domain sources; full text and citations in
+  `deep-dive.md`, runtimes measured at 150 wpm):
+  1. Castle Clinton, 1:30 — you are standing on filled water; the fort that never fired; the
+     ring of four forts, of which two are the rest of today's trip
+  2. Castle Clinton, 2:06 — Jenny Lind and the hatter who bought the first ticket; then the
+     immigrant depot, 8¼ million people, and the Friday it closed
+  3. Liberty, 1:20 — Laboulaye's abolition monument; Bartholdi's rejected Suez colossus; the
+     broken chains nobody can see
+  4. Liberty, 1:40 — repoussé, a skin two pennies thick, Eiffel's springs, 214 crates
+  5. Liberty, 1:44 — France paid, America couldn't; Pulitzer printed every donor's name
+  6. Liberty, 1:47 — Emma Lazarus, and the plaque that arrived seventeen years late
+  7. Liberty, 2:13 — she was brown, not green; Steiner 1906 and Graham 1914 from steerage;
+     the lighthouse that failed and the torch closed since 1916
 - Chapter progress as 7 dots; transcript toggle as in 3.1.
 - A pill at the top: **Look around** (opens 5.3; the chapter keeps playing in a mini
   player).

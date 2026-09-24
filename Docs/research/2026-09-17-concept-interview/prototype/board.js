@@ -30,10 +30,12 @@ const Board = {
         <section class="bcol ranked" data-zone="ranked"><div class="eyebrow">Your ranking</div>
           ${this.ranked.map((i, n) => `<div class="rrow"><span class="rn">${n + 1}</span>${this.card(i)}</div>`).join("") || '<p class="muted drop">Drag cards here, most important first.</p>'}</section>
       </div>
-      <div class="prices"${this.prices ? "" : " hidden"}>
-        <div class="price"><div class="eyebrow">Trip pass</div><b>Solo / Pair</b><span class="amt">$12–19</span></div>
-        <div class="price"><div class="eyebrow">Trip pass</div><b>Household (up to 5)</b><span class="amt">$29–49</span></div>
-        <p class="pnote">One city, one trip. Paid once.</p>
+      <div class="prices paywall"${this.prices ? "" : " hidden"}>
+        <div class="pgrid">
+          <div class="plan"><span class="g"><span class="peye">Trip pass</span><span class="t">Solo / Pair</span></span><span class="price">$12–19</span></div>
+          <div class="plan alt"><span class="g"><span class="peye">Trip pass</span><span class="t">Household (up to 5)</span></span><span class="price">$29–49</span></div>
+        </div>
+        <p class="psub pnote">One city, one trip. Paid once.</p>
       </div>
       <div class="bfoot"><button id="reveal" class="btn quiet">${this.prices ? "Hide prices" : "Reveal prices"}</button><button id="breset" class="btn quiet">Reset ranking</button></div>
     </div>`;

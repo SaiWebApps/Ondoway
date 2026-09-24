@@ -3,7 +3,8 @@
 
 function bottomNav(tab) {
   const tabs = [["explore", "Explore"], ["luggage", "Trips"], ["person", "Profile"]];
-  return `<nav class="bnav">${tabs.map(([ic, l]) => `<span class="tab${l === tab ? " on" : ""}" data-log="Bottom nav: ${l}">${icon(ic, l === tab ? "fill" : "")}${l === tab ? l : ""}</span>`).join("")}</nav>`;
+  // v10 `03 · Home` float-nav: the dark pill, blue on the active tab.
+  return `<div class="home"><nav class="floatnav plan-nav">${tabs.map(([ic, l]) => `<span class="n${l === tab ? " on" : ""}" data-log="Bottom nav: ${l}">${icon(ic, l === tab ? "fill" : "")}${l === tab ? l : ""}</span>`).join("")}</nav></div>`;
 }
 const STOP_IMG = { "9/11 Memorial": "memorial_wide", "Trinity Church": "trinity_wide", "Federal Hall": "federal_wide", "Fraunces Tavern": "fraunces_thumb", "Castle Clinton": "castle_wide", "Statue of Liberty": "liberty" };
 const DAY_IMG = { Thu: "day_thu", Fri: "federal_wide", Sat: "day_sat", Sun: "day_sun" };
@@ -102,10 +103,17 @@ App.def("1.2", {
 });
 
 // ---- 2.1 Plan your trip (= trip_duration_page.dart) + add a must-see
+// Skin: v10 `04 · Build a tour` — .builder / .bd-seg / .bd-hero / .bd-loc / .bd-q /
+// .bd-times / .bd-time / .bd-opt / .foot2 / .bd-gen. Same content, v10 furniture.
 App.def("2.1", {
   time: "8:17",
   render({ maya }) {
     const p = C.plan;
+    // "Thu Oct 8 – Sun Oct 11 · 4 days" reads as the .bd-time value + its caption;
+    // "Statue of Liberty ferry · Fri 2:00 PM" as the .bd-opt label + its muted tail.
+    const split = (s) => { const i = s.indexOf(" · "); return i < 0 ? [s, ""] : [s.slice(0, i), s.slice(i + 3)]; };
+    const [dateRange, dateLen] = split(p.dates);
+    const [ferry, ferryWhen] = split(p.booked);
     const drawMust = () => {
       $("#musts", maya).innerHTML = [...p.mustSees.map((m) => ({ name: m })), ...App.st.addedMustSees].map((m) =>
         `<span class="must${m.fresh ? " fresh" : ""}">${icon("star", "fill")}${esc(m.name)}</span>`).join("") +
@@ -136,27 +144,37 @@ App.def("2.1", {
       $("#msf", s.scrim).onsubmit = (e) => e.preventDefault();
       draw();
     };
-    maya.insertAdjacentHTML("beforeend", `<div class="scr fade-in" style="padding-bottom:110px;display:flex;flex-direction:column;gap:14px">
-      <div class="eyebrow">Plan your trip</div>
-      <h1 class="h1" style="margin-bottom:6px">${esc(p.city)}</h1>
-      <div class="card row-card"><div class="rlabel">${icon("calendar_month")}Dates</div><div class="rval">${esc(p.dates)}</div></div>
-      <div class="card row-card"><div class="rlabel">${icon("star", "fill")}Must-sees</div>
-        <div class="chips" style="gap:6px;margin-top:10px" id="musts"></div></div>
-      <div class="card row-card"><div class="rlabel">${icon("confirmation_number")}Booked</div>
-        <div class="ticket">${icon("directions_boat")}<span>${esc(p.booked)}</span></div></div>
-      <div style="margin-top:auto"><button class="btn block" id="build" data-log="Build my trip">${icon("auto_awesome")}Build my trip</button></div>
+    maya.insertAdjacentHTML("beforeend", `<div class="scr fade-in builder plan-v10 plan-build" style="padding-bottom:104px;display:flex;flex-direction:column">
+      <div class="bd-seg"><span class="s">Now</span><span class="s on">Plan</span></div>
+      <div class="bd-hero">
+        <span class="bd-loc">Plan your trip</span>
+        <h1 class="bd-q">${esc(p.city)}</h1>
+        <div class="pl-block">
+          <div class="pl-lbl">${icon("calendar_month")}Dates</div>
+          <div class="bd-times pl-one"><div class="bd-time on"><div class="v">${esc(dateRange)}</div>${dateLen ? `<div class="s">${esc(dateLen)}</div>` : ""}</div></div>
+        </div>
+        <div class="pl-block">
+          <div class="pl-lbl">${icon("star", "fill")}Must-sees</div>
+          <div class="chips pl-musts" id="musts"></div>
+        </div>
+        <div class="pl-block">
+          <div class="pl-lbl">${icon("confirmation_number")}Booked</div>
+          <div class="bd-opt pl-booked"><span class="pin">${icon("directions_boat")}</span>${esc(ferry)}${ferryWhen ? `<span class="o">· ${esc(ferryWhen)}</span>` : ""}</div>
+        </div>
+      </div>
+      <div class="foot2"><button class="btn block bd-gen" id="build" data-log="Build my trip">${icon("auto_awesome")}Build my trip</button></div>
     </div>${bottomNav("Trips")}`);
     drawMust();
     $("#build", maya).onclick = () => App.next();
   },
 });
 
-// ---- 2.2 Building (auto-advances)
+// ---- 2.2 Building (auto-advances) — v10 builder surface, same ticking lines and timings
 App.def("2.2", {
   time: "8:17",
   render({ maya }) {
-    maya.insertAdjacentHTML("beforeend", `<div class="scr" style="display:flex;align-items:center">
-      <div class="card" style="width:100%;padding:26px 22px">
+    maya.insertAdjacentHTML("beforeend", `<div class="scr builder plan-v10 plan-building" style="display:flex;align-items:center">
+      <div class="pl-buildcard">
         <div class="spinner"></div>
         <div id="blines" style="display:flex;flex-direction:column;gap:12px;margin-top:22px"></div>
       </div></div>`);
@@ -170,25 +188,26 @@ App.def("2.2", {
 });
 
 // ---- 2.3 Your trip — added must-sees appear on their day, with why
+// Skin: v10 `03 · Home` — one .tourcard per day (.thumb / .info / .nm / .mt / .go).
 App.def("2.3", {
   time: "8:18",
   render({ maya }) {
     const cards = C.days.map((d) => {
       const added = App.st.addedMustSees.filter((m) => m.day === d.day);
-      return `<div class="card day${d.open ? " open" : " locked"}" data-log="Day card: ${d.day}" ${d.open ? 'id="friday"' : ""}>
-        <div class="dthumb">${pic(DAY_IMG[d.day], d.area)}<span class="dday">${esc(d.day)}</span></div>
-        <div style="flex:1;min-width:0">
-          <div class="h2" style="font-size:18px">${esc(d.area)}</div>
-          <div class="dmeta">${d.stars.map((s) => `<span class="star">${icon("star", "fill")}${esc(s)}</span>`).join("")}${added.map((m) => `<span class="star added">${icon("star", "fill")}${esc(m.name)}</span>`).join("")}${d.note ? `<span>${esc(d.note)}</span>` : ""}</div>
-          ${added.map((m) => `<div class="addwhy">${esc(m.why)}</div>`).join("")}
-          <div class="mono" style="font-size:11px;color:var(--inkMute);margin-top:6px">${d.stops + added.filter((m) => !m.already).length} stops</div>
+      return `<div class="tourcard day${d.open ? " open" : " locked"}" data-log="Day card: ${d.day}" ${d.open ? 'id="friday"' : ""}>
+        <div class="thumb dthumb">${pic(DAY_IMG[d.day], d.area)}<span class="dday">${esc(d.day)}</span></div>
+        <div class="info">
+          <span class="nm">${esc(d.area)}</span>
+          <span class="mt dmeta">${d.stars.map((s) => `<span class="star">${icon("star", "fill")}${esc(s)}</span>`).join("")}${added.map((m) => `<span class="star added">${icon("star", "fill")}${esc(m.name)}</span>`).join("")}${d.note ? `<span>${esc(d.note)}</span>` : ""}</span>
+          ${added.map((m) => `<span class="addwhy">${esc(m.why)}</span>`).join("")}
+          <span class="mt stops mono">${d.stops + added.filter((m) => !m.already).length} stops</span>
         </div>
-        ${d.open ? icon("chevron_right") : ""}
+        ${d.open ? `<span class="go">${icon("chevron_right")}</span>` : ""}
       </div>`;
     }).join("");
-    maya.insertAdjacentHTML("beforeend", `<div class="scr fade-in" style="padding-bottom:110px;display:flex;flex-direction:column;gap:12px">
-      <div class="eyebrow">New York · 4 days</div>
-      <h1 class="h1" style="margin-bottom:8px">Your trip</h1>
+    maya.insertAdjacentHTML("beforeend", `<div class="scr fade-in home plan-v10 plan-trip" style="padding-bottom:104px;display:flex;flex-direction:column;gap:11px">
+      <div class="lbl">New York · 4 days</div>
+      <h1 class="bd-q">Your trip</h1>
       ${cards}
     </div>${bottomNav("Trips")}`);
     $("#friday", maya).onclick = () => App.next();
@@ -197,34 +216,59 @@ App.def("2.3", {
 });
 
 // ---- 2.4 Friday (= trip_itinerary_page.dart) with Stop reasons and Skip advice
+// Skin: v10 `05 · Tour preview` — .pv-map route under a .pv-sheet (.pv-eye / .pv-meta /
+// .pv-stops / .pv-startbar). Our two extras — the per-stop reason and the "We'd skip"
+// card — ride the sheet's own .pv-why rule and the spark rail.
 App.def("2.4", {
   time: "8:18",
   render({ maya }) {
     const f = C.friday, sk = C.skipAdvice;
+    const STAT_IC = { Stops: "place", Walk: "directions_walk", "Must-sees": "star", Stories: "headphones" };
     let n = 0;
     const stops = f.stops.map((s) => {
       if (s.skipAdvice) return `<div class="skip" data-log="Skip advice card">
-        <div class="h2" style="font-size:18px;display:flex;align-items:center;gap:8px">${icon("do_not_disturb_on")}${esc(sk.heading)} ${sk.todo ? '<span class="todo">TODO ✎</span>' : ""}</div>
-        <p class="body" style="margin:8px 0 0;font-size:14.5px">${esc(sk.body)}</p></div>`;
+        <div class="skip-h">${icon("do_not_disturb_on")}${esc(sk.heading)} ${sk.todo ? '<span class="todo">TODO ✎</span>' : ""}</div>
+        <p class="skip-b">${esc(sk.body)}</p></div>`;
       n++;
       const l = lensOf(s.lens);
-      return `<div class="card stop${s.must ? " must-stop" : ""}" data-log="Stop card: ${s.name}">
-        <div class="sthumb">${pic(STOP_IMG[s.name], s.name)}<span class="num">${n}</span></div>
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:6px"><span class="sname">${esc(s.name)}</span>${s.must ? `<span class="ms fill" style="color:var(--spark);font-size:18px">star</span>` : ""}</div>
-          ${s.reason ? `<div class="reason">${esc(s.reason)}</div>` : s.must ? `<div class="reason plain">Your must-see${s.ferry ? " · ferry booked" : ""}</div>` : ""}
-          <div class="smeta"><span class="pill" style="background:color-mix(in srgb, ${l.color} 16%, transparent);color:${l.color}">${icon(l.icon)}${esc(l.label)}</span><span>${s.mins} min</span></div>
+      return `<div class="pv-stop${s.must ? " must-stop" : ""}" data-log="Stop card: ${s.name}">
+        <div class="th">${pic(STOP_IMG[s.name], s.name)}<span class="num">${n}</span></div>
+        <div class="d">
+          <div class="n">${esc(s.name)}${s.must ? `<span class="ms fill mstar">star</span>` : ""}</div>
         </div>
-        <div class="stime mono">${esc(s.time)}</div>
+        <div class="dur"><span class="t">${esc(s.time)}</span><span class="m">${s.mins} min</span></div>
+        <div class="s"><span class="pill" style="background:color-mix(in srgb, ${l.color} 16%, transparent);color:${l.color}">${icon(l.icon)}${esc(l.label)}</span></div>
+        ${s.reason ? `<div class="pv-why">${esc(s.reason)}</div>` : s.must ? `<div class="pv-why plain">Your must-see${s.ferry ? " · ferry booked" : ""}</div>` : ""}
       </div>`;
     }).join("");
-    maya.insertAdjacentHTML("beforeend", `<div class="scr fade-in" style="padding-bottom:120px;display:flex;flex-direction:column;gap:10px">
-      <div class="eyebrow">Your tour</div>
-      <h1 class="h1" style="margin-bottom:6px">Friday · Lower Manhattan</h1>
-      <div class="stats">${f.stats.map(([k, v]) => `<div><div class="sv">${esc(v)}</div><div class="sk mono">${esc(k)}</div></div>`).join("")}</div>
-      ${stops}
+    // The v10 preview map: an abstract street grid with the day's route drawn over it.
+    const map = `<div class="pv-map">
+      <svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <rect width="300" height="300" fill="#e7e1d5"/>
+        <g stroke="#d7d0c0" stroke-width="9" fill="none" stroke-linecap="round"><path d="M-10 70H310M-10 165H310M-10 250H310M60 -10V310M150 -10V310M225 -10V310"/></g>
+        <path d="M150 -10 L150 165 L225 250" stroke="#cfc7b6" stroke-width="14" fill="none"/>
+        <path d="M18 195 q40 -20 70 6 q30 26 12 60 q-14 26 -50 20 q-40 -8 -44 -46 q-2 -28 12 -40z" fill="#dbe3cf"/>
+        <path d="M210 20 h84 v70 h-84 z" fill="#d3dee4"/>
+        <path d="M55 262 C 70 210, 120 210, 128 170 S 150 100, 205 78" fill="none" stroke="#2c6cc0" stroke-width="13" stroke-linecap="round" opacity=".14"/>
+        <path d="M55 262 C 70 210, 120 210, 128 170 S 150 100, 205 78" fill="none" stroke="#2c6cc0" stroke-width="5.5" stroke-linecap="round" opacity=".95"/>
+      </svg>
+      <span class="pv-dot start" style="left:44px;top:250px">1</span>
+      <span class="pv-dot" style="left:120px;top:160px">3</span>
+      <span class="pv-pin" style="left:186px;top:90px"></span>
     </div>
-    <button class="btn fab" id="walk" data-log="Start walking">${icon("directions_walk")}Start walking</button>`);
+    <div class="pv-top"><span class="pv-back">${icon("chevron_left")}</span><span class="pv-chip">Friday</span></div>`;
+    maya.insertAdjacentHTML("beforeend", `${map}
+    <div class="scr fade-in pv-sheet plan-v10 plan-preview">
+      <div class="pv-handle"></div>
+      <div class="pv-eye">Your tour</div>
+      <h3>Lower Manhattan</h3>
+      <div class="pv-meta">${f.stats.map(([k, v]) => `<span class="chip${k === "Must-sees" ? " ok" : ""}">${STAT_IC[k] ? icon(STAT_IC[k]) : ""}<b>${esc(v)}</b> ${esc(k)}</span>`).join("")}</div>
+      <div class="pv-stops">${stops}</div>
+    </div>
+    <div class="pv-startbar plan-v10 plan-startbar">
+      <button class="btn start" id="walk" data-log="Start walking">${icon("directions_walk")}Start walking</button>
+      <span class="tune">${icon("tune")}</span>
+    </div>`);
     $("#walk", maya).onclick = () => App.next();
   },
 });

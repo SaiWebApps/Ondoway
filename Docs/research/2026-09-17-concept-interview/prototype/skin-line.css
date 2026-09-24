@@ -1,0 +1,205 @@
+/* skin-line — screen-specific additions in the v10 idiom. Loaded after v10.css.
+   Scope: 5.1 in line · 5.2 Deep dive · 5.3 Echoes camera · 5.4 Leave an echo · 6.1 I Spy.
+
+   Borrowed from v10 (mobile/design/design-system-v10.html, ported to v10.css):
+     06 Live guide — .g-player/.gp-top/.gp-art/.gp-lens/.gp-title/.gp-meta/.gp-prog/
+       .gp-scrub/.gp-track/.gp-ctrls/.play/.gp-txt, the .g-next pill, the .g-dots
+       chapter dots, the .g-banner icon tile, the .late sheet over a live map.
+     05 Tour preview — .pv-meta .chip (+ .chip.ok), .pv-why's quote rule, .pv-back.
+     07 Tour complete — the calm full-bleed photo + card treatment.
+   v10 has no camera, no echo, no template builder and no child screen; those are
+   invented here in v10's vocabulary and named in the report.
+
+   Colours are written as v10's own literals (as v10.css's component rules do), not as
+   shared tokens: v10.css re-declares :root with the DARK palette after styles.css, so
+   --card/--bg/--ink/--accent no longer mean what styles.css meant by them. */
+
+/* Eyebrow colour on dark screens belongs to skin-core (.screen.dark .eyebrow); these
+   rules set only size and rhythm so 5.1/5.2 follow the system if that colour changes. */
+
+/* ============================================================ 5.1 · In line?
+   v10 idiom: the dark sheet that sits over a live map (07/.late .sheet). */
+.replan .card.linecard {
+  background: #20242C; color: #F6F4F0;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 24px; padding: 20px;
+  box-shadow: 0 22px 50px rgba(0,0,0,.55), 0 4px 10px rgba(0,0,0,.35);
+}
+.linecard .line-eye { display: flex; align-items: flex-start; gap: 7px; margin: 0; font: 400 10px var(--mono); line-height: 1.5; letter-spacing: .12em; text-transform: uppercase; }
+.linecard .line-eye .ms { font-size: 17px; }
+.linecard .line-h { font-family: var(--display); font-variation-settings: 'opsz' 96; font-weight: 560; font-size: 21px; line-height: 1.08; letter-spacing: -.015em; color: #F6F4F0; margin: 12px 0 0; }
+.linecard .line-p { font: 400 13px/1.45 var(--body); color: rgba(246,244,240,.7); margin: 9px 0 17px; }
+.linecard .line-q { margin: 0; font: 400 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+.linecard .linechips { gap: 9px; margin-top: 11px; }
+.linecard .linechips button { flex: 1; height: 48px; padding: 0 4px; white-space: nowrap; border-radius: 999px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.05); color: #F6F4F0; font: 600 13.5px var(--body); }
+.linecard .linechips button:active { background: #2C6CC0; border-color: #2C6CC0; box-shadow: 0 8px 20px rgba(44,108,192,.4); }
+
+/* ====================================================== 5.2 · Deep dive player
+   v10's 06 Live guide player, scaled up: this one is playing out loud for four. */
+.scr.dd { gap: 0; padding-bottom: 34px; }
+.dd .dd-top { display: flex; align-items: center; gap: 8px; }
+/* Ask / Look around float over the art, as v10's preview chips float over the map. */
+.dd .dd-acts { position: absolute; top: 10px; right: 10px; z-index: 2; display: flex; gap: 6px; }
+.dd .pill.loud, .dd .pill.look {
+  background: rgba(23,26,32,.9); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,.1); color: #F6F4F0;
+  padding: 7px 12px 7px 9px; font: 600 11px var(--body); box-shadow: 0 6px 18px rgba(0,0,0,.45);
+}
+.dd .pill.loud .ms { font-size: 15px; color: #E0A877; }
+.dd .pill.look { border-color: rgba(255,255,255,.18); }
+.dd .pill.look .ms { font-size: 15px; color: #7BB2F5; }
+
+/* The shared art: v10's .gp-art, at hero size instead of 56px. */
+.dd .gp-art {
+  position: relative; display: block; flex: none;
+  width: auto; height: 158px; margin: 14px 0 15px;
+  border-radius: 20px; overflow: hidden;
+  background: #171B22; box-shadow: 0 16px 36px rgba(0,0,0,.5);
+}
+.dd .gp-art > .pic { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 20px; }
+.dd .gp-art > .ms { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 72px; color: rgba(255,255,255,.85); }
+
+.dd .dd-eye { margin: 0; font: 400 10.5px var(--mono); letter-spacing: .16em; text-transform: uppercase; }
+.dd .gp-title.dd-h { font-family: var(--display); font-variation-settings: 'opsz' 144; font-weight: 540; font-size: 33px; line-height: .98; letter-spacing: -.03em; color: #F6F4F0; margin: 9px 0 0; }
+.dd .dd-note { font: 400 13px/1.5 var(--body); color: rgba(246,244,240,.72); margin: 10px 0 0; }
+.dd .dd-line { color: rgba(246,244,240,.45); }
+
+/* Seven chapters, as v10's .g-dots. (.dd-dots, not .dots: the v10 status bar in
+   app-core.js now uses .dots, and this screen's painter must not rewrite those.) */
+.dd .dd-dots { display: flex; gap: 5px; margin: 15px 0 auto; }
+.dd .dd-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.3); box-shadow: none; transition: width .3s ease, background .3s ease; }
+.dd .dd-dots i.on { width: 18px; border-radius: 3px; background: #7BB2F5; }
+.dd .dd-dots i.done { background: rgba(123,178,245,.5); }
+
+/* The player panel itself — v10's .g-player, in flow rather than pinned. */
+.dd .g-player {
+  position: static; margin-top: 15px;
+  background: rgba(23,26,32,.82); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,.09); border-radius: 24px;
+  padding: 14px 16px 15px; box-shadow: 0 -6px 40px rgba(0,0,0,.5);
+}
+.dd .gp-top { align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+.dd .gp-meta { padding-top: 3px; }
+/* v10 stacks lens / title / progress; the lens and the stop read as one line here because
+   the copy carries its own "·" separators. */
+.dd .dd-now { font: 400 11px/1.4 var(--body); color: rgba(246,244,240,.55); }
+.dd .gp-lens { margin-right: 2px; font: 700 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #E0A877; }
+.dd .gp-txt { width: auto; height: 32px; padding: 0 11px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: transparent; color: rgba(246,244,240,.8); font: 600 11.5px var(--body); display: inline-flex; align-items: center; gap: 5px; flex: none; }
+.dd .gp-txt .ms { font-size: 15px; }
+.dd .gp-txt.on { background: #F6F4F0; border-color: #F6F4F0; color: #20242C; }
+.dd .gp-scrub { margin-bottom: 12px; }
+.dd .gp-track { height: 5px; border-radius: 3px; background: rgba(255,255,255,.14); }
+.dd .gp-track i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #7BB2F5; border-radius: 3px; }
+.dd .gp-ctrls { gap: 26px; }
+.dd .gp-ctrls button { border: 0; padding: 0; background: transparent; }
+.dd .gp-ctrls .c { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: rgba(246,244,240,.9); }
+.dd .gp-ctrls .c .ms { font-size: 28px; }
+.dd .gp-ctrls .play { width: 54px; height: 54px; border-radius: 50%; background: #2C6CC0; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 22px rgba(44,108,192,.5); }
+.dd .gp-ctrls .play .ms { font-size: 30px; }
+.dd .np-tx { max-height: 148px; margin-top: 15px; padding-top: 13px; border-top: 1px solid rgba(255,255,255,.09); font: 400 13.5px/1.6 var(--body); color: rgba(246,244,240,.6); }
+.dd .np-tx .hl { color: #F6F4F0; background: rgba(123,178,245,.18); border-radius: 4px; }
+
+/* ================================================= 5.3 · Echoes, through the camera
+   No v10 camera screen: the chrome is v10's live-guide pills, the echo cards are the
+   tour-preview card + .pv-meta chips, the mini player is .g-player at sheet size. */
+.cam .cam-top { top: 56px; gap: 8px; }
+.cam .cam-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: rgba(23,26,32,.9); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  color: #F6F4F0; border-radius: 999px; padding: 7px 13px 7px 10px;
+  font: 600 11px var(--body); box-shadow: 0 6px 18px rgba(0,0,0,.45);
+}
+.cam .cam-pill .bd { width: 8px; height: 8px; border-radius: 50%; background: #7BB2F5; flex: none; }
+.cam .cam-pill .ms { font-size: 15px; color: rgba(246,244,240,.75); }
+.cam .cam-x { width: 38px; height: 38px; border: 1px solid rgba(255,255,255,.14); background: rgba(23,26,32,.9); color: #F6F4F0; display: flex; align-items: center; justify-content: center; }
+.cam .cam-ask { width: 52px; height: 52px; border-radius: 16px; border: 0; background: #2C6CC0; color: #fff; gap: 2px; font: 600 9.5px var(--body); box-shadow: 0 8px 22px rgba(44,108,192,.5); }
+.cam .cam-ask .ms { font-size: 20px; }
+.cam .vf i { width: 26px; height: 26px; border-width: 2.5px; border-color: rgba(246,244,240,.8); }
+.cam-hint {
+  background: rgba(23,26,32,.9); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  color: #F6F4F0; border-radius: 999px; padding: 8px 14px 8px 11px;
+  font: 600 11px var(--body); box-shadow: 0 6px 18px rgba(0,0,0,.45);
+}
+.cam-hint .ms { font-size: 16px; color: #7BB2F5; }
+.cam-hint { white-space: nowrap; }
+
+/* An echo: a v10 card pinned into the photo. */
+.cam .echo {
+  max-width: 178px; padding: 10px 12px;
+  background: #fff; color: #20242C;
+  border-radius: 16px 16px 16px 5px;
+  font: 400 12px/1.35 var(--body);
+  box-shadow: 0 8px 20px rgba(0,0,0,.35);
+}
+.cam .echo b { font-weight: 700; color: #1E4F92; }
+.cam .echo .ecount { margin-top: 6px; font: 400 9.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #5B6069; }
+.cam .echo.open { max-width: 214px; box-shadow: 0 16px 36px rgba(0,0,0,.45); }
+.cam .echo.mine { background: #2C6CC0; color: #fff; border-radius: 16px 16px 5px 16px; box-shadow: 0 12px 26px rgba(44,108,192,.5); }
+.cam .echo.mine b { color: #fff; }
+.cam .echo.mine .ecount { color: rgba(255,255,255,.72); }
+.cam .echo .reacts { margin: 9px 0 0; gap: 5px; }
+.cam .echo .react { background: #F2EFE8; border: 1px solid #E8E3D8; border-radius: 999px; padding: 5px 9px; font: 600 11px var(--body); color: #3A3F49; }
+.cam .echo .react.done { background: #E2ECF8; border-color: #CADCF3; color: #1E4F92; }
+.cam .echo.mine .react { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.3); color: #fff; }
+
+/* The chapter keeps going: v10's player, sheet-sized. */
+.cam .cam-bottom { gap: 10px; bottom: 24px; }
+.cam .btn.cam-leave { height: 52px; border-radius: 999px; background: #2C6CC0; color: #fff; font: 600 15px var(--body); gap: 8px; box-shadow: 0 10px 24px rgba(44,108,192,.45); }
+.cam .btn.cam-leave .ms { font-size: 19px; }
+.mini {
+  align-items: center; gap: 11px; padding: 11px 12px 11px 13px;
+  background: rgba(23,26,32,.82); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,.09); border-radius: 22px;
+  color: #F6F4F0; box-shadow: 0 -6px 40px rgba(0,0,0,.5);
+}
+.mini .mini-ic { width: 38px; height: 38px; border-radius: 12px; background: #2C6CC0; color: #fff; box-shadow: 0 4px 12px rgba(44,108,192,.5); }
+.mini .mini-ic .ms { font-size: 20px; }
+.mini .mini-meta { flex: 1; min-width: 0; }
+.mini .gp-title { font-family: var(--display); font-variation-settings: 'opsz' 96; font-weight: 560; font-size: 15px; line-height: 1.1; letter-spacing: -.01em; margin: 0; }
+.mini .gp-prog { font: 400 10.5px var(--body); color: rgba(246,244,240,.55); margin-top: 3px; }
+.mini .gp-track { height: 4px; border-radius: 2px; background: rgba(255,255,255,.14); margin-top: 7px; overflow: hidden; }
+.mini .gp-track i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #7BB2F5; border-radius: 2px; }
+.mini .mini-play { width: 42px; height: 42px; border-radius: 50%; border: 0; background: #2C6CC0; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(44,108,192,.5); }
+.mini .mini-play .ms { font-size: 24px; }
+
+/* ================================================== 5.4 · Leave an echo (builder)
+   v10's light page: preview-sheet chips for the word lists, .pv-why's rule on the preview. */
+.echo-builder { background: #F6F4F0; color: #20242C; }
+.echo-builder .scr.eb { padding: 64px 22px 36px; display: flex; flex-direction: column; }
+.eb .eb-x { top: 56px; right: 18px; width: 38px; height: 38px; border-radius: 50%; border: 1px solid #E8E3D8; background: rgba(255,255,255,.92); color: #20242C; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(32,36,44,.2); }
+.eb .eb-eye { margin: 0; padding-right: 54px; font: 400 11px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: #2C6CC0; }
+.eb .eb-h { font-family: var(--display); font-variation-settings: 'opsz' 144; font-weight: 560; font-size: 27px; line-height: 1.02; letter-spacing: -.028em; color: #20242C; margin: 10px 0 0; max-width: 16ch; }
+.eb .eb-step { margin: 17px 0 9px; font: 400 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: #5B6069; }
+.eb .chips { gap: 8px; }
+.eb .chips + .chips { margin-top: 8px; }
+.eb .wchip { border-radius: 999px; padding: 8px 13px; border: 1px solid #E8E3D8; background: #fff; font: 600 13px var(--body); color: #3A3F49; box-shadow: 0 1px 2px rgba(32,36,44,.05); }
+.eb .wchip.on { background: #2C6CC0; border-color: #2C6CC0; color: #fff; box-shadow: 0 8px 18px rgba(44,108,192,.3); }
+.eb .card.lenspreview { margin: 18px 0 0; padding: 14px 15px; background: #fff; color: #20242C; border: 1px solid #E8E3D8; border-radius: 18px; box-shadow: 0 4px 14px rgba(32,36,44,.08); }
+.eb .lenspreview .eyebrow { margin: 0; font: 400 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: #2C6CC0; }
+.eb .lenspreview .ptext { font-family: var(--display); font-variation-settings: 'opsz' 96; font-weight: 560; font-size: 19px; line-height: 1.25; letter-spacing: -.01em; margin-top: 10px; padding-left: 11px; border-left: 2px solid #2C6CC0; }
+/* Pinned CTA on its own band, as v10's lens-picker save bar sits over its page fade. */
+.eb .btn.eb-pin { position: sticky; bottom: 0; z-index: 2; margin-top: 21px; height: 52px; border-radius: 999px; background: #2C6CC0; color: #fff; font: 600 15px var(--body); box-shadow: 0 0 0 14px #F6F4F0, 0 10px 22px rgba(44,108,192,.34); }
+.eb .btn.eb-pin[disabled] { box-shadow: 0 0 0 14px #F6F4F0; }
+.eb .btn.eb-pin .ms { font-size: 19px; }
+.eb .eb-fine { margin: 12px 0 0; text-align: center; font: 400 12px var(--body); color: #5B6069; }
+
+/* ================================================================ 6.1 · I Spy
+   Ava's phone: the same brand, obviously a child's. v10 has no child screen, so this is
+   v10's type ramp and .chip.ok answer colour at kid scale, on a warm tint of the bone bg.
+   (Markup lives in screens-late.js and is not touched — this is skin only.) */
+.kid-screen { background: #F7EFE2; color: #20242C; }
+.kid-screen .scr { padding: 58px 20px 30px; }
+/* The finds are flex items in a column: without this they shrink and clip their own
+   answer and button instead of letting the screen scroll. */
+.kid-screen .card.find { flex: none; }
+.kid-screen .kid-head { padding: 9px 18px; background: #E8934A; color: #fff; font: 700 17px var(--body); box-shadow: 0 8px 20px rgba(232,147,74,.35); }
+.kid-screen .kid-head .ms { font-size: 24px; }
+.kid-screen .kid-title { font-family: var(--display); font-variation-settings: 'opsz' 144; font-weight: 560; font-size: 31px; line-height: 1; letter-spacing: -.025em; color: #20242C; margin: 2px 0 0; }
+.kid-screen .card.find { gap: 11px; padding: 16px; background: #fff; border: 1px solid #E8E3D8; border-radius: 22px; box-shadow: 0 6px 18px rgba(32,36,44,.1); }
+.kid-screen .kid-q { font: 600 17px/1.32 var(--body); color: #20242C; }
+.kid-screen .kid-a { font-family: var(--display); font-variation-settings: 'opsz' 96; font-weight: 560; font-size: 16px; line-height: 1.3; color: #1E4F92; background: #E2ECF8; border: 1px solid #CADCF3; border-radius: 14px; padding: 11px 13px; }
+.kid-screen .kid-btn { height: 54px; border-radius: 999px; background: #2C6CC0; color: #fff; font: 700 18px var(--body); box-shadow: 0 10px 22px rgba(44,108,192,.34); }
+.kid-screen .kid-btn .ms { font-size: 26px; }
+.kid-screen .find.found .kid-btn { background: #2F8A45; box-shadow: 0 10px 22px rgba(47,138,69,.28); }
+.kid-screen .stamp { top: 14px; right: 14px; padding: 4px 11px; border: 3px solid #2F8A45; border-radius: 12px; color: #2F8A45; font: 700 17px var(--mono); letter-spacing: 3px; }
+.kid-screen .todo { background: #F6ECD6; border: 1.5px dashed #B9852F; color: #7A5A1E; border-radius: 999px; padding: 3px 9px; font: 400 10px var(--mono); letter-spacing: .1em; }

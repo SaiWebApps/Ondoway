@@ -12,20 +12,19 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0&display=block">
-<link rel="stylesheet" href="styles.css">
+<!-- Local assets are loaded with a cache-buster so a plain static server never serves
+     you yesterday's content.js after you edit it. Order is preserved by document.write. -->
+<script>
+  (function () {
+    var v = Date.now();
+    ["styles.css", "v10.css", "skin-core.css", "skin-plan.css", "skin-walk.css", "skin-line.css", "skin-late.css"].forEach(function (f) { document.write('<link rel="stylesheet" href="' + f + '?v=' + v + '">'); });
+    window.__assets = ["content.js", "sync.js", "app-core.js", "screens-plan.js", "walk-kit.js", "camera.js", "screens-walk.js", "screens-line.js", "screens-late.js", "interviewer.js", "board.js"];
+    window.__v = v;
+  })();
+</script>
 <div id="root"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
-<script src="content.js"></script>
-<script src="sync.js"></script>
-<script src="app-core.js"></script>
-<script src="screens-plan.js"></script>
-<script src="walk-kit.js"></script>
-<script src="camera.js"></script>
-<script src="screens-walk.js"></script>
-<script src="screens-line.js"></script>
-<script src="screens-late.js"></script>
-<script src="interviewer.js"></script>
-<script src="board.js"></script>
+<script>window.__assets.forEach(function (f) { document.write('<scr' + 'ipt src="' + f + '?v=' + window.__v + '"><\/scr' + 'ipt>'); });</script>
 <script>
   (function () {
     const view = new URLSearchParams(location.search).get("view");

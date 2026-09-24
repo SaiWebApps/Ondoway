@@ -32,8 +32,10 @@ App.def("6.1", {
 App.def("7.1", {
   theme: "evening", time: "8:05",
   render({ maya }) {
-    maya.insertAdjacentHTML("beforeend", `<div class="scr" style="filter:blur(3px);opacity:.5">
-      <div class="eyebrow">Tonight</div><h1 class="h1" style="color:var(--dInk)">Friday, told back</h1></div>
+    maya.insertAdjacentHTML("beforeend", `<div class="scr completion behind">
+      <div class="photo"></div><div class="sc"></div>
+      <div class="htop"><div class="cp-eye">Tonight</div><h1 class="cp-h">Friday, told back</h1></div>
+      <div class="cp-sheet"><div class="cp-handle"></div></div></div>
       <div class="ios-scrim"><div class="ios-alert">
         <div class="ios-body"><div class="ios-ic">${icon("photo_library", "fill")}</div>
           <b>“Ondoway” would like to look at photos from today</b><p>Ondoway would like to look at photos from today to build your recap.</p></div>
@@ -52,6 +54,12 @@ function thumb(p, i, allowed) {
   return `<div class="thumb mapthumb"><svg viewBox="0 0 60 60"><rect width="60" height="60" fill="#1A1E26"/><path d="M0 40 L60 22" stroke="#2C6CC0" stroke-width="3"/><circle cx="30" cy="31" r="5" fill="#7BB2F5" stroke="#fff" stroke-width="2"/></svg><span>${esc(p.stop)} · ${esc(p.time)}</span></div>`;
 }
 
+// A header stat ("3.1 mi") as a v10 .cp-stat tile: the number, then its unit. Same words.
+function statTile(s) {
+  const m = String(s).match(/^(\S+)\s+([\s\S]+)$/);
+  return `<div class="cp-stat"><div class="v">${esc(m ? m[1] : s)}</div><div class="l">${esc(m ? m[2] : "")}</div></div>`;
+}
+
 // ---- 7.2 Friday, told back — the Day recap (calm; the dinner screen)
 App.def("7.2", {
   theme: "evening", time: "8:06",
@@ -60,26 +68,30 @@ App.def("7.2", {
     const asked = App.st.asked.length ? App.st.asked.map((a) => ({ q: a.q, place: a.place }))
       : C.ask.federal.chips.slice(0, 2).map((c) => ({ q: c.q, place: "Federal Hall" }));
     const ispyDone = Object.keys(App.st.ispyFound).length > 0;
-    maya.insertAdjacentHTML("beforeend", `<div class="scr recap fade-in" style="padding-top:0">
-      <div class="recap-head">${allowed ? pic("recap_family_landmark", "Your day") : ""}<div class="rh-in">
-        <div class="eyebrow">Tonight · Day recap</div>
-        <h1 class="h1" style="color:#fff">${esc(r.header)}</h1>
-        <div class="rstats mono">${r.stats.map((s) => `<span>${esc(s)}</span>`).join("")}</div></div></div>
-      <div class="strip">${r.photos.map((p, i) => thumb(p, i, allowed)).join("")}</div>
-      <section class="same">
-        <div class="eyebrow" style="color:var(--spark)">Same spot, four stories</div>
-        <h2 class="h2" style="color:var(--dInk);margin-top:4px">Federal Hall</h2>
-        ${r.sameSpot.map((s) => `<div class="who" data-log="Recap row: ${s.who}">
-          <div class="avatar sm">${s.who[0]}</div>
-          <div style="flex:1;min-width:0"><div class="who-n">${esc(s.who)} ${s.lens ? chipHtml(s.lens, { sm: true, on: true }) : s.ispy ? `<span class="pill" style="background:var(--spark);color:#fff">I Spy</span>` : ""}</div>
-          <div class="who-l${s.lens ? "" : " quiet"}">${esc(s.ispy && !ispyDone ? "Ava's I Spy is waiting at the harbor" : s.line)}</div></div></div>`).join("")}
-        <div class="askdan">${icon("forum")} <span><b>${esc(r.askPrompt[0])}</b> ${esc(r.askPrompt[1])}</span></div>
-      </section>
-      <section><div class="eyebrow">You asked</div>
-        ${asked.map((a) => `<div class="asked"><span class="muted">${esc(a.place)}</span>“${esc(a.q)}”</div>`).join("")}</section>
-      <section><div class="eyebrow">Your echo</div>
-        ${App.st.echoLeft ? `<div class="asked">“${esc(App.st.echoLeft)}”<span class="muted">${esc(C.stopNames[App.st.echoLeftAt] || "Castle Clinton")} · ${esc(r.echoFound)}</span></div>` : `<div class="asked muted">You didn't leave one today.</div>`}</section>
-      <button class="btn block" id="trip" data-log="See the whole trip" style="margin-top:8px">See the whole trip</button>
+    maya.insertAdjacentHTML("beforeend", `<div class="scr completion recap fade-in">
+      <div class="photo">${allowed ? pic("recap_family_landmark", "Your day") : ""}</div><div class="sc"></div>
+      <div class="htop">
+        <div class="cp-eye">Tonight · Day recap</div>
+        <h1 class="cp-h">${esc(r.header)}</h1></div>
+      <div class="cp-sheet">
+        <div class="cp-handle"></div>
+        <div class="cp-stats">${r.stats.map(statTile).join("")}</div>
+        <div class="strip">${r.photos.map((p, i) => thumb(p, i, allowed)).join("")}</div>
+        <section class="same">
+          <div class="cp-eye spark">Same spot, four stories</div>
+          <h2 class="cp-q">Federal Hall</h2>
+          ${r.sameSpot.map((s) => `<div class="who" data-log="Recap row: ${s.who}">
+            <div class="avatar sm">${s.who[0]}</div>
+            <div style="flex:1;min-width:0"><div class="who-n">${esc(s.who)} ${s.lens ? chipHtml(s.lens, { sm: true, on: true }) : s.ispy ? `<span class="pill" style="background:var(--spark);color:#fff">I Spy</span>` : ""}</div>
+            <div class="who-l${s.lens ? "" : " quiet"}">${esc(s.ispy && !ispyDone ? "Ava's I Spy is waiting at the harbor" : s.line)}</div></div></div>`).join("")}
+          <div class="askdan">${icon("forum")} <span><b>${esc(r.askPrompt[0])}</b> ${esc(r.askPrompt[1])}</span></div>
+        </section>
+        <section><div class="eyebrow">You asked</div>
+          ${asked.map((a) => `<div class="asked"><span class="muted">${esc(a.place)}</span>“${esc(a.q)}”</div>`).join("")}</section>
+        <section><div class="eyebrow">Your echo</div>
+          ${App.st.echoLeft ? `<div class="asked">“${esc(App.st.echoLeft)}”<span class="muted">${esc(C.stopNames[App.st.echoLeftAt] || "Castle Clinton")} · ${esc(r.echoFound)}</span></div>` : `<div class="asked muted">You didn't leave one today.</div>`}</section>
+        <div class="cp-done"><button class="btn block" id="trip" data-log="See the whole trip">See the whole trip</button></div>
+      </div>
     </div>`);
     $("#trip", maya).onclick = () => App.next();
   },
@@ -126,7 +138,7 @@ App.def("7.3", {
         <div class="filters">${C.filters.map((x) => `<button class="fchip${x.id === ed.filter ? " on" : ""}" data-f="${x.id}" data-log="Filter: ${x.label}">${esc(x.label)}</button>`).join("")}</div>
         <div class="tray">${C.stickers.map((s) => stickerHtml(s, `data-add="${s.id}" data-log="Sticker added" data-detail='{"sticker":"${s.id}"}'`)).join("")}<button class="music-btn" data-log="Add music">${icon("music_note")}Add music</button></div>
         <div class="tr-act"><button class="btn" id="share" data-log="Trip recap: Share">${icon("ios_share")}Share</button><button class="btn quiet" id="keep" data-log="Trip recap: Keep it (keepsake)">${icon("bookmark")}Keep it</button></div>
-        <div class="tr-small" style="font-size:13px;text-align:center">Tap a sticker to add it · drag to move · tap it again to remove · Keep it: make it a keepsake</div>
+        <div class="tr-small">Tap a sticker to add it · drag to move · tap it again to remove · Keep it: make it a keepsake</div>
       </div>`);
       const card = maya.querySelector(".tr");
       card.querySelectorAll("[data-f]").forEach((b) => (b.onclick = () => { ed.filter = b.dataset.f; redraw(); }));
@@ -164,14 +176,14 @@ function dragStickers(card, ed, redraw) {
   });
 }
 function musicSheet(el, onPick) {
-  const s = sheet(el, `<h2 class="h2">Add a song from your library</h2>
+  const s = sheet(el, `<div class="late-sheet"><h2 class="h2">Add a song from your library</h2>
     <p class="body">${esc(C.musicNote)}</p>
-    <div class="sharegrid">${C.musicServices.map((m) => `<button class="shareopt" data-m="${esc(m)}" data-log="Music from: ${esc(m)}">${icon("library_music")}${esc(m)}</button>`).join("")}</div>`);
+    <div class="sharegrid">${C.musicServices.map((m) => `<button class="shareopt" data-m="${esc(m)}" data-log="Music from: ${esc(m)}">${icon("library_music")}${esc(m)}</button>`).join("")}</div></div>`);
   s.scrim.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => { s.close(); onPick(); }));
 }
 function shareSheet(el, ed) {
-  const s = sheet(el, `<h2 class="h2">Share your trip</h2>
-    <div class="sharegrid">${C.shareOptions.map((o, i) => `<button class="shareopt${i === 0 ? " party" : ""}" data-o="${esc(o)}" data-log="Share to: ${esc(o)}">${icon(i === 0 ? "group" : o === "Copy link" ? "link" : "send")}${esc(o)}</button>`).join("")}</div>`);
+  const s = sheet(el, `<div class="late-sheet"><h2 class="h2">Share your trip</h2>
+    <div class="sharegrid">${C.shareOptions.map((o, i) => `<button class="shareopt${i === 0 ? " party" : ""}" data-o="${esc(o)}" data-log="Share to: ${esc(o)}">${icon(i === 0 ? "group" : o === "Copy link" ? "link" : "send")}${esc(o)}</button>`).join("")}</div></div>`);
   s.scrim.querySelectorAll("[data-o]").forEach((b) => (b.onclick = () => {
     const party = b.dataset.o === "Send to your party";
     const f = C.filters.find((x) => x.id === ed.filter);

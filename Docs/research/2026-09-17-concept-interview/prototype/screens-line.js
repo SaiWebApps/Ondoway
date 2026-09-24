@@ -1,4 +1,9 @@
 // PROTOTYPE — throwaway. Screens 5.1 – 5.4 (script.md): in line — the Deep dive, with Echoes.
+// Re-skinned 2026-09-22 to the Ondoway v10 design system (v10.css + skin-line.css):
+// 5.2 is built on v10's live-guide player (.g-player / .gp-top / .gp-art / .gp-lens /
+// .gp-title / .gp-meta / .gp-prog / .gp-scrub / .gp-track / .gp-ctrls / .play), sized up
+// because this one plays out loud for four people; 5.1 uses v10's dark over-map sheet.
+// Copy, ids, data-log/data-detail, wiring and timings are untouched — re-skin only.
 
 // The Deep dive keeps playing across 5.2 → 5.3 → 5.4 → 6.1 (those screens set keepAudio).
 const DeepDive = {
@@ -11,16 +16,17 @@ const DeepDive = {
       onEnd: () => { if (i + 1 < chs.length) this.play(i + 1); else { this.done = true; this.paint(1, -1); App.record("system", "deep dive finished"); } },
       onTick: (p, si) => this.paint(p, si),
     });
-    App.record("system", "deep dive chapter", { n: i + 1, beat: chs[i].beat });
+    App.record("system", "deep dive chapter", { n: i + 1, source: chs[i].source });
     this.paint(0, 0);
   },
   paint(p, si) { if (this.view) this.view(p, si); },
   toggle() { if (Player.active) App.togglePause(); else if (!this.done) this.play(this.i); else this.play(0); },
 };
+// The mini player: the same v10 player parts (.gp-title / .gp-prog / .gp-track) at sheet size.
 function miniPlayer() {
   return `<div class="mini" data-log="Mini player">
     <div class="mini-ic">${icon("volume_up")}</div>
-    <div style="flex:1;min-width:0"><div class="mini-t">${esc(C.deepDive.title)}</div><div class="mini-s" id="mini-s"></div><div class="mini-bar"><i id="mini-bar"></i></div></div>
+    <div class="mini-meta"><div class="mini-t gp-title">${esc(C.deepDive.title)}</div><div class="mini-s gp-prog" id="mini-s"></div><div class="mini-bar gp-track"><i id="mini-bar"></i></div></div>
     <button class="mini-play" id="mini-play" data-log="Mini player: play/pause"><span class="ms fill" data-playicon>${Player.playing ? "pause" : "play_arrow"}</span></button>
   </div>`;
 }
@@ -35,54 +41,59 @@ function wireMini(el) {
   DeepDive.paint(Player.progress(), Player.sentenceIdx());
 }
 
-// ---- 5.1 In line?
+// ---- 5.1 In line?  (v10 idiom: the dark sheet that sits over a live map)
 App.def("5.1", {
   theme: "dark", time: "1:25",
   render({ maya }) {
     Walk.dropped = true; Walk.pos = PTS.castle.slice();
     const w = walkScaffold(maya, { levers: false, where: "castle" }); setWalking(w, true);
     $(".walkbar", w).style.display = "none";
-    maya.insertAdjacentHTML("beforeend", `<div class="replan"><div class="card">
-      <div class="eyebrow" style="color:var(--accent)">${icon("groups")} Castle Clinton · ferry line</div>
-      <h2 class="h2" style="margin-top:8px">Looks like you're in line for the ferry.</h2>
-      <p class="body" style="margin:6px 0 14px">Want the story of the statue while you wait? One story for all four of you, out loud.</p>
-      <div class="eyebrow">How long's the line?</div>
+    maya.insertAdjacentHTML("beforeend", `<div class="replan"><div class="card linecard">
+      <div class="eyebrow line-eye">${icon("groups")} Castle Clinton · ferry line</div>
+      <h2 class="h2 h-serif line-h">Looks like you're in line for the ferry.</h2>
+      <p class="body line-p">Want the story of the statue while you wait? One story for all four of you, out loud.</p>
+      <div class="eyebrow line-q">How long's the line?</div>
       <div class="linechips">${["5 min", "15 min", "30+ min"].map((t) => `<button data-len="${t}" data-log="Line length: ${t}">${t}</button>`).join("")}</div>
     </div></div>`);
     maya.querySelectorAll("[data-len]").forEach((b) => (b.onclick = () => { App.st.lineLength = b.dataset.len; App.next(); }));
   },
 });
 
-// ---- 5.2 Deep dive — full-screen player, out loud
+// ---- 5.2 Deep dive — the v10 player, out loud for four
 App.def("5.2", {
   theme: "dark", walk: true, keepAudio: true, time: "1:27",
   render({ maya }) {
     const dd = C.deepDive, chs = dd.chapters;
     maya.insertAdjacentHTML("beforeend", `<div class="scr dd fade-in">
-      <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="dd-top">
         <span class="pill loud">${icon("volume_up", "fill")}Playing out loud · 4 listening</span>
-        <span style="display:flex;gap:6px"><button class="pill look" id="dd-ask" data-log="Ask button" data-detail='{"where":"castle"}'>${icon("forum", "fill")}Ask</button><button class="pill look" id="look" data-log="Look around (Echoes)">${icon("photo_camera")}Look around</button></span>
       </div>
-      <div class="dd-art">${C.img.liberty ? pic("liberty", "The Statue of Liberty") : icon("sailing")}</div>
-      <div class="eyebrow">Deep dive · Statue of Liberty</div>
-      <h1 class="h1" style="color:var(--dInk)">${esc(dd.title)}</h1>
-      <p class="body" style="margin:6px 0 0">${esc(dd.note)}${App.st.lineLength ? ` <span class="muted">(line: ${esc(App.st.lineLength)})</span>` : ""}</p>
-      <div class="dots">${chs.map((_, i) => `<i data-d="${i}"></i>`).join("")}</div>
-      <div class="dd-now"><span id="dd-lens" class="np-lens"></span> <span id="dd-poi" class="muted"></span></div>
-      <div class="scrub"><i id="dd-bar"></i></div>
-      <div class="np-ctl" style="margin-top:10px">
-        <button id="dd-prev" data-log="Deep dive: previous part">${icon("skip_previous")}</button>
-        <button class="np-play" id="dd-play" data-log="Deep dive: play/pause"><span class="ms fill" data-playicon>pause</span></button>
-        <button id="dd-next" data-log="Deep dive: next part">${icon("skip_next")}</button>
+      <div class="gp-art dd-art">${C.img.liberty ? pic("liberty", "The Statue of Liberty") : icon("sailing")}
+        <span class="dd-acts"><button class="pill look" id="dd-ask" data-log="Ask button" data-detail='{"where":"castle"}'>${icon("forum", "fill")}Ask</button><button class="pill look" id="look" data-log="Look around (Echoes)">${icon("photo_camera")}Look around</button></span>
       </div>
-      <button class="np-text" id="dd-text" data-log="Text (transcript) toggle" style="margin:6px auto 0;display:flex">${icon("notes")}Text</button>
-      <div class="np-tx" id="dd-tx" hidden></div>
+      <div class="eyebrow dd-eye">Deep dive · Statue of Liberty</div>
+      <h1 class="h1 gp-title dd-h">${esc(dd.title)}</h1>
+      <p class="body dd-note">${esc(dd.note)}${App.st.lineLength ? ` <span class="dd-line">(line: ${esc(App.st.lineLength)})</span>` : ""}</p>
+      <div class="dd-dots">${chs.map((_, i) => `<i data-d="${i}"></i>`).join("")}</div>
+      <div class="g-player dd-player">
+        <div class="gp-top">
+          <div class="gp-meta"><div class="dd-now gp-prog"><span id="dd-lens" class="gp-lens"></span> <span id="dd-poi"></span></div></div>
+          <button class="np-text gp-txt" id="dd-text" data-log="Text (transcript) toggle">${icon("notes")}Text</button>
+        </div>
+        <div class="gp-scrub"><span class="gp-track"><i id="dd-bar"></i></span></div>
+        <div class="gp-ctrls">
+          <button class="c" id="dd-prev" data-log="Deep dive: previous part">${icon("skip_previous")}</button>
+          <button class="play" id="dd-play" data-log="Deep dive: play/pause"><span class="ms fill" data-playicon>pause</span></button>
+          <button class="c" id="dd-next" data-log="Deep dive: next part">${icon("skip_next")}</button>
+        </div>
+        <div class="np-tx" id="dd-tx" hidden></div>
+      </div>
     </div>`);
     const tx = $("#dd-tx", maya);
     let shown = -1, lastS = -1;
     DeepDive.view = (p, si) => {
       const ch = chs[DeepDive.i];
-      maya.querySelectorAll(".dots i").forEach((d, i) => d.className = i < DeepDive.i || DeepDive.done ? "done" : i === DeepDive.i ? "on" : "");
+      maya.querySelectorAll(".dd-dots i").forEach((d, i) => d.className = i < DeepDive.i || DeepDive.done ? "done" : i === DeepDive.i ? "on" : "");
       $("#dd-lens", maya).textContent = lensOf(ch.lens).label;
       $("#dd-poi", maya).textContent = `· ${ch.poi} · part ${DeepDive.i + 1} of ${chs.length}`;
       $("#dd-bar", maya).style.width = p * 100 + "%";

@@ -230,7 +230,7 @@ const App = {
         <div class="phone-wrap${spec.layout === "kid" && p === "ava" ? " kid enter" : ""}${spec.layout === "split" && p === "dan" ? " enter" : ""}" data-phone="${p}">
           ${label ? `<div class="phone-label">${esc(label)}</div>` : ""}
           <div class="phone"><div class="screen ${spec.theme || ""}" id="screen-${p}">
-            <div class="statusbar"><span class="clock">${esc(typeof spec.time === "function" ? spec.time() : spec.time || "8:12")}</span><span class="isl"></span><span class="icons">${icon("signal_cellular_alt")}${icon("wifi")}${icon("battery_full")}</span></div>
+            <div class="statusbar"><span class="clock">${esc(typeof spec.time === "function" ? spec.time() : spec.time || "8:12")}</span><span class="dots"><i></i><i></i><i class="batt"></i></span></div>
             <div class="homebar"></div>
           </div></div>
         </div>`).join("")}
@@ -252,19 +252,23 @@ const App = {
     setTimeout(() => document.querySelectorAll(".phone-wrap.enter").forEach((w) => w.classList.remove("enter")), 80);
     if (spec.enter) spec.enter(screens);
   },
-  // Scale the phone(s) to the laptop screen.
+  // Scale the phone(s) to the laptop screen. The frame is v10 geometry (308x648 CSS px,
+  // magnified by the .phone zoom), so its footprint is measured rather than hard-coded.
   fit() {
     const wraps = [...document.querySelectorAll(".phone-wrap")];
     if (!wraps.length) return;
+    wraps.forEach((w) => ($(".phone", w).style.transform = "none"));
+    const r = $(".phone", wraps[0]).getBoundingClientRect();
+    const pw = r.width || 308, phh = r.height || 648;
     const box = $(".phones").getBoundingClientRect();
     const avH = window.innerHeight - $(".capbar").offsetHeight - 70;
     const units = wraps.reduce((a, w) => a + (w.classList.contains("kid") ? 0.8 : 1), 0);
-    const s = Math.min(1, avH / 844, (box.width - 40 * (wraps.length - 1) - 8) / (390 * units));
+    const s = Math.min(1, avH / phh, (box.width - 40 * (wraps.length - 1) - 8) / (pw * units));
     wraps.forEach((w) => {
       const k = s * (w.classList.contains("kid") ? 0.8 : 1);
       const ph = $(".phone", w);
       ph.style.transform = `scale(${k})`;
-      w.style.width = 390 * k + "px"; w.style.height = 844 * k + "px";
+      w.style.width = pw * k + "px"; w.style.height = phh * k + "px";
     });
   },
   setClock(t, jump) {
