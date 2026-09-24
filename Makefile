@@ -102,7 +102,7 @@ LINT_PATHS := src/ tests/ scripts/dev_env.py scripts/ensure_dev_data.py \
 	scripts/tour_batch_candidate.py scripts/score_saved_tours.py \
 	scripts/score_gold_text.py scripts/human_reference_tours.py \
 	scripts/ingest_calibrate.py scripts/claim_conflicts.py scripts/ingest_job.py \
-	scripts/ingest_batch.py scripts/ingest_rejudge.py scripts/ingest_p1probe.py scripts/ingest_lift_report.py \
+	scripts/ingest_batch.py scripts/ingest_rejudge.py scripts/ingest_p1probe.py scripts/ingest_same_probe.py scripts/ingest_lift_report.py \
 	scripts/tour_golden_diff.py scripts/poi_visit_duration.py \
 	scripts/poi_opening_hours.py scripts/poi_place_category.py \
 	scripts/poi_body_places.py scripts/poi_place_judgements.py \
@@ -382,6 +382,10 @@ ingest-rejudge: ## Re-run P3's two judge looks (first look, second look as writt
 ingest-p1probe: ## Sample P1's FIRST ask K times on a finished job's unit (one batch round, LIVE author, spends) and classify each sample's Guggenheim Wright claim SPLIT/BUNDLED/NEITHER. Prints the estimate and stops unless ARGS has --yes. Usage: make ingest-p1probe ARGS="--job-dir <jobs/id> --samples 10 --out data-ingest/sandboxes/<new> [--yes]"
 	@$(PREFLIGHT) --label ingest-p1probe $(PRE_PY) render-key
 	@$(RENDER_LOCAL_EXEC) env INGEST_PROVIDER=anthropic uv run python scripts/ingest_p1probe.py $(ARGS)
+
+ingest-same-probe: ## Ask the claim judge (Haiku, one batch round, LIVE, spends) whether each labeled merge `same` pair in fixtures/ingestion/same_second_look.json loses anything the new claim adds, K samples each, scored against the registered bars. Prints the estimate and stops unless ARGS has --yes. Usage: make ingest-same-probe ARGS="--samples 3 --out data-ingest/sandboxes/<new> [--yes]"
+	@$(PREFLIGHT) --label ingest-same-probe $(PRE_PY) render-key
+	@$(RENDER_LOCAL_EXEC) env INGEST_PROVIDER=anthropic uv run python scripts/ingest_same_probe.py $(ARGS)
 
 ingest-job: ## ONE headless ingest job on the LIVE client into the gitignored data-ingest/ root (spends). Usage: make ingest-job CITY=new_york CHUNK_DIR=Books/new_york/lonely-planet-new-york-city ARGS="--chunk chunk-07-upper-east-side --as-of 2023 [--yes]". Prints the estimate and stops unless --yes.
 	@test -n "$(CITY)" || { echo "ERROR: CITY is required." >&2; exit 2; }

@@ -1557,6 +1557,52 @@ NOT show: that the fold is CORRECT (blind labels still split 1-1), precision bey
 plant, or any guard against a false `same` — r8 shows it reaching the corpus in 1 of 10 runs (it was also
 answered, and held, in 1 of 10 on 2026-09-21); the rate is not measured.
 Spend this session: $0.6344 + $0.1735 = $0.8079.
+*A false `same` loses what the book thought mattered — owner ruling and the evidence ($0,
+2026-09-24).* A `same` fold keeps the existing claim's words and drops the new claim's, and the
+narrator reads claim texts only, never spans (`src/ingest/prompts/narrate.py`). Job B's fold of
+Frommer's "The Frick collection includes a seminal work by El Greco." into LP's "The Frick Collection
+displays works by El Greco." left "seminal" in a source span alone, while Bellini, Holbein, Constable
+and Turner, from the same Frommer's sentence, kept "seminal work" as claims of their own: one sentence
+of the book now tells the narrator four painters matter and a fifth does not. r8's fold of "a huge
+spiral ramp" at the atrium into "has a spiral ramp" is the same loss. **Owner ruling:** sourced
+evaluative language — importance, size, quality, reputation — is narrative signal; a merge may never
+drop it silently; a `same` whose new claim carries such a judgment the existing claim lacks is not
+`same`. No lexical rule can enforce that: over the eleven labeled `same` pairs below, `merge._signature`
+leaves words over on all nine non-hold pairs as well as on both false ones ("seminal", "huge" sit beside
+"late", "mansion", "earliest", "located"), and the narrower "new contains all of existing plus more"
+catches r8, misses El Greco and holds both true Frick Madison folds.
+*`same` second-look probe — registered before any spend (2026-09-24).* Whether a model other than
+the merge judge (Sonnet) and the author (Opus) can tell a true rewording from a `same` that drops
+something, the owner's judgment rule included. Haiku, on the claim judge's role and P3 batch
+transport (a probe only; a built second look gets its own phase), asked `SAME_CHECK_PROMPT`
+(`src/ingest/same_probe.py` at the commit recording this paragraph; prompt sha256 prefix `933a3b4a22087199`) for each pair in
+`fixtures/ingestion/same_second_look.json` (sha256 prefix `0ad16cc80b391a29`) three times, one batch round:
+`make ingest-same-probe ARGS="--samples 3 --out data-ingest/sandboxes/same-probe-1 --yes"`, printed
+estimate $0.0431, metered actual printed. Eleven pairs, texts verbatim from the job logs: two `hold`
+(the El Greco and c162 folds, both labelled false by blind review), six `fold` (Frick admission and
+children, the Jewish Museum and Met addresses, c151's 1959, the calibration paraphrase plant) and
+three `either` (Frick "late 2020", the Neue cafe, and job 2's critics fold, whose folded claim is the
+compound "…earliest critics rejected it, and Newsweek ran a review under the headline 'Museum or
+Cupcake?'" — the spec records that pair above from the shortened text, and the headline is a fact the
+existing claim lacks; `hold` covers only blind-labelled false folds, so that pair stays unscored even
+though the prompt's own first bullet makes `adds` its right answer). The prompt's examples are words
+no pair uses — a guard test fails if any word or number a pair adds appears in it — so the probe
+measures the rule, not word-matching (the first draft named "seminal" and "huge", caught by the
+judge before anything was frozen). Two of the six `fold` pairs, the Frick Madison ones, rest on the
+prompt's "a different name for the same place is not an addition": the fact being folded is the
+price and the age rule. Scored exactly as follows, by `same_probe.score`: (S1) both `hold` pairs
+answered `adds` in 3 of 3 samples each, 6 of 6 — must pass; (S2) the six `fold` pairs answered `same`
+in at least 16 of their 18 samples. A sample that fails to parse or fails in the batch counts against
+its pair's bar and is reported, never dropped. Reported, not scored: each `either` pair's three
+verdicts, and every `adds` list quoted. The run writes `same-probe-report.json` with its inputs
+(fixture and prompt sha256, samples, model, HEAD); a result whose inputs differ from those registered
+here — three samples, the shas above, `claude-haiku-4-5` — is not a result of this registration. No
+re-run and no re-score under it; a batch that raises writes no report, prints its metered spend, and
+is recorded as a failed run. What a pass decides: that a Haiku second look is worth
+building and measuring on a real job, test-first, under its own registration — not that it is
+correct; eleven pairs is a small set and its two positives are the only false folds ever labelled.
+What a fail decides: the second look as worded does not separate them; a prompt change or a
+stronger model is a new registration, never a re-run of this one.
 
 ### Slice 11: Cleanup
 
