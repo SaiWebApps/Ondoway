@@ -216,17 +216,21 @@ made touchable, ending in *"That's every story here in your lenses."*
 - ⚑ "Find me coffee" was dropped: the corpus has no café data and the prototype must not
   invent any.
 
-**3.3 Federal Hall — same spot, different story** — *frame splits into two phones*
-- Left phone **Maya**, right phone **Dan**, same map position. Maya's plays first, then
-  Dan's (each has its own play button; auto-plays Maya's).
-  - **Maya · Historic Architecture**, 58 s: "On the northeast corner of Nassau and Wall
-    stands Federal Hall National Memorial, dubbed the 'Parthenon of Wall Street.' …those
-    classical buildings lost their place in the sun."
-  - **Dan · War & Conflict**, 30 s: "Before its federal function, the building on this
-    site teemed with the birth pangs of the republic. The famed Stamp Act Congress met here
-    in 1765… And the site even served as the British headquarters during the
-    Revolutionary War."
-- Caption: *"Dan is standing right next to you. He's hearing a completely different story."*
+**3.3 Federal Hall — same spot, same moment** — *frame splits into two phones*
+*(revised 2026-09-23, owner: "no one wants to sit and watch the entire Maya thing and then
+hear Dan — it should convey that this is happening at the same time")*
+- Both stories start together on arrival and run on **one clock**. Maya's plays in the
+  traveller's ears; Dan's runs on beside it, scrubber and transcript moving.
+- The phone you are not listening to is dimmed and carries a pill: **"Playing — tap to
+  listen."** Tapping anywhere on that phone moves your listening across and **picks the
+  story up where it has got to** — it does not restart. Tapping back does the same for Maya.
+- Stories: **Maya · Historic Architecture** (who really designed it, and a city afraid of
+  fire) and **Dan · War & Conflict** (Zenger, the Stamp Act, the oath). Maya's **Tell me
+  more** lever adds the 27th amendment.
+- The screen ends when the clock passes the longer of the two and nothing is still playing.
+- Every switch is logged with the second it happened at, so the interviewer view shows
+  whether they explored or sat still.
+- Caption: *"Dan is hearing a different story at the same moment. Tap his phone to listen in."*
 
 **3.4 Ask about this** — *a persistent round Ask button, top right of the walk map (opposite
 the close X), opening a sheet* — **revised 2026-09-18**

@@ -9,16 +9,24 @@ ingestion engine, which is still being rebuilt. It exists so the interviews test
 *concept* rather than the engine's current state. Nobody may later present these
 recordings as engine output, or as evidence that the engine works.
 
-**Sourcing.** Public-domain and government sources — National Park Service, Library of
-Congress (HABS), National Archives, NYC Landmarks Preservation Commission, NYC Parks — plus
-the institutions' own histories, **with one documented exception**: the 9/11 Memorial plaza
-is a private non-profit with no government record, so its four beats rest on the memorial's
-own jury statement and backgrounder, the designers' published words, and 2006 press
-reporting. No commercial guidebooks anywhere, so unlike the current NYC corpus this material
-carries no "private use only" caveat. Every claim's source is listed under each slot. Fact
-sheets, every line cited: `sources/facts-walk.md` (146 facts), `sources/facts-liberty.md`
-(443 facts), `sources/facts-memorial-design.md` (54 facts, several of them `[PRESS]` rather
-than institutional — the file marks which).
+**Sourcing.** Mostly public-domain and government records — National Park Service, Library of
+Congress (HABS), National Archives, NYC Landmarks Preservation Commission, NYC Parks, NYC
+Department of Records, the U.S. Reports — plus the institutions' own histories. **The 9/11
+Memorial's seven beats are the mixed-provenance exception**, because the memorial is a
+private non-profit: they rest on its own jury statement, backgrounder and recorded oral
+history, an engineer's account in the National Academy of Engineering's journal, a trade
+journal, 2006 news reporting, and government records where they exist (the Radio Row
+condemnation case). No commercial guidebooks anywhere, so unlike the current NYC
+corpus this material carries no "private use only" caveat. Every claim's source is named
+under its own slot below, and the fact sheets behind them are in `sources/`:
+
+| File | Covers |
+|---|---|
+| `facts-walk.md` | Federal Hall, Trinity, Bowling Green, the 9/11 plaza basics |
+| `facts-liberty.md` | Castle Clinton and the Statue of Liberty, for the Deep dive |
+| `facts-memorial-design.md` | the competition, the 2006 cost cuts, Arad and Walker |
+| `facts-memorial-tour.md` | what a real guide covers at the plaza; Radio Row; the parapets |
+| `facts-slurry-wall.md` | the wall, the tiebacks and the PATH plugs — **read directly from the primary PDFs in session, after a judge review found these claims had no paper trail in the repo** |
 
 **Voice.** Second person, present then past. Place first, then the story. Quotes
 attributed to whoever said them. Where the record is uncertain, the uncertainty is spoken
@@ -48,42 +56,120 @@ they are written as breaths. One file per slot, named by slot id, mp3 or m4a.
 
 ---
 
-## 3.1 · 9/11 Memorial plaza — Maya's lens (Modern & Contemporary Design) · ~0:55
-*(prototype slot `memorial`; rewritten 2026-09-23 — the first version described the pools,
-which the listener can already see, and told no story)*
+## 9/11 Memorial — a gravity-5 anchor, seven beats, about 5:40
 
-> Look down at the names on the parapet. You were never meant to read them here.
->
-> The design that won this competition took you underground. Down into the footprints,
-> below the street, to read the names with the water falling past you. The jury praised
-> exactly that — the descent into the outlines the towers left, and reaching bedrock inside
-> the north tower's footprint.
->
-> Then the costing came in near a billion dollars, and in 2006 a builder was brought in to
-> cut it. The underground galleries went. The names came up here, to your elbow.
->
-> Michael Arad, who designed it, said he was afraid that in losing the below-ground
-> memorial, he was losing the entire memorial.
->
-> What you are standing on is the argument he had left.
+**846 of the 850 words a stop may carry** (check C8, the gorging cap). Four words of headroom:
+anything added here has to come out of a beat that is already written.
+*(rewritten 2026-09-23. The stop was 3:06 and opened on design. The institution's own guided
+tour runs **event → site history → design**, and third-party walking tours open with Radio
+Row, so the order here follows theirs. Every beat sits in one of Maya's three lenses:
+Historic Architecture, Modern & Contemporary Design, Hidden History.)*
 
-Sources: LMDC/9/11 Memorial *Jury Statement for the Winning Design*, 13 January 2004 —
-the jury's own words about "our descent to the level below the street, down into the
-outlines left by the lost towers" and mourning at bedrock in the north tower's footprint;
-NBC News and CBS News, 2006 (contractors' near-$1bn estimate; Frank Sciame's review for
-Bloomberg and Pataki cutting more than $285m, removing the galleries around the pools where
-the names were to be read, and raising the names to street level); Michael Arad, quoted in
-Yale News, 28 November 2012 ("I was afraid that in losing this below-ground memorial, I was
-losing the entire memorial").
-*Note: the 9/11 Memorial is a private non-profit, not a National Park Service site — there
-is no NPS source for this plaza, unlike every other stop on this walk.*
-*The pools' dimensions and the tree count are gone: they are visible, and the institution
-and the landscape architects disagree on the number of trees anyway.*
+### 3.1 · `memorial` — the two pools aren't the same place (Hidden History) · ~0:50
+
+> Two pools, the same size, side by side, marking where the towers stood. You are at the
+> north one.
+>
+> They are not the same place.
+>
+> When the first plane hit the North Tower, it severed every stairwell above the impact.
+> Nobody above that floor had a way down. In the South Tower, one stairway survived the
+> strike, and a small number of people who were above it walked out.
+>
+> Same shape, same water, same acre. One of them had a way out of it.
+
+Sources: 9/11 Memorial & Museum guided-tour account (the two impact zones as the tour's own
+fourth beat: the North Tower strike severing every escape route, some above the South
+Tower's impact getting out).
+*Says the pools "mark where the towers stood", never that they are exactly the footprints —
+the pools are smaller and square-cornered where the towers were bevelled.*
 
 ---
 
-## 3.2 · "Tell me more" at the 9/11 Memorial — second story · ~50s
-*(prototype slot `memorial_more`)*
+### 3.2 · `memorial_before` — Radio Row (Hidden History) · ~1:00
+
+> Before the towers, this was Radio Row: thirteen blocks of electronics shops, war-surplus
+> dealers and parts bins on the pavement, centred on Cortlandt and Greenwich. Over four
+> hundred merchants.
+>
+> They were condemned, for a reason you would not guess. New Jersey would only agree to the
+> trade centre if the Port Authority took over a failing commuter railway. It did. That
+> railway is the PATH line under your feet. Radio Row was cleared, in part, to rescue it.
+>
+> The merchants fought. On the fourteenth of July, 1962, they carried a black-draped coffin
+> down Cortlandt Street with a sign on it: "Here lies Mr Small Businessman."
+>
+> They lost in the New York Court of Appeals, and the Supreme Court threw out their appeal.
+> The case is named for one of them — a lunch counter called the Courtesy Sandwich Shop.
+
+Sources: NYC Department of Records & Information Services, "Radio Row and the Fight for
+Lower Manhattan", 2024 (the district's bounds, Cortlandt and Greenwich, "over 400
+merchants"); 9/11 Memorial WTC History exhibition (the 16-acre superblock over ~13 blocks;
+the Port Authority taking over the Hudson & Manhattan railway as New Jersey's condition);
+New York Preservation Archive Project (the 14 July 1962 coffin and its sign); *Courtesy
+Sandwich Shop, Inc. v. Port of New York Authority*, 12 N.Y.2d 379 (1963), appeal dismissed
+375 U.S. 78.
+*Avoids "325 businesses" (unsourced) and "30,000 workers" (the merchants' own advocacy
+figure for all 1,600 businesses in the area, not a count of Radio Row).*
+
+---
+
+### 3.2 · `memorial_dig` — the wall that should have collapsed (Hidden History) · ~1:10
+
+> To build the towers they dug a hole in the riverbank and kept the Hudson out of it. The
+> wall that does that is three feet thick and seventy feet deep, still there a few metres
+> below you, and visible from inside the museum.
+>
+> More than a million cubic yards came out of this hole, went into the river behind a steel
+> dam, and became Battery Park City. The neighbourhood next door is the hole under your feet.
+>
+> While they dug, fifteen hundred steel anchors held that wall back against the river. Then
+> the basement floors went in and took over the job — and every one of those anchors was
+> cut.
+>
+> On the eleventh of September the floors were destroyed, which left the wall holding back
+> the Hudson with nothing bracing it. The engineer who built it said it should have
+> collapsed.
+>
+> It didn't. But in the days afterwards they poured concrete plugs into the PATH tunnels
+> under the river, rated to hold back eighty feet of water. In case it did.
+
+Sources: George J. Tamaro (the Port Authority engineer on the original wall, later of Mueser
+Rutledge), "World Trade Center 'Bathtub': From Genesis to Armageddon", *The Bridge*, National
+Academy of Engineering, Spring 2002 — the 3 ft × 70 ft wall socketed into rock, 1,500 tieback
+anchors detensioned once the permanent floors could brace the wall, more than a million cubic
+yards of spoil becoming the Battery Park City landfill, and the 16-foot concrete plugs poured
+into both PATH tubes rated for an 80-foot head of water. Arturo Ressi, who worked on the
+original construction of the wall, in the Memorial's own recorded oral history: the anchors
+"were all cut", and with the floor system gone the wall "should have collapsed". Both
+documents were fetched and read in session — see `sources/facts-slurry-wall.md`.
+*The wall's inward movement after the collapse is reported as 10 inches, 2 feet and over 4
+feet by three credible sources, so no figure is spoken.*
+
+### 3.2 · `memorial_design` — the memorial that was cut (Modern & Contemporary Design) · ~0:50
+
+> Look down at the names on the parapet. You were never meant to read them here.
+>
+> The design that won this competition took you underground — down into the footprints,
+> below the street, to read the names with the water falling past you. The jury praised
+> exactly that: the descent, and reaching bedrock inside the north tower's footprint.
+>
+> Then the costing came in near a billion dollars, a builder was brought in to cut it, and
+> the galleries went. The names came up here, to your elbow. Michael Arad, who designed it,
+> said he feared that in losing the below-ground memorial he was losing the whole thing.
+>
+> What you are standing on is the argument he had left.
+
+Sources: LMDC/9/11 Memorial *Jury Statement for the Winning Design*, 13 January 2004 (the
+descent below street level, bedrock in the north tower's footprint); NBC and CBS News, 2006
+(near-$1bn estimate; Sciame's review removing the galleries and raising the names); Arad in
+Yale News, 2012; UC Berkeley News, 2004 and SFGate (the landscape architect as a condition of
+winning; Walker halving the stone; "the part of this problem that is about death" /
+"continuation of life").
+
+---
+
+### 3.2 · `memorial_names` — the order of the names (Hidden History) · ~0:50
 
 > Walk along the parapet and you'll notice the names aren't in alphabetical order.
 >
@@ -100,44 +186,38 @@ and the landscape architects disagree on the number of trees anyway.*
 > eleventh of September, 2001, and the six people killed when the same buildings were bombed
 > in February 1993.
 
-Sources: 9/11 Memorial "About the Memorial" and Institutional Backgrounder — names grouped
-by location and circumstance then arranged by "meaningful adjacencies", more than 1,200
-requests honoured, the described bonds formed during the response, 2,983 names, the 1993
-six.
-*No emotive framing added: every sentence is the institution's own fact, spoken plainly.*
+Sources: 9/11 Memorial "About the Memorial" and Institutional Backgrounder (grouping by
+location and circumstance, "meaningful adjacencies", more than 1,200 requests honoured, the
+bonds formed during the response, 2,983 names, the 1993 six).
 
 ---
 
-## 3.2 · Third story at the 9/11 Memorial — the trees · ~0:50
-*(prototype slot `memorial_trees`; added 2026-09-23 — a gravity-5 anchor carries a stack)*
+### 3.2 · `memorial_parapet` — why the bronze never burns your hand (Modern & Contemporary Design) · ~0:45
 
-> Arad's competition entry was the voids and almost nothing else: seven acres of stone with
-> two holes torn in it. No trees.
+> Put your hand on the bronze. In August it should be hot enough to hurt; in February it
+> should take the skin off your fingers. It does neither.
 >
-> The jury loved the voids. They disliked the seven acres of stone. So they made winning
-> conditional — he had to bring in a landscape architect. He called Peter Walker, in
-> California, who was on the point of retiring.
+> Behind those panels, in a crawl space you will never see, there are fourteen thousand feet
+> of copper pipe carrying glycol, heating and cooling the metal to hold it between forty and
+> seventy degrees, all year.
 >
-> Walker took out about half the stone and planted the rest. Four hundred oaks, spaced
-> unevenly, so the light through them changes as you walk.
+> The man who ran the memorial's construction explained why they bothered. The bronze is the
+> first thing people touch, he said, and the memorial almost becomes like a baptismal
+> setting: you can wet your hand in the water and leave a print on the name.
 >
-> Walker described the division of labour like this: Arad was dealing with the part of the
-> problem that is about death. He took the part that is about the continuation of life.
->
-> You're standing in the argument between them.
+> Somebody engineered that.
 
-Sources: UC Berkeley News, 25 February 2004 (the jury requiring "a landscape artist of high
-caliber"; Arad contacting Walker; Walker near retirement; his "part of this problem that is
-about death" / "continuation of life" framing); SFGate, Peter Walker interview (the jury
-"loved the idea of the big voids… But they really disliked seven acres of stone plaza";
-halving the stone); Domus, 20 November 2003 (the finalist entry credited to Arad alone).
-*"Four hundred oaks" not 413: the institution and the landscape architects publish
-different counts.*
+Sources: Copper Development Association, *Building & Architecture News*, June 2012 —
+Christopher Powers of KC Fabrications, who built the system with Jaros Baum & Bolles:
+glycol through ~14,000 ft of half-inch copper pipe and 12,000 ft of brackets, panels held
+between 40 and 70 °F because "if the panels are too hot or too cold, the Memorial loses the
+ability for people to interact with it"; Ronaldo Vega, the Memorial's Director of Design and
+Construction, on the bronze being the first thing people touch and the memorial becoming
+"almost like a baptismal setting".
 
 ---
 
-## 3.2 · Fourth story at the 9/11 Memorial — the Survivor Tree · ~0:45
-*(prototype slot `memorial_tree`)*
+### 3.2 · `memorial_tree` — the Survivor Tree (Hidden History) · ~0:40
 
 > There's one tree here that isn't an oak.
 >
@@ -152,13 +232,13 @@ different counts.*
 > own wood.
 
 Sources: 9/11 Memorial Institutional Backgrounder (the Callery pear original to the site,
-recovered October 2001 "with snapped roots and burned and broken branches", cared for by
-the NYC Department of Parks and Recreation, returned in 2010, and the described demarcation
-between new smooth limbs and gnarled stumps — paraphrased, not quoted).
-*No heights: the institution publishes none, and the "eight feet to thirty feet" figures in
-circulation are unsourced.*
+recovered October 2001 "with snapped roots and burned and broken branches", cared for by the
+NYC Department of Parks and Recreation, returned 2010, the demarcation between new smooth
+limbs and gnarled stumps — paraphrased, not quoted).
+*No heights: the institution publishes none.*
 
 ---
+
 
 ## 3.2 · "Tell me more" at Trinity Church — second story · ~30s
 *(prototype slot `trinity_more`)*

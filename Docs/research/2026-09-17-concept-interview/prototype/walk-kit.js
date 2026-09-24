@@ -135,7 +135,9 @@ function setStopDots(w, meta) {
   gd.innerHTML = m ? Array.from({ length: +m[2] }, (_, i) => `<i class="${i + 1 === +m[1] ? "on" : i + 1 < +m[1] ? "done" : ""}"></i>`).join("") : "";
 }
 // Fill the card for a story and play it. Returns nothing; onEnd fires when it finishes.
-function playOn(w, story, meta, onEnd) {
+// Dress a player card with a story, without starting it. Split out of playOn so a second
+// phone can show the same story running on a shared clock while you listen to the other.
+function mountStory(w, story, meta) {
   const l = lensOf(story.lens);
   const slot = POI_IMG[story.poi];
   $(".np-tile", w).innerHTML = slot && C.img[slot] ? pic(slot, story.poi) : icon("headphones");
@@ -144,12 +146,28 @@ function playOn(w, story, meta, onEnd) {
   $(".np-stop", w).textContent = meta;
   setStopDots(w, meta);
   $(".t1", w).textContent = fmtSecs(story.secs);
-  const sents = Player.split(story.text);
-  $(".np-tx", w).innerHTML = sents.map((s, i) => `<span data-s="${i}">${esc(s)} </span>`).join("");
+  $(".np-tx", w).innerHTML = Player.split(story.text).map((s, i) => `<span data-s="${i}">${esc(s)} </span>`).join("");
   setWalking(w, false);
+}
+
+// Paint progress on a card from an outside clock (0..1) — no audio, no Player.
+function paintProgress(w, story, p, lastSeen) {
+  $(".scrub i", w).style.width = p * 100 + "%";
+  const knob = $(".scrub b", w); if (knob) knob.style.left = p * 100 + "%";
+  $(".t0", w).textContent = fmtSecs(p * story.secs);
+  const sents = w.querySelectorAll(".np-tx span");
+  if (!sents.length) return lastSeen;
+  const si = Math.min(sents.length - 1, Math.floor(p * sents.length));
+  if (si !== lastSeen) sents.forEach((s) => s.classList.toggle("hl", +s.dataset.s === si));
+  return si;
+}
+
+function playOn(w, story, meta, onEnd, { from = 0 } = {}) {
+  mountStory(w, story, meta);
   let lastS = -1;
   Player.play(story, {
     onEnd,
+    from,
     onTick(p, si) {
       $(".scrub i", w).style.width = p * 100 + "%";
       const knob = $(".scrub b", w); if (knob) knob.style.left = p * 100 + "%"; // v10 .gp-track handle
@@ -161,7 +179,7 @@ function playOn(w, story, meta, onEnd) {
       }
     },
   });
-  App.record("system", "story started", { source: story.source, poi: story.poi, lens: story.lens });
+  App.record("system", "story started", { source: story.source, poi: story.poi, lens: story.lens, from: from || undefined });
 }
 function wirePlayer(w, { onNext, onPrev, onReplay }) {
   $(".np-play", w).onclick = () => { if (Player.active) App.togglePause(); else onReplay && onReplay(); };

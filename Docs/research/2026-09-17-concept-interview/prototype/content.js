@@ -12,7 +12,7 @@
 
 window.CONTENT = {
   party: [
-    { id: "maya", name: "Maya", role: "You · the Planner", lenses: ["historic_arch", "hidden_history", "visual_art"] },
+    { id: "maya", name: "Maya", role: "You · the Planner", lenses: ["historic_arch", "modern_design", "hidden_history"] },
     { id: "dan", name: "Dan", role: "Partner", lenses: ["war_conflict", "local_legends", "historic_cuisine"], joined: true },
     { id: "leo", name: "Leo", age: 12, role: "12 · own phone", lenses: ["science_tech", "film_tv"], joined: true },
     { id: "ava", name: "Ava", age: 8, role: "8 · own phone", lenses: [], ispy: true },
@@ -67,9 +67,9 @@ window.CONTENT = {
       { time: "9:30", name: "9/11 Memorial", must: true, lens: "modern_design", mins: 90 },
       { time: "11:15", name: "Trinity Church", lens: "historic_arch", mins: 20, reason: "The church that was once the tallest thing in New York — and Hamilton's grave." },
       { time: "11:45", name: "Federal Hall", lens: "historic_arch", mins: 25, reason: "The ‘Parthenon of Wall Street’, on the spot where Washington became president." },
-      { skipAdvice: true },
       { time: "12:30", name: "Fraunces Tavern", lens: "hidden_history", mins: 50, reason: "Lunch where Washington said farewell to his officers in 1783." },
       { time: "1:30", name: "Castle Clinton", lens: "hidden_history", mins: 25, reason: "Where you buy ferry tickets: a fort, a concert hall, then the gate for 8 million immigrants." },
+      { skipAdvice: true },
       { time: "2:00", name: "Statue of Liberty", must: true, ferry: true, lens: "social_change", mins: 150 },
     ],
   },
@@ -89,23 +89,38 @@ window.CONTENT = {
   // Stories. Keyed by slot id. Real beats, never edited.
   stories: {
     memorial: {
-      poi: "9/11 Memorial", lens: "modern_design", secs: 50, audio: null,
-      source: "hand-authored 2026-09-23 from public-domain sources — see narration.md",
-      text: "Look down at the names on the parapet. You were never meant to read them here. The design that won this competition took you underground. Down into the footprints, below the street, to read the names with the water falling past you. The jury praised exactly that — the descent into the outlines the towers left, and reaching bedrock inside the north tower's footprint. Then the costing came in near a billion dollars, and in 2006 a builder was brought in to cut it. The underground galleries went. The names came up here, to your elbow. Michael Arad, who designed it, said he was afraid that in losing the below-ground memorial, he was losing the entire memorial. What you are standing on is the argument he had left.",
+      poi: "9/11 Memorial", lens: "hidden_history", secs: 35, audio: null,
+      source: "hand-authored 2026-09-23 — see narration.md",
+      text: "Two pools, the same size, side by side, marking where the towers stood. You are at the north one. They are not the same place. When the first plane hit the North Tower, it severed every stairwell above the impact. Nobody above that floor had a way down. In the South Tower, one stairway survived the strike, and a small number of people who were above it walked out. Same shape, same water, same acre. One of them had a way out of it.",
     },
-    memorial_more: {
-      poi: "9/11 Memorial", lens: "modern_design", secs: 50, audio: null,
-      source: "hand-authored 2026-09-23 from public-domain sources — see narration.md",
+    memorial_before: {
+      poi: "9/11 Memorial", lens: "hidden_history", secs: 55, audio: null,
+      source: "hand-authored 2026-09-23 — see narration.md",
+      text: "Before the towers, this was Radio Row: thirteen blocks of electronics shops, war-surplus dealers and parts bins on the pavement, centred on Cortlandt and Greenwich. Over four hundred merchants. They were condemned, for a reason you would not guess. New Jersey would only agree to the trade centre if the Port Authority took over a failing commuter railway. It did. That railway is the PATH line under your feet. Radio Row was cleared, in part, to rescue it. The merchants fought. On the fourteenth of July, 1962, they carried a black-draped coffin down Cortlandt Street with a sign on it: \"Here lies Mr Small Businessman.\" They lost in the New York Court of Appeals, and the Supreme Court threw out their appeal. The case is named for one of them — a lunch counter called the Courtesy Sandwich Shop.",
+    },
+    memorial_dig: {
+      poi: "9/11 Memorial", lens: "hidden_history", secs: 70, audio: null,
+      source: "hand-authored 2026-09-23 — see narration.md",
+      text: "To build the towers they dug a hole in the riverbank and kept the Hudson out of it. The wall that does that is three feet thick and seventy feet deep, still there a few metres below you, and visible from inside the museum. More than a million cubic yards came out of this hole, went into the river behind a steel dam, and became Battery Park City. The neighbourhood next door is the hole under your feet. While they dug, fifteen hundred steel anchors held that wall back against the river. Then the basement floors went in and took over the job — and every one of those anchors was cut. On the eleventh of September the floors were destroyed, which left the wall holding back the Hudson with nothing bracing it. The engineer who built it said it should have collapsed. It didn't. But in the days afterwards they poured concrete plugs into the PATH tunnels under the river, rated to hold back eighty feet of water. In case it did.",
+    },
+    memorial_design: {
+      poi: "9/11 Memorial", lens: "modern_design", secs: 45, audio: null,
+      source: "hand-authored 2026-09-23 — see narration.md",
+      text: "Look down at the names on the parapet. You were never meant to read them here. The design that won this competition took you underground — down into the footprints, below the street, to read the names with the water falling past you. The jury praised exactly that: the descent, and reaching bedrock inside the north tower's footprint. Then the costing came in near a billion dollars, a builder was brought in to cut it, and the galleries went. The names came up here, to your elbow. Michael Arad, who designed it, said he feared that in losing the below-ground memorial he was losing the whole thing. What you are standing on is the argument he had left.",
+    },
+    memorial_names: {
+      poi: "9/11 Memorial", lens: "hidden_history", secs: 50, audio: null,
+      source: "hand-authored 2026-09-23 — see narration.md",
       text: "Walk along the parapet and you'll notice the names aren't in alphabetical order. They're grouped by where people were that morning. Which tower. Which floor. Which company. Which flight. Which firehouse. And inside those groups, they were placed by request. Families were asked whether they wanted a name to sit beside particular others. More than twelve hundred of those requests were honoured. Some were for a husband, a sister, a colleague of thirty years. Others were for someone the person had barely known — met that morning, on a stairway, and stayed with. There are two thousand nine hundred and eighty-three names here. Everyone killed on the eleventh of September, 2001, and the six people killed when the same buildings were bombed in February 1993.",
     },
-    memorial_trees: {
-      poi: "9/11 Memorial", lens: "modern_design", secs: 50, audio: null,
-      source: "hand-authored 2026-09-23 from public-domain and institutional sources — see narration.md",
-      text: "Arad's competition entry was the voids and almost nothing else: seven acres of stone with two holes torn in it. No trees. The jury loved the voids. They disliked the seven acres of stone. So they made winning conditional — he had to bring in a landscape architect. He called Peter Walker, in California, who was on the point of retiring. Walker took out about half the stone and planted the rest. Four hundred oaks, spaced unevenly, so the light through them changes as you walk. Walker described the division of labour like this: Arad was dealing with the part of the problem that is about death. He took the part that is about the continuation of life. You're standing in the argument between them.",
+    memorial_parapet: {
+      poi: "9/11 Memorial", lens: "modern_design", secs: 45, audio: null,
+      source: "hand-authored 2026-09-23 — see narration.md",
+      text: "Put your hand on the bronze. In August it should be hot enough to hurt; in February it should take the skin off your fingers. It does neither. Behind those panels, in a crawl space you will never see, there are fourteen thousand feet of copper pipe carrying glycol, heating and cooling the metal to hold it between forty and seventy degrees, all year. The man who ran the memorial's construction explained why they bothered. The bronze is the first thing people touch, he said, and the memorial almost becomes like a baptismal setting: you can wet your hand in the water and leave a print on the name. Somebody engineered that.",
     },
     memorial_tree: {
       poi: "9/11 Memorial", lens: "hidden_history", secs: 40, audio: null,
-      source: "hand-authored 2026-09-23 from public-domain and institutional sources — see narration.md",
+      source: "hand-authored 2026-09-23 — see narration.md",
       text: "There's one tree here that isn't an oak. It's a Callery pear, and it was already on this site before any of this. They pulled it out of the rubble in October 2001 with its roots snapped and its branches burned and broken, and handed it to the city's parks department, who kept it alive. It came back in 2010. If you find it, look where the trunk changes. The old stumps are gnarled; the limbs growing out of them are smooth. The tree carries the line between before and after in its own wood.",
     },
     trinity: {
@@ -114,7 +129,7 @@ window.CONTENT = {
       text: "Trinity's spire stands about two hundred and eighty feet above Broadway. When it was finished, in 1846, nothing in New York stood higher. This is the third church on this ground. The first burned in the great fire of September 1776, days after the British took the city — a newspaper that week described the burning steeple as \"a vast pyramid of fire.\" The second lost its roof supports to heavy snow, in 1839. The parish brought in Richard Upjohn to repair that one. He talked them into pulling it down and starting again — and then he did something that got him into trouble. Upjohn was a High Churchman. He gave this church a deep chancel and carved choir stalls, and to a great many New Yorkers in the 1840s that looked like Rome creeping back in. The feeling ran high enough that at first the stalls went unused. He was building an argument, not just a church. And it is the building that made his name.",
     },
     trinity_more: {
-      poi: "Trinity Church", lens: "visual_art", secs: 25, audio: null,
+      poi: "Trinity Church", lens: "historic_arch", secs: 25, audio: null,
       source: "hand-authored 2026-09-23 from public-domain sources — see narration.md",
       text: "Before you go in, look at the doors. Three pairs of bronze, given by William Waldorf Astor as a memorial to his father, and designed by Richard Morris Hunt — who modelled them on Ghiberti's doors for the Baptistery in Florence. Remember his name. In a few hours you'll be standing on his other New York commission: he designed the pedestal the Statue of Liberty is standing on.",
     },
@@ -270,7 +285,7 @@ window.CONTENT = {
     "2.4": "The big two are yours. Everything in between was picked for you — and it tells you why.",
     "3.1": "You just walk. Stories start on their own when you get there.",
     "3.1b": "You just walk. Stories start on their own when you get there.",
-    "3.3": "Dan is standing right next to you. He's hearing a completely different story.",
+    "3.3": "Dan is hearing a different story at the same moment. Tap his phone to listen in.",
     "4.1": "Your day didn't go to plan. It noticed, and fixed it.",
     "4.2": "Your day didn't go to plan. It noticed, and fixed it.",
     "5.1": "Waiting in line is the best time for the big story.",

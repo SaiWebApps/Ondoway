@@ -78,18 +78,24 @@ const Player = (function () {
     clearInterval(timer); timer = null;
     cur = null;
   }
-  function play(story, { onEnd, onTick } = {}) {
+  // `from` (seconds) starts partway in — used when you switch phones at a stop where two
+  // stories are playing at once, so the one you move to is where it would have got to.
+  function play(story, { onEnd, onTick, from = 0 } = {}) {
     stop();
     const sent = split(story.text);
     const before = []; let acc = 0; sent.forEach((s) => { before.push(acc); acc += s.length; });
+    const cps = acc / (story.secs || acc / 15);
+    let start = 0;
+    if (from > 0) { const chars = from * cps; while (start < sent.length - 1 && before[start + 1] <= chars) start++; }
     const mode = story.audio ? "audio" : synth && synth.getVoices().length ? "speech" : "silent";
-    cur = { story, sent, before, total: acc, cps: acc / (story.secs || acc / 15), mode, idx: 0, playing: true, onEnd, onTick };
+    cur = { story, sent, before, total: acc, cps, mode, idx: start, playing: true, onEnd, onTick };
     if (mode === "audio") {
       audioEl = new Audio(story.audio);
       audioEl.onended = () => finish();
       audioEl.onerror = () => { cur.mode = synth ? "speech" : "silent"; audioEl = null; speakFrom(0); };
+      if (from > 0) audioEl.currentTime = from;
       audioEl.play().catch(() => {});
-    } else speakFrom(0);
+    } else speakFrom(start);
     timer = setInterval(tick, 150);
     App.onPlayState();
   }

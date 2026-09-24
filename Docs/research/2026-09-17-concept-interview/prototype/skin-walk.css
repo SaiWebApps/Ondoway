@@ -156,3 +156,18 @@
 .replan.late .lg { height: 46px; font-size: 13.5px; }
 .replan.late .lp { margin-top: 7px; }
 .replan.late .lg { border: 1px solid rgba(255,255,255,.18); background: transparent; }
+
+/* 3.3 · two phones, one clock. The phone you are not listening to keeps playing — it is
+   dimmed by .quiet (set on the wrapper) and says so, so nobody waits for a turn. */
+.phone-wrap.quiet .g-player { filter: saturate(.55); }
+.phone-wrap.overhearing .g-player { position: relative; }
+.phone-wrap.overhearing .g-player::after {
+  content: "Playing — tap to listen";
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+  white-space: nowrap; padding: 7px 14px; border-radius: 999px;
+  background: rgba(44,108,192,.92); color: #fff;
+  font: 600 12px var(--body); letter-spacing: .01em;
+  box-shadow: 0 8px 20px rgba(0,0,0,.45);
+}
+.phone-wrap.overhearing .g-player .gp-ctrls { opacity: .35; }
+.phone-wrap.overhearing { cursor: pointer; }

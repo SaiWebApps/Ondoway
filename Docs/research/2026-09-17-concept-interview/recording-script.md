@@ -1,23 +1,25 @@
 # Recording script — read these, name the files exactly
 
 One file per block. **Name each file after the id in its heading**, with `.m4a`, `.mp3` or
-`.wav`. Read unhurried, about 150 words a minute. **Each blank line is a pause** — they are
-written as breaths. Nothing needs performing: the house voice is a well-read person telling
-you something true while you both look at it.
+`.wav`. Read unhurried, about 150 words a minute. **Each blank line is a pause.** Nothing
+needs performing: the house voice is a well-read person telling you something true while
+you both look at it.
 
-Revised 2026-09-23 for gravity: the 9/11 Memorial is a gravity-5 anchor, so it now carries
-four stories (3:06) instead of one; Trinity carries two; Bowling Green, a walk-by, carries
-one. `memorial`, `trinity` and `fh_maya` were rewritten — the first versions described what
-the listener could already see.
+Revised 2026-09-23: the 9/11 Memorial is a gravity-5 anchor and carries **seven** beats,
+about 5:40, in the order the memorial's own guided tour uses — event, then site history,
+then design. Every beat sits in one of Maya's three lenses.
 
-Total: 17 blocks, about 20:39 of audio.
+Total: 20 blocks, about 23:08 of audio.
 
 | File | What it is | Length |
 |---|---|---|
-| `memorial` | 9/11 Memorial — 1 of 4: the design | 0:51 |
-| `memorial_more` | 9/11 Memorial — 2 of 4: the names | 0:50 |
-| `memorial_trees` | 9/11 Memorial — 3 of 4: the trees | 0:50 |
-| `memorial_tree` | 9/11 Memorial — 4 of 4: the Survivor Tree | 0:38 |
+| `memorial` | 9/11 Memorial 1 of 7 — the two pools | 0:34 |
+| `memorial_before` | 9/11 Memorial 2 of 7 — Radio Row | 0:56 |
+| `memorial_dig` | 9/11 Memorial 3 of 7 — the wall | 1:09 |
+| `memorial_design` | 9/11 Memorial 4 of 7 — the memorial that was cut | 0:47 |
+| `memorial_names` | 9/11 Memorial 5 of 7 — the names | 0:50 |
+| `memorial_parapet` | 9/11 Memorial 6 of 7 — the bronze | 0:45 |
+| `memorial_tree` | 9/11 Memorial 7 of 7 — the Survivor Tree | 0:38 |
 | `trinity` | Trinity Church — 1 of 2 | 1:07 |
 | `trinity_more` | Trinity Church — 2 of 2: the doors | 0:27 |
 | `fh_maya` | Federal Hall — Maya (architecture) | 1:12 |
@@ -32,29 +34,65 @@ Total: 17 blocks, about 20:39 of audio.
 | `deepdive_6` | Deep dive 6 — The poem that arrived late | 1:47 |
 | `deepdive_7` | Deep dive 7 — What they actually saw | 2:00 |
 
-Pronunciation: **L'Enfant** lahn-FAHN · **Upjohn** UP-john · **Frazee** fray-ZEE ·
-**Tuckahoe** TUCK-a-ho · **Zenger** ZENG-er (hard g) · **DeLancey** de-LAN-see · **Arad** AH-rahd ·
-**Sciame** SHAH-may · **Callery** CAL-er-ee · **Laboulaye** lah-boo-LAY · **Bartholdi** bar-TOL-dee ·
-**repoussé** ruh-poo-SAY · **Isère** ee-ZAIR · **Gounod** GOO-no · **Pulitzer** PULL-it-ser ·
-**Lazarus** LAZ-uh-rus · **Genin** JEN-in · **Ghiberti** gib-AIR-tee · **Sephardic** se-FAR-dik.
+Pronunciation: **Arad** AH-rahd · **Sciame** SHAH-may · **Callery** CAL-er-ee · **Cortlandt** CORT-land ·
+**glycol** GLY-coll · **L'Enfant** lahn-FAHN · **Upjohn** UP-john · **Frazee** fray-ZEE · **Tuckahoe** TUCK-a-ho ·
+**Zenger** ZENG-er (hard g) · **DeLancey** de-LAN-see · **Laboulaye** lah-boo-LAY · **Bartholdi** bar-TOL-dee ·
+**repoussé** ruh-poo-SAY · **Isère** ee-ZAIR · **Gounod** GOO-no · **Pulitzer** PULL-it-ser · **Lazarus** LAZ-uh-rus ·
+**Genin** JEN-in · **Ghiberti** gib-AIR-tee · **Sephardic** se-FAR-dik.
 
 ---
 
-## memorial · 9/11 Memorial — 1 of 4: the design · 0:51
+## memorial · 9/11 Memorial 1 of 7 — the two pools · 0:34
+
+Two pools, the same size, side by side, marking where the towers stood. You are at the north one.
+
+They are not the same place.
+
+When the first plane hit the North Tower, it severed every stairwell above the impact. Nobody above that floor had a way down. In the South Tower, one stairway survived the strike, and a small number of people who were above it walked out.
+
+Same shape, same water, same acre. One of them had a way out of it.
+
+---
+
+## memorial_before · 9/11 Memorial 2 of 7 — Radio Row · 0:56
+
+Before the towers, this was Radio Row: thirteen blocks of electronics shops, war-surplus dealers and parts bins on the pavement, centred on Cortlandt and Greenwich. Over four hundred merchants.
+
+They were condemned, for a reason you would not guess. New Jersey would only agree to the trade centre if the Port Authority took over a failing commuter railway. It did. That railway is the PATH line under your feet. Radio Row was cleared, in part, to rescue it.
+
+The merchants fought. On the fourteenth of July, 1962, they carried a black-draped coffin down Cortlandt Street with a sign on it: "Here lies Mr Small Businessman."
+
+They lost in the New York Court of Appeals, and the Supreme Court threw out their appeal. The case is named for one of them — a lunch counter called the Courtesy Sandwich Shop.
+
+---
+
+## memorial_dig · 9/11 Memorial 3 of 7 — the wall · 1:09
+
+To build the towers they dug a hole in the riverbank and kept the Hudson out of it. The wall that does that is three feet thick and seventy feet deep, still there a few metres below you, and visible from inside the museum.
+
+More than a million cubic yards came out of this hole, went into the river behind a steel dam, and became Battery Park City. The neighbourhood next door is the hole under your feet.
+
+While they dug, fifteen hundred steel anchors held that wall back against the river. Then the basement floors went in and took over the job — and every one of those anchors was cut.
+
+On the eleventh of September the floors were destroyed, which left the wall holding back the Hudson with nothing bracing it. The engineer who built it said it should have collapsed.
+
+It didn't. But in the days afterwards they poured concrete plugs into the PATH tunnels under the river, rated to hold back eighty feet of water. In case it did.
+
+---
+
+## memorial_design · 9/11 Memorial 4 of 7 — the memorial that was cut · 0:47
 
 Look down at the names on the parapet. You were never meant to read them here.
 
-The design that won this competition took you underground. Down into the footprints, below the street, to read the names with the water falling past you. The jury praised exactly that — the descent into the outlines the towers left, and reaching bedrock inside the north tower's footprint.
+The design that won this competition took you underground — down into the footprints, below the street, to read the names with the water falling past you. The jury praised exactly that: the descent, and reaching bedrock inside the north tower's footprint.
 
-Then the costing came in near a billion dollars, and in 2006 a builder was brought in to cut it. The underground galleries went. The names came up here, to your elbow.
-
-Michael Arad, who designed it, said he was afraid that in losing the below-ground memorial, he was losing the entire memorial.
+Then the costing came in near a billion dollars, a builder was brought in to cut it, and the galleries went. The names came up here, to your elbow. Michael Arad, who designed it, said he feared that in losing the below-ground memorial he was losing the whole thing.
 
 What you are standing on is the argument he had left.
 
 ---
 
-## memorial_more · 9/11 Memorial — 2 of 4: the names · 0:50
+## memorial_names · 9/11 Memorial 5 of 7 — the names · 0:50
 
 Walk along the parapet and you'll notice the names aren't in alphabetical order.
 
@@ -66,21 +104,19 @@ There are two thousand nine hundred and eighty-three names here. Everyone killed
 
 ---
 
-## memorial_trees · 9/11 Memorial — 3 of 4: the trees · 0:50
+## memorial_parapet · 9/11 Memorial 6 of 7 — the bronze · 0:45
 
-Arad's competition entry was the voids and almost nothing else: seven acres of stone with two holes torn in it. No trees.
+Put your hand on the bronze. In August it should be hot enough to hurt; in February it should take the skin off your fingers. It does neither.
 
-The jury loved the voids. They disliked the seven acres of stone. So they made winning conditional — he had to bring in a landscape architect. He called Peter Walker, in California, who was on the point of retiring.
+Behind those panels, in a crawl space you will never see, there are fourteen thousand feet of copper pipe carrying glycol, heating and cooling the metal to hold it between forty and seventy degrees, all year.
 
-Walker took out about half the stone and planted the rest. Four hundred oaks, spaced unevenly, so the light through them changes as you walk.
+The man who ran the memorial's construction explained why they bothered. The bronze is the first thing people touch, he said, and the memorial almost becomes like a baptismal setting: you can wet your hand in the water and leave a print on the name.
 
-Walker described the division of labour like this: Arad was dealing with the part of the problem that is about death. He took the part that is about the continuation of life.
-
-You're standing in the argument between them.
+Somebody engineered that.
 
 ---
 
-## memorial_tree · 9/11 Memorial — 4 of 4: the Survivor Tree · 0:38
+## memorial_tree · 9/11 Memorial 7 of 7 — the Survivor Tree · 0:38
 
 There's one tree here that isn't an oak.
 

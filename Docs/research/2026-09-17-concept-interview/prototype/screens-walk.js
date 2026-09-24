@@ -47,10 +47,14 @@ function stopScreen({ leg, story, more, where, meta, time }) {
   };
 }
 
-App.def("3.1", stopScreen({ leg: "3.1", story: "memorial", more: ["memorial_more", "memorial_trees", "memorial_tree"], where: "memorial", meta: "Stop 1 of 6", time: "9:30" }));
+App.def("3.1", stopScreen({ leg: "3.1", story: "memorial", more: ["memorial_before", "memorial_dig", "memorial_design", "memorial_names", "memorial_parapet", "memorial_tree"], where: "memorial", meta: "Stop 1 of 6", time: "9:30" }));
 App.def("3.1b", stopScreen({ leg: "3.1b", story: "trinity", more: "trinity_more", where: "trinity", meta: "Stop 2 of 6", time: "11:15" }));
 
-// ---- 3.3 Federal Hall — same spot, different story (two phones)
+// ---- 3.3 Federal Hall — same spot, same moment, two different stories.
+// Both stories run on ONE clock from the moment they arrive: Maya's plays in your ears and
+// Dan's runs on in parallel, and tapping his phone moves your listening across to wherever
+// his story has got to. Nobody has to sit through one story to reach the other, and the
+// simultaneity is the whole point of the screen.
 App.def("3.3", {
   theme: "dark", walk: true, layout: "split", time: "11:45",
   render({ maya, dan }) {
@@ -62,27 +66,66 @@ App.def("3.3", {
     wd.insertAdjacentHTML("afterbegin", `<div class="whose g-next">${icon("person")}Dan's phone</div>`);
     const fm = C.stories.fh_maya, fd = C.stories.fh_dan;
     const phones = () => document.querySelectorAll(".phone-wrap");
-    const focus = (who) => phones().forEach((p) => p.classList.toggle("quiet", p.dataset.phone !== who));
-    // Dan's card shows what's queued on his phone until it plays.
-    const queue = (w, s, label) => {
-      $(".np-lens", w).textContent = lensOf(s.lens).label; $(".np-name", w).textContent = s.poi;
-      $(".np-stop", w).textContent = label; $(".t1", w).textContent = fmtSecs(s.secs); setWalking(w, false);
+    const card = { maya: wm, dan: wd };
+    const story = { maya: fm, dan: fd };
+    let t0 = 0, listening = null, ghostTimer = null, lastGhost = -1, ended = false;
+    const elapsed = () => (t0 ? (Date.now() - t0) / 1000 : 0);
+
+    // The phone you are NOT listening to keeps moving, so both are visibly running.
+    const ghost = (who) => {
+      clearInterval(ghostTimer); lastGhost = -1;
+      const w = card[who], s = story[who];
+      // Re-dress the card: the phone you stopped listening to must still show ITS story
+      // running, not fall back to the walking bar.
+      mountStory(w, s, who === "maya" ? "Stop 3 of 6" : "Playing on Dan's phone");
+      (w.closest(".phone-wrap") || w).classList.add("overhearing");
+      ghostTimer = setInterval(() => {
+        const p = Math.min(1, elapsed() / s.secs);
+        lastGhost = paintProgress(w, s, p, lastGhost);
+        if (p >= 1) { clearInterval(ghostTimer); $(".np-stop", w).textContent = "Stop 3 of 6 · finished"; finishIfDone(); }
+      }, 150);
     };
-    let played = { maya: false, dan: false };
-    const done = () => { if (played.maya && played.dan) { App.setClock("12:10"); wait(4000, () => App.next("3.3")); } };
-    const playMaya = () => { focus("maya"); queue(wd, fd, "Up next on Dan's phone"); playOn(wm, fm, "Stop 3 of 6", () => { played.maya = true; playDan(); }); };
-    const playDan = () => { focus("dan"); queue(wm, fm, "Stop 3 of 6 · played"); playOn(wd, fd, "Stop 3 of 6 · Dan", () => { played.dan = true; focus(null); done(); }); };
-    wirePlayer(wm, { onNext: () => App.next(), onPrev: playMaya, onReplay: playMaya });
-    wirePlayer(wd, { onNext: () => App.next(), onPrev: playDan, onReplay: playDan });
-    // Each phone's own play button starts that phone's story.
-    $(".np-play", wd).onclick = () => { if (Player.active && Player.story === fd) App.togglePause(); else playDan(); };
-    $(".np-play", wm).onclick = () => { if (Player.active && Player.story === fm) App.togglePause(); else playMaya(); };
+
+    const listen = (who, { silent = false } = {}) => {
+      if (listening === who) return;
+      const other = who === "maya" ? "dan" : "maya";
+      listening = who;
+      clearInterval(ghostTimer);
+      (card[who].closest(".phone-wrap") || card[who]).classList.remove("overhearing");
+      phones().forEach((p) => p.classList.toggle("quiet", p.dataset.phone !== who));
+      const at = elapsed();
+      if (at >= story[who].secs) { mountStory(card[who], story[who], "Stop 3 of 6 · finished"); paintProgress(card[who], story[who], 1, -1); }
+      else playOn(card[who], story[who], who === "maya" ? "Stop 3 of 6" : "Stop 3 of 6 · Dan", () => finishIfDone(), { from: at });
+      ghost(other);
+      if (!silent) App.record("tap", "switched phones", { to: who, at: Math.round(at) });
+    };
+
+    const finishIfDone = () => {
+      if (ended) return;
+      if (elapsed() < Math.max(fm.secs, fd.secs) || Player.active) return;
+      ended = true; clearInterval(ghostTimer);
+      App.setClock("12:10"); wait(4000, () => App.next("3.3"));
+    };
+
+    // Tapping anywhere on the other phone moves your ears across — not only its play button.
+    const wrapOf = (w) => w.closest(".phone-wrap") || w;
+    wrapOf(card.dan).onclick = (e) => { if (listening !== "dan" && !e.target.closest(".np-text")) listen("dan"); };
+    wrapOf(card.maya).onclick = (e) => { if (listening !== "maya" && !e.target.closest(".np-text")) listen("maya"); };
+    wirePlayer(wm, { onNext: () => App.next(), onPrev: () => listen("maya"), onReplay: () => listen("maya") });
+    wirePlayer(wd, { onNext: () => App.next(), onPrev: () => listen("dan"), onReplay: () => listen("dan") });
+    $(".np-play", wd).onclick = (e) => { e.stopPropagation(); if (listening === "dan" && Player.active) App.togglePause(); else listen("dan"); };
+    $(".np-play", wm).onclick = (e) => { e.stopPropagation(); if (listening === "maya" && Player.active) App.togglePause(); else listen("maya"); };
     wireLevers(maya, wm, {
-      more: () => { focus("maya"); playOn(wm, C.stories.fh_more, "Stop 3 of 6 · more", () => { played.maya = true; if (!played.dan) playDan(); else done(); }); },
+      more: () => { listen("maya", { silent: true }); playOn(wm, C.stories.fh_more, "Stop 3 of 6 · more", () => finishIfDone()); },
     });
-    Walk.move(maya, PATHS["3.3"], LEG_MS, () => { App.record("system", "arrived", { stop: "Federal Hall" }); playMaya(); });
+    Walk.move(maya, PATHS["3.3"], LEG_MS, () => {
+      App.record("system", "arrived", { stop: "Federal Hall" });
+      t0 = Date.now();
+      mountStory(wd, fd, "Playing on Dan's phone");
+      listen("maya", { silent: true });
+    });
   },
-  leave() { document.querySelectorAll(".phone-wrap").forEach((p) => p.classList.remove("quiet")); },
+  leave() { document.querySelectorAll(".phone-wrap").forEach((p) => p.classList.remove("quiet", "overhearing")); },
 });
 
 // ---- 4.1 Heads-up: the re-plan fires by itself
