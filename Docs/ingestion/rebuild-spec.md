@@ -1603,6 +1603,28 @@ building and measuring on a real job, test-first, under its own registration —
 correct; eleven pairs is a small set and its two positives are the only false folds ever labelled.
 What a fail decides: the second look as worded does not separate them; a prompt change or a
 stronger model is a new registration, never a re-run of this one.
+*`same` second-look probe — result (2026-09-24, owner go "I waive make test for the probe commit and
+confirm go"; HEAD d6b556b; report `data-ingest/sandboxes/same-probe-1/same-probe-report.json`, its
+inputs matching the registration — fixture `0ad16cc80b391a29`, prompt `933a3b4a22087199`, 3 samples,
+`claude-haiku-4-5`; batch `msgbatch_01SKuGjvvi48Ujt1PhVnKuCe`, estimate $0.0431, metered actual
+$0.0101; R0 PASS, live `556830a5342e178c`, nothing outside the new sandbox newer than the marker;
+backup rsynced).* Scored as registered: (S1) 6 of 6 PASS — El Greco `adds` ["seminal"] and c162
+`adds` ["huge", "atrium centers on"] in every sample; (S2) 12 of 18 FAIL (bar 16) — the Jewish Museum
+and Met addresses, c151's 1959 and the paraphrase plant `same` in 3 of 3 each, both Frick Madison pairs
+`adds` ["Frick Madison"] in 3 of 3 each. **The probe FAILS as registered**, and by its own terms the
+second look as worded is not built; no re-score. Reported, not scored: Frick "late 2020" `adds`
+["mansion"] twice and `same` once; the Neue cafe `same` 3 of 3; the critics compound `adds` the Newsweek
+headline 3 of 3. Every miss sits on the two pairs the registration flagged as resting on "a different
+name for the same place is not an addition". The source bears on that: Frommer's entry is headed
+"Frick Madison", says the renovation "will shutter the mansion for at least 3 years, with the
+collection moved temporarily a few blocks north", and lists "945 Madison Ave." with "Admission $22
+adults" under it. Two readings, not decided here: (i) the `fold` label is wrong, because the source
+places Frick Madison as a temporary building, so its price is that building's; (ii) Haiku did not
+follow the prompt's name exemption — it answered the bare name, never a building or a move. The
+labels are the author's own, so the author does not decide (i): blind labels do, before any new
+registration, and nothing here is re-scored. Job B's panel-upheld folds of these two pairs are
+disputed on the same reading and need a blind label; if false, what they lose is a venue or dating
+fact, not the evaluative language of the 2026-09-24 ruling — a different defect class.
 
 ### Slice 11: Cleanup
 
