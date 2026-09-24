@@ -1788,6 +1788,39 @@ makes a P1 prompt change to carry sourced judgments into claim text the next ste
 and measured by calibration plants under its own registration. LOST below 9 with LOST plus
 UNDECIDED also below 9 makes targeted correction the next step instead. LOST below 9 but LOST plus
 UNDECIDED at 9 or more is INCONCLUSIVE: neither consequence fires, and the owner decides.
+*P1 loses the book's judgments — result (2026-09-24, $0; registration 9683fcf, owner "I waive make test
+for the registration commit, go").* Filled batches, key, every labeller's raw reply, verdicts and the
+LOST list by place are in `$HOME/ondoway-ingest-backup-2026-09-13/p1-evaluative/`. Built from the
+pinned population and prompt after asserting their shas, three batches of 45, 45 and 44 with the four
+controls sorted in by sha as registered (items 42-45 in batch 1, 18 and 43-45 in batch 2, 1, 5, 15
+and 16 in batch 3). **Deviation, disclosed:** the pinned prompt's first line says "Use no tools", but
+each labeller was dispatched to read its batch file with the Read tool so that it saw the exact bytes
+rather than a retyping. The dispatch text is saved as `dispatch_instruction.txt` (sha256 prefix
+`d224a6f0638686a4`), and each Agent result reported exactly one tool use. With all 24 control answers
+right, the delivery did not damage the labelling. Models as each
+reply reports: `claude-opus-5-5` and `claude-fable-5-1`, neither the same model as P1's author or P3's
+judge under `llm.same_model` (checked), so none is void. Controls: all four right for both labellers
+in all three batches, so no batch is UNDECIDED. **LOST 29 of the 164 kept claims (17.7%)**, KEPT 131
+(89 labelled plus the 42 kept by construction), UNDECIDED 4 (c150, c25, c178, c105, one labeller LOST
+each). LOST plus UNDECIDED is 33. As registered, 29 is at or above 9, so **the next step is a P1 prompt
+change that carries sourced judgments into claim text**, built test-first and measured by
+calibration plants under its own registration. Nine of the eleven places lost something (the Cloisters, 2 kept claims, and the Museum of Jewish
+Heritage, 1, lost nothing): the Met 6 ("stunning,
+perfectly preserved, brilliantly colorful", "sentimental but rippingly fun", "famed architect …
+majestic", "truer-than-life", "architectural-looking", "every other master you read about in your
+college art-history course"), the Frick 4 ("beloved", "fascinating", "long-overdue", "something rare
+in museum land"), the Neue 4 ("famed", "swift but effective", "masters", "transporting"), the
+Guggenheim 4 ("insipid", "delirious", "masterpiece", "towering figures"), the Natural History museum 3
+("mesmerizing", "famed", "dazzling"), the Jewish Museum 3 ("handsome", "exquisite", "nifty"), MCNY 2
+("absorbing", "excellent"), the Folk Art museum 2 ("terrific", "small") and Cooper Hewitt 1
+("whiz-bang"); the quoted words are opus's; fable also called every one of the 29 LOST, sometimes quoting more
+(c176 adds "painstakingly"). A lower bound, as
+registered: only judgments inside the span the author chose are visible. Only Frommer's was measured.
+Lonely Planet claims show the same kind of loss (the two LOST controls, and an unregistered look),
+but its rate was not measured. "small" (c166) counts as a size judgment under the registered rule and
+both labellers agreed; without it LOST is 28, still far above 9. Integrity: `verdicts.json` sha256
+prefix `1bbd13ef35017ec3`; raw replies batch1 opus `2b03d55c9561ffd0` / fable `8ed7230dd4e33a0c`,
+batch2 `a6b273082f866596` / `7e88e4e2e49c3452`, batch3 `a3bacfe2f935201f` / `df31525b5515a7c6`.
 
 ### Slice 11: Cleanup
 
