@@ -1460,6 +1460,55 @@ fact and might "correct" the absorption by writing a duplicate (the judge caught
 and the workbench queue line say so rather than contradicting it. What is proven: one item per
 story-slug per unit, a disposition truthful for every fold kind the runner produces. What is NOT
 built: the applier — accepted items still do nothing, which stays owed.
+*The calibration run prints what it spent ($0, 2026-09-23).* `make ingest-calibrate-live` printed
+an estimate and no actual, so a paid run's cost could not be read. The live client is now wrapped in
+the job runner's meter (`calibrate.run(wrap_live=)`, `_CountingClient`): the run prints `spend:
+actual=$… tokens_in= tokens_out= calls:` per phase, priced as the job runner prices, marked a LOWER
+BOUND when a billed call reported no usage, and prints `actual=UNKNOWN` rather than raise when no
+meter is present, because by then the money is spent and the baseline gate has still to run. Its
+printed estimate is now $1.1593 (P3 $0.2956, the omissions check $0.0324, P6 $0.8314 for ten merge
+classes, each a first answer and one re-ask), not the $0.8267 quoted before the four precision plants.
+*Live re-measure of the Guggenheim fold — registered before any spend (2026-09-23).* The offline
+re-measure replayed recorded answers. This one samples the judge again and runs P4/P5/P7. Ten
+replays of job B (`75b8f292b34e40ff90e5049392976335`) at the Guggenheim, run one after another from
+fresh sandboxes `data-ingest/sandboxes/jobB-replay-cov2-r1` … `-r10`, each prepared ($0) by `make
+ingest-merge-replay CITY=new_york JOB=75b8f292… PLACE="Solomon R. Guggenheim Museum" ARGS="--out
+<sandbox>"` off the frozen pre-job copy (sha `fa549e1db77b8463`, refused otherwise), under the
+commit that records this paragraph. R0 around the set: live `data-ingest/new_york/beats.json` sha
+`556830a5342e178c` before and after, and nothing outside the new sandboxes and their logs newer than
+a marker. Run and scored by one pinned loop outside the repo,
+`$HOME/ondoway-ingest-backup-2026-09-13/tools/cov2_loop.py`, sha256
+`8330ed5f47a5adafe340d7bc82a3c2ec182d6348e3d58fe0627be294f2b266bf` (`run` spends, `score` is $0). Its
+scorer reproduced the recorded 2026-09-21 set exactly (applied r1, r3, r7, r9, r10; costs to the
+cent; r3's join into the ziggurat beat flagged). A result scored by any other file, or by this one
+after its sha changes, is not a result of this registration. Scored on the story `a-building-brought-back-from-a-dream`,
+with "answered" (the judge's final answer) reported apart from "applied" (what reached disk):
+(L1) c148 APPLIED, meaning a `merge_covered` event for c148 naming exactly LP c01 + c03 of the
+ziggurat beat, the story not held, and the job `committed`, in at least 9 of 10. Any hold counts as
+not applied, and so does a c148 answered other than `covered`. The two are reported separately.
+(L2) one judge call for the story in 10 of 10, meaning exactly one `merge_answered` event carrying the
+story's slug and no `merge_reasked`. Any re-ask's problems are quoted.
+(L3) across every beat at the place in all ten runs, every non-null `stated_value` on a source whose
+`source_id` is `frommers-nyc-2024` equals both the `new_value` and `existing_value` of the judge's final answer for that claim:
+zero exceptions.
+(L4) the corpus changes only as decided: in every run, every beat of the start file is present and
+byte-identical, except that a claim named by a `same` fold may change in `resolution`, `sources` and
+`verdict` and nowhere else: zero exceptions. Reported, not scored: the story-level verdict per run
+(recorded as `judge_story` only); c151's and c162's answers per run, with every `same` fold of c162
+into LP c03 named, because that is the false fold the blind labels caught; every hold event quoted in full; each run's actual. Stop rules, run by the loop and not by hand. BEFORE each run: no run starts if
+the set's total so far plus $0.15 exceeds $1.00. AFTER each run, any one of these stops the set: a
+status other than `committed`, a non-zero exit, an actual that is unreadable or a lower bound, a run
+above $0.15 (the dearest of the last ten was $0.0901, a fold's remainder narration included), the
+set above $1.00 (the last ten cost $0.7645), any L4 exception, or a change to the live sha. What
+bounds the spend, honestly: the replays end at or below $1.00 unless one run by itself spends more
+than $0.15, which nothing caps while it runs. The calibration run has no cap at all. Its $1.1593 is
+the printed estimate, not a ceiling. Expected total about $0.8 + $1.16, and the go asked of the
+owner is against $1.00 + $1.1593 = $2.16 with the in-flight overrun stated. A set that stops before
+r10 fails every bar it had not already met (L1 needs 9 applied, L2, L3 and L4 need 10 clean runs). It is
+never topped up, extended or re-run under this registration, and its runs are reported as they
+stand. Then the calibration run, bars as registered above, R0 around it too. What this cannot settle: whether the
+Guggenheim fold is CORRECT. The blind labels split 1-1 on it; ten runs measure only how reliably the
+judge gives it.
 
 ### Slice 11: Cleanup
 
