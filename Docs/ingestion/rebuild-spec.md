@@ -1520,6 +1520,43 @@ the loop gains the same argument plus a start check that that root's beats sha i
 sha256 is now `55882988bbc014939a822205f4bfeee7feab67d2643632f5cf70d2dffaa600b2`, which REPLACES the
 sha above. Its scorer is unchanged and re-reproduced the 2026-09-21 set. Bars, stop rules and scoring
 are unchanged. The replays run under the commit recording this amendment.
+*Live re-measure and calibration — result (2026-09-23, owner go "I waive make test for the amendment
+commit and confirm go"; HEAD 17681c8; loop sha256 `55882988…`; sandboxes
+`data-ingest/sandboxes/jobB-replay-cov2-r1` … `-r10`, log `cov2-runs.log`, full score
+`$HOME/ondoway-ingest-backup-2026-09-13/cov2-score-2026-09-23.json`; R0 PASS around both — live
+`556830a5342e178c` before and after, nothing outside the new sandboxes and their logs newer than the
+markers, the calibration baseline file unchanged at `ffc6224e96c0bf9a`; backup rsynced after each).*
+Replays: ten runs, all `committed`, $0.6344 in all ($0.0570-$0.0706 each), no stop rule fired.
+Scored as registered: (L1) c148 answered `covered` LP c01 + c03 in 10/10 and APPLIED in 10/10 — PASS
+(was 5/10 applied live on 2026-09-21); (L2) one `merge_answered`, no re-ask, in 10/10 — PASS; (L3) 0
+exceptions over the ten `stated_value`s written at the place (nine "1959" on LP c21, one "spiral ramp"
+on LP c03) — PASS; (L4) 0 corpus exceptions in 10/10 — PASS as registered; the bar admits r8's false `same` fold by construction (below). Reported, not scored: c151 `same` LP c21
+in 10/10 (r7 wrote no value: the judge's two values differed); the story-level answer `same` in r2, r3,
+r7, r8 and `new` in the rest, recorded only; no hold of any kind in any run; **c162 folded `same` into
+LP c03 in 1 of 10 (r8), applied, writing "spiral ramp" as its value** — the false fold both blind
+labellers called ADDS ("huge" and the atrium are not in "has a spiral ramp"), now seen live. L4 does
+not catch it by construction (a `same` fold may add a source) and neither does anything else.
+Calibration (`make ingest-calibrate-live ARGS="--yes"`, never `--update-baseline`; printed estimate
+$1.1593, metered actual $0.1735, calls P1=2 P3=17 P6=10, exit 0, "baseline[live]: no class below it").
+Scored as registered: (1) no row marked WRONG FOLD — PASS; (2) `regressions()` passed; it gates the six
+classes named above and no merge class, so the merge rows below are first live numbers, not passes of
+a gate; (3) no row marked HELD. Every merge class caught 1/1 on its first answer with no re-ask:
+contested_value and superseded_belief `conflict`, shared_element and shared_union `new`, same_fact
+`same`, covered_union and covered_union_elsewhere `covered` c01+c02, **adds_a_date `new`** (so the
+guard had nothing to hold; the registered 0/1 HELD did not arise), recombined_union and negated_fact
+`conflict` → `supersedes`. The one 0/1 carries neither marker and is named as registered:
+`stated_relation` (omissions detector, not a merge class, absent from the live baseline so ungated) —
+the coverage check split c02, "cramped single elevator makes descending from the top difficult, so
+exhibitions are installed from bottom to top", into three facts, a false compound flag on a stated
+relation; in the calibration nothing is written, so it is a detector miss, not a corpus change. Both
+`omitted_fact` and `stated_relation` also discarded an ungrounded finding ("Other key additions have
+included paintings by Monet, Van Gogh and Degas" is not in the unit). What this shows: under the
+current code the Guggenheim `covered` fold is given and applied in 10 of 10 runs on the first answer (the
+registered bar was 9 of 10; ten runs cannot show the failure rate is below about 26%), and the merge judge answered all ten merge plants correctly once each. What it does
+NOT show: that the fold is CORRECT (blind labels still split 1-1), precision beyond one sample per
+plant, or any guard against a false `same` — r8 shows it reaching the corpus in 1 of 10 runs (it was also
+answered, and held, in 1 of 10 on 2026-09-21); the rate is not measured.
+Spend this session: $0.6344 + $0.1735 = $0.8079.
 
 ### Slice 11: Cleanup
 
