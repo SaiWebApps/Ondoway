@@ -1509,6 +1509,17 @@ never topped up, extended or re-run under this registration, and its runs are re
 stand. Then the calibration run, bars as registered above, R0 around it too. What this cannot settle: whether the
 Guggenheim fold is CORRECT. The blind labels split 1-1 on it; ten runs measure only how reliably the
 judge gives it.
+*Amendment, before any spend (2026-09-23).* The first start of the loop at e77d805 stopped at $0
+in the prep for r1: `make ingest-merge-replay` defaults to `--source-root data-ingest`, where job B
+does not live, so it found no `job.json`. No run started and nothing was written except that prep's
+log, kept as `jobB-replay-cov2-r1.prep-aborted.log`. R0 held (live `556830a5342e178c`). Job B and the
+frozen pre-job copy live in `data-ingest/sandboxes/jobB-replay-src` (beats sha `fa549e1db77b8463`).
+The prep command above therefore gains `--source-root data-ingest/sandboxes/jobB-replay-src`, and
+the loop gains the same argument plus a start check that that root's beats sha is
+`fa549e1db77b8463`. A $0 throwaway prep with it built a sandbox at exactly that sha. The pinned loop's
+sha256 is now `55882988bbc014939a822205f4bfeee7feab67d2643632f5cf70d2dffaa600b2`, which REPLACES the
+sha above. Its scorer is unchanged and re-reproduced the 2026-09-21 set. Bars, stop rules and scoring
+are unchanged. The replays run under the commit recording this amendment.
 
 ### Slice 11: Cleanup
 
