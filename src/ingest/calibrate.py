@@ -595,6 +595,7 @@ def run(
     confirm: Callable[[llm.CostEstimate], bool] | None = None,
     scripted: Callable[[DefectRecord, Unit], dict[str, llm.MockAnswer]] = scripted_answers,
     scripted_merge: Callable[[DefectRecord, Unit], llm.MockAnswer] = scripted_merge_answer,
+    wrap_live: Callable[[llm.ModelClient], llm.ModelClient] | None = None,
 ) -> Report:
     """Run every record through its detector and tally per class.
 
@@ -606,6 +607,8 @@ def run(
     `client="live"`: one AnthropicClient, its estimate printed before any
     call; `confirm(estimate)` returning False stops the run with every
     judged class reported as not run (caught None, detector unchanged).
+    `wrap_live(client)`, when given, replaces the live client before any
+    call — the caller's meter, so a paid run can print what it spent.
     """
     if client not in ("mock", "live"):
         raise ValueError(f"client must be 'mock' or 'live', got {client!r}")
@@ -616,6 +619,8 @@ def run(
     declined = False
     if client == "live":
         live = _live_client(sink)
+        if wrap_live is not None:
+            live = wrap_live(live)
         estimate = _arm(live, fixture.records, unit)
         if confirm is not None and not confirm(estimate):
             declined = True

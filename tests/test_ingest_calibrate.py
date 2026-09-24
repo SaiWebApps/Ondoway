@@ -920,3 +920,44 @@ def test_a_unit_held_class_is_marked_held_too():
     assert row.note.startswith("unit held: ")
     out = calibrate.format_report(calibrate.Report(client="mock", rows=[row]))
     assert "HELD" in out and "held (nothing written, queued for review):" in out
+
+
+def test_a_live_run_prints_what_it_actually_spent(tmp_path, monkeypatch, capsys):
+    """A paid calibration run prints its ACTUAL spend beside the estimate,
+    metered from the usage each completion reports and priced the way the
+    job runner prices it. Without it the only number a paid run prints is
+    the projection, and nobody can read what it cost. Driven through the
+    script's live path on a one-record fixture (one merge call), a scripted
+    client standing in for the provider, so this spends nothing."""
+    import scripts.ingest_calibrate as script
+    import src.ingest.llm as llm
+
+    raw = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    raw["records"] = [item for item in raw["records"] if item["class"] == "same_fact"]
+    assert len(raw["records"]) == 1
+    one_record = tmp_path / "one-record.json"
+    one_record.write_text(json.dumps(raw), encoding="utf-8")
+    fixture = calibrate.load_fixture(one_record)
+    scripted = calibrate.scripted_merge_answer(fixture.records[0], _unit(fixture))
+    answer = llm.MockAnswer(
+        text=scripted.text, model_id=scripted.model_id, input_tokens=20_000, output_tokens=2_000
+    )
+    stand_ins: list[llm.MockClient] = []
+
+    def stand_in(sink):
+        stand_ins.append(llm.MockClient(sink, answers={"merge_judge": [answer]}))
+        return stand_ins[-1]
+
+    monkeypatch.setattr(calibrate, "_live_client", stand_in)
+    monkeypatch.setattr(script, "_live_key_present", lambda: True)
+
+    script.main(["--client", "live", "--yes", "--fixture", str(one_record)])
+
+    out = capsys.readouterr().out
+    assert len(stand_ins) == 1 and stand_ins[0].calls == [("merge_judge", "P6")]
+    price_in, price_out = llm.PRICES_USD_PER_MTOK[llm.ROLE_MODEL["merge_judge"]]
+    expected = (20_000 * price_in + 2_000 * price_out) / 1_000_000
+    spend = [line for line in out.splitlines() if line.startswith("spend:")]
+    assert len(spend) == 1, out
+    assert f"actual=${expected:.4f}" in spend[0]
+    assert "calls: P6=1" in spend[0]
