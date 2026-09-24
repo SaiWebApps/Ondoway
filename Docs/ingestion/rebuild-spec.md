@@ -1704,6 +1704,51 @@ now:** at least one FALSE `same` or `covered` here means the unchanged second-lo
 (`933a3b4a22087199`) is run over this run's labelled pairs, under its own registration with its
 fixture pinned by sha before it sees them; zero FALSE means the second look is not pursued now and the
 rate is reported as not measured beyond this run.
+*P6-only replay of ALL job B stories — result (2026-09-24, owner go "I waive make test for the
+registration commit and confirm go"; HEAD b72a5a8; sandbox `data-ingest/sandboxes/jobB-p6all-r1`,
+prepared at `fa549e1db77b8463`; scorer sha `a00d770d…`, report
+`$HOME/ondoway-ingest-backup-2026-09-13/p6all-score-2026-09-24.json`; R0 PASS — live
+`556830a5342e178c` before and after, nothing outside the new sandbox newer than the marker; backup
+rsynced).* Status `committed`, 85 beats written, 38 new; metered actual **$0.6179** (P6 36 calls, 0
+re-asks, about 3.1k tokens in and 0.8k out each; P4 16 and P5 44 re-narration calls); the hand
+stop-loss never neared 70 (36 `merge_answered`). Of the 41 stories at existing places, 36 reached
+the judge; the other 5 have no narration in job B's copied P4/P5 output, and P6 skips a story with no
+narration without an event (`run.py`, `if key not in narrations: continue`):
+`the-red-brick-museum-hidden-inside` (Met), `the-famous-dollhouse-upstairs` (MCNY),
+`retrospectives-that-fill-the-spiral` and `guggenheim-admission-and-pay-what-you-wish` (Guggenheim),
+`admission-rules-at-the-neue-galerie` (Neue). **(P1) Corpus PASS**, and it is structural: committed,
+live sha unchanged, scorer exit 0, so every change is explained by a fold. It does not judge whether
+a fold or a demotion is right (see below). Reported: 9 folds — `same` c39 (El Greco "seminal") into LP c130, c79 into
+c65, c111 into c54, c141 into c104, c151 into c21; `supersedes` c26 into c138, c61 into c200, c72
+into c50, c80 into c66 — 1 `covered` (c148 by LP c01 + c03), 0 refused, 0 reverted, 4 start beats
+re-run; 7 held stories (four at P6 — three tripwire disagreements, one leftover-words hold on c134
+naming "gold, including, jewel, paintings, toned, woman" — and three at P7) and 9 new-place stories
+skipped by design; 2 new beats were written with `review.held` (`narration_held`, P5):
+`from-a-1-2-million-year-old-scraper-to-a-crocheted-shoulder` and `seven-hundred-paintings-upstairs`.
+**Blind labels, scored as registered** (prompts at their pinned shas, filled prompts, key and
+answers, and each labeller's raw reply with its reasons (`raw-*.txt`), in
+`$HOME/ondoway-ingest-backup-2026-09-13/labels-2026-09-24/`; models as each raw reply reports,
+`claude-opus-5-5` and `claude-fable-5-1`). Controls: every one right for both labellers, pairs and
+covered, so no batch is UNDECIDED. Population: c79 (European paintings, 2nd floor) SAME/SAME, c111
+(Met address) SAME/SAME, c141 (Neue "houses a Viennese cafe") SAME/SAME — three TRUE `same`; c148
+COVERED/COVERED — one TRUE `covered`. **Zero FALSE**, so by the rule fixed beforehand the second look
+is not pursued now and the rate is not measured beyond this run. Counted, c39 would be 1 FALSE of 5
+`same` folds and would have triggered the second look; the rule registered beforehand excludes
+control repeats, so the consequence stands. Reported separately, as registered:
+the run repeated two control pairs — c39's El Greco fold, labelled ADDS by both (a false `same`
+again, the only one in the run: the owner's "seminal" loss recurred in both runs so far), and
+c151, SAME by both. Caveat on c148: its covered control shared both existing claims with it and sat
+beside it in the batch, which may have eased the COVERED answer; the 2026-09-22 labels split 1-1 on
+it under a different prompt.
+**Not registered, reported for the owner.** Demoting folds are unlabelled by design, and one looks
+wrong by this run's own labels: c61 "…at 92nd Street" `supersedes` LP c200 "…between E 92nd and 93rd
+Sts" — the pair both labellers called SAME as a control — so a correct, more precise address was
+demoted to a superseded belief (job B folded the same pair `same`). c26 ("housed for decades in …
+mansion") superseding c138 ("occupies a beaux-arts structure") and c80 ("some 700 works")
+superseding c66 ("more than 1700 canvases") may compare different scopes; none of the four
+demotions was labelled. And the SOURCE spans show the owner's concern one stage earlier: both
+labellers noted unprompted (their raw replies, items 4 and 5) that "transporting" (the Neue cafe) and "masterpiece" (the Guggenheim)
+are in the book's words but never reached the claim text — lost at P1, before any merge.
 
 ### Slice 11: Cleanup
 
