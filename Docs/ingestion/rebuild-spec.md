@@ -1749,6 +1749,45 @@ superseding c66 ("more than 1700 canvases") may compare different scopes; none o
 demotions was labelled. And the SOURCE spans show the owner's concern one stage earlier: both
 labellers noted unprompted (their raw replies, items 4 and 5) that "transporting" (the Neue cafe) and "masterpiece" (the Guggenheim)
 are in the book's words but never reached the claim text — lost at P1, before any merge.
+*P1 loses the book's judgments — measurement registered before labelling ($0, 2026-09-24; owner:
+"go with P1 first").* P1's prompt has no rule against evaluative language, but it asks for
+"standalone factual claims", one fact each, and the claim's own wording; the claim text is all the
+narrator reads. The question: how often does a claim's SPAN carry a judgment of importance, size,
+quality or reputation about what the claim describes that the claim text drops ("a transporting
+Viennese cafe" became "houses a Viennese cafe")? Population: every claim job B's P3 kept, 164, read
+from `data-ingest/sandboxes/jobB-p6all-r1/…/P3.json` (a copy of job B's) by
+`$HOME/ondoway-ingest-backup-2026-09-13/p1-evaluative/p1_dropped.py` (sha256 `cea5b948…`) into
+`population.json` (sha256 `acefd5f3243d2091cbf703d010a2711e3e70bf67d0cf960492af511e12578c1a`). The 42
+claims whose span holds no `merge._signature` word their text lacks are KEPT by construction; the
+other 122 are labelled. That construction was checked on raw tokens as well, since `_signature` drops
+stopwords and words under three letters: for all 42, every raw-token difference is a function word
+or an abbreviation (as, the, with, st, from, ca, its, it, one, s, this, an), none evaluative. A first
+unregistered look showed candidates such as "beloved", "exquisite",
+"famed", "majestic", "stunning" and "rippingly sentimental", and the same shape in Lonely Planet's
+claims already in the corpus ("intriguing", "prized", "eccentric"), so the loss is not one book's.
+Labellers: the Agent tool's `opus` and `fable`, exact ids as each reply reports; a reply whose model
+id is the same model as P1's author (`claude-opus-5`) or P3's judge (`claude-haiku-4-5`) under
+`llm.same_model` is void and is not replaced. Prompt pinned: `p1-evaluative/label_p1_prompt.txt` (sha256
+`e2cdfd7a67ffd3b792bb0f274ce051dd721f7aa8b4b25728e3acbf896a954017`). Items in batches of at most 41 in order of
+the sha256 of the claim text, each batch carrying the same four controls sorted into that order by
+the sha256 of their claim text — Lonely Planet claims in the frozen start file (sha
+`fa549e1db77b8463`), outside the population, named by index and full text because their claim ids
+also occur inside it: [9] "The models from the Tomb of Meketre are clay figurines intended to help in
+the afterlife." / span "the intriguing models from the Tomb of Meketre, clay figurines meant to
+help" — LOST; [9] "The Tomb of Perneb dates from around 2300 BCE." / "prized pieces: the Tomb of
+Perneb (c 2300 BCE), an Old Kingdom burial" — LOST; [1] "Solomon R Guggenheim was a New York mining
+magnate." / "New York mining magnate who began acquiring abstract art in his 60s at" — KEPT; [3] "The
+Guggenheim Museum opened its doors in October 1959." / "When the Guggenheim opened its doors in
+October 1959, the ticket price" — KEPT. One missed control makes that
+labeller's batch UNDECIDED, with no substitute. Both LOST is LOST, both KEPT is KEPT, anything else
+UNDECIDED. Reported: the count and share of LOST among all 164 kept claims (UNDECIDED shown apart,
+never added to either side), every LOST claim with its lost words, per place. What it cannot see: a
+judgment outside the span the author chose — the span is often shorter than the sentence — so this
+is a lower bound. **Consequence, fixed now:** LOST in at least 5% of the 164 (9 claims or more)
+makes a P1 prompt change to carry sourced judgments into claim text the next step, built test-first
+and measured by calibration plants under its own registration. LOST below 9 with LOST plus
+UNDECIDED also below 9 makes targeted correction the next step instead. LOST below 9 but LOST plus
+UNDECIDED at 9 or more is INCONCLUSIVE: neither consequence fires, and the owner decides.
 
 ### Slice 11: Cleanup
 
