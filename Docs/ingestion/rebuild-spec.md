@@ -1430,6 +1430,36 @@ Registered consequence, so it is not re-litigated afterwards: `adds_a_date` is E
 0/1 HELD whenever the judge answers `covered` there, because the leftover-words guard is doing its
 job; scoring that as a regression would be the same error as expecting `new` on `recombined_union` —
 reading a working guard as a defect.
+*One review item per story, with a per-claim disposition — built test-first ($0, 2026-09-22; owner
+ruling on the double-queue).* A reverted merge queued the SAME story twice — once as a remainder
+below the arc minimum, once as a dropped merge — with OVERLAPPING claim sets, and the dropped-merge
+item listed every judged claim including folds that landed in OTHER beats and are still in the
+corpus. Nothing applies an accepted item yet, so nothing was duplicated; the moment an applier
+exists, accepting those writes facts the corpus already states — duplicate claims at one place,
+which is what the claim-level merge exists to prevent and what the narration engine then has to
+dedupe at runtime. Now: at most ONE `merge_held` item per story per UNIT (slugs are unique within a
+unit only — keyed by slug alone, two chunks holding the same slug would collapse into one item and
+the second story's claims would vanish, which the judge caught), however many times P6 could not
+place it, carrying every reason joined, the story's WHOLE judged claim set, and
+`shown.claim_disposition` — per claim one of `written` (its fold landed and survived: an applier
+must never write it again), `absorbed` (`covered`: stated in full by claims already there, written
+nowhere by design), `dropped` (its fold was given back when a beat's rerun was held) or `unmatched`
+(never written) with the beat and claim it names. `held_back.claims` now ranks by what the corpus is
+MISSING (unmatched + dropped), not by how many claims the story has. The six queue points in P6
+funnel into one accumulator flushed after the reverts settle, so a revert re-marks its folds
+`dropped` even when an earlier hold already described them; the two old helpers are deleted.
+Mutants, each red and restored byte-identical: only the last reason kept; `absorbed` reported as
+`unmatched`; a revert that never marks dropped; the disposition built over the subset a path carried
+rather than the whole story. The disposition carries `applied_claim_id` beside `existing_claim_id`,
+because a supersedes/superseded fold demotes the MATCHED claim and writes the new fact under a fresh
+id — an applier keying on the matched id would read the wrong claim. An `absorbed` row carries
+`covered_by`, EVERY claim that states it together, because a covered answer always names at least
+two and the row's single id is only the first: a reviewer checking that one claim would not find the
+fact and might "correct" the absorption by writing a duplicate (the judge caught that).
+`held_back.claims` now means "missing from the corpus" for this kind alone, so `jobs.held_back_rank`
+and the workbench queue line say so rather than contradicting it. What is proven: one item per
+story-slug per unit, a disposition truthful for every fold kind the runner produces. What is NOT
+built: the applier — accepted items still do nothing, which stays owed.
 
 ### Slice 11: Cleanup
 

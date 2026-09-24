@@ -57,6 +57,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -553,6 +554,75 @@ def _story_key(unit: Unit, story: Story) -> str:
     return f"{unit.key}:{story.story_slug}"
 
 
+@dataclass
+class _HeldStory:
+    """A story P6 could not place, and what the corpus holds of it."""
+
+    story: Story
+    claims: list[JudgedClaim]
+    narration: JudgedNarration
+    disposition: list[dict[str, Any]]
+    reasons: list[str] = field(default_factory=list)
+    dropped_beats: set[str] = field(default_factory=set)
+    answered: list[dict[str, Any]] = field(default_factory=list)
+    judge_story: str | None = None
+
+
+#: What the corpus holds of a held story's claim, per claim:
+#: `written` — its fold landed in an existing beat and survived, so an
+#: applier must NOT write it again; `absorbed` — `covered`, stated in full
+#: by claims already there, so it is never written; `dropped` — its fold was
+#: given back when a beat's rerun was held; `unmatched` — never written, the
+#: story's own beat was never assembled.
+_CLAIM_WRITTEN: frozenset[str] = frozenset(
+    {"same", "contested", "supersedes", "superseded"}
+)
+
+
+def _mark_dropped(disposition: list[dict[str, Any]], beat_id: str) -> None:
+    for row in disposition:
+        if row["beat_id"] == beat_id and row["status"] == "written":
+            row["status"] = "dropped"
+
+
+def _disposition(
+    claims: Sequence[JudgedClaim], outcome: merge.MergeOutcome | None
+) -> list[dict[str, Any]]:
+    decided = {o.claim_id: o for o in (outcome.claims if outcome is not None else [])}
+    rows = []
+    for claim in claims:
+        o = decided.get(claim.draft.claim_id)
+        if o is None or o.outcome == "new":
+            status, beat_id, existing = "unmatched", None, None
+        elif o.outcome == "covered":
+            status, beat_id, existing = "absorbed", o.existing_beat_id, o.existing_claim_id
+        elif o.outcome in _CLAIM_WRITTEN:
+            status, beat_id, existing = "written", o.existing_beat_id, o.existing_claim_id
+        else:  # a kind no rule writes: treat as never written, never silently lost
+            status, beat_id, existing = "unmatched", o.existing_beat_id, o.existing_claim_id
+        rows.append(
+            {
+                "claim_id": claim.draft.claim_id,
+                "status": status,
+                "beat_id": beat_id,
+                "existing_claim_id": existing,
+                # WHERE THE FACT LIVES NOW, which is not `existing_claim_id`
+                # for a supersedes/superseded fold: there the matched claim is
+                # the one demoted to a dated belief and the new claim lands
+                # under a fresh id (merge.ClaimOutcome). An applier keying on
+                # the matched id would look at the wrong claim.
+                "applied_claim_id": o.applied_claim_id if o is not None else None,
+                # `absorbed` only: EVERY claim that states it together. A
+                # covered answer always names at least two, and the row's
+                # single id is just the first — a reviewer checking that one
+                # claim alone would not find the fact and might "correct" the
+                # absorption by writing a duplicate.
+                "covered_by": [list(ref) for ref in o.covered_by] if o is not None else [],
+            }
+        )
+    return rows
+
+
 # ── The runner ──────────────────────────────────────────────────────────────
 
 
@@ -569,6 +639,9 @@ class _Run:
         self.city_dir = self.data_root / job.city
         self.beats_path = self.city_dir / "beats.json"
         self.log_path = self.city_dir / "book-log.json"
+        #: Stories P6 could not place, by slug — one review item each, built
+        #: as the phase goes and written once the reruns settled.
+        self._held_stories: dict[str, _HeldStory] = {}
 
     # -- events --
     def emit(self, kind: str, payload: dict[str, Any]) -> None:
@@ -831,44 +904,88 @@ class _Run:
             shown=shown, held_back={"claims": len(beat.claims), "duration_sec": beat.duration_sec},
         )
 
-    def _queue_unmerged(
-        self, story: Story, claims: Sequence[JudgedClaim], reason: str,
-        narration: JudgedNarration,
+    def _hold_story(
+        self, unit_key: str, story: Story, claims: Sequence[JudgedClaim], reason: str,
+        narration: JudgedNarration, *, outcome: merge.MergeOutcome | None = None,
     ) -> None:
-        """A story P6 could not merge at all (the judge's answer never met the
-        contract, or its call failed): held as a merge item, nothing applied."""
-        shown = {
-            "story": _dump(story),
-            "claims": [c.draft.text for c in claims],
-            "judged_claims": [_dump(c) for c in claims],
-            "narration": narration.narration.text,
-            "reason": reason,
-        }
-        self.store.queue(
-            job_id=self.job.id, city=self.job.city, kind="merge_held",
-            story_slug=story.story_slug, place=story.place, reason=reason, shown=shown,
-            held_back={"claims": len(claims), "duration_sec": narration.duration_sec},
-        )
+        """Hold a story for review, ONCE per job however many times P6 could
+        not place it (owner ruling 2026-09-22). Two items for one story
+        carried overlapping claim sets — the dropped-merge item lists every
+        judged claim, including folds that landed in OTHER beats and are in
+        the corpus — so accepting both would write facts the corpus already
+        holds. One item, all its claims, every reason, and a per-claim
+        disposition saying what the corpus actually has."""
+        # The disposition describes the WHOLE story, not the subset this
+        # path happened to carry: a claim absorbed or folded away is exactly
+        # what an applier must not write again, and it is never in `kept`.
+        if outcome is not None and outcome.judged:
+            claims = list(outcome.judged)
+        # Keyed by UNIT and slug, as every other per-story map in P6 is:
+        # slugs are unique within a unit only, so two chunks can both hold a
+        # "how-the-museum-came-to-be". Keyed by slug alone, the second story
+        # would vanish into the first one's item.
+        key = f"{unit_key}:{story.story_slug}"
+        pending = self._held_stories.get(key)
+        if pending is None:
+            self._held_stories[key] = pending = _HeldStory(
+                story=story, claims=list(claims), narration=narration,
+                disposition=_disposition(claims, outcome),
+            )
+        elif len(claims) > len(pending.claims):
+            # The later hold knows about more of the story (the dropped-merge
+            # path carries every judged claim, the remainder path only what
+            # was left): keep the fuller set, never a subset, and rebuild the
+            # disposition over it — then re-apply every drop already recorded,
+            # which the rebuild would otherwise forget.
+            pending.claims = list(claims)
+            if outcome is not None:
+                pending.disposition = _disposition(claims, outcome)
+                for beat_id in pending.dropped_beats:
+                    _mark_dropped(pending.disposition, beat_id)
+        if outcome is not None:
+            pending.answered = outcome.answered or pending.answered
+            pending.judge_story = outcome.judge_story or pending.judge_story
+        if reason not in pending.reasons:
+            pending.reasons.append(reason)
 
-    def _queue_held_merge(
-        self, story: Story, claims: Sequence[JudgedClaim], outcome: merge.MergeOutcome,
-        narration: JudgedNarration,
-    ) -> None:
-        shown = {
-            "story": _dump(story),
-            "claims": [c.draft.text for c in claims],
-            "judged_claims": [_dump(c) for c in claims],
-            "narration": narration.narration.text,
-            "judge_story": outcome.judge_story,
-            "judge_claims": outcome.answered,
-            "reason": outcome.reason,
-        }
-        self.store.queue(
-            job_id=self.job.id, city=self.job.city, kind="merge_held",
-            story_slug=story.story_slug, place=story.place, reason=outcome.reason or "",
-            shown=shown,
-            held_back={"claims": len(claims), "duration_sec": narration.duration_sec},
-        )
+    def _drop_folds_into(self, beat_id: str, unit_key: str, story_slug: str) -> None:
+        """A reverted beat gave back every fold made into it: those claims are
+        no longer in the corpus, whatever else the story's folds did."""
+        pending = self._held_stories.get(f"{unit_key}:{story_slug}")
+        if pending is None:
+            return
+        pending.dropped_beats.add(beat_id)
+        _mark_dropped(pending.disposition, beat_id)
+
+    def _flush_held_stories(self) -> None:
+        """One `merge_held` item per story, after the reruns settled."""
+        for pending in self._held_stories.values():
+            reason = "; ".join(pending.reasons)
+            shown = {
+                "story": _dump(pending.story),
+                "claims": [c.draft.text for c in pending.claims],
+                "judged_claims": [_dump(c) for c in pending.claims],
+                "narration": pending.narration.narration.text,
+                "judge_story": pending.judge_story,
+                "judge_claims": pending.answered,
+                "claim_disposition": pending.disposition,
+                "reason": reason,
+            }
+            self.store.queue(
+                job_id=self.job.id, city=self.job.city, kind="merge_held",
+                story_slug=pending.story.story_slug, place=pending.story.place,
+                reason=reason, shown=shown,
+                held_back={
+                    # Ranked by what the corpus is MISSING: a written or
+                    # absorbed claim is already stated there.
+                    "claims": sum(
+                        1 for r in pending.disposition
+                        if r["status"] in ("unmatched", "dropped")
+                    ),
+                    "duration_sec": pending.narration.duration_sec,
+                },
+            )
+        self._held_stories.clear()
 
     # -- P6 --
     def _rerun(
@@ -929,7 +1046,9 @@ class _Run:
         # Who touched which place, per unit, and which stories merged into
         # which beat — so a merge dropped by a failed rerun counts as nothing.
         touched_by: dict[str, dict[str, set[str]]] = {}
-        merged_into: dict[str, list[tuple[str, Story, list[JudgedClaim], JudgedNarration]]] = {}
+        merged_into: dict[
+            str, list[tuple[str, Story, list[JudgedClaim], JudgedNarration, merge.MergeOutcome]]
+        ] = {}
         # Claims absorbed as `covered`, per unit: recorded in P6 and the book
         # log, not only the event stream.
         covered_by_unit: dict[str, list[dict[str, Any]]] = {}
@@ -974,10 +1093,13 @@ class _Run:
                     except BeatHeld as held:
                         # Slice 9 job 2 attempt 3 (2026-09-15): an invalid merge
                         # answer, twice, raised here and ended a ten-hour job.
-                        self._queue_unmerged(story, claims, held.reason, narration)
+                        self._hold_story(unit.key, story, claims, held.reason, narration)
                         continue
                     if outcome.held:
-                        self._queue_held_merge(story, claims, outcome, narration)
+                        self._hold_story(
+                            unit.key, story, claims, outcome.reason or "", narration,
+                            outcome=outcome,
+                        )
                         continue
                 folds = (
                     [o for o in outcome.claims if o.existing_beat_id is not None]
@@ -1002,7 +1124,7 @@ class _Run:
                     for target in sorted(targets):
                         changed_ids.add(target)
                         merged_into.setdefault(target, []).append(
-                            (unit.key, story, list(outcome.judged or claims), narration)
+                            (unit.key, story, list(outcome.judged or claims), narration, outcome)
                         )
                     rerun.extend(i for i in outcome.rerun if i not in rerun)
                 if outcome is None or outcome.story == "new":
@@ -1046,11 +1168,11 @@ class _Run:
                             continue
                         if model.arc_too_short(story.beat_type, len(kept)):
                             # Written, it would make P7 refuse the whole file.
-                            self._queue_unmerged(
-                                new_story, kept,
+                            self._hold_story(
+                                unit.key, new_story, kept,
                                 f"after folding, {len(kept)} claim is below the arc "
                                 f"minimum for beat_type {story.beat_type!r}",
-                                narration,
+                                narration, outcome=outcome,
                             )
                             continue
                     beat = assemble_record(self.job.city, new_story, kept, narration)
@@ -1063,10 +1185,10 @@ class _Run:
                         # buy a paid call for a byte-identical result.
                         renarrated, reason = self._rerun(beat, publishers)
                         if renarrated is None:
-                            self._queue_unmerged(
-                                new_story, kept,
+                            self._hold_story(
+                                unit.key, new_story, kept,
                                 f"its unmatched claims could not be re-narrated ({reason})",
-                                narration,
+                                narration, outcome=outcome,
                             )
                             continue
                         beat = renarrated
@@ -1078,11 +1200,11 @@ class _Run:
                         # Never a bare drop: its claims are judged and
                         # narrated, and a story never joins the beat it
                         # collides with any more (owner ruling 2026-09-22).
-                        self._queue_unmerged(
-                            new_story, kept,
+                        self._hold_story(
+                            unit.key, new_story, kept,
                             f"the place already holds a beat with this story's slug "
                             f"({beat.beat_id})",
-                            narration,
+                            narration, outcome=outcome,
                         )
                         continue
                     new_records.append(beat)
@@ -1103,18 +1225,22 @@ class _Run:
                     continue
                 reverted.add(b.beat_id)
                 kept.append(model.Beat.model_validate(raw_by_id[b.beat_id]))
-                for unit_key, story, story_claims, narration in merged_into.get(b.beat_id, []):
-                    self._queue_unmerged(
-                        story, story_claims,
+                for unit_key, story, story_claims, narration, dropped_outcome in merged_into.get(
+                    b.beat_id, []
+                ):
+                    self._hold_story(
+                        unit_key, story, story_claims,
                         f"merge into {b.beat_id} dropped: its re-narration was held ({reason})",
-                        narration,
+                        narration, outcome=dropped_outcome,
                     )
+                    self._drop_folds_into(b.beat_id, unit_key, story.story_slug)
                     if story.story_slug in applied:
                         applied.remove(story.story_slug)
                     touched_by[unit_key].get(story.place, set()).discard(story.story_slug)
             existing = kept
             if reverted:
                 self.emit("rerun_reverted", {"beat_ids": sorted(reverted)})
+        self._flush_held_stories()
         for unit_key, entry in per_unit.items():
             entry["pois_touched"] = sorted(
                 place for place, slugs in touched_by.get(unit_key, {}).items() if slugs

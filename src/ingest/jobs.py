@@ -125,7 +125,14 @@ class ReviewItem(BaseModel):
 
 
 def held_back_rank(item: ReviewItem) -> tuple[int, int]:
-    """Content held back, most first: claims, then seconds of narration."""
+    """Content held back, most first: claims, then seconds of narration.
+
+    `claims` means what the item is holding back FROM the corpus, which is
+    not the same as the story's claim count: a `merge_held` item counts
+    only the claims the corpus is missing (unmatched or dropped), since its
+    folded and absorbed claims are already stated there (2026-09-22). Every
+    other kind holds its whole story, so the two coincide.
+    """
     return (item.held_back.get("claims", 0), item.held_back.get("duration_sec", 0))
 
 

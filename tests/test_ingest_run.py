@@ -19,7 +19,18 @@ from pathlib import Path
 
 import pytest
 
-from src.ingest import jobs, judge_claims, judge_narration, llm, model, narrate, run
+from src.ingest import (
+    decompose,
+    group,
+    jobs,
+    judge_claims,
+    judge_narration,
+    llm,
+    merge,
+    model,
+    narrate,
+    run,
+)
 from src.ingest import unit as unit_mod
 from tests import ingest_job_script as script_mod
 
@@ -826,18 +837,27 @@ def test_a_reverted_merge_is_queued_as_the_incoming_story_and_counts_as_nothing(
         {"beat_ids": [script_mod.ORIGINS_ID]}
     ]
     items = store.undecided(script_mod.CITY)
-    # TWO items for one story, both about the same claims (a consequence of
-    # the 2026-09-22 ruling, recorded for the owner): its remainder is one
-    # claim, below the anecdote's arc minimum, AND its folds were dropped
-    # when the re-narration was held.
-    assert [(i.kind, i.story_slug) for i in items] == [
-        ("merge_held", incoming_slug), ("merge_held", incoming_slug)
-    ]
-    reasons = sorted(i.reason for i in items)
-    assert any("arc" in r for r in reasons) and any("dropped" in r for r in reasons)
-    [dropped] = [i for i in items if "dropped" in i.reason]
-    kept = [judge_claims.JudgedClaim.model_validate(c) for c in dropped.shown["judged_claims"]]
+    # ONE item for the story (owner ruling 2026-09-22), carrying BOTH
+    # reasons — its remainder is one claim, below the anecdote's arc
+    # minimum, AND its folds were dropped when the re-narration was held —
+    # and a per-claim disposition, so whatever applies this later writes
+    # only what the corpus is missing. Two items with overlapping claims
+    # would have written facts the corpus already holds.
+    assert [(i.kind, i.story_slug) for i in items] == [("merge_held", incoming_slug)]
+    [item] = items
+    assert "arc" in item.reason and "dropped" in item.reason
+    kept = [judge_claims.JudgedClaim.model_validate(c) for c in item.shown["judged_claims"]]
     assert sorted(c.draft.text for c in kept) == sorted(c["text"] for c in script_mod.CLAIMS)
+    assert item.shown["claim_disposition"] == [
+        # its fold into the origins beat was reverted with the beat
+        {"claim_id": "c01", "status": "dropped", "beat_id": script_mod.ORIGINS_ID,
+         "existing_claim_id": "c01", "applied_claim_id": "c01", "covered_by": []},
+        # never written: the story's own beat was never assembled
+        {"claim_id": "c02", "status": "unmatched", "beat_id": None, "existing_claim_id": None,
+         "applied_claim_id": "c02", "covered_by": []},
+        {"claim_id": "c03", "status": "dropped", "beat_id": script_mod.ORIGINS_ID,
+         "existing_claim_id": "c02", "applied_claim_id": "c02", "covered_by": []},
+    ]
     p6 = store.phase_output(job.id, "P6")
     assert p6["applied"] == []
     assert p6["changed"] is False
@@ -1101,7 +1121,14 @@ def test_a_new_story_too_small_after_folding_is_queued_and_a_fully_folded_one_va
     assert [len(c["sources"]) for c in records[0]["claims"]] == [2, 2]
     items = store.undecided(script_mod.CITY)
     assert [(i.kind, i.story_slug) for i in items] == [("merge_held", script_mod.STORY_SLUG)]
-    assert items[0].shown["claims"] == [script_mod.OPENED_1939["text"]]
+    # The item carries the WHOLE story with a per-claim disposition (owner
+    # ruling 2026-09-22), so an applier writes only the claim the corpus is
+    # missing — the two that folded are already in it.
+    assert items[0].shown["claims"] == [c["text"] for c in script_mod.CLAIMS]
+    assert [(r["claim_id"], r["status"]) for r in items[0].shown["claim_disposition"]] == [
+        ("c01", "written"), ("c02", "unmatched"), ("c03", "written")
+    ]
+    assert items[0].held_back["claims"] == 1
     assert "arc" in items[0].reason
 
     snap, store, records, client = run_with(
@@ -1937,3 +1964,163 @@ def test_a_covered_claim_is_absorbed_and_its_story_keeps_the_rest(tmp_path):
     assert [c["text"] for c in records[2]["claims"]] == remainder
     assert store.undecided(script_mod.CITY) == []
     assert model.validate(records, chunks_root=chunks.parent) == []
+
+
+def test_a_held_story_says_which_claims_the_corpus_already_holds(tmp_path):
+    """The disposition an applier needs (owner ruling 2026-09-22). This
+    story's completion claim is ABSORBED as covered — stated in full by the
+    sidebar's two claims, written nowhere — while its other two claims are
+    unmatched, and the story cannot be written because its slug already
+    names a beat at the place. Accepting the item must add only what the
+    corpus is missing: writing an absorbed claim would put a fact the
+    corpus already states into a second beat, which is exactly the
+    duplication the merge exists to prevent."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    twin = script_mod._beat(
+        f"{script_mod.CITY}/{model.slug(script_mod.PLACE)}/{script_mod.STORY_SLUG}",
+        script_mod.STORY_SLUG, script_mod.STORY_TITLE, "anecdote",
+        [script_mod._lp_claim("c01", script_mod.ADDRESS),
+         script_mod._lp_claim("c02", script_mod.HOURS_2023)],
+        script_mod.VISITING_NARRATION,
+    )
+    script_mod.seed_beats(data_root, [*script_mod.folding_records(), twin])
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(script_mod.unit(chunks))
+    # The story lost its completion claim to the absorption, so its beat is
+    # narrated again over the two it kept — before the slug collision stops
+    # it being written at all.
+    remainder = [script_mod.COLLECTING["text"], script_mod.OPENED_1939["text"]]
+    scripted["answers"]["author"].append(
+        script_mod.narration_answer(script_mod.REMAINDER_NARRATION)
+    )
+    scripted["batch_answers"].update(
+        script_mod.sentence_verdicts(remainder, script_mod.REMAINDER_NARRATION)
+    )
+    scripted["answers"]["merge_judge"] = [
+        script_mod.merge_answer(
+            "new", "",
+            [
+                _claim_verdict("c01", "new", reason="no claim mentions collecting"),
+                _claim_verdict("c02", "new", reason="no claim mentions 1939"),
+                _claim_verdict("c03", "covered", "b2.c01+b2.c02"),
+            ],
+        )
+    ]
+
+    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+
+    [item] = store.undecided(script_mod.CITY)
+    assert "already holds a beat with this story's slug" in item.reason
+    assert item.shown["claim_disposition"] == [
+        {"claim_id": "c01", "status": "unmatched", "beat_id": None, "existing_claim_id": None,
+         "applied_claim_id": "c01", "covered_by": []},
+        {"claim_id": "c02", "status": "unmatched", "beat_id": None, "existing_claim_id": None,
+         "applied_claim_id": "c02", "covered_by": []},
+        # BOTH claims that state it together, not just the first: checking
+        # c01 alone would not find the fact.
+        {"claim_id": "c03", "status": "absorbed", "beat_id": script_mod.COMPLETION_ID,
+         "existing_claim_id": "c01", "applied_claim_id": "c01",
+         "covered_by": [[script_mod.COMPLETION_ID, "c01"], [script_mod.COMPLETION_ID, "c02"]]},
+    ]
+    # Ranked by what is actually missing, not by how many claims it has.
+    assert item.held_back["claims"] == 2
+
+
+def test_two_units_holding_the_same_slug_get_an_item_each(tmp_path):
+    """Slugs are unique within a UNIT, not a job: two chunks of one book can
+    both hold a story called the same thing (the slug-collision path exists
+    because that happens). Keyed by slug alone the second story would
+    vanish into the first one's item — its claims, place and narration
+    discarded with no event — so the hold is keyed by unit AND slug
+    (judge, 2026-09-22)."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    running = run._Run(job, store, llm.MockClient(sink), data_root=data_root)
+    story = group.Story(
+        title=script_mod.STORY_TITLE, story_slug=script_mod.STORY_SLUG,
+        place=script_mod.PLACE, new_poi=False, lenses=["hidden_history"],
+        beat_type="anecdote", enrichment=group.Enrichment(),
+        claim_ids=["c01"],
+    )
+    claims = [
+        judge_claims.JudgedClaim(
+            draft=decompose.ClaimDraft(
+                claim_id="c01", text=script_mod.COLLECTING["text"], kind="event",
+                source=unit.source(script_mod.COLLECTING["span"]),
+            ),
+            verdict=model.Verdict(judge_model="m", entailed=True, bound_to="x" * 64),
+        )
+    ]
+    narration = judge_narration.JudgedNarration(
+        narration=model.Narration(
+            text=script_mod.NARRATION, claims_hash="h" * 64, author_model="a",
+            verdict=model.NarrationVerdict(
+                judge_model="m", sentences_entailed=1, sentences_total=1, bound_to="b" * 64
+            ),
+        ),
+        duration_sec=10, review=model.Review(held=False, reason=None),
+    )
+
+    running._hold_story("chunk-07", story, claims, "first chunk", narration)
+    running._hold_story("chunk-08", story, claims, "second chunk", narration)
+    running._flush_held_stories()
+
+    items = store.undecided(script_mod.CITY)
+    assert [(i.story_slug, i.reason) for i in items] == [
+        (story.story_slug, "first chunk"), (story.story_slug, "second chunk")
+    ]
+
+
+def test_a_superseding_fold_says_where_the_fact_lives_now(tmp_path):
+    """`existing_claim_id` names the claim that was MATCHED; for a
+    supersedes or superseded fold that claim is the one demoted to a dated
+    belief, and the new fact lands under a fresh id in the same beat. The
+    row carries both, so an applier never reads the wrong claim (judge,
+    2026-09-22)."""
+    unit = script_mod.unit(script_mod.chunk_dir(tmp_path))
+    claims = [
+        judge_claims.JudgedClaim(
+            draft=decompose.ClaimDraft(
+                claim_id="c01", text=script_mod.COMPLETED["text"], kind="event",
+                source=unit.source(script_mod.COMPLETED["span"]),
+            ),
+            verdict=model.Verdict(judge_model="m", entailed=True, bound_to="x" * 64),
+        )
+    ]
+
+    def outcome_with(kind: str, applied: str) -> merge.MergeOutcome:
+        return merge.MergeOutcome(
+            story_slug="s", place=script_mod.PLACE, judge_story="new", judge_model="m",
+            story="new", beat_id=None, judged=list(claims),
+            claims=[
+                merge.ClaimOutcome(
+                    claim_id="c01", verdict="conflict",
+                    existing_beat_id=script_mod.ORIGINS_ID, existing_claim_id="c02",
+                    outcome=kind, applied_claim_id=applied, new_value="1960",
+                    existing_value="1959", reason="different year",
+                )
+            ],
+        )
+
+    rows = {
+        kind: run._disposition(claims, outcome_with(kind, applied))[0]
+        for kind, applied in (
+            ("contested", "c02"), ("supersedes", "c03"), ("superseded", "c03")
+        )
+    }
+    assert rows["contested"]["status"] == "written"
+    assert (rows["contested"]["existing_claim_id"], rows["contested"]["applied_claim_id"]) == (
+        "c02", "c02"
+    )
+    for kind in ("supersedes", "superseded"):
+        assert rows[kind]["status"] == "written", kind
+        # the matched claim is NOT where the fact lives now
+        assert rows[kind]["existing_claim_id"] == "c02", kind
+        assert rows[kind]["applied_claim_id"] == "c03", kind
