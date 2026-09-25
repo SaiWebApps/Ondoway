@@ -60,9 +60,11 @@ recap, the close. Cut steps still appear as ranking cards.
   mid-rebuild, so the demo tests the concept, not the engine. Scripts and citations in
   `scripts.md`; research in `sources/`. It is recorded there that this
   audio may never be presented as engine output.
-- **Real audio is required before the pilot.** Hearing the story at the place is the core
-  value; a placeholder button leaves nothing to experience. Build with placeholders (browser
-  speech is acceptable while building), then voice every slot with the project's real TTS.
+- **Real audio on the path every traveller hears.** Hearing the story at the place is the
+  core value; a placeholder button leaves nothing to experience. The founder voiced 10 of the
+  20 slots himself (2026-09-25): every stop's main story, the first two Memorial "Tell me
+  more" stories, Trinity's, both Federal Hall phones, and Deep dive chapters 1-2. He ruled the
+  rest not needed; if a traveller reaches one, it plays in the browser's built-in voice.
 - **Skip advice, I Spy prompts:** placeholder text marked TODO while building; the founder
   writes the real ones before the pilot (verdicts must be ones he would stand behind). Two
   Liberty beats already support "crown tickets sell out months ahead."

@@ -5,9 +5,9 @@
 // Markers carried over from script.md:
 //   TODO ✎  = founder writes it before the pilot (shown on screen as a visible TODO).
 //   ⚑       = proposed by Claude, accepted by the founder 2026-09-18.
-// Story text is real `script_body` from data/new_york/beats.json — chosen, never edited.
-// `audio: null` falls back to browser speech. Before the pilot, voice every story with the
-// project's real TTS (src/audio/provider.py) and set `audio: "audio/<beat_id>.mp3"`.
+// Story text is the owner's own scripts (../scripts.md is the authority) — never edit it here.
+// `audio: "audio/<slot>.mp3"` plays the owner's recording; `audio: null` falls back to
+// browser speech (10 slots, by the owner's ruling of 2026-09-25 — not needed for the pilot).
 // `secs` is the target length from script.md (what the scrubber shows) — or, once a slot has
 // a recording, that recording's real length, since Federal Hall's shared clock runs on it.
 
@@ -125,12 +125,12 @@ window.CONTENT = {
       text: "Among the oaks is a Callery pear known as the Survivor Tree. Recovery workers found it in the rubble in October 2001. Its roots were damaged, and its branches had been burned and broken. The city's Parks Department took it away to care for it. It returned to the site in 2010. Look at the contrast between the older, rough wood and the smoother branches growing from it. Those newer limbs developed after the damage. The tree's recovery took years. You can see some of that history in the way it has grown.",
     },
     trinity: {
-      poi: "Trinity Church", lens: "historic_arch", secs: 65, audio: null,
+      poi: "Trinity Church", lens: "historic_arch", secs: 54, audio: "audio/trinity.mp3",
       source: "owner revision 2026-09-24 — see scripts.md",
       text: "Look up at Trinity's spire, then at the buildings around it. When this church was completed in 1846, its spire was the highest point on New York's skyline. Ships used it as a landmark. This is the third Trinity Church on the site. The first burned in 1776. The second developed serious structural problems after heavy snow, and architect Richard Upjohn was brought in to assess it. He recommended replacing it. The pointed arches and tall spire of his new church drew on medieval English architecture. But one of his choices caused a very contemporary disagreement. He provided a deep space for the altar and choir, with choir stalls. Some people thought that arrangement looked too Roman Catholic for an Episcopal church. The stalls initially went unused. It's easy to see this as a settled piece of old New York. When it was new, people were still arguing over how a service should be conducted inside it.",
     },
     trinity_more: {
-      poi: "Trinity Church", lens: "historic_arch", secs: 30, audio: null,
+      poi: "Trinity Church", lens: "historic_arch", secs: 24, audio: "audio/trinity_more.mp3",
       source: "owner revision 2026-09-24 — see scripts.md",
       text: "Take a moment with the bronze doors at the Broadway entrance. The figures are modeled in relief, so the surface has depth as well as detail. These doors brought together architect Richard Morris Hunt and sculptor Karl Bitter. William Waldorf Astor commissioned them in memory of his father. Hunt connects this stop to the harbor: he also designed the Statue of Liberty's pedestal. When you see the statue, take a look at the building beneath her as well.",
     },
@@ -150,7 +150,7 @@ window.CONTENT = {
       text: "The first Congress, meeting in the earlier Federal Hall, sent twelve proposed amendments to the states in 1789. Ten became the Bill of Rights. Another proposed that a change to congressional pay should have to wait until after an election for the House of Representatives. It didn't win enough support then. Nearly two centuries later, a college student named Gregory Watson began campaigning for states to ratify it. In 1992, it finally became the Twenty-seventh Amendment. That means one proposal from the Congress that met here was still unfinished business when people were using personal computers.",
     },
     bowling: {
-      poi: "Bowling Green", lens: "hidden_history", secs: 50, audio: null,
+      poi: "Bowling Green", lens: "hidden_history", secs: 42, audio: "audio/bowling.mp3",
       source: "owner revision 2026-09-24 — see scripts.md",
       text: "This little park is Bowling Green. The iron fence was put up in 1771, partly to protect a statue of King George the Third standing inside. Five years later, on July ninth, the Declaration of Independence was read to Washington's troops in New York. Soldiers and civilians came here and pulled the king's statue down. The fence survived, though it was damaged and later repaired. Look at the tops of the posts. Their original ornaments are gone. Accounts differ about whether those ornaments were crowns or balls, so the familiar story about cutting off royal crowns needs that qualification. The statue's destruction is well documented. This was a place where the break with Britain became something people could see happening in the street.",
     },

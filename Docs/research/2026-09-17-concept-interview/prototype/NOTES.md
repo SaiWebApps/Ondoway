@@ -103,9 +103,9 @@ Built and clicked through in the in-app browser, no console errors:
   lists (`stopEchoes`, `echoThingsByStop`), stickers, must-see "why" lines.
 - ✎ Skip advice verdict (`skipAdvice`; drafts shown to the founder in the interviewer view).
 - ✎ Third I Spy find, and a review of all child copy (`ispy`).
-- **Real audio** for every story and Deep dive chapter: voice each `text` with the project's
-  TTS (`src/audio/provider.py`) and set `audio: "audio/<beat_id>.mp3"`. Browser speech is
-  the placeholder until then.
+- Audio: DONE as far as it goes — 10 of 20 slots carry the founder's own recordings in
+  `audio/`; he ruled the other 10 not needed (2026-09-25), and they play in browser speech if
+  a traveller reaches them (Memorial "more" 3-6, Federal Hall's "more", Deep dive 3-7).
 - Photo gaps accepted 2026-09-18: no free Charging Bull (echo changed), no wide modern Trinity,
   no Met exterior (Saturday uses Central Park), recap photos are stand-ins, not one family.
 - Caveat from the brief stands: NYC beats are commercial-guidebook text — fine for private

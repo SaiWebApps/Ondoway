@@ -520,6 +520,8 @@ choice (4.1); line length (5.1); Echo reactions and the echo left (5.3–5.4); I
 ## Content still owed before the pilot
 
 - ✎ Skip advice verdicts (2.4), the third I Spy find (6.1), review of all child copy.
-- Voiced audio for every story slot, with the project's real TTS.
+- ~~Voiced audio for every story slot~~ — done 2026-09-25: the founder recorded 10 of 20 slots
+  himself (every main story, both Federal Hall phones, Deep dive 1-2) and ruled the rest not
+  needed; they fall back to browser speech. See `prototype/NOTES.md`.
 - Photos: family placeholders (0.1, 7.2, 7.3) and the Castle Clinton "camera" scene
   (5.3), public-domain or licensed.
