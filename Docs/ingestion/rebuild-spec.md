@@ -1910,6 +1910,85 @@ the job log is watched, and a batch still unfinished 24 hours after submission v
 that errors or is voided is recorded as such, and the owner decides; it is not re-run, and a
 `--resume` from its saved phase files is a re-run, allowed only by a new owner go after R0 checks the
 sandbox. No re-score under this registration.
+*P1 keep-judgments measurement — result (2026-09-24/25, owner go "go on the P1 measurement"; HEAD
+6f15cea; sandbox `data-ingest/sandboxes/p1keep-r1`, job `a58da458…`, status `stopped`, exit 0; R0 PASS —
+live `556830a5342e178c` before and after, nothing outside the sandbox newer than the marker; backup
+rsynced; score `$HOME/ondoway-ingest-backup-2026-09-13/p1-evaluative/p1keep-r1-score.json` by the
+pinned scorer `0e7000a3…`; labels in `p1-evaluative/k2/`, verdicts sha256 prefix `ffa75c61627c95c5`).*
+The P1 batch sat about 3h25m in Anthropic's queue (within the 24-hour rule); the Mac slept about four
+minutes mid-run with no harm, since batches run server-side. **Spend: metered $2.5107 against expected
+$1.3114**, 1.9 times over and inside the $17.87 ceiling. Approximately, from the run's own per-phase call averages: P1
+$0.7283 (12 calls), P2 $0.8503, and P3 the remainder, about $0.93 (282 calls, a third more claims to
+judge). P2 made 3 sync Opus calls where 2 were estimated, averaging 9,686 output tokens each against an
+estimate of 1,500 (`group.py`), about $0.70 of the $1.20 overrun. The likely cause is thinking, which
+counts in P2's 64k output cap; that is unverified. P2's row is the estimate most wrong, and the one to
+re-measure before the next budget.
+**Scored as registered** (claim ids below are this run's unless marked job B). (K1) 20 of 29 measured
+losses carried — PASS (bar 15). One of the 20 is c199, the book-attribution claim described below;
+without it, 19 would still pass: "mesmerizing",
+"famed" (twice), "stunning … perfectly preserved and brilliantly colorful", "architectural-looking",
+"famed architect … majestic", "beloved", "long-overdue", "quick yet effective", "Teutonic master",
+"transporting", "delirious", "masterpiece", "handsome", "exquisite", "nifty", "absorbing", "excellent",
+"terrific", "small". The nine not matched, read and not re-scored, by job B's
+ids: c186 "dazzling", c100 "rippingly sentimental", c81 "truer-than-life", c89 "master", c31
+"fascinating", c35 "rare", c153 "insipid", c158 "towering", c05 "whiz-bang". Some are carried in a
+synonym or under another span, which K1 cannot see: both labellers note this run's c100 rewording
+"truer-than-life" as "strikingly lifelike" (batch 6, item 24), which P3 kept. P3 refused two other
+rewordings ("rippingly" into "rousing", "light-kissed" into "light-filled"). (K2) Zero claims
+use a prompt example word the unit lacks, and all 253 kept claims are labelled SOURCED by both
+labellers (`claude-opus-5-5`, `claude-fable-5-1`, neither the pipeline's P1 author or P3 judge): 0
+INVENTED, 0 UNDECIDED, all 56 control answers right, no batch void — PASS. (K3) 253 kept (≥148), 2
+dropped (≤28), 0 stories held (≤2) — PASS; P1 wrote 252 claims (job B 188), P3 refused 18 (job B 55).
+**Consequence, as registered: the rule stands, and the P1 gate lifts.** The merge-side gate registered
+above (the merge prompt change) still holds for P6. Reported, not scored, for the owner:
+**the redo loop leaks book attribution.** Three claims credit a judgment to the book's writer, which
+`_NO_BOOK_CLAIMS` forbids. The leak gate (`gates.APPARATUS_RE`, which matches "the author") dropped
+two: c37 "…which the author calls fascinating." and c124 "The author describes … as \"sentimental but
+rippingly fun.\"". Those two are exactly K3's 2 dropped. One escaped: c199 "The writer characterizes
+the Guggenheim's building as a masterpiece dating from 1959.", because the pattern has no "the writer".
+All three arose in the refuse-and-redo loop, none in P1's first pass: each first try stated the
+judgment plainly, P3 refused it, and the redo credited the book's author (c37, c124) or writer (c199).
+c37's first try was "The Bloomberg Connects app carries fascinating commentary by Frick curator Aimee
+Ng."; c124's was "… is sentimental but rousing fun."; c199's was "… is regarded as a masterpiece",
+refused because the passage says "only that the author describes it as such". P3's refusal reasons
+steer the redo toward crediting the book, so widening the pattern alone would treat the symptom. The
+next P1 spend carries a known leak (3 of 255 claims, 1 escaping). Whether to fix the redo path, the
+leak pattern, or both, before that spend, is the owner's call. The rule also sometimes writes the judgment as its own claim ("The Frick Collection is
+beloved in New York City.") rather than inside a fact, the shape option (b) described. The claim count
+rose by about half (164 to 253), which raises every later phase's cost per book.
+*The merge judge keeps a judgment the new claim adds — built test-first, committed UNMEASURED ($0,
+2026-09-24; owner: "go in the order of your suggested order", item 2, the El Greco fix).* The El
+Greco false fold is not in the live corpus — job B only ever ran in sandboxes, and the live file's
+El Greco claims are worded differently — so there is nothing to correct by hand. The defect is the
+merge judge's: its prompt said "Wording never matters; only the facts do", and it read "seminal"
+(job B, and again in the all-story replay) and "huge" (cov2-r8) as wording. And the P1 rule above
+will put more judgments into claims, which a `same` fold would strip straight back out. The rule now
+reads: a judgment of importance, size, quality or reputation "is part of what a claim states, never
+its wording, so a new claim that adds one is "new", never "same" or "covered"", with a Paris worked
+example ("The celebrated Eiffel Tower was completed in 1889." is "new"). The prompt names no measured
+word, no El Greco and no seminal, which a test enforces. Mutants, each red and restored: the example
+removed, the rule removed, a measured word inserted into the prompt. A calibration plant,
+`adds_a_judgment`, is the `same_fact` plant's paraphrase plus one judgment the record's claims never
+make ("… the museum's iconic building finished."): `same_fact` must fold and `adds_a_judgment` must
+stay `new`, so the pair differs only by the judgment. Its signature stays silent (0.111 against 0.7),
+so the class measures the judge alone; a mutant that makes the plant match the claim's words fails
+the fixture test (`0.889 < 0.7`). The mock run catches it 1/1, and the mock baseline gains that row;
+the live baseline is untouched. The live calibration estimate is now $1.2457. **Not measured, and so
+gated:** this prompt changes what every P6 answer means, including the Guggenheim `covered` fold
+measured at 10/10 under the old wording. No P6 run — replay or job — runs until one live calibration
+run (`make ingest-calibrate-live ARGS="--yes"`, never `--update-baseline`) is registered and has a
+result with: every one of the eleven `detector: "merge"` classes caught — `adds_a_judgment` (the
+rule works), `same_fact` (it has not turned every paraphrase `new`) and, above all, `covered_union`
+and `covered_union_elsewhere` (the rule forbids `covered` for a claim that adds a judgment, and
+over-applied it would turn a correct `covered` into `new`, which is not a WRONG FOLD and so is caught
+by nothing else, since every live merge baseline is null) — and no WRONG FOLD. The 10/10 Guggenheim
+`covered` result is re-opened: it was measured under the old prompt, and it is not counted again until
+a P6 replay under this one reproduces it. Unmeasured and recorded: a claim whose judgment differs
+from the existing claim's ("beloved" against "panned") will most likely come back `new` (both kept,
+the disagreement unreported), since `conflict` covers names, dates, numbers, places and causes only;
+two claims carrying the same judgment in different words may come back `new` (a duplicate, not a
+loss); and a new claim that drops the existing claim's judgment should still be `same`. No plant pins
+any of these three.
 
 ### Slice 11: Cleanup
 

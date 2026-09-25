@@ -924,6 +924,51 @@
           "kind": "state"
         }
       }
+    },
+    {
+      "class": "adds_a_judgment",
+      "detector": "merge",
+      "note": "Owner ruling 2026-09-24: a judgment of importance, size, quality or reputation is part of what a claim states. The same_fact plant's paraphrase plus one judgment the record's claims never make ('iconic'), so a judge that folds it `same` drops the judgment (the El Greco 'seminal' and c162 'huge' folds); it must stay `new`. Paired with same_fact, which must fold: the two differ only by the judgment. The signature stays silent, so the class measures the judge alone.",
+      "story": {
+        "title": "Neither lived to see it",
+        "place": "Solomon R. Guggenheim Museum",
+        "beat_type": "establishing",
+        "lenses": [
+          "historic_arch",
+          "modern_design",
+          "visual_art"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "Construction of the Guggenheim was finally completed in 1959.",
+          "kind": "event",
+          "span": "Construction was finally completed in 1959"
+        },
+        {
+          "claim_id": "c02",
+          "text": "Both Wright and Guggenheim had passed away before the museum's construction was completed.",
+          "kind": "event",
+          "span": "after both Wright and\nGuggenheim had passed away"
+        }
+      ],
+      "planted": {
+        "claim_id": "c02",
+        "second_source": {
+          "source_id": "second-source",
+          "chunk": "calibration",
+          "as_of": 2024,
+          "rights_basis": "own_work",
+          "text": "Neither the architect nor the patron lived to see the museum's iconic building finished.",
+          "kind": "event"
+        },
+        "expected": "new"
+      }
     }
   ]
 }

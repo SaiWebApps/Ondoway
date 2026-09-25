@@ -620,3 +620,30 @@ def test_p1_keeps_the_passages_own_judgments_in_the_claim():
         rule = rule[: rule.index("\n\n")]
         leaked = set(re.findall(r"[a-z]+", rule.lower())) & lost_words
         assert not leaked, f"the rule's examples name measured words: {sorted(leaked)}"
+
+
+def test_the_merge_judge_never_folds_away_a_judgment_the_new_claim_adds():
+    """Owner ruling 2026-09-24: a `same` fold keeps the existing claim's words,
+    so a new claim that adds a judgment of importance, size, quality or
+    reputation loses it. Job B folded Frommer's "a seminal work by El Greco"
+    into "displays works by El Greco" (and did again on replay), and r8 folded
+    "a huge spiral ramp" into "has a spiral ramp" — the prompt's "wording never
+    matters" let the judge read a judgment as wording. A judgment is part of
+    what a claim states; a claim that adds one is `new`, never `same` or
+    `covered`. The worked example stays in Paris, and no measured word, no
+    El Greco and no seminal appear in the rules, so calibration cannot score a
+    copy of them."""
+    import re
+
+    measured = {"seminal", "huge", "beloved", "masterpiece", "transporting", "exquisite",
+                "famed", "stunning", "delirious", "insipid", "terrific", "excellent"}
+    for rendered in (prompts.MERGE_PROMPT, prompts.MERGE_REDO_PROMPT):
+        assert (
+            "a judgment of importance, size, quality or reputation is part of what a claim "
+            "states, never its wording" in rendered
+        )
+        assert 'a new claim that adds one is "new", never "same" or "covered"' in rendered
+        assert '"The celebrated Eiffel Tower was completed in 1889." is "new"' in rendered
+        assert "El Greco" not in rendered
+        words = set(re.findall(r"[a-z]+", rendered.lower()))
+        assert not words & measured, sorted(words & measured)

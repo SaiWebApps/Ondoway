@@ -53,12 +53,16 @@ _MERGE_RULES = (
     "\"same\"; \"The Eiffel Tower was finished in 1887.\" is \"conflict\" (1887 vs "
     "1889); \"The Eiffel Tower was built for the 1889 World's Fair.\" is \"new\" (it "
     "shares the year, not the fact); \"Gustave Eiffel's company built the tower, "
-    "completing it in 1889.\" is \"new\" (it says more than the existing claim). If a "
+    "completing it in 1889.\" is \"new\" (it says more than the existing claim); "
+    "\"The celebrated Eiffel Tower was completed in 1889.\" is \"new\" (it adds a "
+    "judgment the existing claim does not make). If a "
     "second existing claim says \"The Eiffel Tower is made of wrought iron.\", then \"The "
     "wrought-iron Eiffel Tower was completed in 1889.\" is \"covered\" (the two together "
     "state it; neither alone does).\n"
-    "- Wording never matters; only the facts do. A newer source is never right by "
-    "default: report the difference, never resolve it."
+    "- Wording never matters; only the facts do - and a judgment of importance, size, "
+    "quality or reputation is part of what a claim states, never its wording, so a new "
+    'claim that adds one is "new", never "same" or "covered". A newer source is never '
+    "right by default: report the difference, never resolve it."
 )
 
 _MERGE_SHAPE = (

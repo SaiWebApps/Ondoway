@@ -48,6 +48,7 @@ CLASSES = (
     "recombined_union",
     "negated_fact",
     "covered_union_elsewhere",
+    "adds_a_judgment",
 )
 
 
