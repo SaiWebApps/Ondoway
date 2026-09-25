@@ -2016,6 +2016,37 @@ the disagreement unreported), since `conflict` covers names, dates, numbers, pla
 two claims carrying the same judgment in different words may come back `new` (a duplicate, not a
 loss); and a new claim that drops the existing claim's judgment should still be `same`. No plant pins
 any of these three.
+*Live calibration under the judgment-keeping merge prompt — registered before any spend
+(2026-09-24).* One run, `make ingest-calibrate-live ARGS="--yes"` (never `--update-baseline`), at
+HEAD 73a0acf plus this registration commit. Printed estimate $1.2478 (prices of 2026-06-24; the
+$1.2457 above predates the longer restate prompt of 73a0acf); ceiling 1.5x, $1.87, read after
+the run from the harness's own `spend: actual=` line (it does not stop the run midway). If that
+line is missing or says the actual is a LOWER BOUND, the spend is read from the provider's usage
+console before any next step. The live corpus `data-ingest/new_york/beats.json` is sha
+`556830a5342e178c` before and must be after (the harness writes nothing outside its own output);
+the backup rsync runs before the spend. **The bar, merge only:** all eleven `detector: "merge"`
+classes caught 1/1 — `contested_value`, `superseded_belief`, `shared_element`, `same_fact`,
+`covered_union`, `shared_union`, `adds_a_date`, `recombined_union`, `negated_fact`,
+`covered_union_elsewhere`, `adds_a_judgment` — and no row marked WRONG FOLD. It is scored only
+from the printed table's caught/total column, its WRONG FOLD markers and its wrong-folds section,
+never from the exit code: the live baseline is STALE, every merge entry in it is null and three
+merge classes are absent from it, so `regressions()` skips all eleven and a run that misses every
+one still exits 0. A merge row printed 0/1 for any reason, HELD included (a truncated or empty
+P6 answer becomes a `transport:` hold, not a crash), is a FAIL. **PASS** lifts the
+P6 gate for the one next step, the Guggenheim P6 replay, which carries its own registration.
+**FAIL** on any merge class: no P6 run, no retry, no re-score; the failing class's raw answer is
+read and reported to the owner with the cause, and the next step is theirs. A miss on
+`covered_union` or `covered_union_elsewhere` is read as the new rule over-applied (a correct
+`covered` turned `new`); a miss on `same_fact` as every paraphrase turned `new`. **Reported, not
+scored against this bar:** the ten non-merge classes. They run in the same harness and cost
+$0.33 of the estimate (printed rows $0.2978 for P1/P3 and $0.0324 for the omission check;
+merge $0.9177), and the P3 restate change (73a0acf) touches the `judge_claims` path, so a
+`judge_claims` miss is reported as prominently as a merge miss. `stated_relation` failed 0/1
+live on 2026-09-18 and nothing has changed its prompt since, so a repeat miss is expected there
+and is not new. Any non-merge miss, `REGRESSION` line or exit 1 is reported as a finding and does
+not block the P6 gate, which asks only whether the merge judge still merges. VOID applies only
+when the process exits without printing the report table (a provider error escaping the run);
+it is reported, and a re-run needs a fresh owner go.
 
 ### Slice 11: Cleanup
 
