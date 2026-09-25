@@ -390,7 +390,7 @@ The words helped shape the meaning many people now associate with Liberty. The m
 
 **Script**
 
-When the Statue of Liberty was unveiled in 1886, her copper surface was brown. The familiar green developed gradually as the metal reacted with its surroundings. By 1906, she had acquired her green patina.
+When the Statue of Liberty was unveiled in 1886, her copper surface was brown. The familiar green developed gradually as the metal reacted with its surroundings. Within about twenty-five years, she had acquired her green patina.
 
 For immigrants arriving through New York, the view changed over those years. What happened after they passed the statue also depended on how they had traveled.
 
@@ -406,13 +406,14 @@ As you cross the harbor, keep the two islands distinct. Liberty Island holds the
 
 [NPS: Liberty Island Cultural Landscape](https://www.nps.gov/articles/000/stli-liberty-island-650003.htm); [NPS: Ellis Island FAQ](https://home.nps.gov/elis/faqs.htm); [NPS: Statue of Liberty and Ellis Island Foundation Document](https://www.nps.gov/stli/learn/management/upload/STLI_Signatures-Deleted_508.pdf). The final contrast is interpretation, not an assertion that all arrivals understood the monument in the same way.
 
-> **Open point on the 1906 date (flagged 2026-09-24, text left as the owner wrote it).** None
-> of the three pages above discusses the patina. NPS "Preserving a Symbol" puts full
-> oxidation at roughly 25–30 years from 1886, i.e. 1911–1916, and this repo's own research
-> agrees (`sources/facts-liberty.md`: brown in the 1880s, blotchy through the 1890s, fully
-> green by roughly the 1910s). There *is* a documented 1906 episode — Congress debating
-> whether to paint her, because she had gone green — which would support the date if cited.
-> Either add that citation or soften to "within about twenty-five years" before recording.
+**Patina timing, settled 2026-09-24 (owner).** The line read "By 1906" and no page cited here
+discusses the patina. NPS "Preserving a Symbol" puts full oxidation at about 25 to 30 years
+from 1886, its FAQ says roughly 30, and this repo's own research agrees (brown in the 1880s,
+blotchy through the 1890s, fully green by roughly the 1910s) — see `sources/facts-liberty.md`,
+facts 194–196. Softened to "within about twenty-five years", which takes the fast end of that
+range: the sources support 25 to 30, so this is the earliest defensible reading rather than
+the middle of it. The documented 1906 debate about painting the statue is the citation to add
+if anyone wants the sharper date back.
 
 ---
 

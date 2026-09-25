@@ -1,11 +1,6 @@
 # Recording script — read these, name the files exactly
 
-Generated from `scripts.md` (owner revision, 2026-09-24). Edit that file, not this one.
-
-**Open item before you record.** In `deepdive_7`, the line "By 1906, she had acquired her
-green patina" is not supported by the sources listed for that beat — NPS implies roughly
-1911–1916, though a documented 1906 debate about painting the statue may vindicate the date.
-Owner's ruling pending. Either settle it or drop that sentence before voicing this block.
+Generated from `scripts.md` by `make-recording-script.py`. Edit the scripts, not this file.
 
 One file per block. **Name each file after the id in its heading**, with `.m4a`, `.mp3` or
 `.wav`. Read unhurried, about 150 words a minute. **Each blank line is a pause.**
@@ -14,7 +9,7 @@ These are individually selectable beats, not a sequence that must all play. `fh_
 `fh_dan` are the two treatments of Federal Hall heard side by side, so keep their delivery
 identical — any difference in energy reads as one person's story being better.
 
-Total: 20 blocks, about 18:50 of audio.
+Total: 20 blocks, about 18:51 of audio.
 
 | File | What it is | Length |
 |---|---|---|
@@ -37,7 +32,7 @@ Total: 20 blocks, about 18:50 of audio.
 | `deepdive_4` | How a copper statue moves | 1:13 |
 | `deepdive_5` | The readers who helped finish the pedestal | 1:17 |
 | `deepdive_6` | How the poem became part of the statue | 1:07 |
-| `deepdive_7` | Seeing Liberty, then entering America | 1:07 |
+| `deepdive_7` | Seeing Liberty, then entering America | 1:08 |
 
 Pronunciation: **Arad** AH-rahd · **Callery** CAL-er-ee · **repoussé** ruh-poo-SAY ·
 **Isère** ee-ZAIR · **Laboulaye** lah-boo-LAY · **Bartholdi** bar-TOL-dee · **Upjohn** UP-john ·
@@ -344,9 +339,9 @@ The words helped shape the meaning many people now associate with Liberty. The m
 
 ---
 
-## deepdive_7 · Seeing Liberty, then entering America · 1:07
+## deepdive_7 · Seeing Liberty, then entering America · 1:08
 
-When the Statue of Liberty was unveiled in 1886, her copper surface was brown. The familiar green developed gradually as the metal reacted with its surroundings. By 1906, she had acquired her green patina.
+When the Statue of Liberty was unveiled in 1886, her copper surface was brown. The familiar green developed gradually as the metal reacted with its surroundings. Within about twenty-five years, she had acquired her green patina.
 
 For immigrants arriving through New York, the view changed over those years. What happened after they passed the statue also depended on how they had traveled.
 
