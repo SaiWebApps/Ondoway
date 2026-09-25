@@ -213,3 +213,10 @@
   color: #f6f4f0; font: 600 12px var(--body); white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,.4);
 }
 .cam .cam-ask .ms { font-size: 17px; color: #cfe1fb; }
+
+/* The transcript starts open (so a traveller can follow a chapter they can't hear), and on
+   a 648px phone the hero photo plus the note leave it no room — it fell off the bottom.
+   While it is open the photo shrinks to a strip (Ask / Look around stay on it) and the note
+   goes; closing the text restores both. */
+.scr.dd:has(#dd-tx:not([hidden])) .gp-art { height: 64px; margin: 8px 0 10px; }
+.scr.dd:has(#dd-tx:not([hidden])) .dd-note { display: none; }

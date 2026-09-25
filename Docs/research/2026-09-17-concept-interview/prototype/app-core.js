@@ -33,6 +33,18 @@ const Player = (function () {
     return vs.find((v) => /Samantha|Google US English|Ava|Allison|Aaron/i.test(v.name)) || vs[0] || null;
   }
   if (synth) { voice = pickVoice(); synth.onvoiceschanged = () => { voice = pickVoice(); }; }
+  // Every recording is pulled into memory at load. A plain static server sends no
+  // Accept-Ranges header, so the browser can't seek a file it is still downloading — and
+  // switching phones at Federal Hall joins the other story partway in. A blob always seeks.
+  const blobs = {};
+  (function preload(o) {
+    if (!o || typeof o !== "object") return;
+    if (typeof o.audio === "string" && !(o.audio in blobs)) {
+      const url = o.audio; blobs[url] = null;
+      fetch(url).then((r) => (r.ok ? r.blob() : null)).then((b) => { if (b) blobs[url] = URL.createObjectURL(b); }).catch(() => {});
+    }
+    Object.values(o).forEach(preload);
+  })(window.CONTENT);
   const split = (t) => t.match(/[^.!?]+[.!?]+["”'’)]*\s*|[^.!?]+$/g).map((s) => s.trim()).filter(Boolean);
 
   function progress() {
@@ -90,10 +102,15 @@ const Player = (function () {
     const mode = story.audio ? "audio" : synth && synth.getVoices().length ? "speech" : "silent";
     cur = { story, sent, before, total: acc, cps, mode, idx: start, playing: true, onEnd, onTick };
     if (mode === "audio") {
-      audioEl = new Audio(story.audio);
+      audioEl = new Audio(blobs[story.audio] || story.audio);
       audioEl.onended = () => finish();
       audioEl.onerror = () => { cur.mode = synth ? "speech" : "silent"; audioEl = null; speakFrom(0); };
-      if (from > 0) audioEl.currentTime = from;
+      // A seek on a file that hasn't loaded yet is dropped, and it plays from 0 — so wait
+      // for its metadata (the first time you switch to the other phone at Federal Hall).
+      if (from > 0) {
+        const el = audioEl, seek = () => { el.currentTime = Math.min(from, el.duration || from); };
+        if (el.readyState >= 1) seek(); else el.addEventListener("loadedmetadata", seek, { once: true });
+      }
       audioEl.play().catch(() => {});
     } else speakFrom(start);
     timer = setInterval(tick, 150);

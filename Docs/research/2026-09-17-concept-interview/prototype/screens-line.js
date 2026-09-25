@@ -78,7 +78,7 @@ App.def("5.2", {
       <div class="g-player dd-player">
         <div class="gp-top">
           <div class="gp-meta"><div class="dd-now gp-prog"><span id="dd-lens" class="gp-lens"></span> <span id="dd-poi"></span></div></div>
-          <button class="np-text gp-txt" id="dd-text" data-log="Text (transcript) toggle">${icon("notes")}Text</button>
+          <button class="np-text gp-txt on" id="dd-text" data-log="Text (transcript) toggle">${icon("notes")}Text</button>
         </div>
         <div class="gp-scrub"><span class="gp-track"><i id="dd-bar"></i></span></div>
         <div class="gp-ctrls">
@@ -86,7 +86,7 @@ App.def("5.2", {
           <button class="play" id="dd-play" data-log="Deep dive: play/pause"><span class="ms fill" data-playicon>pause</span></button>
           <button class="c" id="dd-next" data-log="Deep dive: next part">${icon("skip_next")}</button>
         </div>
-        <div class="np-tx" id="dd-tx" hidden></div>
+        <div class="np-tx" id="dd-tx"></div>
       </div>
     </div>`);
     const tx = $("#dd-tx", maya);

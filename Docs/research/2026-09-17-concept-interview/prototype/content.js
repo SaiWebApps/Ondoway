@@ -8,7 +8,8 @@
 // Story text is real `script_body` from data/new_york/beats.json — chosen, never edited.
 // `audio: null` falls back to browser speech. Before the pilot, voice every story with the
 // project's real TTS (src/audio/provider.py) and set `audio: "audio/<beat_id>.mp3"`.
-// `secs` is the target length from script.md (what the scrubber shows).
+// `secs` is the target length from script.md (what the scrubber shows) — or, once a slot has
+// a recording, that recording's real length, since Federal Hall's shared clock runs on it.
 
 window.CONTENT = {
   party: [
@@ -89,17 +90,17 @@ window.CONTENT = {
   // Stories. Keyed by slot id. Real beats, never edited.
   stories: {
     memorial: {
-      poi: "9/11 Memorial", lens: "hidden_history", secs: 35, audio: null,
+      poi: "9/11 Memorial", lens: "hidden_history", secs: 30, audio: "audio/memorial.mp3",
       source: "owner revision 2026-09-24 — see scripts.md",
       text: "These two pools mark the places where the Twin Towers stood. Each is nearly an acre, with water falling down all four sides. Follow it toward the middle. It drops again, into a smaller opening whose bottom you can't see from here. That was central to architect Michael Arad's idea: water keeps entering the space, but the space never appears to fill. He called it “absence made visible.” The names around the edges bring that enormous loss back to individual people. We'll take a closer look at how they were placed.",
     },
     memorial_before: {
-      poi: "9/11 Memorial", lens: "hidden_history", secs: 55, audio: null,
+      poi: "9/11 Memorial", lens: "hidden_history", secs: 46, audio: "audio/memorial_before.mp3",
       source: "owner revision 2026-09-24 — see scripts.md",
       text: "Before the towers, this was a neighborhood of small shops known as Radio Row. People came here for radios, televisions, and electronic parts they couldn't find elsewhere. At first, the shopkeepers welcomed the idea of a World Trade Center. It was supposed to go on the other side of Lower Manhattan, near the East River. More business nearby sounded promising. Then the project moved here. The change was tied to a deal between New York and New Jersey: the Port Authority would build the trade center and take over the struggling Hudson and Manhattan Railroad, now PATH. For the merchants, that meant losing their premises. They protested and challenged the project in court, but the clearance went ahead. So this site had already changed completely once before the towers became the New York skyline people remembered.",
     },
     memorial_dig: {
-      poi: "9/11 Memorial", lens: "hidden_history", secs: 65, audio: null,
+      poi: "9/11 Memorial", lens: "hidden_history", secs: 55, audio: "audio/memorial_dig.mp3",
       source: "owner revision 2026-09-24 — see scripts.md",
       text: "Building the World Trade Center meant digging down to bedrock beside the Hudson River. Before workers could excavate the foundations, they had to keep the surrounding groundwater out. They built a concrete wall underground, roughly three feet thick and seventy feet deep. It enclosed the excavation like the sides of a bathtub. The method sounds back to front. Workers first dug a narrow trench and filled it with a liquid clay mixture to stop the sides collapsing. Then they lowered in reinforcing steel and pumped concrete into the bottom, pushing the clay mixture out. The earth removed from inside that enclosure helped create Battery Park City, across West Street. After the towers collapsed, engineers feared the damaged wall could fail and allow flooding into the site and nearby tunnels. It held, and crews worked to stabilize it during the recovery. A preserved section is inside the museum. What looks like a rough concrete wall was one of the things that made building here possible.",
     },
@@ -134,12 +135,12 @@ window.CONTENT = {
       text: "Take a moment with the bronze doors at the Broadway entrance. The figures are modeled in relief, so the surface has depth as well as detail. These doors brought together architect Richard Morris Hunt and sculptor Karl Bitter. William Waldorf Astor commissioned them in memory of his father. Hunt connects this stop to the harbor: he also designed the Statue of Liberty's pedestal. When you see the statue, take a look at the building beneath her as well.",
     },
     fh_maya: {
-      poi: "Federal Hall", lens: "historic_arch", secs: 60, audio: null,
+      poi: "Federal Hall", lens: "historic_arch", secs: 53, audio: "audio/fh_maya.mp3",
       source: "owner revision 2026-09-24 — see scripts.md",
       text: "With Washington standing outside, you might expect this to be the building where he became president. That happened on this site, but in an earlier building. This one opened in 1842 as a customs house, where duties on imported goods were collected. Look at the columns and the triangular shape above them. The exterior takes its cue from the Parthenon in Athens. Inside, a domed rotunda draws on Roman architecture. Those references gave the business of collecting revenue a public face: a young country presenting itself through the architecture of the ancient world. The materials had a practical purpose too. Marble walls, brick vaults, and a roof of marble slabs helped protect the building from fire. Ithiel Town and Alexander Jackson Davis supplied the winning design; John Frazee supervised construction as it evolved. The result is a building whose appearance tells you about the government's ambitions, while its fabric tells you what it needed to protect.",
     },
     fh_dan: {
-      poi: "Federal Hall", lens: "war_conflict", secs: 60, audio: null,
+      poi: "Federal Hall", lens: "war_conflict", secs: 50, audio: "audio/fh_dan.mp3",
       source: "owner revision 2026-09-24 — see scripts.md",
       text: "George Washington took his first presidential oath here on April thirtieth, 1789. But the building behind his statue came later. The original Federal Hall had a balcony overlooking Wall Street. Washington stepped onto it wearing a dark brown suit made in America, and took the oath in front of the crowd below. That building was demolished in 1812. A large piece of the balcony floor was saved. For years, it was displayed on the grounds of Bellevue Hospital. In 1889, a hundred years after the inauguration, it came back here. Federal Hall preserves that stone today. It even has a later coating of cement, applied so an inscription could be added. So the most direct physical link to the inauguration is a piece of flooring that was moved across the city and brought home again. The grand columns came more than fifty years after Washington's oath.",
     },
@@ -197,10 +198,10 @@ window.CONTENT = {
     title: "The copper woman",
     note: "Seven chapters, about twelve minutes — then it's quiet until the boat.",
     chapters: [
-      { poi: "Castle Clinton", lens: "war_conflict", secs: 75, audio: null, title: "When Castle Clinton stood offshore",
+      { poi: "Castle Clinton", lens: "war_conflict", secs: 62, audio: "audio/deepdive_1.mp3", title: "When Castle Clinton stood offshore",
         source: "owner revision 2026-09-24 — see scripts.md",
         text: "Castle Clinton looks firmly attached to Manhattan now. When it was built, you had to cross a wooden causeway and a drawbridge to reach it. The fort stood on rocks offshore. The connection to land was about two hundred feet long. Later landfill joined it to the Battery. Its original name was the Southwest Battery. Built between 1808 and 1811, it was part of New York's preparations for another possible war with Britain. The curved brownstone walls were eight feet thick, with openings for twenty-eight cannon. Each could fire a thirty-two-pound ball roughly a mile and a half across the water. None was fired in combat during the War of 1812. The British never attacked the city. There's another piece of that harbor defense beneath the Statue of Liberty. Her pedestal sits inside Fort Wood, an eleven-pointed fort completed in the same period. When you reach Liberty Island, look for those low, angled walls around the pedestal. They're older than the statue, and they help explain why that island was already in federal hands when a French sculptor came looking for a place to build." },
-      { poi: "Castle Clinton", lens: "social_change", secs: 85, audio: null, title: "A concert hall becomes an arrival hall",
+      { poi: "Castle Clinton", lens: "social_change", secs: 74, audio: "audio/deepdive_2.mp3", title: "A concert hall becomes an arrival hall",
         source: "owner revision 2026-09-24 — see scripts.md",
         text: "This fort has held some very different crowds. After its military use ended, it became Castle Garden, an entertainment venue. In 1850, more than five thousand people attended the American debut of the Swedish singer Jenny Lind here. P. T. Barnum had promoted her arrival with advertisements and ticket auctions. By the time she stepped onto the stage, the concert was an event in its own right. Then, in 1855, Castle Garden became an immigrant receiving station. Some features of the concert hall survived the change, including decorative details and a balcony. Beneath them, arrivals registered their names, exchanged money, and bought railway tickets for the next part of their journey. That last step could be complicated. One historical account preserved by the Park Service describes a Swedish traveler asking for a ticket to Farmington. There were numerous places with that name. Only after more questions, and checking letters in his luggage, did they establish that he meant Farmington in Minnesota. Over eight million immigrants passed through Castle Garden during its years as a depot. When processing ended here in 1890, it moved temporarily to the nearby Barge Office. Ellis Island opened in 1892. So the immigration history associated with the islands also belongs here, in this small building at the edge of Manhattan." },
       { poi: "Statue of Liberty", lens: "social_change", secs: 60, audio: null, title: "The detail at Liberty's feet",

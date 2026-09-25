@@ -109,9 +109,9 @@ function walkScaffold(el, { levers = true, closeX = true, where = null } = {}) {
         <div class="np-top gp-top">
           <div class="np-tile gp-art">${icon("headphones")}</div>
           <div class="gp-meta"><div class="np-lens gp-lens"></div><div class="np-name gp-title"></div><div class="np-stop gp-prog"></div></div>
-          <button class="np-text gp-txt" data-log="Text (transcript) toggle">${icon("notes")}Text</button>
+          <button class="np-text gp-txt on" data-log="Text (transcript) toggle">${icon("notes")}Text</button>
         </div>
-        <div class="np-tx" hidden></div>
+        <div class="np-tx"></div>
         <div class="gp-scrub"><span class="t0 t">0:00</span><span class="scrub gp-track"><i></i><b></b></span><span class="t1 t">0:00</span></div>
         <div class="np-ctl gp-ctrls">
           <button class="np-prev c" data-log="Player: previous">${icon("skip_previous")}</button>
