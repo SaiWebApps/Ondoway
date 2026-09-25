@@ -11,8 +11,12 @@ class is caught when the reason list names the planted gate) or the P6
 merge (`merge.merge` of the planted second source against the record's own
 claims as the beat the corpus holds; caught when the planted claim reaches
 the planted outcome, contested, supersedes or same — or, for shared_element,
-when nothing folds at all) — and tallies caught/missed
-per class. A class whose detector lands in a later slice (state-as-event
+when nothing folds at all; for `adds_judgment`, only when the planted
+judgment is among the words code found dropped) or the P4+P5 narration of
+a beat (`narration`: `narrate.narrate` then `judge_narration.judge_narration`,
+as the runner re-narrates a merged beat; caught when exactly one sentence
+carries the planted anchor and that sentence carries the planted judgment)
+— and tallies caught/missed per class. A class whose detector lands in a later slice (state-as-event
 has no detector until the owner rules) is reported `pending`, never
 `missed`.
 
@@ -32,17 +36,20 @@ seen is not.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from src.ingest import gates, judge_claims, llm, merge, model, narrate
+from src.ingest import gates, judge_claims, judge_narration, llm, merge, model, narrate
 from src.ingest.decompose import ClaimDraft, UnitHeld
 from src.ingest.group import Enrichment, Story
 from src.ingest.unit import Unit, load_unit
 
-DETECTORS = ("judge_claims", "gates", "omissions", "narration_gates", "merge", "pending")
+DETECTORS = (
+    "judge_claims", "gates", "omissions", "narration_gates", "merge", "narration", "pending"
+)
 
 
 @dataclass(frozen=True)
@@ -312,7 +319,8 @@ def scripted_merge_answer(record: DefectRecord, unit: Unit) -> llm.MockAnswer:
             "beat_id": "",
             "claims": [
                 {"claim_id": "n01", "verdict": "new", "existing_claim_id": "",
-                 "new_value": "", "existing_value": "", "reason": record.note}
+                 "new_value": "", "existing_value": "", "judgments": [],
+                 "reason": record.note}
             ],
         }
         return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
@@ -324,7 +332,8 @@ def scripted_merge_answer(record: DefectRecord, unit: Unit) -> llm.MockAnswer:
             "claims": [
                 {"claim_id": "n01", "verdict": "covered",
                  "existing_claim_id": "+".join(f"b1.{cid}" for cid in planted["claim_ids"]),
-                 "new_value": "", "existing_value": "", "reason": record.note}
+                 "new_value": "", "existing_value": "", "judgments": [],
+                 "reason": record.note}
             ],
         }
         return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
@@ -336,7 +345,26 @@ def scripted_merge_answer(record: DefectRecord, unit: Unit) -> llm.MockAnswer:
             "claims": [
                 {"claim_id": "n01", "verdict": "same",
                  "existing_claim_id": f"b1.{planted['claim_id']}",
-                 "new_value": "", "existing_value": "", "reason": record.note}
+                 "new_value": "", "existing_value": "", "judgments": [],
+                 "reason": record.note}
+            ],
+        }
+        return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
+    if planted["expected"] == "adds_judgment":
+        # adds_a_judgment / covered_adds_a_judgment: the fact is the record's,
+        # the judgment is listed, and code keeps the claim (ADR-0003).
+        covering = "claim_ids" in planted
+        answer = {
+            "story": "new" if covering else "same",
+            "beat_id": "" if covering else "b1",
+            "claims": [
+                {"claim_id": "n01", "verdict": "covered" if covering else "same",
+                 "existing_claim_id": (
+                     "+".join(f"b1.{cid}" for cid in planted["claim_ids"]) if covering
+                     else f"b1.{planted['claim_id']}"
+                 ),
+                 "new_value": "", "existing_value": "", "judgments": [planted["judgment"]],
+                 "reason": record.note}
             ],
         }
         return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
@@ -352,11 +380,48 @@ def scripted_merge_answer(record: DefectRecord, unit: Unit) -> llm.MockAnswer:
                 "existing_claim_id": f"b1.{planted['claim_id']}",
                 "new_value": str(values[planted["second_source"]["source_id"]]),
                 "existing_value": str(values[unit.source_id]),
+                "judgments": [],
                 "reason": record.note,
             }
         ],
     }
     return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
+
+
+def _judged_claims(record: DefectRecord, unit: Unit) -> list[judge_claims.JudgedClaim]:
+    """The record's claims as P3 would pass them on: every one entailed."""
+    return [
+        judge_claims.JudgedClaim(
+            draft=draft,
+            verdict=model.Verdict(
+                judge_model=llm.ROLE_MODEL["claim_judge"],
+                entailed=True,
+                bound_to=model.bind(draft.text, draft.source.span),
+            ),
+        )
+        for draft in _drafts(record, unit)
+    ]
+
+
+def scripted_narration(
+    record: DefectRecord, unit: Unit, narration: str | None = None
+) -> tuple[dict[str, list[llm.MockAnswer]], dict[str, llm.MockAnswer]]:
+    """What a CORRECT author and narration judge would answer for a
+    narration record: the planted narration (or `narration`), every
+    sentence entailed. Returns (sync answers, batch answers by custom_id)."""
+    text = narration if narration is not None else record.planted["narration"]
+    draft = narrate.draft_from(text, _judged_claims(record, unit), llm.ROLE_MODEL["author"])
+    answers = {"author": [llm.MockAnswer(
+        text=json.dumps({"narration": text}), model_id=llm.ROLE_MODEL["author"]
+    )]}
+    batch = {
+        judge_narration.sentence_custom_id(draft, index, 1): llm.MockAnswer(
+            text=json.dumps({"entailed": True, "reason": "stated by the claims"}),
+            model_id=llm.ROLE_MODEL["narration_judge"],
+        )
+        for index in range(len(judge_narration.sentences(text)))
+    }
+    return answers, batch
 
 
 def _arm(client: llm.ModelClient, records: list[DefectRecord], unit: Unit) -> llm.CostEstimate:
@@ -376,7 +441,14 @@ def _arm(client: llm.ModelClient, records: list[DefectRecord], unit: Unit) -> ll
     merge_units = [
         record.planted["second_source"]["text"] for record in records if record.detector == "merge"
     ]
-    if not claim_texts and not omission_units and not merge_units:
+    # P4 and P5 priced per claim text, the runner's own proxy for sentences.
+    narration_texts = [
+        claim["text"]
+        for record in records
+        if record.detector == "narration"
+        for claim in record.claims
+    ]
+    if not claim_texts and not omission_units and not merge_units and not narration_texts:
         raise ValueError("nothing to estimate: no judged record among those given")
     estimates: list[llm.CostEstimate] = []
     if claim_texts:
@@ -385,6 +457,9 @@ def _arm(client: llm.ModelClient, records: list[DefectRecord], unit: Unit) -> ll
         estimates.append(client.estimate(omission_units, list(judge_claims.OMISSIONS_PLAN)))
     if merge_units:
         estimates.append(client.estimate(merge_units, list(merge.P6_PLAN)))
+    if narration_texts:
+        estimates.append(client.estimate(narration_texts, list(narrate.P4_PLAN)))
+        estimates.append(client.estimate(narration_texts, list(judge_narration.P5_PLAN)))
     return llm.CostEstimate(
         units=sum(e.units for e in estimates),
         rows=[row for e in estimates for row in e.rows],
@@ -442,6 +517,36 @@ EVIDENCE_EVENTS: frozenset[str] = frozenset({
 })
 
 
+def _told_once(
+    record: DefectRecord, unit: Unit, client: llm.ModelClient, record_event: llm.EventSink
+) -> _Detection:
+    """`told_once`: the record's beat narrated as the runner re-narrates a
+    merged beat — P4, then P5, scoring the text P5 returns (it may rewrite
+    it). Caught iff exactly one sentence carries the anchor and that one
+    carries the judgment as a whole word; a P5 hold is a miss. The judged
+    narration is always in the details, for the eye: a second telling
+    without the anchor is not scored (spec, `told_once`'s blind spot)."""
+    story = _story(record)
+    claims = _judged_claims(record, unit)
+    try:
+        draft = narrate.narrate(story, claims, client, record_event)
+        judged = judge_narration.judge_narration(story, draft, claims, client, record_event)
+    except narrate.BeatHeld as held:
+        return _Detection(False, f"beat held: {held.reason}", held=True)
+    text = judged.narration.text
+    anchor, judgment = record.planted["anchor"], record.planted["judgment"]
+    carrying = [s for s in judge_narration.sentences(text) if anchor in s]
+    note = f"{len(carrying)} sentence(s) with {anchor!r}"
+    caught = len(carrying) == 1
+    if caught and not re.search(rf"(?<!\w){re.escape(judgment)}(?!\w)", carrying[0], re.I):
+        caught = False
+        note += f"; {judgment!r} missing from it"
+    if judged.review.held:
+        caught = False
+        note += f"; held at P5: {judged.review.reason}"
+    return _Detection(caught, note, details=(f"narration: {text}",), held=judged.review.held)
+
+
 def _detect(
     record: DefectRecord,
     unit: Unit,
@@ -474,6 +579,8 @@ def _detect(
             evidence(kind, {"class": record.defect_class, **payload})
 
     planted_id = record.planted.get("claim_id")
+    if record.detector == "narration":
+        return _told_once(record, unit, client, record_event)
     if record.detector == "merge":
         story, judged = _second_source(record, unit)
         try:
@@ -485,6 +592,18 @@ def _detect(
         expected = record.planted["expected"]
         if expected == "new":  # shared_element: caught only when nothing folds
             hit = bool(outcome.claims) and all(c.outcome == "new" for c in outcome.claims)
+        elif expected == "adds_judgment":  # kept beside its match, its own word dropped
+            word = record.planted["judgment"].lower()
+            hit = any(
+                c.outcome == "adds_judgment"
+                and word in (w.lower() for w in c.judgments_dropped)
+                and (
+                    sorted(ref[1] for ref in c.covered_by) == sorted(record.planted["claim_ids"])
+                    if "claim_ids" in record.planted
+                    else c.existing_claim_id == planted_id
+                )
+                for c in outcome.claims
+            )
         elif expected == "covered":  # covered_union: covered by exactly the planted claims
             hit = any(
                 c.outcome == "covered"
@@ -499,6 +618,7 @@ def _detect(
         note = "; ".join(
             f"{c.claim_id} {c.outcome} "
             + ("+".join(ref[1] for ref in c.covered_by) or c.existing_claim_id or "-")
+            + (f" [{', '.join(c.judgments_dropped)}]" if c.judgments_dropped else "")
             for c in outcome.claims
         )
         # A miss that folded something CHANGED the corpus; a miss where every
@@ -595,6 +715,10 @@ def run(
     confirm: Callable[[llm.CostEstimate], bool] | None = None,
     scripted: Callable[[DefectRecord, Unit], dict[str, llm.MockAnswer]] = scripted_answers,
     scripted_merge: Callable[[DefectRecord, Unit], llm.MockAnswer] = scripted_merge_answer,
+    scripted_narration: Callable[
+        [DefectRecord, Unit],
+        tuple[dict[str, list[llm.MockAnswer]], dict[str, llm.MockAnswer]],
+    ] = scripted_narration,
     wrap_live: Callable[[llm.ModelClient], llm.ModelClient] | None = None,
 ) -> Report:
     """Run every record through its detector and tally per class.
@@ -631,6 +755,7 @@ def run(
             "judge_claims",
             "omissions",
             "merge",
+            "narration",
         )
         if record.detector == "pending":
             rows.append(ClassRow(record.defect_class, "pending", None, None, False, record.note))
@@ -647,6 +772,11 @@ def run(
             per_record_client = mock
         elif client == "mock" and record.detector == "merge":
             mock = llm.MockClient(sink, answers={"merge_judge": [scripted_merge(record, unit)]})
+            _arm(mock, [record], unit)
+            per_record_client = mock
+        elif client == "mock" and record.detector == "narration":
+            answers, batch = scripted_narration(record, unit)
+            mock = llm.MockClient(sink, answers=answers, batch_answers=batch)
             _arm(mock, [record], unit)
             per_record_client = mock
         found = _detect(record, unit, per_record_client, sink)
@@ -707,7 +837,7 @@ def format_report(report: Report) -> str:
         lines.extend(f"  {defect_class}: {detail}" for defect_class, detail in details)
     if report.client == "mock":
         lines.append(
-            "MOCK: the judge_claims, omissions and merge classes are scripted from the "
+            "MOCK: the judge_claims, omissions, merge and narration classes are scripted from the "
             "fixture's planted block — a harness check, not a measurement; only "
             "the gates and narration_gates classes are measured. Run "
             "`make ingest-calibrate-live` to measure."

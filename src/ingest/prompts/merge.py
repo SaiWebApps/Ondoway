@@ -4,10 +4,11 @@ Docs/ingestion/rebuild-spec.md §3 (P6), §1 D7/D8 and CONTEXT.md ("Stated
 value", "Contested claim", "Supersedes") pin the shapes below. The merge
 judge sees the new story's claim TEXTS (with kind and as-of year) and every
 candidate beat's claims (id, text, kind, status, as-of years, stated
-values) — never a span, never the unit — and decides only two things: is
-this story one an existing beat already tells, and for each new claim, does
-an existing claim state the same fact, the same fact with a different value,
-or nothing like it. The deterministic signature hint is never shown to it:
+values) — never a span, never the unit — and decides: is this story one an
+existing beat already tells, and for each new claim, does an existing claim
+state the same fact, the same fact with a different value, or nothing like
+it — on the facts alone; and it lists each new claim's judgment words, which
+the code, not the judge, keeps (ADR-0003). The deterministic signature hint is never shown to it:
 a judge that reads the hint is not independent of it (D7).
 
 Slots are substituted with plain `str.replace`, never `str.format`, for
@@ -32,14 +33,16 @@ _MERGE_RULES = (
     'stated; "new" if no existing beat tells it. "beat_id" names that beat by its '
     "handle (b1, b2, ...), and is empty for a new story.\n"
     '- For every new claim, in order: "same" when a claim of ANY beat at this place '
-    "states EVERYTHING the new claim states, with the same values - even when the story "
+    "states EVERYTHING the new claim states, with the same values, its judgments set "
+    "aside - even when the story "
     "is new, because two books cut the same facts into different stories. A new claim "
     'that says more than the existing claim, or something else, is not "same": sharing '
     "a date, a name, a place or a word is not sharing a fact. \"conflict\" when the two "
     "state the same fact with a different name, date, number, place or cause. "
     '"covered" when no single claim states everything the new claim states, but two or '
     "more claims at this place TOGETHER state everything the new claim states, with the "
-    'same values: name every one of them in "existing_claim_id", joined by "+" '
+    "same values, its judgments set aside: name every one of them in "
+    '"existing_claim_id", joined by "+" '
     '(b1.c02+b1.c05); sharing words across claims is not sharing a fact, and a claim '
     'with a different value in any part is "conflict" with that claim, never "covered". '
     '"new" when no claim at this place states it, alone or together. "existing_claim_id" '
@@ -47,28 +50,31 @@ _MERGE_RULES = (
     "(a new claim that repeats another new claim is judged on its own against the "
     'existing beats), and is empty for "new". "new_value" and "existing_value" quote the '
     "value each side states - a date, a number, a name - as short strings, and are empty "
-    'for "new" and "covered".\n'
+    'for "new" and "covered". "judgments" lists, word for word as the new claim says '
+    "them, the new claim's judgments of importance, size, quality or reputation, and "
+    "is empty when it makes none. A measured or ranked size (\"the tallest\", \"400 feet\", "
+    "\"the largest in the city\") is a fact, never a judgment: it can conflict.\n"
     "- Worked example, from another city: an existing claim says \"The Eiffel Tower was "
     "completed in 1889.\" A new claim \"Work on the Eiffel Tower ended in 1889.\" is "
     "\"same\"; \"The Eiffel Tower was finished in 1887.\" is \"conflict\" (1887 vs "
     "1889); \"The Eiffel Tower was built for the 1889 World's Fair.\" is \"new\" (it "
     "shares the year, not the fact); \"Gustave Eiffel's company built the tower, "
     "completing it in 1889.\" is \"new\" (it says more than the existing claim); "
-    "\"The celebrated Eiffel Tower was completed in 1889.\" is \"new\" (it adds a "
-    "judgment the existing claim does not make). If a "
+    "\"The celebrated Eiffel Tower was completed in 1889.\" is \"same\" with "
+    "judgments [\"celebrated\"] (the same fact, plus a judgment). If a "
     "second existing claim says \"The Eiffel Tower is made of wrought iron.\", then \"The "
     "wrought-iron Eiffel Tower was completed in 1889.\" is \"covered\" (the two together "
     "state it; neither alone does).\n"
-    "- Wording never matters; only the facts do - and a judgment of importance, size, "
-    "quality or reputation is part of what a claim states, never its wording, so a new "
-    'claim that adds one is "new", never "same" or "covered". A newer source is never '
-    "right by default: report the difference, never resolve it."
+    "- Wording never matters; only the facts do. A judgment is not wording, and it is "
+    "not a fact for the verdict either: decide every verdict on the facts alone, and "
+    'list every judgment in "judgments" - the merge keeps it, whatever the verdict. A '
+    "newer source is never right by default: report the difference, never resolve it."
 )
 
 _MERGE_SHAPE = (
     '{"story": "same", "beat_id": "b1", "claims": [{"claim_id": "c01", '
     '"verdict": "same", "existing_claim_id": "b1.c02", "new_value": "1959", '
-    '"existing_value": "1959", "reason": "..."}]}'
+    '"existing_value": "1959", "judgments": [], "reason": "..."}]}'
 )
 
 MERGE_PROMPT = (
@@ -90,6 +96,7 @@ _CLAIM_ITEM_SCHEMA: dict = {
         "existing_claim_id": {"type": "string"},
         "new_value": {"type": "string"},
         "existing_value": {"type": "string"},
+        "judgments": {"type": "array", "items": {"type": "string"}},
         "reason": {"type": "string"},
     },
     "required": [
@@ -98,6 +105,7 @@ _CLAIM_ITEM_SCHEMA: dict = {
         "existing_claim_id",
         "new_value",
         "existing_value",
+        "judgments",
         "reason",
     ],
     "additionalProperties": False,

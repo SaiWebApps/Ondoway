@@ -250,6 +250,7 @@ def _claim_verdict(
     new_value: str = "",
     existing_value: str = "",
     reason: str = "the two state the same fact",
+    judgments: list[str] | None = None,
 ) -> dict:
     return {
         "claim_id": claim_id,
@@ -257,6 +258,7 @@ def _claim_verdict(
         "existing_claim_id": existing_claim_id,
         "new_value": new_value,
         "existing_value": existing_value,
+        "judgments": list(judgments or []),
         "reason": reason,
     }
 
@@ -1043,6 +1045,8 @@ def test_a_new_storys_matched_claim_folds_into_the_beat_that_holds_it(tmp_path):
         "existing_beat_id": BUILDING_ID,
         "existing_claim_id": "c01",
         "existing_text": WRIGHT["text"],
+        "judgments_dropped": [],
+        "covered_by": [],
     }) in events
 
     merged = merge.apply(outcome, existing)
@@ -1503,7 +1507,7 @@ def test_a_held_covered_answer_lists_every_named_claim_for_the_reviewer():
                 {"beat_id": ZIGGURAT_ID, "claim_id": "c01", "text": WRIGHT["text"]},
                 {"beat_id": ZIGGURAT_ID, "claim_id": "c02", "text": SPIRAL_LP["text"]},
             ],
-            "new_value": "x", "existing_value": "y",
+            "new_value": "x", "existing_value": "y", "judgments": [],
             "reason": "c01 the design, c02 the spiral",
         }
     ]
@@ -1570,3 +1574,313 @@ def test_the_judges_story_verdict_never_moves_the_new_storys_claims(tmp_path):
     assert merged[0].narration == existing[0].narration
     assert len(merged[0].claims[1].sources) == 2  # the fold still landed
     assert model.validate(_records(merged), chunks_root=_chunks_root(tmp_path)) == []
+
+
+# ── Judgments: the judge lists them, code keeps them (ADR-0003, 2026-09-25) ──
+# The live calibration of b4a741d folded "…the museum's iconic building
+# finished." `same` and dropped "iconic", with a prompt rule forbidding it.
+# The judge now lists the new claim's judgment words and answers on the facts;
+# code decides what an uncarried judgment changes.
+MASTERPIECE_FR: dict = {
+    "text": "The Guggenheim building, a masterpiece, was finished in 1959.",
+    "kind": "event",
+    "span": "Visiting this 1959 masterpiece",
+}
+BELOVED_C148: dict = {**C148, "text": (
+    "Frank Lloyd Wright designed the beloved spiral Solomon R. Guggenheim Museum."
+)}
+ICONIC_1960: dict = {
+    **FINISHED_1960, "text": "The iconic Guggenheim building was finished in 1960."
+}
+
+
+def test_the_merge_answer_must_list_judgments_for_every_claim():
+    """`judgments` is required on every claim of the schema, and an answer
+    without it, or with a non-list, is unreadable (held, never guessed)."""
+    item = prompts.P6_MERGE_SCHEMA["properties"]["claims"]["items"]
+    assert item["properties"]["judgments"] == {"type": "array", "items": {"type": "string"}}
+    assert "judgments" in item["required"]
+    def parsed(item: dict):
+        return merge.parse_merge(json.dumps({"story": "new", "beat_id": "", "claims": [item]}))
+
+    good = _claim_verdict("c01", "same", "b1.c02", judgments=["masterpiece"])
+    assert parsed(good)
+    assert parsed({k: v for k, v in good.items() if k != "judgments"}) is None
+    assert parsed({**good, "judgments": "masterpiece"}) is None
+    assert parsed({**good, "judgments": ["masterpiece", 3]}) is None
+
+
+@pytest.mark.parametrize("listed", ["iconic", "master", "a masterpiece!"])
+def test_a_judgment_not_in_the_new_claim_is_reasked_once(listed):
+    """A listed word must be a whole word of the new claim's text (any case):
+    otherwise the answer is malformed and earns the one re-ask. "master" is
+    inside "masterpiece" but is not a whole word of it."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", MASTERPIECE_FR)]
+    story = _story("The 1959 building", ["c01"])
+    bad = _answer("same", "b1", [_claim_verdict("c01", "same", "b1.c02", judgments=[listed])])
+    good = _answer(
+        "same", "b1", [_claim_verdict("c01", "same", "b1.c02", judgments=["Masterpiece"])]
+    )
+    events, sink = _sink_and_events()
+
+    outcome = merge.merge(story, claims, _existing(), _armed_judge([bad, good], claims),
+                          events=sink)
+
+    reasked = [p for kind, p in events if kind == "merge_reasked"]
+    assert len(reasked) == 1
+    assert reasked[0]["problems"] == [
+        f"claim c01: judgment {listed!r} is not a whole word of the new claim's text"
+    ]
+    assert outcome.claims[0].outcome == "adds_judgment"
+
+
+def test_a_same_that_would_drop_a_judgment_is_kept_beside_its_match(tmp_path):
+    """The calibration failure, fixed in code. The judge answers `same` on the
+    facts and lists "masterpiece"; LP's c02 does not carry it, so the claim is
+    `adds_judgment`: written, resolved, under a fresh id, BESIDE c02 in c02's
+    beat. c02 keeps its one source (no fold), the beat is re-narrated, and
+    the file validates but for the stale hash that rerun clears. Mutants:
+    drop the `adds_judgment` branch from apply (it then raises), drop the
+    kind from `_RESOLVED_TEXTS_CHANGE` (the rerun is lost)."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", MASTERPIECE_FR)]
+    story = _story("The 1959 building", ["c01"])
+    existing = _existing()
+    answer = _answer(
+        "same", "b1", [_claim_verdict("c01", "same", "b1.c02", judgments=["masterpiece"])]
+    )
+    events, sink = _sink_and_events()
+
+    outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims), events=sink)
+
+    assert outcome.held is False
+    assert _decided(outcome) == [("c01", "adds_judgment", "c02", "c03")]
+    assert outcome.claims[0].verdict == "same"
+    assert outcome.claims[0].judgments_dropped == ("masterpiece",)
+    assert outcome.rerun == [ORIGINS_ID]
+    folded = [p for kind, p in events if kind == "merge_folded"]
+    assert folded[0]["outcome"] == "adds_judgment"
+    assert folded[0]["judgments_dropped"] == ["masterpiece"]
+    assert folded[0]["covered_by"] == []
+
+    merged = merge.apply(outcome, existing)
+
+    beat = merged[0]
+    assert [c.claim_id for c in beat.claims] == ["c01", "c02", "c03"]
+    assert beat.claims[1] == existing[0].claims[1]  # the match is untouched
+    twin = beat.claims[2]
+    assert twin.text == MASTERPIECE_FR["text"]
+    assert (twin.kind, twin.status) == ("event", "resolved")
+    assert [(s.source_id, s.span, s.stated_value) for s in twin.sources] == [
+        (FR_SOURCE, MASTERPIECE_FR["span"], None)
+    ]
+    assert merged[1] == existing[1]
+    assert model.validate(_records(merged), chunks_root=_chunks_root(tmp_path)) == [
+        f"NARRATION_HASH_STALE {ORIGINS_ID}: narration.claims_hash does not match "
+        "a fresh recomputation over this beat's claims"
+    ]
+
+
+def test_a_judgment_the_match_carries_in_the_same_word_still_folds():
+    """Carried = a case-insensitive whole word of the matched claim's text. A
+    listed word the match already states leaves the ordinary `same` fold
+    (the whole-word test is the one that decides "masterpiece" above)."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", MASTERPIECE_FR)]
+    story = _story("The 1959 building", ["c01"])
+    answer = _answer(
+        "same", "b1", [_claim_verdict("c01", "same", "b1.c02", judgments=["guggenheim"])]
+    )
+
+    outcome = merge.merge(story, claims, _existing(), _armed_judge([answer], claims))
+
+    assert _decided(outcome) == [("c01", "same", "c02", "c02")]
+    assert outcome.claims[0].judgments_dropped == ()
+    assert merge.carried("GUGGENHEIM", ["The Guggenheim building"]) is True
+    assert merge.carried("gugg", ["The Guggenheim building"]) is False
+
+
+def test_a_covered_claim_whose_only_extra_word_is_its_judgment_is_kept_in_that_beat():
+    """`covered_leftovers` holds a covered claim with a word no named claim
+    states. A listed, verified judgment is taken out of those words (the
+    carve-out), and the claim becomes `adds_judgment` in the named claims'
+    beat — never `covered`, which would absorb it and lose the word. Mutant:
+    carve the word out but skip the carried check, and the claim comes out
+    `covered`."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", BELOVED_C148)]
+    story = _story("A building brought back from a dream", ["c01"], place=GUGG_PLACE)
+    existing = _ziggurat()
+    answer = _answer(
+        "new", "", [_claim_verdict("c01", "covered", "b1.c01+b1.c02", judgments=["beloved"])]
+    )
+    events, sink = _sink_and_events()
+
+    outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims), events=sink)
+
+    assert outcome.held is False
+    assert _decided(outcome) == [("c01", "adds_judgment", "c01", "c03")]
+    assert outcome.claims[0].covered_by == ((ZIGGURAT_ID, "c01"), (ZIGGURAT_ID, "c02"))
+    assert outcome.claims[0].judgments_dropped == ("beloved",)
+    assert outcome.rerun == [ZIGGURAT_ID]
+    assert [kind for kind, _ in events if kind == "merge_covered"] == []
+    folded = [p for kind, p in events if kind == "merge_folded"]
+    assert folded[0]["covered_by"] == [[ZIGGURAT_ID, "c01"], [ZIGGURAT_ID, "c02"]]
+    merged = merge.apply(outcome, existing)
+    assert [c.text for c in merged[0].claims][-1] == BELOVED_C148["text"]
+
+
+def test_the_carve_out_never_lets_an_added_fact_through():
+    """Only the listed judgment is carved out: a covered claim that also adds
+    a fact is still held, naming the fact's words and not the judgment."""
+    unit = _fr_unit()
+    adds = {**BELOVED_C148, "text": BELOVED_C148["text"][:-1] + " as his last major work."}
+    claims = [_judged(unit, "c01", adds)]
+    story = _story("A building brought back from a dream", ["c01"], place=GUGG_PLACE)
+    answer = _answer(
+        "new", "", [_claim_verdict("c01", "covered", "b1.c01+b1.c02", judgments=["beloved"])]
+    )
+
+    outcome = merge.merge(story, claims, _ziggurat(), _armed_judge([answer], claims))
+
+    assert outcome.held is True
+    assert "last, major, work" in outcome.reason
+    assert "beloved" not in outcome.reason.split("states: ")[1]
+
+
+def test_a_covered_judgment_across_beats_stays_with_its_story():
+    """Named claims in two beats: no single beat to keep the twin in, so the
+    claim stays `new` with its own story and `judgment_kept_split` is logged
+    (a known duplicate, counted before it earns more design)."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", BELOVED_C148)]
+    story = _story("A building brought back from a dream", ["c01"], place=GUGG_PLACE)
+    wright_id = "new_york/guggenheim-museum/wrights-museum"
+    spiral_id = "new_york/guggenheim-museum/the-spiral"
+    records = [
+        _beat(wright_id, "wrights-museum", "Wright's museum", "establishing",
+              [_lp_claim("c01", WRIGHT), _lp_claim("c02", COLLECTING)], "Wright designed it."),
+        _beat(spiral_id, "the-spiral", "The spiral", "establishing",
+              [_lp_claim("c01", SPIRAL_LP), _lp_claim("c02", ADDRESS)], "It has a spiral ramp."),
+    ]
+    existing = [model.Beat.model_validate(r) for r in records]
+    answer = _answer(
+        "new", "", [_claim_verdict("c01", "covered", "b1.c01+b2.c01", judgments=["beloved"])]
+    )
+    events, sink = _sink_and_events()
+
+    outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims), events=sink)
+
+    assert outcome.held is False
+    assert _decided(outcome) == [("c01", "new", None, "c01")]
+    assert outcome.rerun == []
+    split = [p for kind, p in events if kind == "judgment_kept_split"]
+    assert split == [{
+        "story_slug": story.story_slug, "claim_id": "c01", "judgments_dropped": ["beloved"],
+        "covered_by": [[wright_id, "c01"], [spiral_id, "c01"]],
+    }]
+    assert merge.apply(outcome, existing) == existing
+
+
+def test_a_contested_value_takes_no_twin_and_its_judgment_is_logged(tmp_path):
+    """A contested claim must carry two differing stated values (model.py);
+    a twin would need the other book's source and credit "iconic" to a book
+    that never said it. The contest is recorded exactly as before, and
+    `judgment_on_contested` names the word, which waits in the new source's
+    span for whoever resolves the contest."""
+    unit = _second_unit()
+    claims = [_judged(unit, "c01", ICONIC_1960)]
+    story = _story("Finished in 1960", ["c01"])
+    existing = _existing()
+    answer = _answer("same", "b1", [_claim_verdict(
+        "c01", "conflict", "b1.c02", "1960", "1959", judgments=["iconic"])])
+    events, sink = _sink_and_events()
+
+    outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims), events=sink)
+
+    assert _decided(outcome) == [("c01", "contested", "c02", "c02")]
+    assert outcome.claims[0].judgments_dropped == ("iconic",)
+    assert [p for kind, p in events if kind == "judgment_on_contested"] == [{
+        "story_slug": story.story_slug, "claim_id": "c01", "judgments_dropped": ["iconic"],
+        "existing_beat_id": ORIGINS_ID, "existing_claim_id": "c02",
+        "span": ICONIC_1960["span"],
+    }]
+    merged = merge.apply(outcome, existing)
+    assert [c.claim_id for c in merged[0].claims] == ["c01", "c02"]  # no twin
+    assert merged[0].claims[1].status == "contested"
+
+
+def test_apply_refuses_an_outcome_kind_it_has_no_rule_for():
+    """The catch-all used to write ANY unknown kind as a superseded belief —
+    silently unnarrated. It now raises."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", COMPLETED_FR)]
+    story = _story("The 1959 building", ["c01"])
+    existing = _existing()
+    answer = _answer("same", "b1", [_claim_verdict("c01", "same", "b1.c02", "1959", "1959")])
+    outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims))
+    bogus = merge.ClaimOutcome.model_construct(
+        **{**outcome.claims[0].model_dump(), "outcome": "bogus"}
+    )
+    broken = outcome.model_copy(update={"claims": [bogus]})
+
+    with pytest.raises(ValueError, match="no rule applies outcome 'bogus'"):
+        merge.apply(broken, existing)
+
+
+def test_a_held_answer_shows_the_reviewer_the_listed_judgments():
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", COMPLETED_FR)]
+    story = _story("The 1959 building", ["c01"])
+    answer = _answer("new", "", [_claim_verdict("c01", "new", judgments=[])])
+
+    outcome = merge.merge(story, claims, _existing(), _armed_judge([answer], claims))
+
+    assert outcome.held is True  # the signature matches c02
+    assert outcome.answered[0]["judgments"] == []
+
+
+@pytest.mark.parametrize("status", ["superseded", "contested"])
+def test_a_same_onto_an_unresolved_claim_never_writes_a_resolved_twin(status):
+    """Skeptic panel 2026-09-25 (F1): a twin is written RESOLVED, so a `same`
+    onto a superseded claim would bring an outdated fact back into narration,
+    and onto a contested one would narrate a disputed value around its
+    contest. No twin: the fold stays `same` (a source for the unresolved
+    claim, as before) and `judgment_on_unresolved` names the word, which
+    waits in the new source's span. Mutant: drop the status check."""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", MASTERPIECE_FR)]
+    story = _story("The 1959 building", ["c01"])
+    existing = _existing()
+    old = existing[0].claims[1]
+    sources = old.sources
+    if status == "contested":
+        sources = [
+            sources[0].model_copy(update={"stated_value": "1959"}),
+            sources[0].model_copy(update={"stated_value": "1960", "as_of": 2024}),
+        ]
+    patched = old.model_copy(update={
+        "status": status, "kind": "belief" if status == "superseded" else old.kind,
+        "sources": sources,
+    })
+    existing[0] = existing[0].model_copy(
+        update={"claims": [existing[0].claims[0], patched]}
+    )
+    answer = _answer(
+        "same", "b1", [_claim_verdict("c01", "same", "b1.c02", judgments=["masterpiece"])]
+    )
+    events, sink = _sink_and_events()
+
+    outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims), events=sink)
+
+    assert _decided(outcome) == [("c01", "same", "c02", "c02")]
+    assert outcome.claims[0].judgments_dropped == ("masterpiece",)
+    assert [p for kind, p in events if kind == "judgment_on_unresolved"] == [{
+        "story_slug": story.story_slug, "claim_id": "c01", "judgments_dropped": ["masterpiece"],
+        "existing_beat_id": ORIGINS_ID, "existing_claim_id": "c02", "status": status,
+        "span": MASTERPIECE_FR["span"],
+    }]
+    merged = merge.apply(outcome, existing)
+    assert [c.claim_id for c in merged[0].claims] == ["c01", "c02"]
+    assert all(c.status != "resolved" for c in merged[0].claims if c.claim_id == "c02")

@@ -598,9 +598,11 @@ class _HeldStory:
 #: applier must NOT write it again; `absorbed` — `covered`, stated in full
 #: by claims already there, so it is never written; `dropped` — its fold was
 #: given back when a beat's rerun was held; `unmatched` — never written, the
-#: story's own beat was never assembled.
+#: story's own beat was never assembled. An `adds_judgment` claim is
+#: written beside its match in the match's beat (ADR-0003), so it is
+#: `written` like a fold: an applier writing it again would tell it twice.
 _CLAIM_WRITTEN: frozenset[str] = frozenset(
-    {"same", "contested", "supersedes", "superseded"}
+    {"same", "contested", "supersedes", "superseded", "adds_judgment"}
 )
 
 
@@ -642,7 +644,11 @@ def _disposition(
                 # single id is just the first — a reviewer checking that one
                 # claim alone would not find the fact and might "correct" the
                 # absorption by writing a duplicate.
-                "covered_by": [list(ref) for ref in o.covered_by] if o is not None else [],
+                # A covered claim that stayed `new` across beats keeps its
+                # refs on the outcome for its event; its row is unmatched.
+                "covered_by": (
+                    [list(ref) for ref in o.covered_by] if status == "absorbed" else []
+                ),
             }
         )
     return rows

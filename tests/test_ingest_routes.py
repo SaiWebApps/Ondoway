@@ -95,7 +95,8 @@ def _hold_a_merge(workspace) -> None:
         script_mod.merge_answer(
             "new", "",
             [{"claim_id": c, "verdict": "new", "existing_claim_id": "", "new_value": "",
-              "existing_value": "", "reason": "nothing like it"} for c in ("c01", "c02", "c03")],
+              "existing_value": "", "judgments": [], "reason": "nothing like it"}
+             for c in ("c01", "c02", "c03")],
         )
     ]
     script_mod.write_script(workspace["script"], scripted)

@@ -16,6 +16,8 @@ import ast
 import json
 from pathlib import Path
 
+import pytest
+
 from src.ingest import calibrate, gates, judge_claims
 from src.ingest import unit as unit_mod
 
@@ -49,6 +51,8 @@ CLASSES = (
     "negated_fact",
     "covered_union_elsewhere",
     "adds_a_judgment",
+    "covered_adds_a_judgment",
+    "told_once",
 )
 
 
@@ -75,6 +79,7 @@ def test_fixture_has_one_record_per_class_and_only_the_planted_defect():
         "omissions",
         "narration_gates",
         "merge",
+        "narration",
         "pending",
     }
 
@@ -143,6 +148,35 @@ def test_fixture_has_one_record_per_class_and_only_the_planted_defect():
                 assert merge.covered(second, union) >= merge.SIGNATURE_MATCH_MIN, (
                     record.defect_class
                 )
+        elif record.detector == "merge" and record.planted["expected"] == "adds_judgment":
+            # adds_a_judgment / covered_adds_a_judgment (ADR-0003): the judgment
+            # is a whole word of the plant and of no record claim, so it is
+            # really dropped; no claim OUTSIDE the plant trips the signature
+            # (else the tripwire holds a correct judge); and for the covered
+            # plant nothing but the judgment is left over once the named
+            # claims and the place are taken away (else the guard holds it).
+            import re
+
+            from src.ingest import merge
+
+            word = record.planted["judgment"]
+            text = record.planted["second_source"]["text"]
+            assert re.search(rf"\b{word}\b", text), record.defect_class
+            assert not any(re.search(rf"\b{word}\b", c["text"], re.I) for c in record.claims)
+            planted_ids = record.planted.get("claim_ids", [planted_claim_id])
+            second = merge._signature(text)
+            for c in record.claims:
+                if c["claim_id"] not in planted_ids:
+                    assert merge.covered(second, merge._signature(c["text"])) < (
+                        merge.SIGNATURE_MATCH_MIN
+                    ), record.defect_class
+            if "claim_ids" in record.planted:
+                stated = merge._signature(record.story["place"]).union(
+                    *(merge._signature(c["text"]) for c in record.claims
+                      if c["claim_id"] in planted_ids),
+                    merge._signature(word),
+                )
+                assert second - stated == frozenset(), (record.defect_class, second - stated)
         elif record.detector == "merge" and record.planted["expected"] == "covered":
             # covered_union: the signature's best match must be INSIDE the
             # planted pair, or the tripwire would hold a correct judge.
@@ -352,7 +386,9 @@ def test_confirm_sees_the_whole_estimate_and_declined_rows_say_not_run():
     estimate = calibrate._arm(mock, fixture.records, unit)
 
     printed = [payload for kind, payload in events if kind == "cost_estimate"]
-    assert len(printed) == 3  # the P3 plan, the omissions plan, the P6 plan (slice 6)
+    # the P3 plan, the omissions plan, the P6 plan (slice 6), and told_once's
+    # P4 and P5 plans (ADR-0003)
+    assert len(printed) == 5
     assert estimate.total_usd == sum(p["total_usd"] for p in printed)
     assert estimate.total_input_tokens == sum(p["total_input_tokens"] for p in printed)
     assert len(estimate.rows) == sum(len(p["rows"]) for p in printed)
@@ -508,7 +544,8 @@ def test_a_merge_judge_the_signature_contradicts_is_held_and_counts_as_missed():
             "beat_id": "",
             "claims": [
                 {"claim_id": "n01", "verdict": "new", "existing_claim_id": "",
-                 "new_value": "", "existing_value": "", "reason": "nothing like it"}
+                 "new_value": "", "existing_value": "", "judgments": [],
+                 "reason": "nothing like it"}
             ],
         }
         return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
@@ -555,7 +592,7 @@ def test_a_claim_sharing_only_a_date_is_new_and_a_judge_that_folds_it_misses():
             "claims": [
                 {"claim_id": "n01", "verdict": "same",
                  "existing_claim_id": f"b1.{planted['claim_id']}",
-                 "new_value": "1959", "existing_value": "1959",
+                 "new_value": "1959", "existing_value": "1959", "judgments": [],
                  "reason": "both reference the same 1959 date"}
             ],
         }
@@ -594,7 +631,8 @@ def test_a_true_paraphrase_folds_and_a_judge_that_calls_it_new_misses():
             "beat_id": "",
             "claims": [
                 {"claim_id": "n01", "verdict": "new", "existing_claim_id": "",
-                 "new_value": "", "existing_value": "", "reason": "worded differently"}
+                 "new_value": "", "existing_value": "", "judgments": [],
+                 "reason": "worded differently"}
             ],
         }
         return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
@@ -706,7 +744,7 @@ def test_a_claim_two_claims_state_together_is_covered_and_one_sharing_their_word
             "story": "new", "beat_id": "",
             "claims": [{"claim_id": "n01", "verdict": "covered",
                         "existing_claim_id": "b1.c01+b1.c02", "new_value": "",
-                        "existing_value": "", "reason": "together they cover it"}],
+                        "existing_value": "", "judgments": [], "reason": "together they cover it"}],
         }
         return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
 
@@ -739,7 +777,7 @@ def test_a_judge_that_wrongly_covers_a_precision_plant_always_misses():
             "story": "new", "beat_id": "",
             "claims": [
                 {"claim_id": "n01", "verdict": "covered", "existing_claim_id": ids,
-                 "new_value": "", "existing_value": "",
+                 "new_value": "", "existing_value": "", "judgments": [],
                  "reason": "the two together state it"}
             ],
         }
@@ -783,7 +821,8 @@ def test_a_hold_is_reported_apart_from_a_wrong_fold():
             "story": "new", "beat_id": "",
             "claims": [
                 {"claim_id": "n01", "verdict": "covered", "existing_claim_id": ids,
-                 "new_value": "", "existing_value": "", "reason": "the two together state it"}
+                 "new_value": "", "existing_value": "", "judgments": [],
+                 "reason": "the two together state it"}
             ],
         }
         return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
@@ -844,7 +883,7 @@ def test_a_wrong_fold_is_named_in_the_row_and_the_printout():
             "claims": [
                 {"claim_id": "n01", "verdict": "same",
                  "existing_claim_id": f"b1.{rec.planted['claim_id']}",
-                 "new_value": "", "existing_value": "", "reason": "same fact"}
+                 "new_value": "", "existing_value": "", "judgments": [], "reason": "same fact"}
             ],
         }
         return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
@@ -870,7 +909,8 @@ def test_a_wrong_fold_is_named_in_the_row_and_the_printout():
             "story": "new", "beat_id": "",
             "claims": [
                 {"claim_id": "n01", "verdict": "new", "existing_claim_id": "",
-                 "new_value": "", "existing_value": "", "reason": "nothing states it"}
+                 "new_value": "", "existing_value": "", "judgments": [],
+                 "reason": "nothing states it"}
             ],
         }
         return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
@@ -962,3 +1002,90 @@ def test_a_live_run_prints_what_it_actually_spent(tmp_path, monkeypatch, capsys)
     assert len(spend) == 1, out
     assert f"actual=${expected:.4f}" in spend[0]
     assert "calls: P6=1" in spend[0]
+
+
+# ── Judgments kept by code (ADR-0003, 2026-09-25) ───────────────────────────
+
+
+def _merge_answer(verdict: str, existing: str, judgments: list[str]) -> str:
+    return json.dumps({"story": "new", "beat_id": "", "claims": [
+        {"claim_id": "n01", "verdict": verdict, "existing_claim_id": existing,
+         "new_value": "", "existing_value": "", "judgments": judgments,
+         "reason": "scripted"}]})
+
+
+def test_a_judgment_plant_is_caught_only_when_its_own_word_is_kept():
+    """`adds_a_judgment` and `covered_adds_a_judgment` pass on the mock only
+    when the claim lands beside its match as `adds_judgment` AND the planted
+    word is among the words code found dropped. A judge that lists another
+    word ("finished") still yields `adds_judgment` — a changed corpus, so a
+    WRONG FOLD, never a catch; a judge that lists nothing folds `same`."""
+    import src.ingest.llm as llm
+
+    fixture = _fixture()
+    report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock")
+    rows = {r.defect_class: r for r in report.rows}
+    assert (rows["adds_a_judgment"].caught, rows["adds_a_judgment"].total) == (1, 1)
+    assert rows["adds_a_judgment"].note == "n01 adds_judgment c02 [iconic]"
+    assert (rows["covered_adds_a_judgment"].caught,
+            rows["covered_adds_a_judgment"].total) == (1, 1)
+    assert rows["covered_adds_a_judgment"].note == "n01 adds_judgment c01+c02 [beloved]"
+
+    for listed, note in ((["finished"], "n01 adds_judgment c02 [finished]"),
+                         ([], "n01 same c02")):
+        def wrong(rec, u, listed=listed):
+            if rec.defect_class != "adds_a_judgment":
+                return calibrate.scripted_merge_answer(rec, u)
+            return llm.MockAnswer(text=_merge_answer("same", "b1.c02", listed),
+                                  model_id=llm.ROLE_MODEL["merge_judge"])
+
+        report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock", scripted_merge=wrong)
+        row = next(r for r in report.rows if r.defect_class == "adds_a_judgment")
+        assert (row.caught, row.wrong_fold, row.note) == (0, True, note)
+
+
+@pytest.mark.parametrize(
+    ("narration", "caught", "note"),
+    [
+        ("The museum's acclaimed building was finally completed in 1959.", 1,
+         "1 sentence(s) with '1959'"),
+        ("The building was completed in 1959. Its acclaimed spiral was finished in 1959.", 0,
+         "2 sentence(s) with '1959'"),
+        ("The building was finally completed in 1959.", 0,
+         "1 sentence(s) with '1959'; 'acclaimed' missing from it"),
+    ],
+)
+def test_told_once_passes_only_one_sentence_with_the_year_and_the_judgment(
+    narration, caught, note
+):
+    """`told_once`: a beat holding a claim and its `adds_judgment` twin is
+    narrated (P4, then P5 as run._rerun does) and scored by anchor: exactly
+    one sentence carries "1959", and that sentence carries "acclaimed". The
+    narration is always in the details, so a second telling without the year
+    is seen by eye."""
+    fixture = _fixture()
+    record = next(r for r in fixture.records if r.defect_class == "told_once")
+    assert record.detector == "narration"
+
+    def scripted(rec, u):
+        return calibrate.scripted_narration(rec, u, narration=narration)
+
+    report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock",
+                           scripted_narration=scripted)
+    row = next(r for r in report.rows if r.defect_class == "told_once")
+    assert (row.caught, row.total, row.scripted) == (caught, 1, True)
+    assert row.note == note
+    assert row.details == (f"narration: {narration}",)
+    assert row.wrong_fold is False
+
+
+def test_the_estimate_prices_the_told_once_narration_and_its_judge():
+    fixture = _fixture()
+    unit = _unit(fixture)
+    record = next(r for r in fixture.records if r.defect_class == "told_once")
+    import src.ingest.llm as llm
+
+    mock = llm.MockClient(lambda _kind, _payload: None)
+    estimate = calibrate._arm(mock, [record], unit)
+    phases = {(row.phase, row.role) for row in estimate.rows}
+    assert phases == {("P4", "author"), ("P5", "narration_judge")}

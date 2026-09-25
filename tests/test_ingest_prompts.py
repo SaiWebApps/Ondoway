@@ -622,28 +622,42 @@ def test_p1_keeps_the_passages_own_judgments_in_the_claim():
         assert not leaked, f"the rule's examples name measured words: {sorted(leaked)}"
 
 
-def test_the_merge_judge_never_folds_away_a_judgment_the_new_claim_adds():
-    """Owner ruling 2026-09-24: a `same` fold keeps the existing claim's words,
-    so a new claim that adds a judgment of importance, size, quality or
-    reputation loses it. Job B folded Frommer's "a seminal work by El Greco"
-    into "displays works by El Greco" (and did again on replay), and r8 folded
-    "a huge spiral ramp" into "has a spiral ramp" — the prompt's "wording never
-    matters" let the judge read a judgment as wording. A judgment is part of
-    what a claim states; a claim that adds one is `new`, never `same` or
-    `covered`. The worked example stays in Paris, and no measured word, no
-    El Greco and no seminal appear in the rules, so calibration cannot score a
-    copy of them."""
+def test_the_merge_judge_lists_judgments_and_decides_on_the_facts():
+    """Owner ruling 2026-09-24: a judgment of importance, size, quality or
+    reputation is part of what a claim states. Job B folded Frommer's "a
+    seminal work by El Greco" into "displays works by El Greco", and a prompt
+    rule ("a claim that adds one is new") failed live (b4a741d: "iconic"
+    folded `same`, the word dropped). ADR-0003: the judge decides on the facts
+    alone and LISTS every judgment, verbatim, in `judgments`; code keeps it.
+    The worked example stays in Paris, and no measured word, no El Greco and
+    no seminal appear in the rules, so calibration cannot score a copy.
+    Mutants: the facts-alone clause removed, the `judgments` field
+    description removed, the Eiffel example turned back to "new"."""
     import re
 
     measured = {"seminal", "huge", "beloved", "masterpiece", "transporting", "exquisite",
-                "famed", "stunning", "delirious", "insipid", "terrific", "excellent"}
+                "famed", "stunning", "delirious", "insipid", "terrific", "excellent",
+                "iconic", "acclaimed"}
     for rendered in (prompts.MERGE_PROMPT, prompts.MERGE_REDO_PROMPT):
+        assert "with the same values, its judgments set aside - even when" in rendered
+        assert "with the same values, its judgments set aside: name every one" in rendered
         assert (
-            "a judgment of importance, size, quality or reputation is part of what a claim "
-            "states, never its wording" in rendered
+            'A measured or ranked size ("the tallest", "400 feet", "the largest in the city") '
+            "is a fact, never a judgment: it can conflict." in rendered
         )
-        assert 'a new claim that adds one is "new", never "same" or "covered"' in rendered
-        assert '"The celebrated Eiffel Tower was completed in 1889." is "new"' in rendered
+        assert (
+            '"judgments" lists, word for word as the new claim says them, the new claim\'s '
+            "judgments of importance, size, quality or reputation, and is empty when it "
+            "makes none" in rendered
+        )
+        assert "decide every verdict on the facts alone" in rendered
+        assert 'list every judgment in "judgments" - the merge keeps it' in rendered
+        assert (
+            '"The celebrated Eiffel Tower was completed in 1889." is "same" with '
+            'judgments ["celebrated"]' in rendered
+        )
+        assert 'adds one is "new"' not in rendered
+        assert '"judgments": []' in rendered  # the shape
         assert "El Greco" not in rendered
         words = set(re.findall(r"[a-z]+", rendered.lower()))
         assert not words & measured, sorted(words & measured)

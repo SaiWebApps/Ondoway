@@ -26,7 +26,7 @@ def _claim_verdict(claim_id: str, verdict: str, existing_claim_id: str = "",
                    reason: str = "the two state the same fact") -> dict:
     return {
         "claim_id": claim_id, "verdict": verdict, "existing_claim_id": existing_claim_id,
-        "new_value": new_value, "existing_value": existing_value, "reason": reason,
+        "new_value": new_value, "existing_value": existing_value, "judgments": [], "reason": reason,
     }
 
 

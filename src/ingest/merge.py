@@ -58,6 +58,26 @@ the narration the job runner holds (slice 7), and the runner narrates it
 again over those claims alone. Every fold is emitted as `merge_folded` with
 both texts and the new span, so a wrong `same` can be audited.
 
+A judgment the new claim carries (CONTEXT.md "Judgment", ADR-0003) is the
+judge's to LIST and the code's to keep. Every claim's answer lists its
+judgment words verbatim, each a whole word of the new claim's text (else a
+re-ask); the verdict is judged on the facts alone. A listed word is carried
+when it is a case-insensitive whole word of the matched claim's text
+(`covered`: of any named claim's). A `same` that does not carry one, or a
+`covered` whose named claims sit in ONE beat and do not, becomes
+`adds_judgment`: the new claim is written beside its match, in the match's
+beat, and that beat is re-narrated — never folded away, never left in its
+own story to tell the same fact twice at the place (the owner ruling of
+2026-09-22 amended for this case only). A `covered` across beats stays
+`new` (`judgment_kept_split`); a conflict that is `contested` takes no twin,
+since a contested claim needs two differing stated values, and
+`judgment_on_contested` names the word, which waits in the new span. A
+`same` onto a superseded or contested claim takes no twin either (a twin is
+resolved, and would narrate what the corpus no longer holds or disputes):
+the fold stays `same` and `judgment_on_unresolved` names the word.
+`covered_leftovers` leaves out the listed words, so a covered claim whose
+only extra word is its judgment is kept, not held.
+
 Every re-kinded claim keeps its text, sources and verdict byte-for-byte —
 kind and status are not in the binding. A claim that gained a source is
 re-bound (`model.bind(text, joined spans)`, the binding the slice-1
@@ -106,7 +126,9 @@ SIGNATURE_MIN_SHARED: int = MIN_SHARED_TOKENS
 
 StoryOutcome = Literal["same", "new", "supersedes"]
 ClaimVerdict = Literal["new", "same", "conflict", "covered"]
-ClaimOutcomeKind = Literal["new", "same", "contested", "supersedes", "superseded", "covered"]
+ClaimOutcomeKind = Literal[
+    "new", "same", "contested", "supersedes", "superseded", "covered", "adds_judgment"
+]
 
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.S)
 _CLAIM_ID_RE = re.compile(r"^c(\d+)$")
@@ -121,7 +143,14 @@ class ClaimOutcome(BaseModel):
     the existing claim's for `same` and `contested`; a fresh id in the
     matched claim's beat for `supersedes` (the new claim) and `superseded`
     (the new claim, appended as a dated belief); for `new`, the story's own
-    id — an unmatched claim stays with its story.
+    id — an unmatched claim stays with its story; for `adds_judgment`, a
+    fresh id in the matched claim's beat, where the new claim is written
+    beside its match (`existing_*` is the match, the first named claim for
+    one that came from `covered`).
+
+    `judgments_dropped` holds the listed judgment words the matched claim(s)
+    do not carry, for `adds_judgment`, a `contested` conflict and a
+    `covered` that stayed `new` because its named claims span beats.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -135,9 +164,11 @@ class ClaimOutcome(BaseModel):
     new_value: str | None
     existing_value: str | None
     reason: str
-    #: `covered` only: every existing claim that TOGETHER states the new
-    #: claim (the first is also `existing_*`); empty for every other verdict.
+    #: A `covered` answer only: every existing claim that TOGETHER states the
+    #: new claim (the first is also `existing_*`, unless the claim stayed
+    #: `new` across beats); empty for every other verdict.
     covered_by: tuple[tuple[str, str], ...] = ()
+    judgments_dropped: tuple[str, ...] = ()
 
 
 class MergeOutcome(BaseModel):
@@ -205,8 +236,10 @@ def _extract_json_object(text: str) -> Any | None:
 
 
 _CLAIM_KEYS = frozenset(
-    {"claim_id", "verdict", "existing_claim_id", "new_value", "existing_value", "reason"}
+    {"claim_id", "verdict", "existing_claim_id", "new_value", "existing_value", "judgments",
+     "reason"}
 )
+_STRING_KEYS = _CLAIM_KEYS - {"verdict", "judgments"}
 
 
 def parse_merge(text: str) -> dict | None:
@@ -223,7 +256,10 @@ def parse_merge(text: str) -> dict | None:
             return None
         if item["verdict"] not in prompts.CLAIM_VERDICTS:
             return None
-        if not all(isinstance(item[key], str) for key in _CLAIM_KEYS - {"verdict"}):
+        if not all(isinstance(item[key], str) for key in _STRING_KEYS):
+            return None
+        judgments = item["judgments"]
+        if not isinstance(judgments, list) or not all(isinstance(j, str) for j in judgments):
             return None
     return parsed
 
@@ -284,6 +320,24 @@ def signature_hint(claims: Sequence[JudgedClaim], existing: Sequence[model.Beat]
     return Hint(matches={c.draft.claim_id: _best_match(c.draft.text, existing) for c in claims})
 
 
+# ── Judgments ───────────────────────────────────────────────────────────────
+
+
+def _whole_word(word: str, text: str) -> bool:
+    """`word` (any case) stands in `text` as a whole word or phrase."""
+    return bool(word.strip()) and re.search(
+        rf"(?<!\w){re.escape(word.strip())}(?!\w)", text, re.IGNORECASE
+    ) is not None
+
+
+def carried(word: str, texts: Sequence[str]) -> bool:
+    """A listed judgment is carried when the SAME word is a case-insensitive
+    whole word of one of `texts` — never a synonym (ADR-0003: "beloved" and
+    "much-loved" are two judgments, and the cost is a redundant claim in one
+    beat, never a lost word)."""
+    return any(_whole_word(word, text) for text in texts)
+
+
 # ── Judge answer checks ─────────────────────────────────────────────────────
 
 
@@ -322,12 +376,18 @@ def answer_problems(
 
     expected = [c.draft.claim_id for c in claims]
     answered = [item["claim_id"] for item in answer["claims"]]
+    texts = {c.draft.claim_id: c.draft.text for c in claims}
     if sorted(answered) != sorted(expected):
         problems.append(
             f"claims must be answered exactly once each: expected {expected}, got {answered}"
         )
     for item in answer["claims"]:
         cid = item["claim_id"]
+        for word in item["judgments"]:
+            if cid in texts and not _whole_word(word, texts[cid]):
+                problems.append(
+                    f"claim {cid}: judgment {word!r} is not a whole word of the new claim's text"
+                )
         if item["verdict"] == "new":
             if item["existing_claim_id"]:
                 problems.append(f'claim {cid}: verdict "new" must leave existing_claim_id empty')
@@ -461,7 +521,12 @@ def covered_leftovers(
     never a false fold): a word-form the named claims phrase differently
     ("design" / "designed"), and a name the place and the named claims
     lack — a longer official name, an alias ("the Met"); c148 folds only
-    because P2's place is "Solomon R. Guggenheim Museum"."""
+    because P2's place is "Solomon R. Guggenheim Museum".
+
+    The listed judgment words are left out (ADR-0003): a judgment the named
+    claims do not carry is kept by `adds_judgment`, never absorbed, so it is
+    no added fact. Only listed words, each verified a whole word of the new
+    claim by `answer_problems`, are left out; any other word still holds."""
     texts = {c.draft.claim_id: c.draft.text for c in claims}
     claim_text = {(b.beat_id, c.claim_id): c.text for b in existing for c in b.claims}
     found: list[str] = []
@@ -469,7 +534,8 @@ def covered_leftovers(
         if item["verdict"] != "covered":
             continue
         stated = _signature(place).union(
-            *(_signature(claim_text[tuple(ref)]) for ref in item["covered_by"])
+            *(_signature(claim_text[tuple(ref)]) for ref in item["covered_by"]),
+            *(_signature(word) for word in item["judgments"]),
         )
         left = sorted(_signature(texts[item["claim_id"]]) - stated)
         if left:
@@ -500,6 +566,7 @@ def _answered(answer: dict, existing: Sequence[model.Beat]) -> list[dict]:
                 ],
                 "new_value": item["new_value"],
                 "existing_value": item["existing_value"],
+                "judgments": list(item["judgments"]),
                 "reason": item["reason"],
             }
         )
@@ -640,6 +707,9 @@ def _decide_claims(
             fresh[beat_id] = _fresh_ids(beats[beat_id])
         return next(fresh[beat_id])
 
+    def text_of(ref) -> str:
+        return next(c.text for c in beats[ref[0]].claims if c.claim_id == ref[1])
+
     outcomes: list[ClaimOutcome] = []
     for item in answer["claims"]:
         judged = by_id[item["claim_id"]]
@@ -648,6 +718,11 @@ def _decide_claims(
         existing_id = item["existing_claim_id"] or None
         new_value = item["new_value"] or None
         existing_value = item["existing_value"] or None
+        covered_by = tuple(tuple(ref) for ref in item.get("covered_by", []))
+        matched = [text_of(ref) for ref in covered_by] or (
+            [text_of((beat_id, existing_id))] if existing_id else []
+        )
+        dropped = tuple(w for w in item["judgments"] if not carried(w, matched))
         if verdict == "new":
             # Nothing to compare, so no value: the judge's fields here are
             # prose (live 2026-09-21) and would be written as stated_value.
@@ -660,8 +735,21 @@ def _decide_claims(
                 # value; not re-asked, since it is no evidence against same.
                 new_value = existing_value = None
             outcome, applied = "same", item["existing_claim_id"]
+            status = next(c.status for c in beats[beat_id].claims if c.claim_id == existing_id)
+            if dropped and status == "resolved":
+                # A twin is written RESOLVED: beside a superseded claim it
+                # would narrate an outdated fact, beside a contested one a
+                # disputed value (skeptic panel 2026-09-25). There the fold
+                # stays `same` and `judgment_on_unresolved` names the word.
+                outcome, applied = "adds_judgment", fresh_id(beat_id)
         elif verdict == "covered":
             outcome, applied = "covered", item["existing_claim_id"]
+            if dropped and len({ref[0] for ref in covered_by}) == 1:
+                outcome, applied = "adds_judgment", fresh_id(beat_id)
+            elif dropped:
+                # No one beat to keep it in: it stays with its story.
+                outcome, applied = "new", judged.draft.claim_id
+                beat_id = existing_id = None
         else:
             old = next(c for c in beats[beat_id].claims if c.claim_id == existing_id)
             outcome = conflict_outcome(
@@ -671,6 +759,10 @@ def _decide_claims(
                 claim_year(old),
             )
             applied = existing_id if outcome == "contested" else fresh_id(beat_id)
+            if outcome != "contested":
+                dropped = ()  # the new claim is written with its own text
+        if verdict == "new":
+            dropped = ()
         outcomes.append(
             ClaimOutcome(
                 claim_id=item["claim_id"],
@@ -682,14 +774,17 @@ def _decide_claims(
                 new_value=new_value,
                 existing_value=existing_value,
                 reason=item["reason"],
-                covered_by=tuple(tuple(ref) for ref in item.get("covered_by", [])),
+                covered_by=covered_by,
+                judgments_dropped=dropped,
             )
         )
     return outcomes
 
 
 #: Claim outcomes that change the beat's RESOLVED texts, and so its hash.
-_RESOLVED_TEXTS_CHANGE: frozenset[str] = frozenset({"new", "contested", "supersedes"})
+_RESOLVED_TEXTS_CHANGE: frozenset[str] = frozenset(
+    {"new", "contested", "supersedes", "adds_judgment"}
+)
 
 
 def merge(
@@ -766,6 +861,45 @@ def merge(
     rerun = [b.beat_id for b in existing if b.beat_id in changed]
     texts = {c.draft.claim_id: c for c in claims}
     for o in outcomes:
+        if o.outcome == "new" and o.judgments_dropped:
+            emit(
+                "judgment_kept_split",
+                {
+                    "story_slug": new_story.story_slug,
+                    "claim_id": o.claim_id,
+                    "judgments_dropped": list(o.judgments_dropped),
+                    "covered_by": [list(ref) for ref in o.covered_by],
+                },
+            )
+        if o.outcome == "same" and o.judgments_dropped:
+            emit(
+                "judgment_on_unresolved",
+                {
+                    "story_slug": new_story.story_slug,
+                    "claim_id": o.claim_id,
+                    "judgments_dropped": list(o.judgments_dropped),
+                    "existing_beat_id": o.existing_beat_id,
+                    "existing_claim_id": o.existing_claim_id,
+                    "status": next(
+                        c.status
+                        for b in existing if b.beat_id == o.existing_beat_id
+                        for c in b.claims if c.claim_id == o.existing_claim_id
+                    ),
+                    "span": texts[o.claim_id].draft.source.span,
+                },
+            )
+        if o.outcome == "contested" and o.judgments_dropped:
+            emit(
+                "judgment_on_contested",
+                {
+                    "story_slug": new_story.story_slug,
+                    "claim_id": o.claim_id,
+                    "judgments_dropped": list(o.judgments_dropped),
+                    "existing_beat_id": o.existing_beat_id,
+                    "existing_claim_id": o.existing_claim_id,
+                    "span": texts[o.claim_id].draft.source.span,
+                },
+            )
         if o.existing_beat_id is None:
             continue
         if o.outcome == "covered":
@@ -807,6 +941,8 @@ def merge(
                 "existing_text": next(
                     c.text for c in held_by.claims if c.claim_id == o.existing_claim_id
                 ),
+                "judgments_dropped": list(o.judgments_dropped),
+                "covered_by": [list(ref) for ref in o.covered_by],
             },
         )
     emit(
@@ -925,8 +1061,15 @@ def apply(outcome: MergeOutcome, beats: Sequence[model.Beat]) -> list[model.Beat
             old.kind = "belief"
             old.status = "superseded"
             claims.append(_new_claim(new, item.applied_claim_id, item.new_value))
-        else:  # superseded: the new claim arrives as a dated belief
+        elif item.outcome == "adds_judgment":
+            # Beside its match, never folded into it: the match's text lacks
+            # the judgment the new claim carries (ADR-0003). The match is
+            # untouched, so the fact is one fact told once, by the narrator.
+            claims.append(_new_claim(new, item.applied_claim_id, None))
+        elif item.outcome == "superseded":  # the new claim arrives as a dated belief
             claims.append(_new_claim(new, item.applied_claim_id, item.new_value, superseded=True))
+        else:
+            raise ValueError(f"no rule applies outcome {item.outcome!r}")
     return [
         b.model_copy(update={"claims": claims_of[b.beat_id]}) if b.beat_id in claims_of else b
         for b in beats

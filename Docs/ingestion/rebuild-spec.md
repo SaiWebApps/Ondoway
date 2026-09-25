@@ -218,7 +218,7 @@ failed job resumes at its last completed phase.
 | P3 judge claims | judge | per claim: entailed yes/no and the temporal kind read from the span (slice 9: a wrongly kinded claim is re-kinded, never refused); per unit: facts no claim carries, and (slice 10) claims that state more than one fact — logged as `compound_found`, no re-ask yet | a claim refused once is re-asked with the judge's reason quoted back; refused twice is dropped and logged; an omission finding that no claim already states (a finding whose signature equals a claim's is dropped, `omission_already_carried`) re-asks P1 once for that unit — since slice 10 (owner ruling A, 2026-09-19) for the omitted facts ONLY, the first pass's claims shown; the new claims are appended, grouped and judged on their own, and a re-ask that fails keeps the first pass |
 | P4 narrate | author, sees claims only | narration text | no lift vs any span; no leak; no framing regex (`imagine`, `picture`, `envision`); duration computed |
 | P5 judge narration | judge | per sentence entailed yes/no | a failing sentence re-asks P4 once with the sentence quoted back; still failing → `narration.flags` set, `review.held = true` |
-| P6 merge | merge judge + signature | per new story: same / new / supersedes; per claim, against ANY claim at the place whatever the story verdict: new / same / conflict — candidate beats and claims named by handle (`b1`, `b1.c02`), never by id | the signature is a one-way tripwire, measured in the contract's direction (`merge.covered`: the existing claim covers ≥0.7 of the new claim's tokens): a signature match on a claim the judge called `new`, or on a different claim than the judge named, holds the new story (queue item); a judge match the signature cannot see applies. Every raw answer is logged (`merge_answered`), every matched claim logged with both texts and the new span (`merge_folded`). A matched claim FOLDS into the claim that holds it: conflict → the D9 kind rules (`contested`, or supersedes → old claim `belief`, dated); same → one claim, sources appended. A `new` story's own beat keeps only its unmatched claims and is narrated again; left below its arc minimum it is a queue item; fully folded it writes nothing (`merge_absorbed`). Any claim change → P4/P5 rerun for that beat |
+| P6 merge | merge judge + signature | per new story: same / new / supersedes; per claim, against ANY claim at the place whatever the story verdict: new / same / conflict / covered, decided on the facts alone, with the claim's judgment words listed verbatim (`judgments`, ADR-0003) — candidate beats and claims named by handle (`b1`, `b1.c02`), never by id | the signature is a one-way tripwire, measured in the contract's direction (`merge.covered`: the existing claim covers ≥0.7 of the new claim's tokens): a signature match on a claim the judge called `new`, or on a different claim than the judge named, holds the new story (queue item); a judge match the signature cannot see applies. Every raw answer is logged (`merge_answered`), every matched claim logged with both texts and the new span (`merge_folded`). A matched claim FOLDS into the claim that holds it: conflict → the D9 kind rules (`contested`, or supersedes → old claim `belief`, dated); same → one claim, sources appended, unless a listed judgment is not carried by a resolved match, which writes the new claim beside it (`adds_judgment`, ADR-0003). A `new` story's own beat keeps only its unmatched claims and is narrated again; left below its arc minimum it is a queue item; fully folded it writes nothing (`merge_absorbed`). Any claim change → P4/P5 rerun for that beat |
 | P7 commit | none | `beats_io.commit` | the slice-1 validator, extended; nothing reaches disk otherwise |
 
 Refusal loop: exactly one re-ask per phase per item, then drop or hold. No item is padded,
@@ -1567,7 +1567,8 @@ of the book now tells the narrator four painters matter and a fifth does not. r8
 spiral ramp" at the atrium into "has a spiral ramp" is the same loss. **Owner ruling:** sourced
 evaluative language — importance, size, quality, reputation — is narrative signal; a merge may never
 drop it silently; a `same` whose new claim carries such a judgment the existing claim lacks is not
-`same`. No lexical rule can enforce that: over the eleven labeled `same` pairs below, `merge._signature`
+`same`. (Since ADR-0003, 2026-09-25, this is the merge's OUTCOME, `adds_judgment`, never the judge's
+verdict: the judge answers `same` on the facts and lists the judgment.) No lexical rule can enforce that: over the eleven labeled `same` pairs below, `merge._signature`
 leaves words over on all nine non-hold pairs as well as on both false ones ("seminal", "huge" sit beside
 "late", "mansion", "earliest", "located"), and the narrower "new contains all of existing plus more"
 catches r8, misses El Greco and holds both true Frick Madison folds.
@@ -2012,7 +2013,9 @@ by nothing else, since every live merge baseline is null) — and no WRONG FOLD.
 `covered` result is re-opened: it was measured under the old prompt, and it is not counted again until
 a P6 replay under this one reproduces it. Unmeasured and recorded: a claim whose judgment differs
 from the existing claim's ("beloved" against "panned") will most likely come back `new` (both kept,
-the disagreement unreported), since `conflict` covers names, dates, numbers, places and causes only;
+the disagreement unreported), since `conflict` covers names, dates, numbers, places and causes only
+(since ADR-0003 it comes back `same` with the judgment listed, so `adds_judgment` puts both claims in
+one beat, where the narrator meets the disagreement, still unreported);
 two claims carrying the same judgment in different words may come back `new` (a duplicate, not a
 loss); and a new claim that drops the existing claim's judgment should still be `same`. No plant pins
 any of these three.
@@ -2047,6 +2050,103 @@ and is not new. Any non-merge miss, `REGRESSION` line or exit 1 is reported as a
 not block the P6 gate, which asks only whether the merge judge still merges. VOID applies only
 when the process exits without printing the report table (a provider error escaping the run);
 it is reported, and a re-run needs a fresh owner go.
+*Live calibration under the judgment-keeping merge prompt — result (2026-09-24, owner go on
+b4a741d): FAIL, as registered.* Actual spend $0.1863 (the printed $1.2478 is 6.7x high; no
+unmetered calls). The live corpus stayed sha `556830a5342e178c` and the baseline file was untouched.
+Ten merge classes 1/1, among them `same_fact`, `covered_union` and `covered_union_elsewhere`,
+so the rule did not over-apply. **`adds_a_judgment` 0/1, WRONG FOLD:** the judge answered
+`same` onto c02, and its own `new_value` restated the claim without "iconic" ("Neither architect
+nor patron lived to see the building finished"), although the rule and its worked example were
+in the prompt it was sent. The run exited 0, as the registration warned (stale baseline).
+Non-merge: `stated_relation` 0/1 (the expected repeat), the other nine 1/1, `judge_claims` 3/3.
+The P6 gate stays closed. Log pinned at
+`$HOME/ondoway-ingest-backup-2026-09-13/calib-2026-09-24/calib-live-b4a741d.log`.
+
+*A judgment a merge would drop is kept by code — plan (owner grilling, 2026-09-25; ADR-0003).*
+The prompt rule failed, so code enforces it. (1) The P6 answer gains a required per-claim
+`judgments` array: the new claim's judgment words, verbatim. `answer_problems` refuses a listed
+word that is not a whole word of the new claim's text (the normal one re-ask). (2) The prompt
+drops "a claim that adds one is "new"": the verdict is judged on facts alone, the judgment is
+listed, and the Eiffel example becomes "The celebrated Eiffel Tower was completed in 1889." is
+"same", judgments ["celebrated"]. (3) A listed word is carried when it is a case-insensitive
+whole word of the matched claim's text (`covered`: any named claim's). A `same` or `covered`
+with a word not carried becomes the new outcome `adds_judgment`: the new claim, resolved and
+with a fresh id, is written beside its match in the match's beat. The old claim is untouched,
+the beat is in `rerun`, and the runner counts the claim as written. A `covered` whose named
+claims span beats stays `new` and emits `judgment_kept_split`. (4) `covered_leftovers` leaves
+out the signature tokens of listed, verified judgment words, so a covered claim whose only
+extra word is its judgment is no longer held. Any other extra word still holds it. (5) A
+conflict that becomes `contested` with a word not carried takes no twin (the model requires a
+contested claim to carry two differing stated values). `judgment_on_contested` names the word,
+which waits in the new source's span. `supersedes` and `superseded` already write the new
+claim. (6) Calibration: `adds_a_judgment` expects `adds_judgment` on c02. The new
+`covered_adds_a_judgment` is `covered_union`'s pair plus a word the prompt never names
+("…with its beloved spiral ramp…") and expects `adds_judgment` covered by c01+c02. The new
+`told_once` runs a new `narration` detector: one live P4 (and its redo, if a gate refuses)
+over a beat of "…completed in 1959" plus its twin "…acclaimed building…completed in 1959".
+It passes iff exactly one sentence of the narration contains "1959" and that sentence
+contains "acclaimed". The narration is printed in the details, so a second sentence that
+restates the fact without the year is caught by eye, not scored. The estimate gains the P4
+plan for narration records. Tests first, each mutation-checked: the schema/parse, the
+malformed quote, the carried check (case, whole word, covered union), the `same`/`covered`
+overrides, the split-beat fallback, the contested event, `apply` writing the twin, the
+runner disposition, the leftovers carve-out, the prompt text, and the three records on the
+mock. **Gate, unchanged in kind:** no P6 run until a live calibration registered afterwards
+has all twelve merge classes caught, `told_once` caught, and no WRONG FOLD. `told_once`'s known
+blind spot: a second sentence that restates the fact without the year is checked only by eye.
+*Amended at the judge's PROCEED (conditional).* (a) `apply` gets an explicit `adds_judgment`
+branch. Its catch-all becomes `elif outcome == "superseded"` and then `else: raise`, so a new
+kind can never be written silently as a superseded belief. (b) `adds_judgment` joins
+`_RESOLVED_TEXTS_CHANGE` (without it the twin's beat is never re-narrated and P7 refuses the
+file on a stale hash) and `run._CLAIM_WRITTEN` (without it a held story's disposition calls the
+twin unmatched and an applier writes it twice). The docstrings say so. (c) `parse_merge`,
+`_CLAIM_KEYS`, `_CLAIM_ITEM_SCHEMA` (and its `required`), `_MERGE_SHAPE`, `scripted_merge_answer`
+and every hand-built P6 answer in the tests carry `judgments`. (d) `ClaimOutcome` gains
+`judgments_dropped`. `merge_folded` carries it and `covered_by`, and `_answered` carries the
+listed judgments for the reviewer of a held story. (e) `adds_a_judgment` and
+`covered_adds_a_judgment` are caught only when the planted word ("iconic", "beloved") is in
+`judgments_dropped`. A judge that lists some other word ("finished") gets `adds_judgment` but
+is not caught. `covered_adds_a_judgment` has its own branch comparing `covered_by` with the
+planted pair. (f) A test pins the carve-out invariant: a token the carve-out removes never
+leaves the claim `covered` (absorbed). Its mutant applies the carve-out without the carried
+check. (g) `told_once` runs `narrate` then `judge_narration`, as `run._rerun` does, and scores
+the text P5 returns, since P5 may rewrite it. The estimate prices P4 and P5. (h) The 2026-09-24
+ruling's "is not `same`" now describes the OUTCOME, never the judge's verdict, which is on
+facts (ADR-0003). (i) A new claim that comes out `superseded` is written with its own text,
+judgment included, so nothing is dropped and no event is owed. (j) The prompt test's
+measured-word set gains "iconic" and "acclaimed". "celebrated" is the prompt's own example and
+stays out of every plant.
+*Built, $0 (2026-09-25).* Everything above as planned, with one prompt addition: the `same` rule
+reads "with the same values, its judgments set aside". Without it, "states EVERYTHING the new
+claim states" would still push the judge to answer `new` on a judgment and leave the twin with its
+own story. Fourteen new tests: ten in merge, one in run, and three in calibrate (the planted-word rule,
+`told_once` over three narrations, and the P4/P5 estimate). The prompt test was rewritten. A fixture
+pin covers the two judgment plants: the word appears in no record claim, no claim outside the plant
+trips the signature, and nothing but the judgment is left over. Sixteen mutants each went red on
+their own node and were restored: apply's `adds_judgment` branch, the rerun set, `_CLAIM_WRITTEN`,
+the `same` override, the covered keep (the absorbed mutant), the leftovers carve-out, the split-beat
+check, the new-text quote check, the whole-word boundaries, the list parse, the contested event,
+apply's raising catch-all, the planted-word rule, `told_once`'s one-sentence and judgment checks,
+and the facts-alone clause. Every `tests/test_ingest_*.py` file is green (379 tests; 382 after the panel below), and so are
+lint and the mock calibration (23 classes, each 1/1). The live estimate is now $1.4965.
+*Skeptic panel (opus, sonnet, fable; 2026-09-25).* Sonnet CONFIRMED that the calibration measures
+the fix for the right reason: no plant passes through the signature or the leftover guard (worked
+by hand: 0.11 and 0.667 against 0.7, no leftover). Opus and Fable each REFUTED the build on the same
+path. A `same` onto a superseded or contested claim, with a word it lacks, wrote a RESOLVED twin,
+bringing back an outdated value or getting round a contest. Fixed: a twin is written only beside a
+resolved match; otherwise the fold stays `same` and `judgment_on_unresolved` names the word. Also
+fixed: `covered` gets the same "judgments set aside" clause as `same`; the prompt calls a measured
+or ranked size a fact ("the tallest", "400 feet"), so opposite superlatives still conflict and do
+not twin; a split `covered` row shows no `covered_by`; and the §3 P6 row, the prompt module
+docstring, the 2026-09-24 ruling and the "beloved against panned" note now match the code. Two new
+tests, each mutation-checked red. At the judge's PROVE-FIRST the mutation script was retargeted to
+the committed tree (the panel fix had moved the `same` override line) and gained F1 and F6: all
+18 mutants red on their own node, each an assertion failure, the diff unchanged after; script and
+log pinned at `$HOME/ondoway-ingest-backup-2026-09-13/calib-2026-09-24/mutate-adr0003*`. Open and recorded in ADR-0003, owed an owner ruling before the P6 gate opens (the
+judge: it blocks neither this commit nor the calibration, which never conflicts a twin): twins
+are not linked, so a later conflict that names one leaves the other narrating the old value. Also recorded: the carried check
+reads the word, not what it qualifies, and an old claim's own judgment still leaves narration when
+that claim is superseded.
 
 ### Slice 11: Cleanup
 

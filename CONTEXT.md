@@ -22,6 +22,22 @@ span. A relation the source states (X caused Y, X rejected Y's offer) is one cla
 naming both sides, never two.
 _Avoid_: key claim, fact, detail
 
+**Judgment**:
+A source's own evaluation of importance, size, quality or reputation ("seminal",
+"iconic", "huge"), kept inside the claim it qualifies in the source's words. It is part
+of what the claim states: two claims that differ only by a judgment state the same fact
+but not the same thing, and a merge keeps both wherever the matched claim is resolved.
+_Avoid_: opinion, adjective, wording, flavour
+
+**Adds a judgment**:
+What a merge concludes about a new claim that states the same fact as an existing claim
+plus a judgment the existing claim does not carry. The new claim is kept beside the
+claim it matches, in that claim's beat, so the beat is told once with the judgment in
+it. A judgment counts as carried only in the same word. A claim is only ever kept
+beside a resolved match: beside a contested or superseded one, the judgment waits in
+its source's passage until a person resolves it.
+_Avoid_: duplicate, variant
+
 **Stated value**:
 What one source says a claim's value is, kept with that source even after the claim is
 resolved differently. A claim with two stated values that differ is contested.

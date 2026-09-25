@@ -87,6 +87,14 @@
       "caught": 1,
       "total": 1
     },
+    "covered_adds_a_judgment": {
+      "caught": 1,
+      "total": 1
+    },
+    "told_once": {
+      "caught": 1,
+      "total": 1
+    },
     "recombined_union": {
       "caught": 1,
       "total": 1

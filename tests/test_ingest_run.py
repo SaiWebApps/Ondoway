@@ -337,7 +337,7 @@ def _claim_verdict(claim_id: str, verdict: str, existing_claim_id: str = "",
                    reason: str = "the two state the same fact") -> dict:
     return {
         "claim_id": claim_id, "verdict": verdict, "existing_claim_id": existing_claim_id,
-        "new_value": new_value, "existing_value": existing_value, "reason": reason,
+        "new_value": new_value, "existing_value": existing_value, "judgments": [], "reason": reason,
     }
 
 
@@ -431,13 +431,13 @@ def test_a_held_merge_shows_the_reviewer_every_claim_the_judge_named(tmp_path):
             "claim_id": "c01", "verdict": "same",
             "named": [{"beat_id": script_mod.ORIGINS_ID, "claim_id": "c01",
                        "text": script_mod.COLLECTING["text"]}],
-            "new_value": "his sixties", "existing_value": "his sixties",
+            "new_value": "his sixties", "existing_value": "his sixties", "judgments": [],
             "reason": "both say he began collecting in his sixties",
         },
         {"claim_id": "c02", "verdict": "new", "named": [], "new_value": "",
-         "existing_value": "", "reason": "no claim mentions 1939"},
+         "existing_value": "", "judgments": [], "reason": "no claim mentions 1939"},
         {"claim_id": "c03", "verdict": "new", "named": [], "new_value": "",
-         "existing_value": "", "reason": "nothing like it"},
+         "existing_value": "", "judgments": [], "reason": "nothing like it"},
     ]
 
 
@@ -2124,3 +2124,54 @@ def test_a_superseding_fold_says_where_the_fact_lives_now(tmp_path):
         # the matched claim is NOT where the fact lives now
         assert rows[kind]["existing_claim_id"] == "c02", kind
         assert rows[kind]["applied_claim_id"] == "c03", kind
+
+
+def test_a_held_storys_adds_judgment_claim_counts_as_written():
+    """ADR-0003: an `adds_judgment` claim is written beside its match in the
+    match's beat. When its story is later held, the disposition must say
+    `written` at the fresh id — `unmatched` would let an applier accepting
+    the queue item write it a second time. Mutant: drop the kind from
+    `run._CLAIM_WRITTEN`."""
+    from types import SimpleNamespace
+
+    kept = merge.ClaimOutcome(
+        claim_id="c01", verdict="same", existing_beat_id="new_york/p/b",
+        existing_claim_id="c02", outcome="adds_judgment", applied_claim_id="c03",
+        new_value=None, existing_value=None, reason="the same fact, plus a judgment",
+        judgments_dropped=("iconic",),
+    )
+    outcome = merge.MergeOutcome(
+        story_slug="s", place="p", judge_story="same", judge_model="m", story="new",
+        beat_id=None, claims=[kept],
+    )
+    claims = [SimpleNamespace(draft=SimpleNamespace(claim_id="c01"))]
+
+    rows = run._disposition(claims, outcome)
+
+    assert [(r["status"], r["beat_id"], r["applied_claim_id"]) for r in rows] == [
+        ("written", "new_york/p/b", "c03")
+    ]
+
+
+def test_a_split_covered_claim_that_stayed_new_is_unmatched_with_no_covered_refs():
+    """Skeptic panel 2026-09-25 (F6): a covered claim whose named claims span
+    beats stays `new` (ADR-0003) but keeps its refs on the outcome for its
+    event. Its row must read plainly unmatched — `covered_by` is for
+    absorbed rows only, or a reviewer mistakes it for absorbed."""
+    from types import SimpleNamespace
+
+    split = merge.ClaimOutcome(
+        claim_id="c01", verdict="covered", existing_beat_id=None, existing_claim_id=None,
+        outcome="new", applied_claim_id="c01", new_value=None, existing_value=None,
+        reason="spans two beats", covered_by=(("b/a", "c01"), ("b/b", "c01")),
+        judgments_dropped=("beloved",),
+    )
+    outcome = merge.MergeOutcome(
+        story_slug="s", place="p", judge_story="new", judge_model="m", story="new",
+        beat_id=None, claims=[split],
+    )
+    claims = [SimpleNamespace(draft=SimpleNamespace(claim_id="c01"))]
+
+    rows = run._disposition(claims, outcome)
+
+    assert [(r["status"], r["covered_by"]) for r in rows] == [("unmatched", [])]

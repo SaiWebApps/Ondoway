@@ -928,7 +928,7 @@
     {
       "class": "adds_a_judgment",
       "detector": "merge",
-      "note": "Owner ruling 2026-09-24: a judgment of importance, size, quality or reputation is part of what a claim states. The same_fact plant's paraphrase plus one judgment the record's claims never make ('iconic'), so a judge that folds it `same` drops the judgment (the El Greco 'seminal' and c162 'huge' folds); it must stay `new`. Paired with same_fact, which must fold: the two differ only by the judgment. The signature stays silent, so the class measures the judge alone.",
+      "note": "Owner ruling 2026-09-24: a judgment of importance, size, quality or reputation is part of what a claim states. The same_fact plant's paraphrase plus one judgment the record's claims never make ('iconic'). Under the prompt rule the live judge folded it `same` and dropped the word (2026-09-24, b4a741d); since ADR-0003 the judge answers on the facts and lists the word, and code keeps the claim beside c02 as `adds_judgment`. Caught only when 'iconic' is among the words code found dropped. Paired with same_fact, which must fold and list nothing. The signature stays silent, so the class measures the judge alone.",
       "story": {
         "title": "Neither lived to see it",
         "place": "Solomon R. Guggenheim Museum",
@@ -967,7 +967,94 @@
           "text": "Neither the architect nor the patron lived to see the museum's iconic building finished.",
           "kind": "event"
         },
-        "expected": "new"
+        "expected": "adds_judgment",
+        "judgment": "iconic"
+      }
+    },
+    {
+      "class": "covered_adds_a_judgment",
+      "detector": "merge",
+      "note": "ADR-0003: covered_union's pair plus a judgment neither claim carries ('beloved', a word the prompt never names). The judge answers `covered` by c01+c02 and lists the word; covered_leftovers leaves the listed word out, and code keeps the claim beside c01 in the same beat as `adds_judgment` instead of absorbing it. Caught only when 'beloved' is among the words code found dropped and the claim is covered by exactly c01+c02.",
+      "story": {
+        "title": "The building that upstages its art, beloved",
+        "place": "Solomon R. Guggenheim Museum",
+        "beat_type": "establishing",
+        "lenses": [
+          "historic_arch",
+          "modern_design"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "The Guggenheim Museum building was designed by architect Frank Lloyd Wright.",
+          "kind": "state",
+          "span": "this building by architect Frank Lloyd Wright almost overshadows the collection of 20th-century art inside"
+        },
+        {
+          "claim_id": "c02",
+          "text": "The Guggenheim Museum has a spiral ramp.",
+          "kind": "state",
+          "span": "Walking the spiral ramp"
+        }
+      ],
+      "planted": {
+        "claim_id": "c01",
+        "claim_ids": [
+          "c01",
+          "c02"
+        ],
+        "expected": "adds_judgment",
+        "second_source": {
+          "source_id": "second-source",
+          "chunk": "calibration",
+          "as_of": 2024,
+          "rights_basis": "own_work",
+          "text": "The Guggenheim Museum, with its beloved spiral ramp, was designed by Frank Lloyd Wright.",
+          "kind": "state"
+        },
+        "judgment": "beloved"
+      }
+    },
+    {
+      "class": "told_once",
+      "detector": "narration",
+      "note": "ADR-0003's listener promise: a beat holding a claim and its `adds_judgment` twin (the same fact plus the judgment 'acclaimed') is narrated once, with the judgment. One live P4 plus P5, as run._rerun does. Caught iff exactly one sentence of the judged narration contains '1959' and that sentence contains 'acclaimed'; a second telling without the year is visible only in the printed narration. The twin's span is the record's own (a narration plant needs no second source: P4 reads claim texts, the lift gate reads spans).",
+      "story": {
+        "title": "Finished in 1959",
+        "place": "Solomon R. Guggenheim Museum",
+        "beat_type": "establishing",
+        "lenses": [
+          "historic_arch",
+          "modern_design"
+        ],
+        "claim_ids": [
+          "c01",
+          "c02"
+        ]
+      },
+      "claims": [
+        {
+          "claim_id": "c01",
+          "text": "Construction of the Guggenheim was finally completed in 1959.",
+          "kind": "event",
+          "span": "Construction was finally completed in 1959"
+        },
+        {
+          "claim_id": "c02",
+          "text": "The Guggenheim's acclaimed building was finally completed in 1959.",
+          "kind": "event",
+          "span": "Construction was finally completed in 1959"
+        }
+      ],
+      "planted": {
+        "anchor": "1959",
+        "judgment": "acclaimed",
+        "narration": "The museum's acclaimed building was finally completed in 1959."
       }
     }
   ]
