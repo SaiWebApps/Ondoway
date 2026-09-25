@@ -2147,6 +2147,35 @@ judge: it blocks neither this commit nor the calibration, which never conflicts 
 are not linked, so a later conflict that names one leaves the other narrating the old value. Also recorded: the carried check
 reads the word, not what it qualifies, and an old claim's own judgment still leaves narration when
 that claim is superseded.
+*Live calibration under ADR-0003 — registered before any spend (2026-09-25).* One run,
+`make ingest-calibrate-live ARGS="--yes"` (never `--update-baseline`), at 38abf75 plus this
+registration commit. The printed estimate is $1.4984 (prices of 2026-06-24; the $1.4965 above was
+printed before the panel's two prompt additions lengthened the merge prompt). Last night's run came
+in at 0.15x its estimate, so about $0.25 is expected. The ceiling is 1.5x, $2.25, read after the run
+from the harness's `spend: actual=` line. The run does not stop midway. If that line is missing or
+marked LOWER BOUND, the provider's usage console gives the spend before any next step. The live
+corpus is sha `556830a5342e178c` before, and must be after, as must the baseline file
+(`11725b795783bb4c`, since `--update-baseline` is forbidden). The backup rsync runs before the spend.
+**The bar**, scored only from the printed table (caught/total, the WRONG FOLD marks and the
+wrong-folds section), never from the exit code, has three parts. (1) All twelve `merge` classes
+catch 1/1: `contested_value`, `superseded_belief`, `shared_element`, `same_fact`, `covered_union`,
+`shared_union`, `adds_a_date`, `recombined_union`, `negated_fact`, `covered_union_elsewhere`,
+`adds_a_judgment` and `covered_adds_a_judgment`. The last two catch only when the harness finds
+their own word in `judgments_dropped` (calibrate.py's `adds_judgment` branch; a caught row prints no
+note). The word is also checked by eye on the class's `event merge_folded` line
+(`"judgments_dropped": ["iconic"]` / `["beloved"]`). (2) `told_once` catches 1/1. (3) No row is marked
+WRONG FOLD. Any row printed 0/1, HELD included (a P6 `transport:` hold, and on `told_once` a P4 `beat held` or a P5 review hold),
+is a FAIL. **PASS** meets the calibration condition of the P6 gate. The gate still stays closed
+until the owner rules on the unlinked twins (ADR-0003, Open). After that, the next step is the
+Guggenheim P6 replay under its own registration. **FAIL:** no retry and no re-score. The failing
+row's raw answer, or narration, is read and reported to the owner with its cause, and the next step
+is theirs. `same_fact` missing reads as the facts-alone rule over-applied. `adds_a_judgment` as a
+plain `same` reads as the judge not listing the word. `told_once` with two sentences reads as the
+narrator telling the twins twice. **Read by eye, not scored:** `told_once`'s printed narration,
+for a second telling without the year (its registered blind spot), reported as a finding if
+present. **Reported, not scored:** the ten non-merge classes. `stated_relation` 0/1 is the expected
+repeat, and any `judge_claims` miss is reported as prominently as a merge miss. VOID applies only
+when the process exits without printing the table. A re-run then needs a fresh owner go.
 
 ### Slice 11: Cleanup
 
