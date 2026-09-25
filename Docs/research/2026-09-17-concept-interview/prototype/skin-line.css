@@ -203,3 +203,13 @@
 .kid-screen .find.found .kid-btn { background: #2F8A45; box-shadow: 0 10px 22px rgba(47,138,69,.28); }
 .kid-screen .stamp { top: 14px; right: 14px; padding: 4px 11px; border: 3px solid #2F8A45; border-radius: 12px; color: #2F8A45; font: 700 17px var(--mono); letter-spacing: 3px; }
 .kid-screen .todo { background: #F6ECD6; border: 1.5px dashed #B9852F; color: #7A5A1E; border-radius: 999px; padding: 3px 9px; font: 400 10px var(--mono); letter-spacing: .1em; }
+
+/* The camera's Ask joins the walk's pill family (design pass 2026-09-23) — it used to be a
+   blue tile, the only control on the walkthrough shaped like that. */
+.cam .cam-ask {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 13px 0 10px;
+  border-radius: 999px; border: 1px solid rgba(123,178,245,.45); background: rgba(44,108,192,.28);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color: #f6f4f0; font: 600 12px var(--body); white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,.4);
+}
+.cam .cam-ask .ms { font-size: 17px; color: #cfe1fb; }

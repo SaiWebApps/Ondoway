@@ -58,7 +58,7 @@ recap, the close. Cut steps still appear as ranking cards.
 - **Story text (revised 2026-09-23):** hand-authored to the house standard from
   public-domain and government sources (NPS, LOC/HABS, NARA, LPC, NYC Parks) — the engine is
   mid-rebuild, so the demo tests the concept, not the engine. Scripts and citations in
-  `narration.md` and `deep-dive.md`; research in `sources/`. It is recorded there that this
+  `scripts.md`; research in `sources/`. It is recorded there that this
   audio may never be presented as engine output.
 - **Real audio is required before the pilot.** Hearing the story at the place is the core
   value; a placeholder button leaves nothing to experience. Build with placeholders (browser
@@ -67,7 +67,7 @@ recap, the close. Cut steps still appear as ranking cards.
   writes the real ones before the pilot (verdicts must be ones he would stand behind). Two
   Liberty beats already support "crown tickets sell out months ahead."
 - **Deep dive length:** seven chapters, 12:23, hand-authored from public-domain sources
-  (`deep-dive.md`). Chapters are separate files, so a short queue stops early.
+  (`scripts.md`). Chapters are separate files, so a short queue stops early.
 - **Look:** copy the real Flutter app's screens and tokens (details in `script.md`), so
   people see what the product will actually look like.
 

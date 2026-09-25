@@ -93,15 +93,18 @@ function walkScaffold(el, { levers = true, closeX = true, where = null } = {}) {
   el.insertAdjacentHTML("beforeend", `<div class="walk guide">
     <div class="g-map">${Walk.mapSvg()}</div>
     ${closeX ? `<button class="walk-x" data-log="Close walk (X)">${icon("close")}</button>` : ""}
-    ${where ? `<div class="map-tools"><button class="tool ask-btn" data-log="Ask button" data-detail='{"where":"${where}"}'>${icon("forum", "fill")}<span>Ask</span></button><button class="tool cam-btn" data-log="Camera button" data-detail='{"where":"${where}"}'>${icon("photo_camera", "fill")}<span>Echoes</span></button></div>` : ""}
     <div class="walkbar g-banner"><div class="ar">${icon("directions_walk")}</div><div class="bx"><div class="bt"><span>Walk to the next stop — audio starts on arrival</span></div></div></div>
+    <div class="tooldock">
+    ${(levers || where) ? `<div class="toolrow" role="toolbar" aria-label="What you can do here">
+        ${where ? `<button class="ask-btn" data-log="Ask button" data-detail='{"where":"${where}"}'>${icon("forum")}Ask</button>` : ""}
+        ${where ? `<button class="cam-btn" data-log="Camera button" data-detail='{"where":"${where}"}'>${icon("photo_camera")}Echoes</button>` : ""}
+        ${levers ? `<button data-lever="more" data-log="Lever: Tell me more">${icon("add_circle")}Tell me more</button>
+        <button data-lever="skip" data-log="Lever: Skip this stop">${icon("skip_next")}Skip stop</button>
+        <button data-lever="short" data-log="Lever: Shorter day">${icon("schedule")}Shorter day</button>` : ""}
+      </div>` : ""}
+    </div>
     <div class="np-wrap">
       <div class="g-dots"></div>
-      ${levers ? `<div class="levers">
-        <button data-lever="more" data-log="Lever: Tell me more">${icon("add_circle")}Tell me more</button>
-        <button data-lever="skip" data-log="Lever: Skip this stop">${icon("skip_next")}Skip this stop</button>
-        <button data-lever="short" data-log="Lever: Shorter day">${icon("schedule")}Shorter day</button>
-      </div>` : ""}
       <div class="np g-player">
         <div class="np-top gp-top">
           <div class="np-tile gp-art">${icon("headphones")}</div>

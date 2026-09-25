@@ -49,7 +49,7 @@ function cameraView(el, stop, { overlay = false, leaveBtn = true, fresh = false,
       ${mine ? `<div class="echo mine${fresh ? " fresh" : ""}" style="left:40%;top:54%"><b>Your echo</b> ${esc(mine)}<span class="ecount">0 found — yet</span></div>` : ""}
     </div>
     <div class="vf"><i></i><i></i><i></i><i></i></div>
-    <div class="cam-top">${overlay ? `<button class="cam-x" data-log="Camera: close">${icon("close")}</button>` : ""}<span class="pill cam-pill"><i class="bd"></i>${icon("photo_camera", "fill")}Echoes at ${esc(C.stopNames[stop] || "")} · ${echoes.length + (mine ? 1 : 0)}</span>${ask ? `<button class="tool ask-btn cam-ask" data-log="Ask button" data-detail='{"where":"${ask}"}'>${icon("forum", "fill")}<span>Ask</span></button>` : ""}</div>
+    <div class="cam-top">${overlay ? `<button class="cam-x" data-log="Camera: close">${icon("close")}</button>` : ""}<span class="pill cam-pill"><i class="bd"></i>${icon("photo_camera", "fill")}Echoes at ${esc(C.stopNames[stop] || "")} · ${echoes.length + (mine ? 1 : 0)}</span>${ask ? `<button class="ask-btn cam-ask" data-log="Ask button" data-detail='{"where":"${ask}"}'>${icon("forum")}Ask</button>` : ""}</div>
     <div class="cam-hint">${icon("swipe")}Drag to look around</div>
     <div class="cam-bottom">${leaveBtn ? `<button class="btn block cam-leave" data-log="Leave an echo" data-detail='{"stop":"${stop}"}'>${icon("add_location_alt")}Leave an echo</button>` : ""}${mini ? miniPlayer() : ""}</div>
   </div>`);
@@ -82,14 +82,33 @@ function panCamera(cam) {
   setH();
   let pos = 0.35, dir = 1, last = performance.now(), holdUntil = 0, drag = null;
   const maxShift = () => Math.max(0, pano.offsetWidth - cam.clientWidth);
-  const apply = () => (pano.style.transform = `translateX(${-pos * maxShift()}px)`);
+  const cards = [...cam.querySelectorAll(".echo")];
+  // An echo card is either readable or gently gone — never sliced by the frame edge. The
+  // panorama drifts, so this has to run with the pan, not once at layout.
+  const fade = () => {
+    const view = cam.getBoundingClientRect();
+    cards.forEach((e) => {
+      const b = e.getBoundingClientRect();
+      if (!b.width) return;
+      const inView = Math.min(b.right, view.right) - Math.max(b.left, view.left);
+      const frac = Math.max(0, Math.min(1, inView / b.width));
+      const o = frac >= .97 ? 1 : Math.max(0, (frac - .55) / .42);
+      e.style.opacity = o.toFixed(2);
+      e.style.pointerEvents = o > .85 ? "auto" : "none";
+    });
+  };
+  const apply = () => { pano.style.transform = `translateX(${-pos * maxShift()}px)`; fade(); };
   const step = (now) => {
     if (!cam.isConnected) return;
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (!drag && now > holdUntil) {
-      const edge = Math.min(pos, 1 - pos);
-      pos += dir * dt * 0.07 * Math.min(1, 0.25 + edge * 5);
-      if (pos >= 1) { pos = 1; dir = -1; } if (pos <= 0) { pos = 0; dir = 1; }
+      // The idle drift stays in a narrow band around the echoes. Left to roam the full
+      // panorama it parked on empty sky with every echo off-frame, which reads as a broken
+      // screen rather than an invitation to look around. Dragging still reaches the ends.
+      const LO = 0.24, HI = 0.52;
+      const edge = Math.min(pos - LO, HI - pos);
+      pos += dir * dt * 0.04 * Math.min(1, 0.3 + Math.max(0, edge) * 12);
+      if (pos >= HI) { pos = HI; dir = -1; } if (pos <= LO) { pos = LO; dir = 1; }
     }
     apply();
     requestAnimationFrame(step);

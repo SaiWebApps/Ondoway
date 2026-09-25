@@ -1,6 +1,6 @@
 # Fact sheet — the slurry wall under the 9/11 Memorial plaza
 
-Sources for the `memorial_dig` beat in `../narration.md`. **Everything below was fetched and
+Sources for the `memorial_dig` beat in `../scripts.md`. **Everything below was fetched and
 read directly in this session (2026-09-23)** — the two primary documents were downloaded and
 their text extracted here, not summarised from anywhere. Quotations are verbatim.
 

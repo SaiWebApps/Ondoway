@@ -53,13 +53,6 @@
 /* ---- map furniture, moved clear of the banner and dressed as v10 frosted chrome */
 .walk .walk-x { top: 120px; left: 12px; width: 38px; height: 38px; border-radius: 50%; background: rgba(23,26,32,.9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.1); color: #f6f4f0; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
 .walk .walk-x .ms { font-size: 20px; }
-/* laid out as a row so the stack no longer runs down over the Federal Hall pin label */
-.walk .map-tools { flex-direction: row; top: 120px; right: 12px; gap: 8px; }
-.walk .tool { width: 52px; height: 52px; border-radius: 16px; font: 700 10px var(--body); }
-.walk .tool.ask-btn { background: #2c6cc0; color: #fff; box-shadow: 0 6px 18px rgba(44,108,192,.45); }
-.walk .tool.ask-btn .ms { color: #fff; font-size: 21px; }
-.walk .tool.cam-btn { background: rgba(23,26,32,.9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.1); color: #f6f4f0; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
-.walk .tool.cam-btn .ms { color: #7bb2f5; font-size: 21px; }
 /* 3.3's "Dan's phone" badge is v10's .g-next pill */
 .walk .whose.g-next { top: 120px; right: 12px; z-index: 5; }
 .walk .whose.g-next .ms { font-size: 15px; }
@@ -95,10 +88,48 @@
 .np-ctl.gp-ctrls .play { width: 56px; height: 56px; border-radius: 50%; background: #2c6cc0; color: #fff; box-shadow: 0 8px 22px rgba(44,108,192,.5); }
 .np-ctl.gp-ctrls .play .ms { font-size: 28px; }
 
-/* ---- the lever bank: no v10 component, so it borrows the .g-next / .g-banner frost */
-.walk .levers { gap: 7px; padding: 0 2px 9px; }
-.walk .levers button { border: 1px solid rgba(255,255,255,.12); background: rgba(23,26,32,.88); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #f6f4f0; border-radius: 999px; padding: 7px 12px 7px 9px; font: 600 11.5px var(--body); box-shadow: 0 6px 18px rgba(0,0,0,.4); }
-.walk .levers button .ms { font-size: 16px; color: #7bb2f5; }
+/* ---- One tool row, docked to the player (design pass 2026-09-23).
+   Before: Ask + Echoes were 52px tiles floating at the top-right of the map and the three
+   levers wrapped into two ragged rows over it — three clusters, none attached to anything,
+   all of them colliding with pin labels. v10's live guide has exactly two anchors, the
+   banner and the player, so every action now lives in one horizontal row sitting on the
+   player, in one pill family, scrollable sideways when it overflows. Nothing sits on the
+   map any more. */
+/* The dock sits just above the player card and STAYS when the card slides away while
+   walking — the actions are about the place you are in, not about the story playing. */
+.walk .tooldock { position: absolute; left: 0; right: 0; bottom: 252px; z-index: 8; transition: bottom .45s cubic-bezier(.2,.8,.2,1); }
+/* a soft scrim so pills stay legible over map labels without boxing them in */
+.walk .tooldock::before { content: ""; position: absolute; inset: -18px 0 -6px; background: linear-gradient(180deg, transparent, rgba(16,18,24,.55) 45%, rgba(16,18,24,.72)); pointer-events: none; }
+.walk.walking .tooldock { bottom: 92px; }
+.walk .toolrow {
+  display: flex; gap: 7px; align-items: center;
+  padding: 0 14px 9px;
+  overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  scroll-padding-inline: 14px;
+}
+.walk .toolrow::-webkit-scrollbar { display: none; }
+/* fade the right edge so an overflowing row reads as "there is more", not as a cut-off */
+.walk .toolrow { mask-image: linear-gradient(90deg, #000 0 94%, transparent 100%); scroll-snap-type: x proximity; }
+.walk .toolrow button { scroll-snap-align: start; }
+.walk .toolrow.ends { mask-image: none; }
+.walk .toolrow button {
+  flex: none; display: inline-flex; flex-direction: row; align-items: center; gap: 6px;
+  width: auto; min-width: 0;
+  height: 34px; padding: 0 13px 0 10px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14); background: rgba(23,26,32,.9);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color: #f6f4f0; font: 600 12px var(--body); white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0,0,0,.4);
+  transition: background .15s, transform .15s;
+}
+.walk .toolrow button:active { transform: scale(.96); }
+.walk .toolrow button .ms { font-size: 17px; color: #7bb2f5; }
+/* Ask leads the row: it is the one action the traveller invents for themselves, and H6
+   measures whether they find it. Tinted, not filled — it must not outrank the story. */
+.walk .toolrow .ask-btn { border-color: rgba(123,178,245,.45); background: rgba(44,108,192,.28); }
+.walk .toolrow .ask-btn .ms { color: #cfe1fb; }
+/* The map is now clear, so the chapter dots can sit with the row rather than float. */
+.walk .g-dots { padding: 0 0 8px; }
 
 /* ---- the Ask sheet + Shorter day sheet. sheet() is shared with the plan and recap
    screens, so nothing here touches .sheet itself: the walk's own sheets mark their

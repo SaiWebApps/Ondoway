@@ -124,6 +124,9 @@ records what they touched; you record what they *said*.
   want your kids seeing what strangers wrote?"
 
 **Step 6 · The kid in line — I Spy (2 min)** — tests **H9: the kid is the veto**
+- If they raised the kids' tour at step 1 (the party screen), pick it up here: "Back on that
+  first screen it said the children get their own version. Does that matter to you, or is the
+  game the point?"
 - "On your last trip, what did the kids do while you were looking at things?" (skip if
   already answered in part 2)
 - "Would this change that?"

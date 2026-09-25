@@ -1,52 +1,20 @@
-# Recording script — read these, name the files exactly
+# Ondway — Lower Manhattan tour scripts
 
-Generated from `scripts.md` (owner revision, 2026-09-24). Edit that file, not this one.
+Research-backed revision for the guided feedback mockup. Prepared September 24, 2026.
 
-**Open item before you record.** In `deepdive_7`, the line "By 1906, she had acquired her
-green patina" is not supported by the sources listed for that beat — NPS implies roughly
-1911–1916, though a documented 1906 debate about painting the statue may vindicate the date.
-Owner's ruling pending. Either settle it or drop that sentence before voicing this block.
+The original 20 file IDs are preserved. Spoken copy appears between **Script** and **Sources**; source notes are not narration. These are individually selectable beats, not a requirement to play every item in sequence. Maya and Dan are alternative treatments of Federal Hall. Location cues assume the relevant landmark is shown in the mockup; real-world positioning and access have not been field-tested.
 
-One file per block. **Name each file after the id in its heading**, with `.m4a`, `.mp3` or
-`.wav`. Read unhurried, about 150 words a minute. **Each blank line is a pause.**
+> **Provenance.** Owner revision, 2026-09-24, written after judging the earlier drafts weak.
+> This file is the authority for every spoken word and supersedes the scripts previously in
+> `narration.md` and `deep-dive.md`, which are deleted. `prototype/content.js` carries this
+> text; `recording-script.md` is generated from it — when regenerating, carry any open item
+> (below) into its header, because a reader voicing the blocks never sees these Sources notes. Screen text that is never spoken (the
+> Ask answers, I Spy, Skip advice) lives in `screen-text.md`. Background research is in
+> `sources/`, and remains useful for anything added later.
 
-These are individually selectable beats, not a sequence that must all play. `fh_maya` and
-`fh_dan` are the two treatments of Federal Hall heard side by side, so keep their delivery
-identical — any difference in energy reads as one person's story being better.
+## memorial — The two pools
 
-Total: 20 blocks, about 18:50 of audio.
-
-| File | What it is | Length |
-|---|---|---|
-| `memorial` | The two pools | 0:36 |
-| `memorial_before` | The neighborhood before the towers | 0:54 |
-| `memorial_dig` | Holding back the river | 1:06 |
-| `memorial_design` | Why the names are here | 0:46 |
-| `memorial_names` | Names placed together | 0:48 |
-| `memorial_parapet` | Designed to be touched | 0:35 |
-| `memorial_tree` | The Survivor Tree | 0:37 |
-| `trinity` | A different skyline | 1:03 |
-| `trinity_more` | A connection in the doors | 0:31 |
-| `fh_maya` | Why a customs house looks like this | 1:02 |
-| `fh_dan` | The balcony that survived | 0:58 |
-| `fh_more` | An amendment that took two centuries | 0:38 |
-| `bowling` | The fence and the missing king | 0:49 |
-| `deepdive_1` | When Castle Clinton stood offshore | 1:14 |
-| `deepdive_2` | A concert hall becomes an arrival hall | 1:26 |
-| `deepdive_3` | The detail at Liberty's feet | 1:02 |
-| `deepdive_4` | How a copper statue moves | 1:13 |
-| `deepdive_5` | The readers who helped finish the pedestal | 1:17 |
-| `deepdive_6` | How the poem became part of the statue | 1:07 |
-| `deepdive_7` | Seeing Liberty, then entering America | 1:07 |
-
-Pronunciation: **Arad** AH-rahd · **Callery** CAL-er-ee · **repoussé** ruh-poo-SAY ·
-**Isère** ee-ZAIR · **Laboulaye** lah-boo-LAY · **Bartholdi** bar-TOL-dee · **Upjohn** UP-john ·
-**Frazee** fray-ZEE · **Ithiel** ITH-ee-el · **Bitter** BIT-er · **Lazarus** LAZ-uh-rus ·
-**Pulitzer** PULL-it-ser · **Schuyler** SKY-ler · **Jenny Lind** LIND (short i).
-
----
-
-## memorial · The two pools · 0:36
+**Script**
 
 These two pools mark the places where the Twin Towers stood. Each is nearly an acre, with water falling down all four sides.
 
@@ -56,9 +24,13 @@ That was central to architect Michael Arad's idea: water keeps entering the spac
 
 The names around the edges bring that enormous loss back to individual people. We'll take a closer look at how they were placed.
 
----
+**Sources**
 
-## memorial_before · The neighborhood before the towers · 0:54
+[9/11 Memorial: About the Memorial](https://www.911memorial.org/visit/memorial/about-memorial); [original competition design board](https://collection.911memorial.org/Detail/objects/121765). The apparent unfilled space is the architect's interpretation of the design, not a claim about how the recirculating water system operates.
+
+## memorial_before — The neighborhood before the towers
+
+**Script**
 
 Before the towers, this was a neighborhood of small shops known as Radio Row. People came here for radios, televisions, and electronic parts they couldn't find elsewhere.
 
@@ -72,9 +44,13 @@ For the merchants, that meant losing their premises. They protested and challeng
 
 So this site had already changed completely once before the towers became the New York skyline people remembered.
 
----
+**Sources**
 
-## memorial_dig · Holding back the river · 1:06
+[9/11 Memorial: A Look Back at Manhattan's Radio Row](https://www.911memorial.org/taxonomy/term/1046); [Memorial exhibition: Casualties of Progress](https://membership.911memorial.org/learn/resources/digital-exhibitions/world-trade-center-history/world-peace-through-world-trade); [Port Authority: PATH history](https://www.panynj.gov/path/en/about/history.html).
+
+## memorial_dig — Holding back the river
+
+**Script**
 
 Building the World Trade Center meant digging down to bedrock beside the Hudson River. Before workers could excavate the foundations, they had to keep the surrounding groundwater out.
 
@@ -88,9 +64,13 @@ After the towers collapsed, engineers feared the damaged wall could fail and all
 
 A preserved section is inside the museum. What looks like a rough concrete wall was one of the things that made building here possible.
 
----
+**Sources**
 
-## memorial_design · Why the names are here · 0:46
+[9/11 Memorial: Slurry Wall construction](https://www.911memorial.org/connect/blog/slurry-wall-behind-engineering-feat-made-wtc-possible); [Museum collection: preserved Slurry Wall](https://collection.911memorial.org/Detail/objects/121790).
+
+## memorial_design — Why the names are here
+
+**Script**
 
 The names weren't always going to be here at the edge of the plaza.
 
@@ -102,9 +82,13 @@ The names moved to the bronze panels you see now, within reach of people walking
 
 It's a substantial change in how you encounter them. You can stop beside a name without first entering a separate room or going below ground. Remembering happens here, in the open, with the city around you.
 
----
+**Sources**
 
-## memorial_names · Names placed together · 0:48
+[Original design board](https://collection.911memorial.org/Detail/objects/121765); [Yale's account of Arad's 2012 talk](https://news.yale.edu/2012/11/28/architect-911-memorial-tells-story-its-creation). The final paragraph is interpretation of the documented placement. The revision avoids reducing the redesign to a single budget decision.
+
+## memorial_names — Names placed together
+
+**Script**
 
 The names around these pools aren't alphabetical. Their arrangement also preserves relationships.
 
@@ -118,9 +102,13 @@ That connection isn't something you could work out just by reading the bronze. Y
 
 The Memorial calls this arrangement “meaningful adjacencies.” It gives families a way to preserve who someone was connected to, as well as their name.
 
----
+**Sources**
 
-## memorial_parapet · Designed to be touched · 0:35
+[Memorial announcement of the names arrangement](https://www.911memorial.org/blog/memorial-announces-final-names-arrangement-memorial-guide); [Memorial's account of Richard Barry Ross and Stacey Leigh Sanders](https://www.911memorial.org/richard-barry-ross-and-stacey-leigh-sanders). This beat belongs at the North Pool; the panel example does not imply the listener is already directly in front of it.
+
+## memorial_parapet — Designed to be touched
+
+**Script**
 
 The bronze panels were designed for people to touch. That presented a practical problem: metal outdoors can become very hot in summer and bitterly cold in winter.
 
@@ -128,9 +116,13 @@ Beneath the panels is a network of copper pipes. Fluid circulates through them t
 
 There are about fourteen thousand feet of piping involved. You won't see it from the plaza, but it supports one of the simplest things someone might come here to do: rest a hand on a name.
 
----
+**Sources**
 
-## memorial_tree · The Survivor Tree · 0:37
+[Copper Development Association: 9/11 Memorial — A Look Inside](https://www.copper.org/publications/newsletters/ba-news/2012/spring/docs/Sept11-Memorial.pdf), including accounts from the fabricator and Memorial construction director. This describes design intent, not a guarantee of the surface temperature on a particular visit.
+
+## memorial_tree — The Survivor Tree
+
+**Script**
 
 Among the oaks is a Callery pear known as the Survivor Tree.
 
@@ -142,9 +134,13 @@ Look at the contrast between the older, rough wood and the smoother branches gro
 
 The tree's recovery took years. You can see some of that history in the way it has grown.
 
----
+**Sources**
 
-## trinity · A different skyline · 1:03
+[9/11 Memorial: The Survivor Tree](https://www.911memorial.org/visit/memorial/survivor-tree). Introduce this beat with a tree photograph or map marker in the mockup; species alone is not adequate wayfinding.
+
+## trinity — A different skyline
+
+**Script**
 
 Look up at Trinity's spire, then at the buildings around it. When this church was completed in 1846, its spire was the highest point on New York's skyline. Ships used it as a landmark.
 
@@ -156,9 +152,13 @@ He provided a deep space for the altar and choir, with choir stalls. Some people
 
 It's easy to see this as a settled piece of old New York. When it was new, people were still arguing over how a service should be conducted inside it.
 
----
+**Sources**
 
-## trinity_more · A connection in the doors · 0:31
+[National Historic Landmark nomination for Trinity Church](https://npgallery.nps.gov/pdfhost/docs/NHLS/Text/76001252.pdf), physical description and significance sections. The choir-stall controversy is documented; the rewrite narrows it to what that source supports rather than claiming all New Yorkers shared the reaction.
+
+## trinity_more — A connection in the doors
+
+**Script**
 
 Take a moment with the bronze doors at the Broadway entrance. The figures are modeled in relief, so the surface has depth as well as detail.
 
@@ -166,9 +166,13 @@ These doors brought together architect Richard Morris Hunt and sculptor Karl Bit
 
 Hunt connects this stop to the harbor: he also designed the Statue of Liberty's pedestal. When you see the statue, take a look at the building beneath her as well.
 
----
+**Sources**
 
-## fh_maya · Why a customs house looks like this · 1:02
+[Library of Congress: east entrance door design](https://www.loc.gov/item/2010649585/); [NPS: Richard Morris Hunt](https://www.nps.gov/stli/learn/historyculture/richard-morris-hunt.htm). This is specifically about the east/Broadway doors, not sole authorship of all three sets.
+
+## fh_maya — Why a customs house looks like this
+
+**Script**
 
 With Washington standing outside, you might expect this to be the building where he became president. That happened on this site, but in an earlier building.
 
@@ -182,9 +186,13 @@ The materials had a practical purpose too. Marble walls, brick vaults, and a roo
 
 Ithiel Town and Alexander Jackson Davis supplied the winning design; John Frazee supervised construction as it evolved. The result is a building whose appearance tells you about the government's ambitions, while its fabric tells you what it needed to protect.
 
----
+**Sources**
 
-## fh_dan · The balcony that survived · 0:58
+[NPS: Manhattan Sites General Management Plan, Federal Hall section](https://www.nps.gov/feha/learn/management/upload/GMP-Manhattan-Sites-Reduced.pdf); [NPS Federal Hall foundation overview](https://www.npshistory.com/publications/foundation-documents/feha-fd-overview.pdf). The sentence about national presentation is architectural interpretation. Use Maya as the architecture alternative to Dan, not immediately before him.
+
+## fh_dan — The balcony that survived
+
+**Script**
 
 George Washington took his first presidential oath here on April thirtieth, 1789. But the building behind his statue came later.
 
@@ -198,9 +206,13 @@ Federal Hall preserves that stone today. It even has a later coating of cement, 
 
 So the most direct physical link to the inauguration is a piece of flooring that was moved across the city and brought home again. The grand columns came more than fifty years after Washington's oath.
 
----
+**Sources**
 
-## fh_more · An amendment that took two centuries · 0:38
+[NPS: Inaugural Balcony](https://www.nps.gov/feha/learn/historyculture/inaugural-balcony.htm?mobile-app=true&theme=wiki); [NPS Federal Hall building history](https://www.nps.gov/feha/learn/management/upload/GMP-Manhattan-Sites-Reduced.pdf). No promise of interior access or a specific current display position is made.
+
+## fh_more — An amendment that took two centuries
+
+**Script**
 
 The first Congress, meeting in the earlier Federal Hall, sent twelve proposed amendments to the states in 1789. Ten became the Bill of Rights.
 
@@ -212,9 +224,13 @@ In 1992, it finally became the Twenty-seventh Amendment.
 
 That means one proposal from the Congress that met here was still unfinished business when people were using personal computers.
 
----
+**Sources**
 
-## bowling · The fence and the missing king · 0:49
+[National Archives: original twelve amendments](https://www.archives.gov/founding-docs/constitution-q-and-a); [National Archives: Gregory Watson and ratification](https://www.archives.gov/publications/prologue/2017/spring/historian-27-amendment); [text and dates of the Twenty-seventh Amendment](https://www.archives.gov/founding-docs/amendments-11-27). The comparison with personal computers is a modern time reference, not a quotation or historical motive.
+
+## bowling — The fence and the missing king
+
+**Script**
 
 This little park is Bowling Green. The iron fence was put up in 1771, partly to protect a statue of King George the Third standing inside.
 
@@ -226,9 +242,13 @@ Look at the tops of the posts. Their original ornaments are gone. Accounts diffe
 
 The statue's destruction is well documented. This was a place where the break with Britain became something people could see happening in the street.
 
----
+**Sources**
 
-## deepdive_1 · When Castle Clinton stood offshore · 1:14
+[NYC Landmarks Preservation Commission: Bowling Green Fence designation](https://s-media.nyc.gov/agencies/lpc/lp/0548.pdf). This does not claim the fence is untouched or that the precise form of its missing ornaments is settled.
+
+## deepdive_1 — When Castle Clinton stood offshore
+
+**Script**
 
 Castle Clinton looks firmly attached to Manhattan now. When it was built, you had to cross a wooden causeway and a drawbridge to reach it.
 
@@ -244,9 +264,13 @@ There's another piece of that harbor defense beneath the Statue of Liberty. Her 
 
 When you reach Liberty Island, look for those low, angled walls around the pedestal. They're older than the statue, and they help explain why that island was already in federal hands when a French sculptor came looking for a place to build.
 
----
+**Sources**
 
-## deepdive_2 · A concert hall becomes an arrival hall · 1:26
+[NPS: Southwest Battery/Castle Clinton, 1807–1823](https://home.nps.gov/cacl/learn/historyculture/southwest-battery-castle-clinton-1807-1823.htm); [NPS: Southwest Battery](https://www.nps.gov/places/southwest-battery.htm); [Castle Clinton foundation document](https://parkplanning.nps.gov/showFile.cfm?projectID=53953&sfid=375947); [NPS: Liberty Island chronology](https://www.nps.gov/stli/learn/historyculture/liberty-island-a-chronology.htm). Avoid claiming the forts demonstrably caused the British decision not to attack.
+
+## deepdive_2 — A concert hall becomes an arrival hall
+
+**Script**
 
 This fort has held some very different crowds.
 
@@ -266,9 +290,13 @@ When processing ended here in 1890, it moved temporarily to the nearby Barge Off
 
 So the immigration history associated with the islands also belongs here, in this small building at the edge of Manhattan.
 
----
+**Sources**
 
-## deepdive_3 · The detail at Liberty's feet · 1:02
+[NPS: Castle Garden entertainment history](https://home.nps.gov/cacl/learn/historyculture/castle-garden-entertainment-center.htm); [NPS: Castle Garden Emigrant Depot](https://www.nps.gov/cacl/learn/historyculture/castle-garden-emigrant-depot.htm), including the attributed Farmington account; [NPS: Ellis Island Cultural Landscape Report, first immigration station chapter](https://www.nps.gov/parkhistory/online_books/elis/clr.pdf). The traveler anecdote remains explicitly attributed; no dialogue or internal feelings are invented.
+
+## deepdive_3 — The detail at Liberty's feet
+
+**Script**
 
 The torch is the part of the Statue of Liberty you can recognize from far away. A much less visible detail explains another part of her meaning.
 
@@ -282,9 +310,13 @@ The monument also celebrated American independence and the relationship between 
 
 From the ferry, the chain will be difficult to make out. Knowing it's there changes how you read the figure: she is carrying her torch forward, with a broken restraint at her feet.
 
----
+**Sources**
 
-## deepdive_4 · How a copper statue moves · 1:13
+[NPS: Statue of Liberty facts and symbolism](https://www.nps.gov/stli/learn/statue-of-liberty-facts.htm); [NPS research report on the statue's origins](https://www.nps.gov/stli/learn/historyculture/black-statue-of-liberty.htm); [NPS: Creating the Statue of Liberty](https://www.nps.gov/stli/learn/historyculture/places_creating_statue.htm). The disputed dinner scene is omitted, and emancipation is presented alongside the monument's other documented purposes.
+
+## deepdive_4 — How a copper statue moves
+
+**Script**
 
 The Statue of Liberty's copper surface is only about two and a half millimeters thick—roughly the thickness of two American pennies.
 
@@ -300,9 +332,13 @@ The statue was assembled in Paris, then taken apart for shipping. It arrived in 
 
 When you look at her from the boat, the robe appears heavy. What you're seeing is carefully shaped sheet metal, supported by a structure designed to give a little in the wind.
 
----
+**Sources**
 
-## deepdive_5 · The readers who helped finish the pedestal · 1:17
+[NPS: materials FAQ](https://home.nps.gov/stli/planyourvisit/frequently-asked-questions-statue-of-liberty.htm); [NPS: Alexandre-Gustave Eiffel](https://www.nps.gov/stli/learn/historyculture/alexandre-gustave-eiffel.htm); [NPS: Creating the Statue of Liberty](https://www.nps.gov/stli/learn/historyculture/places_creating_statue.htm). The account describes the original engineering; the armature was subsequently restored and altered.
+
+## deepdive_5 — The readers who helped finish the pedestal
+
+**Script**
 
 France would fund the Statue of Liberty. Americans would fund her pedestal. That was the arrangement, but the two projects didn't finish together.
 
@@ -320,9 +356,13 @@ The pedestal was designed by Richard Morris Hunt, who also worked on Trinity's b
 
 When you look at the base, remember that many of the people who helped finish it were newspaper readers sending in small amounts.
 
----
+**Sources**
 
-## deepdive_6 · How the poem became part of the statue · 1:07
+[NPS: Joseph Pulitzer](https://www.nps.gov/stli/learn/historyculture/joseph-pulitzer.htm); [NPS: Pulitzer in depth](https://home.nps.gov/stli/learn/historyculture/pulitzer-in-depth.htm); [NPS: Richard Morris Hunt](https://www.nps.gov/stli/learn/historyculture/richard-morris-hunt.htm); [Library of Congress: Trinity door design](https://www.loc.gov/item/2010649585/); [NPS: statue construction and dedication](https://www.nps.gov/stli/learn/historyculture/places_creating_statue.htm). This describes the campaign that closed the funding gap, not the entire pedestal budget.
+
+## deepdive_6 — How the poem became part of the statue
+
+**Script**
 
 “Give me your tired, your poor” is so closely associated with the Statue of Liberty that it can seem like part of the original commission.
 
@@ -342,9 +382,13 @@ That was seventeen years after the statue was unveiled.
 
 The words helped shape the meaning many people now associate with Liberty. The monument's story continued to develop after the building work was finished.
 
----
+**Sources**
 
-## deepdive_7 · Seeing Liberty, then entering America · 1:07
+[NPS: Emma Lazarus](https://www.nps.gov/stli/learn/historyculture/emma-lazarus.htm). Poem fragments quoted total 17 words. The revision says the poem helped shape the immigration association, rather than claiming it single-handedly created it.
+
+## deepdive_7 — Seeing Liberty, then entering America
+
+**Script**
 
 When the Statue of Liberty was unveiled in 1886, her copper surface was brown. The familiar green developed gradually as the metal reacted with its surroundings. By 1906, she had acquired her green patina.
 
@@ -358,4 +402,30 @@ Ellis Island processed roughly twelve million immigrants during its years of ope
 
 As you cross the harbor, keep the two islands distinct. Liberty Island holds the monument and its promise. Ellis Island tells the story of the people who arrived, and the system they had to pass through.
 
+**Sources**
+
+[NPS: Liberty Island Cultural Landscape](https://www.nps.gov/articles/000/stli-liberty-island-650003.htm); [NPS: Ellis Island FAQ](https://home.nps.gov/elis/faqs.htm); [NPS: Statue of Liberty and Ellis Island Foundation Document](https://www.nps.gov/stli/learn/management/upload/STLI_Signatures-Deleted_508.pdf). The final contrast is interpretation, not an assertion that all arrivals understood the monument in the same way.
+
+> **Open point on the 1906 date (flagged 2026-09-24, text left as the owner wrote it).** None
+> of the three pages above discusses the patina. NPS "Preserving a Symbol" puts full
+> oxidation at roughly 25–30 years from 1886, i.e. 1911–1916, and this repo's own research
+> agrees (`sources/facts-liberty.md`: brown in the 1880s, blotchy through the 1890s, fully
+> green by roughly the 1910s). There *is* a documented 1906 episode — Congress debating
+> whether to paint her, because she had gone green — which would support the date if cited.
+> Either add that citation or soften to "within about twenty-five years" before recording.
+
 ---
+
+## Carried forward from the deleted `narration.md` and `deep-dive.md`
+
+Two records that were not scripts, kept so the next session does not re-litigate them.
+
+**Numbers deliberately avoided.** The statue's weight (three NPS figures disagree), the pane
+count in the 1916 torch (600 vs ~250), and the pedestal height (87 vs 89 ft). Each is
+contested across credible sources; none earns the risk of being spoken.
+
+**Negative rails on the walk.** "325 businesses" on Radio Row has no source, and the
+30,000-workers figure is the merchants' own advocacy claim for all 1,600 businesses in the
+area, not a count of Radio Row — phrase either as a claim, or not at all. The slurry wall's
+inward movement after the collapse is reported as 10 inches, 2 feet and over 4 feet by three
+credible sources, so no figure for it is spoken.

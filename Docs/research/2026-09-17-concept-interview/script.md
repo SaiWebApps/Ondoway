@@ -9,8 +9,8 @@ written. ✎ = founder writes it (verdicts and child prompts he must stand behin
 with a visible TODO placeholder. Everything unmarked is decided or is real corpus text.
 
 **Story text** was corpus `script_body` until 2026-09-23; it is now hand-authored from
-public-domain and government sources — full scripts and citations in `narration.md` and
-`deep-dive.md`, and already swapped into `prototype/content.js`. **Captions** (the one line
+public-domain and government sources — full scripts and citations in `scripts.md` and
+`scripts.md`, and already swapped into `prototype/content.js`. **Captions** (the one line
 under each screen that makes it self-explaining) are product copy, written here in full.
 
 ---
@@ -31,6 +31,13 @@ Every screen copies the Flutter app (`mobile/lib`), so people see what it will l
   Profile, selected tab = cobalt pill with label.
 - **Caption strip** (new, prototype only): a slim bar under the phone frame, Space Grotesk
   15, ink on panel. One line per screen. It is the only explanation the traveller gets.
+- **Captions orient and instruct; they never evaluate (rule added 2026-09-24).** Four of them
+  used to grade the product — "It noticed, and fixed it", "picked for you — and it tells you
+  why", "the best time for the big story" — which answered the interview's own questions
+  before the founder could ask them, so a reaction could no longer be told apart from a
+  prompt. They now say where you are and what you can do, and nothing about whether it is
+  any good. Three duplicate captions (2.1/2.2, 3.1/3.1b, 4.1/4.2) were split, and 7.4, which
+  had none, got one.
 
 **Frame:** one phone centred on the laptop screen. For the companion moment (screen 3.3)
 the frame splits into two phones side by side, and for I Spy (6.1) a third, smaller phone
@@ -100,6 +107,14 @@ people")*
   - **+ Invite someone** → pretend share sheet (Messages · WhatsApp · Copy link); nothing is
     sent; closes with "Invite ready — in the real app this sends a link." Logged.
   - Card: "Why invite them? At the same stop, each of you hears the story that fits you."
+  - **Kids card (added 2026-09-23, owner: the screen should say children get a kid-friendly
+    tour, not only a game):** "Children get their own version of the day, not just a game.
+    Every story is marked for whether it suits a child — at the 9/11 Memorial, most of ours
+    are not. Ava hears the ones that are, told for an eight-year-old, and plays I Spy where
+    there is nothing we would tell her." Grounded, not aspirational: beats carry a
+    `kid_friendly` flag, and 11 of the 17 Memorial beats in `data/new_york/beats.json` are
+    marked no. Row statuses say it too — Leo "picked 2 lenses · kid-safe stories", Ava
+    "kids' view — stories written for her, plus I Spy".
   - Deliberately absent: price or the household pass (would anchor H11's "who would it need to
     cover?") and comparing stories at dinner (tested by 7.2 and the step 7 questions, H3).
 
@@ -124,11 +139,12 @@ people")*
   shows as a ★ on its day card with a one-line why, e.g. "Added to Thursday — it's near your
   Midtown arrival." Log: sheet opened, search text, place added.
 - Button **Build my trip**.
-- Caption: *"Tell it what you already want to see. It plans everything around that."*
+- Caption: *"Maya's trip: four days, and the places she already wants to see."*
 
 **2.2 Building** — *spinner card, 2 seconds, auto-advances*
 - Lines tick in: "Reading 4 people's interests…" · "Fitting your must-sees…" · "Finding
   what's worth your time between them…" · "Checking what's worth skipping…"
+- Caption: *"Building the four days."*
 
 **2.3 Your trip** — *new, in itinerary card style*
 - Four day cards, each: day, area, must-see stars, stop count.
@@ -137,7 +153,7 @@ people")*
   - Sat · Central Park & the Met — ★ ★ ⚑
   - Sun · Brooklyn Bridge & DUMBO ⚑
 - Friday card is highlighted; only it opens.
-- Caption: *"Four days, built around your must-sees. Open Friday."*
+- Caption: *"Four days. Friday is the one you'll walk."*
 
 **2.4 Friday** — *= Itinerary (`trip_itinerary_page.dart`)*
 - Eyebrow "YOUR TOUR". Title "Friday · Lower Manhattan".
@@ -163,8 +179,7 @@ people")*
     - "The New York Stock Exchange. You can't go in — see it from Federal Hall's steps,
       it's across the street." ⚑ needs a source or founder verdict.
 - Button **Start walking** (the app's FAB label).
-- Caption: *"The big two are yours. Everything in between was picked for you — and it tells
-  you why."*
+- Caption: *"Friday, stop by stop."*
 - Log: time on screen, taps on stop cards, taps on the Skip advice card.
 
 ---
@@ -187,7 +202,18 @@ people")*
   2. **Trinity Church** — `historic_arch`, 57 s: "This is actually the third Trinity Church
      on the site…"
   3. **Federal Hall** — see 3.3.
-- Caption at 3.1: *"You just walk. Stories start on their own when you get there."*
+- Caption (3.1): *"9:30, walking the first leg. The story starts when you arrive."*
+- Caption (3.1b, Trinity): *"Second stop: Trinity Church."*
+
+**Chrome, after a design pass (2026-09-23, owner: "the button placement on the ask now and
+stuff feels weird").** Ask, Echoes and the three levers used to be three separate clusters
+floating on the map — two 52px tiles top-right and a lever bank that wrapped into two ragged
+rows over the pin labels. v10's live guide has exactly two anchors, the banner and the
+player, so every action now lives in **one horizontal pill row docked above the player**, in
+one family, scrolling sideways when it overflows, over a soft scrim so it stays legible on
+the map. The row stays put when the player slides away during walking — these actions are
+about the place, not the story. The camera view's Ask matches the same pill. Nothing floats
+on the map any more.
 
 **Gravity decides how much a stop has to say (added 2026-09-23, owner).** The engine models
 pull as `tier` 1–5 and books dwell from it (`src/tour/routing.py`: tier 5 → 5 min, tier 3 →
@@ -270,7 +296,8 @@ the close X), opening a sheet* — **revised 2026-09-18**
   - 1:30 Castle Clinton → **1:25**, ferry still on time ✓
 - Buttons **Sounds good** (continues) · **Keep original** (shows "You'd miss the 2:00 ferry"
   then continues anyway).
-- Caption: *"Your day didn't go to plan. It noticed, and fixed it."*
+- Caption: *"Something has changed in the day."*
+- 4.2, walking on afterwards: *"Walking again. The ferry is at two."*
 - ⚑ The trigger is a timed ticket, not "you're tired": it is concrete, and it is the
   thing a fixed audio tour can't do.
 
@@ -287,14 +314,13 @@ Modica's 7000lb bronze Charging Bull…"
 - Card: "**Looks like you're in line for the ferry.** Want the story of the statue while
   you wait? One story for all four of you, out loud."
 - "How long's the line?" chips: **5 min** · **15 min** · **30+ min**.
-- Caption: *"Waiting in line is the best time for the big story."*
+- Caption: *"You've reached the ferry line at Castle Clinton."*
 
 **5.2 Deep dive — "The copper woman"** — *full-screen player, same brand, speaker icon
 and "Playing out loud · 4 listening"*
 - Whatever line length is chosen: "Seven chapters, about twelve minutes — then it's quiet
   until the boat."
-- Chapters (hand-authored 2026-09-23 from public-domain sources; full text and citations in
-  `deep-dive.md`, runtimes measured at 150 wpm):
+- Chapters (hand-authored 2026-09-23 from public-domain sources; full text and citations in `scripts.md`, runtimes measured at 150 wpm):
   1. Castle Clinton, 1:30 — you are standing on filled water; the fort that never fired; the
      ring of four forts, of which two are the rest of today's trip
   2. Castle Clinton, 2:06 — Jenny Lind and the hatter who bought the first ticket; then the
@@ -338,7 +364,7 @@ and harbor as the "camera feed" ⚑ source: public-domain / Wikimedia*
   (tapping one increments it).
 - Button **Leave an echo** → 5.4.
 - Mini player at the bottom keeps the chapter going.
-- Caption: *"Other travellers left these right here. Tap one."*
+- Caption: *"Hold the phone up at the harbour. Tap an echo."*
 
 **5.4 Leave an echo** — *template builder*
 - Step 1, pick a template: "Look ___ at ___" · "Worth it: ___" · "Skip: ___" ·
@@ -425,6 +451,7 @@ to advance*
 - Caption: *"And when you're home, the whole trip."*
 
 **7.4 End** — "That's the whole thing." Button **Back to the conversation**.
+- Caption: *"That's everything. Back to the conversation."*
 
 ---
 

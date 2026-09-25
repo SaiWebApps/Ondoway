@@ -86,6 +86,7 @@ App.def("1.2", {
       ${rows}
       <button class="invite" id="invite" data-log="+ Invite someone">${icon("person_add")}Invite someone</button>
       <div class="why">${icon("headphones")}<span>${esc(C.partyWhy)}</span></div>
+      <div class="why kids">${icon("child_care")}<span>${esc(C.partyKids)}</span></div>
       <div style="margin-top:auto;padding-top:8px"><button class="btn block" id="pcont" data-log="Continue (party)">Continue</button></div>
     </div>`);
     $("#pcont", maya).onclick = () => App.next();

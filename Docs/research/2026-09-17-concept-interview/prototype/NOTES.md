@@ -10,14 +10,13 @@ recap — **without the founder explaining or operating anything**? Spec: `../sc
 
 Every spoken line and every Ask answer in `content.js` was replaced with text written from
 public-domain and government sources (NPS, LOC/HABS, NARA, LPC, NYC Parks). Scripts and
-citations: `../narration.md` (8 walk stories, ~6 min) and `../deep-dive.md` (7 Statue of
-Liberty chapters, 12:23). Research: `../sources/`.
+citations: `../scripts.md` (all 20 beats, 18:50). Research: `../sources/`.
 
 Each story carries `source:` instead of the old `beat:` id, and the session log records it.
 **This audio is not engine output and may never be presented as such.**
 
 To drop a recording in: set that slot's `audio:` from `null` to the filename. The slot ids
-are listed in `../narration.md`.
+are listed in `../scripts.md`.
 
 ## Look: the v10 design system
 

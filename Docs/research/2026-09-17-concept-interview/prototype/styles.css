@@ -427,7 +427,6 @@ button.must.add { font-family: var(--body); }
 .sthumb .num { position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; font-size: 11px; background: rgba(255,255,255,.92); }
 .stop.must-stop .sthumb .num { background: var(--accent); color: #fff; }
 /* Walk: Ask + Echoes buttons, echo badges, photo tile */
-.map-tools { position: absolute; top: 58px; right: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 6; }
 .tool { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: 58px; height: 58px; border-radius: 18px; border: 0; background: var(--accent); color: #fff; font: 700 10.5px var(--body); box-shadow: 0 6px 16px rgba(0,0,0,.35); }
 .tool .ms { font-size: 22px; }
 .tool.cam-btn { background: rgba(32,36,44,.94); color: var(--dInk); border: 1.5px solid var(--dLine); }
