@@ -100,7 +100,12 @@ RESTATE_PROMPT = (
     "drop or correct whatever the source does not support. Keep it "
     "standing entirely on its own, in your own wording (never eight words "
     "of the passage in a row outside an attributed quotation), with the "
-    "span copied exactly from the passage word for word. Set kind to "
+    "span copied exactly from the passage word for word. Never credit the claim "
+    'to the book, its author or its writer ("the author calls", "the writer '
+    'describes"), and never as a reputation the passage does not report ("is '
+    'regarded as"): when the passage judges what the claim describes, state the '
+    "passage's judgment about the thing itself, in the passage's own word for it "
+    '("The hall is a triumph.", not "The hall is regarded as a triumph."). Set kind to '
     '"event", "state", "belief" or "ambiguous".\n\n'
     "Answer as JSON only, matching this shape exactly:\n"
     f"{_RESTATE_SHAPE}\n\n"

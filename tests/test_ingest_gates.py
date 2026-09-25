@@ -629,3 +629,28 @@ def test_claim_gates_no_longer_test_a_claim_for_lift():
         "It opened in 1959, according to the guidebook.", "not in the unit at all", unit
     )
     assert [r.split(":")[0] for r in reasons] == ["span_not_in_unit", "leak", "not_self_contained"]
+
+
+def test_leak_catches_a_judgment_credited_to_the_writer_or_the_book():
+    """P1 keep-judgments run (p1keep-r1, 2026-09-24): P3's refuse-and-redo
+    loop credited three judgments to the book. The gate caught "the author"
+    twice; c199 escaped as "The writer characterizes …". A book-attribution
+    verb after "the writer", "the book" or "the guide" is apparatus; a
+    named writer who is the subject of the place's history is not."""
+    logged = [
+        "The writer characterizes the Guggenheim's building as a masterpiece dating from 1959.",
+        "The book calls the Frick Collection beloved.",
+        "The guide describes the Neue Galerie's cafe as transporting.",
+        "The guidebook's writer considers the Japanese hall ravishingly beautiful.",
+    ]
+    for text in logged:
+        reason = gates.leak(text)
+        assert reason and reason.startswith("leak"), text
+    ordinary = [
+        "The writer Truman Capote lived in Brooklyn Heights.",
+        "The writer of the novel lived on this street.",
+        "Writer Edith Wharton was born near Madison Square.",
+        "The Frick Collection is beloved in New York City.",
+    ]
+    for text in ordinary:
+        assert gates.leak(text) is None, text

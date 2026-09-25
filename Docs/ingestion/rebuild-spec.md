@@ -1910,7 +1910,7 @@ the job log is watched, and a batch still unfinished 24 hours after submission v
 that errors or is voided is recorded as such, and the owner decides; it is not re-run, and a
 `--resume` from its saved phase files is a re-run, allowed only by a new owner go after R0 checks the
 sandbox. No re-score under this registration.
-*P1 keep-judgments measurement — result (2026-09-24/25, owner go "go on the P1 measurement"; HEAD
+*P1 keep-judgments measurement — result (2026-09-24, owner go "go on the P1 measurement"; HEAD
 6f15cea; sandbox `data-ingest/sandboxes/p1keep-r1`, job `a58da458…`, status `stopped`, exit 0; R0 PASS —
 live `556830a5342e178c` before and after, nothing outside the sandbox newer than the marker; backup
 rsynced; score `$HOME/ondoway-ingest-backup-2026-09-13/p1-evaluative/p1keep-r1-score.json` by the
@@ -1956,6 +1956,33 @@ next P1 spend carries a known leak (3 of 255 claims, 1 escaping). Whether to fix
 leak pattern, or both, before that spend, is the owner's call. The rule also sometimes writes the judgment as its own claim ("The Frick Collection is
 beloved in New York City.") rather than inside a fact, the shape option (b) described. The claim count
 rose by about half (164 to 253), which raises every later phase's cost per book.
+*The book-attribution leak — the redo steered, the gate widened ($0, 2026-09-24; owner: "accept your
+recommendations", both).* What P3 refused in the three first tries shows the cause. c199's "is regarded
+as a masterpiece" claimed a reputation the passage does not report (the passage calls it a masterpiece
+itself). c124 paraphrased the judgment ("rousing" for the passage's "rippingly"). c37 was refused for an
+unrelated fact ("Frick curator"). Each redo then credited the book instead. (1) The redo: the P3
+restate prompt (`prompts/judge.py` RESTATE_PROMPT) now says "Never credit the claim to the book, its
+author or its writer (…), and never as a reputation the passage does not report ("is regarded as"):
+when the passage judges what the claim describes, state the passage's judgment about the thing itself,
+in the passage's own word for it". The example uses no measured word. A bare restate would likely be
+refused again and then dropped (a claim refused twice is dropped), which turns a book-credited judgment
+into a lost one. Asking for the passage's own word is meant to give P3 something it can accept. It is
+unmeasured: the next P1 run must count, for every judgment claim the redo touches, whether it was kept
+plainly or dropped, and a rise in drops is this change's cost, not a new defect. (2) The gate:
+`gates.APPARATUS_RE` gains "the writer", "the book", "the guide" and "the guidebook('s) writer" followed
+by an attributing verb (calls, describes, characterizes, considers, deems, rates, regards, praises,
+dismisses, judges, finds, says, notes). It is anchored to the verb, so "The writer Truman Capote lived
+in Brooklyn Heights." and "The book Eloise was written at the Plaza." pass. Accepted false positives,
+recorded so no one mistakes the drops: a book's own content described as "the book describes …" (a
+novel written at a place), a historical writer quoted as "the writer says …", and an actual tour guide
+as "the guide says …" are dropped. Accepted gap: the past tense ("the writer called it …") passes. Tests:
+the logged c199 text and three variants leak; four ordinary sentences, including a bare judgment ("The
+Frick Collection is beloved in New York City."), pass; the restate prompt carries each clause. Mutants,
+each red at its assertion and restored: the new alternative removed, the verb anchor loosened (the
+Capote sentence then leaks), the restate rule removed, the own-word clause removed. Blast radius, $0:
+over the 460 claims of the live corpus and the p1keep-r1 run, the widened gate newly catches exactly one,
+c199. Green: gates 24, prompts 23, judge 20, rejudge 9, calibrate 19, decompose 19, run 45, narrate 18,
+and the mock calibration.
 *The merge judge keeps a judgment the new claim adds — built test-first, committed UNMEASURED ($0,
 2026-09-24; owner: "go in the order of your suggested order", item 2, the El Greco fix).* The El
 Greco false fold is not in the live corpus — job B only ever ran in sandboxes, and the live file's

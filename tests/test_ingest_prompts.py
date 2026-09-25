@@ -647,3 +647,19 @@ def test_the_merge_judge_never_folds_away_a_judgment_the_new_claim_adds():
         assert "El Greco" not in rendered
         words = set(re.findall(r"[a-z]+", rendered.lower()))
         assert not words & measured, sorted(words & measured)
+
+
+def test_the_restate_never_credits_a_judgment_to_the_book():
+    """P1 keep-judgments run (2026-09-24): all three book attributions came
+    from the refuse-and-redo loop. P3 refused c199's "is regarded as a
+    masterpiece" (a reputation the passage does not report) and c124's
+    paraphrased judgment ("rousing" for "rippingly"), and the restate credited
+    the book's author or writer instead. The restate now forbids crediting the
+    book or claiming a reputation, and asks for the judgment stated about the
+    thing itself in the passage's own word — something P3 can accept, rather
+    than a plain restate it refuses again and drops."""
+    rendered = prompts.render_restate("C.", "S.", "only the author describes it", "P.")
+    assert "Never credit the claim to the book, its author or its writer" in rendered
+    assert "state the passage's judgment about the thing itself" in rendered
+    assert "in the passage's own word for it" in rendered
+    assert 'never as a reputation the passage does not report ("is regarded as")' in rendered

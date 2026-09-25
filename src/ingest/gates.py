@@ -276,6 +276,12 @@ APPARATUS_RE = re.compile(
     # Job B's restates (2026-09-21): claims about the book's LISTING, not the
     # place. "the author" is apparatus unless it names someone's work ("of").
     r"|the (?:guide(?:book)?'s )?author(?:'s)?(?!\s+of\b)|address given (?:for|in)|this listing"
+    # P1 keep-judgments run (2026-09-24): the redo credited a judgment to "the
+    # writer". Anchored to an attributing verb, so a named writer ("the writer
+    # Truman Capote") who belongs to the place's history is not apparatus.
+    r"|(?:the (?:(?:guide(?:book)?|book)'s )?writer|the (?:guide(?:book)?|book))\s+"
+    r"(?:calls|describes|characteri[sz]es|considers|deems|rates|regards|praises|dismisses"
+    r"|judges|finds|says|notes)"
     r"|listed (?:visiting )?(?:hours|admission|visitor information)|visitor information for)\b",
     re.I,
 )
