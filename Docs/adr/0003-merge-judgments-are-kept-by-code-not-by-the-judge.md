@@ -71,7 +71,8 @@ in the prompt it was sent.
   would show it as a WRONG FOLD.
 - A beat can hold two claims stating one fact. The narrator must tell it once, with the
   judgment; the `told_once` plant measures that live.
-- **Open (skeptic panel, 2026-09-25), owed a ruling before the P6 gate opens** (the first real
+- **CLOSED by ADR-0004 (2026-09-27): no twin is written, so this no longer exists.** Was: **Open
+  (skeptic panel, 2026-09-25), owed a ruling before the P6 gate opens** (the first real
   P6 run writes twins into the corpus): twins are not
   linked. A later book whose conflict names one twin supersedes or contests that one alone; the
   other stays resolved and keeps narrating the old value. A later restatement can also tie the

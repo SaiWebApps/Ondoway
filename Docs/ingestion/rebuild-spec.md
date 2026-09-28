@@ -2281,6 +2281,39 @@ is the property the guard pins. 406 tests green (every ingest file plus claim_co
 0, the mock calibration is 23/23, and the live corpus is unchanged (61 beats, 0 errors,
 `e3b0c44298fc1c14`). The estimate is $1.4188.
 
+*Live calibration under ADR-0004 — registered before any spend (2026-09-27).* One run,
+`make ingest-calibrate-live ARGS="--yes"` (never `--update-baseline`), at 7d06b20 plus this
+registration commit. The printed estimate is $1.4188 (prices of 2026-06-24); the last two runs came in
+at 0.15x their estimate and 0.14x, so about $0.20 is expected. The ceiling is 1.5x, $2.13, read
+after the run from the harness's `spend: actual=` line. The run does not stop midway. An actual above it is reported to the owner before any next step,
+the scoring unchanged. If that line is missing or marked LOWER BOUND, the provider's usage console
+gives the spend before any next step.
+Pinned before, and required unchanged after: the live corpus `data-ingest/new_york/beats.json`
+(`556830a5342e178c`), the baseline file (`11725b795783bb4c`) and the fixture
+`fixtures/ingestion/defects.json` (`19955864df5cc2ad`). The backup rsync runs before the spend.
+**The bar**, scored only from the printed table (caught/total, the WRONG FOLD marks and the
+wrong-folds section), never from the exit code, has three parts. (1) All twelve `merge` classes
+catch 1/1: `contested_value`, `superseded_belief`, `shared_element`, `same_fact`, `covered_union`,
+`shared_union`, `adds_a_date`, `recombined_union`, `negated_fact`, `covered_union_elsewhere`,
+`adds_a_judgment` and `covered_adds_a_judgment`. For the last two, the harness's own check
+(`calibrate._judgment_kept`) already requires the planted word. `adds_a_judgment` needs `same` onto
+c02, "iconic" in `new_judgments`, the applied source carrying it and the beat in `rerun`.
+`covered_adds_a_judgment` needs the claim kept `new` with "beloved" and `covered_by` exactly
+c01+c02. By eye: `adds_a_judgment`'s `event merge_folded` line shows `"judgments": ["iconic"]`;
+`covered_adds_a_judgment` emits no fold, and its `event merge_answered` line shows `"verdict":
+"covered"` with `"judgments": ["beloved"]`. (2) `told_once` catches 1/1: exactly one sentence
+with "1959", carrying "acclaimed", and no "also called" anywhere. (3) No row is marked WRONG FOLD.
+Any row printed 0/1, HELD included (a P6 `transport:` hold; on `told_once` a P4 `beat held` or a P5
+review hold; on `covered_adds_a_judgment` a leftover-guard hold), is a FAIL. **PASS** opens the P6
+gate: no twin is written any more, so ADR-0003's open item (F2) no longer exists. The next step is
+the Guggenheim P6 replay under its own registration. **FAIL:** no retry and no re-score. The failing
+row's raw answer, or narration, is read and reported to the owner with its cause, and the next step
+is theirs. **Read by eye, not scored:** `told_once`'s printed narration, for a second telling
+without the year, reported as a finding if present. **Reported, not scored:** the ten non-merge
+classes. `stated_relation` 0/1 is the expected repeat, and any `judge_claims` miss is reported as
+prominently as a merge miss. VOID applies only when the process exits without printing the table;
+a re-run then needs a fresh owner go.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
