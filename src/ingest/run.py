@@ -537,9 +537,10 @@ def story_of_beat(beat: model.Beat) -> Story:
 
 
 def judged_of_beat(beat: model.Beat) -> list[JudgedClaim]:
-    """A beat's RESOLVED claims as the JudgedClaims P4/P5 read (texts and
-    spans). A claim with several sources carries every span, newline-
-    joined, so the lift gate sees all of them."""
+    """A beat's RESOLVED claims as the JudgedClaims P4/P5 read (texts,
+    spans and judgments). A claim with several sources carries every span,
+    newline-joined, so the lift gate sees all of them, and the judgments
+    its sources make that its text does not carry (ADR-0004)."""
     out: list[JudgedClaim] = []
     for claim in beat.claims:
         if claim.status != "resolved":
@@ -552,6 +553,7 @@ def judged_of_beat(beat: model.Beat) -> list[JudgedClaim]:
                     claim_id=claim.claim_id, text=claim.text, kind=claim.kind, source=source
                 ),
                 verdict=claim.verdict,
+                judgments=tuple(model.claim_judgments(claim.model_dump())),
             )
         )
     return out
@@ -598,11 +600,9 @@ class _HeldStory:
 #: applier must NOT write it again; `absorbed` — `covered`, stated in full
 #: by claims already there, so it is never written; `dropped` — its fold was
 #: given back when a beat's rerun was held; `unmatched` — never written, the
-#: story's own beat was never assembled. An `adds_judgment` claim is
-#: written beside its match in the match's beat (ADR-0003), so it is
-#: `written` like a fold: an applier writing it again would tell it twice.
+#: story's own beat was never assembled.
 _CLAIM_WRITTEN: frozenset[str] = frozenset(
-    {"same", "contested", "supersedes", "superseded", "adds_judgment"}
+    {"same", "contested", "supersedes", "superseded"}
 )
 
 

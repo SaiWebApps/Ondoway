@@ -123,6 +123,36 @@ def test_fixture_has_one_record_per_class_and_only_the_planted_defect():
         if "corrected" in record.planted:
             corrected = record.planted["corrected"]
             assert gates.claim_gates(corrected["text"], corrected["span"], unit.text) == []
+        if record.detector == "merge" and "judgment" in record.planted:
+            # adds_a_judgment / covered_adds_a_judgment (ADR-0003/0004): the judgment
+            # is a whole word of the plant and of no record claim, so it is
+            # really dropped; no claim OUTSIDE the plant trips the signature
+            # (else the tripwire holds a correct judge); and for the covered
+            # plant nothing but the judgment is left over once the named
+            # claims and the place are taken away (else the guard holds it),
+            # and the word is in the second source's own text, its span.
+            import re
+
+            from src.ingest import merge
+
+            word = record.planted["judgment"]
+            text = record.planted["second_source"]["text"]
+            assert re.search(rf"\b{word}\b", text), record.defect_class
+            assert not any(re.search(rf"\b{word}\b", c["text"], re.I) for c in record.claims)
+            planted_ids = record.planted.get("claim_ids", [planted_claim_id])
+            second = merge._signature(text)
+            for c in record.claims:
+                if c["claim_id"] not in planted_ids:
+                    assert merge.covered(second, merge._signature(c["text"])) < (
+                        merge.SIGNATURE_MATCH_MIN
+                    ), record.defect_class
+            if "claim_ids" in record.planted:
+                stated = merge._signature(record.story["place"]).union(
+                    *(merge._signature(c["text"]) for c in record.claims
+                      if c["claim_id"] in planted_ids),
+                    merge._signature(word),
+                )
+                assert second - stated == frozenset(), (record.defect_class, second - stated)
         if record.detector == "merge" and record.planted["expected"] in ("new", "same"):
             # shared_element: the plant shares an element, not a fact, so the
             # signature must NOT match it either — else the tripwire would hold
@@ -148,35 +178,6 @@ def test_fixture_has_one_record_per_class_and_only_the_planted_defect():
                 assert merge.covered(second, union) >= merge.SIGNATURE_MATCH_MIN, (
                     record.defect_class
                 )
-        elif record.detector == "merge" and record.planted["expected"] == "adds_judgment":
-            # adds_a_judgment / covered_adds_a_judgment (ADR-0003): the judgment
-            # is a whole word of the plant and of no record claim, so it is
-            # really dropped; no claim OUTSIDE the plant trips the signature
-            # (else the tripwire holds a correct judge); and for the covered
-            # plant nothing but the judgment is left over once the named
-            # claims and the place are taken away (else the guard holds it).
-            import re
-
-            from src.ingest import merge
-
-            word = record.planted["judgment"]
-            text = record.planted["second_source"]["text"]
-            assert re.search(rf"\b{word}\b", text), record.defect_class
-            assert not any(re.search(rf"\b{word}\b", c["text"], re.I) for c in record.claims)
-            planted_ids = record.planted.get("claim_ids", [planted_claim_id])
-            second = merge._signature(text)
-            for c in record.claims:
-                if c["claim_id"] not in planted_ids:
-                    assert merge.covered(second, merge._signature(c["text"])) < (
-                        merge.SIGNATURE_MATCH_MIN
-                    ), record.defect_class
-            if "claim_ids" in record.planted:
-                stated = merge._signature(record.story["place"]).union(
-                    *(merge._signature(c["text"]) for c in record.claims
-                      if c["claim_id"] in planted_ids),
-                    merge._signature(word),
-                )
-                assert second - stated == frozenset(), (record.defect_class, second - stated)
         elif record.detector == "merge" and record.planted["expected"] == "covered":
             # covered_union: the signature's best match must be INSIDE the
             # planted pair, or the tripwire would hold a correct judge.
@@ -1015,33 +1016,44 @@ def _merge_answer(verdict: str, existing: str, judgments: list[str]) -> str:
 
 
 def test_a_judgment_plant_is_caught_only_when_its_own_word_is_kept():
-    """`adds_a_judgment` and `covered_adds_a_judgment` pass on the mock only
-    when the claim lands beside its match as `adds_judgment` AND the planted
-    word is among the words code found dropped. A judge that lists another
-    word ("finished") still yields `adds_judgment` — a changed corpus, so a
-    WRONG FOLD, never a catch; a judge that lists nothing folds `same`."""
+    """ADR-0004. `adds_a_judgment` is caught when the fold stays `same` onto
+    c02, "iconic" is in `new_judgments`, the appended source carries it and
+    the beat is re-narrated. `covered_adds_a_judgment` is caught when the
+    claim stays `new` with "beloved" in `new_judgments`. A judge listing
+    another word ("finished") or none still folds `same` — a changed corpus
+    without the planted word, so a WRONG FOLD, never a catch; a judge that
+    absorbs the covered plant listing nothing is HELD by the leftover guard
+    ("beloved" is a word no named claim states), so the word is never lost.
+    Mutants: the planted-word check removed; the source-carries check
+    removed."""
     import src.ingest.llm as llm
 
     fixture = _fixture()
     report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock")
     rows = {r.defect_class: r for r in report.rows}
     assert (rows["adds_a_judgment"].caught, rows["adds_a_judgment"].total) == (1, 1)
-    assert rows["adds_a_judgment"].note == "n01 adds_judgment c02 [iconic]"
+    assert rows["adds_a_judgment"].note == "n01 same c02 [iconic]"
     assert (rows["covered_adds_a_judgment"].caught,
             rows["covered_adds_a_judgment"].total) == (1, 1)
-    assert rows["covered_adds_a_judgment"].note == "n01 adds_judgment c01+c02 [beloved]"
+    assert rows["covered_adds_a_judgment"].note == "n01 new c01+c02 [beloved]"
 
-    for listed, note in ((["finished"], "n01 adds_judgment c02 [finished]"),
-                         ([], "n01 same c02")):
-        def wrong(rec, u, listed=listed):
-            if rec.defect_class != "adds_a_judgment":
+    held_note = "held: claim n01: covered leaves words no named claim states: beloved"
+    for defect, verdict, existing, listed, note, wrong_fold in (
+        ("adds_a_judgment", "same", "b1.c02", ["finished"], "n01 same c02 [finished]", True),
+        ("adds_a_judgment", "same", "b1.c02", [], "n01 same c02", True),
+        ("covered_adds_a_judgment", "covered", "b1.c01+b1.c02", [], held_note, False),
+    ):
+        def wrong(rec, u, defect=defect, verdict=verdict, existing=existing, listed=listed):
+            if rec.defect_class != defect:
                 return calibrate.scripted_merge_answer(rec, u)
-            return llm.MockAnswer(text=_merge_answer("same", "b1.c02", listed),
+            return llm.MockAnswer(text=_merge_answer(verdict, existing, listed),
                                   model_id=llm.ROLE_MODEL["merge_judge"])
 
         report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock", scripted_merge=wrong)
-        row = next(r for r in report.rows if r.defect_class == "adds_a_judgment")
-        assert (row.caught, row.wrong_fold, row.note) == (0, True, note)
+        row = next(r for r in report.rows if r.defect_class == defect)
+        assert (row.caught, row.wrong_fold, row.held, row.note) == (
+            0, wrong_fold, not wrong_fold, note
+        ), (defect, listed)
 
 
 @pytest.mark.parametrize(
@@ -1053,12 +1065,14 @@ def test_a_judgment_plant_is_caught_only_when_its_own_word_is_kept():
          "2 sentence(s) with '1959'"),
         ("The building was finally completed in 1959.", 0,
          "1 sentence(s) with '1959'; 'acclaimed' missing from it"),
+        ("The building, also called acclaimed, was finally completed in 1959.", 0,
+         "1 sentence(s) with '1959'; 'also called' in it"),
     ],
 )
 def test_told_once_passes_only_one_sentence_with_the_year_and_the_judgment(
     narration, caught, note
 ):
-    """`told_once`: a beat holding a claim and its `adds_judgment` twin is
+    """`told_once`: a beat holding ONE claim whose second source judges it is
     narrated (P4, then P5 as run._rerun does) and scored by anchor: exactly
     one sentence carries "1959", and that sentence carries "acclaimed". The
     narration is always in the details, so a second telling without the year
@@ -1089,3 +1103,73 @@ def test_the_estimate_prices_the_told_once_narration_and_its_judge():
     estimate = calibrate._arm(mock, [record], unit)
     phases = {(row.phase, row.role) for row in estimate.rows}
     assert phases == {("P4", "author"), ("P5", "narration_judge")}
+
+
+def test_a_judgment_plant_is_missed_when_apply_does_not_write_the_word(monkeypatch):
+    """The `same` plant is caught on the APPLIED beat, not the outcome alone:
+    if apply wrote the source without its judgments, the word would never
+    reach narration. Mutant: the source-carries check removed."""
+    import src.ingest.merge as merge_mod
+
+    real_apply = merge_mod.apply
+
+    def stripping(outcome, beats):
+        applied = real_apply(outcome, beats)
+        return [
+            b.model_copy(update={"claims": [
+                c.model_copy(update={"sources": [
+                    s.model_copy(update={"judgments": []}) for s in c.sources
+                ]}) for c in b.claims
+            ]})
+            for b in applied
+        ]
+
+    monkeypatch.setattr(merge_mod, "apply", stripping)
+    report = calibrate.run(_fixture(), REPO_ROOT / "Books", client="mock")
+    row = next(r for r in report.rows if r.defect_class == "adds_a_judgment")
+    assert (row.caught, row.wrong_fold) == (0, True)
+
+
+def test_told_once_shows_the_narrator_the_judgment_through_the_rerun_path():
+    """ADR-0004 amendment (d): told_once's claims come through
+    run.judged_of_beat, so P4 is shown "(Also called: acclaimed)" on the
+    one claim's line. Mutant: the plant built without its judging source."""
+    import src.ingest.narrate as narrate
+    import src.ingest.prompts as prompts
+
+    fixture = _fixture()
+    record = next(r for r in fixture.records if r.defect_class == "told_once")
+    claims = calibrate._told_once_claims(record, _unit(fixture))
+
+    assert [c.judgments for c in claims] == [("acclaimed",)]
+    prompt = prompts.render_narrate("P", "T", narrate.resolved_claim_texts(claims))
+    assert (
+        "- Construction of the Guggenheim was finally completed in 1959. "
+        "(Also called: acclaimed)" in prompt
+    )
+
+
+def test_a_covered_plant_kept_for_some_other_word_is_not_caught():
+    """The planted-word check, which no fixture judge can reach (the covered
+    plant has one uncarried word, and the same plant is also checked on its
+    applied source): a covered plant kept `new` for a DIFFERENT word is not
+    the planted judgment kept. Mutant: the planted-word check removed."""
+    import src.ingest.merge as merge_mod
+
+    fixture = _fixture()
+    record = next(r for r in fixture.records if r.defect_class == "covered_adds_a_judgment")
+    kept = merge_mod.ClaimOutcome(
+        claim_id="n01", verdict="covered", existing_beat_id=None, existing_claim_id=None,
+        outcome="new", applied_claim_id="n01", new_value=None, existing_value=None,
+        reason="r", covered_by=(("b", "c01"), ("b", "c02")), new_judgments=("spiral",),
+    )
+    outcome = merge_mod.MergeOutcome(
+        story_slug="s", place="p", judge_story="new", judge_model="m", story="new",
+        beat_id=None, claims=[kept],
+    )
+
+    assert calibrate._judgment_kept(record, outcome, []) is False
+    right = outcome.model_copy(update={"claims": [
+        kept.model_copy(update={"new_judgments": ("Beloved",)})
+    ]})
+    assert calibrate._judgment_kept(record, right, []) is True

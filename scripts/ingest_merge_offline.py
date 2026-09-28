@@ -66,8 +66,16 @@ def _recorded_answers(log: Path) -> dict[str, list[llm.MockAnswer]]:
 def _written_values(
     outcome: merge.MergeOutcome, before: list[model.Beat], after: list[model.Beat]
 ) -> list[dict[str, Any]]:
-    """Every source this story's apply added that carries a stated_value."""
-    sources = {c.draft.source.model_dump_json() for c in outcome.judged}
+    """Every source this story's apply added that carries a stated_value.
+
+    Written sources are matched to the judged ones by (source_id, chunk,
+    span): the merge writes a source with its stated_value AND its
+    judgments (ADR-0004), so a match on the whole serialized source would
+    silently drop every judged one."""
+    sources = {
+        (c.draft.source.source_id, c.draft.source.chunk, c.draft.source.span)
+        for c in outcome.judged
+    }
     old = {
         (b.beat_id, c.claim_id): len(c.sources) for b in before for c in b.claims
     }
@@ -77,8 +85,8 @@ def _written_values(
     for beat in after:
         for claim in beat.claims:
             for source in claim.sources[old.get((beat.beat_id, claim.claim_id), 0):]:
-                bare = source.model_copy(update={"stated_value": None}).model_dump_json()
-                if source.stated_value is None or bare not in sources:
+                key = (source.source_id, source.chunk, source.span)
+                if source.stated_value is None or key not in sources:
                     continue
                 new_id = by_span.get(source.span)
                 written.append({

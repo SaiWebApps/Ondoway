@@ -146,7 +146,9 @@ def _contest(claim: dict, value: str, other_sources: Sequence[Mapping], other_va
         if (source["source_id"], source["chunk"], source["span"]) in own:
             continue
         stated = source["stated_value"] if source["stated_value"] is not None else other_value
-        claim["sources"].append({**deepcopy(source), "stated_value": stated})
+        # Its judgments judged the OTHER claim; carried here they would join
+        # this claim's narration line once the contest is resolved (ADR-0004).
+        claim["sources"].append({**deepcopy(source), "stated_value": stated, "judgments": []})
     claim["status"] = "contested"
     claim["resolved_value"] = None
     claim["resolution"] = None

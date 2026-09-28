@@ -928,7 +928,7 @@
     {
       "class": "adds_a_judgment",
       "detector": "merge",
-      "note": "Owner ruling 2026-09-24: a judgment of importance, size, quality or reputation is part of what a claim states. The same_fact plant's paraphrase plus one judgment the record's claims never make ('iconic'). Under the prompt rule the live judge folded it `same` and dropped the word (2026-09-24, b4a741d); since ADR-0003 the judge answers on the facts and lists the word, and code keeps the claim beside c02 as `adds_judgment`. Caught only when 'iconic' is among the words code found dropped. Paired with same_fact, which must fold and list nothing. The signature stays silent, so the class measures the judge alone.",
+      "note": "Owner ruling 2026-09-24: a judgment of importance, size, quality or reputation is part of what a source states. The same_fact plant's paraphrase plus one judgment the record's claims never make ('iconic'). Under the prompt rule the live judge folded it `same` and dropped the word (b4a741d); since ADR-0003 the judge answers on the facts and lists it, and since ADR-0004 the fold stays `same`: the second source is appended to c02 carrying judgments ['iconic'] and the beat is re-narrated. Caught only when the outcome is `same` onto c02 with 'iconic' in new_judgments, the appended source carries it and the beat is in rerun. Paired with same_fact, which must fold and list nothing. The signature stays silent, so the class measures the judge alone.",
       "story": {
         "title": "Neither lived to see it",
         "place": "Solomon R. Guggenheim Museum",
@@ -967,14 +967,14 @@
           "text": "Neither the architect nor the patron lived to see the museum's iconic building finished.",
           "kind": "event"
         },
-        "expected": "adds_judgment",
+        "expected": "same",
         "judgment": "iconic"
       }
     },
     {
       "class": "covered_adds_a_judgment",
       "detector": "merge",
-      "note": "ADR-0003: covered_union's pair plus a judgment neither claim carries ('beloved', a word the prompt never names). The judge answers `covered` by c01+c02 and lists the word; covered_leftovers leaves the listed word out, and code keeps the claim beside c01 in the same beat as `adds_judgment` instead of absorbing it. Caught only when 'beloved' is among the words code found dropped and the claim is covered by exactly c01+c02.",
+      "note": "ADR-0004 decision 5: covered_union's pair plus a judgment neither claim carries ('beloved', a word the prompt never names). The judge answers `covered` by c01+c02 and lists the word; covered_leftovers leaves it out, and the claim stays `new` with its own story (judgment_kept_new) rather than being absorbed, which would lose the word. Caught only when the outcome is `new` with 'beloved' in new_judgments; absorbed is a WRONG FOLD.",
       "story": {
         "title": "The building that upstages its art, beloved",
         "place": "Solomon R. Guggenheim Museum",
@@ -1008,7 +1008,7 @@
           "c01",
           "c02"
         ],
-        "expected": "adds_judgment",
+        "expected": "new",
         "second_source": {
           "source_id": "second-source",
           "chunk": "calibration",
@@ -1023,7 +1023,7 @@
     {
       "class": "told_once",
       "detector": "narration",
-      "note": "ADR-0003's listener promise: a beat holding a claim and its `adds_judgment` twin (the same fact plus the judgment 'acclaimed') is narrated once, with the judgment. One live P4 plus P5, as run._rerun does. Caught iff exactly one sentence of the judged narration contains '1959' and that sentence contains 'acclaimed'; a second telling without the year is visible only in the printed narration. The twin's span is the record's own (a narration plant needs no second source: P4 reads claim texts, the lift gate reads spans).",
+      "note": "ADR-0004's listener promise: ONE claim ('...completed in 1959') whose second source judges it 'acclaimed' is narrated once, with the judgment. The beat is built as the merge writes it (the second source appended, carrying judgments ['acclaimed']) and its claims read back through run.judged_of_beat, the production rerun path, so P4 and P5 are shown '(Also called: acclaimed)'. One live P4 plus P5, as run._rerun does. Caught iff exactly one sentence of the judged narration contains '1959' and that sentence contains 'acclaimed'; a second telling without the year is visible only in the printed narration.",
       "story": {
         "title": "Finished in 1959",
         "place": "Solomon R. Guggenheim Museum",
@@ -1033,8 +1033,7 @@
           "modern_design"
         ],
         "claim_ids": [
-          "c01",
-          "c02"
+          "c01"
         ]
       },
       "claims": [
@@ -1043,18 +1042,20 @@
           "text": "Construction of the Guggenheim was finally completed in 1959.",
           "kind": "event",
           "span": "Construction was finally completed in 1959"
-        },
-        {
-          "claim_id": "c02",
-          "text": "The Guggenheim's acclaimed building was finally completed in 1959.",
-          "kind": "event",
-          "span": "Construction was finally completed in 1959"
         }
       ],
       "planted": {
         "anchor": "1959",
         "judgment": "acclaimed",
-        "narration": "The museum's acclaimed building was finally completed in 1959."
+        "narration": "The museum's acclaimed building was finally completed in 1959.",
+        "second_source": {
+          "source_id": "second-source",
+          "chunk": "calibration",
+          "as_of": 2024,
+          "rights_basis": "own_work",
+          "text": "The acclaimed Guggenheim building was finally completed in 1959.",
+          "kind": "event"
+        }
       }
     }
   ]

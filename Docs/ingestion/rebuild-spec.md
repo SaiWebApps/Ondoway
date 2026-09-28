@@ -158,7 +158,7 @@ One beat in `data/{city}/beats.json`. Field names are final; slice 1 pins them.
   ],
   "narration": {
     "text": "Solomon Guggenheim was a mining millionaire ...",
-    "claims_hash": "<sha256 of the resolved claim texts in order>",
+    "claims_hash": "<sha256 of the resolved claims' narration lines in order>",
     "author_model": "claude-opus-5",
     "verdict": {"judge_model": "claude-haiku-4-5", "sentences_entailed": 9,
                 "sentences_total": 9, "bound_to": "<sha256 of text>"},
@@ -183,7 +183,9 @@ Rules the validator enforces on this shape (slice 1):
   from `narration.author_model`.
 - `kind ∈ {event, state, belief}`; `status ∈ {resolved, contested, superseded}`; a
   contested claim has ≥2 sources with differing `stated_value`.
-- `narration.claims_hash` equals the hash of the resolved claims' texts, in order. A
+- `narration.claims_hash` equals the hash of the resolved claims' narration lines, in order:
+  each claim's text, plus "(Also called: …)" with the judgments its sources make that the text
+  does not carry (ADR-0004); a claim with none is its bare text. A
   narration whose hash is stale is refused (the same rule as `verified_body_hash` today).
 - No lift between `narration.text` and any span of the beat, outside attributed
   quotation: the P4 gate refuses a run of seven words (`narrate.NARRATION_LIFT_GATE_RUN`;
@@ -218,7 +220,7 @@ failed job resumes at its last completed phase.
 | P3 judge claims | judge | per claim: entailed yes/no and the temporal kind read from the span (slice 9: a wrongly kinded claim is re-kinded, never refused); per unit: facts no claim carries, and (slice 10) claims that state more than one fact — logged as `compound_found`, no re-ask yet | a claim refused once is re-asked with the judge's reason quoted back; refused twice is dropped and logged; an omission finding that no claim already states (a finding whose signature equals a claim's is dropped, `omission_already_carried`) re-asks P1 once for that unit — since slice 10 (owner ruling A, 2026-09-19) for the omitted facts ONLY, the first pass's claims shown; the new claims are appended, grouped and judged on their own, and a re-ask that fails keeps the first pass |
 | P4 narrate | author, sees claims only | narration text | no lift vs any span; no leak; no framing regex (`imagine`, `picture`, `envision`); duration computed |
 | P5 judge narration | judge | per sentence entailed yes/no | a failing sentence re-asks P4 once with the sentence quoted back; still failing → `narration.flags` set, `review.held = true` |
-| P6 merge | merge judge + signature | per new story: same / new / supersedes; per claim, against ANY claim at the place whatever the story verdict: new / same / conflict / covered, decided on the facts alone, with the claim's judgment words listed verbatim (`judgments`, ADR-0003) — candidate beats and claims named by handle (`b1`, `b1.c02`), never by id | the signature is a one-way tripwire, measured in the contract's direction (`merge.covered`: the existing claim covers ≥0.7 of the new claim's tokens): a signature match on a claim the judge called `new`, or on a different claim than the judge named, holds the new story (queue item); a judge match the signature cannot see applies. Every raw answer is logged (`merge_answered`), every matched claim logged with both texts and the new span (`merge_folded`). A matched claim FOLDS into the claim that holds it: conflict → the D9 kind rules (`contested`, or supersedes → old claim `belief`, dated); same → one claim, sources appended, unless a listed judgment is not carried by a resolved match, which writes the new claim beside it (`adds_judgment`, ADR-0003). A `new` story's own beat keeps only its unmatched claims and is narrated again; left below its arc minimum it is a queue item; fully folded it writes nothing (`merge_absorbed`). Any claim change → P4/P5 rerun for that beat |
+| P6 merge | merge judge + signature | per new story: same / new / supersedes; per claim, against ANY claim at the place whatever the story verdict: new / same / conflict / covered, decided on the facts alone, with the claim's judgment words listed verbatim (`judgments`, ADR-0003) — candidate beats and claims named by handle (`b1`, `b1.c02`), never by id | the signature is a one-way tripwire, measured in the contract's direction (`merge.covered`: the existing claim covers ≥0.7 of the new claim's tokens): a signature match on a claim the judge called `new`, or on a different claim than the judge named, holds the new story (queue item); a judge match the signature cannot see applies. Every raw answer is logged (`merge_answered`), every matched claim logged with both texts and the new span (`merge_folded`). A matched claim FOLDS into the claim that holds it: conflict → the D9 kind rules (`contested`, or supersedes → old claim `belief`, dated); same → one claim, sources appended, each source carrying its listed judgment words (verbatim words of its span), and the beat re-narrated when a resolved match gains a judgment it does not carry (ADR-0004; a covered claim bringing such a judgment stays `new`). A `new` story's own beat keeps only its unmatched claims and is narrated again; left below its arc minimum it is a queue item; fully folded it writes nothing (`merge_absorbed`). Any claim change → P4/P5 rerun for that beat |
 | P7 commit | none | `beats_io.commit` | the slice-1 validator, extended; nothing reaches disk otherwise |
 
 Refusal loop: exactly one re-ask per phase per item, then drop or hold. No item is padded,
@@ -390,8 +392,9 @@ here`, `the guide`, `the author`, publisher names from the manifest) and
 `framing(text) -> list[str]`; reuse `scripts.verbatim.run_outside_quotation`.
 **Produces:** `narrate(story, claims, client, publishers=()) -> NarrationDraft` (the
 judged claims come in as a parameter — a `Story` carries only claim ids; the author is
-shown their TEXTS alone, never a span or the unit; the draft carries the text,
-`claims_hash` over those texts, the author model the response reported, and
+shown their TEXTS alone, never a span or the unit (since ADR-0004 each with any judgments its
+sources make, "(Also called: …)"); the draft carries the text, `claims_hash` over those
+narration lines, the author model the response reported, and
 `duration_sec` at the tour engine's 150 wpm — a draft, not a `Narration`, because that
 record requires a verdict only P5 can supply). The P4 code gate (`narration_gates`: lift
 against every claim span, `provenance_leak` with the manifest's publisher names via
@@ -433,7 +436,8 @@ resolved); the same year or any other pairing → contested (one claim, the seco
 appended, every source carrying its stated value). `same` appends the source to ONE claim
 (`corroborated`, verdict re-bound over both spans); `new` appends the claim under a fresh id;
 a `new` STORY is reported, not assembled (its record needs the narration the runner holds).
-`MergeOutcome.rerun` names every beat whose resolved texts changed: its `narration.claims_hash`
+`MergeOutcome.rerun` names every beat whose `claims_hash` changed (resolved texts, or since
+ADR-0004 a judgment a resolved claim gains): its `narration.claims_hash`
 is stale by design and P4/P5 must rerun (slice 7's runner). `apply(outcome, beats) ->
 list[Beat]` is pure and refuses a held outcome. The calibration classes `contested_value` and
 `superseded_belief` run under the new `merge` detector (scripted on the mock, $0);
@@ -1567,8 +1571,8 @@ of the book now tells the narrator four painters matter and a fifth does not. r8
 spiral ramp" at the atrium into "has a spiral ramp" is the same loss. **Owner ruling:** sourced
 evaluative language — importance, size, quality, reputation — is narrative signal; a merge may never
 drop it silently; a `same` whose new claim carries such a judgment the existing claim lacks is not
-`same`. (Since ADR-0003, 2026-09-25, this is the merge's OUTCOME, `adds_judgment`, never the judge's
-verdict: the judge answers `same` on the facts and lists the judgment.) No lexical rule can enforce that: over the eleven labeled `same` pairs below, `merge._signature`
+`same`. (Since ADR-0003 the judge answers `same` on the facts and lists the judgment; since ADR-0004,
+2026-09-27, the fold stays `same` and the judgment is kept on the source that makes it.) No lexical rule can enforce that: over the eleven labeled `same` pairs below, `merge._signature`
 leaves words over on all nine non-hold pairs as well as on both false ones ("seminal", "huge" sit beside
 "late", "mansion", "earliest", "located"), and the narrower "new contains all of existing plus more"
 catches r8, misses El Greco and holds both true Frick Madison folds.
@@ -2176,6 +2180,106 @@ for a second telling without the year (its registered blind spot), reported as a
 present. **Reported, not scored:** the ten non-merge classes. `stated_relation` 0/1 is the expected
 repeat, and any `judge_claims` miss is reported as prominently as a merge miss. VOID applies only
 when the process exits without printing the table. A re-run then needs a fresh owner go.
+
+*Live calibration under ADR-0003 — result (2026-09-25, owner go on fd00c13): FAIL, as registered,
+on `told_once` alone.* Actual spend $0.2071 against the printed $1.4984 (ceiling $2.25; no unmetered
+calls). The corpus stayed sha `556830a5342e178c` and the baseline `11725b795783bb4c`. All twelve
+merge classes 1/1, no WRONG FOLD. `adds_a_judgment`: the judge answered `same` onto c02 with
+judgments ["iconic"] and code wrote `adds_judgment`. `covered_adds_a_judgment`: `covered` by c01+c02
+with ["beloved"], also `adds_judgment`. `same_fact` listed nothing and folded. **`told_once` 0/1:**
+"Construction here was finally completed in 1959. This acclaimed building reached completion in that
+year." The narrator told the claim and its twin twice, and the judgment landed in the sentence without
+the year. Non-merge: `stated_relation` 0/1 (the expected repeat), the other nine 1/1. No retry and no
+re-score. The P6 gate stays closed. Log pinned at
+`$HOME/ondoway-ingest-backup-2026-09-13/calib-2026-09-24/calib-live-fd00c13.log`.
+
+*A judgment belongs to its source — plan (owner grilling, 2026-09-25/27; ADR-0004).* The twin goes.
+The judge's `judgments` list, the facts-alone prompt, the whole-word check and the leftovers carve-out
+stay (measured live above). (1) `model.Source.judgments: list[str] = []`, verbatim. The validator
+refuses a word that is not a case-insensitive whole word of the source's span
+(`JUDGMENT_NOT_IN_SPAN`). (2) `model.narration_line(text, judgments)` renders `- text (Also called:
+w1, w2)`, and `model.claim_judgments(claim)` gives the ordered, unique words across the claim's
+sources that its text does not carry. `claims_hash` hashes each resolved claim's line: a claim with no
+judgments hashes as today, so no existing narration goes stale. (3) `JudgedClaim.judgments` (default
+empty) carries a claim's extra words to P4 and P5. `run.judged_of_beat` fills it, and
+`narrate.resolved_claim_texts` renders the lines P4, P5 and `draft_from`'s hash all read, so the
+narration hash equals the validator's. (4) The P4 prompts (narrate, redo, revise) gain one rule: an
+"(Also called: …)" word is a judgment its sources make; use it in the sentence that tells that fact,
+in the house voice, never naming who made it, and when they disagree, say opinion is divided and never
+pick one. The P5 sentence prompt says such a word supports a sentence that uses it. (5) Merge: every
+source the merge writes carries the listed words that are whole words of its span; a listed word that
+is not is logged (`judgment_not_in_span`), not recorded. `same` stays `same`. Its outcome records
+`new_judgments` (listed words the match's text and its sources' judgments do not carry), and the
+matched beat joins `rerun` when the match is resolved and `new_judgments` is not empty. `covered` with
+`new_judgments` stays `new` wherever its named claims sit (`judgment_kept_new`, the word named);
+otherwise it is absorbed as before. `adds_judgment`, `judgment_kept_split`, `judgment_on_contested`
+and `judgment_on_unresolved` are deleted; `apply` keeps its raising catch-all. (6) Calibration.
+`adds_a_judgment` is caught when the outcome is `same` onto c02, "iconic" is in `new_judgments`, and
+the appended source carries it (checked on the applied beat). `covered_adds_a_judgment` is caught when
+the outcome is `new` with "beloved" in `new_judgments`; absorbed is a WRONG FOLD. `told_once` is
+re-planted as ONE claim ("…completed in 1959") whose second source carries `judgments:
+["acclaimed"]`, scored as before. Tests first, each mutation-checked. The next live bar is the
+owner's (Q7): these three plus the other ten merge classes at 1/1, no WRONG FOLD, HELD a FAIL. A PASS
+opens the P6 gate, since no twin is written any more (F2 and F4 are gone).
+*Amended at the judge's PROCEED (conditional).* (a) `narration_line(text, [])` is exactly `text`;
+the bullet stays in the prompt renderer. A test pins `claims_hash` of a judgment-free fixture to
+the raw SHA-256 of its texts. (b) There is one whole-word helper, in `model`, shared by the
+validator, `claim_judgments` and the merge (it moves out of `merge`). `claim_judgments` dedups
+case-insensitively, keeping the first-seen spelling, in source order. The validator hashes each
+claim with its sources. A test proves `draft_from`'s hash equals the validator's for a beat
+carrying a judgment. (c) A guard test over every merge case: a beat is in `rerun` iff its
+`claims_hash` differs after `apply`. That covers a listed word the span lacks, which is not
+recorded and so must not rerun. (d) `told_once` builds its claims through the production fill
+(`run.judged_of_beat`'s helper), so P4 is shown "(Also called: acclaimed)". Its second source's
+span contains the word. `defects.json` changes sha (from `6f466f184ac48ab4`), and the next
+registration pins the new one. (e) `scripts/ingest_merge_offline.py` matches written sources by
+(source_id, chunk, span), with a test. (f) Both `judgments` fields default to empty (a tuple on the
+frozen JudgedClaim), so older phase JSON still loads. (g) `model.validate` over the live
+`data-ingest/new_york/beats.json` gives the same error set before and after the change, read-only.
+`scripts/claim_conflicts.py` copying source dicts, judgments included, into a contested claim is
+harmless: they are not narrated.
+*Built, $0 (2026-09-27).* As planned and amended. The twin tests were replaced by ADR-0004's: one
+claim per fact; the source carries the word; covered with a judgment stays `new`; the contested
+source keeps its word; `same` onto an unresolved claim records the word and writes nothing resolved;
+a word the span lacks is logged; and the rerun guard runs over seven cases (a beat reruns iff
+`apply` changes its hash). The model, narrate, run, offline and calibrate tests are new or
+rewritten. `merged_beat_with_judgment` in `tests/ingest_job_script.py` pins P4's hash to P7's on a real
+judged beat. Two findings during the build, both fixed: in `apply`'s contested branch, a loop
+variable named `source` overwrote the new source; and an expected result was wrong, since a judge
+that absorbs the covered plant listing nothing is HELD by the leftover guard, never a silent loss.
+One mutant survived the first pass: the calibration's planted-word check, which no fixture judge
+can reach. It got a direct unit test. Twenty mutants, each an assertion failure on its own node, the
+diff unchanged after; script and log pinned at
+`$HOME/ondoway-ingest-backup-2026-09-13/calib-2026-09-24/mutate-adr0004*`. Every
+`tests/test_ingest_*.py` file is green (400 tests), as are `tests/test_preflight.py` (57, including
+the new read-only `make ingest-validate`), lint and the mock calibration (23 classes, 1/1). The live
+corpus validates identically before and after (61 beats, 0 errors, fingerprint
+`e3b0c44298fc1c14`). The live estimate is now $1.4181, since `told_once` has one claim.
+*Skeptic panel (opus, sonnet, fable; 2026-09-27).* Sonnet CONFIRMED that the calibration measures
+the fix for the right reasons. It worked the token math by hand (the covered plant's hint fires on
+c01, inside the named pair; "beloved" is carved out of the leftovers) and traced `told_once` through
+the production rerun path. Opus REFUTED the build on the hash path. The merge decided "carried"
+against a source's judgments by whole-word containment, while the narration line used exact words.
+So "masterpiece" beside an existing "1959 masterpiece" changed the hash without a rerun, and P7
+would have refused the whole file. Fixed: `model.judgment_carried` is now the one rule both sides
+call, and the seven-case rerun guard gains the reviewer's case as its eighth. Fable REFUTED the
+prompts. P4 was told to say "opinion is divided" and P5 had no rule to accept it; fixed. The
+disagreement rule missed the claim's own wording against an Also-called word; fixed. And "the
+building, also called acclaimed, …" passed every gate and the `told_once` scorer. Now P4 is told
+never to write "also called", and the scorer misses any narration containing it. Also fixed: stale
+normative text (§2's hash contract, §3's P6 row, the 2026-09-24 ruling's note, two module
+docstrings, a test docstring). A lint error I had misread as clean, a dotted reference the doc
+linter reads as a path, is fixed; lint now exits 0. `scripts/claim_conflicts.py` strips the copied
+source's judgments (they judged the other claim). The merge docstring now says exactly which claims
+log `judgment_not_in_span`. **Recorded, not fixed:** P5 has never refused an unlisted evaluative word
+("magnificent"). That predates this change and would alter P5 for every narration, so it is the
+owner's call. Two new claims folding the same word into one claim append it twice, which the
+narration line's dedup neutralises. Twenty-five mutants, each an assertion failure on its own node,
+the diff unchanged after. The "carried by containment" mutant was replaced by "the merge drifts
+from the model's rule": with one shared rule, changing the rule keeps both sides consistent, which
+is the property the guard pins. 406 tests green (every ingest file plus claim_conflicts), lint exits
+0, the mock calibration is 23/23, and the live corpus is unchanged (61 beats, 0 errors,
+`e3b0c44298fc1c14`). The estimate is $1.4188.
 
 ### Slice 11: Cleanup
 

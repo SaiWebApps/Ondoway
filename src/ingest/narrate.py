@@ -146,8 +146,11 @@ def parse_narration(text: str) -> str | None:
 
 
 def resolved_claim_texts(claims: Sequence[JudgedClaim]) -> list[str]:
-    """The claim texts P4 writes from, in claim order."""
-    return [claim.draft.text for claim in claims]
+    """The claim lines P4 writes from and P5 judges against, in claim order:
+    each text with its sources' judgments beside it (`model.narration_line`,
+    ADR-0004). `draft_from` hashes these same lines, so the draft's hash is
+    the one P7's validator recomputes from the beat's claims and sources."""
+    return [model.narration_line(claim.draft.text, list(claim.judgments)) for claim in claims]
 
 
 def claim_spans(claims: Sequence[JudgedClaim]) -> list[str]:
@@ -253,7 +256,8 @@ def ask_author(
 
 
 def draft_from(text: str, claims: Sequence[JudgedClaim], author_model: str) -> NarrationDraft:
-    """A NarrationDraft over `text`, hashed over the claims' resolved texts."""
+    """A NarrationDraft over `text`, hashed over the claims' narration lines
+    (`resolved_claim_texts`: each text with its judgments, ADR-0004)."""
     texts = resolved_claim_texts(claims)
     return NarrationDraft(
         text=text,

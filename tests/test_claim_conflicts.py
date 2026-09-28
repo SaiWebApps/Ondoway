@@ -291,3 +291,20 @@ def test_no_live_client_in_this_file():
                 assert forbidden_env_var not in sub.value, (
                     f"{forbidden_env_var!r} must not appear in this file"
                 )
+
+
+def test_a_copied_source_arrives_without_the_other_claims_judgments():
+    """ADR-0004: a source's judgments judge the claim it came from. Copied
+    onto the other side of a contest, they would join this claim's
+    narration line once the contest is resolved. Mutant: the copy keeping
+    `judgments`."""
+    records = _records()
+    records[1]["claims"][1]["sources"][0]["judgments"] = ["1960"]
+    conflicts = find_conflicts(records)
+
+    applied, _rerun = apply_conflicts(records, conflicts)
+
+    g_sources = applied[0]["claims"][0]["sources"]
+    assert [s.get("judgments", []) for s in g_sources] == [[], []]
+    m_sources = applied[1]["claims"][1]["sources"]
+    assert m_sources[0]["judgments"] == ["1960"]  # its own source keeps them

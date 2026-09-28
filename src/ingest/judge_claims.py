@@ -66,6 +66,11 @@ class JudgedClaim(BaseModel):
 
     draft: ClaimDraft
     verdict: model.Verdict
+    #: The judgment words the claim's OTHER sources make that its text does
+    #: not carry (`model.claim_judgments`), shown to P4/P5 beside the text
+    #: (ADR-0004). Empty for a claim fresh from P3; `run.judged_of_beat`
+    #: fills it for a rerun.
+    judgments: tuple[str, ...] = ()
 
 
 #: The P3 cost-estimate plan, priced PER CLAIM (estimate it over the

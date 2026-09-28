@@ -62,6 +62,13 @@ narrower measure.
 Slice 4 adds VERDICT_NOT_ENTAILED: a claim whose verdict.entailed is false
 is refused — P3 (src/ingest/judge_claims.py) drops a refused claim, so one
 on disk means a gate was bypassed.
+
+ADR-0004 adds judgments: a source's `judgments` are its own judgment words
+(CONTEXT.md "Judgment"), each a case-insensitive whole word of that
+source's span (JUDGMENT_NOT_IN_SPAN). A resolved claim's narration line is
+its text plus the words its sources judge it with that the text does not
+carry (`claim_judgments`, `narration_line`), and `claims_hash` hashes those
+lines: a claim with no judgments hashes as its bare text, as before.
 """
 
 from __future__ import annotations
@@ -140,13 +147,60 @@ def bind(text: str, span: str = "") -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def claims_hash(claims: list[dict[str, Any]]) -> str:
-    """SHA-256 of the resolved claims' texts, '\\n'-joined, in file order.
+def whole_word(word: str, text: str) -> bool:
+    """`word` (any case) stands in `text` as a whole word or phrase. The one
+    definition the validator, `claim_judgments` and the merge share
+    (ADR-0004), so "carried" and "in its span" can never disagree."""
+    stripped = word.strip()
+    return bool(stripped) and re.search(
+        rf"(?<!\w){re.escape(stripped)}(?!\w)", text, re.IGNORECASE
+    ) is not None
 
-    A beat with no resolved claims hashes the empty string.
+
+def judgment_carried(word: str, text: str, judged: list[str]) -> bool:
+    """THE rule for whether a claim already carries a judgment (ADR-0004),
+    shared by `claim_judgments` (the narration line and its hash) and the
+    merge (what reruns): a whole word of the claim's `text`, or the same
+    judgment, case aside, as one its sources already make. The two must
+    agree, or a beat's hash changes without a rerun and P7 refuses the
+    file (skeptic panel 2026-09-27: "masterpiece" beside "1959 masterpiece")."""
+    key = word.strip().lower()
+    return whole_word(word, text) or key in {j.strip().lower() for j in judged}
+
+
+def claim_judgments(claim: dict[str, Any]) -> list[str]:
+    """The judgment words a claim's sources make that its text does not
+    carry: source order, the first-seen spelling, deduplicated regardless
+    of case (`judgment_carried`)."""
+    words: list[str] = []
+    for source in claim.get("sources", []):
+        for word in source.get("judgments") or []:
+            if not word.strip() or judgment_carried(word, claim["text"], words):
+                continue
+            words.append(word.strip())
+    return words
+
+
+def narration_line(text: str, judgments: list[str]) -> str:
+    """What P4 and P5 read for one claim, and what `claims_hash` hashes:
+    the bare text, or the text with its judgments beside it. No bullet —
+    the prompt renderer adds that."""
+    return f"{text} (Also called: {', '.join(judgments)})" if judgments else text
+
+
+def claims_hash(claims: list[dict[str, Any]]) -> str:
+    """SHA-256 of the resolved claims' narration lines, '\\n'-joined, in
+    file order: each claim's text, plus the judgments its sources make
+    that the text does not carry (`narration_line`). A claim with no
+    judgments hashes as its bare text, so a beat without them hashes
+    exactly as it always has. No resolved claims hashes the empty string.
     """
-    texts = [claim["text"] for claim in claims if claim.get("status") == "resolved"]
-    return hashlib.sha256("\n".join(texts).encode("utf-8")).hexdigest()
+    lines = [
+        narration_line(claim["text"], claim_judgments(claim))
+        for claim in claims
+        if claim.get("status") == "resolved"
+    ]
+    return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
 
 
 def _normalize_ws(text: str) -> str:
@@ -179,6 +233,9 @@ class Source(BaseModel):
     as_of: int | str
     rights_basis: Literal["owned_copy", "cc_by_sa", "public_domain", "own_work", "permission"]
     stated_value: str | int | float | None = None
+    #: This source's own judgment words, verbatim (ADR-0004); each a
+    #: whole word of `span` (JUDGMENT_NOT_IN_SPAN).
+    judgments: list[str] = []
     # cc_by_sa attribution fields (Rights and licensing in the spec); their
     # presence/absence rule (CC_BY_SA_FIELDS_MISSING) is a later step's check.
     article_title: str | None = None
@@ -446,6 +503,12 @@ def _identity_and_arc_errors(
 
         for source in claim.sources:
             errors.extend(_cc_by_sa_errors(label, claim.claim_id, source))
+            for word in source.judgments:
+                if not whole_word(word, source.span):
+                    errors.append(
+                        f"JUDGMENT_NOT_IN_SPAN {label}: claim {claim.claim_id} source "
+                        f"{source.source_id}: judgment {word!r} is not a whole word of its span"
+                    )
 
     return errors
 
@@ -551,9 +614,7 @@ def _hash_and_verdict_errors(
     skip_claim_ids = skip_claim_ids or set()
     errors: list[str] = []
 
-    expected_claims_hash = claims_hash(
-        [{"text": claim.text, "status": claim.status} for claim in beat.claims]
-    )
+    expected_claims_hash = claims_hash([claim.model_dump() for claim in beat.claims])
     if beat.narration.claims_hash != expected_claims_hash:
         errors.append(
             f"NARRATION_HASH_STALE {label}: narration.claims_hash does not match "

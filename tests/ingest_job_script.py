@@ -228,6 +228,30 @@ def existing_records() -> list[dict]:
     return records
 
 
+def merged_beat_with_judgment() -> dict:
+    """The origins beat after a `same` fold whose Frommer's source judges
+    c02 (ADR-0004): "Visiting this 1959 masterpiece" carries
+    `judgments: ["masterpiece"]`, which c02's text lacks. Valid on disk:
+    its narration hash is recomputed over the judged line."""
+    completed = _lp_claim("c02", COMPLETED)
+    frommers = {
+        "source_id": "frommers-nyc-2024", "chunk": "chunk-05-ch05-uptown",
+        "span": "Visiting this 1959 masterpiece", "as_of": 2024,
+        "rights_basis": "owned_copy", "stated_value": None, "judgments": ["masterpiece"],
+    }
+    completed["sources"].append(frommers)
+    completed["resolution"] = {"by": "corroborated"}
+    completed["verdict"]["bound_to"] = model.bind(
+        COMPLETED["text"], "\n".join(s["span"] for s in completed["sources"])
+    )
+    record = _beat(
+        ORIGINS_ID, "how-the-museum-came-to-be", STORY_TITLE, "anecdote",
+        [_lp_claim("c01", COLLECTING), completed], ORIGINS_NARRATION,
+    )
+    assert model.validate([record]) == []
+    return record
+
+
 COMPLETION_ID = f"{CITY}/{model.slug(PLACE)}/the-1959-building"
 COMPLETION_NARRATION = (
     "The building was finished in 1959, by which time both Wright and Guggenheim had died. "

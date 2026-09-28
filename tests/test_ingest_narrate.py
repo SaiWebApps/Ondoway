@@ -939,3 +939,79 @@ def test_a_failed_sentence_request_holds_its_story_not_the_others():
     assert [c.draft.claim_id for c in held_claims] == ["c01"]
     assert "boom" in reason and "transport" in reason
     assert [p["story_slug"] for k, p in events if k == "beat_held"] == ["the-opening"]
+
+
+# ── Judgments reach the narrator on their fact's line (ADR-0004) ────────────
+
+
+def test_a_claims_judgments_are_rendered_beside_it_for_p4_and_p5():
+    """P4 and P5 read the same lines, and P4's hash is over exactly those
+    lines. A claim without judgments renders as before."""
+    import src.ingest.prompts as prompts
+
+    unit = unit_mod.Unit(city="new_york", source_id="s", chunk="c",
+                         text="The building was completed in 1959.", as_of=2024,
+                         rights_basis="own_work")
+    plain = judge_claims.JudgedClaim(
+        draft=decompose.ClaimDraft(claim_id="c01", text="The building was completed in 1959.",
+                                   kind="event", source=unit.source("completed in 1959")),
+        verdict=model.Verdict(judge_model="j", entailed=True, bound_to="b"),
+    )
+    judged = plain.model_copy(update={"judgments": ("acclaimed",)})
+
+    assert narrate.resolved_claim_texts([plain]) == ["The building was completed in 1959."]
+    assert narrate.resolved_claim_texts([judged]) == [
+        "The building was completed in 1959. (Also called: acclaimed)"
+    ]
+    line = "- The building was completed in 1959. (Also called: acclaimed)"
+    assert line in prompts.render_narrate("P", "T", narrate.resolved_claim_texts([judged]))
+    assert line in prompts.render_judge_sentence("S.", narrate.resolved_claim_texts([judged]))
+    draft = narrate.draft_from("x.", [judged], "author")
+    assert draft.claims_hash == model.claims_hash([{
+        "text": plain.draft.text, "status": "resolved",
+        "sources": [{"judgments": ["acclaimed"]}],
+    }])
+
+
+def test_the_narrator_and_its_judge_are_told_what_an_also_called_word_is():
+    """Mutants: either rule removed."""
+    import src.ingest.prompts as prompts
+
+    voice = (
+        'A claim may end with "(Also called: ...)": those are judgments its sources make '
+        "about it. Use them in the sentence that tells that claim, in your own voice, never "
+        "saying who made them; when they disagree, say opinion is divided and never pick one."
+        ' Never write the words "also called": a judgment is not a name.\n'
+        '- When a claim\'s own wording and its "(Also called: ...)" words judge it '
+        "differently, that is a disagreement too."
+    )
+    for rendered in (
+        prompts.NARRATE_PROMPT, prompts.NARRATE_REDO_PROMPT, prompts.NARRATE_REVISE_PROMPT
+    ):
+        assert voice in rendered
+    assert (
+        'A claim\'s "(Also called: ...)" words are judgments its sources make about it: a '
+        "sentence that uses one of them about that claim is entailed on that point, and so is "
+        "a sentence saying opinion on it is divided when its judgments disagree."
+        in prompts.JUDGE_SENTENCE_PROMPT
+    )
+
+
+def test_older_phase_json_without_judgments_still_loads():
+    """A job resumed from P3 JSON written before ADR-0004 has no
+    `judgments` on its claims or sources; both default to empty."""
+    unit = unit_mod.Unit(city="new_york", source_id="s", chunk="c",
+                         text="The building was completed in 1959.", as_of=2024,
+                         rights_basis="own_work")
+    claim = judge_claims.JudgedClaim(
+        draft=decompose.ClaimDraft(claim_id="c01", text="The building was completed in 1959.",
+                                   kind="event", source=unit.source("completed in 1959")),
+        verdict=model.Verdict(judge_model="j", entailed=True, bound_to="b"),
+    )
+    raw = json.loads(claim.model_dump_json())
+    del raw["judgments"]
+    del raw["draft"]["source"]["judgments"]
+
+    loaded = judge_claims.JudgedClaim.model_validate(raw)
+
+    assert loaded.judgments == () and loaded.draft.source.judgments == []

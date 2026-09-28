@@ -11,8 +11,9 @@ class is caught when the reason list names the planted gate) or the P6
 merge (`merge.merge` of the planted second source against the record's own
 claims as the beat the corpus holds; caught when the planted claim reaches
 the planted outcome, contested, supersedes or same — or, for shared_element,
-when nothing folds at all; for `adds_judgment`, only when the planted
-judgment is among the words code found dropped) or the P4+P5 narration of
+when nothing folds at all; for a plant carrying a judgment, only when the
+planted word is among the outcome's `new_judgments`, ADR-0004) or the P4+P5
+narration of
 a beat (`narration`: `narrate.narrate` then `judge_narration.judge_narration`,
 as the runner re-narrates a merged beat; caught when exactly one sentence
 carries the planted anchor and that sentence carries the planted judgment)
@@ -45,6 +46,7 @@ from typing import Any
 from src.ingest import gates, judge_claims, judge_narration, llm, merge, model, narrate
 from src.ingest.decompose import ClaimDraft, UnitHeld
 from src.ingest.group import Enrichment, Story
+from src.ingest.run import judged_of_beat
 from src.ingest.unit import Unit, load_unit
 
 DETECTORS = (
@@ -312,6 +314,24 @@ def scripted_merge_answer(record: DefectRecord, unit: Unit) -> llm.MockAnswer:
     claim, both stated values quoted. What the conflict BECOMES (contested
     or supersedes) is the code's, by kind and date — never the judge's."""
     planted = record.planted
+    if "judgment" in planted:
+        # adds_a_judgment / covered_adds_a_judgment: the fact is the record's,
+        # the judgment is listed, and code keeps it (ADR-0003, ADR-0004).
+        covering = "claim_ids" in planted
+        answer = {
+            "story": "new" if covering else "same",
+            "beat_id": "" if covering else "b1",
+            "claims": [
+                {"claim_id": "n01", "verdict": "covered" if covering else "same",
+                 "existing_claim_id": (
+                     "+".join(f"b1.{cid}" for cid in planted["claim_ids"]) if covering
+                     else f"b1.{planted['claim_id']}"
+                 ),
+                 "new_value": "", "existing_value": "", "judgments": [planted["judgment"]],
+                 "reason": record.note}
+            ],
+        }
+        return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
     if planted["expected"] == "new":
         # shared_element: the second source shares an element, not a fact.
         answer = {
@@ -346,24 +366,6 @@ def scripted_merge_answer(record: DefectRecord, unit: Unit) -> llm.MockAnswer:
                 {"claim_id": "n01", "verdict": "same",
                  "existing_claim_id": f"b1.{planted['claim_id']}",
                  "new_value": "", "existing_value": "", "judgments": [],
-                 "reason": record.note}
-            ],
-        }
-        return llm.MockAnswer(text=json.dumps(answer), model_id=llm.ROLE_MODEL["merge_judge"])
-    if planted["expected"] == "adds_judgment":
-        # adds_a_judgment / covered_adds_a_judgment: the fact is the record's,
-        # the judgment is listed, and code keeps the claim (ADR-0003).
-        covering = "claim_ids" in planted
-        answer = {
-            "story": "new" if covering else "same",
-            "beat_id": "" if covering else "b1",
-            "claims": [
-                {"claim_id": "n01", "verdict": "covered" if covering else "same",
-                 "existing_claim_id": (
-                     "+".join(f"b1.{cid}" for cid in planted["claim_ids"]) if covering
-                     else f"b1.{planted['claim_id']}"
-                 ),
-                 "new_value": "", "existing_value": "", "judgments": [planted["judgment"]],
                  "reason": record.note}
             ],
         }
@@ -410,7 +412,7 @@ def scripted_narration(
     narration record: the planted narration (or `narration`), every
     sentence entailed. Returns (sync answers, batch answers by custom_id)."""
     text = narration if narration is not None else record.planted["narration"]
-    draft = narrate.draft_from(text, _judged_claims(record, unit), llm.ROLE_MODEL["author"])
+    draft = narrate.draft_from(text, _told_once_claims(record, unit), llm.ROLE_MODEL["author"])
     answers = {"author": [llm.MockAnswer(
         text=json.dumps({"narration": text}), model_id=llm.ROLE_MODEL["author"]
     )]}
@@ -517,17 +519,76 @@ EVIDENCE_EVENTS: frozenset[str] = frozenset({
 })
 
 
+def _judgment_kept(
+    record: DefectRecord, outcome: merge.MergeOutcome, beats: list[model.Beat]
+) -> bool:
+    """A judgment plant is caught (ADR-0004) when its own word is kept: for
+    `same`, the fold lands on the planted claim with the word in
+    `new_judgments`, the appended source carries it and the beat reruns;
+    for a covered plant, the claim stays `new` with the word in
+    `new_judgments` instead of being absorbed."""
+    word = record.planted["judgment"].lower()
+    for c in outcome.claims:
+        if word not in (w.lower() for w in c.new_judgments):
+            continue
+        if record.planted["expected"] == "new":
+            if c.outcome == "new" and sorted(ref[1] for ref in c.covered_by) == sorted(
+                record.planted["claim_ids"]
+            ):
+                return True
+            continue
+        if c.outcome != "same" or c.existing_claim_id != record.planted["claim_id"]:
+            continue
+        applied = merge.apply(outcome, beats)
+        claim = next(
+            x for b in applied if b.beat_id == c.existing_beat_id
+            for x in b.claims if x.claim_id == c.existing_claim_id
+        )
+        carried = any(word in (w.lower() for w in s.judgments) for s in claim.sources)
+        if carried and c.existing_beat_id in outcome.rerun:
+            return True
+    return False
+
+
+def _told_once_claims(record: DefectRecord, unit: Unit) -> list[judge_claims.JudgedClaim]:
+    """The told_once beat as the merge writes it (ADR-0004): the record's
+    claim with the planted second source appended, carrying its judgment,
+    read back through `run.judged_of_beat` — the production rerun path, so
+    P4 and P5 see exactly what they would in a job."""
+    beat = _beat(record, unit)
+    planted = record.planted["second_source"]
+    second = Unit(
+        city=unit.city, source_id=planted["source_id"], chunk=planted["chunk"],
+        text=planted["text"], as_of=planted["as_of"], rights_basis=planted["rights_basis"],
+    )
+    source = second.source(planted["text"]).model_copy(
+        update={"judgments": [record.planted["judgment"]]}
+    )
+    claim = beat.claims[0]
+    sources = [*claim.sources, source]
+    claim = claim.model_copy(update={
+        "sources": sources,
+        "resolution": model.Resolution(by="corroborated"),
+        "verdict": claim.verdict.model_copy(update={
+            "bound_to": model.bind(claim.text, "\n".join(s.span for s in sources))
+        }),
+    })
+    beat = beat.model_copy(update={"claims": [claim, *beat.claims[1:]]})
+    return judged_of_beat(beat)
+
+
 def _told_once(
     record: DefectRecord, unit: Unit, client: llm.ModelClient, record_event: llm.EventSink
 ) -> _Detection:
     """`told_once`: the record's beat narrated as the runner re-narrates a
     merged beat — P4, then P5, scoring the text P5 returns (it may rewrite
     it). Caught iff exactly one sentence carries the anchor and that one
-    carries the judgment as a whole word; a P5 hold is a miss. The judged
+    carries the judgment as a whole word; a P5 hold is a miss, and so is
+    "also called" anywhere in it (the judgment misread as a name). The judged
     narration is always in the details, for the eye: a second telling
     without the anchor is not scored (spec, `told_once`'s blind spot)."""
     story = _story(record)
-    claims = _judged_claims(record, unit)
+    claims = _told_once_claims(record, unit)
     try:
         draft = narrate.narrate(story, claims, client, record_event)
         judged = judge_narration.judge_narration(story, draft, claims, client, record_event)
@@ -541,6 +602,11 @@ def _told_once(
     if caught and not re.search(rf"(?<!\w){re.escape(judgment)}(?!\w)", carrying[0], re.I):
         caught = False
         note += f"; {judgment!r} missing from it"
+    if re.search(r"\balso called\b", text, re.I):
+        # The judgment read as a name ("the building, also called acclaimed"):
+        # every gate and P5 pass it, so the scorer must not (skeptic panel).
+        caught = False
+        note += "; 'also called' in it"
     if judged.review.held:
         caught = False
         note += f"; held at P5: {judged.review.reason}"
@@ -590,20 +656,10 @@ def _detect(
         if outcome.held:
             return _Detection(False, f"held: {outcome.reason}", held=True)
         expected = record.planted["expected"]
-        if expected == "new":  # shared_element: caught only when nothing folds
+        if "judgment" in record.planted:
+            hit = _judgment_kept(record, outcome, [_beat(record, unit)])
+        elif expected == "new":  # shared_element: caught only when nothing folds
             hit = bool(outcome.claims) and all(c.outcome == "new" for c in outcome.claims)
-        elif expected == "adds_judgment":  # kept beside its match, its own word dropped
-            word = record.planted["judgment"].lower()
-            hit = any(
-                c.outcome == "adds_judgment"
-                and word in (w.lower() for w in c.judgments_dropped)
-                and (
-                    sorted(ref[1] for ref in c.covered_by) == sorted(record.planted["claim_ids"])
-                    if "claim_ids" in record.planted
-                    else c.existing_claim_id == planted_id
-                )
-                for c in outcome.claims
-            )
         elif expected == "covered":  # covered_union: covered by exactly the planted claims
             hit = any(
                 c.outcome == "covered"
@@ -618,7 +674,7 @@ def _detect(
         note = "; ".join(
             f"{c.claim_id} {c.outcome} "
             + ("+".join(ref[1] for ref in c.covered_by) or c.existing_claim_id or "-")
-            + (f" [{', '.join(c.judgments_dropped)}]" if c.judgments_dropped else "")
+            + (f" [{', '.join(c.new_judgments)}]" if c.new_judgments else "")
             for c in outcome.claims
         )
         # A miss that folded something CHANGED the corpus; a miss where every

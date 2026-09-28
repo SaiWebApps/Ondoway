@@ -1,6 +1,7 @@
 # ADR-0003 — a judgment a merge would drop is kept by code, not by the merge judge
 
-**Status:** accepted (owner, grilling session 2026-09-25). Amends the owner ruling of
+**Status:** accepted (owner, grilling session 2026-09-25); decisions 3, 4 and 5 SUPERSEDED by
+ADR-0004 (2026-09-27): the twin told the fact twice live, and a judgment now belongs to its source. Amends the owner ruling of
 2026-09-22 ("a new claim stays with its story") for one case only, and moves the owner ruling
 of 2026-09-24 (a claim that adds a judgment "is not `same`") from the judge's verdict to the
 merge's outcome: the judge now answers `same` on the facts, and code makes the outcome

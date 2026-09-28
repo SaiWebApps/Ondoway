@@ -2126,45 +2126,18 @@ def test_a_superseding_fold_says_where_the_fact_lives_now(tmp_path):
         assert rows[kind]["applied_claim_id"] == "c03", kind
 
 
-def test_a_held_storys_adds_judgment_claim_counts_as_written():
-    """ADR-0003: an `adds_judgment` claim is written beside its match in the
-    match's beat. When its story is later held, the disposition must say
-    `written` at the fresh id — `unmatched` would let an applier accepting
-    the queue item write it a second time. Mutant: drop the kind from
-    `run._CLAIM_WRITTEN`."""
-    from types import SimpleNamespace
-
-    kept = merge.ClaimOutcome(
-        claim_id="c01", verdict="same", existing_beat_id="new_york/p/b",
-        existing_claim_id="c02", outcome="adds_judgment", applied_claim_id="c03",
-        new_value=None, existing_value=None, reason="the same fact, plus a judgment",
-        judgments_dropped=("iconic",),
-    )
-    outcome = merge.MergeOutcome(
-        story_slug="s", place="p", judge_story="same", judge_model="m", story="new",
-        beat_id=None, claims=[kept],
-    )
-    claims = [SimpleNamespace(draft=SimpleNamespace(claim_id="c01"))]
-
-    rows = run._disposition(claims, outcome)
-
-    assert [(r["status"], r["beat_id"], r["applied_claim_id"]) for r in rows] == [
-        ("written", "new_york/p/b", "c03")
-    ]
-
-
 def test_a_split_covered_claim_that_stayed_new_is_unmatched_with_no_covered_refs():
-    """Skeptic panel 2026-09-25 (F6): a covered claim whose named claims span
-    beats stays `new` (ADR-0003) but keeps its refs on the outcome for its
-    event. Its row must read plainly unmatched — `covered_by` is for
+    """Skeptic panel 2026-09-25 (F6): a covered claim carrying a judgment its
+    named claims lack stays `new` (ADR-0004) but keeps its refs on the
+    outcome for its event. Its row must read plainly unmatched — `covered_by` is for
     absorbed rows only, or a reviewer mistakes it for absorbed."""
     from types import SimpleNamespace
 
     split = merge.ClaimOutcome(
         claim_id="c01", verdict="covered", existing_beat_id=None, existing_claim_id=None,
         outcome="new", applied_claim_id="c01", new_value=None, existing_value=None,
-        reason="spans two beats", covered_by=(("b/a", "c01"), ("b/b", "c01")),
-        judgments_dropped=("beloved",),
+        reason="kept for its judgment", covered_by=(("b/a", "c01"), ("b/b", "c01")),
+        new_judgments=("beloved",),
     )
     outcome = merge.MergeOutcome(
         story_slug="s", place="p", judge_story="new", judge_model="m", story="new",
@@ -2175,3 +2148,17 @@ def test_a_split_covered_claim_that_stayed_new_is_unmatched_with_no_covered_refs
     rows = run._disposition(claims, outcome)
 
     assert [(r["status"], r["covered_by"]) for r in rows] == [("unmatched", [])]
+
+
+def test_a_rerun_shows_the_narrator_its_sources_judgments_and_hashes_as_p7_does():
+    """ADR-0004: a merged beat's claim carries a second source that judges
+    it. `judged_of_beat` hands P4 that word, and the hash P4's draft carries
+    equals the one P7's validator recomputes — else the first beat with a
+    judgment is refused NARRATION_HASH_STALE. Mutants: judged_of_beat
+    ignoring judgments; draft_from hashing bare texts."""
+    beat = model.Beat.model_validate(script_mod.merged_beat_with_judgment())
+    claims = run.judged_of_beat(beat)
+
+    assert [c.judgments for c in claims] == [(), ("masterpiece",)]
+    draft = narrate.draft_from("Some narration.", claims, "claude-opus-5")
+    assert draft.claims_hash == model.claims_hash([c.model_dump() for c in beat.claims])

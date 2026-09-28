@@ -3,7 +3,8 @@
 
 Docs/ingestion/rebuild-spec.md §3 (P4, P5) and CONTEXT.md ("Narration",
 "Provenance leak", "Lift") pin the shapes below. The author sees the
-story's resolved claim TEXTS only — never a span, never the unit — so a
+story's resolved claim TEXTS only (each with any judgments its sources
+make, as "(Also called: ...)", ADR-0004) — never a span, never the unit — so a
 narration cannot copy a source it has not read; the narration judge sees
 one sentence and the claim texts, and only decides.
 
@@ -26,7 +27,13 @@ _VOICE_RULES = (
     "supplies those; a beat only tells.\n"
     "- Your own wording throughout; quote only words a named person said or "
     "wrote, and say who.\n"
-    "- Plain spoken English, one story, no headings, no lists."
+    "- Plain spoken English, one story, no headings, no lists.\n"
+    '- A claim may end with "(Also called: ...)": those are judgments its sources make '
+    "about it. Use them in the sentence that tells that claim, in your own voice, never "
+    "saying who made them; when they disagree, say opinion is divided and never pick one."
+    ' Never write the words "also called": a judgment is not a name.\n'
+    "- When a claim's own wording and its \"(Also called: ...)\" words judge it "
+    "differently, that is a disagreement too."
 )
 
 _NARRATION_SHAPE = '{"narration": "..."}'
@@ -100,7 +107,10 @@ _SENTENCE_RULE = (
     "or by two claims read together. A sentence that adds a detail no claim "
     "gives, changes a value, or attaches a cause no claim states is not "
     "entailed, even if the detail is true in the world. Wording may differ "
-    "freely; only the facts are judged."
+    "freely; only the facts are judged. A claim's \"(Also called: ...)\" words are "
+    "judgments its sources make about it: a sentence that uses one of them about that "
+    "claim is entailed on that point, and so is a sentence saying opinion on it is divided "
+    "when its judgments disagree."
 )
 
 _VERDICT_SHAPE = '{"entailed": true, "reason": "..."}'

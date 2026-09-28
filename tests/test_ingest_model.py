@@ -776,3 +776,75 @@ def test_practicalities_is_a_structural_beat_type():
     assert not any(e.startswith("ARC_TOO_FEW_CLAIMS") for e in errors), errors
     assert not any(e.startswith("BEAT_TYPE_INVALID") for e in errors), errors
     assert "practicalities" in STRUCTURAL_BEAT_TYPES
+
+
+# ── Judgments belong to their source (ADR-0004, 2026-09-27) ──
+
+
+def test_a_beat_with_no_judgments_hashes_exactly_as_before():
+    """The narration hash covers each resolved claim's rendered line, and a
+    claim with no judgments renders as its bare text — so every existing
+    narration keeps its hash. Pinned to the raw SHA-256 of the texts."""
+    from src.ingest.model import narration_line
+
+    beat = minimal_beat()
+    texts = [c["text"] for c in beat["claims"] if c["status"] == "resolved"]
+    assert claims_hash(beat["claims"]) == hashlib.sha256(
+        "\n".join(texts).encode("utf-8")
+    ).hexdigest()
+    assert narration_line("The building was completed in 1959.", []) == (
+        "The building was completed in 1959."
+    )
+    assert narration_line("The building was completed in 1959.", ["iconic", "huge"]) == (
+        "The building was completed in 1959. (Also called: iconic, huge)"
+    )
+
+
+def test_a_claims_judgments_are_its_sources_words_the_text_does_not_carry():
+    """Source order, first-seen spelling, case-insensitive dedup, and a word
+    the claim text already carries (whole word, any case) is left out."""
+    from src.ingest.model import claim_judgments
+
+    claim = {
+        "text": "The celebrated tower was completed in 1889.",
+        "sources": [
+            {"judgments": []},
+            {"judgments": ["Iconic", "celebrated"]},
+            {"judgments": ["iconic", "huge"]},
+            {},
+        ],
+    }
+    assert claim_judgments(claim) == ["Iconic", "huge"]
+
+
+def test_a_new_judgment_makes_the_narration_stale_and_restamping_clears_it():
+    beat = minimal_beat()
+    assert validate([beat]) == []
+    judged = copy.deepcopy(beat)
+    extra = copy.deepcopy(judged["claims"][0]["sources"][0])
+    extra.update({"source_id": "frommers-nyc-2024", "judgments": ["finally"]})
+    judged["claims"][0]["sources"].append(extra)
+    judged["claims"][0]["verdict"]["bound_to"] = bind(
+        judged["claims"][0]["text"],
+        "\n".join(s["span"] for s in judged["claims"][0]["sources"]),
+    )
+
+    errors = validate([judged])
+
+    assert [e.split(" ")[0] for e in errors] == ["NARRATION_HASH_STALE"]
+    assert validate([stamp(judged)]) == []
+
+
+def test_a_judgment_must_be_a_whole_word_of_its_own_span():
+    """A source's judgments are verbatim: each is a case-insensitive whole
+    word of that source's span ("Construction was finally completed in
+    1959."). "final" is inside "finally" but is not a whole word of it."""
+    for word, ok in (("Finally", True), ("final", False), ("iconic", False)):
+        beat = minimal_beat()
+        beat["claims"][0]["sources"][0]["judgments"] = [word]
+        errors = validate([stamp(beat)])
+        if ok:
+            assert errors == [], word
+        else:
+            assert [e.split(" ")[0] for e in errors] == ["JUDGMENT_NOT_IN_SPAN"], word
+            assert repr(word) in errors[0]

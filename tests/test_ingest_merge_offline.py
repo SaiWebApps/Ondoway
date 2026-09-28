@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 
 import scripts.ingest_merge_offline as offline
+import src.ingest.merge as merge
 from tests import ingest_job_script as script_mod
 from tests.test_ingest_merge_replay import _claim_verdict, _source_job
 
@@ -126,3 +127,26 @@ def test_a_story_that_needs_an_answer_nobody_recorded_is_unmeasured(
     # The mock logs a call once answered: the one recorded answer was used,
     # the re-ask it demanded had nothing to answer it.
     assert (story["recorded"], story["judge_calls"]) == (1, 1)
+
+
+def test_a_written_source_carrying_judgments_is_still_reported():
+    """ADR-0004: merge now writes a source with its `judgments`. The report
+    matched written sources to judged ones by their whole serialized form
+    with only stated_value cleared, so a judged source dropped out of it
+    silently. It now matches by (source_id, chunk, span). Mutant: the old
+    whole-dump match."""
+    from tests import test_ingest_merge as tm
+
+    unit = tm._second_unit()
+    claims = [tm._judged(unit, "c01", tm.ICONIC_1960)]
+    story = tm._story("Finished in 1960", ["c01"])
+    before = tm._existing()
+    answer = tm._answer("same", "b1", [tm._claim_verdict(
+        "c01", "conflict", "b1.c02", "1960", "1959", judgments=["finished"])])
+    outcome = merge.merge(story, claims, before, tm._armed_judge([answer], claims))
+    after = merge.apply(outcome, before)
+    assert after[0].claims[1].sources[-1].judgments == ["finished"]
+
+    written = offline._written_values(outcome, before, after)
+
+    assert [(w["claim_id"], w["stated_value"]) for w in written] == [("c01", "1960")]
