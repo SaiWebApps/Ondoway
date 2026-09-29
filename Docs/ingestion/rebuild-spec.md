@@ -2314,6 +2314,35 @@ classes. `stated_relation` 0/1 is the expected repeat, and any `judge_claims` mi
 prominently as a merge miss. VOID applies only when the process exits without printing the table;
 a re-run then needs a fresh owner go.
 
+*Live calibration under ADR-0004 — result (2026-09-27, owner go on 7ea964c): FAIL as registered, on
+`adds_a_date` alone.* $0.2067 actual against $1.4188 printed. Corpus, baseline and fixture shas were
+unchanged. Every judgment class passed. `adds_a_judgment`: `same` onto c02, "iconic" recorded on the
+source, beat rerun. `covered_adds_a_judgment`: kept `new` with "beloved". `told_once` 1/1: "Construction
+here was finally completed in 1959, and the building that resulted has been acclaimed ever since."
+`adds_a_date` 0/1 HELD: the judge answered `covered` for "...since 1938", its own reason conceding "plus
+a date", and the leftover guard held it ("1938, since"). There was NO WRONG FOLD. Cause: sampling
+variance, not a change. The merge prompt and the plant's inputs are byte-identical to fd00c13, where
+the same judge answered `new`. Across three live runs that class is 2 `new` (caught) and 1 false `covered`
+(held). (A first diagnosis blamed the covered rule's "judgments set aside" clause; that clause was
+already in fd00c13's prompt, so the revert built on it was undone unshipped.) Seen, not scored:
+"acclaimed ever since" adds a claim no source makes, and P5 accepted it (the recorded gap).
+
+*Owner ruling, 2026-09-28: gate on safety, not on single-sample recall.* Scoring each class 1/1 on one
+live sample, against a judge that varies run to run, fails almost every run by chance. That is what
+turned two weeks into a loop of rebuild, re-register and re-run. It replaces the calibration bars
+above, and every earlier "no P6 run until a live calibration" gate in this slice. The exit 1 that
+`scripts/ingest_calibrate.py` gives on a class below its baseline (the JUDGE bar of slice 4) is now a
+monitor signal, not a gate; changing that code is a later step. (1) **The P6 gate is zero WRONG FOLD.** A merge is unsafe only when it writes something wrong;
+whatever the guards HOLD costs nothing and goes to review. By this rule 7ea964c PASSES: zero WRONG
+FOLD, its one miss held, every judgment class working. **The P6 gate is open.** (2) **Calibration is
+a monitor, not a gate.** It runs after a change to a judge or narrator prompt and reports its rates
+and every WRONG FOLD. A WRONG FOLD still stops the work until it is understood; a miss is a data
+point. (3) **Real runs replace proof loops.** The next step is one P6 replay of job B over all its
+stories, whose bar is also safety: the job commits, the replayed sandbox validates, and the live
+corpus is untouched. Its merged beats and narrations are shown to the owner. Then the district port
+(the owner's end point of 2026-09-19). (4) **Holds must be actionable:** the review-queue applier
+is built, so an accepted hold is applied, not left to pile up.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,
