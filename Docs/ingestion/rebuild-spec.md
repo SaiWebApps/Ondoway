@@ -2343,6 +2343,26 @@ corpus is untouched. Its merged beats and narrations are shown to the owner. The
 (the owner's end point of 2026-09-19). (4) **Holds must be actionable:** the review-queue applier
 is built, so an accepted hold is applied, not left to pile up.
 
+*Job B P6 replay over all stories under ADR-0004 — result (2026-09-28, owner go; HEAD c23d9f0; sandbox
+`data-ingest/sandboxes/jobB-adr0004-r1`, started at `fa549e1db77b8463`).* Safety bar PASS. Status
+`committed`, 86 beats, `make ingest-validate` 0 errors, the live corpus unchanged at `556830a5342e178c`,
+and nothing outside the sandbox touched. Actual $0.7316 against $13.61 printed (the resume prices the
+whole job). 37 merge answers, 1 re-ask, 11 folds, 0 WRONG FOLD; 9 holds (3 merge, 3 narration, 3 commit).
+Two judgments kept on their sources: "seminal" (Frommer's El Greco, the fold that dropped it twice in
+job B) and "ornate" (the Frick house). Report: https://claude.ai/artifact/A8ZNV6sRQo3EqNH4VLc77z.
+**The narrator's use of both was unfaithful:** "a seminal work by El Greco" became "paintings that
+shaped everything that came after them", and "was housed for decades" became "has been kept"; P5
+accepted both. *Fix (2026-09-29):* the P4 rules keep a judgment as its source's word ("your own
+wording throughout, except a judgment") and keep each claim's time; P5 refuses a sentence that
+praises, ranks or dramatizes beyond the listed words ("shaped everything that came after", "ever
+since"). The proof is a second replay in a fresh sandbox, not a calibration gate.
+*Holds (owner grilling, 2026-09-29; ADR-0005):* every hold gets a safe default inside the job (a merge
+hold is written as its own story, re-narrated; a narration hold gets one more try, else it is left out;
+a commit hold is left out), nothing blocks publishing, and review is optional, in the existing
+workbench screen, as overrides only. **Not yet implemented** (as of c23d9f0): `run.py` still only
+queues holds, and `POST /ingest/publish` still refuses (409) while any held item is undecided. This
+ruling replaces point (4) of the 2026-09-28 ruling above ("the review-queue applier is built").
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,

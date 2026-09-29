@@ -979,8 +979,9 @@ def test_the_narrator_and_its_judge_are_told_what_an_also_called_word_is():
 
     voice = (
         'A claim may end with "(Also called: ...)": those are judgments its sources make '
-        "about it. Use them in the sentence that tells that claim, in your own voice, never "
-        "saying who made them; when they disagree, say opinion is divided and never pick one."
+        "about it. Use each as the source's own word, in the sentence that tells that claim "
+        '("a seminal work", never a paraphrase that says more), never saying who made them; '
+        "when they disagree, say opinion is divided and never pick one."
         ' Never write the words "also called": a judgment is not a name.\n'
         '- When a claim\'s own wording and its "(Also called: ...)" words judge it '
         "differently, that is a disagreement too."
@@ -989,11 +990,24 @@ def test_the_narrator_and_its_judge_are_told_what_an_also_called_word_is():
         prompts.NARRATE_PROMPT, prompts.NARRATE_REDO_PROMPT, prompts.NARRATE_REVISE_PROMPT
     ):
         assert voice in rendered
+        # Job B replay 2026-09-28: "seminal" became "paintings that shaped everything
+        # that came after them", and "was housed for decades" became "has been kept".
+        assert (
+            "Your own wording throughout, except a judgment, which keeps its source's word;"
+            in rendered
+        )
+        assert "- Keep each claim's time: what a claim says was so, say was so." in rendered
     assert (
         'A claim\'s "(Also called: ...)" words are judgments its sources make about it: a '
         "sentence that uses one of them about that claim is entailed on that point, and so is "
         "a sentence saying opinion on it is divided when its judgments disagree."
         in prompts.JUDGE_SENTENCE_PROMPT
+    )
+    assert (
+        'A sentence that praises, ranks or dramatizes ("shaped everything that came after", '
+        '"ever since", "the finest") beyond the words a claim or its "(Also called: ...)" '
+        "list gives is not entailed: here a judgment is a fact, and a stronger one is a "
+        "different fact." in prompts.JUDGE_SENTENCE_PROMPT
     )
 
 

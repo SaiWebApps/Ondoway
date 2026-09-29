@@ -25,12 +25,14 @@ _VOICE_RULES = (
     "- No framing, openers or transitions: never \"imagine\", \"picture\", "
     "\"envision\", \"welcome\", \"as you walk\", \"next\". A tour engine "
     "supplies those; a beat only tells.\n"
-    "- Your own wording throughout; quote only words a named person said or "
-    "wrote, and say who.\n"
+    "- Your own wording throughout, except a judgment, which keeps its source's word; "
+    "quote only words a named person said or wrote, and say who.\n"
+    "- Keep each claim's time: what a claim says was so, say was so.\n"
     "- Plain spoken English, one story, no headings, no lists.\n"
     '- A claim may end with "(Also called: ...)": those are judgments its sources make '
-    "about it. Use them in the sentence that tells that claim, in your own voice, never "
-    "saying who made them; when they disagree, say opinion is divided and never pick one."
+    "about it. Use each as the source's own word, in the sentence that tells that claim "
+    '("a seminal work", never a paraphrase that says more), never saying who made them; '
+    "when they disagree, say opinion is divided and never pick one."
     ' Never write the words "also called": a judgment is not a name.\n'
     "- When a claim's own wording and its \"(Also called: ...)\" words judge it "
     "differently, that is a disagreement too."
@@ -110,7 +112,10 @@ _SENTENCE_RULE = (
     "freely; only the facts are judged. A claim's \"(Also called: ...)\" words are "
     "judgments its sources make about it: a sentence that uses one of them about that "
     "claim is entailed on that point, and so is a sentence saying opinion on it is divided "
-    "when its judgments disagree."
+    "when its judgments disagree. A sentence that praises, ranks or dramatizes "
+    '("shaped everything that came after", "ever since", "the finest") beyond the words '
+    'a claim or its "(Also called: ...)" list gives is not entailed: here a judgment is a '
+    "fact, and a stronger one is a different fact."
 )
 
 _VERDICT_SHAPE = '{"entailed": true, "reason": "..."}'
