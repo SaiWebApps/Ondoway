@@ -2359,9 +2359,28 @@ since"). The proof is a second replay in a fresh sandbox, not a calibration gate
 *Holds (owner grilling, 2026-09-29; ADR-0005):* every hold gets a safe default inside the job (a merge
 hold is written as its own story, re-narrated; a narration hold gets one more try, else it is left out;
 a commit hold is left out), nothing blocks publishing, and review is optional, in the existing
-workbench screen, as overrides only. **Not yet implemented** (as of c23d9f0): `run.py` still only
-queues holds, and `POST /ingest/publish` still refuses (409) while any held item is undecided. This
-ruling replaces point (4) of the 2026-09-28 ruling above ("the review-queue applier is built").
+workbench screen, as overrides only. This ruling replaces point (4) of the 2026-09-28 ruling above
+("the review-queue applier is built"). Decisions 1 and 2 are built (below).
+*Built, $0 (2026-09-29): ADR-0005 decisions 1 and 2.* In `run.py` the defaults are always on
+(`defaults=False` only in tests of the hold machinery itself, which still check what each item
+shows). A P4 hold gets one more narration. A P5-held narration gets one more narrate and judge
+inside P6: kept when it passes, otherwise written with its held flag (the export skips it) and
+queued `left_out`, and it never merges: a left-out story's facts must not fold into a beat a tour
+plays, or be written again by a merge default (judge PROVE-FIRST). It is written only as its own
+held beat, under a free beat id. A merge hold is written as its own beat when the corpus lacks at least an arc's
+worth of its claims, under a beat id nothing else uses (`…-2`) and re-narrated over only those
+claims; otherwise it is `left_out` with the reason. Every default is on the item
+(`ReviewItem.default`) and in a `hold_default` event. `POST /ingest/publish` no longer refuses on
+undecided items. Seven tests are new or rewritten (six in run, one in routes), each default
+mutation-checked red. The CLI, offline and replay fixtures now script the default's narration, and
+the offline one passes the pre-job start file, since the job now changes the city's file. 411 tests
+green; lint exits 0. **Not built:** decision 3 (the workbench loading saved holds and persisting
+decisions) and the overrides. **Recorded, not done:** a held merge whose remainder falls below its
+arc minimum is left out even when its absorbed claims would lift it over; the 2026-09-22 ruling
+("keeping a claim the corpus already states beats losing one it does not") suggests including
+them. A default-written beat that P7 then refuses (`commit_held`) still shows
+`written_as_own_story` on its merge item. `cap_bound_usd` does not include the defaults'
+re-narrations; the metered actual does.
 
 ### Slice 11: Cleanup
 

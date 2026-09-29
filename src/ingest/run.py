@@ -18,7 +18,9 @@ what those modules deliberately left to the runner.
   cannot take a new-shape record, and the validator would refuse the
   mixed file at P7 anyway, so the job stops before any call. Before P1
   the cost estimate — `P1_PLAN`…`P6_PLAN` over the unit texts, a
-  projection; `cap_bound_usd` is the true limit — is the job's first
+  projection; `cap_bound_usd` bounds every planned call, but not the
+  re-narrations ADR-0005's hold defaults add (one P4, and P5, per held
+  story) — is the job's first
   event; it arms the mock and the live
   client refuses to run without it.
 - P1 decompose, P2 group per unit.
@@ -29,11 +31,16 @@ what those modules deliberately left to the runner.
   (owner ruling A, slice 10) — with no second omission check. Exactly
   one re-ask per phase per item: the phases enforce their own budgets;
   the runner never adds a retry.
-- P4 narrate, P5 judge narration per story, `publishers=` passed.
+- P4 narrate, P5 judge narration per story, `publishers=` passed. A
+  narration held at P4, or still held after P5, gets one more try
+  (ADR-0005); one still held after that is left out: never merged,
+  written only as its own beat flagged held, which the export skips.
 - P6 merge per story against the beats already at its place in the
   city's file: no beat there → the story is new without a merge call
   (logged `merge_skipped`); a held outcome → a D13 queue item, nothing
-  applied; otherwise `merge.apply`, then P4/P5 run again for every id in
+  applied, and after the reruns its ADR-0005 default: written as its own
+  beat, re-narrated, or left out, recorded on the item; otherwise
+  `merge.apply`, then P4/P5 run again for every id in
   `MergeOutcome.rerun` before P7 (every beat a claim folded into counts as
   changed). A `new` story's record is assembled here:
   `beat_id = city/slug(place)/story_slug`, the story's enrichment fields,
@@ -577,6 +584,17 @@ def _unique_slug(story: Story, taken: set[str]) -> Story:
     return story if slug == story.story_slug else story.model_copy(update={"story_slug": slug})
 
 
+def _free_slug(city: str, story: Story, taken: set[str]) -> Story:
+    """`story` under a slug whose beat id (city/place/slug) is not in `taken`,
+    suffixed `-2`, `-3`, ...; `taken` gains the beat id used."""
+    prefix = f"{city}/{model.slug(story.place)}/"
+    slug, n = story.story_slug, 2
+    while prefix + slug in taken:
+        slug, n = f"{story.story_slug}-{n}", n + 1
+    taken.add(prefix + slug)
+    return story if slug == story.story_slug else story.model_copy(update={"story_slug": slug})
+
+
 def _story_key(unit: Unit, story: Story) -> str:
     return f"{unit.key}:{story.story_slug}"
 
@@ -661,9 +679,13 @@ class _Run:
     """One `run_job` invocation's working state."""
 
     def __init__(
-        self, job: IngestJob, store: IngestJobStore, client: llm.ModelClient, data_root: Path
+        self, job: IngestJob, store: IngestJobStore, client: llm.ModelClient, data_root: Path,
+        *, defaults: bool = True,
     ) -> None:
         self.job = job
+        #: ADR-0005: every hold gets its safe default inside the job. Off
+        #: only for tests of the hold machinery itself.
+        self.defaults = defaults
         self.store = store
         self.client = client
         self.data_root = Path(data_root)
@@ -866,7 +888,18 @@ class _Run:
                         story, claims, self.client, events=self.emit, publishers=publishers
                     )
                 except BeatHeld as held:
-                    self._queue_held_narration(story, claims, held.reason, phase="P4")
+                    retried = self._narrate_once_more(story, claims, publishers, judge=False)
+                    if retried is not None:
+                        drafts[_story_key(unit, story)] = retried
+                        self.emit("hold_default", {
+                            "kind": "narration_held", "story_slug": story.story_slug,
+                            "phase": "P4", "applied": "renarrated",
+                        })
+                        continue
+                    self._queue_held_narration(
+                        story, claims, held.reason, phase="P4",
+                        default={"applied": "left_out"} if self.defaults else None,
+                    )
         self.done("P4", {"drafts": {k: _dump(d) for k, d in drafts.items()}})
         return drafts
 
@@ -907,9 +940,30 @@ class _Run:
         return narrations
 
     # -- queue items --
+    def _narrate_once_more(
+        self, story: Story, claims: Sequence[JudgedClaim], publishers: Sequence[str],
+        *, judge: bool = True,
+    ) -> Any:
+        """ADR-0005's one more try at a held narration: P4 again (and P5 when
+        `judge`), or None — when defaults are off, or the try is held too."""
+        if not self.defaults:
+            return None
+        try:
+            draft = narrate.narrate(story, claims, self.client, events=self.emit,
+                                    publishers=publishers)
+            if not judge:
+                return draft
+            judged = judge_narration.judge_narration(
+                story, draft, claims, self.client, events=self.emit, publishers=publishers
+            )
+        except BeatHeld:
+            return None
+        return None if judged.review.held else judged
+
     def _queue_held_narration(
         self, story: Story, claims: Sequence[JudgedClaim], reason: str, *, phase: str,
         narration: str | None = None, duration_sec: int = 0,
+        default: dict[str, Any] | None = None,
     ) -> None:
         shown = {
             "story": _dump(story),
@@ -925,6 +979,7 @@ class _Run:
             job_id=self.job.id, city=self.job.city, kind="narration_held",
             story_slug=story.story_slug, place=story.place, reason=reason, shown=shown,
             held_back={"claims": len(claims), "duration_sec": duration_sec},
+            default=default,
         )
 
     def _queue_new_place(self, beat: model.Beat, story: Story) -> None:
@@ -988,9 +1043,54 @@ class _Run:
         pending.dropped_beats.add(beat_id)
         _mark_dropped(pending.disposition, beat_id)
 
-    def _flush_held_stories(self) -> None:
-        """One `merge_held` item per story, after the reruns settled."""
+    def _default_for_held_story(
+        self, pending: _HeldStory, publishers: Sequence[str], taken: set[str]
+    ) -> tuple[model.Beat | None, dict[str, Any]]:
+        """ADR-0005's default for a held merge: the claims the corpus does not
+        hold (per the disposition) become the story's own beat, re-narrated
+        over just those claims, under a beat id nothing else uses. Left out
+        when the corpus holds every claim, when too few remain for the beat
+        type, or when the new narration is held."""
+        keep_ids = [
+            r["claim_id"] for r in pending.disposition if r["status"] in ("unmatched", "dropped")
+        ]
+        kept = [c for c in pending.claims if c.draft.claim_id in keep_ids]
+        if not kept:
+            return None, {"applied": "left_out", "why": "the corpus already holds every claim"}
+        beat_type = pending.story.beat_type
+        if model.arc_too_short(beat_type, len(kept)):
+            n = len(kept)
+            return None, {"applied": "left_out", "why": (
+                f"{n} claim{' is' if n == 1 else 's are'} below the arc minimum "
+                f"for beat_type {beat_type!r}"
+            )}
+        story = _free_slug(
+            self.job.city, pending.story.model_copy(update={"claim_ids": keep_ids}), set(taken)
+        )
+        narration = self._narrate_once_more(story, kept, publishers)
+        if narration is None:
+            return None, {"applied": "left_out", "why": "its new narration was held"}
+        beat = assemble_record(self.job.city, story, kept, narration)
+        taken.add(beat.beat_id)
+        return beat, {"applied": "written_as_own_story", "beat_id": beat.beat_id}
+
+    def _flush_held_stories(
+        self, publishers: Sequence[str] = (), taken: set[str] | None = None
+    ) -> list[model.Beat]:
+        """One `merge_held` item per story, after the reruns settled, each
+        with its default applied (ADR-0005); returns the beats the defaults
+        wrote."""
+        written: list[model.Beat] = []
+        taken = set() if taken is None else taken
         for pending in self._held_stories.values():
+            default: dict[str, Any] | None = None
+            if self.defaults:
+                beat, default = self._default_for_held_story(pending, publishers, taken)
+                if beat is not None:
+                    written.append(beat)
+                self.emit("hold_default", {
+                    "kind": "merge_held", "story_slug": pending.story.story_slug, **default,
+                })
             reason = "; ".join(pending.reasons)
             shown = {
                 "story": _dump(pending.story),
@@ -1015,8 +1115,10 @@ class _Run:
                     ),
                     "duration_sec": pending.narration.duration_sec,
                 },
+                default=default,
             )
         self._held_stories.clear()
+        return written
 
     # -- P6 --
     def _rerun(
@@ -1093,11 +1195,38 @@ class _Run:
                 claims = judged[unit.key][story.story_slug]
                 narration = narrations[key]
                 if narration.review.held:
-                    self._queue_held_narration(
-                        story, claims, narration.review.reason or "", phase="P5",
-                        narration=narration.narration.text,
-                        duration_sec=narration.duration_sec,
-                    )
+                    retried = self._narrate_once_more(story, claims, publishers)
+                    if retried is not None:
+                        narration = retried
+                        self.emit("hold_default", {
+                            "kind": "narration_held", "story_slug": story.story_slug,
+                            "applied": "renarrated",
+                            "beat_id": f"{self.job.city}/{model.slug(story.place)}/"
+                                       f"{story.story_slug}",
+                        })
+                    else:
+                        self._queue_held_narration(
+                            story, claims, narration.review.reason or "", phase="P5",
+                            narration=narration.narration.text,
+                            duration_sec=narration.duration_sec,
+                            default={"applied": "left_out"} if self.defaults else None,
+                        )
+                        if self.defaults and not story.new_poi:
+                            # Left out means left out: never merged, so none of
+                            # its facts fold into a beat a tour plays, and no
+                            # merge default writes it again. Written only as its
+                            # own beat, held (the export skips it), restorable.
+                            taken = {b.beat_id for b in existing} | {
+                                b.beat_id for b in new_records
+                            }
+                            beat = assemble_record(
+                                self.job.city, _free_slug(self.job.city, story, taken),
+                                claims, narration,
+                            )
+                            new_records.append(beat)
+                            extracted += 1
+                            touched.setdefault(story.place, set()).add(story.story_slug)
+                            continue
                 if story.new_poi:
                     beat = assemble_record(
                         self.job.city, story, claims, narration,
@@ -1271,7 +1400,9 @@ class _Run:
             existing = kept
             if reverted:
                 self.emit("rerun_reverted", {"beat_ids": sorted(reverted)})
-        self._flush_held_stories()
+        # ADR-0005: a held story's default may write it as a beat of its own.
+        taken = {b.beat_id for b in existing} | {b.beat_id for b in new_records}
+        new_records.extend(self._flush_held_stories(publishers, taken))
         for unit_key, entry in per_unit.items():
             entry["pois_touched"] = sorted(
                 place for place, slugs in touched_by.get(unit_key, {}).items() if slugs
@@ -1416,12 +1547,15 @@ def run_job(
     *,
     data_root: Path | str | None = None,
     stop_after: str | None = None,
+    defaults: bool = True,
 ) -> None:
     """Run (or resume) the job; see the module docstring. Never raises: a
     failure ends the job in `error` with the message on the job and an
     `error` event, the completed phases kept for a later resume.
     `stop_after="P3"` ends it after P3 with status `stopped`: nothing is
-    written, P1-P3's output is kept."""
+    written, P1-P3's output is kept. `defaults` applies ADR-0005's safe
+    default to every hold inside the job; only tests of the hold machinery
+    itself turn it off."""
     if stop_after not in (None, *STOP_AFTER_ROWS):
         raise ValueError(f"stop_after must be one of {sorted(STOP_AFTER_ROWS)}, got {stop_after!r}")
     job = store.get(job_id)
@@ -1430,7 +1564,7 @@ def run_job(
     root = Path(data_root) if data_root is not None else data_root_from_env()
     store.set_status(job_id, "running")
     try:
-        stopped = _Run(job, store, client, root).run(stop_after)
+        stopped = _Run(job, store, client, root, defaults=defaults).run(stop_after)
     except Exception as exc:  # any failure MUST end the job cleanly
         store.append_event(job_id, "error", str(exc))
         store.set_status(job_id, "error", error=str(exc))

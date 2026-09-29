@@ -26,7 +26,7 @@ def _log_path(ws: dict):
 def _run(ws: dict, capsys, start=None) -> tuple[int, dict | str]:
     rc = offline.main([
         "--city", script_mod.CITY, "--job", ws["job_id"],
-        "--start", str(start or ws["beats"]), "--run", str(ws["data_root"]),
+        "--start", str(start or ws["start"]), "--run", str(ws["data_root"]),
     ])
     out = capsys.readouterr().out
     return rc, (json.loads(out) if rc == 0 else out)

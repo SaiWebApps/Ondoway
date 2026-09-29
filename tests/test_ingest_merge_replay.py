@@ -37,7 +37,7 @@ def _sha(path: Path) -> str:
 def _source_job(tmp_path, monkeypatch, capsys) -> dict:
     """A committed job whose story the slice-9 contract could not merge: the
     judge called it new while the completion claim's signature matches the
-    sidebar's, so P6 held it and nothing of it reached the file."""
+    sidebar's, so P6 held it (and, since ADR-0005, wrote it as its own beat)."""
     chunks = script_mod.chunk_dir(tmp_path)
     repo_data = script_mod.data_dir(tmp_path)
     data_root = tmp_path / "data-ingest"
@@ -46,7 +46,13 @@ def _source_job(tmp_path, monkeypatch, capsys) -> dict:
     (city_dir / "poi-raw.json").write_bytes((repo_data / script_mod.CITY / "poi-raw.json")
                                             .read_bytes())
     beats = script_mod.seed_beats(data_root, script_mod.folding_records())
+    # The file the job starts from: since ADR-0005 the job itself writes the
+    # held story as a beat of its own, so the city's file changes under it.
+    start = tmp_path / "start-beats.json"
+    start.write_bytes(beats.read_bytes())
     scripted = script_mod.script(script_mod.unit(chunks))
+    # ADR-0005: the held story's default re-narrates it as a beat of its own.
+    scripted["answers"]["author"].append(script_mod.narration_answer())
     scripted["answers"]["merge_judge"] = [
         script_mod.merge_answer(
             "new", "", [_claim_verdict(c, "new", reason="nothing like it")
@@ -67,7 +73,7 @@ def _source_job(tmp_path, monkeypatch, capsys) -> dict:
     job_ids = [p.name for p in (city_dir / "jobs").iterdir() if p.is_dir()]
     assert len(job_ids) == 1
     return {"chunks": chunks, "repo_data": repo_data, "data_root": data_root,
-            "beats": beats, "job_id": job_ids[0], "script_path": script_path}
+            "beats": beats, "start": start, "job_id": job_ids[0], "script_path": script_path}
 
 
 def test_a_replay_reruns_p6_in_a_sandbox_from_the_jobs_own_phase_files(

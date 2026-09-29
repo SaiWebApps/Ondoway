@@ -91,6 +91,8 @@ def _hold_a_merge(workspace) -> None:
     place, a judge that calls the story new while the hint matches it."""
     script_mod.seed_beats(workspace["data_root"], script_mod.existing_records())
     scripted = script_mod.script(workspace["unit"])
+    # ADR-0005: the job re-narrates the held story as a beat of its own.
+    scripted["answers"]["author"].append(script_mod.narration_answer())
     scripted["answers"]["merge_judge"] = [
         script_mod.merge_answer(
             "new", "",
@@ -173,12 +175,13 @@ def test_stream_is_event_stream_and_terminates(client, workspace, monkeypatch):
 
 
 @needs_neo4j
-def test_publish_refuses_while_an_item_is_held(client, workspace, clean_driver):
-    """§5's proving node: a job whose merge is held leaves an undecided
-    queue item, GET /ingest/review?city= lists it (ranked, with the hash
-    a decision binds to), and POST /ingest/publish refuses 409 naming it
-    until it is decided. Once decided, publish converges the graph on the
-    file (slice 8, §6): the two beats the file holds are linked."""
+def test_publish_never_waits_on_a_held_item(client, workspace, clean_driver):
+    """ADR-0005 (owner ruling 2026-09-29): a job whose merge is held applies
+    the safe default itself — the story is written as a beat of its own —
+    and still lists the item for optional review (ranked, with the hash a
+    decision binds to, and the default it got). Publishing does not wait
+    on it: it converges the graph on the file at once, three beats linked.
+    Mutant: the undecided-items refusal restored (409)."""
     _hold_a_merge(workspace)
     job_id, snap = _run_job(client, workspace["chunks"])
     assert snap["status"] == "committed", snap["error"]
@@ -191,23 +194,19 @@ def test_publish_refuses_while_an_item_is_held(client, workspace, clean_driver):
     ]
     item = items[0]
     assert item["shown_hash"] == item["item_id"] == jobs.shown_hash(item["shown"])
-    assert item["held_back"]["claims"] == 3
+    assert item["default"] == {
+        "applied": "written_as_own_story", "beat_id": f"{script_mod.BEAT_ID}-2"
+    }
     assert client.get("/api/v1/ingest/review", params={"city": "paris"}).json()["items"] == []
 
     r = client.post("/api/v1/ingest/publish", params={"city": script_mod.CITY, "target": "local"})
-    assert r.status_code == 409, r.text
-    assert r.json()["detail"]["undecided"] == [item["item_id"]]
-    assert "undecided" in r.json()["detail"]["error"]
-
-    r = client.post(
-        "/api/v1/ingest/review/decision",
-        json={"item_id": item["item_id"], "decision": "reject", "decided_by": "adam",
-              "shown_hash": item["shown_hash"]},
-    )
     assert r.status_code == 200, r.text
+    assert r.json()["beats"]["linked"] == 3
+    # Leave the module's shared graph as the next test expects it: the file
+    # back to its two start beats, and the held story's beat withdrawn.
+    script_mod.seed_beats(workspace["data_root"], script_mod.existing_records())
     r = client.post("/api/v1/ingest/publish", params={"city": script_mod.CITY, "target": "local"})
-    assert r.status_code == 200, r.text
-    assert r.json()["beats"]["linked"] == 2
+    assert (r.json()["beats"]["linked"], r.json()["beats"]["withdrawn"]) == (2, 1)
 
 
 def _beat_status(driver, beat_id: str) -> str | None:

@@ -1,10 +1,12 @@
 # ADR-0005 — a held story gets a safe default inside the job; review is optional
 
-**Status:** accepted (owner, grilling session 2026-09-29), **not yet implemented** (as of
-c23d9f0): `src/ingest/run.py` still only queues holds, and `POST /ingest/publish` still refuses
-(409) while any held item is undecided (`src/api/routes/ingest.py`). The decision below is the
-target, not the current behaviour. Applies ADR-0002 decision 4 ("a duplicate story is preferred
-over a missing one … never blocks a publish") to the review queue, which blocks publishing today.
+**Status:** accepted (owner, grilling session 2026-09-29). Decisions 1 and 2 are built (2026-09-29):
+`run_job(..., defaults=True)` applies every default inside the job and records it on the item
+(`ReviewItem.default`, a `hold_default` event), and `POST /ingest/publish` no longer waits on held
+items. **Decision 3 is not yet built:** the workbench screen still sees only its own process's
+queue, not the saved `held/*.jsonl` files, and decisions are not persisted. Applies ADR-0002
+decision 4 ("a duplicate story is preferred over a missing one … never blocks a publish") to the
+review queue.
 
 ## Context
 

@@ -122,6 +122,11 @@ class ReviewItem(BaseModel):
     held_back: dict[str, int]
     decision: dict[str, Any] | None = None
     queued_at: str | None = None
+    #: The safe default the job applied (ADR-0005): `{"applied":
+    #: "written_as_own_story", "beat_id": ...}`, `{"applied": "left_out", ...}`
+    #: or None for an item raised before defaults existed. Not part of what
+    #: the reviewer is shown, so not part of the item's hash.
+    default: dict[str, Any] | None = None
 
 
 def held_back_rank(item: ReviewItem) -> tuple[int, int]:
@@ -204,6 +209,7 @@ class IngestJobStore(JobStore):
         reason: str,
         shown: dict[str, Any],
         held_back: dict[str, int],
+        default: dict[str, Any] | None = None,
     ) -> ReviewItem:
         """Add an item keyed by the hash of `shown`; re-queueing identical
         content returns the item already held."""
@@ -223,6 +229,7 @@ class IngestJobStore(JobStore):
                 shown=shown,
                 held_back=held_back,
                 queued_at=_now_iso(),
+                default=default,
             )
             self._items[item_id] = item
             return item

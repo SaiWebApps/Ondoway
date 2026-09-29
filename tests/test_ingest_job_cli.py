@@ -215,6 +215,9 @@ def test_a_story_held_at_p4_survives_the_cli_in_the_held_sidecar(tmp_path, monke
         scripted["answers"]["author"][0],
         script_mod.narration_answer(lifted),
         script_mod.narration_answer(lifted_again),
+        # ADR-0005's one more try at P4, lifted again, so the story stays held.
+        script_mod.narration_answer(lifted),
+        script_mod.narration_answer(lifted_again),
     ]
     script_mod.write_script(tmp_path / "script.json", scripted)
 

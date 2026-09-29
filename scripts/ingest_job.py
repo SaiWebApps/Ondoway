@@ -102,7 +102,9 @@ def client_event_sink(store: jobs.IngestJobStore, holder: dict[str, str]):
 def _first_pass_usd(estimate: llm.CostEstimate) -> float:
     """The rows that are each phase's FIRST ask: the projected spend when
     nothing is refused. The whole plan is the projection with every re-ask;
-    `run.cap_bound_usd` is the true limit."""
+    `run.cap_bound_usd` bounds every planned call, but not ADR-0005's
+    re-narration of held stories (one P4 and P5 each), which only the
+    metered actual shows."""
     return sum(row.usd for row, first in zip(estimate.rows, run.FIRST_PASS, strict=True) if first)
 
 

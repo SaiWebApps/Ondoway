@@ -366,7 +366,7 @@ def test_a_held_merge_is_a_queue_item_and_nothing_of_it_reaches_disk(tmp_path):
     ]
     client = llm.MockClient(sink, **scripted)
 
-    run.run_job(job.id, store, client, data_root=data_root)
+    run.run_job(job.id, store, client, data_root=data_root, defaults=False)
 
     snap = store.snapshot(job.id)
     assert snap.status == "committed", snap.error
@@ -422,7 +422,9 @@ def test_a_held_merge_shows_the_reviewer_every_claim_the_judge_named(tmp_path):
         )
     ]
 
-    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+    run.run_job(
+        job.id, store, llm.MockClient(sink, **scripted), data_root=data_root, defaults=False
+    )
 
     [item] = store.undecided(script_mod.CITY)
     assert item.kind == "merge_held"
@@ -740,7 +742,9 @@ def test_one_failing_item_never_ends_the_job(tmp_path, case):
     scripted = script_mod.script(unit)
     phase = _inject_one_item_failure(case, unit, scripted, data_root)
 
-    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+    run.run_job(
+        job.id, store, llm.MockClient(sink, **scripted), data_root=data_root, defaults=False
+    )
 
     snap = store.snapshot(job.id)
     assert snap.status == "committed", snap.error
@@ -829,7 +833,9 @@ def test_a_reverted_merge_is_queued_as_the_incoming_story_and_counts_as_nothing(
         script_mod.RESPONSE_JUDGE_MODEL
     )
 
-    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+    run.run_job(
+        job.id, store, llm.MockClient(sink, **scripted), data_root=data_root, defaults=False
+    )
 
     snap = store.snapshot(job.id)
     assert snap.status == "committed", snap.error
@@ -965,7 +971,9 @@ def test_a_covered_claim_of_a_reverted_merge_is_not_recorded(tmp_path):
         )
     ]
 
-    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+    run.run_job(
+        job.id, store, llm.MockClient(sink, **scripted), data_root=data_root, defaults=False
+    )
 
     snap = store.snapshot(job.id)
     assert snap.status == "committed", snap.error
@@ -1010,7 +1018,9 @@ def test_a_story_whose_beat_id_already_exists_is_queued_never_dropped(tmp_path):
         )
     ]
 
-    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+    run.run_job(
+        job.id, store, llm.MockClient(sink, **scripted), data_root=data_root, defaults=False
+    )
 
     snap = store.snapshot(job.id)
     assert snap.status == "committed", snap.error
@@ -1182,7 +1192,9 @@ def test_a_fold_dropped_by_a_held_rerun_is_queued_with_the_incoming_claim(tmp_pa
         script_mod.sentence_verdicts(remainder, script_mod.REMAINDER_NARRATION)
     )
 
-    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+    run.run_job(
+        job.id, store, llm.MockClient(sink, **scripted), data_root=data_root, defaults=False
+    )
 
     snap = store.snapshot(job.id)
     assert snap.status == "committed", snap.error
@@ -1263,7 +1275,7 @@ def test_a_narration_still_refused_after_the_revise_is_held_and_queued(tmp_path)
     )
     client = llm.MockClient(sink, **scripted)
 
-    run.run_job(job.id, store, client, data_root=data_root)
+    run.run_job(job.id, store, client, data_root=data_root, defaults=False)
 
     snap = store.snapshot(job.id)
     assert snap.status == "committed", snap.error
@@ -1315,7 +1327,7 @@ def test_a_story_held_at_p4_keeps_its_judged_claims_in_the_queue_item(tmp_path):
     ]
     client = llm.MockClient(sink, **scripted)
 
-    run.run_job(job.id, store, client, data_root=data_root)
+    run.run_job(job.id, store, client, data_root=data_root, defaults=False)
 
     snap = store.snapshot(job.id)
     assert snap.status == "committed", snap.error
@@ -1725,7 +1737,7 @@ def test_two_units_get_their_own_rounds_never_one_shared_round(tmp_path):
     _events, sink = _sink_and_events()
     recorder = _RecordingClient(llm.MockClient(sink, **scripted))
 
-    run.run_job(job.id, store, recorder, data_root=data_root)
+    run.run_job(job.id, store, recorder, data_root=data_root, defaults=False)
 
     snap = store.snapshot(job.id)
     assert snap.status == "committed", snap.error
@@ -2010,7 +2022,9 @@ def test_a_held_story_says_which_claims_the_corpus_already_holds(tmp_path):
         )
     ]
 
-    run.run_job(job.id, store, llm.MockClient(sink, **scripted), data_root=data_root)
+    run.run_job(
+        job.id, store, llm.MockClient(sink, **scripted), data_root=data_root, defaults=False
+    )
 
     [item] = store.undecided(script_mod.CITY)
     assert "already holds a beat with this story's slug" in item.reason
@@ -2162,3 +2176,242 @@ def test_a_rerun_shows_the_narrator_its_sources_judgments_and_hashes_as_p7_does(
     assert [c.judgments for c in claims] == [(), ("masterpiece",)]
     draft = narrate.draft_from("Some narration.", claims, "claude-opus-5")
     assert draft.claims_hash == model.claims_hash([c.model_dump() for c in beat.claims])
+
+
+# ── ADR-0005: every hold gets its safe default inside the job ───────────────
+
+
+def _held_merge_job(tmp_path, *, extra_author: int = 1):
+    """The held-merge setup: a judge calling all three claims new, which the
+    signature contradicts. `extra_author` narrations are scripted for the
+    default's re-narration of the story as its own beat."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    script_mod.seed_beats(data_root, script_mod.existing_records())
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(unit)
+    scripted["answers"]["author"].extend(
+        script_mod.narration_answer() for _ in range(extra_author)
+    )
+    scripted["answers"]["merge_judge"] = [
+        script_mod.merge_answer(
+            "new", "", [_claim_verdict(c, "new", reason="nothing like it") for c in
+                        ("c01", "c02", "c03")]
+        )
+    ]
+    return chunks, data_root, store, job, llm.MockClient(sink, **scripted)
+
+
+def test_a_held_merge_is_written_as_its_own_story_by_default(tmp_path):
+    """ADR-0005: the held story is written as a beat of its own — the claims
+    the corpus does not hold (here all three), re-narrated — under a slug
+    of its own (the origins beat already has this one), never folded. The
+    item is still queued, as the audit record of what was defaulted.
+    Mutant: the merge default removed (nothing written)."""
+    chunks, data_root, store, job, client = _held_merge_job(tmp_path)
+
+    run.run_job(job.id, store, client, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    records = json.loads((data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8"))
+    own_id = f"{script_mod.BEAT_ID}-2"
+    assert [r["beat_id"] for r in records] == [
+        script_mod.ORIGINS_ID, script_mod.VISITING_ID, own_id
+    ]
+    own = records[2]
+    assert [c["text"] for c in own["claims"]] == [c["text"] for c in script_mod.CLAIMS]
+    assert own["review"]["held"] is False
+    assert model.validate(records, chunks_root=chunks.parent) == []
+    [item] = store.items(script_mod.CITY)
+    assert item.kind == "merge_held"
+    assert item.default == {"applied": "written_as_own_story", "beat_id": own_id}
+    defaults = [e.data for e in snap.events if e.message == "hold_default"]
+    assert defaults == [{"kind": "merge_held", "story_slug": script_mod.STORY_SLUG,
+                         "applied": "written_as_own_story", "beat_id": own_id}]
+
+
+def test_a_held_merge_below_its_arc_minimum_is_left_out_and_recorded(tmp_path):
+    """The default writes only what the corpus lacks, and never a beat below
+    its arc minimum: two claims fold, the one left is below an anecdote's
+    two, so nothing is re-narrated or written and the item says it was left
+    out. Mutant: the arc check removed (P7 then refuses the one-claim beat)."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    beats_path = script_mod.seed_beats(data_root, script_mod.existing_records())
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    _events, sink = _sink_and_events()
+    scripted = script_mod.script(script_mod.unit(chunks))
+    scripted["answers"]["merge_judge"] = [script_mod.merge_answer("new", "", [
+        _claim_verdict("c01", "same", "b1.c01", "his sixties", "his sixties"),
+        _claim_verdict("c02", "new", reason="no claim mentions 1939"),
+        _claim_verdict("c03", "same", "b1.c02", "1959", "1959"),
+    ])]
+    client = llm.MockClient(sink, **scripted)
+
+    run.run_job(job.id, store, client, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    assert client.calls[-1] == ("merge_judge", "P6")  # nothing re-narrated
+    records = json.loads(beats_path.read_text(encoding="utf-8"))
+    assert [r["beat_id"] for r in records] == [script_mod.ORIGINS_ID, script_mod.VISITING_ID]
+    [item] = store.items(script_mod.CITY)
+    assert item.default == {"applied": "left_out", "why": "1 claim is below the arc minimum "
+                            "for beat_type 'anecdote'"}
+
+
+class _JudgeRelentsClient(llm.MockClient):
+    """A narration judge that refuses whatever its script says the first
+    time a set of sentences is judged, and entails every sentence after
+    that — the retry ADR-0005 gives a held narration."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.p5_rounds = 0
+
+    def complete_batch(self, *, role, prompts, schema, phase, max_tokens):
+        if role != "narration_judge":
+            return super().complete_batch(
+                role=role, prompts=prompts, schema=schema, phase=phase, max_tokens=max_tokens
+            )
+        self.p5_rounds += 1
+        if self.p5_rounds <= 2:  # the first narration and its revise, as scripted
+            return super().complete_batch(
+                role=role, prompts=prompts, schema=schema, phase=phase, max_tokens=max_tokens
+            )
+        return {
+            cid: llm.Completion(
+                text=json.dumps({"entailed": True, "reason": "stated"}),
+                model_id=script_mod.RESPONSE_JUDGE_MODEL,
+                usage=llm.Usage(1, 1, 0, 0, True, None, None),
+                stop_reason="end_turn",
+            )
+            for cid, _prompt in prompts
+        }
+
+
+def _refused_narration_job(tmp_path, client_cls):
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    texts = [c["text"] for c in script_mod.CLAIMS]
+    revised = script_mod.NARRATION.replace("ran a temporary museum", "opened a temporary museum")
+    scripted = script_mod.script(unit)
+    scripted["answers"]["author"].extend([
+        script_mod.narration_answer(revised), script_mod.narration_answer(),
+        script_mod.narration_answer(revised),
+    ])
+    scripted["batch_answers"].update(
+        script_mod.sentence_verdicts(texts, refused={1: "no claim says she ran it"})
+    )
+    scripted["batch_answers"].update(
+        script_mod.sentence_verdicts(
+            texts, revised, attempt=2, refused={1: "no claim says she opened it"}
+        )
+    )
+    return chunks, data_root, store, job, client_cls(sink, **scripted)
+
+
+def test_a_held_narration_is_narrated_once_more_and_kept_when_it_passes(tmp_path):
+    """ADR-0005: a narration P5 still refuses after its revise gets one more
+    try inside the job. Here the second try passes, so the beat is written
+    NOT held, and the item records the default. Mutant: the retry removed
+    (the beat stays held)."""
+    chunks, data_root, store, job, client = _refused_narration_job(tmp_path, _JudgeRelentsClient)
+
+    run.run_job(job.id, store, client, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    records = json.loads((data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8"))
+    assert [r["beat_id"] for r in records] == [script_mod.BEAT_ID]
+    assert records[0]["review"]["held"] is False
+    assert model.validate(records, chunks_root=chunks.parent) == []
+    defaults = [e.data for e in snap.events if e.message == "hold_default"]
+    assert defaults == [{"kind": "narration_held", "story_slug": script_mod.STORY_SLUG,
+                         "applied": "renarrated", "beat_id": script_mod.BEAT_ID}]
+    assert store.items(script_mod.CITY) == []  # nothing left waiting
+
+
+def test_a_narration_refused_again_is_left_out_of_tours_and_recorded(tmp_path):
+    """The one more try is refused too: the beat keeps its held flag (the
+    export leaves it out of every tour, and it stays on disk to restore),
+    and the item says it was left out."""
+    _chunks, data_root, store, job, client = _refused_narration_job(tmp_path, llm.MockClient)
+
+    run.run_job(job.id, store, client, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    records = json.loads((data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8"))
+    assert records[0]["review"]["held"] is True
+    [item] = store.items(script_mod.CITY)
+    assert (item.kind, item.default) == ("narration_held", {"applied": "left_out"})
+
+
+def test_a_story_held_at_p4_is_narrated_once_more_by_default(tmp_path):
+    """A narration refused twice by the code gate at P4 gets one more try:
+    here a clean third narration, so the story reaches P5 and is written."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    lifted = (
+        "Solomon Guggenheim bought abstract art at the behest of his art adviser, "
+        "an eccentric German baroness named Hilla Rebay."
+    )
+    scripted = script_mod.script(unit)
+    scripted["answers"]["author"] = [
+        scripted["answers"]["author"][0],
+        script_mod.narration_answer(lifted),
+        script_mod.narration_answer(lifted),
+        script_mod.narration_answer(),
+    ]
+    client = llm.MockClient(sink, **scripted)
+
+    run.run_job(job.id, store, client, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    records = json.loads((data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8"))
+    assert [r["beat_id"] for r in records] == [script_mod.BEAT_ID]
+    assert records[0]["narration"]["text"] == script_mod.NARRATION
+    defaults = [e.data for e in snap.events if e.message == "hold_default"]
+    assert [(d["kind"], d["applied"]) for d in defaults] == [("narration_held", "renarrated")]
+
+
+def test_a_narration_still_held_never_merges_so_left_out_is_true(tmp_path):
+    """Judge PROVE-FIRST 2026-09-29: a story whose narration is still refused
+    after its one more try is left out — so it must not go on to merge, or
+    its facts would fold into existing beats (reaching tours) or be written
+    again by a merge default, and the item's `left_out` would be false. It
+    is written only as its own beat, flagged held (out of every tour,
+    restorable), under a beat id nothing else uses, and the merge judge is
+    never asked. Mutant: the merge not skipped (the judge is asked)."""
+    chunks, data_root, store, job, client = _refused_narration_job(tmp_path, llm.MockClient)
+    script_mod.seed_beats(data_root, script_mod.existing_records())
+    before = json.loads((data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8"))
+
+    run.run_job(job.id, store, client, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    assert ("merge_judge", "P6") not in client.calls
+    records = json.loads((data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8"))
+    assert records[:2] == before  # nothing folded into the existing beats
+    own = records[2]
+    assert own["beat_id"] == f"{script_mod.BEAT_ID}-2"
+    assert own["review"]["held"] is True
+    assert model.validate(records, chunks_root=chunks.parent) == []
+    [item] = store.items(script_mod.CITY)
+    assert (item.kind, item.default) == ("narration_held", {"applied": "left_out"})

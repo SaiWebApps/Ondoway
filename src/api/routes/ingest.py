@@ -9,8 +9,8 @@ snapshot with a per-phase summary; `GET /ingest/jobs/{id}/stream` is the
 SSE view of the same log. `GET /ingest/review?city=` lists the D13 queue
 ranked by content held back; `POST /ingest/review/decision` records a
 decision bound to the hash of what was shown (a stale or foreign hash is
-refused); `POST /ingest/publish?city=&target=` refuses while any held
-item of that city is undecided, refuses a cloud target outright (D14: the
+refused); `POST /ingest/publish?city=&target=` never waits on a held item
+(ADR-0005: the job applied its safe default), refuses a cloud target outright (D14: the
 cloud publish is a human at the keyboard), and otherwise runs the
 publisher converge (`scripts.upload_paris.converge`, spec §6) against the
 process driver from `INGEST_DATA_ROOT`: the graph is made to match the
@@ -271,21 +271,11 @@ def record_decision(body: DecisionRequest) -> dict:
 
 @router.post("/publish")
 def publish(city: str, target: str = "local") -> dict:
-    """Refuse while any held item of `city` is undecided (409, naming
-    them) and refuse any target but `local` (400). Otherwise converge the
-    graph on the city's file (§6): 404 for an unregistered city, 422 when
-    the validate_beats gate refuses the file (nothing is written), else
-    200 with the step stats."""
-    store = get_ingest_store()
-    undecided = store.undecided(city)
-    if undecided:
-        raise HTTPException(
-            409,
-            detail={
-                "error": f"{len(undecided)} held item(s) for {city!r} are undecided",
-                "undecided": [i.item_id for i in undecided],
-            },
-        )
+    """Refuse any target but `local` (400). Otherwise converge the graph
+    on the city's file (§6): 404 for an unregistered city, 422 when the
+    validate_beats gate refuses the file (nothing is written), else 200
+    with the step stats. A held item never blocks it (ADR-0005): the job
+    already applied its safe default, and review is optional."""
     if target != "local":
         raise HTTPException(
             400,
