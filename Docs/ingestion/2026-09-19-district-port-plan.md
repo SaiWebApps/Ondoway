@@ -215,3 +215,47 @@ passage" past the leak gate; the Museum of the City of New York story placed at 
 Side" although that POI exists; the Met Breuer snapped to the Met; `’`/`–` span corruption;
 claim-id collisions across jobs; literal `\u` escapes in narration; `kid_friendly`/`entities`
 defects. All are review-queue or later-slice work under this plan.
+
+## Step 1 of the port, second book — result (2026-09-29, owner "yes, do step 1"; $0)
+
+The job-B replay under ADR-0004 (sandbox `data-ingest/sandboxes/jobB-adr0004-r1`, 86 beats: Lonely
+Planet chunk-07 plus Frommer's chunk-05, Upper East Side) was published to the SCRATCH graph
+(`make ingest-publish-scratch`, dev3 :7693). 68 were linked and 18 blocked (held or
+`practicalities`); 28 were withdrawn, flagged not deleted: the 2026-09-19 one-book publish was 32
+beats, of which 4 were published again under the same ids. The dev graph on 7687 was not touched.
+Before dev3 started, and on the judge's precondition, the idle `workbench2` (:7694) and `dev2`
+(:7692) containers of this worktree's lane were stopped (no connections) to free memory: swap in
+the Docker VM was full. MemAvailable was 2.9 GiB after the stops and 2.2 GiB with dev3 up.
+**`dev2` was then restarted by this session's own `make test-file`:** this worktree runs its tests
+under the `test2` profile, whose dev graph is :7692, and `PRE_PYTEST` starts it (started
+21:35:51Z, the comparison test's run). Afterwards MemAvailable was 1.4 GiB, with dev3, dev2 and
+test2 up and workbench2 stopped. `test2` itself was never touched.
+
+**Does a second book add stories per place? Yes, nearly twice as many.** Publishable beats at the
+same 18 places went from 37 (Lonely Planet only, the replay's start file) to 68 with Frommer's, a
+rise of 84%. The Met went from 7 to 15, the Guggenheim 7 to 10, the Frick 4 to 9, Natural History
+0 to 4. Of the 31 added beats, all are new Frommer's stories. 7 publishable stories also carry
+facts from both books, plus 1 fenced `practicalities` beat (`visiting-the-frick`), which is why the
+tool counts 8. The legacy corpus has 189 beats across five books at the 18 publishable places; the
+192 in the tables below cover all 19 places, American Folk Art Museum's 3 included.
+
+**Copying**, measured by `make ingest-corpus-compare` (committed; `scripts/verbatim.py`, each beat
+against every chunk it cites). Legacy at these 19 places: 149 of 192 beats carry an 8-word run
+from their own chunk. Like for like (legacy from these same two chapters): 24 of 66. New: 3 of 86,
+none at the 70% shingle bar. Of the three, one is an attributed quotation (Herbert Muschamp,
+3 words outside the quote marks), and two are REAL lifts that passed the narration gate: "but others
+quickly celebrated it as one of the country's most beautiful buildings" (14 words, Guggenheim
+opening day) and "were being replaced to improve the quality of light" (9, the Met). **Cause, a P1
+defect:** each claim's cited span stops mid-sentence ("…savaged by the New York Times, but others
+quickly"), while the claim text carries the book's words past it. The narration gate compares only
+against the span, so it cannot see them, and P3 judged entailment against the same short span.
+**Recorded, not fixed.** The likely fix: the lift gate reads the whole chunk, and P1 spans end on a
+sentence boundary.
+
+**Provenance.** All 337 new claims carry a cited span. The legacy side has 570 plain-string
+`key_claims` at these places.
+
+**Coverage and variety** (the new file / publishable / legacy like for like / legacy all): places
+19 / 18 / 16 / 19; beats per place, mean 4.53 / 3.78 / 4.12 / 10.11, with median 2 / 2.5 / 2.5 / 6
+and max 18 / 15 / 16 / 44; lenses per place 4.68 / 4.67 / 2.56 / 4.0; distinct lenses 19 / 19 / 16 /
+19. The spread is wide: most places carry one to three beats, and the museums carry the corpus.
