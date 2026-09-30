@@ -1765,6 +1765,86 @@ def test_a_covered_claim_with_a_judgment_its_named_claims_lack_stays_new():
     assert merge.apply(outcome, existing) == existing
 
 
+NEUE_PLACE = "Neue Galerie New York"
+NEUE_VISITING_ID = "new_york/neue-galerie-new-york/visiting-the-neue-galerie"
+UNDER_12_LP: dict = {
+    "text": "The Neue Galerie does not admit children younger than 12.",
+    "kind": "state",
+    "span": "under 12 are not admitted to the museum, though Family Mornings are",
+}
+RACY_FR: dict = {
+    "text": (
+        "Because some drawings at the Neue Galerie New York are racy, children 11 and "
+        "under are barred from entry."
+    ),
+    "kind": "state",
+    "span": (
+        "Because some of these drawings are a bit racy, children 11 and\nunder are not admitted"
+    ),
+}
+
+
+def _neue_visiting() -> list[model.Beat]:
+    record = _beat(
+        NEUE_VISITING_ID,
+        "visiting-the-neue-galerie",
+        "Visiting the Neue Galerie",
+        "stop_orientation",
+        [_lp_claim("c01", UNDER_12_LP)],
+        "Children younger than twelve are not admitted here.",
+    )
+    record["poi_name"] = NEUE_PLACE
+    assert model.validate([record]) == []
+    return [model.Beat.model_validate(record)]
+
+
+def test_a_judgment_whose_subject_the_match_never_names_stays_its_own_claim():
+    """Job-B replay r2 (2026-09-29): the judge answered `same` for Frommer's "Because
+    some drawings … are racy, children 11 and under are barred" against the admission
+    claim, and "racy" rode onto a claim that never names the drawings — the narration
+    then called the admission POLICY racy. A judgment rides onto a match only when what
+    it describes is named there (`merge.judgment_rides`); else the claim stays `new`
+    with its own story, as the first replay told it. [undo: drop the ride check from
+    the `same` branch → c01 folds onto the admission claim → RED]"""
+    unit = _fr_unit()
+    claims = [_judged(unit, "c01", RACY_FR)]
+    story = _story("Too racy for children", ["c01"], place=NEUE_PLACE)
+    existing = _neue_visiting()
+    answer = _answer(
+        "new", "", [_claim_verdict("c01", "same", "b1.c01", judgments=["racy"])]
+    )
+    events, sink = _sink_and_events()
+
+    outcome = merge.merge(story, claims, existing, _armed_judge([answer], claims), events=sink)
+
+    assert _decided(outcome) == [("c01", "new", None, "c01")]
+    assert outcome.claims[0].new_judgments == ("racy",)
+    assert outcome.rerun == []
+    assert merge.apply(outcome, existing) == existing
+    kept = [p for kind, p in events if kind == "judgment_kept_new"]
+    assert [(k["claim_id"], k["new_judgments"]) for k in kept] == [("c01", ["racy"])]
+
+
+def test_what_a_judgment_describes_is_read_from_its_own_phrase():
+    """The subject is the words the judgment qualifies, never the place's own name: the
+    following words when it stands before them ("a seminal work by El Greco"), the
+    preceding ones when it closes its phrase ("drawings … are racy,", "the building,
+    a masterpiece,"). A judgment whose subject is not found never rides."""
+    rides = merge.judgment_rides
+    assert rides("seminal", "The Frick collection includes a seminal work by El Greco.",
+                 ["The Frick Collection displays works by El Greco."], "Frick Collection")
+    assert rides("masterpiece", MASTERPIECE_FR["text"], [COMPLETED["text"]], PLACE)
+    assert rides("celebrated", "The celebrated Eiffel Tower was completed in 1889.",
+                 ["The Eiffel Tower was completed in 1889."], "Eiffel Tower")
+    # The calibration plant: the word qualifies the place itself, so it rides onto a
+    # match that paraphrases "building" as "construction".
+    assert rides("iconic", "Neither the architect nor the patron lived to see the museum's "
+                 "iconic building finished.", ["Both Wright and Guggenheim had passed away "
+                 "before the museum's construction was completed."], GUGG_PLACE)
+    assert not rides("racy", RACY_FR["text"], [UNDER_12_LP["text"]], NEUE_PLACE)
+    assert not rides("racy", "Nothing here says it.", [UNDER_12_LP["text"]], NEUE_PLACE)
+
+
 def test_the_carve_out_never_lets_an_added_fact_through():
     """Only the listed judgment is carved out: a covered claim that also adds
     a fact is still held, naming the fact's words and not the judgment."""

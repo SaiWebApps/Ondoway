@@ -1039,7 +1039,10 @@ def test_a_judgment_plant_is_caught_only_when_its_own_word_is_kept():
 
     held_note = "held: claim n01: covered leaves words no named claim states: beloved"
     for defect, verdict, existing, listed, note, wrong_fold in (
-        ("adds_a_judgment", "same", "b1.c02", ["finished"], "n01 same c02 [finished]", True),
+        # A listed word that describes nothing the match names never rides
+        # (merge.judgment_rides, 2026-09-30): the claim stays `new`, "iconic" and all,
+        # so nothing is lost — neither a catch nor a wrong fold.
+        ("adds_a_judgment", "same", "b1.c02", ["finished"], "n01 new - [finished]", False),
         ("adds_a_judgment", "same", "b1.c02", [], "n01 same c02", True),
         ("covered_adds_a_judgment", "covered", "b1.c01+b1.c02", [], held_note, False),
     ):
@@ -1051,8 +1054,9 @@ def test_a_judgment_plant_is_caught_only_when_its_own_word_is_kept():
 
         report = calibrate.run(fixture, REPO_ROOT / "Books", client="mock", scripted_merge=wrong)
         row = next(r for r in report.rows if r.defect_class == defect)
+        held = not wrong_fold and verdict == "covered"
         assert (row.caught, row.wrong_fold, row.held, row.note) == (
-            0, wrong_fold, not wrong_fold, note
+            0, wrong_fold, held, note
         ), (defect, listed)
 
 

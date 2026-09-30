@@ -106,7 +106,12 @@ from src.ingest import llm, model, prompts
 from src.ingest.group import Story
 from src.ingest.judge_claims import JudgedClaim
 from src.ingest.narrate import Emit, emitter, hold
-from src.tour.claim_dedup import CLAIM_DEDUP_THRESHOLD, MIN_SHARED_TOKENS, _signature
+from src.tour.claim_dedup import (
+    _STOPWORDS,
+    CLAIM_DEDUP_THRESHOLD,
+    MIN_SHARED_TOKENS,
+    _signature,
+)
 
 #: Output tokens requested for one merge answer (a verdict per new claim).
 P6_MAX_TOKENS: int = 16_000  # thinking-inclusive; tests/test_ingest_output_caps.py
@@ -325,6 +330,80 @@ def carried(word: str, texts: Sequence[str]) -> bool:
     beat, never a lost word). The texts may include judgment words already
     on the matched claim's sources."""
     return any(model.whole_word(word, text) for text in texts)
+
+
+#: How many salient words make up what a judgment describes, on the side it faces.
+JUDGED_SUBJECT_WORDS_BEFORE = 3
+JUDGED_SUBJECT_WORDS_AFTER = 2
+
+_WORD = re.compile(r"[a-z0-9]+")
+
+
+def _salient_words(text: str) -> list[str]:
+    """`text`'s words in order, lowercased, without stopwords or words under 3 letters
+    (the claim-signature tokenizer's rule, in order rather than as a set)."""
+    return [w for w in _WORD.findall(text.lower()) if len(w) >= 3 and w not in _STOPWORDS]
+
+
+def _stem(word: str) -> str:
+    return word[:-1] if len(word) > 3 and word.endswith("s") else word
+
+
+def judged_subject(word: str, text: str, place: str) -> set[str]:
+    """The words of `text` the judgment `word` qualifies, the place's own name left out:
+    the following words when it stands before them ("a seminal work by El Greco" ->
+    work, greco), the preceding ones when it closes its phrase ("drawings … are racy,"
+    -> drawings; "the building, a masterpiece," -> building). Empty when `word` is not a
+    whole word of `text`."""
+    match = re.search(rf"(?<!\w){re.escape(word.strip())}(?!\w)", text, re.IGNORECASE)
+    if match is None or not word.strip():
+        return set()
+    place_words = set(_salient_words(place))
+    after = text[match.end():]
+    if re.match(r"\s*(?:[,.;:!?)]|$)", after):
+        before = re.split(r"[;:]", text[: match.start()])[-1]
+        words = [w for w in _salient_words(before) if w not in place_words]
+        return set(words[-JUDGED_SUBJECT_WORDS_BEFORE:])
+    phrase = re.split(r"[,.;:!?]", after)[0]
+    words = [w for w in _salient_words(phrase) if w not in place_words]
+    return set(words[:JUDGED_SUBJECT_WORDS_AFTER])
+
+
+def judges_the_place(word: str, text: str, place: str) -> bool:
+    """True when `word` stands before a noun and qualifies the place itself: the word
+    right before it or right after it is the place's own name ("the museum's iconic
+    building", "the celebrated Eiffel Tower", "Frick's ornate mansion"). Every claim at
+    the place is about the place, so such a judgment rides onto any match. Never read
+    from a word that closes its phrase: "drawings at the Neue Galerie … are racy"
+    judges the drawings, not the gallery."""
+    match = re.search(rf"(?<!\w){re.escape(word.strip())}(?!\w)", text, re.IGNORECASE)
+    if match is None or not word.strip():
+        return False
+    after = text[match.end():]
+    if re.match(r"\s*(?:[,.;:!?)]|$)", after):
+        return False
+    place_words = set(_salient_words(place))
+    before_words = _salient_words(re.split(r"[,.;:!?]", text[: match.start()])[-1])
+    after_words = _salient_words(re.split(r"[,.;:!?]", after)[0])
+    return bool(
+        (before_words and before_words[-1] in place_words)
+        or (after_words and after_words[0] in place_words)
+    )
+
+
+def judgment_rides(word: str, new_text: str, matched_texts: Sequence[str], place: str) -> bool:
+    """A judgment a `same` brings may ride onto the matched claim only when that claim
+    names what the judgment describes (`judged_subject`, plural aside). Job-B replay r2:
+    "Because some drawings … are racy, children 11 and under are barred" was judged
+    `same` as the admission claim, and "racy" rode onto a claim that never names the
+    drawings — the narration called the admission policy racy. No subject found, no
+    ride: the claim stays `new` (a duplicate is preferred over a misplaced word).
+    A word that qualifies the place itself always rides (`judges_the_place`)."""
+    if judges_the_place(word, new_text, place):
+        return True
+    subject = {_stem(w) for w in judged_subject(word, new_text, place)}
+    named = {_stem(w) for text in matched_texts for w in _salient_words(text)}
+    return bool(subject & named)
 
 
 # ── Judge answer checks ─────────────────────────────────────────────────────
@@ -686,6 +765,7 @@ def _decide_claims(
     answer: dict,
     claims: Sequence[JudgedClaim],
     existing: Sequence[model.Beat],
+    place: str = "",
 ) -> list[ClaimOutcome]:
     by_id = {c.draft.claim_id: c for c in claims}
     beats = {b.beat_id: b for b in existing}
@@ -736,6 +816,14 @@ def _decide_claims(
                 # value; not re-asked, since it is no evidence against same.
                 new_value = existing_value = None
             outcome, applied = "same", item["existing_claim_id"]
+            # A word the match lacks rides onto it only if the match names what the
+            # word describes; else the claim keeps its own story (`judgment_rides`).
+            if any(
+                not judgment_rides(w, judged.draft.text, [c.text for c in matched], place)
+                for w in new_judgments
+            ):
+                outcome, applied = "new", judged.draft.claim_id
+                beat_id = existing_id = None
         elif verdict == "covered":
             outcome, applied = "covered", item["existing_claim_id"]
             # Its claim text keeps every listed word, so any it brings stays.
@@ -841,7 +929,7 @@ def merge(
     # the judge joined an existing beat in 4 of 10 replays of one story and
     # kept it separate in 6. Its verdict is kept as `judge_story`, and
     # claim-level folds are untouched — a repeated fact still merges.
-    outcomes = _decide_claims(answer, claims, existing)
+    outcomes = _decide_claims(answer, claims, existing, new_story.place)
     story: StoryOutcome = "new"
     status_of = {(b.beat_id, c.claim_id): c.status for b in existing for c in b.claims}
     changed = {
