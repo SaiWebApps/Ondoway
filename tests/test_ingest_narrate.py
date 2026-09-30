@@ -1029,3 +1029,73 @@ def test_older_phase_json_without_judgments_still_loads():
     loaded = judge_claims.JudgedClaim.model_validate(raw)
 
     assert loaded.judgments == () and loaded.draft.source.judgments == []
+
+
+# ── The lift gate reads the source passage, not the cited span (2026-09-29) ─
+# 86% of cited spans stop mid-sentence while the claim text carries the book's
+# words past them: "...savaged by the New York Times, but others quickly" as the
+# span, "...but others quickly celebrated it as one of the country's most
+# beautiful buildings" as the claim. A gate that reads only spans cannot see
+# the 14-word lift that reached a narration (job-B replay, 2026-09-28).
+PASSAGE = (
+    "The structure was savaged by the New York Times, but others quickly celebrated it "
+    "as one of the country's most beautiful buildings."
+)
+LIFTED = (
+    "Critics were split, and others quickly celebrated it as one of the country's most "
+    "beautiful buildings."
+)
+
+
+def _truncated_claim() -> judge_claims.JudgedClaim:
+    unit = unit_mod.Unit(city="new_york", source_id="s", chunk="c", text=PASSAGE,
+                         as_of=2023, rights_basis="owned_copy")
+    return judge_claims.JudgedClaim(
+        draft=decompose.ClaimDraft(
+            claim_id="c01", kind="event",
+            text="Others quickly celebrated the building as one of the country's most beautiful.",
+            source=unit.source(
+                "The structure was savaged by the New York Times, but others quickly"
+            ),
+        ),
+        verdict=model.Verdict(judge_model="j", entailed=True, bound_to="b"),
+    )
+
+
+def test_the_lift_gate_catches_a_copy_past_the_cited_span_when_given_the_passage():
+    """Given the passage, the gate sees the copy; given only the span, it
+    cannot (the defect). The reason names the source passage. Mutant: the
+    passage ignored in favour of the spans."""
+    claim = _truncated_claim()
+    spans = narrate.claim_spans([claim])
+    assert [r for r in narrate.narration_gates(LIFTED, spans) if r.startswith("lift")] == []
+    reasons = narrate.narration_gates(LIFTED, [PASSAGE])
+    assert reasons and reasons[0].startswith("lift:")
+    assert "from its source passage" in reasons[0]
+
+
+def test_narrate_gates_against_the_passages_it_is_given():
+    """narrate(..., passages=) refuses the lifted narration and asks again;
+    without passages it falls back to the spans (and would pass it)."""
+    claim = _truncated_claim()
+    story = _story(["c01"])
+    events: list = []
+    clean = (
+        "Not everyone disliked it: others soon praised it as among the nation's loveliest "
+        "buildings."
+    )
+    mock = llm.MockClient(
+        lambda k, p: events.append((k, p)),
+        answers={"author": [
+            llm.MockAnswer(text=json.dumps({"narration": LIFTED}), model_id=RESPONSE_AUTHOR_MODEL),
+            llm.MockAnswer(text=json.dumps({"narration": clean}), model_id=RESPONSE_AUTHOR_MODEL),
+        ]},
+    )
+    mock.estimate([claim.draft.text], list(narrate.P4_PLAN))
+
+    draft = narrate.narrate(story, [claim], mock, events=lambda k, p: events.append((k, p)),
+                            passages=[PASSAGE])
+
+    assert draft.text == clean
+    refused = [p for k, p in events if k == "narration_refused"]
+    assert len(refused) == 1 and refused[0]["reasons"][0].startswith("lift:")

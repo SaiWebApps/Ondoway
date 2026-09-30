@@ -315,6 +315,7 @@ def judge_narration_unit(
     client: llm.ModelClient,
     events: llm.EventSink | None = None,
     publishers: Sequence[str] = (),
+    passages: Sequence[str] | None = None,
 ) -> tuple[dict[str, JudgedNarration], dict[str, tuple[Story, Sequence[JudgedClaim], str]]]:
     """Judge EVERY story's narration, one round per stage.
 
@@ -369,7 +370,9 @@ def judge_narration_unit(
             phase="P5",
         )
         rewrite = draft_from(text, claims, author_model)
-        gate_reasons = narration_gates(rewrite.text, claim_spans(claims), publishers)
+        gate_reasons = narration_gates(
+            rewrite.text, list(passages) if passages else claim_spans(claims), publishers
+        )
         if gate_reasons:
             emit(
                 "narration_refused",
@@ -432,6 +435,7 @@ def judge_narration(
     client: llm.ModelClient,
     events: llm.EventSink | None = None,
     publishers: Sequence[str] = (),
+    passages: Sequence[str] | None = None,
 ) -> JudgedNarration:
     """Judge the draft sentence by sentence; see the module docstring.
 
@@ -473,7 +477,9 @@ def judge_narration(
         phase="P5",
     )
     rewrite = draft_from(text, claims, author_model)
-    gate_reasons = narration_gates(rewrite.text, claim_spans(claims), publishers)
+    gate_reasons = narration_gates(
+        rewrite.text, list(passages) if passages else claim_spans(claims), publishers
+    )
     if gate_reasons:
         emit(
             "narration_refused",

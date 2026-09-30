@@ -589,9 +589,14 @@ def _told_once(
     without the anchor is not scored (spec, `told_once`'s blind spot)."""
     story = _story(record)
     claims = _told_once_claims(record, unit)
+    # The chapters the claims cite, as the runner passes them: the lift gate
+    # reads the chapter, not only the (often truncated) span.
+    passages = [unit.text, record.planted["second_source"]["text"]]
     try:
-        draft = narrate.narrate(story, claims, client, record_event)
-        judged = judge_narration.judge_narration(story, draft, claims, client, record_event)
+        draft = narrate.narrate(story, claims, client, record_event, passages=passages)
+        judged = judge_narration.judge_narration(
+            story, draft, claims, client, record_event, passages=passages
+        )
     except narrate.BeatHeld as held:
         return _Detection(False, f"beat held: {held.reason}", held=True)
     text = judged.narration.text

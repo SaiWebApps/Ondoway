@@ -2382,6 +2382,36 @@ them. A default-written beat that P7 then refuses (`commit_held`) still shows
 `written_as_own_story` on its merge item. `cap_bound_usd` does not include the defaults'
 re-narrations; the metered actual does.
 
+*The lift gate reads the chapter, not only the cited span (2026-09-29, owner "fix the copied-text
+bug"; $0).* The district-port comparison (4d1865f) found two narrations copying 9 and 14 words of
+their book past the narration gate. Cause, measured over the job-B replay's 344 sources: **86% of
+cited spans stop mid-sentence, and 60% of claims carry four or more content words their span lacks**
+("…savaged by the New York Times, but others quickly" as the span, "…but others quickly celebrated
+it as one of the country's most beautiful buildings" as the claim). The P4 gate compared the
+narration only against spans, so it could not see those words. P3 is unaffected: it judges each
+claim against the whole passage. Fix: `narrate.narrate` and `judge_narration` take `passages`, the
+source chapters, and gate against them, falling back to the spans only when no chapter is found.
+The runner passes the unit's text at P4 and P5, and each chapter the claims cite (read from P0's
+`chunks_root`) on the ADR-0005 retries and on reruns. A rerun reads every source of every resolved
+claim, since `judged_of_beat` keeps only a folded claim's first source. The refusal now names "its
+source passage". Measured before building, the chapter-level gate would refuse 5 of the replay's 86
+narrations (0 against the spans): the two lifts, and "paintings by Monet, Van Gogh and Degas",
+"the top and wind their way down", "regularly closes for funerals and other events". A refusal gets
+its normal redo. A source whose chapter file is missing contributes its own spans instead, and the
+miss is logged `passage_missing`, so the gate is never weaker than the span-only gate it replaced.
+Calibration's `told_once` also gates against its chapter. At the judge's PROVE-FIRST, the paths job B
+and the district port actually run got tests of their own. A rerun of a two-book beat whose
+narration copies the SECOND book's chapter past its span is refused (the rerun reads every source,
+not only a claim's first). A P5 revise that copies the chapter is refused by the gate and held
+`gate`. Six tests are new (two narrate, four run); six mutants were red, with each edit and its
+failure pinned at `$HOME/ondoway-ingest-backup-2026-09-13/calib-2026-09-24/mutate-liftgate-run.log`.
+Three of the six kills (P4, rerun, P5 revise) are the mock running out of P5 answers for the lifted
+narration that got past the gate, not the assertion the test names. They are valid kills, but they
+rest on the mock script. **Follow-up:** script a P5 verdict for the lifted text, so each fails on
+"lifted text committed". 419 tests green; lint exits 0. **Not changed:** P1 still cites short spans (ending them on a
+sentence boundary is optional now that the gate reads the chapter), and P7's `NARRATION_LIFT` (8
+words, against spans) still reads spans. Beats already on disk are gated again only when re-narrated.
+
 ### Slice 11: Cleanup
 
 **Files:** delete `.claude/commands/unified-beat-extract.md`, `pipeline-chunk.md`,

@@ -34,6 +34,8 @@ from src.ingest import (
 from src.ingest import unit as unit_mod
 from tests import ingest_job_script as script_mod
 
+REPO_BOOKS = Path(__file__).resolve().parent.parent / "Books" / "new_york"
+
 
 def _sink_and_events():
     events: list[tuple[str, dict]] = []
@@ -2415,3 +2417,132 @@ def test_a_narration_still_held_never_merges_so_left_out_is_true(tmp_path):
     assert model.validate(records, chunks_root=chunks.parent) == []
     [item] = store.items(script_mod.CITY)
     assert (item.kind, item.default) == ("narration_held", {"applied": "left_out"})
+
+
+def test_a_narration_copying_its_chapter_past_every_cited_span_is_refused(tmp_path):
+    """2026-09-29: the lift gate reads the unit's chapter, not only the
+    claims' cited spans (86% of which stop mid-sentence). A narration that
+    copies nine words of Lonely Planet's chapter that no claim's span holds
+    is refused at P4 and written again. Mutant: P4 gating against the spans
+    only (the lifted narration is then committed)."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    lifted = (
+        script_mod.NARRATION
+        + " Neighbors were unhappy to see a giant concrete spaceship land in their midst."
+    )
+    scripted = script_mod.script(unit)
+    scripted["answers"]["author"] = [
+        scripted["answers"]["author"][0],
+        script_mod.narration_answer(lifted),
+        script_mod.narration_answer(),
+    ]
+    client = llm.MockClient(sink, **scripted)
+
+    run.run_job(job.id, store, client, data_root=data_root)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    refused = [e.data for e in snap.events if e.message == "narration_refused"]
+    assert len(refused) == 1
+    assert refused[0]["reasons"][0].startswith("lift:")
+    assert "from its source passage" in refused[0]["reasons"][0]
+    records = json.loads((data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8"))
+    assert records[0]["narration"]["text"] == script_mod.NARRATION
+
+
+_FROMMERS_LIFT = "transforms the standard museum experience into a profound journey"
+
+
+def test_a_rerun_gates_against_every_book_its_claims_cite(tmp_path):
+    """Judge PROVE-FIRST 2026-09-29: the path job B and the district port run.
+    A merged beat's c02 cites Lonely Planet AND Frommer's; its re-narration
+    copies nine words of Frommer's chapter that no span holds ("Visiting this
+    1959 masterpiece" is the span). The rerun gates against both chapters, so
+    it is refused and written again. Mutant: the rerun reading only each
+    claim's first source (Frommer's chapter is then never read)."""
+    beat = model.Beat.model_validate(script_mod.merged_beat_with_judgment())
+    store = jobs.IngestJobStore()
+    job = store.create(city=script_mod.CITY, source={"kind": "book", "chunk_dir": "x"},
+                       as_of=2024, rights_basis="owned_copy")
+    _events, sink = _sink_and_events()
+    lines = narrate.resolved_claim_texts(run.judged_of_beat(beat))
+    lifted = script_mod.ORIGINS_NARRATION + f" Visiting it {_FROMMERS_LIFT} for everyone."
+    client = llm.MockClient(
+        sink,
+        answers={"author": [script_mod.narration_answer(lifted),
+                            script_mod.narration_answer(script_mod.ORIGINS_NARRATION)]},
+        batch_answers=script_mod.sentence_verdicts(lines, script_mod.ORIGINS_NARRATION),
+    )
+    client.estimate(lines, [*narrate.P4_PLAN, *judge_narration.P5_PLAN])
+    runner = run._Run(job, store, client, tmp_path)
+    runner.chunks_root = REPO_BOOKS
+
+    renarrated, reason = runner._rerun(beat, publishers=[])
+
+    assert reason == "", reason
+    assert renarrated.narration.text == script_mod.ORIGINS_NARRATION
+    refused = [e.data for e in store.snapshot(job.id).events if e.message == "narration_refused"]
+    assert len(refused) == 1 and _FROMMERS_LIFT.split()[0] in refused[0]["reasons"][0]
+
+
+def test_a_p5_revise_that_copies_its_chapter_is_refused_by_the_gate(tmp_path):
+    """The P5 revise path: the judge refuses a sentence, the author's revise
+    copies nine words of the chapter that no span holds; the gate reads the
+    unit's chapter, so the revise is refused and the beat is held with a
+    `gate` flag. Mutant: P5 gating the revise against spans only (the copied
+    revise is then judged, with no verdict scripted for it)."""
+    chunks = script_mod.chunk_dir(tmp_path)
+    data_root = script_mod.data_dir(tmp_path)
+    store = jobs.IngestJobStore()
+    job = _book_job(store, chunks)
+    unit = script_mod.unit(chunks)
+    _events, sink = _sink_and_events()
+    texts = [c["text"] for c in script_mod.CLAIMS]
+    copied = (
+        script_mod.NARRATION
+        + " Neighbors were unhappy to see a giant concrete spaceship land in their midst."
+    )
+    scripted = script_mod.script(unit)
+    scripted["answers"]["author"].append(script_mod.narration_answer(copied))
+    scripted["batch_answers"].update(
+        script_mod.sentence_verdicts(texts, refused={1: "no claim says she ran it"})
+    )
+    client = llm.MockClient(sink, **scripted)
+
+    run.run_job(job.id, store, client, data_root=data_root, defaults=False)
+
+    snap = store.snapshot(job.id)
+    assert snap.status == "committed", snap.error
+    records = json.loads((data_root / script_mod.CITY / "beats.json").read_text(encoding="utf-8"))
+    flags = records[0]["narration"]["flags"]
+    assert any(f.startswith("gate: lift:") for f in flags), flags
+    assert records[0]["narration"]["text"] == script_mod.NARRATION  # round one's text
+
+
+def test_a_missing_chapter_falls_back_to_that_sources_spans_and_is_logged(tmp_path):
+    """The gate is never weaker than the span-only gate it replaced: a source
+    whose chapter file is missing contributes its own spans, and the miss is
+    logged `passage_missing`. Mutant: the per-source span fallback removed."""
+    beat = model.Beat.model_validate(script_mod.merged_beat_with_judgment())
+    store = jobs.IngestJobStore()
+    job = store.create(city=script_mod.CITY, source={"kind": "book", "chunk_dir": "x"},
+                       as_of=2024, rights_basis="owned_copy")
+    runner = run._Run(job, store, llm.MockClient(lambda k, p: None), tmp_path)
+    books = tmp_path / "books"
+    lp = books / script_mod.LP_SOURCE
+    lp.mkdir(parents=True)
+    (lp / f"{script_mod.LP_CHUNK}.txt").write_text("the lonely planet chapter", encoding="utf-8")
+    runner.chunks_root = books  # Frommer's chapter is absent here
+    sources = [s for c in beat.claims for s in c.sources]
+
+    passages = runner._passages(sources)
+
+    assert passages[0] == "the lonely planet chapter"
+    assert passages[1:] == [s.span for s in sources if s.source_id == "frommers-nyc-2024"]
+    missing = [e.data for e in store.snapshot(job.id).events if e.message == "passage_missing"]
+    assert missing == [{"source_id": "frommers-nyc-2024", "chunk": "chunk-05-ch05-uptown"}]

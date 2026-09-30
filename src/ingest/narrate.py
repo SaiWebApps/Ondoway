@@ -188,7 +188,7 @@ def narration_gates(
     for span in spans:
         lift_reason = gates.lift(text, span, run_length=NARRATION_LIFT_GATE_RUN)
         if lift_reason is not None:
-            reasons.append(lift_reason.replace("from the unit", "from a claim's span"))
+            reasons.append(lift_reason.replace("from the unit", "from its source passage"))
             break
     leaks = gates.provenance_leak(text, publishers)
     if leaks:
@@ -273,15 +273,20 @@ def narrate(
     client: llm.ModelClient,
     events: llm.EventSink | None = None,
     publishers: Sequence[str] = (),
+    passages: Sequence[str] | None = None,
 ) -> NarrationDraft:
     """Write the story's narration from its claims; see the module docstring.
 
     `publishers` are the source's publisher names (from its manifest), so
     "Lonely Planet calls it" is a leak when the source is Lonely Planet.
+    `passages` are the source chapters the claims come from: the lift gate
+    reads them, since a cited span can stop mid-sentence while the claim
+    carries the book's words past it (86% of spans did, 2026-09-29). Without
+    them the gate falls back to the spans.
     """
     emit = emitter(events)
     texts = resolved_claim_texts(claims)
-    spans = claim_spans(claims)
+    spans = list(passages) if passages else claim_spans(claims)
 
     text, author_model = ask_author(
         emit, story, client, prompts.render_narrate(story.place, story.title, texts)

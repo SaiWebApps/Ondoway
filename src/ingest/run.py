@@ -686,6 +686,9 @@ class _Run:
         #: ADR-0005: every hold gets its safe default inside the job. Off
         #: only for tests of the hold machinery itself.
         self.defaults = defaults
+        #: Where each source's chapter text lives (P0's `chunks_root`): the
+        #: lift gate reads the chapter, never only a claim's cited span.
+        self.chunks_root: Path | None = None
         self.store = store
         self.client = client
         self.data_root = Path(data_root)
@@ -885,7 +888,8 @@ class _Run:
                     continue
                 try:
                     drafts[_story_key(unit, story)] = narrate.narrate(
-                        story, claims, self.client, events=self.emit, publishers=publishers
+                        story, claims, self.client, events=self.emit, publishers=publishers,
+                        passages=[unit.text],
                     )
                 except BeatHeld as held:
                     retried = self._narrate_once_more(story, claims, publishers, judge=False)
@@ -931,7 +935,8 @@ class _Run:
             if not items:
                 continue
             unit_narrations, held_narrations = judge_narration.judge_narration_unit(
-                items, self.client, events=self.emit, publishers=publishers
+                items, self.client, events=self.emit, publishers=publishers,
+                passages=[unit.text],
             )
             narrations.update(unit_narrations)
             for story, claims, reason in held_narrations.values():
@@ -940,6 +945,23 @@ class _Run:
         return narrations
 
     # -- queue items --
+    def _passages(self, sources: Sequence[model.Source]) -> list[str]:
+        """What the lift gate reads for `sources`: each cited chapter once, and
+        for a source whose chapter file is missing, that source's own spans —
+        so the gate is never weaker than the span-only gate it replaced.
+        A missing chapter is logged `passage_missing`."""
+        texts: list[str] = []
+        found: set[tuple[str, str]] = set()
+        for source_id, chunk in sorted({(s.source_id, s.chunk) for s in sources}):
+            path = (self.chunks_root / source_id / f"{chunk}.txt") if self.chunks_root else None
+            if path is not None and path.exists():
+                texts.append(path.read_text(encoding="utf-8"))
+                found.add((source_id, chunk))
+            else:
+                self.emit("passage_missing", {"source_id": source_id, "chunk": chunk})
+        texts.extend(s.span for s in sources if (s.source_id, s.chunk) not in found)
+        return texts
+
     def _narrate_once_more(
         self, story: Story, claims: Sequence[JudgedClaim], publishers: Sequence[str],
         *, judge: bool = True,
@@ -948,13 +970,15 @@ class _Run:
         `judge`), or None — when defaults are off, or the try is held too."""
         if not self.defaults:
             return None
+        passages = self._passages([c.draft.source for c in claims])
         try:
             draft = narrate.narrate(story, claims, self.client, events=self.emit,
-                                    publishers=publishers)
+                                    publishers=publishers, passages=passages)
             if not judge:
                 return draft
             judged = judge_narration.judge_narration(
-                story, draft, claims, self.client, events=self.emit, publishers=publishers
+                story, draft, claims, self.client, events=self.emit, publishers=publishers,
+                passages=passages,
             )
         except BeatHeld:
             return None
@@ -1131,14 +1155,20 @@ class _Run:
         the whole file — and queues the stories whose merges it dropped."""
         story = story_of_beat(beat)
         claims = judged_of_beat(beat)
+        # Every source of every resolved claim: a folded claim cites two books,
+        # and judged_of_beat keeps only its first source's chapter.
+        passages = self._passages(
+            [s for c in beat.claims if c.status == "resolved" for s in c.sources]
+        )
         try:
             draft = narrate.narrate(story, claims, self.client, events=self.emit,
-                                    publishers=publishers)
+                                    publishers=publishers, passages=passages)
         except BeatHeld as held:
             return None, f"P4: {held.reason}"
         try:
             judged = judge_narration.judge_narration(
-                story, draft, claims, self.client, events=self.emit, publishers=publishers
+                story, draft, claims, self.client, events=self.emit, publishers=publishers,
+                passages=passages,
             )
         except BeatHeld as held:
             return None, f"P5: {held.reason}"
@@ -1527,6 +1557,7 @@ class _Run:
     def run(self, stop_after: str | None = None) -> bool:
         """Run every phase; True when it stopped early after `stop_after`."""
         units, publishers, chunks_root = self.p0()
+        self.chunks_root = chunks_root
         pois = load_pois(self.data_root, self.job.city)
         claims = self.p1(units)
         stories = self.p2(units, claims, pois)
