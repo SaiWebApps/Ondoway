@@ -37,6 +37,7 @@ from src.api.models.nodes import canonical_name_key
 from src.connection import abort_on_connection_error, create_driver, get_database
 from src.schema.constraints import apply_all
 from src.seed.lenses import seed_lenses
+from src.tour.contract import sub_location_vocabulary
 
 _LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
@@ -273,6 +274,10 @@ def _upload_pois(session, pois: list[dict], city_name: str, bbox: tuple) -> dict
                 if isinstance(poi.get("anchors"), list) and poi["anchors"]
                 else None
             ),
+            # The sub-location vocabulary (ADR-0002 decision 3): the place's ordered
+            # list of `sub_location` values, stored natively as list[str]. Absence
+            # stays absent — a place nobody gave a vocabulary has none.
+            "sub_locations": list(sub_location_vocabulary(poi.get("sub_locations"))) or None,
         })
 
     result = session.run(
@@ -308,7 +313,8 @@ def _upload_pois(session, pois: list[dict], city_name: str, bbox: tuple) -> dict
             p.queue_minutes_offpeak = poi.queue_minutes_offpeak,
             p.queue_peak_hours     = poi.queue_peak_hours,
             p.queue_basis          = poi.queue_basis,
-            p.anchors              = poi.anchors
+            p.anchors              = poi.anchors,
+            p.sub_locations        = poi.sub_locations
         RETURN count(p) AS total
         """,
         pois=params,
@@ -433,7 +439,18 @@ def _backfill_provenance(session, beats: list[dict]) -> dict[str, int]:
     return {"updated": updated, "candidates": len(params)}
 
 
-def _export_view(beat: dict) -> dict:
+def _vocabulary_by_poi(pois: list[dict]) -> dict[str, tuple[str, ...]]:
+    """poi name -> its sub-location vocabulary (ADR-0002 decision 3), for every POI that
+    carries one. Beats link to their POI by name, so the export looks a beat's up here."""
+    out: dict[str, tuple[str, ...]] = {}
+    for poi in pois:
+        vocab = sub_location_vocabulary(poi.get("sub_locations"))
+        if vocab and poi.get("name"):
+            out[poi["name"]] = vocab
+    return out
+
+
+def _export_view(beat: dict, vocab: tuple[str, ...] = ()) -> dict:
     """The §2 graph export: a new-shape record (`claims` + `narration`, the
     same rule as scripts/validate_beats.py — never keyed on `script_body`)
     seen through the legacy field contract the tour engine reads. A legacy
@@ -455,6 +472,12 @@ def _export_view(beat: dict) -> dict:
     # a new-shape record exports neither until they are judged.
     view["pronunciation"] = None
     view["physical_cues"] = []
+    # The engine buckets a place's beats by exact `sub_location` and walks them in its
+    # POI's vocabulary order (ADR-0002 decision 3). P2's free prose ("Rotunda ramp")
+    # matches nothing and, at 3+ distinct values, turned a museum's order alphabetical
+    # (district port gap 4, 7 of 19 places on the job-B replay). Only a value the POI's
+    # own vocabulary names is exported; no vocabulary, no value.
+    view["sub_location"] = beat.get("sub_location") if beat.get("sub_location") in vocab else None
     return view
 
 
@@ -492,16 +515,26 @@ def _withdraw_absent(session, city_name: str, published_ids: set[str]) -> int:
     return result.single()["withdrawn"]
 
 
-def publish_beats(session, beats: list[dict], city_name: str) -> dict:
+def publish_beats(
+    session,
+    beats: list[dict],
+    city_name: str,
+    vocab_by_poi: dict[str, tuple[str, ...]] | None = None,
+) -> dict:
     """Make the graph's beats for `city_name` match `beats` (spec §6): MERGE
     every publishable beat, then withdraw every beat of the city this call
     did not publish. The stats are `_upload_beats`' plus `withdrawn`."""
-    stats = _upload_beats(session, beats, city_name)
+    stats = _upload_beats(session, beats, city_name, vocab_by_poi)
     stats["withdrawn"] = _withdraw_absent(session, city_name, set(stats["published_ids"]))
     return stats
 
 
-def _upload_beats(session, beats: list[dict], city_name: str) -> dict:
+def _upload_beats(
+    session,
+    beats: list[dict],
+    city_name: str,
+    vocab_by_poi: dict[str, tuple[str, ...]] | None = None,
+) -> dict:
     """Upload NarrativeBeat nodes and link to POIs + Lenses via batched UNWIND.
 
     ``city_name`` is the slug of the city being deployed (POI ``city_name`` in the
@@ -516,7 +549,9 @@ def _upload_beats(session, beats: list[dict], city_name: str) -> dict:
     blocked = 0
     no_beat_id = 0
 
-    for beat in map(_export_view, beats):
+    vocab_by_poi = vocab_by_poi or {}
+    views = (_export_view(b, vocab_by_poi.get(b.get("poi_name") or "", ())) for b in beats)
+    for beat in views:
         poi_name = beat.get("poi_name", "")
         script_body = beat.get("script_body", "")
         beat_id = beat.get("beat_id", "")
@@ -709,7 +744,7 @@ def converge(driver, city_slug: str, *, data_root: Path | None = None) -> dict:
         # 4. Beats + relationships, then the §6 withdraw step
         print(f"  [4/5] Publishing {len(beats)} beats + linking...")
         t0 = time.time()
-        beat_stats = publish_beats(session, beats, city_slug)
+        beat_stats = publish_beats(session, beats, city_slug, _vocabulary_by_poi(pois))
         print(
             f"         {beat_stats['linked']} linked, {beat_stats['orphaned']} orphaned, "
             f"{beat_stats['tagged']} tagged, {beat_stats['blocked']} blocked (disputed/held), "

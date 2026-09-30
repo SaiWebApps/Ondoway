@@ -339,6 +339,19 @@ class Anchor(BaseModel):
     basis: str = ""
 
 
+def sub_location_vocabulary(raw: object) -> tuple[str, ...]:
+    """A POI's controlled `sub_location` vocabulary (ADR-0002 decision 3) as the ordered
+    tuple the engine walks: strings only, stripped, non-empty, first occurrence wins.
+    Anything that is not a list of strings is no vocabulary. The ONE normalizer for both
+    hops — the uploader (poi-raw.json -> graph) and the loader (graph -> `POI`)."""
+    if not isinstance(raw, (list, tuple)):
+        return ()
+    out: list[str] = []
+    for entry in raw:
+        if isinstance(entry, str) and entry.strip() and entry.strip() not in out:
+            out.append(entry.strip())
+    return tuple(out)
+
 
 class POI(BaseModel):
     """A POI loaded from the Neo4j corpus, snapshot-frozen for selection."""
@@ -447,6 +460,10 @@ class POI(BaseModel):
     # inside the footprint where a person placed a chapter of the story — marquee
     # places only, Notre-Dame first. Empty = no chapters, the story is told whole.
     anchors: tuple[Anchor, ...] = ()
+    # THE SUB-LOCATION VOCABULARY (ADR-0002 decision 3): the place's own controlled list
+    # of `sub_location` values, in WALK order — the building walk follows it ahead of the
+    # hand fixtures (src/tour/fixtures.py). Empty = no vocabulary.
+    sub_locations: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def _playback_flags_are_consistent(self) -> POI:

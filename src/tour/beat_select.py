@@ -307,7 +307,9 @@ def _order_by_sub_location(
     for b in beats:
         (no_loc if not b.sub_location else by_loc[b.sub_location]).append(b)
 
-    curated = sub_location_order_for(poi.name)
+    # The place's own vocabulary is its walk order (ADR-0002 decision 3); the hand
+    # fixtures stay the fallback for the places that predate it.
+    curated = poi.sub_locations or sub_location_order_for(poi.name)
     seen_locs = list(by_loc.keys())
     if curated is not None:
         # Order: curated entries that exist, in fixture order, then any

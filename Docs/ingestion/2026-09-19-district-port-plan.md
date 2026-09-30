@@ -72,6 +72,15 @@ publish path. What does not carry:
    (`upload_paris.py:105-111`), owner ruling 2026-09-13: prices and hours wait for an engine
    channel that does not voice them in the bare present. 7 of 42. POLICY, not a defect.
 4. **`sub_location` is free prose** — see ADR-0002; it is exported and feeds the trigger.
+   **Measured 2026-09-29** on the job-B replay: 56 distinct prose values over 86 beats, so the
+   engine (exact-string buckets, sub_location ordering at 3+ distinct values) would have walked
+   7 of 19 places — every museum carrying the corpus — alphabetically by prose.
+   **Owner ruling 2026-09-29: an ORDERED list per POI.** `sub_locations` on poi-raw.json (the
+   walk path) rides to the graph as list[str] and onto `POI.sub_locations`, where it is the walk
+   order ahead of `src/tour/fixtures.py`; the export keeps a new-shape beat's value only when its
+   POI's list names it (`tests/test_poi_sub_locations.py`). No list, no value, so ordering falls
+   to `narrative_function`. Still owed: the UES lists themselves (drafted, reviewed, then owner),
+   and P2 answering from the list.
 5. **Minor losses:** claim ids, source passage/chunk and `subject_tag` are not written, which
    leaves the graph-side duplicate lane inert.
 

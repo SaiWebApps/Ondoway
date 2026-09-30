@@ -56,6 +56,7 @@ from .contract import (
     Route,
     TourabilityAssessment,
     TourInput,
+    sub_location_vocabulary,
 )
 from .corpus_places import CorpusMaterializationPlan, CorpusPlaceManifest
 from .degradations import record
@@ -782,6 +783,7 @@ RETURN
   p.queue_basis   AS queue_basis,
   p.trigger_radius AS trigger_radius,
   p.anchors       AS anchors,
+  p.sub_locations AS sub_locations,
   area_names      AS areas
 ORDER BY p.id
 """
@@ -1117,6 +1119,9 @@ def _snapshot_from_records(
                 # graph's JSON list lands on the POI; a record carrying none lands on
                 # the contract's empty tuple and the story is told uncut.
                 anchors=_decode_anchors(r.get("anchors")),
+                # THE SUB-LOCATION VOCABULARY (ADR-0002 decision 3) — the same closed-hop
+                # rule: the graph's list[str] lands on the POI in walk order; none = ().
+                sub_locations=_decode_sub_locations(r.get("sub_locations")),
                 queue_basis=_clean(r.get("queue_basis")) or "",
             )
         )
@@ -1141,6 +1146,12 @@ def _snapshot_from_records(
         lens_neighbors=_lens_neighbor_map(lens_records or []),
         place_manifest=place_manifest,
     )
+
+
+def _decode_sub_locations(raw) -> tuple[str, ...]:
+    """A POI's sub-location vocabulary from the graph's native list[str]. Fails OPEN like
+    the anchor decoder: anything but a list of strings is no vocabulary."""
+    return sub_location_vocabulary(raw)
 
 
 def _decode_anchors(raw) -> tuple[Anchor, ...]:
