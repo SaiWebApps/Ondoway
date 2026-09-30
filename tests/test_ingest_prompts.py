@@ -677,3 +677,25 @@ def test_the_restate_never_credits_a_judgment_to_the_book():
     assert "state the passage's judgment about the thing itself" in rendered
     assert "in the passage's own word for it" in rendered
     assert 'never as a reputation the passage does not report ("is regarded as")' in rendered
+
+
+def test_the_narrator_says_no_street_address_unless_the_story_is_about_it():
+    """OWNER RULING 2026-09-30: "it's weird when we add addresses into story telling …
+    unless the story itself is about the address", e.g. Baker Street for a Sherlock
+    Holmes beat in London. Job-B replay r2 voiced a street address in 6 of its story
+    beats ("This is 1000 Fifth Avenue, at East 82nd Street"). The rule is carried by
+    every P4 ask (first, redo, revise); "drop nothing a claim says" names it as the one
+    exception. A prompt rule, not a refusing gate: a refused narration is left out after
+    one re-ask, and losing a story is worse than hearing an address. The worked example
+    stays in London, so no New York address sits in the rule. Mutant: the rule removed."""
+    claims = ["The museum stands at 1071 Fifth Ave.", "The museum opened in 1959."]
+    for rendered in (
+        prompts.render_narrate("Guggenheim Museum", "T", claims),
+        prompts.render_narrate_redo("Guggenheim Museum", "T", claims, "x", ["framing: 'x'"]),
+        prompts.render_narrate_revise("Guggenheim Museum", "T", claims, "A.", [("A.", "no")]),
+    ):
+        assert "drop nothing a claim says except a street address" in rendered
+        assert "Never say a street address" in rendered
+        assert "221B Baker Street" in rendered and "Sherlock Holmes" in rendered
+        assert "A claim that says only where the place stands may go untold" in rendered
+        assert "Fifth Ave" not in rendered.split("Claims:")[0]

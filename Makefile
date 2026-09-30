@@ -102,7 +102,7 @@ LINT_PATHS := src/ tests/ scripts/dev_env.py scripts/ensure_dev_data.py \
 	scripts/tour_batch_candidate.py scripts/score_saved_tours.py \
 	scripts/score_gold_text.py scripts/human_reference_tours.py \
 	scripts/ingest_calibrate.py scripts/claim_conflicts.py scripts/ingest_job.py \
-	scripts/ingest_batch.py scripts/ingest_rejudge.py scripts/ingest_p1probe.py scripts/ingest_same_probe.py scripts/ingest_lift_report.py scripts/ingest_validate.py scripts/ingest_corpus_compare.py \
+	scripts/ingest_batch.py scripts/ingest_rejudge.py scripts/ingest_p1probe.py scripts/ingest_same_probe.py scripts/ingest_lift_report.py scripts/ingest_address_report.py scripts/ingest_validate.py scripts/ingest_corpus_compare.py \
 	scripts/tour_golden_diff.py scripts/b8_dedup_report.py scripts/poi_visit_duration.py \
 	scripts/poi_opening_hours.py scripts/poi_place_category.py \
 	scripts/poi_body_places.py scripts/poi_place_judgements.py \
@@ -421,6 +421,11 @@ ingest-merge-offline: ## Re-measure P6 on finished replay sandboxes with the ans
 	@test -n "$(RUNS)" || { echo "ERROR: RUNS (replay sandbox roots) is required." >&2; exit 2; }
 	@$(PREFLIGHT) --label ingest-merge-offline $(PRE_PY)
 	@$(LOCAL_EXEC) uv run python scripts/ingest_merge_offline.py --city $(CITY) --job $(JOB) --start "$(START)" $(foreach r,$(RUNS),--run "$(r)") $(ARGS)
+
+ingest-address-report: ## Street addresses a new-shape beats file's narrations voice (owner ruling 2026-09-30: never, unless the story is about the address), story beats and practicalities apart. $0. Usage: make ingest-address-report FILE=data-ingest/sandboxes/<sb>/new_york/beats.json
+	@test -n "$(FILE)" || { echo "ERROR: FILE is required (a new-shape beats.json)." >&2; exit 2; }
+	@$(PREFLIGHT) --label ingest-address-report $(PRE_PY)
+	@$(LOCAL_EXEC) uv run python scripts/ingest_address_report.py --file $(FILE)
 
 ingest-lift-report: ## Narration lift report over a new-shape beats file ($0): per beat the longest run shared with its spans, proper-name or not, and refusals at the gate's run length with/without the name exemption. Usage: make ingest-lift-report FILE=data-ingest/new_york/beats.json [ARGS="--run 6"]
 	@test -n "$(FILE)" || { echo "ERROR: FILE is required (a new-shape beats.json)." >&2; exit 2; }

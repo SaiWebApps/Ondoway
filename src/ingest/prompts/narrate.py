@@ -18,7 +18,15 @@ from __future__ import annotations
 _VOICE_RULES = (
     "Rules:\n"
     "- Every sentence states something one of the claims says. Add nothing "
-    "the claims do not say, however well known; drop nothing a claim says.\n"
+    "the claims do not say, however well known; drop nothing a claim says except a "
+    "street address (below).\n"
+    # OWNER RULING 2026-09-30: the listener is standing there; an address is navigation,
+    # not story, unless the story turns on it (tests/test_ingest_prompts.py).
+    "- Never say a street address or a street-and-number location: the listener is "
+    "standing there. Say one only when the story turns on the address itself - where "
+    "something used to be, a move, a famous address: in London, \"221B Baker Street\" "
+    "belongs in a Sherlock Holmes story. A claim that says only where the place stands "
+    "may go untold.\n"
     "- Say it as someone standing at the place would: present tense for what "
     "is there now, past tense for what happened. Never mention a book, a "
     "guide, an author, a page, a route or a walk.\n"

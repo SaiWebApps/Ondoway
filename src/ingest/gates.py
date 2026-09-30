@@ -363,6 +363,23 @@ def provenance_leak(text: str, publishers: Sequence[str] = ()) -> list[str]:
     return [matched for _start, matched in found]
 
 
+#: A street address a narration voices (OWNER RULING 2026-09-30: never, unless the
+#: story is about the address). A house number and a street ("1000 Fifth Avenue",
+#: "221B Baker Street", "945 Madison Ave"), or a numbered cross street after "at"/"on"
+#: ("at East 82nd Street"). A report, never a gate: see prompts/narrate.py.
+_STREET_KIND = r"(?:Street|St|Avenue|Ave|Road|Rd|Place|Pl|Boulevard|Blvd|Square|Lane)"
+STREET_ADDRESS_RE = re.compile(
+    rf"\b\d{{1,5}}[A-Z]?\s+(?:(?:East|West|North|South|E\.|W\.)\s+)?"
+    rf"(?:\d{{1,3}}(?:st|nd|rd|th)|[A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?\s+{_STREET_KIND}\b"
+    rf"|\b(?:at|on)\s+(?:(?:East|West|E\.|W\.)\s+)?\d{{1,3}}(?:st|nd|rd|th)\s+{_STREET_KIND}\b"
+)
+
+
+def street_addresses(text: str) -> list[str]:
+    """Every street address in `text` (`STREET_ADDRESS_RE`), as written, in order."""
+    return [match.group(0) for match in STREET_ADDRESS_RE.finditer(text)]
+
+
 def framing(text: str) -> list[str]:
     """Every framing verb in `text` (`FRAMING_RE`), as written, in text order."""
     return [match.group(0) for match in FRAMING_RE.finditer(text)]
