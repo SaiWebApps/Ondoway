@@ -102,7 +102,7 @@ LINT_PATHS := src/ tests/ scripts/dev_env.py scripts/ensure_dev_data.py \
 	scripts/tour_batch_candidate.py scripts/score_saved_tours.py \
 	scripts/score_gold_text.py scripts/human_reference_tours.py \
 	scripts/ingest_calibrate.py scripts/claim_conflicts.py scripts/ingest_job.py \
-	scripts/ingest_batch.py scripts/ingest_rejudge.py scripts/ingest_p1probe.py scripts/ingest_same_probe.py scripts/ingest_lift_report.py scripts/ingest_address_report.py scripts/ingest_validate.py scripts/ingest_corpus_compare.py \
+	scripts/ingest_batch.py scripts/ingest_rejudge.py scripts/ingest_p1probe.py scripts/ingest_same_probe.py scripts/ingest_lift_report.py scripts/ingest_address_report.py scripts/ingest_merge_replay.py scripts/ingest_validate.py scripts/ingest_corpus_compare.py \
 	scripts/tour_golden_diff.py scripts/b8_dedup_report.py scripts/poi_visit_duration.py \
 	scripts/poi_opening_hours.py scripts/poi_place_category.py \
 	scripts/poi_body_places.py scripts/poi_place_judgements.py \
@@ -408,11 +408,11 @@ ingest-batch: ## Recover a finished Batch API round ($0): per-request stop reaso
 	@$(PREFLIGHT) --label ingest-batch $(PRE_PY) render-key
 	@$(RENDER_LOCAL_EXEC) uv run python scripts/ingest_batch.py $(if $(BATCH),--batch $(BATCH),--job-log $(JOB_LOG)) $(ARGS)
 
-ingest-merge-replay: ## Prepare a sandbox to replay a finished job's P6 under the current merge code ($0): rebuilds the beats file the job started from (refused unless its sha matches the job's), copies P0-P5 (PLACE keeps one place's stories), prints the resume that spends. Usage: make ingest-merge-replay CITY=new_york JOB=<job_id> [PLACE="Solomon R. Guggenheim Museum"]
+ingest-merge-replay: ## Prepare a sandbox to replay a finished job's P6 under the current merge code ($0): rebuilds the beats file the job started from (refused unless its sha matches the job's), copies P0-P5 (PLACE keeps one place's stories; KEEP=P3 keeps P0-P3 so narration runs again), prints the resume that spends. Usage: make ingest-merge-replay CITY=new_york JOB=<job_id> [PLACE="Solomon R. Guggenheim Museum"] [KEEP=P3]
 	@test -n "$(CITY)" || { echo "ERROR: CITY is required." >&2; exit 2; }
 	@test -n "$(JOB)" || { echo "ERROR: JOB (a data-ingest job id) is required." >&2; exit 2; }
 	@$(PREFLIGHT) --label ingest-merge-replay $(PRE_PY)
-	@$(LOCAL_EXEC) uv run python scripts/ingest_merge_replay.py --city $(CITY) --job $(JOB) $(if $(PLACE),--place "$(PLACE)") $(ARGS)
+	@$(LOCAL_EXEC) uv run python scripts/ingest_merge_replay.py --city $(CITY) --job $(JOB) $(if $(PLACE),--place "$(PLACE)") $(if $(KEEP),--keep-through $(KEEP)) $(ARGS)
 
 ingest-merge-offline: ## Re-measure P6 on finished replay sandboxes with the answers they recorded ($0, no model call): every story merged again under the current code over the file the job started from (refused unless its sha matches), unmeasured where the code asks more than was recorded; prints a JSON report. Usage: make ingest-merge-offline CITY=new_york JOB=<job_id> START=<beats.json> RUNS="<sandbox> <sandbox> ..."
 	@test -n "$(CITY)" || { echo "ERROR: CITY is required." >&2; exit 2; }

@@ -158,6 +158,53 @@ def test_a_replay_refuses_a_city_file_it_cannot_rebuild_the_jobs_start_from(
     assert not sandbox.exists()
 
 
+def test_a_replay_can_keep_through_p3_so_the_resume_narrates_again(
+    tmp_path, monkeypatch, capsys
+):
+    """`--keep-through P3` (2026-09-30): a narration change (the owner's street-address
+    rule) is proven only if P4 and P5 run again, and the default replay keeps them. The
+    sandbox then holds P0-P3 alone, and the resume narrates (P4), judges the narration
+    (P5), then merges (P6) — never repaying P1-P3. A phase outside P3..P5 is refused and
+    creates nothing. [undo: ignore keep_through → P4.json/P5.json are copied → RED]"""
+    ws = _source_job(tmp_path, monkeypatch, capsys)
+    sandbox = tmp_path / "replay"
+
+    rc = replay.main(["--city", script_mod.CITY, "--job", ws["job_id"],
+                      "--source-root", str(ws["data_root"]), "--out", str(sandbox),
+                      "--keep-through", "P3"])
+
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    job_dir = sandbox / script_mod.CITY / "jobs" / ws["job_id"]
+    assert sorted(p.name for p in job_dir.glob("P*.json")) == [f"P{i}.json" for i in range(4)]
+
+    scripted = script_mod.script(script_mod.unit(ws["chunks"]))
+    scripted["answers"]["author"] = [script_mod.narration_answer(), script_mod.narration_answer()]
+    scripted["answers"]["merge_judge"] = [
+        script_mod.merge_answer(
+            "new", "", [_claim_verdict(c, "new", reason="nothing like it")
+                        for c in ("c01", "c02", "c03")]
+        )
+    ]
+    script_mod.write_script(ws["script_path"], scripted)
+    rc = ingest_job.main(["--city", script_mod.CITY, "--data-root", str(sandbox),
+                          "--repo-data", str(ws["repo_data"]), "--resume", ws["job_id"], "--yes"])
+
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert "status=committed" in out
+    log = (sandbox / script_mod.CITY / "jobs" / f"{ws['job_id']}.jsonl").read_text("utf-8")
+    assert '"phases": ["P0", "P1", "P2", "P3"]' in log
+
+    for bad in ("P2", "P6"):
+        refused = tmp_path / f"refused-{bad}"
+        rc = replay.main(["--city", script_mod.CITY, "--job", ws["job_id"],
+                          "--source-root", str(ws["data_root"]), "--out", str(refused),
+                          "--keep-through", bad])
+        assert rc == 2
+        assert not refused.exists()
+
+
 def test_no_live_client_in_this_file():
     """This $0-spend test file never names a live LLM client or reads its
     API key. Its own body is exempt from the walk below — this docstring

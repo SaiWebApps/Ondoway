@@ -35,11 +35,17 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.beats_io import _write_json  # noqa: E402 — the one serializer P7 writes with
-from src.ingest import model  # noqa: E402
+from scripts.beats_io import _write_json  # the one serializer P7 writes with
+from src.ingest import model
 
 #: The phases whose saved output a replay keeps: everything before P6.
 KEPT_PHASES: tuple[str, ...] = ("P0", "P1", "P2", "P3", "P4", "P5")
+
+#: How far a replay may stop keeping (`--keep-through`). P5 (the default) replays P6
+#: onward; P3 also re-runs P4 and P5, so a NARRATION change is proven on the job's own
+#: judged claims (2026-09-30, the owner's street-address rule). Never before P3: P1-P3
+#: are the expensive extraction and claim judging a replay exists not to repay.
+KEEP_THROUGH_CHOICES: tuple[str, ...] = ("P3", "P4", "P5")
 
 
 def _sha256(path: Path) -> str:
@@ -50,9 +56,22 @@ def _only_place(stories: dict[str, list[dict]], place: str) -> dict[str, list[di
     return {unit: [s for s in listed if s["place"] == place] for unit, listed in stories.items()}
 
 
-def prepare(city: str, job_id: str, source_root: Path, out: Path, place: str | None) -> str:
+def prepare(
+    city: str,
+    job_id: str,
+    source_root: Path,
+    out: Path,
+    place: str | None,
+    keep_through: str = "P5",
+) -> str:
     """Build the sandbox; returns the resume command. Raises ValueError
-    (nothing created) when the job's starting file cannot be rebuilt."""
+    (nothing created) when the job's starting file cannot be rebuilt, or when
+    `keep_through` is not one of `KEEP_THROUGH_CHOICES`."""
+    if keep_through not in KEEP_THROUGH_CHOICES:
+        raise ValueError(
+            f"--keep-through must be one of {KEEP_THROUGH_CHOICES}, not {keep_through}"
+        )
+    kept = KEPT_PHASES[: KEPT_PHASES.index(keep_through) + 1]
     city_dir = source_root / city
     job_dir = city_dir / "jobs" / job_id
     meta = json.loads((job_dir / "job.json").read_text(encoding="utf-8"))
@@ -77,7 +96,7 @@ def prepare(city: str, job_id: str, source_root: Path, out: Path, place: str | N
         )
     shutil.copyfile(city_dir / "poi-raw.json", sandbox_city / "poi-raw.json")
     shutil.copyfile(job_dir / "job.json", sandbox_city / "jobs" / job_id / "job.json")
-    for phase in KEPT_PHASES:
+    for phase in kept:
         output = json.loads((job_dir / f"{phase}.json").read_text(encoding="utf-8"))
         if place is not None and phase in ("P2", "P3"):
             output["stories"] = _only_place(output["stories"], place)
@@ -100,13 +119,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=None,
                         help="defaults to {source-root}/{city}/replays/{job}-{place or all}")
     parser.add_argument("--place", default=None, help="keep only this place's stories")
+    parser.add_argument("--keep-through", default="P5",
+                        help=f"last phase kept, one of {', '.join(KEEP_THROUGH_CHOICES)}; "
+                        "P3 re-runs narration (P4, P5) too")
     args = parser.parse_args(argv)
     out = args.out or (
         args.source_root / args.city / "replays"
         / f"{args.job}-{model.slug(args.place) if args.place else 'all'}"
     )
     try:
-        command = prepare(args.city, args.job, args.source_root, out, args.place)
+        command = prepare(
+            args.city, args.job, args.source_root, out, args.place, args.keep_through
+        )
     except ValueError as refused:
         print(f"replay refused: {refused}")
         return 2
