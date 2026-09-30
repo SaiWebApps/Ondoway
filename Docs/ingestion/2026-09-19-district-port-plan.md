@@ -79,10 +79,25 @@ publish path. What does not carry:
    walk path) rides to the graph as list[str] and onto `POI.sub_locations`, where it is the walk
    order ahead of `src/tour/fixtures.py`; the export keeps a new-shape beat's value only when its
    POI's list names it (`tests/test_poi_sub_locations.py`). No list, no value, so ordering falls
-   to `narrative_function`. Still owed: the UES lists themselves (drafted, reviewed, then owner),
-   and P2 answering from the list.
+   to `narrative_function`. **PARKED by the owner 2026-09-29**, after the code shipped in ce8ed52: the lists and
+   P2 answering from them wait until a tour walks a building inside. Most tours stand outside, and
+   the blank default is correct. `sub_location` never limits how many beats a place holds; it only
+   orders one visit.
 5. **Minor losses:** claim ids, source passage/chunk and `subject_tag` are not written, which
    leaves the graph-side duplicate lane inert.
+   **Checked 2026-09-29, nothing to build.** `subject_tag` is one of four signals in the engine's
+   play-time duplicate guard (`beat_select._claims_collide`); the other three (entities, prose
+   5-grams, year plus shared names) read exported fields, and legacy `subject_tag` is mostly empty
+   too. A missing `source_passage` makes `verify_provenance` SKIP the beat, never refuse it, and a
+   new beat's provenance is already judged per claim at ingest. Claim ids wait for `claim_uid`
+   (step 4a).
+   **The guard itself merges distinct new stories on one shared name** (measured 2026-09-29 with
+   `make b8-dedup-report`: 2 of 156 pairs on the job-B replay, both distinct stories: the
+   Guggenheim's ramp and dream stories on "Frank Lloyd Wright", two Frick stories on "Frick
+   Collection"). A fix (at least 2 shared names, place name excluded) was built and REVERTED:
+   the same report showed it released 21 legacy pairs, about a dozen of them real cross-book
+   duplicates (Brooklyn Bridge x3, Flatiron, Wyckoff House). Owner ruling: keep the guard. The
+   real fix waits for the full-city swap: same story = shared judged claims (`claim_uid`, 4a).
 
 ## The plan
 

@@ -103,7 +103,7 @@ LINT_PATHS := src/ tests/ scripts/dev_env.py scripts/ensure_dev_data.py \
 	scripts/score_gold_text.py scripts/human_reference_tours.py \
 	scripts/ingest_calibrate.py scripts/claim_conflicts.py scripts/ingest_job.py \
 	scripts/ingest_batch.py scripts/ingest_rejudge.py scripts/ingest_p1probe.py scripts/ingest_same_probe.py scripts/ingest_lift_report.py scripts/ingest_validate.py scripts/ingest_corpus_compare.py \
-	scripts/tour_golden_diff.py scripts/poi_visit_duration.py \
+	scripts/tour_golden_diff.py scripts/b8_dedup_report.py scripts/poi_visit_duration.py \
 	scripts/poi_opening_hours.py scripts/poi_place_category.py \
 	scripts/poi_body_places.py scripts/poi_place_judgements.py \
 	scripts/poi_queues.py scripts/poi_trigger_radius.py scripts/sync_poi_exports.py \
@@ -435,6 +435,11 @@ claim-conflicts: ## City-wide report of the same fact stated with different valu
 score-human-tours: ## Score the two human-authored reference tours against the rubric. $0, no DB.
 	@$(PREFLIGHT) --label score-human-tours $(PRE_PY)
 	@$(LOCAL_EXEC) uv run python -m scripts.human_reference_tours
+
+b8-dedup-report: ## Read-only: every same-place beat pair the play-time duplicate guard (B8) treats as one story, with the signal that fired; diff it before and after any guard change. $0, files only. Usage: make b8-dedup-report FILE=data/paris/beats.json
+	@test -n "$(FILE)" || { echo "ERROR: FILE is required (a beats.json)." >&2; exit 2; }
+	@$(PREFLIGHT) --label b8-dedup-report $(PRE_PY)
+	@$(LOCAL_EXEC) uv run python scripts/b8_dedup_report.py --file "$(FILE)"
 
 golden-diff: ## Diff one golden fixture. Usage: make golden-diff FIXTURE=pdv_round_trip_60min.
 	@test -n "$(FIXTURE)" || { echo "ERROR: FIXTURE is required." >&2; exit 2; }
