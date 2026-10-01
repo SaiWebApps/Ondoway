@@ -380,6 +380,59 @@ def street_addresses(text: str) -> list[str]:
     return [match.group(0) for match in STREET_ADDRESS_RE.finditer(text)]
 
 
+#: "<place> stands at / is at / is located at <house number> ..." and "The address
+#: (given) of/for <place> is <house number> ...": the shapes of a claim that only says
+#: where its place stands (job-B replay r3's real claims, 2026-09-30).
+_LOCATED_AT_RE = re.compile(r"\b(?:stands|is located|is|sits|lies)\s+(?:at|on)\s+(?=\d)", re.I)
+_ADDRESS_OF_RE = re.compile(r"^\s*the address (?:given )?(?:of|for)\b.*?\bis\s+(?=\d)", re.I)
+_ADDRESS_WORD_TEXT = (
+    "at on the corner of between and e w east west north south st sts ave aves street "
+    "avenue avenues road rd place pl square lane boulevard blvd"
+)
+_ADDRESS_WORDS: frozenset[str] = frozenset(_ADDRESS_WORD_TEXT.split())
+
+
+def address_only_claim(text: str) -> bool:
+    """True when `text` says nothing but where its place stands: a located-at shape
+    (`_LOCATED_AT_RE`, `_ADDRESS_OF_RE`) followed only by street words, numbers and
+    capitalised street names. "The museum, which is at 1071 Fifth Ave, opened in 1959"
+    says more ("opened"), and so does any story about a street ("opened a temporary
+    museum on 54th St")."""
+    found = _ADDRESS_OF_RE.search(text) or _LOCATED_AT_RE.search(text)
+    if found is None:
+        return False
+    for word in re.findall(r"[A-Za-z0-9]+", text[found.end():]):
+        if word[0].isdigit() or word[0].isupper() or word.lower() in _ADDRESS_WORDS:
+            continue
+        return False
+    return True
+
+
+def place_address_sentences(
+    sentences: Sequence[str], claim_texts: Sequence[str]
+) -> list[tuple[str, str]]:
+    """Each narration sentence that voices an address an address-only claim gives (a
+    street number in common), with the reason P5 quotes back to the author. OWNER RULING
+    2026-09-30: the listener is standing there, so a bare location line is not story;
+    an address a story turns on comes from a claim that says more, and is never
+    flagged."""
+    numbers: set[str] = set()
+    for line in claim_texts:
+        text = line.split(" (Also called:")[0]
+        if address_only_claim(text):
+            numbers.update(re.findall(r"\d+", text))
+    flagged: list[tuple[str, str]] = []
+    for sentence in sentences:
+        voiced = street_addresses(sentence)
+        if voiced and numbers & set(re.findall(r"\d+", " ".join(voiced))):
+            flagged.append((
+                sentence,
+                f"street address: {', '.join(voiced)} only says where the place stands, "
+                "and the listener is standing there; tell the story without it",
+            ))
+    return flagged
+
+
 def framing(text: str) -> list[str]:
     """Every framing verb in `text` (`FRAMING_RE`), as written, in text order."""
     return [match.group(0) for match in FRAMING_RE.finditer(text)]

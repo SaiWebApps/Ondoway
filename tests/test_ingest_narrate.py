@@ -13,6 +13,8 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+
 import src.ingest.judge_narration as judge_narration
 import src.ingest.llm as llm
 import src.ingest.narrate as narrate
@@ -1099,3 +1101,98 @@ def test_narrate_gates_against_the_passages_it_is_given():
     assert draft.text == clean
     refused = [p for k, p in events if k == "narration_refused"]
     assert len(refused) == 1 and refused[0]["reasons"][0].startswith("lift:")
+
+
+#: CLEAN_NARRATION without its bare location line (OWNER RULING 2026-09-30).
+NO_ADDRESS_NARRATION = (
+    "The building was finished in 1959, by which time both Wright and Guggenheim had died."
+)
+
+
+def _p5(entry: str, story, draft, claims, client, sink):
+    """Run P5 through `entry` — the one-story path or the per-unit path `run.p5` takes —
+    with the street-address check on, returning the story's JudgedNarration."""
+    if entry == "story":
+        return judge_narration.judge_narration(
+            story, draft, claims, client, events=sink, address_check=True
+        )
+    judged, held = judge_narration.judge_narration_unit(
+        [("k", story, draft, claims)], client, events=sink, address_check=True
+    )
+    assert held == {}
+    return judged["k"]
+
+
+@pytest.mark.parametrize("entry", ["story", "unit"])
+def test_a_bare_location_line_is_rewritten_out(entry):
+    """OWNER RULING 2026-09-30, the P5 check: a sentence voicing an address that an
+    address-only claim gives is refused IN CODE in round one, quoted back once, and a
+    clean rewrite replaces the narration. [undo: drop the address refusals from round
+    one → the bare location line stays → RED]"""
+    unit = _real_unit()
+    claims = [_judged(unit, "c01", ADDRESS_CLAIM), _judged(unit, "c02", COMPLETED_CLAIM)]
+    story = _story(["c01", "c02"])
+    draft = _draft(CLEAN_NARRATION, claims)
+    mock = _armed_judge(
+        {
+            judge_narration.sentence_custom_id(draft, 0, 1): _sentence_verdict(True, "c01"),
+            judge_narration.sentence_custom_id(draft, 1, 1): _sentence_verdict(True, "c02"),
+            judge_narration.sentence_custom_id(draft, 0, 2): _sentence_verdict(True, "c02"),
+        },
+        [_authored(NO_ADDRESS_NARRATION)],
+        judge_narration.sentences(CLEAN_NARRATION),
+    )
+    recorder = _RecordingClient(mock)
+    events, sink = _sink_and_events()
+
+    judged = _p5(entry, story, draft, claims, recorder, sink)
+
+    assert judged.narration.text == NO_ADDRESS_NARRATION
+    assert judged.review.held is False and judged.narration.flags == []
+    refused = [p for kind, p in events if kind == "sentence_refused"]
+    assert [p["sentence"] for p in refused] == [judge_narration.sentences(CLEAN_NARRATION)[0]]
+    assert refused[0]["reason"].startswith("street address: 1071 Fifth Avenue")
+    assert "street address" in recorder.sync_calls[0]["prompt"]
+
+
+@pytest.mark.parametrize("entry", ["story", "unit"])
+@pytest.mark.parametrize("failure", ["gate", "judge", "transport"])
+def test_a_failed_address_rewrite_keeps_the_first_narration_unheld(entry, failure):
+    """The fallback (learning: refusing output can be the regression): when ONLY the
+    address check asked for the rewrite, a rewrite that trips the code gate, that the
+    judge refuses, or whose re-judging dies in transport, never costs the story — the
+    round-one narration, which the judge
+    passed, comes out with its round-one verdict, unheld, and `address_kept` is logged.
+    [undo: route an address-only rewrite failure through the ordinary hold → held → RED]"""
+    unit = _real_unit()
+    claims = [_judged(unit, "c01", ADDRESS_CLAIM), _judged(unit, "c02", COMPLETED_CLAIM)]
+    story = _story(["c01", "c02"])
+    draft = _draft(CLEAN_NARRATION, claims)
+    answers = {
+        judge_narration.sentence_custom_id(draft, 0, 1): _sentence_verdict(True, "c01"),
+        judge_narration.sentence_custom_id(draft, 1, 1): _sentence_verdict(True, "c02"),
+    }
+    if failure == "judge":
+        answers[judge_narration.sentence_custom_id(draft, 0, 2)] = _sentence_verdict(
+            False, "no claim says who died"
+        )
+    if failure == "transport":
+        # The judge's round-two request dies: no `beat_held` may be logged for a story
+        # that is kept (the job report counts beat_held events as holds).
+        answers[judge_narration.sentence_custom_id(draft, 0, 2)] = llm.MockFailure(
+            result_type="errored", error_message="boom"
+        )
+    rewrite = LEAKING_NARRATION if failure == "gate" else NO_ADDRESS_NARRATION
+    mock = _armed_judge(answers, [_authored(rewrite)], judge_narration.sentences(CLEAN_NARRATION))
+    events, sink = _sink_and_events()
+
+    judged = _p5(entry, story, draft, claims, mock, sink)
+
+    assert judged.narration.text == CLEAN_NARRATION
+    assert (judged.narration.verdict.sentences_entailed,
+            judged.narration.verdict.sentences_total) == (2, 2)
+    assert judged.narration.verdict.bound_to == model.bind(CLEAN_NARRATION)
+    assert judged.review.held is False and judged.narration.flags == []
+    assert not [p for kind, p in events if kind == "beat_held"]
+    kept = [p for kind, p in events if kind == "address_kept"]
+    assert [(p["story_slug"], p["why"]) for p in kept] == [(story.story_slug, failure)]

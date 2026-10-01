@@ -2546,3 +2546,37 @@ def test_a_missing_chapter_falls_back_to_that_sources_spans_and_is_logged(tmp_pa
     assert passages[1:] == [s.span for s in sources if s.source_id == "frommers-nyc-2024"]
     missing = [e.data for e in store.snapshot(job.id).events if e.message == "passage_missing"]
     assert missing == [{"source_id": "frommers-nyc-2024", "chunk": "chunk-05-ch05-uptown"}]
+
+
+def test_every_p5_call_the_job_makes_checks_for_a_bare_street_address(tmp_path, monkeypatch):
+    """OWNER RULING 2026-09-30: the P5 street-address check is an option of
+    judge_narration(_unit), off by default so the P5 mechanics tests keep their fixture;
+    the JOB must turn it on at all three of its P5 calls — the per-unit P5 phase, a
+    rerun (`_rerun`) and ADR-0005's one more try (`_narrate_once_more`). Runs the jobs of
+    the rerun and held-narration tests with both entry points wrapped. [undo: drop
+    `address_check=True` from any one call in run.py → RED]"""
+    seen: list[tuple[str, object]] = []
+    real_unit = judge_narration.judge_narration_unit
+    real_story = judge_narration.judge_narration
+
+    def unit_spy(*args, **kwargs):
+        seen.append(("unit", kwargs.get("address_check")))
+        return real_unit(*args, **kwargs)
+
+    def story_spy(*args, **kwargs):
+        import inspect
+
+        caller = inspect.stack()[1].function
+        seen.append((caller, kwargs.get("address_check")))
+        return real_story(*args, **kwargs)
+
+    monkeypatch.setattr(judge_narration, "judge_narration_unit", unit_spy)
+    monkeypatch.setattr(judge_narration, "judge_narration", story_spy)
+    (tmp_path / "rerun").mkdir()
+    (tmp_path / "once-more").mkdir()
+
+    test_ids_in_rerun_get_p4_and_p5_again_before_p7(tmp_path / "rerun")
+    test_a_held_narration_is_narrated_once_more_and_kept_when_it_passes(tmp_path / "once-more")
+
+    assert {site for site, _flag in seen} >= {"unit", "_rerun", "_narrate_once_more"}, seen
+    assert all(flag is True for _site, flag in seen), seen

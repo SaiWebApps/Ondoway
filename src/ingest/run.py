@@ -936,7 +936,7 @@ class _Run:
                 continue
             unit_narrations, held_narrations = judge_narration.judge_narration_unit(
                 items, self.client, events=self.emit, publishers=publishers,
-                passages=[unit.text],
+                passages=[unit.text], address_check=True,
             )
             narrations.update(unit_narrations)
             for story, claims, reason in held_narrations.values():
@@ -978,7 +978,7 @@ class _Run:
                 return draft
             judged = judge_narration.judge_narration(
                 story, draft, claims, self.client, events=self.emit, publishers=publishers,
-                passages=passages,
+                passages=passages, address_check=True,
             )
         except BeatHeld:
             return None
@@ -1168,7 +1168,7 @@ class _Run:
         try:
             judged = judge_narration.judge_narration(
                 story, draft, claims, self.client, events=self.emit, publishers=publishers,
-                passages=passages,
+                passages=passages, address_check=True,
             )
         except BeatHeld as held:
             return None, f"P5: {held.reason}"

@@ -5,7 +5,9 @@ OWNER RULING 2026-09-30: narration never says a street address unless the story 
 it (Baker Street in a Sherlock Holmes beat). P4 carries that as a prompt rule, not a
 refusing gate, so this report is how a real run shows whether it holds. Story beats and
 `practicalities` beats (never published) are counted apart; each flagged beat is listed
-so a person can tell the Baker Street kind from the plain location line.
+so a person can tell the Baker Street kind from the plain location line, with what the P5
+check (`gates.place_address_sentences`) does to it: `p5=refuses` (a bare location line,
+rewritten out) or `p5=keeps` (an address the story's own claims carry).
 
     make ingest-address-report FILE=data-ingest/sandboxes/<sb>/new_york/beats.json
 """
@@ -20,7 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from src.ingest import gates
+from src.ingest import gates, judge_narration
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -38,7 +40,10 @@ def main(argv: list[str] | None = None) -> int:
         practical += is_practical
         story += not is_practical
         label = "PRACTICAL" if is_practical else "STORY"
-        print(f"{label} {beat.get('story_slug')}: {' | '.join(found)}")
+        claims = [c["text"] for c in beat.get("claims") or [] if c.get("status") == "resolved"]
+        told = judge_narration.sentences(beat["narration"]["text"])
+        verdict = "refuses" if gates.place_address_sentences(told, claims) else "keeps"
+        print(f"{label} {beat.get('story_slug')}: {' | '.join(found)} p5={verdict}")
     print(
         f"beats={len(beats)} story_with_address={story} practicalities_with_address={practical}"
     )

@@ -24,11 +24,12 @@ from collections.abc import Sequence
 
 from pydantic import BaseModel, ConfigDict
 
-from src.ingest import llm, model, prompts
+from src.ingest import gates, llm, model, prompts
 from src.ingest.group import Story
 from src.ingest.judge_claims import JudgedClaim, _extract_json_object
 from src.ingest.narrate import (
     P4_EXPECTED_OUTPUT_TOKENS,
+    BeatHeld,
     Emit,
     NarrationDraft,
     ask_author,
@@ -229,6 +230,32 @@ def _judged(draft: NarrationDraft, verdicts: Sequence[dict], flags: list[str]) -
     return JudgedNarration(narration=narration, duration_sec=draft.duration_sec, review=review)
 
 
+def _with_address_refusals(
+    verdicts: Sequence[dict], texts: Sequence[str], refusals: list[tuple[str, str]]
+) -> list[tuple[str, str]]:
+    """The judge's refusals plus, in code, every sentence voicing an address that an
+    address-only claim gives (`gates.place_address_sentences`; OWNER RULING 2026-09-30)
+    that the judge did not already refuse."""
+    already = {sentence for sentence, _reason in refusals}
+    told = [verdict["sentence"] for verdict in verdicts]
+    return refusals + [
+        (sentence, reason)
+        for sentence, reason in gates.place_address_sentences(told, texts)
+        if sentence not in already
+    ]
+
+
+def _keep_first(
+    emit: Emit, story: Story, draft: NarrationDraft, verdicts: Sequence[dict], why: str
+) -> JudgedNarration:
+    """An address-only rewrite that failed (`why`: gate, judge or transport): the
+    round-one narration, which the judge passed, with its round-one verdict, unheld. A
+    bare location line is never worth a story (learning: refusing output can be the
+    regression)."""
+    emit("address_kept", {"story_slug": story.story_slug, "why": why})
+    return _judged(draft, verdicts, [])
+
+
 def _emit_refusals(emit: Emit, story: Story, attempt: int, refusals: Sequence[tuple[str, str]]):
     for sentence, reason in refusals:
         emit(
@@ -316,6 +343,7 @@ def judge_narration_unit(
     events: llm.EventSink | None = None,
     publishers: Sequence[str] = (),
     passages: Sequence[str] | None = None,
+    address_check: bool = False,
 ) -> tuple[dict[str, JudgedNarration], dict[str, tuple[Story, Sequence[JudgedClaim], str]]]:
     """Judge EVERY story's narration, one round per stage.
 
@@ -352,12 +380,22 @@ def judge_narration_unit(
 
     rewritten: list[tuple[str, Story, NarrationDraft, Sequence[str]]] = []
     first_refusals: dict[str, list[tuple[str, str]]] = {}
+    first_verdicts: dict[str, list[dict]] = {}
+    # Stories whose rewrite only the address check asked for: any failure of the
+    # rewrite keeps the round-one narration, unheld (`_keep_first`).
+    address_only: set[str] = set()
     for key, story_verdicts in verdicts.items():
         story, draft, claims = by_key[key]
         refusals = _refusals(story_verdicts)
+        if address_check:
+            judge_refused = bool(refusals)
+            refusals = _with_address_refusals(story_verdicts, texts[key], refusals)
+            if refusals and not judge_refused:
+                address_only.add(key)
         if not refusals:
             judged[key] = _judged(draft, story_verdicts, [])
             continue
+        first_verdicts[key] = story_verdicts
         _emit_refusals(emit, story, 1, refusals)
         first_refusals[key] = refusals
         text, author_model = ask_author(
@@ -378,6 +416,9 @@ def judge_narration_unit(
                 "narration_refused",
                 {"story_slug": story.story_slug, "attempt": 2, "reasons": list(gate_reasons)},
             )
+            if key in address_only:
+                judged[key] = _keep_first(emit, story, draft, story_verdicts, "gate")
+                continue
             flags = [f"not_entailed: {sentence!r}: {reason}" for sentence, reason in refusals]
             flags.extend(f"gate: {reason}" for reason in gate_reasons)
             # The round-ONE text with its round-one verdict: the only text a
@@ -397,7 +438,12 @@ def judge_narration_unit(
     if rewritten:
         second, failed_two = _round_many(emit, rewritten, client, attempt=2)
         for key, reason in failed_two.items():
-            story, _draft, claims = by_key[key]
+            story, first_draft, claims = by_key[key]
+            if key in address_only:
+                judged[key] = _keep_first(
+                    emit, story, first_draft, first_verdicts[key], "transport"
+                )
+                continue
             hold_reason = f"P5 {reason}"
             emit(
                 "beat_held",
@@ -407,13 +453,16 @@ def judge_narration_unit(
         for key, _story, rewrite, _texts in rewritten:
             if key not in second:
                 continue
-            story, _first_draft, _claims = by_key[key]
+            story, first_draft, _claims = by_key[key]
             story_verdicts = second[key]
             refusals = _refusals(story_verdicts)
             if not refusals:
                 judged[key] = _judged(rewrite, story_verdicts, [])
                 continue
             _emit_refusals(emit, story, 2, refusals)
+            if key in address_only:
+                judged[key] = _keep_first(emit, story, first_draft, first_verdicts[key], "judge")
+                continue
             flags = [f"not_entailed: {sentence!r}: {reason}" for sentence, reason in refusals]
             judged[key] = _judged(rewrite, story_verdicts, flags)
             emit(
@@ -436,6 +485,7 @@ def judge_narration(
     events: llm.EventSink | None = None,
     publishers: Sequence[str] = (),
     passages: Sequence[str] | None = None,
+    address_check: bool = False,
 ) -> JudgedNarration:
     """Judge the draft sentence by sentence; see the module docstring.
 
@@ -465,8 +515,14 @@ def judge_narration(
 
     verdicts = _judge_round(emit, story, draft, texts, client, attempt=1)
     refusals = _refusals(verdicts)
+    address_only = False
+    if address_check:
+        judge_refused = bool(refusals)
+        refusals = _with_address_refusals(verdicts, texts, refusals)
+        address_only = bool(refusals) and not judge_refused
     if not refusals:
         return _judged(draft, verdicts, [])
+    first_verdicts = verdicts
     _emit_refusals(emit, story, 1, refusals)
 
     text, author_model = ask_author(
@@ -485,6 +541,8 @@ def judge_narration(
             "narration_refused",
             {"story_slug": story.story_slug, "attempt": 2, "reasons": list(gate_reasons)},
         )
+        if address_only:
+            return _keep_first(emit, story, draft, first_verdicts, "gate")
         flags = [f"not_entailed: {sentence!r}: {reason}" for sentence, reason in refusals]
         flags.extend(f"gate: {reason}" for reason in gate_reasons)
         judged = _judged(draft, verdicts, flags)
@@ -493,11 +551,25 @@ def judge_narration(
             {"story_slug": story.story_slug, "phase": "P5", "reason": judged.review.reason},
         )
         return judged
-    verdicts = _judge_round(emit, story, rewrite, texts, client, attempt=2)
+    # An address-only rewrite whose re-judging dies is KEPT, not held, so its
+    # `beat_held` (emitted by `narrate.hold` before it raises) must not reach the job
+    # report, which counts those events as holds.
+    def emit_two(kind: str, payload: dict) -> None:
+        if not (address_only and kind == "beat_held"):
+            emit(kind, payload)
+
+    try:
+        verdicts = _judge_round(emit_two, story, rewrite, texts, client, attempt=2)
+    except BeatHeld:
+        if not address_only:
+            raise
+        return _keep_first(emit, story, draft, first_verdicts, "transport")
     refusals = _refusals(verdicts)
     if not refusals:
         return _judged(rewrite, verdicts, [])
     _emit_refusals(emit, story, 2, refusals)
+    if address_only:
+        return _keep_first(emit, story, draft, first_verdicts, "judge")
     flags = [f"not_entailed: {sentence!r}: {reason}" for sentence, reason in refusals]
     judged = _judged(rewrite, verdicts, flags)
     emit(
