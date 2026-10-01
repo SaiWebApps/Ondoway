@@ -674,3 +674,139 @@ def test_stop_after_p3_runs_only_p1_to_p3_prices_only_them_and_writes_no_beat(
     assert json.loads((city_dir / "beats.json").read_text(encoding="utf-8")) == []
     (job_dir,) = [p for p in (city_dir / "jobs").iterdir() if p.is_dir()]
     assert (job_dir / "P3.json").is_file() and not (job_dir / "P4.json").exists()
+
+
+def test_the_summary_says_what_became_of_every_story_and_which_rule_stopped_it(tmp_path):
+    """Owner, 2026-10-01: "make sure the rules we put in place aren't going to kill a ton
+    of good stories". Every story P2 produced ends one of four ways — written, written but
+    held, folded into an existing beat, or left out — and a story left out names the rule
+    that stopped it, read off its last hold. Before this, r5's three lost stories took a
+    hand-rolled script to find. Event shapes are r5's own. [undo: drop the stories line →
+    RED]"""
+    store = ingest_job._PrintingStore(tmp_path / "jobs")
+    job = store.create(
+        city="new_york", source={"kind": "book", "chunk_dir": "x"}, as_of=2024,
+        rights_basis="owned_copy",
+    )
+    place = "Frick Collection"
+    slugs = ["kept", "kept-held", "lifted", "folded", "one-fact"]
+    store.set_phase(job.id, "P2", {"stories": {"u1": [
+        {"story_slug": s, "place": place} for s in slugs
+    ]}})
+    ids = {s: f"new_york/frick-collection/{s}" for s in slugs}
+    store.set_phase(job.id, "P6", {"new": [ids["kept"], ids["kept-held"], ids["one-fact"]]})
+    beats = tmp_path / "beats.json"
+    beats.write_text(json.dumps([
+        {"beat_id": ids["kept"], "story_slug": "kept", "review": {"held": False}},
+        {"beat_id": ids["kept-held"], "story_slug": "kept-held", "review": {"held": True}},
+        {"beat_id": "new_york/frick-collection/older", "story_slug": "older",
+         "review": {"held": False}},
+    ]), encoding="utf-8")
+    store.set_phase(job.id, "P7", {"beats_path": str(beats), "written": 3})
+    for message, data in (
+        ("beat_held", {"story_slug": "lifted", "phase": "P4",
+                       "reason": "lift: 'for the deadly johnstown flood of 1889' copied"}),
+        ("merge_absorbed", {"story_slug": "folded"}),
+        ("commit_held", {"beat_id": ids["one-fact"], "errors": [
+            f"ARC_TOO_FEW_CLAIMS {ids['one-fact']}: beat_type 'anecdote' requires >=2 claims"
+        ]}),
+    ):
+        store.append_event(job.id, "info", message, data=data)
+
+    text = ingest_job.summary(store.get(job.id), tmp_path / "x.jsonl")
+
+    assert (
+        "stories: produced=5 written=2 (held=1) folded=1 left_out=2 "
+        "by_rule: arc_minimum=1 lift=1"
+    ) in text, text
+    assert "  left out [lift] lifted:" in text and "  left out [arc_minimum] one-fact:" in text
+
+
+def test_two_units_with_the_same_story_slug_are_two_stories_with_two_fates(tmp_path):
+    """The judge, 2026-10-01: P2 slugs are unique within a UNIT only, and the job writes a
+    second same-slug story at the same place as "<slug>-2" (run._free_slug). Keyed by
+    slug, both collapsed into one "written" — produced=2, written=1, left_out=0 — and a
+    story actually lost read as written. Each produced story now takes its own beat id,
+    and fates always add up to produced. [undo: match by bare slug → RED]"""
+    store = ingest_job._PrintingStore(tmp_path / "jobs")
+    job = store.create(
+        city="new_york", source={"kind": "book", "chunk_dir": "x"}, as_of=2024,
+        rights_basis="owned_copy",
+    )
+    place = "Frick Collection"
+    store.set_phase(job.id, "P2", {"stories": {
+        "u1": [{"story_slug": "visiting", "place": place}],
+        "u2": [{"story_slug": "visiting", "place": place},
+               {"story_slug": "visiting", "place": place}],
+    }})
+    first, second = "new_york/frick-collection/visiting", "new_york/frick-collection/visiting-2"
+    store.set_phase(job.id, "P6", {"new": [first, second]})
+    beats = tmp_path / "beats.json"
+    beats.write_text(json.dumps([
+        {"beat_id": first, "story_slug": "visiting", "review": {"held": False}},
+        {"beat_id": second, "story_slug": "visiting-2", "review": {"held": False}},
+    ]), encoding="utf-8")
+    store.set_phase(job.id, "P7", {"beats_path": str(beats), "written": 2})
+
+    text = ingest_job.summary(store.get(job.id), tmp_path / "x.jsonl")
+
+    assert "stories: produced=3 written=2 (held=0) folded=0 left_out=1 " in text, text
+    assert "  left out [unknown] visiting:" in text
+
+
+def test_summary_of_reprints_a_finished_jobs_summary_from_disk_and_writes_nothing(
+    tmp_path, monkeypatch, capsys
+):
+    """`--summary-of <job>` ($0, `make ingest-job-summary`): rebuilds a finished job from
+    its directory (`restore`) and prints the same summary, story fates included — so a
+    past job (job-B r3-r5) can be read the way the next one will be. It writes nothing.
+    [undo: drop the --summary-of branch → argparse refuses → RED]"""
+    ws = _mock_env(tmp_path, monkeypatch)
+    assert ingest_job.main([*ws["argv"], "--yes"]) == 0
+    capsys.readouterr()
+    jobs_dir = ws["data_root"] / script_mod.CITY / "jobs"
+    [job_id] = [p.name for p in jobs_dir.iterdir() if p.is_dir()]
+    before = sorted((p, p.stat().st_mtime) for p in ws["data_root"].rglob("*"))
+
+    rc = ingest_job.main(["--city", script_mod.CITY, "--data-root", str(ws["data_root"]),
+                          "--summary-of", job_id])
+
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert "read from disk: phases P0 P1 P2 P3 P4 P5 P6 P7" in out
+    assert "stories: produced=1 written=1 (held=0) folded=0 left_out=0 by_rule: none" in out
+    assert sorted((p, p.stat().st_mtime) for p in ws["data_root"].rglob("*")) == before
+
+
+def test_a_story_whose_every_claim_the_claim_check_refused_is_left_out_by_that_rule(tmp_path):
+    """Job-B r5 (2026-10-01): three stories ("the famous dollhouse upstairs", the
+    Guggenheim's retrospectives and admission) left no event in the replay's log — P3, run
+    once in the original job, had refused every claim (one for saying "noted for its fame"
+    of "a famed dollhouse"). Their fate comes from P3's own record: no surviving claim →
+    left out [claim_check]. P3's story list is the one counted (it adds re-ask stories).
+    [undo: count P2 and skip the P3 check → "unknown" → RED]"""
+    store = ingest_job._PrintingStore(tmp_path / "jobs")
+    job = store.create(
+        city="new_york", source={"kind": "book", "chunk_dir": "x"}, as_of=2024,
+        rights_basis="owned_copy",
+    )
+    place = "Museum of the City of New York"
+    stories = [{"story_slug": "the-famous-dollhouse-upstairs", "place": place},
+               {"story_slug": "from-the-reask", "place": place}]
+    store.set_phase(job.id, "P2", {"stories": {"u1": stories[:1]}})
+    store.set_phase(job.id, "P3", {
+        "stories": {"u1": stories},
+        "judged": {"u1": {"the-famous-dollhouse-upstairs": [], "from-the-reask": [{"c": 1}]}},
+    })
+    kept = "new_york/museum-of-the-city-of-new-york/from-the-reask"
+    store.set_phase(job.id, "P6", {"new": [kept]})
+    beats = tmp_path / "beats.json"
+    beats.write_text(json.dumps([{"beat_id": kept, "review": {"held": False}}]), "utf-8")
+    store.set_phase(job.id, "P7", {"beats_path": str(beats), "written": 1})
+
+    text = ingest_job.summary(store.get(job.id), tmp_path / "x.jsonl")
+
+    assert "stories: produced=2 written=1 (held=0) folded=0 left_out=1 by_rule: claim_check=1" in (
+        text
+    ), text
+    assert "  left out [claim_check] the-famous-dollhouse-upstairs: every claim" in text

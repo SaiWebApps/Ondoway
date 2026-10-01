@@ -38,14 +38,16 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import sys
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from src.ingest import jobs, llm, run
+from src.ingest import jobs, llm, model, run
 
 
 def ensure_root(data_root: Path, repo_data: Path, city: str) -> dict[str, Path]:
@@ -348,6 +350,128 @@ class _PrintingStore(jobs.IngestJobStore):
         return item
 
 
+#: The rule a left-out story's last hold names, from its reason's first word.
+_RULE_OF_REASON: tuple[tuple[str, str], ...] = (
+    ("lift", "lift"),
+    ("NARRATION_LIFT", "lift"),
+    ("not_entailed", "narration_check"),
+    ("ARC_TOO_FEW_CLAIMS", "arc_minimum"),
+    ("judge and signature disagree", "merge_hold"),
+    ("transport", "transport"),
+    ("schema", "transport"),
+    ("provenance_leak", "book_mention"),
+)
+
+
+def _rule(reason: str) -> str:
+    text = re.sub(r"^(?:P\d\s+|gate:\s*)", "", reason.strip())
+    for prefix, rule in _RULE_OF_REASON:
+        if text.startswith(prefix):
+            return rule
+    return text.split(":", 1)[0].split(" ", 1)[0] or "unknown"
+
+
+def story_fates(snap: jobs.IngestJob, events: list[tuple[str, dict]]) -> list[str]:
+    """What became of every story P2 produced (owner, 2026-10-01: rules must not kill good
+    stories unseen): written (and how many of those are held), folded into a beat the
+    corpus already had, or left out — each left-out story with the rule its last hold
+    names. Written = a beat the job made new (P6 `new`) that is in the final file. Each
+    produced story claims ONE such beat id — its own `city/place/slug`, else the
+    `-2`, `-3` ... the job gives a second same-slug story at a place (`run._free_slug`) — so
+    two stories never share a fate, and the fates always add up to `produced`."""
+    # P3's story list is the final one (an omission re-ask adds stories P2 never had).
+    source = snap.phases.get("P3") if (snap.phases.get("P3") or {}).get("stories") else None
+    source = source or snap.phases.get("P2") or {}
+    stories = [s for listed in (source.get("stories") or {}).values() for s in listed]
+    if not stories:
+        return []
+    # A story P3 left with no surviving claim never reaches P4: its claims were refused,
+    # possibly in an earlier run of the job (a replay resumes after P3, so no event).
+    no_claims = {
+        slug
+        for unit in ((snap.phases.get("P3") or {}).get("judged") or {}).values()
+        for slug, judged in unit.items()
+        if not judged
+    }
+    beats_path = (snap.phases.get("P7") or {}).get("beats_path")
+    records = (
+        json.loads(Path(beats_path).read_text(encoding="utf-8"))
+        if beats_path and Path(beats_path).is_file()
+        else []
+    )
+    by_id = {r.get("beat_id"): r for r in records}
+    available = {
+        bid for bid in (snap.phases.get("P6") or {}).get("new") or [] if bid in by_id
+    }
+
+    def beat_id(story: dict, n: int) -> str:
+        suffix = "" if n == 1 else f"-{n}"
+        return f"{snap.city}/{model.slug(story.get('place', ''))}/{story.get('story_slug')}{suffix}"
+
+    # Exact ids first, so a story whose own slug ends in "-2" keeps its beat.
+    taken: dict[int, str] = {}
+    for index, story in enumerate(stories):
+        if beat_id(story, 1) in available:
+            taken[index] = beat_id(story, 1)
+            available.discard(taken[index])
+    for index, story in enumerate(stories):
+        if index in taken:
+            continue
+        for n in range(2, 100):
+            if beat_id(story, n) in available:
+                taken[index] = beat_id(story, n)
+                available.discard(taken[index])
+                break
+    written = {
+        index: bool((by_id[bid].get("review") or {}).get("held")) for index, bid in taken.items()
+    }
+    absorbed = {d.get("story_slug") for m, d in events if m == "merge_absorbed"}
+    last_reason: dict[str, str] = {}
+    for message, data in events:
+        if message == "beat_held":
+            last_reason[data.get("story_slug", "")] = str(data.get("reason", ""))
+        elif message == "commit_held":
+            slug = str(data.get("beat_id", "")).rsplit("/", 1)[-1]
+            last_reason[slug] = "; ".join(data.get("errors") or [])
+        elif message == "hold_default" and data.get("applied") == "left_out":
+            last_reason.setdefault(data.get("story_slug", ""), str(data.get("why", "")))
+    left_out: list[tuple[str, str, str]] = []
+    folded = 0
+    for index, story in enumerate(stories):
+        slug = story.get("story_slug", "")
+        if index in written:
+            continue
+        if slug in absorbed:
+            folded += 1
+            continue
+        if slug in no_claims and slug not in last_reason:
+            left_out.append(
+                ("claim_check", slug, "every claim refused at the claim check (P3)")
+            )
+            continue
+        reason = last_reason.get(slug, "")
+        left_out.append((_rule(reason) if reason else "unknown", slug, reason))
+    by_rule = Counter(rule for rule, _slug, _reason in left_out)
+    held = sum(written.values())
+    accounted = len(written) + folded + len(left_out)
+    return [
+        *(
+            [f"stories: MISMATCH produced={len(stories)} accounted={accounted}"]
+            if accounted != len(stories)
+            else []
+        ),
+        *(
+            [f"stories: {len(available)} new beat(s) matched no produced story"]
+            if available
+            else []
+        ),
+        f"stories: produced={len(stories)} written={len(written)} (held={held}) "
+        f"folded={folded} left_out={len(left_out)} by_rule: "
+        + (" ".join(f"{rule}={n}" for rule, n in sorted(by_rule.items())) or "none"),
+        *(f"  left out [{rule}] {slug}: {reason}" for rule, slug, reason in left_out),
+    ]
+
+
 def summary(snap: jobs.IngestJob, log_path: Path) -> str:
     """The slice-9 measurements, read off the job log: the P6 hold rate
     with every `beat_held` reason, the stories P3 held on their own
@@ -386,6 +510,7 @@ def summary(snap: jobs.IngestJob, log_path: Path) -> str:
         f"leak_gate_drops={len(leak_drops)}",
         *(f"  refused: {d.get('claim_id')}: {d.get('reason')}" for d in refused1),
         *(f"  dropped: {d.get('claim_id')}: {d.get('reason')}" for d in dropped),
+        *story_fates(snap, events),
     ]
     if snap.error:
         lines.append(f"error: {snap.error}")
@@ -441,13 +566,30 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--resume", default=None, metavar="JOB_ID",
                         help="continue a job from its phase files instead of starting one")
     parser.add_argument("--yes", action="store_true", help="proceed past the estimate and spend")
+    parser.add_argument("--summary-of", default=None, metavar="JOB_ID",
+                        help="print a finished job's summary from its directory ($0, writes "
+                        "nothing) and exit")
     parser.add_argument("--stop-after", choices=sorted(run.STOP_AFTER_ROWS), default=None,
                         help="end the job after this phase: nothing written, its output kept")
     args = parser.parse_args(argv)
+    data_root = args.data_root or Path(os.environ.get("INGEST_DATA_ROOT") or ROOT / "data-ingest")
+    if args.summary_of is not None:
+        # Read-only: no ensure_root, no client. A past job is read the way the next one is.
+        jobs_dir = data_root / args.city / "jobs"
+        if not (jobs_dir / args.summary_of / "job.json").is_file():
+            print(f"unknown job {args.summary_of!r} under {jobs_dir}")
+            return 2
+        reader = _PrintingStore(jobs_dir)
+        job, _meta = reader.restore(args.summary_of)
+        print(
+            f"read from disk: phases {' '.join(p for p in jobs.PHASES if p in job.phases)} "
+            "(a job's status is not stored; a P7 phase means it committed)"
+        )
+        print(summary(reader.get(args.summary_of), reader.log_path(args.summary_of)))
+        return 0
     if args.resume is None and (args.chunk_dir is None or args.as_of is None):
         parser.error("a new job needs --chunk-dir and --as-of")
 
-    data_root = args.data_root or Path(os.environ.get("INGEST_DATA_ROOT") or ROOT / "data-ingest")
     paths = ensure_root(data_root, args.repo_data, args.city)
     print(f"data root: {data_root} (beats: {paths['beats']})")
 

@@ -403,6 +403,13 @@ ingest-job: ## ONE headless ingest job on the LIVE client into the gitignored da
 	@$(RENDER_LOCAL_EXEC) env INGEST_PROVIDER=anthropic INGEST_DATA_ROOT=data-ingest \
 		uv run python scripts/ingest_job.py --city $(CITY) --chunk-dir $(CHUNK_DIR) $(ARGS)
 
+ingest-job-summary: ## Re-print a finished ingest job's summary from its directory, story fates included ($0, read-only, no credentials). Usage: make ingest-job-summary CITY=new_york JOB=<job_id> DATA_ROOT=data-ingest/sandboxes/<sb>
+	@test -n "$(CITY)" || { echo "ERROR: CITY is required." >&2; exit 2; }
+	@test -n "$(JOB)" || { echo "ERROR: JOB (a data-ingest job id) is required." >&2; exit 2; }
+	@test -n "$(DATA_ROOT)" || { echo "ERROR: DATA_ROOT (the job's data root) is required." >&2; exit 2; }
+	@$(PREFLIGHT) --label ingest-job-summary $(PRE_PY)
+	@$(LOCAL_EXEC) uv run python scripts/ingest_job.py --city $(CITY) --data-root "$(DATA_ROOT)" --summary-of $(JOB)
+
 ingest-batch: ## Recover a finished Batch API round ($0): per-request stop reason, tokens, priced cost, parsed claim count (ARGS=--text-tokens splits text from thinking); or per-phase usage for a whole job. Usage: make ingest-batch BATCH=msgbatch_... | JOB_LOG=data-ingest/<city>/jobs/<id>.jsonl
 	@test -n "$(BATCH)$(JOB_LOG)" || { echo "ERROR: BATCH (a msgbatch_... id) or JOB_LOG (a job JSONL) is required." >&2; exit 2; }
 	@$(PREFLIGHT) --label ingest-batch $(PRE_PY) render-key
