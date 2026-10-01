@@ -38,7 +38,11 @@ _MERGE_RULES = (
     "is new, because two books cut the same facts into different stories. A new claim "
     'that says more than the existing claim, or something else, is not "same": sharing '
     "a date, a name, a place or a word is not sharing a fact. \"conflict\" when the two "
-    "state the same fact with a different name, date, number, place or cause. "
+    "state the same fact with a different name, date, number, place or cause - two "
+    "values for the same thing about the same subject. Statements about a different "
+    "thing - another category, another place or another time, or a broader or narrower "
+    'location - are no conflict: judge the new claim "new", or "same"/"covered" if '
+    "existing claims state it. "
     '"covered" when no single claim states everything the new claim states, but two or '
     "more claims at this place TOGETHER state everything the new claim states, with the "
     "same values, its judgments set aside: name every one of them in "
@@ -64,7 +68,11 @@ _MERGE_RULES = (
     "judgments [\"celebrated\"] (the same fact, plus a judgment). If a "
     "second existing claim says \"The Eiffel Tower is made of wrought iron.\", then \"The "
     "wrought-iron Eiffel Tower was completed in 1889.\" is \"covered\" (the two together "
-    "state it; neither alone does).\n"
+    "state it; neither alone does). An existing claim \"The Louvre is the largest museum "
+    "in Paris.\" and a new claim \"The Louvre is the most visited museum in Paris.\" "
+    "rank two different things (another category): \"new\", never \"conflict\"; \"The "
+    "Louvre holds 380,000 objects.\" against \"The Louvre holds 615,000 objects.\" gives "
+    "two values for the same thing: \"conflict\".\n"
     "- Wording never matters; only the facts do. A judgment is not wording, and it is "
     "not a fact for the verdict either: decide every verdict on the facts alone, and "
     'list every judgment in "judgments" - the merge keeps it, whatever the verdict. A '

@@ -699,3 +699,29 @@ def test_the_narrator_says_no_street_address_unless_the_story_is_about_it():
         assert "221B Baker Street" in rendered and "Sherlock Holmes" in rendered
         assert "A claim that says only where the place stands may go untold" in rendered
         assert "Fifth Ave" not in rendered.split("Claims:")[0]
+
+
+def test_a_conflict_is_two_values_for_the_same_thing():
+    """Job-B replays r1-r3 (2026-09-30): 19 `conflict` answers over 9 distinct claims, and
+    three were about DIFFERENT things — another category ("the largest museum in the city"
+    vs "the largest single-site attraction"), another place (a temporary home vs the
+    house), a narrower location ("Gallery 760" inside "the American Collection"). A
+    conflict on a present-tense fact SUPERSEDES the older claim, so each lost a true fact
+    from the narration. The rule: conflict = two values for the SAME thing about the same
+    subject, so an updated count still conflicts (the judge noted 2026-09-30 that more
+    than 3 million implies more than 2 million, so "both can be true" would have made
+    that update "new"); a different thing is "new". The worked examples stay in Paris.
+    Mutant: the rule removed."""
+    for rendered in (prompts.MERGE_PROMPT, prompts.MERGE_REDO_PROMPT):
+        assert "two values for the same thing about the same subject" in rendered
+        assert (
+            "a different thing - another category, another place or another time, or a "
+            "broader or narrower location - are no conflict" in rendered
+        )
+        assert '"The Louvre is the most visited museum in Paris."' in rendered
+        assert '"The Louvre is the largest museum in Paris."' in rendered
+        assert '"The Louvre holds 615,000 objects." gives two values for the same thing' in (
+            rendered
+        )
+        for nyc in ("Met", "Frick", "Gallery 760", "Fifth Ave"):
+            assert nyc not in rendered.split("Answer as JSON")[0], nyc
