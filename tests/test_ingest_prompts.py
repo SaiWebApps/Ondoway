@@ -725,3 +725,61 @@ def test_a_conflict_is_two_values_for_the_same_thing():
         )
         for nyc in ("Met", "Frick", "Gallery 760", "Fifth Ave"):
             assert nyc not in rendered.split("Answer as JSON")[0], nyc
+
+
+def test_a_judgment_several_claims_share_is_said_once_over_them():
+    """Job-B replays r2-r3 (2026-10-01): the Frick's "Three Vermeers" beat said "a seminal
+    work" four times in a row — "a seminal work by Bellini. There is a seminal work by
+    Hans Holbein here as well…" — because the rule put each judgment "in the sentence that
+    tells that claim". Every word sourced, no longer a person talking. The rule now lets
+    one word cover every claim that carries it. Mutant: the sentence removed."""
+    claims = ["The collection includes a seminal work by Bellini. (Also called: seminal)"]
+    for rendered in (
+        prompts.render_narrate("P", "T", claims),
+        prompts.render_narrate_redo("P", "T", claims, "x", ["framing: 'x'"]),
+        prompts.render_narrate_revise("P", "T", claims, "A.", [("A.", "no")]),
+    ):
+        assert (
+            "When several claims carry the same word, say it once over all of them" in rendered
+        )
+        assert "never claim by claim" in rendered
+
+
+def test_a_lift_redo_keeps_the_names_and_judgment_words_and_rewords_around_them():
+    """Job-B replay r3 (2026-10-01): most lift refusals quote a claim's own wording, which
+    is the book's ("El Greco's brooding landscape of Toledo"); the redo reworded it AND
+    the judgment ("dark and heavy in its mood"), and P5 refused that, holding the story.
+    The redo now says how to fix a lift. Mutant: the sentence removed."""
+    redo = prompts.render_narrate_redo("P", "T", ["c"], "x", ["lift: 'abc' copied verbatim"])
+    assert (
+        "A lift problem means a claim's own wording is the book's: say that fact in other "
+        "words, keeping every name and every judgment word as they are" in redo
+    )
+
+
+def test_the_sentence_judge_is_told_where_the_narration_is_told():
+    """Job-B replay r3: P5 refused "Here the museum has presented…" and "The museum has a
+    book-and-gift shop…" for not naming which museum — the judge was never told the place,
+    so "here" was unresolvable — and the second held a beat. The place now reaches the
+    judge with what stands for it: "here", "this place", and "the <kind>" only when the
+    place's name ends in a kind of place. Never "it" (an "it" may be a painting) and never
+    "the museum" at a mansion (the judge, 2026-10-01: a safety gate must not be loosened
+    past the defect). Mutants: the place line dropped; "the museum" offered everywhere."""
+    judge = prompts.render_judge_sentence(
+        "The museum has a shop.", ["The Folk Art Museum has a shop."],
+        place="American Folk Art Museum",
+    )
+    assert (
+        'The narration is told at American Folk Art Museum: "here", "this place" and '
+        '"the museum" name American Folk Art Museum' in judge
+    )
+    assert "{place" not in judge
+    mansion = prompts.render_judge_sentence("S.", ["c"], place="Gracie Mansion")
+    assert '"the mansion" name Gracie Mansion' in mansion and '"the museum"' not in mansion
+    area = prompts.render_judge_sentence("S.", ["c"], place="Upper East Side")
+    assert '"here" and "this place" name Upper East Side' in area
+    for rendered in (judge, mansion, area):
+        assert '"it"' not in rendered
+    # No place given (the old call): no place line, nothing left unsubstituted.
+    bare = prompts.render_judge_sentence("S.", ["c"])
+    assert "The narration is told at" not in bare and "{place" not in bare

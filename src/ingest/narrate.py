@@ -135,14 +135,20 @@ def _extract_json_object(text: str) -> Any | None:
         return None
 
 
+#: A JSON escape the author double-escaped ("Carr\\u00e8re"), which json.loads leaves as
+#: six literal characters a voice reads out as code (job-B replays r1-r4, 2026-10-01).
+_LITERAL_UNICODE_ESCAPE_RE = re.compile(r"\\u([0-9a-fA-F]{4})")
+
+
 def parse_narration(text: str) -> str | None:
-    """Turn one raw P4 answer into its narration text, or None."""
+    """Turn one raw P4 answer into its narration text, or None. A literal \\uXXXX
+    escape left in the text is decoded to its character."""
     parsed = _extract_json_object(text)
     if not isinstance(parsed, dict) or set(parsed.keys()) != {"narration"}:
         return None
     if not isinstance(parsed["narration"], str) or not parsed["narration"].strip():
         return None
-    return parsed["narration"]
+    return _LITERAL_UNICODE_ESCAPE_RE.sub(lambda m: chr(int(m.group(1), 16)), parsed["narration"])
 
 
 def resolved_claim_texts(claims: Sequence[JudgedClaim]) -> list[str]:

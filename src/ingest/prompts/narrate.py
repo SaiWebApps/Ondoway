@@ -43,7 +43,11 @@ _VOICE_RULES = (
     "when they disagree, say opinion is divided and never pick one."
     ' Never write the words "also called": a judgment is not a name.\n'
     "- When a claim's own wording and its \"(Also called: ...)\" words judge it "
-    "differently, that is a disagreement too."
+    "differently, that is a disagreement too.\n"
+    # Job-B replays r2-r3: "a seminal work" said four times in a row (2026-10-01).
+    "- When several claims carry the same word, say it once over all of them "
+    '("seminal works by Bellini, Holbein and Turner"), never claim by claim - whether the '
+    'word is in their own wording or in their "(Also called: ...)".'
 )
 
 _NARRATION_SHAPE = '{"narration": "..."}'
@@ -85,7 +89,9 @@ NARRATE_REDO_PROMPT = (
     "Refused narration:\n{narration}\n\n"
     "Problems:\n{problems}\n\n"
     "Write it again from the start, from the same claims, fixing every "
-    "problem listed.\n\n"
+    "problem listed. A lift problem means a claim's own wording is the book's: say that "
+    "fact in other words, keeping every name and every judgment word as they are and "
+    "changing the words around them.\n\n"
     f"{_VOICE_RULES}\n\n"
     "Answer as JSON only, matching this shape exactly:\n"
     f"{_NARRATION_SHAPE}\n\n"
@@ -136,9 +142,35 @@ JUDGE_SENTENCE_PROMPT = (
     f"{_VERDICT_SHAPE}\n"
     "The reason is one sentence naming which claim supports it, or what no "
     "claim supports.\n\n"
+    "{place_line}"
     "Sentence:\n{sentence}\n\n"
     "Claims:\n{claims}"
 )
+
+#: Job-B replay r3: P5 refused "Here the museum has presented…" for not naming the
+#: museum, because it never knew the place (2026-10-01). What stands for the place is kept
+#: narrow — this is a safety gate: "here", "this place", and "the <kind>" only when the
+#: place's name ends in a kind of place. Never "it", which may be a painting.
+_PLACE_LINE = "The narration is told at {place}: {aliases} name {place}, and a sentence need "
+_PLACE_LINE += "not name it again.\n\n"
+_PLACE_KINDS: frozenset[str] = frozenset({
+    "museum", "mansion", "collection", "gallery", "galerie", "church", "cathedral",
+    "chapel", "synagogue", "temple", "library", "park", "garden", "gardens", "house",
+    "hall", "center", "centre", "building", "tower", "bridge", "square", "society",
+    "palace", "castle", "cemetery", "market", "station", "theater", "theatre",
+})
+
+
+def _place_aliases(place: str) -> str:
+    """The quoted names a sentence may give `place` without naming it: "here" and "this
+    place", plus "the <kind>" when its name ends in a kind of place ("the museum" at the
+    American Folk Art Museum, "the mansion" at Gracie Mansion)."""
+    aliases = ['"here"', '"this place"']
+    words = place.split()
+    if words and words[-1].lower() in _PLACE_KINDS:
+        aliases.append(f'"the {words[-1].lower()}"')
+    return ", ".join(aliases[:-1]) + " and " + aliases[-1]
+
 
 #: The same verdict shape as P3's — a boolean and a sentence — declared
 #: on its own because P5 is a different phase under a different judge.
@@ -153,9 +185,16 @@ P5_VERDICT_SCHEMA: dict = {
 }
 
 
-def render_judge_sentence(sentence: str, claim_texts: list[str]) -> str:
-    """Render JUDGE_SENTENCE_PROMPT for one sentence (str.replace)."""
-    rendered = JUDGE_SENTENCE_PROMPT.replace("{sentence}", sentence)
+def render_judge_sentence(sentence: str, claim_texts: list[str], place: str = "") -> str:
+    """Render JUDGE_SENTENCE_PROMPT for one sentence (str.replace), with the place the
+    narration is told at when given."""
+    place_line = (
+        _PLACE_LINE.replace("{aliases}", _place_aliases(place)).replace("{place}", place)
+        if place
+        else ""
+    )
+    rendered = JUDGE_SENTENCE_PROMPT.replace("{place_line}", place_line)
+    rendered = rendered.replace("{sentence}", sentence)
     return rendered.replace("{claims}", _claim_lines(claim_texts))
 
 

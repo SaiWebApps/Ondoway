@@ -1196,3 +1196,43 @@ def test_a_failed_address_rewrite_keeps_the_first_narration_unheld(entry, failur
     assert not [p for kind, p in events if kind == "beat_held"]
     kept = [p for kind, p in events if kind == "address_kept"]
     assert [(p["story_slug"], p["why"]) for p in kept] == [(story.story_slug, failure)]
+
+
+def test_a_double_escaped_character_in_the_authors_answer_is_decoded():
+    """Job-B replays r1-r4 (2026-10-01): the author wrote "Carr\\\\u00e8re" in its JSON, so
+    json.loads left the literal six characters `\\u00e8` in the narration ("Carr\\u00e8re
+    and Hastings"), which a voice reads out as code — 2 narrations a replay, 6 in the live
+    ingest corpus, never in a claim. The parser decodes a literal \\uXXXX escape.
+    [undo: return parsed["narration"] undecoded → RED]"""
+    raw = json.dumps({"narration": "Carr\\u00e8re and Hastings built it."})
+    assert "\\\\u00e8" in raw  # the double escape, as the author wrote it
+    assert narrate.parse_narration(raw) == "Carrère and Hastings built it."
+    # A real backslash-free narration is untouched, and so is a malformed escape.
+    assert narrate.parse_narration(json.dumps({"narration": "Plain text."})) == "Plain text."
+    assert narrate.parse_narration(json.dumps({"narration": "A \\u12 tail."})) == "A \\u12 tail."
+
+
+@pytest.mark.parametrize("entry", ["story", "unit"])
+def test_every_sentence_prompt_tells_the_judge_the_place(entry):
+    """Both P5 paths hand the story's place to the sentence judge (job-B replay r3: "Here
+    the museum…" refused for not naming the museum). [undo: drop `story.place` from
+    either render_judge_sentence call → RED]"""
+    unit = _real_unit()
+    claims = [_judged(unit, "c01", ADDRESS_CLAIM), _judged(unit, "c02", COMPLETED_CLAIM)]
+    story = _story(["c01", "c02"])
+    draft = _draft(NO_ADDRESS_NARRATION, claims)
+    mock = _armed_judge(
+        {judge_narration.sentence_custom_id(draft, 0, 1): _sentence_verdict(True, "c02")},
+        [],
+        judge_narration.sentences(NO_ADDRESS_NARRATION),
+    )
+    recorder = _RecordingClient(mock)
+    _events, sink = _sink_and_events()
+    if entry == "story":
+        judge_narration.judge_narration(story, draft, claims, recorder, events=sink)
+    else:
+        judge_narration.judge_narration_unit([("k", story, draft, claims)], recorder, sink)
+    [batch] = recorder.batch_calls
+    assert all(
+        f"The narration is told at {story.place}:" in prompt for _id, prompt in batch["prompts"]
+    )

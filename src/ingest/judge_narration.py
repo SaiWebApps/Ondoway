@@ -170,7 +170,7 @@ def _judge_round(
         completions = client.complete_batch(
             role="narration_judge",
             prompts=[
-                (custom_id, prompts.render_judge_sentence(sentence, texts))
+                (custom_id, prompts.render_judge_sentence(sentence, texts, story.place))
                 for custom_id, sentence in zip(ids, split, strict=True)
             ],
             schema=prompts.P5_VERDICT_SCHEMA,
@@ -283,14 +283,14 @@ def _round_many(
     """
     split: dict[str, list[str]] = {}
     prompts_: list[tuple[str, str]] = []
-    for key, _story, draft, texts in items:
+    for key, story, draft, texts in items:
         pieces = sentences(draft.text)
         split[key] = pieces
         for index, sentence in enumerate(pieces):
             prompts_.append(
                 (
                     sentence_custom_id(draft, index, attempt),
-                    prompts.render_judge_sentence(sentence, texts),
+                    prompts.render_judge_sentence(sentence, texts, story.place),
                 )
             )
     if not prompts_:
