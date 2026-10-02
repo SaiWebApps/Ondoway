@@ -59,9 +59,11 @@ put 15-20 of them in front of the owner; the owner rules on the claim check with
 **Step 1, the pilot (~$20-30, owner go on the printed estimate).** One whole small book — Moon
 (7 chunks, 24k words) — into an EMPTY new-shape city file in a sandbox. It proves what nothing has
 yet: a 7-unit job end to end (only 2 units ever ran), cost per 1,000 words at book scale, wall
-time per chunk, and the story-fate line (`stories: … left_out=… by_rule:`). **Stop condition:**
-left_out above ~5% of produced stories, or one rule (likely the copying gate on names) causing
-most of the losses — then the owner rules on that rule with real numbers before any more spend.
+time per chunk, and the story-fate line (`stories: … left_out=… by_rule:`). **Stop condition
+(OWNER RULING 2026-10-01, option b, chosen BEFORE the run):** report the left-out rate and the
+rule behind each loss; no next book starts until the owner has reviewed it. (The earlier hard
+5% bar was dropped before spending: job-B r5 already lost ~15% of publishable stories.) Run with
+`--max-usd`; on any resume pass the ceiling minus spend so far (the meter restarts at 0).
 
 **Step 2, the books, one job each (owner go per book on its printed estimate).** Into the same
 sandbox file, in order. Recommended order: Frommer's 2024 (newest, broad), Lonely Planet,
