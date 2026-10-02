@@ -198,7 +198,13 @@ def main(
     actual spend printed even when the run dies."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--job-dir", type=Path, required=True)
-    parser.add_argument("--labels-dir", type=Path, required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--labels-dir", type=Path)
+    source.add_argument(
+        "--items", type=Path,
+        help="a JSON list of {claim_id, text, span, label} judged as given (e.g. a job's "
+        "dropped restates, which no P1-keyed label reaches), plus planted negatives",
+    )
     parser.add_argument("--events", type=Path, default=None, help="the job's .jsonl log")
     parser.add_argument("--samples", type=int, default=3)
     parser.add_argument("--accepted", action="store_true",
@@ -209,7 +215,14 @@ def main(
 
     raw = json.loads((args.job_dir / "P0.json").read_text(encoding="utf-8"))["units"][0]
     unit = Unit(**{**raw, "path": Path(raw["path"])})
-    items = _items(args.job_dir, args.labels_dir, args.events, args.accepted)
+    if args.items is not None:
+        given = [
+            Item(i["claim_id"], i["text"], i["span"], i["label"])
+            for i in json.loads(args.items.read_text(encoding="utf-8"))
+        ]
+        items = given + negatives_of(given)
+    else:
+        items = _items(args.job_dir, args.labels_dir, args.events, args.accepted)
     if events is None:
         events = EventLog()
     if client is None:

@@ -783,3 +783,21 @@ def test_the_sentence_judge_is_told_where_the_narration_is_told():
     # No place given (the old call): no place line, nothing left unsubstituted.
     bare = prompts.render_judge_sentence("S.", ["c"])
     assert "The narration is told at" not in bare and "{place" not in bare
+
+
+def test_a_restate_keeps_the_passages_own_words():
+    """Job-B claim drops, reviewed 2026-10-01 by two blind models (13 of 28 refusals agreed
+    too strict, 0 agreed right): every dropped claim was a RESTATE, and the restate
+    prompt's "in your own wording" bred synonym swaps — "a famed dollhouse" became "a
+    dollhouse noted for its fame", "the 18th century" became "the 1700s". The restate now
+    keeps the passage's own words for what the claim states and rewords only around them.
+    A judge-side paraphrase rule was measured the same day (A/B, 11 restated drops x 3
+    samples, $2.30) and REVERTED: no gain (32/33 vs 31/33) — the judge passes these
+    claims ~97% of the time either way. Mutant: the sentence removed."""
+    assert (
+        "keep the passage's own word for every name, number, date and judgment" in (
+            prompts.RESTATE_PROMPT
+        )
+    )
+    # The judge's rule is unchanged from 2026-09-13.
+    assert "A synonym or a restatement" not in prompts.render_judge_claim("c", "s", "p")

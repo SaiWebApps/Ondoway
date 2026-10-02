@@ -125,14 +125,23 @@ def _print_estimate(estimate: llm.CostEstimate) -> None:
         )
 
 
+class SpendCeilingReached(Exception):  # noqa: N818 — named for what it reports
+    """`--max-usd` reached: no new call is made. Deliberately NOT a ValueError (P5 holds a
+    story on a batch ValueError and carries on); run_job ends the job `error` with its
+    finished phases kept, so `--resume` picks it up."""
+
+
 class _CountingClient:
     """The model client with a meter on it: every call the run actually
     makes, per phase (a batch counts each prompt), and the usage the
     completions report, priced at the same table the estimate used. The
     protocol methods are forwarded; everything else too."""
 
-    def __init__(self, inner: llm.ModelClient) -> None:
+    def __init__(self, inner: llm.ModelClient, max_usd: float | None = None) -> None:
         self._inner = inner
+        #: The hard ceiling (`--max-usd`): once metered spend reaches it, every new
+        #: call is refused, so a run overshoots by at most the call already made.
+        self.max_usd = max_usd
         self.calls: dict[str, int] = {}
         self.usd: float = 0.0
         self.tokens: dict[str, int] = {"input": 0, "output": 0}
@@ -173,6 +182,13 @@ class _CountingClient:
         per_phase["in"] += in_tokens
         per_phase["out"] += usage.output_tokens
 
+    def _refuse_past_ceiling(self, phase: str) -> None:
+        if self.max_usd is not None and self.usd >= self.max_usd:
+            raise SpendCeilingReached(
+                f"spend ceiling reached: ${self.usd:.2f} metered of the ${self.max_usd:.2f} "
+                f"--max-usd; no {phase} call made (resume the job to continue)"
+            )
+
     def count_tokens(self, model_id: str, text: str) -> int:
         return self._inner.count_tokens(model_id, text)
 
@@ -182,6 +198,7 @@ class _CountingClient:
         return self._inner.estimate(units, plan, prices=prices)
 
     def complete(self, role, prompt, schema, *, phase, max_tokens):
+        self._refuse_past_ceiling(phase)
         self.calls[phase] = self.calls.get(phase, 0) + 1
         metered = False
         try:
@@ -196,6 +213,7 @@ class _CountingClient:
                 self.unmetered[phase] = self.unmetered.get(phase, 0) + 1
 
     def complete_batch(self, role, prompts, schema, *, phase, max_tokens):
+        self._refuse_past_ceiling(phase)
         self.calls[phase] = self.calls.get(phase, 0) + len(prompts)
         metered = False
         try:
@@ -566,6 +584,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--resume", default=None, metavar="JOB_ID",
                         help="continue a job from its phase files instead of starting one")
     parser.add_argument("--yes", action="store_true", help="proceed past the estimate and spend")
+    parser.add_argument("--max-usd", type=float, default=None,
+                        help="hard spend ceiling: once metered spend reaches it no new call "
+                        "is made and the job ends error, resumable")
     parser.add_argument("--summary-of", default=None, metavar="JOB_ID",
                         help="print a finished job's summary from its directory ($0, writes "
                         "nothing) and exit")
@@ -611,7 +632,9 @@ def main(argv: list[str] | None = None) -> int:
             rights_basis=args.rights_basis,
         )
         meta = None
-    client = _CountingClient(run.client_from_env(client_event_sink(store, holder)))
+    client = _CountingClient(
+        run.client_from_env(client_event_sink(store, holder)), max_usd=args.max_usd
+    )
     holder["job_id"] = job.id
 
     try:

@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 import scripts.ingest_job as ingest_job
-from src.ingest import jobs
+from src.ingest import jobs, llm
 from tests import ingest_job_script as script_mod
 
 
@@ -810,3 +810,91 @@ def test_a_story_whose_every_claim_the_claim_check_refused_is_left_out_by_that_r
         text
     ), text
     assert "  left out [claim_check] the-famous-dollhouse-upstairs: every claim" in text
+
+
+class _PricedInner:
+    """A stub client whose every sync answer reports 100k output tokens on the author
+    (opus, $25/Mtok → $2.50 a call), so the meter crosses a ceiling on a known call."""
+
+    def __init__(self) -> None:
+        self.roles = {"author": "claude-opus-5"}
+        self.calls = 0
+
+    def complete(self, role, prompt, schema, *, phase, max_tokens):
+        self.calls += 1
+        return llm.Completion(
+            text="{}", model_id="claude-opus-5", stop_reason="end_turn",
+            usage=llm.Usage(input_tokens=0, output_tokens=100_000,
+                            cache_creation_input_tokens=0, cache_read_input_tokens=0,
+                            batch=False, batch_id=None, request_id=None),
+        )
+
+
+def test_the_meter_refuses_a_new_call_once_spend_reaches_the_ceiling():
+    """The judge, 2026-10-01: a "$45 ceiling" watched by hand is no ceiling — the only
+    real bound on a 7-unit pilot was its $754 cap-bound. `--max-usd` makes the meter
+    refuse any NEW call once metered spend reaches it, so the overshoot is at most the
+    call already made. It raises SpendCeilingReached, not a ValueError: P5 treats a
+    ValueError from a batch as a transport hold and would carry on story by story.
+    [undo: drop the ceiling check → the third call is made → RED]"""
+    inner = _PricedInner()
+    meter = ingest_job._CountingClient(inner, max_usd=4.0)
+    meter.complete("author", "p", {}, phase="P4", max_tokens=10)   # $2.50
+    meter.complete("author", "p", {}, phase="P4", max_tokens=10)   # $5.00, past the ceiling
+    with pytest.raises(ingest_job.SpendCeilingReached) as refused:
+        meter.complete("author", "p", {}, phase="P4", max_tokens=10)
+    assert inner.calls == 2
+    assert not isinstance(refused.value, ValueError)
+    assert "$5.00" in str(refused.value) and "$4.00" in str(refused.value)
+    unlimited = ingest_job._CountingClient(_PricedInner())
+    for _ in range(3):
+        unlimited.complete("author", "p", {}, phase="P4", max_tokens=10)
+
+
+def test_the_ceiling_also_refuses_a_new_batch():
+    """P1, P3 and P5 spend through complete_batch — most of a job's money. A new batch is
+    refused at the ceiling too; a batch is metered at the Batch discount (two calls here,
+    $2.50). [undo: drop the check from complete_batch → RED]"""
+    inner = _PricedInner()
+    inner.complete_batch = lambda role, prompts, schema, *, phase, max_tokens: {
+        cid: inner.complete(role, p, schema, phase=phase, max_tokens=max_tokens)
+        for cid, p in prompts
+    }
+    meter = ingest_job._CountingClient(inner, max_usd=2.0)
+    meter.complete_batch("author", [("a", "p"), ("b", "p")], {}, phase="P1", max_tokens=10)
+    with pytest.raises(ingest_job.SpendCeilingReached):
+        meter.complete_batch("author", [("c", "p")], {}, phase="P1", max_tokens=10)
+    assert inner.calls == 2
+
+
+def test_a_job_that_hits_its_ceiling_ends_in_error_and_spends_nothing_more(
+    tmp_path, monkeypatch, capsys
+):
+    """End to end on the mock: `--max-usd 0` refuses the first call, the job ends
+    `error` with the ceiling named (run_job keeps finished phases for --resume), and the
+    CLI exits nonzero. [undo: ignore --max-usd → the job commits → RED]"""
+    ws = _mock_env(tmp_path, monkeypatch)
+
+    rc = ingest_job.main([*ws["argv"], "--yes", "--max-usd", "0"])
+
+    out = capsys.readouterr().out
+    assert rc == 1, out
+    assert "summary: status=error" in out
+    assert "spend ceiling" in out
+
+
+def test_a_job_stopped_by_its_ceiling_resumes_and_commits(tmp_path, monkeypatch, capsys):
+    """The ceiling is a pause, not a loss: the stopped job's directory is kept, and
+    `--resume <job>` (with a higher ceiling, or none) carries it to `committed`."""
+    ws = _mock_env(tmp_path, monkeypatch)
+    assert ingest_job.main([*ws["argv"], "--yes", "--max-usd", "0"]) == 1
+    capsys.readouterr()
+    jobs_dir = ws["data_root"] / script_mod.CITY / "jobs"
+    [job_id] = [p.name for p in jobs_dir.iterdir() if p.is_dir()]
+
+    rc = ingest_job.main(["--city", script_mod.CITY, "--data-root", str(ws["data_root"]),
+                          "--repo-data", str(ws["repo_data"]), "--resume", job_id, "--yes"])
+
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert "summary: status=committed" in out

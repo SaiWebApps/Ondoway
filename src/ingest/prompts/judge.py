@@ -98,8 +98,9 @@ RESTATE_PROMPT = (
     "Refusal:\n{reason}\n\n"
     "Restate the claim so that every fact in it is stated by the passage — "
     "drop or correct whatever the source does not support. Keep it "
-    "standing entirely on its own, in your own wording (never eight words "
-    "of the passage in a row outside an attributed quotation), with the "
+    "standing entirely on its own; keep the passage's own word for every name, number, "
+    "date and judgment the claim states, and reword only the sentence around them (never "
+    "eight words of the passage in a row outside an attributed quotation), with the "
     "span copied exactly from the passage word for word. Never credit the claim "
     'to the book, its author or its writer ("the author calls", "the writer '
     'describes"), and never as a reputation the passage does not report ("is '

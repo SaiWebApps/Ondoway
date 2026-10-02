@@ -205,6 +205,35 @@ def test_cli_scores_agreed_labels_plus_negatives_and_writes_only_under_out(tmp_p
     ]
 
 
+def test_items_judges_a_given_labeled_list_plus_its_planted_negatives(tmp_path):
+    """`--items FILE` (2026-10-01): the claims a job DROPPED were restates, never in P1 or
+    a first refusal, so labels keyed by P1 claim ids cannot reach them. A JSON list of
+    {claim_id, text, span, label} is judged as given, plus a planted negative per
+    numbered SUPPORTED item. [undo: ignore --items → argparse refuses → RED]"""
+    job, _labels = _job(tmp_path)
+    items = tmp_path / "items.json"
+    items.write_text(json.dumps([{**ADDRESS, "claim_id": "r01", "label": "SUPPORTED"}]))
+    out = tmp_path / "out"
+    ids = rejudge.custom_ids
+    answers = {
+        ids(1, "r01", 1): _verdict(True),
+        ids(1, "r01n", 1): _verdict(False), ids(1, "r01n", 2): _verdict(False),
+    }
+    client = llm.MockClient(lambda k, p: None, batch_answers=answers)
+
+    code = rejudge.main(
+        ["--job-dir", str(job), "--items", str(items), "--samples", "1",
+         "--out", str(out), "--yes"],
+        client=client,
+    )
+
+    assert code == 0
+    report = json.loads((out / "rejudge-report.json").read_text())
+    assert report["labels"] == {"r01": "SUPPORTED", "r01n": "NEGATIVE"}
+    assert report["per_sample"][0]["supported_survived"] == 1
+    assert report["per_sample"][0]["negatives_caught"] == 1
+
+
 def test_the_accepted_pass_judges_only_the_unlabeled_claims(tmp_path):
     """`--accepted` is its own pass over the claims the job's first look
     accepted — never the labeled claims or the planted negatives again, so
