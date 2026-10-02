@@ -79,6 +79,9 @@ LIFT_RUN_LENGTH: int = 8
 
 _WHITESPACE_RUN = re.compile(r"\s+")
 
+#: A printed page number on a line of its own, as PDF extraction leaves it.
+_PAGE_NUMBER_LINE = re.compile(r"^[ \t]*\d{1,4}[ \t]*$", re.MULTILINE)
+
 
 def normalize_ws(text: str) -> str:
     """Collapse every run of whitespace to a single space; trim the ends.
@@ -174,17 +177,28 @@ def locate_span(span: str, unit_text: str) -> str | None:
     finds it (a paraphrase, or an empty citation). Exists because the live
     omission judge of 2026-09-12 cited "Guggenheim's" for the passage's
     "Guggenheim\u2019s" and two real findings were discarded for it.
+
+    A line that is nothing but a page number is read through too: the book
+    prints it mid-sentence ("by\\n14\\n\\nthe Singer"), and a citation that left
+    it out is still the passage. What comes back keeps the page number, so the
+    stored span stays verbatim for `span_in_unit` and the commit validator
+    (Moon pilot, 2026-10-01: refused on every chunk, the Roosevelt House claim
+    dropped).
     """
     folded_span, _ = _fold_for_locating(span)
     folded_span = folded_span.strip()
     if not folded_span:
         return None
-    folded_unit, origin = _fold_for_locating(unit_text)
-    start = folded_unit.find(folded_span)
-    if start < 0:
-        return None
-    last = start + len(folded_span) - 1
-    return normalize_ws(unit_text[origin[start] : origin[last] + 1])
+    # Blanking a page-number line with as many spaces keeps every index, so
+    # `origin` still points into the unit's own text.
+    page_blanked = _PAGE_NUMBER_LINE.sub(lambda line: " " * len(line.group()), unit_text)
+    for text in (unit_text, page_blanked):
+        folded_unit, origin = _fold_for_locating(text)
+        start = folded_unit.find(folded_span)
+        if start >= 0:
+            last = start + len(folded_span) - 1
+            return normalize_ws(unit_text[origin[start] : origin[last] + 1])
+    return None
 
 
 def ground_span(span: str, unit_text: str) -> str:

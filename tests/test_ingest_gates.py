@@ -91,6 +91,38 @@ def test_span_gate_is_exact_on_case_punctuation_and_dashes():
     assert gates.span_in_unit(en_dash_to_hyphen, UNIT_TEXT) is not None
 
 
+def test_locating_a_citation_reads_through_a_bare_page_number_line():
+    """Moon pilot 2026-10-01: the book's page numbers sit on their own line
+    mid-sentence ("by\\n14\\n\\nthe Singer"). An author who quoted the sentence
+    without the page number was refused span_not_in_unit on every chunk, and
+    the Roosevelt House claim was dropped. Locating (author claims through
+    ground_span, judge omissions through locate_span) reads through a line that
+    is nothing but a page number and returns the passage's own text with it, so
+    the strict gate still passes; a dropped real word is still not found."""
+    moon = REPO_ROOT / "Books" / "new_york" / "moon-nyc-walks"
+    soho = (moon / "chunk-02-walk2-nolita-soho-westvillage-highline.txt").read_text()
+    ues = (moon / "chunk-04-walk4-upper-east-side-central-park.txt").read_text()
+    singer = "The building was erected in 1902 by\nthe Singer Manufacturing Company"
+    roosevelt = "Sarah Delano Roosevelt gave the house to her son Franklin and his new bride"
+    assert "by\n14\n\nthe Singer" in soho  # the page number really interrupts it
+
+    # The strict gate is unchanged: the citation is not the passage verbatim.
+    assert gates.span_in_unit(singer, soho) is not None
+    grounded = gates.ground_span(singer, soho)
+    assert grounded == "The building was erected in 1902 by 14 the Singer Manufacturing Company"
+    assert gates.span_in_unit(grounded, soho) is None
+    located = gates.locate_span(roosevelt, ues)
+    assert located == (
+        "Sarah Delano Roosevelt gave the house to her son Franklin and his new 14 bride"
+    )
+    assert gates.span_in_unit(located, ues) is None
+    # A citation that keeps the page number is found as it stands.
+    assert gates.locate_span("erected in 1902 by 14 the Singer", soho) is not None
+    # Reading through a page number is not license to skip a word.
+    assert gates.locate_span("erected in 1902 by Singer Manufacturing", soho) is None
+    assert gates.locate_span("gave the house to her son Franklin and bride", ues) is None
+
+
 def test_lift_is_eight_words_outside_attributed_quotation():
     # Sub-runs of the pinned fixture_pins lift example, sized to land
     # exactly on the LIFT_RUN_LENGTH boundary.

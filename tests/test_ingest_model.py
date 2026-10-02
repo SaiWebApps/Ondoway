@@ -491,6 +491,41 @@ def test_span_matches_across_line_wrap_only():
     assert errors[0].startswith("SPAN_NOT_VERBATIM")
 
 
+def test_a_span_grounded_across_a_page_number_passes_the_validator():
+    """Moon pilot 2026-10-01: the book prints a page number mid-sentence
+    ("by\\n14\\n\\nthe Singer"). An author's citation without it is grounded to
+    the passage's own text, page number kept, so the commit validator — which
+    folds whitespace only — still finds it verbatim."""
+    from src.ingest.gates import ground_span
+
+    chunk = "chunk-02-walk2-nolita-soho-westvillage-highline"
+    chunk_text = (CHUNKS_ROOT / "moon-nyc-walks" / f"{chunk}.txt").read_text()
+    cited = "The building was erected in 1902 by\nthe Singer Manufacturing Company"
+
+    def _beat(span: str) -> dict[str, Any]:
+        beat = minimal_beat(beat_type="stop_orientation")
+        beat["claims"] = [beat["claims"][0]]
+        beat["claims"][0]["sources"] = [
+            {
+                "source_id": "moon-nyc-walks",
+                "chunk": chunk,
+                "span": span,
+                "as_of": 2020,
+                "rights_basis": "owned_copy",
+                "stated_value": None,
+            }
+        ]
+        return stamp(beat)
+
+    grounded = ground_span(cited, chunk_text)
+    assert grounded == "The building was erected in 1902 by 14 the Singer Manufacturing Company"
+    assert validate([_beat(grounded)], chunks_root=CHUNKS_ROOT) == []
+    # The citation as the author wrote it is not the passage's text.
+    errors = validate([_beat(cited)], chunks_root=CHUNKS_ROOT)
+    assert len(errors) == 1
+    assert errors[0].startswith("SPAN_NOT_VERBATIM")
+
+
 def test_missing_chunk_is_refused_not_skipped(tmp_path):
     records = _fixture_records()
     missing_root = tmp_path / "nope"
