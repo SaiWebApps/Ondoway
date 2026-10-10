@@ -23,7 +23,7 @@ rep('>App Store fee, 30%<',f'>App Store fee, {round(n["feeRate"]*100)}%<')
 rep('>−$8.10<',f'>−{d2(n["fee"])}<')
 rep('>AI and delivery<',f'>AI writing and voice, {n["tours"]:g} tours<')
 rep('>−$0.25<',f'>−{d2(n["ai"])}<')
-rep('>Ticket commission<','>Ticket commission, not built yet<')
+rep('>Ticket commission<','>Ticket commission, left out of base case<')
 rep('>+$1.08<','>$0.00<')
 rep('>Cost to win them, assumed<','>Cost to win them<')
 rep('>−$5.00<','>to prove<')
@@ -62,7 +62,7 @@ rep('>At a $27 average pass, 1% of those travel parties is roughly $95M a year<'
     f'>If 13% use tour apps, 10% of them install us and 2.1% pay, that is about {M(n["worldBase"])} a year<')
 rep('>52.4M<',f'>{n["nycParties"]*2/1e6:.1f}M<')
 rep('>Leisure visitors to New York City each year. No language carveout, so international visitors are addressable too.<',
-    '>Overnight leisure visits to New York City in 2025 (NYC Tourism + Conventions). Day-trips and business travel left out.<')
+    '>Overnight leisure visits to New York City in 2025 (NYC Tourism + Conventions). No language carveout, so international visitors are addressable too.<')
 rep('>37K = $1M<',f'>{round(n["passesPer1M"]/1e3)}K = $1M<')
 rep(">At a $27 average pass, 37,000 passes a year is $1M in revenue. That is about 0.14% of NYC's ~26M leisure travel parties.<",
     f">At a {d2(n['price'])} average pass, {round(n['passesPer1M'],-3):,.0f} passes a year is $1M in revenue. That is about {n['nycShareFor1M']*100:.2f}% of NYC's ~{n['nycParties']/1e6:.0f}M overnight leisure travel parties.<")
