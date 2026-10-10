@@ -182,7 +182,7 @@ const INPUTS = [
  {g:"Cost per tour",id:"freeMode",label:"Free first walk",type:"select",tag:"decision",options:[["shared","One shared tour, audio reused (~$0)"],["generated","Generated per person (full tour cost)"]],base:"shared",src:"Decision Q19: one fixed tour per city, audio shared by every free user."},
  {g:"Cost per tour",id:"audioMB",label:"Audio stored per tour (MB)",min:0,max:40,step:1,base:8,low:8,high:8,fmt:"int",tag:"assumed",src:"Stored in Cloudflare R2 at $0.015/GB-month and never deleted (no caller of delete in src/audio/storage.py)."},
  // Commission
- {g:"Ticket commission",id:"commOn",label:"Count ticket commission",type:"select",tag:"decision",options:[["off","Off (base case)"],["on","On"]],base:"off",src:"Left out of the base case. Apple takes no cut of physical services (guideline 3.1.3(e))."},
+ {g:"Ticket commission",id:"commOn",label:"Count ticket commission",type:"select",tag:"decision",options:[["on","On"],["off","Off"]],base:"on",src:"Ticket booking in the app. Apple takes no cut of physical services (guideline 3.1.3(e))."},
  {g:"Ticket commission",id:"bookShare",label:"Buyers who book a ticket through us",min:0,max:1,step:.05,base:.3,low:.3,high:.3,fmt:"pct",tag:"assumed",src:"No data."},
  {g:"Ticket commission",id:"ticket",label:"Ticket price per person",min:10,max:80,step:1,base:46,low:46,high:46,fmt:"usd0",tag:"researched",src:"Empire State 86th floor from $46 (esbnyc.com); Edge $42+$2; Summit $43–49."},
  {g:"Ticket commission",id:"commRate",label:"Commission rate",min:0,max:.12,step:.005,base:.08,low:.04,high:.08,fmt:"pct1",tag:"researched",src:"Viator direct 8%; via Awin 4%; GetYourGuide ~8% via Travelpayouts."},
@@ -379,7 +379,7 @@ function render(){
   const rowsC=[["Average price",F.usd2(dk.price),F.usd2(g.price),"Deck's $26.99 blend has no stated mix; grounded is per party, two tiers."],
    ["Store fee",F.pct(.30),F.pct(.15),"Apple Small Business Program until $1M/yr."],
    ["AI cost per pass",F.usd2(dk.toursPerBuyer*dk.tc),F.usd2(g.toursPerBuyer*g.tc),"Measured writing, fact check and voice per tour (docs/business/tour-cost-measurement.json) × tours per pass (assumed)."],
-   ["Ticket commission",F.usd2(DECK.bookShare*DECK.ticket*DECK.commRate),"$0.00","Left out of the base case."],
+   ["Ticket commission",F.usd2(DECK.bookShare*DECK.ticket*DECK.commRate),F.usd2(preset("grounded").bookShare*2*preset("grounded").ticket*preset("grounded").commRate),"Grounded: 30% book, 2 tickets, $46, 8%."],
    ["Profit per pass (before marketing)",F.usd2(unitOf(preset("deck"),dk)+DECK.flatCAC),F.usd2(unitOf(preset("grounded"),g)),""],
    ["Fixed costs / month",money(dk.rows[0].fixed),money(g.rows[0].fixed),"Deck's figure is implied, not stated; founders are unpaid."],
    ["NYC parties per year",count(DECK.nycVisits/2),count(preset("grounded").nycVisits/2),"Overnight leisure only; day-trippers don't buy a 5-day pass."],
