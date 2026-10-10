@@ -12,7 +12,8 @@ Measured on 2026-10-09 with real paid calls, New York, 16 tours (6 served).
 
 - Cost per narrated stop: **$0.51**.
 - Total spent on this measurement: **$9.49**, including tours that were refused.
-- 10 tour(s) were refused after money was spent. That money is counted in the total and in the 'with refusals' column of the JSON.
+- 5 tour(s) were refused after money was spent. That money is counted in the total and in the 'with refusals' column of the JSON.
+- 5 tour(s) were refused before any money was spent.
 
 ## Where the money goes
 

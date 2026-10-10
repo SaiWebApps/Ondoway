@@ -1,426 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ondoway Money Model</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Space+Grotesk:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap">
 <style>
-/* Layout: sticky control rail on the left (inputs grouped by evidence), results column on the right; stacks on phones. */
+/* Layout: the answer first, then sliders beside the per-pass sum, then the price chart, the
+   month-by-month view, and every assumption folded at the bottom. One column on phones. */
 :root{
-  --bg:#f2ece1; --panel:#fbf8f2; --ink:#23262e; --ink-2:#4d5260; --muted:#62656e; --rule:#ddd4c4;
-  --accent:#2c6cc0; --rev:#2c6cc0; --cost:#b4572a; --profit:#1f8a5f; --neg:#b03a2e;
-  --t-measured:#1f8a5f; --t-researched:#2c6cc0; --t-assumed:#8a5512; --t-decision:#6b5aa8;
+  --bg:#f2ece1; --panel:#fbf8f2; --sunk:#ebe3d5; --ink:#23262e; --ink-2:#4d5260; --muted:#62656e; --rule:#ddd4c4;
+  --accent:#2c6cc0; --rev:#2c6cc0; --cost:#b4572a; --profit:#1f8a5f; --neg:#b03a2e; --band:rgba(44,108,192,.10);
+  --t-measured:#1f8a5f; --t-source:#2c6cc0; --t-owner:#7a5a12; --t-guess:#a24a12; --t-choice:#6b5aa8;
   --display:"Young Serif",Georgia,serif; --body:"Space Grotesk",system-ui,sans-serif; --mono:"Space Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#1c1e24; --panel:#23262e; --ink:#ece6da; --ink-2:#c3bfb6; --muted:#8e8f96; --rule:#3a3d46;
-  --accent:#5b8fd9; --rev:#5b8fd9; --cost:#d0794a; --profit:#2fa874; --neg:#e0675a;
-  --t-measured:#2fa874; --t-researched:#5b8fd9; --t-assumed:#d39a4a; --t-decision:#a597e0; color-scheme:dark}}
+  --bg:#1c1e24; --panel:#23262e; --sunk:#191b20; --ink:#ece6da; --ink-2:#c3bfb6; --muted:#9a9ba2; --rule:#3a3d46;
+  --accent:#6b9be0; --rev:#6b9be0; --cost:#d9845a; --profit:#3db27f; --neg:#e8786b; --band:rgba(107,155,224,.14);
+  --t-measured:#3db27f; --t-source:#6b9be0; --t-owner:#d6b25e; --t-guess:#e8955a; --t-choice:#a99ae6; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#1c1e24; --panel:#23262e; --ink:#ece6da; --ink-2:#c3bfb6; --muted:#8e8f96; --rule:#3a3d46;
-  --accent:#5b8fd9; --rev:#5b8fd9; --cost:#d0794a; --profit:#2fa874; --neg:#e0675a;
-  --t-measured:#2fa874; --t-researched:#5b8fd9; --t-assumed:#d39a4a; --t-decision:#a597e0; color-scheme:dark}
+  --bg:#1c1e24; --panel:#23262e; --sunk:#191b20; --ink:#ece6da; --ink-2:#c3bfb6; --muted:#9a9ba2; --rule:#3a3d46;
+  --accent:#6b9be0; --rev:#6b9be0; --cost:#d9845a; --profit:#3db27f; --neg:#e8786b; --band:rgba(107,155,224,.14);
+  --t-measured:#3db27f; --t-source:#6b9be0; --t-owner:#d6b25e; --t-guess:#e8955a; --t-choice:#a99ae6; color-scheme:dark}
 *{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);margin:0}
-.wrap{max-width:1320px;margin:0 auto;padding-inline:20px;padding-block:28px 60px}
-h1,h2,h3{font-family:var(--display);font-weight:400;text-wrap:balance;margin:0}
-h1{font-size:2.1rem;line-height:1.15}
-h2{font-size:1.35rem;margin-bottom:.6rem}
-h3{font-size:1.05rem}
-.lede{color:var(--ink-2);max-width:68ch;margin:.5rem 0 0}
-.num,td.n,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
-header.top{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:22px}
-.presets{display:flex;flex-wrap:wrap;gap:8px}
-button{font:500 .9rem var(--body);color:var(--ink);background:var(--panel);border:1px solid var(--rule);border-radius:999px;padding:.45rem .9rem;cursor:pointer}
-button:hover{border-color:var(--accent)}
-button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.grid{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:24px;align-items:start}
-@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
-aside.rail{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:14px 16px}
-@media (max-width:900px){aside.rail{position:static;max-height:none}}
-details.grp{border-top:1px solid var(--rule);padding:.5rem 0}
-details.grp:first-of-type{border-top:0}
-details.grp>summary{cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between;align-items:center}
-details.grp>summary::after{content:"+";font-family:var(--mono);color:var(--muted)}
-details.grp[open]>summary::after{content:"–"}
-.ctl{display:grid;grid-template-columns:1fr auto;gap:2px 8px;margin:.7rem 0}
-.ctl label{font-size:.88rem}
-.ctl output{font-family:var(--mono);font-size:.85rem;text-align:right}
-.ctl input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--accent)}
-.ctl select{grid-column:1/-1;font:inherit;padding:.3rem;background:var(--bg);color:var(--ink);border:1px solid var(--rule);border-radius:6px}
-.ctl .src{grid-column:1/-1;font-size:.75rem;color:var(--muted);line-height:1.35}
-.tag{display:inline-block;font:700 .72rem/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:.22rem .4rem;border-radius:4px;border:1px solid currentColor;margin-right:.35rem;vertical-align:1px}
-.tag.measured{color:var(--t-measured)} .tag.researched{color:var(--t-researched)} .tag.assumed{color:var(--t-assumed)} .tag.decision{color:var(--t-decision)}
-.ctl.changed label::after{content:" •";color:var(--accent)}
-main{display:flex;flex-direction:column;gap:24px;min-width:0}
-section.card{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:18px 20px;min-width:0}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
-.kpi{padding:12px 14px;border:1px solid var(--rule);border-radius:8px;background:var(--bg)}
-.kpi .k{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
-.kpi .v{font:700 1.45rem var(--mono);font-variant-numeric:tabular-nums;margin-top:2px}
-.kpi .s{font-size:.8rem;color:var(--ink-2)}
+::selection{background:var(--accent);color:var(--panel)}
+.wrap{max-width:1200px;margin:0 auto;padding:28px 16px 64px}
+h1,h2{font-family:var(--display);font-weight:400;text-wrap:balance;margin:0}
+h1{font-size:2rem;line-height:1.15}
+h2{font-size:1.3rem;line-height:1.25;margin-bottom:.35rem}
+p{margin:0}
+.lede{color:var(--ink-2);max-width:62ch;margin-top:.45rem}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .neg{color:var(--neg)}
-.tbl{overflow-x:auto}
+.note{font-size:.88rem;color:var(--ink-2);max-width:70ch}
+section{margin-top:28px}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:18px 20px;min-width:0}
+button,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Header */
+header.top{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:flex-end;justify-content:space-between}
+.scen{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.scen .lbl{font-size:.85rem;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:999px;background:var(--panel);padding:3px}
+.seg button{border:0;background:transparent;border-radius:999px;padding:.35rem .9rem;cursor:pointer;font-weight:500}
+.seg button:hover{color:var(--accent)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.reset{border:1px solid var(--rule);background:transparent;border-radius:999px;padding:.38rem .8rem;cursor:pointer;font-size:.85rem}
+.reset:hover{border-color:var(--accent);color:var(--accent)}
+.reset[hidden]{display:none}
+
+/* The answer */
+.answer{margin-top:22px}
+.verdict{font-family:var(--display);font-size:1.4rem;line-height:1.35;max-width:52ch;text-wrap:pretty}
+.verdict b{font-weight:400;color:var(--neg)}
+.verdict b.pos{color:var(--profit)}
+.figs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:18px 0 0;border-top:2px solid var(--ink);border-bottom:1px solid var(--rule)}
+.fig{padding:12px 16px 14px 0;margin:0}
+.fig+.fig{padding-left:16px;border-left:1px solid var(--rule)}
+.fig dt{font-size:.82rem;color:var(--ink-2)}
+.fig dd{margin:0}
+.fig .v{font:700 1.6rem/1.2 var(--mono);font-variant-numeric:tabular-nums;margin-top:4px;display:block}
+.fig .s{font-size:.8rem;color:var(--muted);display:block;margin-top:2px}
+@media (max-width:760px){.figs{grid-template-columns:repeat(2,minmax(0,1fr))}.fig:nth-child(3){border-left:0;padding-left:0}.fig:nth-child(n+3){border-top:1px solid var(--rule)}}
+
+/* Sliders beside the sum */
+.work{display:grid;grid-template-columns:minmax(300px,400px) minmax(0,1fr);gap:20px;align-items:start}
+.work .sum{position:sticky;top:12px}
+@media (max-width:900px){.work{grid-template-columns:minmax(0,1fr)}.work .sum{position:static}}
+.ctl{padding:12px 0;border-top:1px solid var(--rule)}
+.ctl:first-of-type{border-top:0;padding-top:4px}
+.ctl[hidden]{display:none}
+.ctl .row{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.ctl label{font-weight:500;font-size:.93rem}
+.ctl output{font:700 .92rem var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ctl input[type=range]{width:100%;margin:8px 0 2px;accent-color:var(--accent)}
+.ctl select{width:100%;margin-top:6px;padding:.4rem .5rem;background:var(--bg);border:1px solid var(--rule);border-radius:6px}
+.ctl .meta{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;margin-top:4px;font-size:.8rem;color:var(--muted)}
+.ctl.changed label::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-left:6px;vertical-align:2px}
+.ctl details summary{cursor:pointer;color:var(--ink-2);text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px}
+.ctl details summary:hover{color:var(--accent)}
+.ctl details p{margin-top:6px;font-size:.84rem;line-height:1.45;color:var(--ink-2);max-width:70ch}
+.ctl .flag{font-size:.82rem;color:var(--t-guess);margin-top:4px}
+.tag{display:inline-block;font:700 .68rem/1 var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:.25rem .4rem;border-radius:4px;border:1px solid currentColor}
+.tag.measured{color:var(--t-measured)}.tag.source{color:var(--t-source)}.tag.owner{color:var(--t-owner)}.tag.guess{color:var(--t-guess)}.tag.choice{color:var(--t-choice)}
+.tag.notbuilt{color:var(--neg)}
+
 table{border-collapse:collapse;width:100%;font-size:.9rem}
-th,td{padding:.45rem .55rem;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
+th,td{padding:.5rem .55rem;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
 th{font-weight:600;font-size:.8rem;color:var(--ink-2)}
-td.n,th.n{text-align:right;white-space:nowrap}
-tr.total td{font-weight:700;border-top:2px solid var(--ink)}
-.chartbox{position:relative}
+td.n,th.n{text-align:right;white-space:nowrap;font-family:var(--mono);font-variant-numeric:tabular-nums}
+th.n{font-family:var(--body)}
+td.how{color:var(--ink-2);font-size:.84rem}
+tr.total td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0}
+.tbl{overflow-x:auto}
+.floor{margin-top:16px;padding:12px 14px;background:var(--sunk);border-radius:8px}
+.floor p+p{margin-top:6px}
+
+/* Charts */
+.chartbox{position:relative;margin-top:10px}
+svg{display:block;width:100%;height:auto;overflow:visible}
 svg text{fill:var(--ink-2);font:12px var(--mono)}
-.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.85rem;margin:.2rem 0 .6rem}
+svg .lab{fill:var(--ink-2);font:12px var(--body)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.84rem;margin-top:8px;color:var(--ink-2)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .sw{width:18px;height:0;border-top:2px solid}
-.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font:12px/1.45 var(--mono);padding:8px 10px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-110%)}
-.note{font-size:.85rem;color:var(--ink-2);max-width:75ch}
-.callout{background:var(--bg);border-radius:6px;padding:.5rem .8rem;margin:.6rem 0;max-width:75ch}
-.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
-.heat td.n{font-weight:600}
-@media (prefers-reduced-motion:no-preference){.kpi .v{transition:color .2s}}
-</style>
+.box{width:14px;height:10px;background:var(--band);border:1px solid var(--accent)}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font:12px/1.45 var(--mono);padding:8px 10px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-110%);z-index:2}
+.tip[hidden]{display:none}
 
+/* All assumptions */
+.all details.grp{border-top:1px solid var(--rule)}
+.all details.grp:last-of-type{border-bottom:1px solid var(--rule)}
+.all details.grp>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:12px;padding:12px 0;font-weight:600}
+.all details.grp>summary::-webkit-details-marker{display:none}
+.all details.grp>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:0 4px 4px auto;flex:none;transition:transform .2s}
+.all details.grp[open]>summary::after{transform:rotate(-135deg);margin-bottom:-2px}
+.all .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));column-gap:28px;padding-bottom:12px}
+.all .grid .ctl:first-of-type{border-top:1px solid var(--rule);padding-top:12px}
+.key{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:.84rem;color:var(--ink-2);margin:10px 0 14px}
+.key span{display:inline-flex;gap:6px;align-items:center}
+ul.plain{margin:6px 0 0;padding-left:1.1rem;font-size:.88rem;color:var(--ink-2)}
+ul.plain li+li{margin-top:4px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-top:18px}
+@media (max-width:560px){.panel{padding:16px 14px}th,td{padding:.45rem .4rem}.verdict{font-size:1.25rem}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
 <div class="wrap">
   <header class="top">
     <div>
       <h1>Ondoway money model</h1>
-      <p class="lede">Move any input on the left and every number on this page updates. Each input is tagged by where it comes from: <span class="tag measured">measured</span>from our own code and receipts, <span class="tag researched">researched</span>from a public source, <span class="tag assumed">assumed</span>still to prove, or <span class="tag decision">decision</span>ours to choose. Months run from December 2026 (launch) for 36 months.</p>
+      <p class="lede">Does a pass make money, and at what price? Move a slider and every number updates. Each number says where it comes from, and every guess is marked.</p>
     </div>
-    <div class="presets" role="group" aria-label="Scenario presets">
-      <button id="p-grounded" data-preset="grounded">Grounded (base)</button>
-      <button id="p-low" data-preset="low">Grounded, low case</button>
-      <button id="p-high" data-preset="high">Grounded, high case</button>
-      <button id="p-deck" data-preset="deck">Deck inputs</button>
+    <div class="scen">
+      <span class="lbl" id="scenLbl">Scenario</span>
+      <div class="seg" role="group" aria-labelledby="scenLbl">
+        <button type="button" data-preset="low">Low</button>
+        <button type="button" data-preset="base">Base</button>
+        <button type="button" data-preset="high">High</button>
+      </div>
+      <button type="button" class="reset" id="reset" hidden>Undo my changes</button>
     </div>
   </header>
 
-  <div class="grid">
-    <aside class="rail" id="rail" aria-label="Inputs"></aside>
-    <main>
-      <section class="card">
-        <h2>The answer at a glance</h2>
-        <div class="kpis" id="kpis"></div>
-        <p class="note" id="headline" style="margin-top:.8rem"></p>
-      </section>
+  <section class="answer" aria-live="polite">
+    <p class="verdict" id="verdict"></p>
+    <dl class="figs" id="figs"></dl>
+  </section>
 
-      <section class="card">
-        <h2>One pass, top to bottom</h2>
-        <div class="two">
-          <div class="tbl"><table id="unit"></table></div>
-          <div id="unitNote" class="note"></div>
-        </div>
-      </section>
+  <section class="work">
+    <div class="panel">
+      <h2>Main sliders</h2>
+      <p class="note">The rest are under “All assumptions” below.</p>
+      <div id="main" style="margin-top:10px"></div>
+    </div>
+    <div class="panel sum">
+      <h2>One pass, line by line</h2>
+      <p class="note">What one buyer brings in and costs, before marketing, at Apple's 15% rate.</p>
+      <div class="tbl" style="margin-top:10px"><table id="unit"></table></div>
+      <div class="floor note" id="floor"></div>
+    </div>
+  </section>
 
-      <section class="card">
-        <h2>Month by month</h2>
-        <div class="legend">
-          <span><i class="sw" style="border-color:var(--rev)"></i>Revenue</span>
-          <span><i class="sw" style="border-color:var(--cost);border-top-style:dashed"></i>All costs</span>
-          <span><i class="sw" style="border-color:var(--profit);border-top-width:3px"></i>Profit</span>
-        </div>
-        <div class="chartbox" id="chartbox"><svg id="chart" viewBox="0 0 860 300" width="100%" role="img" aria-label="Monthly revenue, cost and profit"></svg><div class="tip" id="tip" hidden></div></div>
-        <div class="tbl" style="margin-top:12px"><table id="years"></table></div>
-      </section>
+  <section class="panel">
+    <h2>Price: what share of installs must pay?</h2>
+    <p class="note">For each average price, the share of installs that must pay for year 3 to break even, with every cost included. Nobody knows yet how price changes that share, so the chart doesn't pick a price. Ask yourself whether the share needed is believable.</p>
+    <div class="chartbox" id="pbox"><svg id="pchart" role="img" aria-label="Share of installs that must pay, by average price"></svg><div class="tip" id="ptip" hidden></div></div>
+    <div class="legend" id="plegend"></div>
+    <p class="note" id="pnote" style="margin-top:10px"></p>
+  </section>
 
-      <section class="card">
-        <h2>Pricing: which option survives?</h2>
-        <p class="note">Year 3 profit for each price option at three free-to-paid rates. Nobody knows yet how price changes the rate, so read across a row, not down a column: a higher price only wins if it doesn't drag conversion into a lower column.</p>
-        <div class="tbl"><table id="sens" class="heat"></table></div>
-        <div id="models" class="tbl" style="margin-top:14px"></div>
-      </section>
+  <section class="panel">
+    <h2>Month by month</h2>
+    <div class="legend">
+      <span><i class="sw" style="border-color:var(--rev)"></i>Revenue</span>
+      <span><i class="sw" style="border-color:var(--cost);border-top-style:dashed"></i>All costs</span>
+      <span><i class="sw" style="border-color:var(--profit)"></i>Profit</span>
+    </div>
+    <div class="chartbox" id="mbox"><svg id="mchart" role="img" aria-label="Monthly revenue, cost and profit"></svg><div class="tip" id="mtip" hidden></div></div>
+    <div class="tbl" style="margin-top:14px"><table id="years"></table></div>
+  </section>
 
-      <section class="card">
-        <h2>Deck vs grounded</h2>
-        <div class="tbl"><table id="compare"></table></div>
-        <div id="compareNote" class="note"></div>
-      </section>
-
-      <section class="card">
-        <h2>Every input and its source</h2>
-        <div class="tbl"><table id="sources"></table></div>
-      </section>
-    </main>
-  </div>
+  <section class="panel all">
+    <h2>All assumptions</h2>
+    <p class="note">Every number the model uses, grouped by topic. The label on each says how much to trust it.</p>
+    <div class="key" id="key"></div>
+    <div id="groups"></div>
+    <div class="cols">
+      <div><h2 style="font-size:1.05rem">Rules built into the math</h2><ul class="plain" id="rules"></ul></div>
+      <div><h2 style="font-size:1.05rem">Not counted</h2><ul class="plain" id="notcounted"></ul></div>
+    </div>
+  </section>
 </div>
 
+<script src="model.js"></script>
 <script>
 "use strict";
-/* ---------- Inputs: one row per assumption, with its evidence ---------- */
-const OCT = "checked 9 Oct 2026";
-const INPUTS = [
- // Pricing (decisions)
- {g:"Pricing",id:"model",label:"Pricing model",type:"select",tag:"decision",options:[["pass","Trip pass per party (recommended)"],["perperson","Pass per person"],["pertour","Pay per tour"]],base:"pass",src:"Per party matches the code: a family shares one trip and its audio files (ADR 0005; audio keyed per trip stop)."},
- {g:"Pricing",id:"priceSolo",label:"Solo / pair pass",min:4.99,max:59.99,step:1,base:19.99,low:12.99,high:24.99,fmt:"usd2",tag:"decision",src:"Benchmarks: Routes 7-day $12.99, VoiceMap Tour Pass $24.99, Autio 14 days $14.99 (App Store, "+OCT+")."},
- {g:"Pricing",id:"priceHH",label:"Household pass (up to 5)",min:4.99,max:89.99,step:1,base:34.99,low:24.99,high:49.99,fmt:"usd2",tag:"decision",src:"Adam's interview cards test $29–49 for a household (branch concept-interview-prototype). Not yet tested."},
- {g:"Pricing",id:"hhShare",label:"Buyers choosing household",min:0,max:1,step:.05,base:.25,low:.25,high:.25,fmt:"pct",tag:"assumed",src:"No data on NYC party mix. Prove with first buyers."},
- {g:"Pricing",id:"pricePerson",label:"Per-person pass price",min:2.99,max:39.99,step:1,base:12.99,low:12.99,high:12.99,fmt:"usd2",tag:"decision",src:"Used only by the per-person model."},
- {g:"Pricing",id:"pricePerTour",label:"Per-tour price",min:1.99,max:19.99,step:1,base:7.99,low:7.99,high:7.99,fmt:"usd2",tag:"decision",src:"VoiceMap single tours $4.99–19.99. Used only by the pay-per-tour model."},
- {g:"Pricing",id:"toursBought",label:"Tours bought per buyer (per-tour model)",min:1,max:6,step:.5,base:1.5,low:1.5,high:1.5,fmt:"x",tag:"assumed",src:"No data."},
- {g:"Pricing",id:"webShare",label:"Sales through web checkout",min:0,max:1,step:.05,base:0,low:0,high:0,fmt:"pct",tag:"decision",src:"US link-out to web checkout is 0% Apple commission today, but a court is still setting a fee (Apple proposed 5% for small developers). MacRumors 13 Aug 2026."},
- // Market
- {g:"Market",id:"nycVisits",label:"NYC overnight leisure visits / yr",min:5e6,max:60e6,step:1e5,base:26.6e6,low:26.6e6,high:26.6e6,fmt:"m",tag:"researched",src:"NYC Tourism + Conventions, 24 Mar 2026: 2025 = 12.5M international + 52.4M domestic (51% overnight) − 12.6M business ≈ 26.6M. Deck uses 52.4M incl. day-trippers."},
- {g:"Market",id:"cityVisits",label:"Each later city: visits / yr",min:1e6,max:30e6,step:1e5,base:7.0e6,low:7.0e6,high:7.0e6,fmt:"m",tag:"researched",src:"Euromonitor Top 100 City Destinations, 5 Dec 2025: 702M international arrivals across 100 cities = 7.0M average. International only."},
- {g:"Market",id:"partySize",label:"People per travel party",min:1,max:4,step:.1,base:2,low:2,high:2,fmt:"x",tag:"assumed",src:"No official NYC party size exists. Deck also uses 2."},
- {g:"Market",id:"categoryUse",label:"Travellers who use self-guided tour apps",min:0,max:.5,step:.01,base:.13,low:.13,high:.13,fmt:"pct",tag:"researched",src:"Arival, 4 Aug 2026: 13% of US and European travellers took a self-guided mobile tour in the past year; flat for years."},
- {g:"Market",id:"ourShare",label:"Our share of those travellers (installs)",min:0,max:1,step:.01,base:.10,low:.03,high:.25,fmt:"pct",tag:"assumed",src:"The big unknown. 10% of app-tour users install Ondoway in a live city. Prove in NYC."},
- {g:"Market",id:"conv",label:"Free-to-paid conversion",min:.002,max:.15,step:.001,base:.021,low:.01,high:.045,fmt:"pct1",tag:"researched",src:"RevenueCat State of Subscription Apps 2026: freemium median 2.1%, top quartile 4.5%+. Subscription apps, so a proxy."},
- {g:"Market",id:"buyShare",label:"Parties who buy (deck method only)",min:0,max:.02,step:.0005,base:0,low:0,high:0,fmt:"pct2",tag:"assumed",src:"The deck's '1% of travel parties buy'. Only used when 'Sales method' = share of parties."},
- {g:"Market",id:"salesMode",label:"Sales method",type:"select",tag:"decision",options:[["funnel","Funnel: installs × conversion"],["share","Deck: share of parties buy"]],base:"funnel",src:"The funnel shows what a share target implies for installs."},
- // Rollout
- {g:"Rollout",id:"nycOnly",label:"Months of NYC only",min:1,max:24,step:1,base:6,low:6,high:6,fmt:"int",tag:"decision",src:"Deck: six months of New York only."},
- {g:"Rollout",id:"cadence",label:"Months between new cities",min:1,max:12,step:.5,base:1.5,low:3,high:1.5,fmt:"x",tag:"decision",src:"Deck: a new city every six weeks. Limited by one unpaid builder; no city build cost is recorded."},
- {g:"Rollout",id:"maxCities",label:"Most cities live",min:1,max:30,step:1,base:23,low:10,high:23,fmt:"int",tag:"decision",src:"Deck: up to 23 by year 3. City two is Paris, already built."},
- {g:"Rollout",id:"ramp",label:"Months for a city to reach full reach",min:1,max:18,step:1,base:6,low:9,high:4,fmt:"int",tag:"assumed",src:"No data."},
- // Acquisition
- {g:"Acquisition",id:"adBudget",label:"Paid ads per month",min:0,max:50000,step:250,base:0,low:0,high:0,fmt:"usd0",tag:"decision",src:"Bootstrapped: $0 by default. Ads add installs at the cost per install below."},
- {g:"Acquisition",id:"cpi",label:"Cost per install (paid)",min:.5,max:10,step:.05,base:3.0,low:3.85,high:2.24,fmt:"usd2",tag:"researched",src:"No travel-specific US figure found. iOS proxies $2.24 (Adjust, worldwide) to $3.85 (North America)."},
- {g:"Acquisition",id:"otherMkt",label:"Other marketing per month",min:0,max:20000,step:100,base:0,low:0,high:0,fmt:"usd0",tag:"decision",src:"Creators, hotel QR cards. Their installs are inside 'our share' above."},
- {g:"Acquisition",id:"flatCAC",label:"Cost to win a buyer (deck method only)",min:0,max:50,step:.5,base:0,low:0,high:0,fmt:"usd2",tag:"assumed",src:"The deck's assumed $5. Only used when 'Sales method' = share of parties."},
- // Costs per tour
- {g:"Cost per tour",id:"cWrite",label:"Writing (Claude Opus 4.8)",min:0,max:3,step:.01,base:.77,low:1.46,high:.43,fmt:"usd2",tag:"measured",src:"docs/business/tour-cost-measurement.json: 6 solo NYC tours of 60–90 min (1–2 stops) served, $0.43–1.34, average $0.77. Low case $1.46 counts the spend on refused tours (6 served of 11 paid attempts)."},
- {g:"Cost per tour",id:"cCheck",label:"Fact check (Claude Haiku 4.5)",min:0,max:.5,step:.001,base:.024,low:.031,high:.015,fmt:"usd3",tag:"measured",src:"docs/business/tour-cost-measurement.json: 38–80 Haiku calls per served tour, $0.015–0.031, average $0.024."},
- {g:"Cost per tour",id:"cVoice",label:"Voice (OpenAI gpt-4o-mini-tts)",min:0,max:2,step:.01,base:.07,low:.30,high:.04,fmt:"usd2",tag:"measured",src:"docs/business/tour-cost-measurement.json: $0.038–0.079 per served tour, average $0.065, at $0.015 per audio minute. Low case $0.30 also voices the longer tellings and extras a listener can tap for (about 13,650 more characters per tour)."},
- {g:"Cost per tour",id:"cGlue",label:"Walking-leg lines (Haiku)",min:0,max:.2,step:.001,base:.007,low:.011,high:.003,fmt:"usd3",tag:"measured",src:"tour_build runs in data/paris/tours: $0.003–0.011 per tour."},
- {g:"Cost per tour",id:"toursPerPass",label:"Tours per pass",min:1,max:15,step:.5,base:4,low:8,high:2,fmt:"x",tag:"assumed",src:"No usage data. A 5-day pass of one-day tours."},
- {g:"Cost per tour",id:"freeMode",label:"Free first walk",type:"select",tag:"decision",options:[["shared","One shared tour, audio reused (~$0)"],["generated","Generated per person (full tour cost)"]],base:"shared",src:"Decision Q19: one fixed tour per city, audio shared by every free user."},
- {g:"Cost per tour",id:"audioMB",label:"Audio stored per tour (MB)",min:0,max:40,step:1,base:8,low:8,high:8,fmt:"int",tag:"assumed",src:"Stored in Cloudflare R2 at $0.015/GB-month and never deleted (no caller of delete in src/audio/storage.py)."},
- // Commission
- {g:"Ticket commission",id:"commOn",label:"Count ticket commission",type:"select",tag:"decision",options:[["on","On"],["off","Off"]],base:"on",src:"Ticket booking in the app. Apple takes no cut of physical services (guideline 3.1.3(e))."},
- {g:"Ticket commission",id:"bookShare",label:"Buyers who book a ticket through us",min:0,max:1,step:.05,base:.3,low:.3,high:.3,fmt:"pct",tag:"assumed",src:"No data."},
- {g:"Ticket commission",id:"ticket",label:"Ticket price per person",min:10,max:80,step:1,base:46,low:46,high:46,fmt:"usd0",tag:"researched",src:"Empire State 86th floor from $46 (esbnyc.com); Edge $42+$2; Summit $43–49."},
- {g:"Ticket commission",id:"commRate",label:"Commission rate",min:0,max:.12,step:.005,base:.08,low:.04,high:.08,fmt:"pct1",tag:"researched",src:"Viator direct 8%; via Awin 4%; GetYourGuide ~8% via Travelpayouts."},
- // Store
- {g:"Store and fixed costs",id:"feeSmall",label:"App Store fee under $1M/yr",min:0,max:.3,step:.01,base:.15,low:.15,high:.15,fmt:"pct",tag:"researched",src:"Apple Small Business Program: 15% while proceeds stay ≤ $1M per calendar year."},
- {g:"Store and fixed costs",id:"feeStd",label:"App Store fee above $1M/yr",min:0,max:.3,step:.01,base:.30,low:.30,high:.30,fmt:"pct",tag:"researched",src:"Apple standard rate 30%. Applies for the rest of the year and the next once proceeds pass $1M."},
- {g:"Store and fixed costs",id:"tools",label:"AI tool subscriptions / month",min:0,max:2000,step:50,base:600,low:600,high:600,fmt:"usd0",tag:"measured",src:"Owner: Claude Max $200 + Claude API credits $200 + Codex Pro $200."},
- {g:"Store and fixed costs",id:"toolShare",label:"Share of tools charged to Ondoway",min:0,max:1,step:.05,base:1,low:1,high:1,fmt:"pct",tag:"decision",src:"Tools are shared with other projects; 100% is the cautious default."},
- {g:"Store and fixed costs",id:"infra",label:"Servers and services / month",min:0,max:3000,step:5,base:95,low:95,high:95,fmt:"usd0",tag:"researched",src:"List prices, verify against bills: Render web + Valhalla starter ~$7 each, Neo4j Aura Professional ~$65 (1GB), Apple developer $99/yr ≈ $8, R2 and Resend free tiers."},
- {g:"Store and fixed costs",id:"perCity",label:"Extra server cost per live city / month",min:0,max:500,step:5,base:0,low:10,high:0,fmt:"usd0",tag:"assumed",src:"Bigger Valhalla tiles and database per city. Not measured."},
- {g:"Store and fixed costs",id:"hires",label:"Paid hires",min:0,max:10,step:1,base:0,low:0,high:0,fmt:"int",tag:"decision",src:"Founders unpaid. No hiring plan yet."},
- {g:"Store and fixed costs",id:"hireCost",label:"Cost per hire / month",min:0,max:25000,step:500,base:10000,low:10000,high:10000,fmt:"usd0",tag:"assumed",src:"Fully loaded. Only counts when hires > 0."},
- {g:"Store and fixed costs",id:"hireStart",label:"Hires start in month",min:1,max:36,step:1,base:7,low:7,high:7,fmt:"int",tag:"decision",src:"Month 1 = Dec 2026."},
- {g:"Store and fixed costs",id:"otherFixed",label:"Other fixed costs / month",min:0,max:60000,step:100,base:0,low:0,high:0,fmt:"usd0",tag:"assumed",src:"The deck implies $38,272/month (31,200 passes × $14.72 ÷ 12) with no stated basis."},
-];
-
-const DECK = {model:"pass",priceSolo:26.99,priceHH:26.99,hhShare:0,webShare:0,nycVisits:52.4e6,cityVisits:7.0e6,partySize:2,
- salesMode:"share",buyShare:.01,flatCAC:5,adBudget:0,otherMkt:0,nycOnly:6,cadence:1.5,maxCities:23,ramp:1,
- cWrite:.25,cCheck:0,cVoice:0,cGlue:0,toursPerPass:1,freeMode:"shared",audioMB:0,
- commOn:"on",bookShare:.45,ticket:30,commRate:.08,partySizeTickets:1,feeSmall:.30,feeStd:.30,tools:0,toolShare:1,infra:0,perCity:0,hires:0,otherFixed:38272};
-
-/* ---------- The model ---------- */
-const MONTHS=36, START=new Date(2026,11,1);
-function priceFor(p){
-  if(p.model==="perperson") return p.pricePerson*p.partySize;
-  if(p.model==="pertour") return p.pricePerTour*p.toursBought;
-  return (1-p.hhShare)*p.priceSolo + p.hhShare*p.priceHH;
-}
-function tourCost(p){return p.cWrite+p.cCheck+p.cVoice+p.cGlue}
-function cityStart(k,p){return k===0?0:p.nycOnly+(k-1)*p.cadence}
-
-function simulate(p){
-  const price=priceFor(p), tc=tourCost(p);
-  const toursPerBuyer = p.model==="pertour"? p.toursBought : p.toursPerPass;
-  const ticketsPerBuyer = p.partySizeTickets!=null? p.partySizeTickets : p.partySize;
-  let overThis=false, overPrev=false, cyProceeds=0, storedGB=0, cum=0;
-  const rows=[];
-  for(let m=0;m<MONTHS;m++){
-    const d=new Date(START.getFullYear(),START.getMonth()+m,1);
-    if(d.getMonth()===0 && m>0){overPrev=overThis;overThis=false;cyProceeds=0}
-    let parties=0,nycParties=0,live=0;
-    for(let k=0;k<p.maxCities;k++){
-      const s=cityStart(k,p); if(m<s) continue;
-      live++;
-      const ramp=Math.min(1,(m-s+1)/p.ramp);
-      const yearly=(k===0?p.nycVisits:p.cityVisits)/p.partySize;
-      const mp=yearly/12*ramp; parties+=mp; if(k===0) nycParties=mp;
-    }
-    let installs,buyers,acq;
-    if(p.salesMode==="share"){ buyers=parties*p.buyShare; installs=buyers; acq=buyers*p.flatCAC; }
-    else { installs=parties*p.categoryUse*p.ourShare + p.adBudget/p.cpi; buyers=installs*p.conv; acq=p.adBudget+p.otherMkt; }
-    const gross=buyers*price;
-    const rate=(overThis||overPrev)?p.feeStd:p.feeSmall;
-    const storeGross=gross*(1-p.webShare), webGross=gross*p.webShare;
-    const storeFee=storeGross*rate, webFee=webGross*.029+buyers*p.webShare*.30;
-    cyProceeds+=storeGross-storeFee; if(cyProceeds>1e6) overThis=true;
-    const paidTours=buyers*toursPerBuyer;
-    const freeTours=p.salesMode==="share"?0:installs;
-    const aiCost=paidTours*tc + (p.freeMode==="generated"?freeTours*tc:0);
-    storedGB+=(paidTours+(p.freeMode==="generated"?freeTours:0))*p.audioMB/1024;
-    const storage=storedGB*.015;
-    const comm=p.commOn==="on"? buyers*p.bookShare*ticketsPerBuyer*p.ticket*p.commRate:0;
-    const fixed=p.tools*p.toolShare+p.infra+p.perCity*live+(m+1>=p.hireStart?p.hires*p.hireCost:0)+p.otherFixed;
-    const revenue=gross+comm;
-    const cost=storeFee+webFee+aiCost+storage+acq+fixed;
-    const profit=revenue-cost; cum+=profit;
-    rows.push({m,d,live,parties,nycParties,installs,buyers,gross,comm,revenue,storeFee,webFee,aiCost,storage,acq,fixed,cost,profit,cum,rate});
-  }
-  return {rows,price,tc,toursPerBuyer,ticketsPerBuyer};
-}
-function years(sim){
-  const y=[0,1,2].map(i=>{const r=sim.rows.slice(i*12,i*12+12);const s=k=>r.reduce((a,x)=>a+x[k],0);
-    return {live:r[11].live,parties:s("parties"),installs:s("installs"),buyers:s("buyers"),revenue:s("revenue"),cost:s("cost"),profit:s("profit"),ai:s("aiCost"),fee:s("storeFee")+s("webFee"),acq:s("acq"),fixed:s("fixed")}});
-  return y;
-}
-
 /* ---------- Formatting ---------- */
 const F={
- usd0:v=>"$"+Math.round(v).toLocaleString("en-US"),
- usd2:v=>"$"+v.toFixed(2), usd3:v=>"$"+v.toFixed(3),
- pct:v=>Math.round(v*100)+"%", pct1:v=>(v*100).toFixed(1)+"%", pct2:v=>(v*100).toFixed(2)+"%",
- m:v=>(v/1e6).toFixed(1)+"M", x:v=>(+v).toFixed(1).replace(/\.0$/,""), int:v=>String(Math.round(v)),
+  usd0:v=>"$"+Math.round(v).toLocaleString("en-US"),
+  usd2:v=>"$"+(+v).toFixed(2), usd3:v=>"$"+(+v).toFixed(3),
+  pct:v=>Math.round(v*100)+"%", pct1:v=>(v*100).toFixed(1)+"%",
+  m:v=>(v/1e6).toFixed(1)+"M", x:v=>(+v).toFixed(1).replace(/\.0$/,""), x2:v=>(+v).toFixed(2),
+  int:v=>String(Math.round(v)), hours:v=>F.x(v)+" h",
 };
 function money(v){const a=Math.abs(v),s=v<0?"−":"";
   if(a>=1e6) return s+"$"+(a/1e6).toFixed(2)+"M"; if(a>=1e4) return s+"$"+Math.round(a/1e3)+"K"; return s+"$"+Math.round(a).toLocaleString("en-US");}
+const usd=v=>(v<0?"−":"")+"$"+Math.abs(v).toFixed(2);
 function count(v){return v>=1e6?(v/1e6).toFixed(2)+"M":v>=1e4?Math.round(v/1e3)+"K":Math.round(v).toLocaleString("en-US")}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const monthName=d=>d.toLocaleString("en-US",{month:"short",year:"numeric"});
 
-/* ---------- State and presets ---------- */
-const byId=Object.fromEntries(INPUTS.map(i=>[i.id,i]));
-function preset(name){
-  const p={partySizeTickets:null};
-  for(const i of INPUTS){p[i.id]= i.tag==="decision"?i.base : name==="low"&&i.low!=null?i.low : name==="high"&&i.high!=null?i.high : i.base}
-  if(name==="deck") Object.assign(p,DECK);
-  return p;
+/* ---------- State ---------- */
+let active="base", state=preset(active);
+const reference=()=>preset(active);
+
+/* ---------- Controls: one builder for the main sliders and the full list ---------- */
+function control(i){
+  const tag=`<span class="tag ${i.tag}">${TAGS[i.tag]}</span>`;
+  const field=i.type==="select"
+    ? `<select id="${i.id}">${i.options.map(([v,t])=>`<option value="${v}">${esc(t)}</option>`).join("")}</select>`
+    : `<input type="range" id="${i.id}" min="${i.min}" max="${i.max}" step="${i.step}">`;
+  return `<div class="ctl" id="c-${i.id}">
+    <div class="row"><label for="${i.id}">${esc(i.label)}</label>${i.type==="select"?"":`<output id="o-${i.id}" for="${i.id}"></output>`}</div>
+    ${field}
+    <div class="flag" id="f-${i.id}" hidden>Not built yet. This only counts once the feature exists.</div>
+    <div class="meta">${tag}<details><summary>Why this number</summary><p>${esc(i.src)}</p></details></div>
+  </div>`;
 }
-let state=preset("grounded"), active="grounded";
-
-/* ---------- Controls ---------- */
-const rail=document.getElementById("rail");
-function buildRail(){
-  const groups=[...new Set(INPUTS.map(i=>i.g))];
-  rail.innerHTML=groups.map((g,gi)=>`<details class="grp" ${gi<2?"open":""}><summary>${esc(g)}</summary>${
-    INPUTS.filter(i=>i.g===g).map(i=>{
-      const tag=`<span class="tag ${i.tag}">${i.tag}</span>`;
-      if(i.type==="select") return `<div class="ctl" id="c-${i.id}"><label for="${i.id}">${esc(i.label)}</label><output></output><select id="${i.id}">${i.options.map(([v,t])=>`<option value="${v}">${esc(t)}</option>`).join("")}</select><div class="src">${tag}${esc(i.src)}</div></div>`;
-      return `<div class="ctl" id="c-${i.id}"><label for="${i.id}">${esc(i.label)}</label><output id="o-${i.id}"></output><input type="range" id="${i.id}" min="${i.min}" max="${i.max}" step="${i.step}"><div class="src">${tag}${esc(i.src)}</div></div>`;
-    }).join("")}</details>`).join("");
+function buildControls(){
+  document.getElementById("main").innerHTML=INPUTS.filter(i=>i.main).map(control).join("");
+  const rest=INPUTS.filter(i=>!i.main), groups=[...new Set(rest.map(i=>i.g))];
+  document.getElementById("groups").innerHTML=groups.map(g=>{const list=rest.filter(i=>i.g===g);
+    return `<details class="grp"><summary>${esc(g)}</summary><div class="grid">${list.map(control).join("")}</div></details>`}).join("");
+  document.getElementById("key").innerHTML=Object.entries(TAGS).map(([k,t])=>`<span><span class="tag ${k}">${t}</span>${{
+    measured:"from our own test runs",source:"from a named public source",owner:"you told us; no receipt",guess:"nobody knows yet",choice:"yours to decide"}[k]}</span>`).join("");
+  document.getElementById("rules").innerHTML=FIXED_RULES.map(r=>`<li>${esc(r.text)} <span class="tag ${r.tag}">${TAGS[r.tag]}</span></li>`).join("");
+  document.getElementById("notcounted").innerHTML=NOT_COUNTED.map(t=>`<li>${esc(t)}</li>`).join("");
   for(const i of INPUTS){
     const el=document.getElementById(i.id);
-    el.addEventListener("input",()=>{state[i.id]=i.type==="select"?el.value:+el.value;active=null;sync();render()});
+    for(const ev of ["input","change"]) el.addEventListener(ev,()=>{state[i.id]=i.type==="select"?el.value:+el.value;schedule()});
   }
 }
-function sync(){
-  const ref=preset(active||"grounded");
+function syncControls(){
+  const ref=reference(); let changed=false;
   for(const i of INPUTS){
     const el=document.getElementById(i.id), v=state[i.id];
     if(String(el.value)!==String(v)) el.value=v;
     if(i.type!=="select") document.getElementById("o-"+i.id).textContent=F[i.fmt](v);
-    document.getElementById("c-"+i.id).classList.toggle("changed",active===null && String(v)!==String(preset("grounded")[i.id]));
+    const diff=String(v)!==String(ref[i.id]); changed=changed||diff;
+    const box=document.getElementById("c-"+i.id);
+    box.classList.toggle("changed",diff);
+    box.hidden=!!i.showIf && !i.showIf(state);
+    document.getElementById("f-"+i.id).hidden=!(i.notBuilt && v===i.notBuilt);
   }
+  document.getElementById("reset").hidden=!changed;
   document.querySelectorAll("[data-preset]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.preset===active)));
 }
-document.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>{active=b.dataset.preset;state=preset(active);sync();render()}));
+document.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>{active=b.dataset.preset;state=preset(active);schedule()}));
+document.getElementById("reset").addEventListener("click",()=>{state=preset(active);schedule()});
+let queued=false;
+function schedule(){if(queued) return; queued=true; requestAnimationFrame(()=>{queued=false;syncControls();render()})}
 
 /* ---------- Render ---------- */
+function floorIn(p,x){ // a floor stated in the unit the traveller pays
+  if(p.model==="person") return {v:x/p.partySize,unit:"per person"};
+  if(p.model==="tour") return {v:x/p.toursBought,unit:"per tour"};
+  return {v:x,unit:"per pass, on average"};
+}
 function render(){
-  const sim=simulate(state), Y=years(sim), r=sim.rows, last=r[MONTHS-1];
-  const fixedNow=r[0].fixed;
-  // per-buyer contribution (month-1 fee rate)
-  const p=state, price=sim.price;
-  const fee=price*(1-p.webShare)*r[0].rate + p.webShare*(price*.029+.30);
-  const ai=sim.toursPerBuyer*sim.tc;
-  const freePerBuyer = p.salesMode==="share"||p.freeMode!=="generated"?0:sim.tc*(1/p.conv-1);
-  const comm=p.commOn==="on"?p.bookShare*sim.ticketsPerBuyer*p.ticket*p.commRate:0;
-  const acqPer = p.salesMode==="share"? p.flatCAC : (r[0].buyers>0? (p.adBudget+p.otherMkt)/r[MONTHS-1].buyers : 0);
-  const contrib=price-fee-ai-freePerBuyer+comm-acqPer;
-  const beBuyers=contrib>0?fixedNow/contrib:Infinity;
-  const nycInstalls = r[MONTHS-1].nycParties*p.categoryUse*p.ourShare;
-  const firstProfit=r.findIndex(x=>x.profit>0);
-  const mName=i=>i<0?"not in 36 months":r[i].d.toLocaleString("en-US",{month:"short",year:"numeric"});
-  const nycShareY3 = p.salesMode==="share"?p.buyShare: (p.categoryUse*p.ourShare*p.conv);
+  const p=state, sim=simulate(p), Y=years(sim), r=sim.rows, u=perPass(p), floor=priceFloor(p);
+  const running=r[0].running, be=u.total>0?Math.ceil(running/u.total):null;
+  const firstProfit=r.findIndex(x=>x.profit>0), fl=floorIn(p,floor);
+  const priceLine=p.model==="party"?`${F.usd2(p.priceSolo)} solo or pair, ${F.usd2(p.priceHH)} household`
+    :p.model==="person"?`${F.usd2(p.pricePerson)} a person × ${F.x(p.partySize)} people`:`${F.usd2(p.pricePerTour)} a tour × ${F.x(p.toursBought)} tours`;
 
-  document.getElementById("kpis").innerHTML=[
-    ["Profit per pass",F.usd2(contrib),`${Math.round(contrib/price*100)}% of the ${F.usd2(price)} average price`],
-    ["Break-even",isFinite(beBuyers)?count(Math.ceil(beBuyers))+" passes/mo":"never",`covers ${money(fixedNow)}/month of fixed costs`],
-    ["Year 3 revenue",money(Y[2].revenue),`${count(Y[2].buyers)} passes, ${Y[2].live} cities`],
-    ["Year 3 profit",money(Y[2].profit),`first profitable month: ${mName(firstProfit)}`],
-    ["NYC parties who buy",F.pct2(nycShareY3),p.salesMode==="share"?`implies ${F.pct(p.buyShare/p.conv)} install at ${F.pct1(p.conv)} conversion`:`${F.pct1(p.categoryUse*p.ourShare)} install × ${F.pct1(p.conv)} convert`],
-  ].map(([k,v,s])=>`<div class="kpi"><div class="k">${k}</div><div class="v ${/^−/.test(v)?"neg":""}">${v}</div><div class="s">${s}</div></div>`).join("");
+  // The answer
+  const big=[["tours",u.tours,"tours"],["free walks",u.free,"free walks"]].sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById("verdict").innerHTML=u.total<=0
+    ? `At these settings each pass <b>loses ${usd(-u.total)}</b>. A pass only covers its own costs at ${F.usd2(fl.v)} ${fl.unit}. The biggest cost is ${big[0]}: ${usd(big[1])} a pass.`
+    : `Each pass <b class="pos">makes ${usd(u.total)}</b> before marketing. Running costs of ${money(running)} a month are covered at ${count(be)} passes a month.`;
+  const figs=[
+    ["Profit per pass",usd(u.total),`average price ${F.usd2(u.price)}`,u.total<0],
+    ["Lowest price that covers a pass",F.usd2(fl.v),fl.unit,false],
+    ["Passes a month to cover running costs",be?count(be):"Never",be?`running costs ${money(running)} a month`:"each pass loses money",!be],
+    ["Year 3 profit",money(Y[2].profit),firstProfit<0?"no profitable month in 36":`first profitable month ${monthName(r[firstProfit].d)}`,Y[2].profit<0],
+  ];
+  document.getElementById("figs").innerHTML=figs.map(([k,v,s,bad])=>`<div class="fig"><dt>${k}</dt><dd><span class="v ${bad?"neg":""}">${v}</span><span class="s">${esc(s)}</span></dd></div>`).join("");
 
-  const impliedInstall = p.salesMode==="share"? p.buyShare/p.conv : p.categoryUse*p.ourShare;
-  document.getElementById("headline").innerHTML = p.salesMode==="share"
-   ? `This preset assumes ${F.pct2(p.buyShare)} of every city's travel parties buy. At the median ${F.pct1(p.conv)} free-to-paid rate, that needs <b>${F.pct(impliedInstall)} of all parties to install the app</b>. Arival puts the whole self-guided app category at 13% of travellers.`
-   : `In New York, ${F.pct1(impliedInstall)} of overnight leisure parties install and ${F.pct1(p.conv)} of them pay: about <b>${count(last.nycParties*impliedInstall*p.conv)} passes a month</b> at full reach. Each pass clears ${F.usd2(contrib)}, so fixed costs are covered at ${isFinite(beBuyers)?count(Math.ceil(beBuyers)):"—"} passes a month.`;
+  // One pass
+  const feeHow=p.webShare>0?`${F.pct(1-p.webShare)} through Apple at ${F.pct(p.feeSmall)}, ${F.pct(p.webShare)} on the web at ${F.pct1(p.webPct)} + ${F.usd2(p.webFixed)}`:`Apple keeps ${F.pct(p.feeSmall)}`;
+  const lines=[
+    ["Average price paid",u.price,priceLine+(p.model==="party"?`; ${F.pct(p.hhShare)} pick household`:"")],
+    ["App Store fee",-u.fee,feeHow],
+    ["Tours",-u.tours,`${F.x(toursPerBuyer(p))} ${p.model==="tour"?"tours":"tour days"} × ${F.x(stopsPerTour(p))} stops (${F.x(p.tourHours)} h × ${F.x2(p.stopsPerHour)} an hour) × ${F.usd2(p.costPerStop)} a stop`],
+    ["Free walks",-u.free,p.freeMode==="fresh"?`${F.x(freeWalksPerBuyer(p))} installs per buyer (1 ÷ ${F.pct1(p.conv)} who pay${p.freeTake<1?` × ${F.pct(p.freeTake)} who walk`:""}) × ${p.freeStops} stop${p.freeStops>1?"s":""} × ${F.usd2(p.costPerStop)}`:"One shared walk per city, so about $0 per pass. Not built yet."],
+  ];
+  if(p.commOn==="on") lines.push(["Ticket commission",u.comm,`${F.pct(p.bookShare)} book × ${p.ticketsPerBooking} tickets × ${F.usd0(p.ticket)} × ${F.pct1(p.commRate)}. Not built yet.`]);
+  document.getElementById("unit").innerHTML=`<thead><tr><th>Per pass</th><th class="n">Amount</th><th>How it's worked out</th></tr></thead><tbody>${
+    lines.map(([a,v,h])=>`<tr><td>${a}</td><td class="n ${v<0?"neg":""}">${usd(v)}</td><td class="how">${esc(h)}</td></tr>`).join("")
+  }<tr class="total"><td>Profit per pass</td><td class="n ${u.total<0?"neg":""}">${usd(u.total)}</td><td class="how">before marketing</td></tr></tbody>`;
+  const r30=priceFloor(p,p.feeStd);
+  document.getElementById("floor").innerHTML=`<p><b>Lowest price that covers a pass: ${F.usd2(fl.v)} ${fl.unit}.</b> That is the tours plus the free walks${p.commOn==="on"?", less commission,":""} divided by the ${F.pct(1-p.feeSmall)} Apple lets you keep. Once sales pass $1M a year Apple keeps 30%, and the floor rises to ${F.usd2(floorIn(p,r30).v)}.</p>
+    <p>Running costs are ${money(running)} a month: AI tools ${money(p.tools*p.toolShare)}, servers ${money(p.infra)}${p.hires?`, ${p.hires} hire${p.hires>1?"s":""} from month ${p.hireStart}`:""}${p.otherFixed?`, other ${money(p.otherFixed)}`:""}.</p>`;
 
-  // unit table
-  const lines=[["Average price paid",price,""],["App Store / checkout fee",-fee,`${F.pct(r[0].rate)} store rate${p.webShare?`, ${F.pct(p.webShare)} via web`:""}`],
-    ["AI writing, checking and voice",-ai,`${F.x(sim.toursPerBuyer)} tours × ${F.usd2(sim.tc)}`]];
-  if(freePerBuyer) lines.push(["Free walks by non-buyers",-freePerBuyer,`${F.x(1/p.conv-1)} free walks per buyer`]);
-  if(comm) lines.push(["Ticket commission",comm,`${F.pct(p.bookShare)} book × ${F.x(sim.ticketsPerBuyer)} tickets × ${F.usd0(p.ticket)} × ${F.pct1(p.commRate)}`]);
-  lines.push(["Cost to win the buyer",-acqPer,p.salesMode==="share"?"assumed flat":"marketing spend ÷ buyers (month 36)"]);
-  document.getElementById("unit").innerHTML=`<thead><tr><th>Per pass</th><th class="n">$</th><th>How</th></tr></thead><tbody>${
-    lines.map(([a,v,h])=>`<tr><td>${a}</td><td class="n ${v<0?"neg":""}">${v<0?"−":""}${F.usd2(Math.abs(v))}</td><td>${esc(h)}</td></tr>`).join("")
-  }<tr class="total"><td>Profit per pass</td><td class="n">${F.usd2(contrib)}</td><td>${Math.round(contrib/price*100)}% of price</td></tr></tbody>`;
-  document.getElementById("unitNote").innerHTML=`<p class="callout">Fixed costs today are ${money(fixedNow)} a month: AI tools ${money(p.tools*p.toolShare)}, servers ${money(p.infra)}${p.hires?`, hires from month ${p.hireStart}`:""}${p.otherFixed?`, other ${money(p.otherFixed)}`:""}.</p>
-   <p>Every tour is written live by Claude Opus and voiced per traveller, so cost grows with tours, not passes. Pricing per party works because a family shares one trip and its audio.</p>
-   ${p.freeMode==="generated"?`<p><b>Free walks are generated per person here.</b> At ${F.pct1(p.conv)} conversion each buyer carries ${F.x(1/p.conv-1)} free walks, ${F.usd2(freePerBuyer)} per pass.</p>`:`<p>The free first walk is one shared tour per city, so non-buyers cost close to nothing.</p>`}`;
+  drawPriceChart(p,u.price);
+  drawMonthChart(r);
 
-  drawChart(r);
-
+  const rows=[["Cities live at year end",y=>y.live,String],["Installs",y=>y.installs,count],["Passes sold",y=>y.buyers,count],
+    ["Revenue",y=>y.revenue,money],["App Store and card fees",y=>-y.fees,money],["Tours",y=>-y.tourAI,money],["Free walks",y=>-y.freeAI,money],
+    ["Audio storage",y=>-y.storage,money],["Marketing",y=>-y.marketing,money],["Running costs",y=>-y.running,money],["Profit",y=>y.profit,money]];
+  const planned=p.maxCities, live=citiesLiveBy(p,MONTHS-1);
+  const notes=[];
+  if(u.total<0) notes.push("Each pass loses money, so more sales mean bigger losses. That is why fewer installs (as in the Low scenario) can lose less than more installs.");
+  if(live<planned) notes.push(`${planned} cities are planned, but only ${live} go live within 36 months at one every ${F.x(p.cadence)} months.`);
   document.getElementById("years").innerHTML=`<thead><tr><th></th><th class="n">Year 1</th><th class="n">Year 2</th><th class="n">Year 3</th></tr></thead><tbody>${
-   [["Cities live (year end)",y=>y.live,String],["Travel parties reached",y=>y.parties,count],["Installs",y=>y.installs,count],["Passes sold",y=>y.buyers,count],
-    ["Revenue",y=>y.revenue,money],["Store and checkout fees",y=>-y.fee,money],["AI and storage",y=>-y.ai,money],["Marketing",y=>-y.acq,money],["Fixed costs",y=>-y.fixed,money],["Profit",y=>y.profit,money]]
-   .map(([l,f,fmt],i,a)=>`<tr class="${i===a.length-1?"total":""}"><td>${l}</td>${Y.map(y=>{const v=f(y);return `<td class="n ${v<0?"neg":""}">${fmt(v)}</td>`}).join("")}</tr>`).join("")
-  }</tbody>`;
-
-  // sensitivity: price options x conversion
-  const opts=[["Undercut",12.99,24.99],["Mid",19.99,34.99],["Premium",24.99,49.99]], convs=[.01,.021,.045];
-  document.getElementById("sens").innerHTML=`<thead><tr><th>Solo/pair · household</th>${convs.map(c=>`<th class="n">${F.pct1(c)} convert</th>`).join("")}<th class="n">Profit per pass</th></tr></thead><tbody>${
-    opts.map(([n,s,h])=>{const base={...state,model:"pass",priceSolo:s,priceHH:h,salesMode:"funnel"};
-      const cells=convs.map(c=>{const y=years(simulate({...base,conv:c}))[2].profit;return `<td class="n ${y<0?"neg":""}">${money(y)}</td>`}).join("");
-      const pr=(1-state.hhShare)*s+state.hhShare*h; const cp=pr*(1-state.feeSmall)-state.toursPerPass*tourCost(state);
-      return `<tr><td>${n}: $${s} · $${h}</td>${cells}<td class="n">${F.usd2(cp)}</td></tr>`}).join("")
-  }</tbody>`;
-  const mods=[["Trip pass per party",{model:"pass"}],["Pass per person",{model:"perperson"}],["Pay per tour",{model:"pertour"}]];
-  document.getElementById("models").innerHTML=`<table><thead><tr><th>Pricing model, current inputs</th><th class="n">Average paid</th><th class="n">Year 3 revenue</th><th class="n">Year 3 profit</th></tr></thead><tbody>${
-    mods.map(([n,o])=>{const s=simulate({...state,...o,salesMode:state.salesMode});const y=years(s)[2];return `<tr><td>${n}</td><td class="n">${F.usd2(s.price)}</td><td class="n">${money(y.revenue)}</td><td class="n ${y.profit<0?"neg":""}">${money(y.profit)}</td></tr>`}).join("")
-  }</tbody></table><p class="note">Same conversion assumed for every model, so this compares money per buyer, not demand.</p>`;
-
-  // compare deck vs grounded
-  const g=simulate(preset("grounded")), dk=simulate(preset("deck")), gy=years(g), dy=years(dk);
-  const unitOf=(pp,s)=>{const pr=s.price,f=pr*s.rows[0].rate,a=s.toursPerBuyer*s.tc,c=pp.commOn==="on"?pp.bookShare*s.ticketsPerBuyer*pp.ticket*pp.commRate:0;return pr-f-a+c-(pp.salesMode==="share"?pp.flatCAC:0)};
-  const rowsC=[["Average price",F.usd2(dk.price),F.usd2(g.price),"Deck's $26.99 blend has no stated mix; grounded is per party, two tiers."],
-   ["Store fee",F.pct(.30),F.pct(.15),"Apple Small Business Program until $1M/yr."],
-   ["AI cost per pass",F.usd2(dk.toursPerBuyer*dk.tc),F.usd2(g.toursPerBuyer*g.tc),"Measured writing, fact check and voice per tour (docs/business/tour-cost-measurement.json) × tours per pass (assumed)."],
-   ["Ticket commission",F.usd2(DECK.bookShare*DECK.ticket*DECK.commRate),F.usd2(preset("grounded").bookShare*2*preset("grounded").ticket*preset("grounded").commRate),"Grounded: 30% book, 2 tickets, $46, 8%."],
-   ["Profit per pass (before marketing)",F.usd2(unitOf(preset("deck"),dk)+DECK.flatCAC),F.usd2(unitOf(preset("grounded"),g)),""],
-   ["Fixed costs / month",money(dk.rows[0].fixed),money(g.rows[0].fixed),"Deck's figure is implied, not stated; founders are unpaid."],
-   ["NYC parties per year",count(DECK.nycVisits/2),count(preset("grounded").nycVisits/2),"Overnight leisure only; day-trippers don't buy a 5-day pass."],
-   ["Share of parties who buy","1.00%",F.pct2(preset("grounded").categoryUse*preset("grounded").ourShare*preset("grounded").conv),"Grounded = 13% use app tours × 10% pick us × 2.1% pay."],
-   ["Year 3 revenue",money(dy[2].revenue),money(gy[2].revenue),"Deck column = the deck's per-pass inputs run on our city rollout."],["Year 3 profit",money(dy[2].profit),money(gy[2].profit),"The deck slide says $14.3M with 23 cities; it can't be rebuilt from the deck's stated inputs."]];
-  document.getElementById("compare").innerHTML=`<thead><tr><th></th><th class="n">Deck</th><th class="n">Grounded</th><th>Why it differs</th></tr></thead><tbody>${rowsC.map(r=>`<tr><td>${r[0]}</td><td class="n">${r[1]}</td><td class="n">${r[2]}</td><td>${esc(r[3])}</td></tr>`).join("")}</tbody>`;
-  document.getElementById("compareNote").innerHTML=`<p>The deck reproduces from its own inputs: $26.99 − 30% − $0.25 + $1.08 − $5 = $14.72 per pass. Its weak point is not the per-pass math but <b>volume</b>: 1% of parties buying needs about ${F.pct(.01/.021)} of them to install at a median conversion rate.</p>`;
-
-  document.getElementById("sources").innerHTML=`<thead><tr><th>Input</th><th>Evidence</th><th class="n">Now</th><th>Source</th></tr></thead><tbody>${
-    INPUTS.map(i=>`<tr><td>${esc(i.label)}</td><td><span class="tag ${i.tag}">${i.tag}</span></td><td class="n">${i.type==="select"?esc((i.options.find(o=>o[0]===state[i.id])||[])[1]||""):F[i.fmt](state[i.id])}</td><td>${esc(i.src)}</td></tr>`).join("")}</tbody>`;
+    rows.map(([l,f,fmt],i)=>`<tr class="${i===rows.length-1?"total":""}"><td>${l}</td>${Y.map(y=>{const v=f(y);return `<td class="n ${v<0?"neg":""}">${fmt(v)}</td>`}).join("")}</tr>`).join("")
+  }</tbody>${notes.length?`<caption style="caption-side:bottom;text-align:left;padding-top:8px" class="note">${notes.join(" ")}</caption>`:""}`;
 }
 
-/* ---------- Chart ---------- */
-function drawChart(r){
-  const svg=document.getElementById("chart"),W=860,H=300,L=64,R=16,T=14,B=30;
-  const ks=["revenue","cost","profit"];
+/* ---------- Price chart ---------- */
+const COMPETITORS=[["Routes, 7 days",12.99],["Autio, 14 days",14.99],["VoiceMap pass",24.99]];
+const TESTED=[["Tested solo or pair",12,19],["Tested household",29,49]];
+function drawPriceChart(p,current){
+  const svg=document.getElementById("pchart"),W=chartWidth(svg),H=320,L=48,R=12,T=16,B=40,X0=0,X1=100,YMAX=.15,narrow=W<600;
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  const x=v=>L+(v-X0)*(W-L-R)/(X1-X0), y=v=>T+(YMAX-Math.min(v,YMAX))*(H-T-B)/YMAX;
+  const pts=[]; for(let v=5;v<=X1+1e-9;v+=2.5) pts.push([v,payShareNeeded(p,v)]);
+  let s="";
+  for(const [n,a,b] of TESTED) s+=`<rect x="${x(a)}" y="${T}" width="${x(b)-x(a)}" height="${H-T-B}" fill="var(--band)"/>${narrow?"":`<text class="lab" x="${(x(a)+x(b))/2}" y="${H-B-16}" text-anchor="middle">${n.replace("Tested ","")}</text>`}`;
+  for(let v=0;v<=YMAX+1e-9;v+=.03) s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--rule)"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end">${Math.round(v*100)}%</text>`;
+  for(let v=0;v<=X1;v+=20) s+=`<text x="${x(v)}" y="${H-B+18}" text-anchor="middle">$${v}</text>`;
+  s+=`<text class="lab" x="${(L+W-R)/2}" y="${H-4}" text-anchor="middle">Average price paid per buyer</text>`;
+  const ref=[[.021,"typical app, 2.1%"],[.045,"top quarter, 4.5%"]];
+  for(const [v,t] of ref) s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--muted)" stroke-dasharray="3 4"/><text class="lab" x="${W-R}" y="${y(v)-5}" text-anchor="end">${t}</text>`;
+  for(const [n,v] of COMPETITORS) s+=`<line x1="${x(v)}" x2="${x(v)}" y1="${H-B}" y2="${H-B-10}" stroke="var(--ink-2)" stroke-width="2"/>`;
+  // the curve, broken where no share works
+  let d="",open=false;
+  for(const [v,c] of pts){ if(c==null||c>YMAX){open=false;continue} d+=(open?"L":"M")+x(v).toFixed(1)+","+y(c).toFixed(1); open=true; }
+  s+=`<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="3"/>`;
+  if(current<=X1) s+=`<line x1="${x(current)}" x2="${x(current)}" y1="${T}" y2="${H-B}" stroke="var(--ink)" stroke-width="1.5"/><text class="lab" x="${x(current)+6}" y="${T+12}">your price ${F.usd2(current)}</text>`;
+  s+=`<line id="pxh" y1="${T}" y2="${H-B}" stroke="var(--muted)" visibility="hidden"/><rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="transparent" id="phit"/>`;
+  svg.innerHTML=s;
+  const first=pts.find(([,c])=>c!=null&&c<=YMAX);
+  document.getElementById("plegend").innerHTML=`<span><i class="sw" style="border-color:var(--accent)"></i>Share that must pay</span>
+    <span><i class="box"></i>Prices the interview cards tested (solo or pair $12–19, household $29–49)</span>
+    <span><i class="sw" style="border-color:var(--ink-2);width:2px;height:10px;border-top:0;border-left:2px solid"></i>Competitors: Routes $12.99 for 7 days, Autio $14.99 for 14 days, VoiceMap pass $24.99</span>`;
+  const atCurrent=payShareNeeded(p,current);
+  document.getElementById("pnote").innerHTML=(first?`Below about ${F.usd0(first[0])}, no share of installs up to 15% breaks even in year 3. `:`At these settings no price up to $100 breaks even in year 3 with 15% or fewer paying. `)
+    +(atCurrent!=null?`At your price, ${F.pct1(atCurrent)} must pay; the slider says ${F.pct1(p.conv)}.`:`At your price, no share up to 50% breaks even.`)
+    +` Competitor passes are priced for travellers who walk their own route. Their cost to serve is not known.`;
+  const tip=document.getElementById("ptip"),box=document.getElementById("pbox"),xh=svg.querySelector("#pxh");
+  const hit=svg.querySelector("#phit");
+  hit.addEventListener("pointermove",ev=>{
+    const pt=svg.createSVGPoint();pt.x=ev.clientX;pt.y=ev.clientY;const q=pt.matrixTransform(svg.getScreenCTM().inverse());
+    const i=Math.max(0,Math.min(pts.length-1,Math.round(((q.x-L)/(W-L-R)*(X1-X0)-5)/2.5))),[v,c]=pts[i];
+    xh.setAttribute("x1",x(v));xh.setAttribute("x2",x(v));xh.setAttribute("visibility","visible");
+    tip.hidden=false;tip.innerHTML=`At ${F.usd2(v)}: ${c==null?"no share up to 50% works":F.pct1(c)+" must pay"}`;
+    const sb=svg.getBoundingClientRect();tip.style.left=Math.max(90,Math.min(sb.width-90,x(v)/W*sb.width))+"px";tip.style.top=(y(c==null?YMAX:c)/H*sb.height)+"px";
+  });
+  hit.addEventListener("pointerleave",()=>{tip.hidden=true;xh.setAttribute("visibility","hidden")});
+}
+
+/* ---------- Month chart ---------- */
+function drawMonthChart(r){
+  const svg=document.getElementById("mchart"),W=chartWidth(svg),H=300,L=60,R=12,T=14,B=30,ks=["revenue","cost","profit"];
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
   let lo=Math.min(0,...r.flatMap(x=>ks.map(k=>x[k]))), hi=Math.max(1,...r.flatMap(x=>ks.map(k=>x[k])));
   const step=niceStep((hi-lo)/5); lo=Math.floor(lo/step)*step; hi=Math.ceil(hi/step)*step;
   const x=i=>L+i*(W-L-R)/(MONTHS-1), y=v=>T+(hi-v)*(H-T-B)/(hi-lo);
   let s="";
-  for(let v=lo;v<=hi+1e-9;v+=step){s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--rule)" stroke-width="${Math.abs(v)<1e-9?1.5:1}"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end">${money(v)}</text>`}
-  for(let i=0;i<MONTHS;i+=6){s+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle">${r[i].d.toLocaleString("en-US",{month:"short"})} ${String(r[i].d.getFullYear()).slice(2)}</text>`}
-  const path=k=>r.map((p,i)=>(i?"L":"M")+x(i).toFixed(1)+","+y(p[k]).toFixed(1)).join("");
-  s+=`<path d="${path("revenue")}" fill="none" stroke="var(--rev)" stroke-width="2"/>`;
-  s+=`<path d="${path("cost")}" fill="none" stroke="var(--cost)" stroke-width="2" stroke-dasharray="5 4"/>`;
-  s+=`<path d="${path("profit")}" fill="none" stroke="var(--profit)" stroke-width="3"/>`;
-  const e=r[MONTHS-1]; s+=`<circle cx="${x(MONTHS-1)}" cy="${y(e.profit)}" r="4" fill="var(--profit)" stroke="var(--panel)" stroke-width="2"/>`;
-  s+=`<line id="xh" y1="${T}" y2="${H-B}" stroke="var(--muted)" stroke-width="1" visibility="hidden"/><rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="transparent" id="hit"/>`;
+  for(let v=lo;v<=hi+1e-9;v+=step) s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="${Math.abs(v)<1e-9?"var(--ink-2)":"var(--rule)"}"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end">${money(v)}</text>`;
+  for(let i=0;i<MONTHS;i+=W<600?12:6) s+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle">${r[i].d.toLocaleString("en-US",{month:"short"})} ${String(r[i].d.getFullYear()).slice(2)}</text>`;
+  const path=k=>r.map((q,i)=>(i?"L":"M")+x(i).toFixed(1)+","+y(q[k]).toFixed(1)).join("");
+  s+=`<path d="${path("revenue")}" fill="none" stroke="var(--rev)" stroke-width="2"/><path d="${path("cost")}" fill="none" stroke="var(--cost)" stroke-width="2" stroke-dasharray="5 4"/><path d="${path("profit")}" fill="none" stroke="var(--profit)" stroke-width="3"/>`;
+  s+=`<line id="mxh" y1="${T}" y2="${H-B}" stroke="var(--muted)" visibility="hidden"/><rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="transparent" id="mhit"/>`;
   svg.innerHTML=s;
-  const tip=document.getElementById("tip"),box=document.getElementById("chartbox"),xh=svg.querySelector("#xh");
-  svg.querySelector("#hit").addEventListener("pointermove",ev=>{
+  const tip=document.getElementById("mtip"),xh=svg.querySelector("#mxh"),hit=svg.querySelector("#mhit");
+  hit.addEventListener("pointermove",ev=>{
     const pt=svg.createSVGPoint();pt.x=ev.clientX;pt.y=ev.clientY;const q=pt.matrixTransform(svg.getScreenCTM().inverse());
-    const i=Math.max(0,Math.min(MONTHS-1,Math.round((q.x-L)/((W-L-R)/(MONTHS-1))))),p=r[i];
+    const i=Math.max(0,Math.min(MONTHS-1,Math.round((q.x-L)/((W-L-R)/(MONTHS-1))))),m=r[i];
     xh.setAttribute("x1",x(i));xh.setAttribute("x2",x(i));xh.setAttribute("visibility","visible");
-    tip.hidden=false;tip.innerHTML=`${p.d.toLocaleString("en-US",{month:"short",year:"numeric"})} · ${p.live} ${p.live>1?"cities":"city"}<br>Passes ${count(p.buyers)}<br>Revenue ${money(p.revenue)}<br>Costs ${money(p.cost)}<br>Profit ${money(p.profit)}`;
-    const bb=box.getBoundingClientRect(),sb=svg.getBoundingClientRect();
-    tip.style.left=Math.max(70,Math.min(bb.width-70,(x(i)/W)*sb.width))+"px";tip.style.top=((y(Math.max(p.revenue,p.cost))/H)*sb.height)+"px";
+    tip.hidden=false;tip.innerHTML=`${monthName(m.d)} · ${m.live} ${m.live>1?"cities":"city"}<br>Passes ${count(m.buyers)}<br>Revenue ${money(m.revenue)}<br>Costs ${money(m.cost)}<br>Profit ${money(m.profit)}`;
+    const sb=svg.getBoundingClientRect();tip.style.left=Math.max(80,Math.min(sb.width-80,x(i)/W*sb.width))+"px";tip.style.top=(y(Math.max(m.revenue,m.cost))/H*sb.height)+"px";
   });
-  svg.querySelector("#hit").addEventListener("pointerleave",()=>{tip.hidden=true;xh.setAttribute("visibility","hidden")});
+  hit.addEventListener("pointerleave",()=>{tip.hidden=true;xh.setAttribute("visibility","hidden")});
 }
-function niceStep(raw){const p=Math.pow(10,Math.floor(Math.log10(raw||1)));const n=raw/p;return (n<=1?1:n<=2?2:n<=5?5:10)*p}
+// Draw charts at their real pixel width so the text stays readable on a phone.
+function chartWidth(svg){return Math.max(300,Math.round(svg.parentNode.clientWidth||860))}
+let lastWidth=0;
+window.addEventListener("resize",()=>{const w=document.getElementById("pbox").clientWidth;if(w!==lastWidth){lastWidth=w;schedule()}});
+function niceStep(raw){const q=Math.pow(10,Math.floor(Math.log10(raw||1)));const n=raw/q;return (n<=1?1:n<=2?2:n<=5?5:10)*q}
 
-buildRail();sync();render();
+buildControls();syncControls();render();
 </script>
+</body>
+</html>

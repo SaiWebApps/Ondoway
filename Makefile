@@ -178,7 +178,7 @@ check_db = @echo " $(LOCAL_DBS) " | grep -q " $(DB) " || \
 	tour-batch-plan tour-batch-live tour-batch-review-plan tour-batch-review-live \
 	db-up db-down db-status db-reset db-parity \
 	valhalla-up valhalla-down valhalla-status valhalla-build-tiles \
-	api workbench dashboard \
+	api workbench dashboard money-model \
 	flutter-web flutter-ios flutter-device flutter-pub-get flutter-clean \
 	survey-area-candidates fix-area-radii backfill-provenance backfill-poi-role \
 	backfill-name-key wiki-fetch gen-within-edges validate-beats deploy prune-orphans \
@@ -650,6 +650,12 @@ workbench: ## Start the local editorial workbench with dev data and fresh Render
 dashboard: ## Start the local dashboard with the validated dev profile.
 	@$(PREFLIGHT) --label dashboard $(PRE_LOCAL_GRAPH) port-$(DASHBOARD_PORT)
 	@$(LOCAL_EXEC) env DASHBOARD_PORT=$(DASHBOARD_PORT) uv run python -m src.server
+
+# The page loads model.js as a second file, so it needs a server, not a file:// open.
+money-model: ## Open the money model simulator in the browser (Docs/business).
+	@$(PREFLIGHT) --label money-model uv
+	@(sleep 1 && open http://localhost:8765/ondoway-financial-model.html) &
+	python3 -m http.server 8765 --bind 127.0.0.1 --directory Docs/business
 
 flutter-web: ## Run the Flutter web app on its lane's web port.
 	@$(PREFLIGHT) --label flutter-web $(PRE_FLUTTER) port-$(FLUTTER_WEB_PORT)

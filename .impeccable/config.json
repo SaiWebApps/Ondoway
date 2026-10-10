@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "space grotesk",
+        "createdAt": "2026-10-10T04:47:41.895Z",
+        "reason": "user confirmed: keep current colours and fonts, rebuild layout only (Q7, 2026-10-09)"
+      }
+    ]
+  }
+}

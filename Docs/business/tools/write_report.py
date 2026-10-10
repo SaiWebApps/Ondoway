@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 src = Path(sys.argv[1])
-out_dir = Path("/Users/sairambkrishnan/git/ondoway/docs/business")
+out_dir = Path(__file__).resolve().parents[1]
 out_dir.mkdir(parents=True, exist_ok=True)
 
 rows = [json.loads(line) for line in src.read_text().splitlines() if line.strip()]
@@ -184,10 +184,13 @@ L.append("")
 if summary["usd_per_narrated_stop"] is not None:
     L.append(f"- Cost per narrated stop: **${summary['usd_per_narrated_stop']:.2f}**.")
 L.append(f"- Total spent on this measurement: **${total_spend:.2f}**, including tours that were refused.")
-refused = [t for t in tours if not t["served"]]
-if refused:
-    L.append(f"- {len(refused)} tour(s) were refused after money was spent. "
+refused_paid = [t for t in tours if not t["served"] and t["total_usd"] > 0]
+refused_free = [t for t in tours if not t["served"] and t["total_usd"] == 0]
+if refused_paid:
+    L.append(f"- {len(refused_paid)} tour(s) were refused after money was spent. "
              "That money is counted in the total and in the 'with refusals' column of the JSON.")
+if refused_free:
+    L.append(f"- {len(refused_free)} tour(s) were refused before any money was spent.")
 L.append("")
 L.append("## Where the money goes\n")
 L.append("| Part of the work | Share of cost |")
