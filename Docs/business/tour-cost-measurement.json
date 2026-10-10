@@ -1,0 +1,1206 @@
+{
+  "title": "Measured provider cost of one walking tour (New York)",
+  "measured_on": "2026-10-09",
+  "pricing_basis": {
+    "date": "2026-10-09",
+    "anthropic": {
+      "claude-opus-4-8": {
+        "input_usd_per_mtok": 5.0,
+        "output_usd_per_mtok": 25.0
+      },
+      "claude-haiku-4-5": {
+        "input_usd_per_mtok": 1.0,
+        "output_usd_per_mtok": 5.0
+      },
+      "cache_write_multiplier": 1.25,
+      "cache_read_multiplier": 0.1,
+      "note": "Thinking tokens are billed as output and are inside output_tokens."
+    },
+    "openai_tts": {
+      "model": "gpt-4o-mini-tts",
+      "voice": "nova",
+      "audio_usd_per_minute": 0.015,
+      "text_input_usd_per_mtok": 0.6,
+      "text_tokens_estimated_as": "characters / 4",
+      "note": "OpenAI lists $0.60/MTok text in and $12/MTok audio out, and estimates $0.015 per minute. The speech endpoint returns no token counts, so audio is priced by measured minutes. The code comment '$12 per 1M characters' is a different unit and is not used."
+    }
+  },
+  "method": "Each tour ran through the product's own endpoints in-process against the local dev graph and routing engine, with the real paid providers: POST /trips/generate, POST /trips/{id}/compose (route_id opt1), POST /audio/generate-trip-stops/{id}. Every Anthropic messages.create call and every OpenAI speech request was recorded at the SDK and HTTP seam, with the usage the provider reported. No product code was changed.",
+  "summary": {
+    "outcomes": {
+      "served": 6,
+      "planner_refused_free": 5,
+      "provider_timeout_after_spend": 1,
+      "writing_refused_after_spend": 4
+    },
+    "opus_usd_per_served_tour_mean": 0.766,
+    "haiku_fact_check_usd_per_served_tour_mean": 0.024,
+    "haiku_glue_usd_per_served_tour_mean": 0.0006,
+    "tts_usd_per_served_tour_mean": 0.065,
+    "spend_per_served_tour_incl_failed_attempts_usd": 1.582,
+    "tours_run": 16,
+    "tours_served": 6,
+    "total_spend_usd": 9.49,
+    "usd_per_narrated_stop": 0.514,
+    "share_of_cost_by_component": {
+      "opus_day_stop": 0.5,
+      "opus_reroll": 0.0,
+      "opus_full_telling": 0.395,
+      "opus_standby": 0.0,
+      "haiku_fact_check": 0.028,
+      "haiku_glue": 0.001,
+      "tts_stop_narration": 0.067,
+      "tts_session_lines": 0.009
+    },
+    "by_duration_min": {
+      "60": {
+        "tours_run": 3,
+        "tours_served": 2,
+        "mean_usd": 0.52,
+        "min_usd": 0.494,
+        "max_usd": 0.547,
+        "mean_stops_narrated": 1,
+        "spend_incl_refused_per_served_usd": 0.52
+      },
+      "90": {
+        "tours_run": 8,
+        "tours_served": 4,
+        "mean_usd": 1.024,
+        "min_usd": 0.722,
+        "max_usd": 1.449,
+        "mean_stops_narrated": 2,
+        "spend_incl_refused_per_served_usd": 1.076
+      },
+      "180": {
+        "tours_run": 5,
+        "tours_served": 0,
+        "mean_usd": null,
+        "min_usd": null,
+        "max_usd": null,
+        "mean_stops_narrated": null,
+        "spend_incl_refused_per_served_usd": null
+      }
+    }
+  },
+  "tours": [
+    {
+      "tour": 0,
+      "start": "Washington Square Park",
+      "duration_min": 60,
+      "party": "solo",
+      "lenses": [
+        "historic_arch",
+        "social_change"
+      ],
+      "served": true,
+      "outcome": "served",
+      "refusal": null,
+      "compose_attempts": 1,
+      "stops_narrated": 1,
+      "full_tellings_kept": 1,
+      "standbys": 0,
+      "narration_chars": 2963,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 2128,
+        "extra_narration": 7051
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 1,
+          "input_tokens": 4030,
+          "output_tokens": 6105,
+          "cache_creation_input_tokens": 6091,
+          "usd": 0.2108
+        },
+        "opus_reroll": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_full_telling": {
+          "calls": 1,
+          "input_tokens": 5267,
+          "output_tokens": 7542,
+          "cache_read_input_tokens": 6091,
+          "usd": 0.2179
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 38,
+          "input_tokens": 14321,
+          "output_tokens": 164,
+          "usd": 0.0151
+        },
+        "haiku_glue": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_stop_narration": {
+          "calls": 1,
+          "chars": 2953,
+          "audio_seconds": 179.9,
+          "usd": 0.0454
+        },
+        "tts_session_lines": {
+          "calls": 3,
+          "chars": 262,
+          "audio_seconds": 17.0,
+          "usd": 0.0043
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 0.4439,
+      "tts_usd": 0.0497,
+      "total_usd": 0.4936,
+      "compose_seconds": 179,
+      "wall_seconds": 216
+    },
+    {
+      "tour": 1,
+      "start": "Bryant Park",
+      "duration_min": 60,
+      "party": "family",
+      "lenses": [
+        "local_legends",
+        "hidden_history"
+      ],
+      "served": false,
+      "outcome": "planner_refused_free",
+      "refusal": "{\"detail\":{\"cause\":\"time_budget\",\"reason\":\"the longest day that can be built here is about 20 minutes, far short of the 60 minutes asked for; there is not enough to visit near this start for a day this long\",\"technical\":\"Certification planning infeasible under ondoway-premium-tour-v1: the longest day that can be built here is about 20 minutes, far short of the 60 minutes asked for; there is not enough to visit near this start for a day this long; required 3240-3600s, best eligible bounded route ",
+      "compose_attempts": null,
+      "stops_narrated": 0,
+      "full_tellings_kept": 0,
+      "standbys": 0,
+      "narration_chars": 0,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 0,
+        "extra_narration": 0
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_reroll": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_full_telling": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_glue": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_stop_narration": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_session_lines": {
+          "calls": 0,
+          "usd": 0.0
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 0.0,
+      "tts_usd": 0.0,
+      "total_usd": 0.0,
+      "compose_seconds": null,
+      "wall_seconds": 1
+    },
+    {
+      "tour": 2,
+      "start": "Federal Hall",
+      "duration_min": 60,
+      "party": "solo",
+      "lenses": [
+        "hidden_history",
+        "dark_history",
+        "social_change"
+      ],
+      "served": true,
+      "outcome": "served",
+      "refusal": null,
+      "compose_attempts": 1,
+      "stops_narrated": 1,
+      "full_tellings_kept": 1,
+      "standbys": 0,
+      "narration_chars": 2353,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 2733,
+        "extra_narration": 5202
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 1,
+          "input_tokens": 3884,
+          "output_tokens": 7075,
+          "cache_read_input_tokens": 6091,
+          "usd": 0.1993
+        },
+        "opus_reroll": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_full_telling": {
+          "calls": 1,
+          "input_tokens": 5940,
+          "output_tokens": 10447,
+          "cache_read_input_tokens": 6091,
+          "usd": 0.2939
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 44,
+          "input_tokens": 14823,
+          "output_tokens": 193,
+          "usd": 0.0158
+        },
+        "haiku_glue": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_stop_narration": {
+          "calls": 1,
+          "chars": 2342,
+          "audio_seconds": 137.9,
+          "usd": 0.0348
+        },
+        "tts_session_lines": {
+          "calls": 2,
+          "chars": 166,
+          "audio_seconds": 12.8,
+          "usd": 0.0032
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 0.509,
+      "tts_usd": 0.038,
+      "total_usd": 0.5471,
+      "compose_seconds": 230,
+      "wall_seconds": 257
+    },
+    {
+      "tour": 3,
+      "start": "Union Square",
+      "duration_min": 90,
+      "party": "solo",
+      "lenses": [
+        "social_change",
+        "music_heritage"
+      ],
+      "served": false,
+      "outcome": "provider_timeout_after_spend",
+      "refusal": "{\"detail\":\"LLM provider error: Request timed out or interrupted. This could be due to a network timeout, dropped connection, or request cancellation. See https://docs.anthropic.com/en/api/errors#long-requests for more details.\"}",
+      "compose_attempts": null,
+      "stops_narrated": 0,
+      "full_tellings_kept": 0,
+      "standbys": 0,
+      "narration_chars": 0,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 0,
+        "extra_narration": 0
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 1,
+          "input_tokens": 4004,
+          "output_tokens": 7398,
+          "cache_read_input_tokens": 6091,
+          "usd": 0.208
+        },
+        "opus_reroll": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_full_telling": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_glue": {
+          "calls": 1,
+          "input_tokens": 858,
+          "output_tokens": 11,
+          "usd": 0.0009
+        },
+        "tts_stop_narration": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_session_lines": {
+          "calls": 0,
+          "usd": 0.0
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 0.2089,
+      "tts_usd": 0.0,
+      "total_usd": 0.2089,
+      "compose_seconds": 181,
+      "wall_seconds": 182
+    },
+    {
+      "tour": 4,
+      "start": "Rockefeller Center",
+      "duration_min": 90,
+      "party": "family",
+      "lenses": [
+        "visual_art",
+        "local_legends"
+      ],
+      "served": false,
+      "outcome": "planner_refused_free",
+      "refusal": "{\"detail\":{\"cause\":\"time_budget\",\"reason\":\"the longest day that can be built here is about 31 minutes, far short of the 90 minutes asked for; there is not enough to visit near this start for a day this long\",\"technical\":\"Certification planning infeasible under ondoway-premium-tour-v1: the longest day that can be built here is about 31 minutes, far short of the 90 minutes asked for; there is not enough to visit near this start for a day this long; required 4860-5400s, best eligible bounded route ",
+      "compose_attempts": null,
+      "stops_narrated": 0,
+      "full_tellings_kept": 0,
+      "standbys": 0,
+      "narration_chars": 0,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 0,
+        "extra_narration": 0
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_reroll": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_full_telling": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_glue": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_stop_narration": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_session_lines": {
+          "calls": 0,
+          "usd": 0.0
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 0.0,
+      "tts_usd": 0.0,
+      "total_usd": 0.0,
+      "compose_seconds": null,
+      "wall_seconds": 2
+    },
+    {
+      "tour": 5,
+      "start": "City Hall",
+      "duration_min": 90,
+      "party": "solo",
+      "lenses": [
+        "historic_arch",
+        "hidden_history",
+        "dark_history"
+      ],
+      "served": false,
+      "outcome": "planner_refused_free",
+      "refusal": "{\"detail\":{\"cause\":\"time_budget\",\"reason\":\"the longest day that can be built here is about 43 minutes, far short of the 90 minutes asked for; there is not enough to visit near this start for a day this long\",\"technical\":\"Certification planning infeasible under ondoway-premium-tour-v1: the longest day that can be built here is about 43 minutes, far short of the 90 minutes asked for; there is not enough to visit near this start for a day this long; required 4860-5400s, best eligible bounded route ",
+      "compose_attempts": null,
+      "stops_narrated": 0,
+      "full_tellings_kept": 0,
+      "standbys": 0,
+      "narration_chars": 0,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 0,
+        "extra_narration": 0
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_reroll": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_full_telling": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_glue": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_stop_narration": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_session_lines": {
+          "calls": 0,
+          "usd": 0.0
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 0.0,
+      "tts_usd": 0.0,
+      "total_usd": 0.0,
+      "compose_seconds": null,
+      "wall_seconds": 2
+    },
+    {
+      "tour": 6,
+      "start": "Flatiron Building",
+      "duration_min": 90,
+      "party": "family",
+      "lenses": [
+        "historic_arch",
+        "local_legends"
+      ],
+      "served": false,
+      "outcome": "planner_refused_free",
+      "refusal": "{\"detail\":{\"cause\":\"time_budget\",\"reason\":\"the longest day that can be built here is about 24 minutes, far short of the 90 minutes asked for; there is not enough to visit near this start for a day this long\",\"technical\":\"Certification planning infeasible under ondoway-premium-tour-v1: the longest day that can be built here is about 24 minutes, far short of the 90 minutes asked for; there is not enough to visit near this start for a day this long; required 4860-5400s, best eligible bounded route ",
+      "compose_attempts": null,
+      "stops_narrated": 0,
+      "full_tellings_kept": 0,
+      "standbys": 0,
+      "narration_chars": 0,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 0,
+        "extra_narration": 0
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_reroll": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_full_telling": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_glue": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_stop_narration": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_session_lines": {
+          "calls": 0,
+          "usd": 0.0
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 0.0,
+      "tts_usd": 0.0,
+      "total_usd": 0.0,
+      "compose_seconds": null,
+      "wall_seconds": 0
+    },
+    {
+      "tour": 7,
+      "start": "Grand Central Terminal",
+      "duration_min": 180,
+      "party": "solo",
+      "lenses": [
+        "historic_arch",
+        "modern_design"
+      ],
+      "served": false,
+      "outcome": "writing_refused_after_spend",
+      "refusal": "{\"detail\":{\"reason\":\"compose_verification_failed\",\"attempts\":2,\"untraceable\":0,\"forbidden\":2,\"provenance\":0,\"faithfulness\":13}}",
+      "compose_attempts": null,
+      "stops_narrated": 0,
+      "full_tellings_kept": 0,
+      "standbys": 0,
+      "narration_chars": 0,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 0,
+        "extra_narration": 0
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 3,
+          "input_tokens": 11638,
+          "output_tokens": 29084,
+          "cache_read_input_tokens": 18273,
+          "usd": 0.7944
+        },
+        "opus_reroll": {
+          "calls": 2,
+          "input_tokens": 7890,
+          "output_tokens": 17062,
+          "cache_read_input_tokens": 12182,
+          "usd": 0.4721
+        },
+        "opus_full_telling": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 118,
+          "input_tokens": 39625,
+          "output_tokens": 505,
+          "usd": 0.0422
+        },
+        "haiku_glue": {
+          "calls": 2,
+          "input_tokens": 1768,
+          "output_tokens": 26,
+          "usd": 0.0019
+        },
+        "tts_stop_narration": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_session_lines": {
+          "calls": 0,
+          "usd": 0.0
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 1.3106,
+      "tts_usd": 0.0,
+      "total_usd": 1.3106,
+      "compose_seconds": 391,
+      "wall_seconds": 395
+    },
+    {
+      "tour": 8,
+      "start": "Washington Square Park",
+      "duration_min": 180,
+      "party": "family",
+      "lenses": [
+        "local_legends",
+        "visual_art",
+        "hidden_history"
+      ],
+      "served": false,
+      "outcome": "planner_refused_free",
+      "refusal": "{\"detail\":{\"cause\":\"time_budget\",\"reason\":\"the longest day that can be built here is about 53 minutes, far short of the 180 minutes asked for; there is not enough to visit near this start for a day this long\",\"technical\":\"Certification planning infeasible under ondoway-premium-tour-v1: the longest day that can be built here is about 53 minutes, far short of the 180 minutes asked for; there is not enough to visit near this start for a day this long; required 9720-10800s, best eligible bounded rou",
+      "compose_attempts": null,
+      "stops_narrated": 0,
+      "full_tellings_kept": 0,
+      "standbys": 0,
+      "narration_chars": 0,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 0,
+        "extra_narration": 0
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_reroll": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_full_telling": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_glue": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_stop_narration": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_session_lines": {
+          "calls": 0,
+          "usd": 0.0
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 0.0,
+      "tts_usd": 0.0,
+      "total_usd": 0.0,
+      "compose_seconds": null,
+      "wall_seconds": 1
+    },
+    {
+      "tour": 9,
+      "start": "Bowling Green Park",
+      "duration_min": 180,
+      "party": "solo",
+      "lenses": [
+        "dark_history",
+        "social_change"
+      ],
+      "served": false,
+      "outcome": "writing_refused_after_spend",
+      "refusal": "{\"detail\":{\"reason\":\"tour_quality_blocked\",\"attempts\":2,\"blockers\":[{\"check\":\"C1-starved\",\"stop_idx\":2,\"poi_name\":\"Brooklyn Bridge\",\"message\":\"394 words rendered for a POI with 35 corpus beats (floor 420); the material exists and was not used\"}],\"warnings\":1,\"recomposed_stops\":[]}}",
+      "compose_attempts": null,
+      "stops_narrated": 0,
+      "full_tellings_kept": 0,
+      "standbys": 0,
+      "narration_chars": 0,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 0,
+        "extra_narration": 0
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 3,
+          "input_tokens": 10562,
+          "output_tokens": 22998,
+          "cache_read_input_tokens": 18273,
+          "usd": 0.6369
+        },
+        "opus_reroll": {
+          "calls": 1,
+          "input_tokens": 4402,
+          "output_tokens": 10407,
+          "cache_read_input_tokens": 6091,
+          "usd": 0.2852
+        },
+        "opus_full_telling": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 92,
+          "input_tokens": 34503,
+          "output_tokens": 398,
+          "usd": 0.0365
+        },
+        "haiku_glue": {
+          "calls": 2,
+          "input_tokens": 1794,
+          "output_tokens": 32,
+          "usd": 0.002
+        },
+        "tts_stop_narration": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_session_lines": {
+          "calls": 0,
+          "usd": 0.0
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 0.9606,
+      "tts_usd": 0.0,
+      "total_usd": 0.9606,
+      "compose_seconds": 322,
+      "wall_seconds": 324
+    },
+    {
+      "tour": 10,
+      "start": "Grand Central Terminal",
+      "duration_min": 90,
+      "party": "solo",
+      "lenses": [
+        "historic_arch",
+        "social_change"
+      ],
+      "served": true,
+      "outcome": "served",
+      "refusal": null,
+      "compose_attempts": 1,
+      "stops_narrated": 2,
+      "full_tellings_kept": 2,
+      "standbys": 0,
+      "narration_chars": 3992,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 4126,
+        "extra_narration": 9171
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 2,
+          "input_tokens": 8271,
+          "output_tokens": 26227,
+          "cache_creation_input_tokens": 12182,
+          "usd": 0.7732
+        },
+        "opus_reroll": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_full_telling": {
+          "calls": 2,
+          "input_tokens": 11059,
+          "output_tokens": 20141,
+          "cache_read_input_tokens": 12182,
+          "usd": 0.5649
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 80,
+          "input_tokens": 29141,
+          "output_tokens": 342,
+          "usd": 0.0309
+        },
+        "haiku_glue": {
+          "calls": 1,
+          "input_tokens": 895,
+          "output_tokens": 13,
+          "usd": 0.001
+        },
+        "tts_stop_narration": {
+          "calls": 2,
+          "chars": 3985,
+          "audio_seconds": 260.5,
+          "usd": 0.0657
+        },
+        "tts_session_lines": {
+          "calls": 6,
+          "chars": 802,
+          "audio_seconds": 54.1,
+          "usd": 0.0136
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 1.3699,
+      "tts_usd": 0.0794,
+      "total_usd": 1.4493,
+      "compose_seconds": 445,
+      "wall_seconds": 506
+    },
+    {
+      "tour": 11,
+      "start": "Wall Street",
+      "duration_min": 90,
+      "party": "solo",
+      "lenses": [
+        "local_legends",
+        "hidden_history"
+      ],
+      "served": true,
+      "outcome": "served",
+      "refusal": null,
+      "compose_attempts": 1,
+      "stops_narrated": 2,
+      "full_tellings_kept": 1,
+      "standbys": 0,
+      "narration_chars": 4034,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 2290,
+        "extra_narration": 8312
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 2,
+          "input_tokens": 7892,
+          "output_tokens": 15742,
+          "cache_read_input_tokens": 12182,
+          "usd": 0.4391
+        },
+        "opus_reroll": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_full_telling": {
+          "calls": 1,
+          "input_tokens": 5349,
+          "output_tokens": 8896,
+          "cache_read_input_tokens": 6091,
+          "usd": 0.2522
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 60,
+          "input_tokens": 22203,
+          "output_tokens": 256,
+          "usd": 0.0235
+        },
+        "haiku_glue": {
+          "calls": 1,
+          "input_tokens": 843,
+          "output_tokens": 11,
+          "usd": 0.0009
+        },
+        "tts_stop_narration": {
+          "calls": 2,
+          "chars": 4018,
+          "audio_seconds": 239.1,
+          "usd": 0.0604
+        },
+        "tts_session_lines": {
+          "calls": 5,
+          "chars": 609,
+          "audio_seconds": 39.0,
+          "usd": 0.0098
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 0.7157,
+      "tts_usd": 0.0702,
+      "total_usd": 0.7859,
+      "compose_seconds": 424,
+      "wall_seconds": 480
+    },
+    {
+      "tour": 12,
+      "start": "Union Square",
+      "duration_min": 90,
+      "party": "solo",
+      "lenses": [
+        "social_change",
+        "music_heritage"
+      ],
+      "served": true,
+      "outcome": "served",
+      "refusal": null,
+      "compose_attempts": 1,
+      "stops_narrated": 2,
+      "full_tellings_kept": 1,
+      "standbys": 0,
+      "narration_chars": 4614,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 2904,
+        "extra_narration": 22883
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 2,
+          "input_tokens": 8271,
+          "output_tokens": 14543,
+          "cache_read_input_tokens": 12182,
+          "usd": 0.411
+        },
+        "opus_reroll": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_full_telling": {
+          "calls": 1,
+          "input_tokens": 5516,
+          "output_tokens": 7043,
+          "cache_read_input_tokens": 6091,
+          "usd": 0.2067
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 67,
+          "input_tokens": 25210,
+          "output_tokens": 287,
+          "usd": 0.0266
+        },
+        "haiku_glue": {
+          "calls": 1,
+          "input_tokens": 858,
+          "output_tokens": 11,
+          "usd": 0.0009
+        },
+        "tts_stop_narration": {
+          "calls": 2,
+          "chars": 4610,
+          "audio_seconds": 276.2,
+          "usd": 0.0697
+        },
+        "tts_session_lines": {
+          "calls": 4,
+          "chars": 414,
+          "audio_seconds": 28.8,
+          "usd": 0.0073
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 0.6453,
+      "tts_usd": 0.077,
+      "total_usd": 0.7223,
+      "compose_seconds": 388,
+      "wall_seconds": 440
+    },
+    {
+      "tour": 13,
+      "start": "Times Square",
+      "duration_min": 90,
+      "party": "solo",
+      "lenses": [
+        "hidden_history",
+        "dark_history",
+        "social_change"
+      ],
+      "served": true,
+      "outcome": "served",
+      "refusal": null,
+      "compose_attempts": 1,
+      "stops_narrated": 2,
+      "full_tellings_kept": 2,
+      "standbys": 0,
+      "narration_chars": 4482,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 4288,
+        "extra_narration": 10812
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 2,
+          "input_tokens": 8708,
+          "output_tokens": 19479,
+          "cache_read_input_tokens": 12182,
+          "usd": 0.5366
+        },
+        "opus_reroll": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_full_telling": {
+          "calls": 2,
+          "input_tokens": 9949,
+          "output_tokens": 17458,
+          "cache_read_input_tokens": 12182,
+          "usd": 0.4923
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 79,
+          "input_tokens": 29073,
+          "output_tokens": 337,
+          "usd": 0.0308
+        },
+        "haiku_glue": {
+          "calls": 1,
+          "input_tokens": 868,
+          "output_tokens": 13,
+          "usd": 0.0009
+        },
+        "tts_stop_narration": {
+          "calls": 2,
+          "chars": 4473,
+          "audio_seconds": 277.7,
+          "usd": 0.0701
+        },
+        "tts_session_lines": {
+          "calls": 6,
+          "chars": 492,
+          "audio_seconds": 33.5,
+          "usd": 0.0084
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 1.0606,
+      "tts_usd": 0.0785,
+      "total_usd": 1.1391,
+      "compose_seconds": 373,
+      "wall_seconds": 428
+    },
+    {
+      "tour": 14,
+      "start": "Flatiron Building",
+      "duration_min": 180,
+      "party": "solo",
+      "lenses": [
+        "historic_arch",
+        "social_change"
+      ],
+      "served": false,
+      "outcome": "writing_refused_after_spend",
+      "refusal": "{\"detail\":{\"reason\":\"compose_verification_failed\",\"attempts\":2,\"untraceable\":0,\"forbidden\":2,\"provenance\":0,\"faithfulness\":22}}",
+      "compose_attempts": null,
+      "stops_narrated": 0,
+      "full_tellings_kept": 0,
+      "standbys": 0,
+      "narration_chars": 0,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 0,
+        "extra_narration": 0
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 5,
+          "input_tokens": 19688,
+          "output_tokens": 33564,
+          "cache_read_input_tokens": 30455,
+          "usd": 0.9528
+        },
+        "opus_reroll": {
+          "calls": 1,
+          "input_tokens": 4715,
+          "output_tokens": 6099,
+          "cache_read_input_tokens": 6091,
+          "usd": 0.1791
+        },
+        "opus_full_telling": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 167,
+          "input_tokens": 74054,
+          "output_tokens": 728,
+          "usd": 0.0777
+        },
+        "haiku_glue": {
+          "calls": 4,
+          "input_tokens": 3438,
+          "output_tokens": 64,
+          "usd": 0.0038
+        },
+        "tts_stop_narration": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_session_lines": {
+          "calls": 0,
+          "usd": 0.0
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 1.2133,
+      "tts_usd": 0.0,
+      "total_usd": 1.2133,
+      "compose_seconds": 210,
+      "wall_seconds": 215
+    },
+    {
+      "tour": 15,
+      "start": "Central Park Bethesda",
+      "duration_min": 180,
+      "party": "solo",
+      "lenses": [
+        "historic_arch",
+        "social_change",
+        "local_legends"
+      ],
+      "served": false,
+      "outcome": "writing_refused_after_spend",
+      "refusal": "{\"detail\":{\"reason\":\"tour_quality_blocked\",\"attempts\":1,\"blockers\":[{\"check\":\"C2-tier-inversion\",\"stop_idx\":null,\"poi_name\":\"Museum of Modern Art\",\"message\":\"tier-5 POI with 16 beats is a walk-past vignette while a tier-4 POI is a full stop\"}],\"warnings\":2,\"recomposed_stops\":[]}}",
+      "compose_attempts": null,
+      "stops_narrated": 0,
+      "full_tellings_kept": 0,
+      "standbys": 0,
+      "narration_chars": 0,
+      "on_demand_chars_not_voiced": {
+        "full_narration": 0,
+        "extra_narration": 0
+      },
+      "components": {
+        "opus_day_stop": {
+          "calls": 3,
+          "input_tokens": 12191,
+          "output_tokens": 22701,
+          "cache_read_input_tokens": 18273,
+          "usd": 0.6376
+        },
+        "opus_reroll": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_full_telling": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "opus_standby": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "haiku_fact_check": {
+          "calls": 56,
+          "input_tokens": 18508,
+          "output_tokens": 242,
+          "usd": 0.0197
+        },
+        "haiku_glue": {
+          "calls": 2,
+          "input_tokens": 1725,
+          "output_tokens": 24,
+          "usd": 0.0018
+        },
+        "tts_stop_narration": {
+          "calls": 0,
+          "usd": 0.0
+        },
+        "tts_session_lines": {
+          "calls": 0,
+          "usd": 0.0
+        }
+      },
+      "other_components": {},
+      "anthropic_usd": 0.6592,
+      "tts_usd": 0.0,
+      "total_usd": 0.6592,
+      "compose_seconds": 151,
+      "wall_seconds": 154
+    }
+  ]
+}
