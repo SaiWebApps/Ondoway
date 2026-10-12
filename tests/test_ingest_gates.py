@@ -157,6 +157,65 @@ def test_lift_is_eight_words_outside_attributed_quotation():
     assert matched_words in unattributed_reason
 
 
+def test_a_name_with_its_furniture_is_not_a_lift():
+    """Owner ruling 2026-10-11 (Moon pilot: 8 of 69 stories lost to lift, 3 on
+    runs of names): a shared run is exempt when, names and their small joining
+    words set aside, it carries no more than two ordinary words and runs no
+    longer than twelve words — a name is a fact with one wording. Three
+    ordinary words is the source's phrasing: the
+    2026-09-13 ruling on "an eccentric German baroness named Hilla Rebay"
+    stands, and a copied sentence with a name in the middle is still a lift."""
+    armory_span = (
+        "The large brick 7th Regiment Armory was once the headquarters of the\n"
+        "seventh regiment of the New York National Guard."
+    )
+    armory = "Soldiers drilled here. It housed the seventh regiment of the New York National Guard."
+    assert gates.lift(armory, armory_span, run_length=7) is None  # seventh, regiment
+
+    heart_span = "East Pole Restaurant sits in the heart of the Upper East Side."
+    heart = "You will find the dining room in the heart of the Upper East Side."
+    assert gates.lift(heart, heart_span, run_length=7) is None  # heart
+
+    mile_span = "the Guggenheim, the Neue Galerie, and the Frick Collection"
+    mile = "Among them stand the Guggenheim, the Neue Galerie and the Frick Collection."
+    assert gates.lift(mile, mile_span, run_length=7) is None
+
+    # Three ordinary words beside the name: the source's phrasing.
+    pierre_span = "The Pierre is one of the most elegant hotels in New York City."
+    pierre = "People call it the most elegant hotels in New York City, and they mean it."
+    assert gates.lift(pierre, pierre_span, run_length=7) is not None  # most, elegant, hotels
+    baroness_span = "an eccentric German baroness named Hilla Rebay"
+    baroness = "His adviser was an eccentric German baroness named Hilla Rebay, who steered him."
+    assert gates.lift(baroness, baroness_span, run_length=7) is not None
+
+    # A name in the middle does not launder the copied words around it.
+    singer_span = (
+        "The building was erected in 1902 by the Singer Manufacturing Company, "
+        "known primarily for sewing machines."
+    )
+    singer = (
+        "This one was erected in 1902 by the Singer Manufacturing Company, "
+        "known primarily for sewing machines."
+    )
+    reason = gates.lift(singer, singer_span, run_length=7)
+    assert reason and reason.startswith("lift")
+
+    # The exemption is for a name, not a sentence of names: past
+    # NAME_RUN_WORDS_MAX words a copied run is a lift whatever it is made of.
+    astors_span = (
+        "The Astors and the Vanderbilts and the Carnegies built mansions on "
+        "Fifth Avenue and Madison Avenue."
+    )
+    astors = "Here the Astors and the Vanderbilts and the Carnegies built mansions on Fifth Avenue."
+    assert gates.lift(astors, astors_span, run_length=7) is not None  # 13 words, 2 ordinary
+
+    # A capital that only opens a sentence is not a name: Everything, costs,
+    # more are three ordinary words.
+    opener_span = "Everything costs more at the Metropolitan Museum of Art."
+    opener = "Be warned. Everything costs more at the Metropolitan Museum of Art."
+    assert gates.lift(opener, opener_span, run_length=7) is not None
+
+
 def test_leak_catches_apparatus_and_listing_furniture():
     apparatus_page = "See page 139 for the hours."
     apparatus_step = "Step 4 of this walk turns left."

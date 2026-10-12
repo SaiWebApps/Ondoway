@@ -1,9 +1,12 @@
 """Narration lift report over a new-shape beats file — `make ingest-lift-report FILE=`. $0.
 
 For every beat: the longest run its narration shares with any of its claims'
-spans (outside attributed quotation), whether that run is a proper name
-(exempt under the owner ruling of 2026-09-13), and how many beats the
-narration gate would refuse at `--run` words with and without the exemption.
+spans (outside attributed quotation), whether that whole run is a proper
+name, how many ordinary words it carries beside names (a run with no more than
+`model.NAME_RUN_ORDINARY_WORDS_MAX`, and no longer than
+`model.NAME_RUN_WORDS_MAX` words, is exempt — owner rulings 2026-09-13 and
+2026-10-11), and how many beats the narration gate would refuse at `--run`
+words with and without the exemption.
 The judge measured job 1's twenty beats by hand — ten of twenty at six words,
 mostly names and titles; this reproduces that number on any file.
 
@@ -21,7 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from scripts.verbatim import run_outside_quotation
-from src.ingest import gates, narrate
+from src.ingest import gates, model, narrate
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -43,8 +46,9 @@ def main(argv: list[str] | None = None) -> int:
             found = run_outside_quotation(text, span)
             if found["length"] > longest["length"]:
                 longest = found
-        cased = gates._cased_run(longest["text"], text) if longest["text"] else None
+        cased = model._cased_run(longest["text"], text) if longest["text"] else None
         is_name = bool(cased and gates.is_proper_name(cased.group(0)))
+        ordinary = model.ordinary_words(cased.group(0)) if cased else 0
         refused = any(
             gates.lift(text, span, run_length=args.run) is not None for span in spans
         )
@@ -54,7 +58,8 @@ def main(argv: list[str] | None = None) -> int:
         with_exemption += refused
         print(
             f"{beat.get('story_slug')} longest={longest['length']} "
-            f"name={'yes' if is_name else 'no'} refused={'yes' if refused else 'no'} "
+            f"name={'yes' if is_name else 'no'} ordinary={ordinary} "
+            f"refused={'yes' if refused else 'no'} "
             f"run={longest['text']!r}"
         )
     print(

@@ -120,6 +120,96 @@ CC_BY_SA_ATTRIBUTION_FIELDS = ("article_title", "url", "revision_id", "section",
 # a span").
 NARRATION_LIFT_RUN_LENGTH = 8
 
+#: Joining words a proper name may carry without breaking its capitalized
+#: run: "Museum of Non-Objective Painting", "Sant Ambroeus and Irving Farm
+#: Roasters", "Portrait of Adele Bloch-Bauer I".
+PROPER_NAME_SMALL_WORDS: frozenset[str] = frozenset(
+    {"a", "an", "the", "of", "and", "for", "on", "at", "in", "de", "du", "la",
+     "le", "von", "der", "di", "y", "i", "ii", "iii", "iv", "v"}
+)
+
+#: Placeholder a measured run is replaced with: a non-word character, so the
+#: masked words can never join a run on either side.
+_MASK = "␀"
+
+_WORD = re.compile(r"[^\W_]+(?:'[^\W_]+)?")
+
+
+def _cased_run(run_text: str, text: str) -> re.Match[str] | None:
+    """The run as it appears in `text`, case and punctuation intact."""
+    words = run_text.split()
+    if not words:
+        return None
+    pattern = r"\W*".join(re.escape(w) for w in words)
+    return re.search(pattern, text, re.I)
+
+
+#: A shared run with no more than this many ORDINARY words — names and
+#: their small joining words set aside — is a name with its furniture, not the
+#: source's phrasing (owner ruling 2026-10-11). Two passes "the seventh
+#: regiment of the New York National Guard" and "in the heart of the Upper
+#: East Side"; three still refuses "an eccentric German baroness named Hilla
+#: Rebay" (owner ruling 2026-09-13) and "the most elegant hotels in New York
+#: City".
+NAME_RUN_ORDINARY_WORDS_MAX = 2
+#: …and only up to this many words in all: a name with its furniture, not a
+#: sentence built of names ("The Astors and the Vanderbilts and the Carnegies
+#: built mansions on Fifth Avenue and Madison Avenue" has two ordinary words
+#: and is the source's sentence). The pilot's exempt runs were 8 and 9 words.
+NAME_RUN_WORDS_MAX = 12
+
+
+def ordinary_words(cased: str, *, opens_sentence: bool = False) -> int:
+    """How many words of a shared run are ordinary words: neither part of a
+    proper name nor one of the small joining words (`PROPER_NAME_SMALL_WORDS`).
+    A number counts as ordinary.
+
+    A capital that only opens a sentence is not a name unless a capitalized
+    word follows it ("Everything at this market" is ordinary; "Sarah Delano
+    Roosevelt gave" opens on a name)."""
+    words = list(_WORD.finditer(cased))
+    small = [w.group().lower() in PROPER_NAME_SMALL_WORDS for w in words]
+    capital = [w.group()[0].isupper() and not small[i] for i, w in enumerate(words)]
+    ordinary = 0
+    for i, word in enumerate(words):
+        if small[i]:
+            continue
+        gap = cased[words[i - 1].end() : word.start()] if i else ""
+        opens = opens_sentence if i == 0 else any(mark in gap for mark in ".!?:")
+        follows = i + 1 < len(words) and capital[i + 1]
+        if not (capital[i] and (not opens or follows)):
+            ordinary += 1
+    return ordinary
+
+
+def lift_run(text: str, source: str, run_length: int) -> dict[str, Any] | None:
+    """The first run of `run_length`+ words `text` shares with `source`,
+    outside an attributed quotation (`scripts.verbatim.run_outside_quotation`),
+    that is more than a name with its furniture — more than
+    `NAME_RUN_ORDINARY_WORDS_MAX` ordinary words (`ordinary_words`), or longer
+    than `NAME_RUN_WORDS_MAX` words; None when there is none. An exempt run is
+    masked and the measure runs again, so a lift elsewhere in the text is
+    still found (a text that keeps yielding exempt runs is refused, not
+    passed). The ONE measure the P4
+    narration gate (`gates.lift`) and the commit validator (NARRATION_LIFT)
+    share: the Moon pilot (2026-10-03) lost two stories to the validator
+    refusing what the gate had passed."""
+    masked = text
+    found: dict[str, Any] | None = None
+    for _ in range(16):
+        found = run_outside_quotation(masked, source)
+        if found["length"] < run_length:
+            return None
+        cased = _cased_run(found["text"], masked)
+        if cased is None or found["length"] > NAME_RUN_WORDS_MAX:
+            return found
+        before = masked[: cased.start()].rstrip(" \t\n\"'\u201c\u2018(")
+        opens = not before or before[-1] in ".!?:"
+        if ordinary_words(cased.group(0), opens_sentence=opens) > NAME_RUN_ORDINARY_WORDS_MAX:
+            return found
+        masked = masked[: cased.start()] + _MASK * len(cased.group(0)) + masked[cased.end() :]
+    return found
+
 
 def slug(name: str) -> str:
     """NFKD-fold, lowercase, collapse every run of non-[a-z0-9] to one '-',
@@ -552,15 +642,15 @@ def _verdict_entailed_errors(label: str, beat: Beat) -> list[str]:
 
 def _narration_lift_errors(label: str, beat: Beat) -> list[str]:
     """NARRATION_LIFT: `beat.narration.text` shares an 8+ word run, measured
-    outside attributed quotation, with one of the beat's own claim spans
-    (`scripts.verbatim.run_outside_quotation` — see the module docstring).
+    outside attributed quotation and a name with its furniture exempt
+    (`lift_run`), with one of the beat's own claim spans.
     Reports the first source span (claim/source order) whose run clears the
     block; stops there rather than listing every span a narration lifts from.
     """
     for claim in beat.claims:
         for source in claim.sources:
-            found = run_outside_quotation(beat.narration.text, source.span)
-            if found["length"] >= NARRATION_LIFT_RUN_LENGTH:
+            found = lift_run(beat.narration.text, source.span, NARRATION_LIFT_RUN_LENGTH)
+            if found is not None:
                 return [
                     f"NARRATION_LIFT {label}: narration.text shares an "
                     f"{found['length']}-word run with a source span: {found['text']!r}"

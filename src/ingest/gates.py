@@ -67,8 +67,12 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping, Sequence
 
-from scripts.verbatim import run_outside_quotation
-from src.ingest.model import BEAT_TYPE_VALUES, STRUCTURAL_BEAT_TYPES
+from src.ingest.model import (
+    BEAT_TYPE_VALUES,
+    PROPER_NAME_SMALL_WORDS,
+    STRUCTURAL_BEAT_TYPES,
+    lift_run,
+)
 from src.ingest.model import slug as story_slug_of
 from src.schema.definitions import TAGGABLE_LENSES
 
@@ -217,28 +221,6 @@ def ground_span(span: str, unit_text: str) -> str:
     return span if located is None else located
 
 
-#: Joining words a proper name may carry without breaking its capitalized
-#: run: "Museum of Non-Objective Painting", "Sant Ambroeus and Irving Farm
-#: Roasters", "Portrait of Adele Bloch-Bauer I".
-PROPER_NAME_SMALL_WORDS: frozenset[str] = frozenset(
-    {"a", "an", "the", "of", "and", "for", "on", "at", "in", "de", "du", "la",
-     "le", "von", "der", "di", "y", "i", "ii", "iii", "iv", "v"}
-)
-
-#: Placeholder a masked name is replaced with: a non-word character, so the
-#: masked words can never join a run on either side.
-_MASK = "␀"
-
-
-def _cased_run(run_text: str, text: str) -> re.Match[str] | None:
-    """The run as it appears in `text`, case and punctuation intact."""
-    words = run_text.split()
-    if not words:
-        return None
-    pattern = r"\W*".join(re.escape(w) for w in words)
-    return re.search(pattern, text, re.I)
-
-
 def is_proper_name(cased: str) -> bool:
     """True when every word of the run, small joining words and numbers
     set aside, is capitalized — a name or a title, which has one wording
@@ -254,28 +236,23 @@ def lift(text: str, unit_text: str, run_length: int = LIFT_RUN_LENGTH) -> str | 
     is LIFT_RUN_LENGTH). Since the owner ruling of 2026-09-13 this is a
     NARRATION gate only — `claim_gates` no longer calls it.
 
-    A shared run that is a PROPER NAME (`is_proper_name`: "Museum of
-    Non-Objective Painting", "Portrait of Adele Bloch-Bauer I") is exempt,
-    as an attributed quotation is: a name is a fact with one wording. The
-    name is masked and the measure runs again, so a lift elsewhere in the
-    text is still found.
+    A shared run that is a PROPER NAME with its furniture — no more than
+    `model.NAME_RUN_ORDINARY_WORDS_MAX` ordinary words beside the name and its
+    small joining words, and no longer than `model.NAME_RUN_WORDS_MAX` words
+    ("Museum of Non-Objective Painting", "the seventh regiment of the New York
+    National Guard") — is exempt, as an attributed
+    quotation is: a name is a fact with one wording (owner rulings 2026-09-13,
+    2026-10-11). The measure is `model.lift_run`, shared with the commit
+    validator, so the two cannot disagree.
 
-    Measured against the whole unit (not just the cited span) with
-    `run_outside_quotation`, which already exempts a quotation that names
-    who said it. Returns None when the longest shared run outside
-    quotation is below `run_length`; otherwise a reason starting with
-    `lift` that carries the copied words.
+    Returns None when no shared run outside quotation reaches `run_length`
+    beyond that exemption; otherwise a reason starting with `lift` that
+    carries the copied words.
     """
-    masked = text
-    for _ in range(16):
-        result = run_outside_quotation(masked, unit_text)
-        if result["length"] < run_length:
-            return None
-        cased = _cased_run(result["text"], masked)
-        if cased is None or not is_proper_name(cased.group(0)):
-            return f"lift: {result['text']!r} copied verbatim from the unit"
-        masked = masked[: cased.start()] + _MASK * len(cased.group(0)) + masked[cased.end() :]
-    return None
+    found = lift_run(text, unit_text, run_length)
+    if found is None:
+        return None
+    return f"lift: {found['text']!r} copied verbatim from the unit"
 
 
 #: Claims about the BOOK rather than the place — page numbers, numbered walk

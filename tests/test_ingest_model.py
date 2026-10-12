@@ -745,6 +745,46 @@ def test_narration_lift_is_refused():
     assert validate([not_lifted]) == []
 
 
+def test_the_commit_validator_exempts_a_name_with_its_furniture():
+    """Moon pilot 2026-10-03: the P4 narration gate exempted a run of names,
+    the commit validator did not, so "Museum Mile" and the Brooklyn railing
+    story passed P4 and were refused at commit with no redo. Both now use one
+    measure, `model.lift_run` (owner ruling 2026-10-11: a run of names with
+    no more than two ordinary words is exempt)."""
+
+    def _beat(span: str, narration_text: str) -> dict[str, Any]:
+        beat = minimal_beat()
+        beat["claims"][0]["sources"][0]["span"] = span
+        beat["narration"]["text"] = narration_text
+        return stamp(beat)
+
+    mile = _beat(
+        "such notable museums as the Metropolitan Museum of Art, the Guggenheim, "
+        "the Neue Galerie, and the Frick Collection",
+        "The Metropolitan Museum of Art stands among its notable museums, as do the "
+        "Guggenheim, the Neue Galerie and the Frick Collection.",
+    )
+    assert validate([mile]) == []
+
+    railing = _beat(
+        "famous view of the East River, the Statue of Liberty, and the Brooklyn Bridge",
+        "From its rail the East River spreads out, with the Statue of Liberty and the "
+        "Brooklyn Bridge beyond it.",
+    )
+    assert validate([railing]) == []
+
+    # Eight of the source's own words around a name are still refused.
+    singer = _beat(
+        "The building was erected in 1902 by the Singer Manufacturing Company, "
+        "known primarily for sewing machines.",
+        "This one was erected in 1902 by the Singer Manufacturing Company, known "
+        "primarily for sewing machines.",
+    )
+    errors = validate([singer])
+    assert len(errors) == 1
+    assert errors[0].startswith("NARRATION_LIFT")
+
+
 def test_attributed_quotation_is_exempt_from_lift():
     """An 8+ word run inside a quotation that names who said it is not a
     lift (scripts.verbatim.run_outside_quotation, decisions — quoting a
