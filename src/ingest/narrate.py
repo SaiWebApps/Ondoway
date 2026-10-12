@@ -192,7 +192,7 @@ def narration_gates(
     """
     reasons: list[str] = []
     for span in spans:
-        lift_reason = gates.lift(text, span, run_length=NARRATION_LIFT_GATE_RUN)
+        lift_reason = gates.lift(text, span, run_length=NARRATION_LIFT_GATE_RUN, context=spans)
         if lift_reason is not None:
             reasons.append(lift_reason.replace("from the unit", "from its source passage"))
             break

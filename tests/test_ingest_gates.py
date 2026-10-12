@@ -216,6 +216,82 @@ def test_a_name_with_its_furniture_is_not_a_lift():
     assert gates.lift(opener, opener_span, run_length=7) is not None
 
 
+def test_a_name_run_does_not_launder_the_sentence_around_it():
+    """Whole Moon book, 2026-10-12: with a name run exempt, a sentence could
+    carry the source's phrasing on both sides of it and pass, because each
+    other shared piece was under seven words on its own ("Grand Central
+    Terminal is a Beaux Arts masterpiece, and it embodies the romanticism of
+    train travel"). Owner ruling 2026-10-12: in a sentence that uses the
+    exemption, everything it shares with the story's spans is added up, and
+    five or more ordinary words is a lift. Measured over the book's 33 such
+    sentences, each against all its story's spans: 30 share four or fewer and
+    stay; the near-copies share five and seven."""
+    central_span = (
+        "Grand Central Terminal is a Beaux Arts masterpiece embodying the romanticism "
+        "of train travel."
+    )
+    central = (
+        "Grand Central Terminal is a Beaux Arts masterpiece, and it embodies the "
+        "romanticism of train travel."
+    )
+    reason = gates.lift(central, central_span, run_length=7)
+    assert reason and reason.startswith("lift")
+    assert "romanticism of train travel" in reason  # the author is told all of it
+
+    cheese_span = "old-fashioned cheese shop is a rare gem in New York City"
+    cheese = "The Bedford Cheese Shop is an old-fashioned cheese shop, a rare gem in New York City."
+    assert gates.lift(cheese, cheese_span, run_length=7) is not None
+
+    # The other half of the sentence sits in another claim's span: the gate
+    # has to be given the story's spans together.
+    moma_name = "The world-famous Museum of Modern Art (MoMA) has an extensive"
+    moma_rest = "has an extensive and unique collection of contemporary and modern art"
+    moma = (
+        "The world-famous Museum of Modern Art holds an extensive and unique collection "
+        "of modern and contemporary art."
+    )
+    assert gates.lift(moma, moma_name, run_length=7) is None
+    assert gates.lift(moma, moma_name, run_length=7, context=[moma_name, moma_rest]) is not None
+
+    # A name with its furniture in an otherwise rewritten sentence still passes.
+    pastry_span = (
+        "In the shadow of the Cathedral of Saint John the Divine stands the Hungarian "
+        "Pastry Shop."
+    )
+    pastry = (
+        "The Hungarian Pastry Shop sits in the shadow of the Cathedral of Saint John "
+        "the Divine."
+    )
+    assert gates.lift(pastry, pastry_span, run_length=7) is None
+    sister_span = "It is the sister restaurant of The Fat Radish on the Lower East Side"
+    sister = (
+        "It's the sister restaurant of The Fat Radish down on the Lower East Side, and the "
+        "two share the same quality."
+    )
+    assert gates.lift(sister, sister_span, run_length=7) is None
+    # An attributed quotation keeps its exemption inside the measured sentence,
+    # whatever follows it (the sentence slice must keep its closing quote mark).
+    quoted_span = pastry_span + " Students have gathered at its tables for decades and never leave."
+    quoted = (
+        "The Hungarian Pastry Shop sits in the shadow of the Cathedral of Saint John the "
+        'Divine, and one critic wrote, "students have gathered at its tables for decades."'
+    )
+    assert gates.lift(quoted, quoted_span, run_length=7) is None
+    assert gates.lift(quoted + " It is still busy.", quoted_span, run_length=7) is None
+    curly = quoted.replace(', "students', ", \u201cstudents").replace('decades."', "decades.\u201d")
+    assert gates.lift(curly + " It is still busy.", quoted_span, run_length=7) is None
+
+    # Another sentence's overlap is not this sentence's: the count is per sentence.
+    two = "It housed the seventh regiment of the New York National Guard. " + (
+        "Years on, the whole interior fell into disrepair and decay."
+    )
+    two_span = (
+        "the headquarters of the seventh regiment of the New York National Guard. The "
+        "interior fell into disrepair over the years"
+    )
+    assert gates.lift(two, two_span, run_length=7) is None
+
+
 def test_leak_catches_apparatus_and_listing_furniture():
     apparatus_page = "See page 139 for the hours."
     apparatus_step = "Step 4 of this walk turns left."

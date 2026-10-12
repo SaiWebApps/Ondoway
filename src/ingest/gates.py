@@ -230,7 +230,12 @@ def is_proper_name(cased: str) -> bool:
     return len(heads) >= 2 and all(t[0].isupper() for t in heads)
 
 
-def lift(text: str, unit_text: str, run_length: int = LIFT_RUN_LENGTH) -> str | None:
+def lift(
+    text: str,
+    unit_text: str,
+    run_length: int = LIFT_RUN_LENGTH,
+    context: Sequence[str] = (),
+) -> str | None:
     """Text must not copy `run_length`+ consecutive unit words (the
     narration gate passes NARRATION_LIFT_GATE_RUN; the validator's floor
     is LIFT_RUN_LENGTH). Since the owner ruling of 2026-09-13 this is a
@@ -242,14 +247,18 @@ def lift(text: str, unit_text: str, run_length: int = LIFT_RUN_LENGTH) -> str | 
     ("Museum of Non-Objective Painting", "the seventh regiment of the New York
     National Guard") — is exempt, as an attributed
     quotation is: a name is a fact with one wording (owner rulings 2026-09-13,
-    2026-10-11). The measure is `model.lift_run`, shared with the commit
-    validator, so the two cannot disagree.
+    2026-10-11). The exemption does not launder the sentence around the
+    name: that sentence is measured against `unit_text` and `context` (the
+    story's other spans) together, and more than
+    `model.NAME_SENTENCE_ORDINARY_WORDS_MAX` shared ordinary words is a lift
+    (owner ruling 2026-10-12). The measure is `model.lift_run`, shared with
+    the commit validator, so the two cannot disagree.
 
     Returns None when no shared run outside quotation reaches `run_length`
     beyond that exemption; otherwise a reason starting with `lift` that
     carries the copied words.
     """
-    found = lift_run(text, unit_text, run_length)
+    found = lift_run(text, unit_text, run_length, context)
     if found is None:
         return None
     return f"lift: {found['text']!r} copied verbatim from the unit"

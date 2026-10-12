@@ -76,6 +76,7 @@ from __future__ import annotations
 import hashlib
 import re
 import unicodedata
+from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 from typing import Any, Literal
@@ -157,6 +158,19 @@ NAME_RUN_ORDINARY_WORDS_MAX = 2
 #: built mansions on Fifth Avenue and Madison Avenue" has two ordinary words
 #: and is the source's sentence). The pilot's exempt runs were 8 and 9 words.
 NAME_RUN_WORDS_MAX = 12
+#: A sentence that uses the name exemption may share no more than this many
+#: ordinary words with the story's spans, every shared run of
+#: `_SENTENCE_RUN_FLOOR`+ words counted (owner ruling 2026-10-12: five or more
+#: is a lift). Measured on the whole Moon book's 33 such sentences, each
+#: against all of its story's spans: 30 share four or fewer and stay; the
+#: near-copies share five ("Grand Central Terminal is a Beaux Arts
+#: masterpiece… the romanticism of train travel") and seven. Refusing at four
+#: was measured and rejected: it took five more, among them a genre list, a
+#: date range, and pieces of five or six words that the seven-word rule
+#: allows on their own.
+NAME_SENTENCE_ORDINARY_WORDS_MAX = 4
+_SENTENCE_RUN_FLOOR = 3
+_SENTENCE_END = re.compile(r"[.!?][\"'\u201d\u2019)]*\s+")
 
 
 def ordinary_words(cased: str, *, opens_sentence: bool = False) -> int:
@@ -182,18 +196,71 @@ def ordinary_words(cased: str, *, opens_sentence: bool = False) -> int:
     return ordinary
 
 
-def lift_run(text: str, source: str, run_length: int) -> dict[str, Any] | None:
-    """The first run of `run_length`+ words `text` shares with `source`,
-    outside an attributed quotation (`scripts.verbatim.run_outside_quotation`),
-    that is more than a name with its furniture — more than
+def _sentence_at(text: str, start: int, end: int) -> tuple[int, int]:
+    """The bounds of the sentence of `text` that holds [start, end), its
+    closing quotation mark included — a slice that lost it would unpair the
+    quotation and cost an attributed quote its exemption.
+
+    A plain split on . ! ?: an abbreviation ("Mott St. near…") ends the
+    sentence early, so the measure sees less of it. That errs toward passing,
+    never toward a false refusal."""
+    begin = 0
+    for stop in _SENTENCE_END.finditer(text):
+        if stop.end() <= start:
+            begin = stop.end()
+        elif stop.start() >= end - 1:
+            return begin, stop.end()
+    return begin, len(text)
+
+
+def _sentence_shared(sentence: str, sources: Sequence[str]) -> tuple[int, list[str]]:
+    """Everything `sentence` shares with `sources`: the ordinary words of every
+    shared run of `_SENTENCE_RUN_FLOOR`+ words, each word counted once, and the
+    runs themselves."""
+    ordinary = 0
+    runs: list[str] = []
+    masked = sentence
+    for source in dict.fromkeys(sources):
+        for _ in range(16):
+            found = run_outside_quotation(masked, source)
+            if found["length"] < _SENTENCE_RUN_FLOOR:
+                break
+            cased = _cased_run(found["text"], masked)
+            if cased is None:
+                break
+            before = masked[: cased.start()].rstrip(" \t\n\"'\u201c\u2018(")
+            ordinary += ordinary_words(cased.group(0), opens_sentence=not before)
+            runs.append(found["text"])
+            masked = masked[: cased.start()] + _MASK * len(cased.group(0)) + masked[cased.end() :]
+    return ordinary, runs
+
+
+def lift_run(
+    text: str, source: str, run_length: int, context: Sequence[str] = ()
+) -> dict[str, Any] | None:
+    """What makes `text` a lift against `source`, or None. Either the first
+    run of `run_length`+ words they share, outside an attributed quotation
+    (`scripts.verbatim.run_outside_quotation`), that is more than a name with
+    its furniture (`length` and `text` are that run's), or a SENTENCE around
+    an exempt name run that shares too much (`sentence` is True, `text` is its
+    shared runs joined by " … ", `length` their words added up).
+
+    A run is more than a name with its furniture when it has more than
     `NAME_RUN_ORDINARY_WORDS_MAX` ordinary words (`ordinary_words`), or longer
     than `NAME_RUN_WORDS_MAX` words; None when there is none. An exempt run is
     masked and the measure runs again, so a lift elsewhere in the text is
     still found (a text that keeps yielding exempt runs is refused, not
-    passed). The ONE measure the P4
-    narration gate (`gates.lift`) and the commit validator (NARRATION_LIFT)
-    share: the Moon pilot (2026-10-03) lost two stories to the validator
-    refusing what the gate had passed."""
+    passed).
+
+    An exempt run does not launder its sentence: the sentence it sits in is
+    measured against `source` and `context` (the story's other spans)
+    together, and more than `NAME_SENTENCE_ORDINARY_WORDS_MAX` shared ordinary
+    words is a lift, reported with every shared run so the author sees all of
+    it.
+
+    The ONE measure the P4 narration gate (`gates.lift`) and the commit
+    validator (NARRATION_LIFT) share: the Moon pilot (2026-10-03) lost two
+    stories to the validator refusing what the gate had passed."""
     masked = text
     found: dict[str, Any] | None = None
     for _ in range(16):
@@ -207,6 +274,14 @@ def lift_run(text: str, source: str, run_length: int) -> dict[str, Any] | None:
         opens = not before or before[-1] in ".!?:"
         if ordinary_words(cased.group(0), opens_sentence=opens) > NAME_RUN_ORDINARY_WORDS_MAX:
             return found
+        begin, end = _sentence_at(text, cased.start(), cased.end())
+        shared, runs = _sentence_shared(text[begin:end], [source, *context])
+        if shared > NAME_SENTENCE_ORDINARY_WORDS_MAX:
+            return {
+                "length": sum(len(run.split()) for run in runs),
+                "text": " … ".join(runs),
+                "sentence": True,
+            }
         masked = masked[: cased.start()] + _MASK * len(cased.group(0)) + masked[cased.end() :]
     return found
 
@@ -643,14 +718,24 @@ def _verdict_entailed_errors(label: str, beat: Beat) -> list[str]:
 def _narration_lift_errors(label: str, beat: Beat) -> list[str]:
     """NARRATION_LIFT: `beat.narration.text` shares an 8+ word run, measured
     outside attributed quotation and a name with its furniture exempt
-    (`lift_run`), with one of the beat's own claim spans.
+    (`lift_run`), with one of the beat's own claim spans — or a sentence of it
+    around such a name shares too much with the beat's spans together.
     Reports the first source span (claim/source order) whose run clears the
     block; stops there rather than listing every span a narration lifts from.
     """
+    spans = [source.span for claim in beat.claims for source in claim.sources]
     for claim in beat.claims:
         for source in claim.sources:
-            found = lift_run(beat.narration.text, source.span, NARRATION_LIFT_RUN_LENGTH)
+            found = lift_run(
+                beat.narration.text, source.span, NARRATION_LIFT_RUN_LENGTH, context=spans
+            )
             if found is not None:
+                if found.get("sentence"):
+                    return [
+                        f"NARRATION_LIFT {label}: a narration.text sentence shares "
+                        f"{found['length']} words with the beat's spans around an exempt "
+                        f"name: {found['text']!r}"
+                    ]
                 return [
                     f"NARRATION_LIFT {label}: narration.text shares an "
                     f"{found['length']}-word run with a source span: {found['text']!r}"

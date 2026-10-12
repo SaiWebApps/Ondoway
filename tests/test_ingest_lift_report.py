@@ -44,3 +44,28 @@ def test_the_report_counts_refusals_with_and_without_the_name_exemption(tmp_path
     assert "phrasing longest=6 name=no" in out
     assert "clean longest=" in out
     assert "beats=3 at_or_over=2 refused_with_exemption=1 refused_without=2" in out
+
+
+def test_the_report_refuses_what_the_gate_refuses_across_a_beats_spans(tmp_path, capsys):
+    """The report and the P4 gate are one measure: a sentence around an exempt
+    name run is added up across ALL the beat's spans (owner ruling 2026-10-12),
+    so the report must hand `gates.lift` those spans too — one span at a time
+    it printed refused=no for a beat the gate refuses."""
+    beat = _beat(
+        "moma",
+        "The world-famous Museum of Modern Art holds an extensive and unique collection "
+        "of modern and contemporary art.",
+        "The world-famous Museum of Modern Art (MoMA) has an extensive",
+    )
+    beat["claims"][1]["sources"][0]["span"] = (
+        "has an extensive and unique collection of contemporary and modern art"
+    )
+    path = tmp_path / "beats.json"
+    path.write_text(json.dumps([beat]), encoding="utf-8")
+
+    rc = report.main(["--file", str(path), "--run", "7"])
+
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "moma longest=7 name=no ordinary=2 refused=yes" in out
+    assert "beats=1 at_or_over=1 refused_with_exemption=1 refused_without=1" in out

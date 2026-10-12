@@ -50,7 +50,8 @@ def main(argv: list[str] | None = None) -> int:
         is_name = bool(cased and gates.is_proper_name(cased.group(0)))
         ordinary = model.ordinary_words(cased.group(0)) if cased else 0
         refused = any(
-            gates.lift(text, span, run_length=args.run) is not None for span in spans
+            gates.lift(text, span, run_length=args.run, context=spans) is not None
+            for span in spans
         )
         over = longest["length"] >= args.run
         at_or_over += over

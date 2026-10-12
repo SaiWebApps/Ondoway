@@ -855,6 +855,23 @@ def test_a_proper_name_shared_with_the_source_is_not_a_lift():
     assert reasons and reasons[0].startswith("lift"), reasons
 
 
+def test_the_narration_gate_measures_a_sentence_against_all_the_storys_spans():
+    """Owner ruling 2026-10-12: a name run is exempt, but the sentence around
+    it is added up across every span of the story — the other half of a copied
+    sentence is usually another claim's span. One span at a time, this
+    sentence passed (whole Moon book, 2026-10-12)."""
+    name_span = "The world-famous Museum of Modern Art (MoMA) has an extensive"
+    rest_span = "has an extensive and unique collection of contemporary and modern art"
+    text = (
+        "The world-famous Museum of Modern Art holds an extensive and unique collection "
+        "of modern and contemporary art."
+    )
+    assert narrate.narration_gates(text, [name_span]) == []
+    reasons = narrate.narration_gates(text, [name_span, rest_span])
+    assert reasons and reasons[0].startswith("lift"), reasons
+    assert "unique collection" in reasons[0]
+
+
 def _named_story(slug: str, claim_ids: list[str]) -> group.Story:
     return group.Story(
         title=slug.replace("-", " ").title(),

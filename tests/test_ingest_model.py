@@ -785,6 +785,43 @@ def test_the_commit_validator_exempts_a_name_with_its_furniture():
     assert errors[0].startswith("NARRATION_LIFT")
 
 
+def test_the_commit_validator_adds_up_a_sentence_across_the_beats_spans():
+    """Owner ruling 2026-10-12: a sentence that uses the name exemption is a
+    lift when it shares five or more ordinary words with the beat's spans —
+    taken together, since the other half of a copied sentence is often another
+    claim's span. The validator's floor is eight words, so it is the
+    eight-word name run of the whole Moon book's Grand Central sentence that
+    reaches it; a seven-word one is the P4 gate's to catch."""
+
+    def _beat(first_span: str, second_span: str, narration_text: str) -> dict[str, Any]:
+        beat = minimal_beat()
+        beat["claims"][0]["sources"][0]["span"] = first_span
+        beat["claims"][1]["sources"][0]["span"] = second_span
+        beat["narration"]["text"] = narration_text
+        return stamp(beat)
+
+    central = _beat(
+        "Grand Central Terminal is a Beaux Arts masterpiece",
+        "a masterpiece embodying the romanticism of train travel",
+        "Grand Central Terminal is a Beaux Arts masterpiece, and it embodies the "
+        "romanticism of train travel.",
+    )
+    errors = validate([central])
+    assert len(errors) == 1
+    assert errors[0].startswith("NARRATION_LIFT")
+    # Not "an N-word run": the pieces are not contiguous.
+    assert "sentence shares" in errors[0] and "-word run" not in errors[0]
+
+    pastry = _beat(
+        "In the shadow of the Cathedral of Saint John the Divine stands the Hungarian "
+        "Pastry Shop.",
+        "Students have gathered at its tables for decades.",
+        "The Hungarian Pastry Shop sits in the shadow of the Cathedral of Saint John the "
+        "Divine.",
+    )
+    assert validate([pastry]) == []
+
+
 def test_attributed_quotation_is_exempt_from_lift():
     """An 8+ word run inside a quotation that names who said it is not a
     lift (scripts.verbatim.run_outside_quotation, decisions — quoting a
