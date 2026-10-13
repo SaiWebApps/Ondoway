@@ -434,7 +434,7 @@ ingest-address-report: ## Street addresses a new-shape beats file's narrations v
 	@$(PREFLIGHT) --label ingest-address-report $(PRE_PY)
 	@$(LOCAL_EXEC) uv run python scripts/ingest_address_report.py --file $(FILE)
 
-ingest-lift-report: ## Narration lift report over a new-shape beats file ($0): per beat the longest run shared with its spans, proper-name or not, and refusals at the gate's run length with/without the name exemption. Usage: make ingest-lift-report FILE=data-ingest/new_york/beats.json [ARGS="--run 6"]
+ingest-lift-report: ## Narration lift report over a new-shape beats file ($0): per beat the longest run shared with the chunks its claims cite (its spans where a chunk is missing), proper-name or not, and refusals at the gate's run length with/without the name exemption. Usage: make ingest-lift-report FILE=data-ingest/new_york/beats.json [ARGS="--run 6"]
 	@test -n "$(FILE)" || { echo "ERROR: FILE is required (a new-shape beats.json)." >&2; exit 2; }
 	@$(PREFLIGHT) --label ingest-lift-report $(PRE_PY)
 	@$(LOCAL_EXEC) uv run python scripts/ingest_lift_report.py --file $(FILE) $(ARGS)

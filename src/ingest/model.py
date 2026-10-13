@@ -170,6 +170,13 @@ NAME_RUN_WORDS_MAX = 12
 #: allows on their own.
 NAME_SENTENCE_ORDINARY_WORDS_MAX = 4
 _SENTENCE_RUN_FLOOR = 3
+#: How much of a long source counts as "the passage around the name": this many
+#: characters either side of where the exempt run sits in it. The P4 gate hands
+#: the measure a whole chapter (a cited span can stop mid-sentence), and three
+#: stock words found pages away ("in the morning") are not the sentence
+#: tracking its source. Measured on the whole Moon book at 150, 300 and 600:
+#: the same six sentences refused each time.
+LIFT_PASSAGE_CHARS = 300
 _SENTENCE_END = re.compile(r"[.!?][\"'\u201d\u2019)]*\s+")
 
 
@@ -213,6 +220,31 @@ def _sentence_at(text: str, start: int, end: int) -> tuple[int, int]:
     return begin, len(text)
 
 
+def _passages_around(run_text: str, sources: Sequence[str]) -> list[str]:
+    """Each of `sources` cut down to the passage around `run_text`: a source no
+    longer than a passage is kept whole (a cited span); a longer one (a
+    chapter) gives `LIFT_PASSAGE_CHARS` either side of every place the run
+    sits in it. Where the run cannot be found in a long source as written (the
+    book sets the name in _italics_, which the run measure reads through and
+    this search does not), the whole source is kept: no passage must never
+    mean nothing to measure against."""
+    words = run_text.split()
+    pattern = re.compile(r"\W*".join(re.escape(w) for w in words), re.I) if words else None
+    passages: list[str] = []
+    for source in dict.fromkeys(sources):
+        if len(source) <= 2 * LIFT_PASSAGE_CHARS:
+            passages.append(source)
+            continue
+        hits = list(pattern.finditer(source)) if pattern is not None else []
+        if not hits:
+            passages.append(source)
+            continue
+        for hit in hits:
+            begin = max(0, hit.start() - LIFT_PASSAGE_CHARS)
+            passages.append(source[begin : hit.end() + LIFT_PASSAGE_CHARS])
+    return passages
+
+
 def _sentence_shared(sentence: str, sources: Sequence[str]) -> tuple[int, list[str]]:
     """Everything `sentence` shares with `sources`: the ordinary words of every
     shared run of `_SENTENCE_RUN_FLOOR`+ words, each word counted once, and the
@@ -253,10 +285,11 @@ def lift_run(
     passed).
 
     An exempt run does not launder its sentence: the sentence it sits in is
-    measured against `source` and `context` (the story's other spans)
-    together, and more than `NAME_SENTENCE_ORDINARY_WORDS_MAX` shared ordinary
-    words is a lift, reported with every shared run so the author sees all of
-    it.
+    measured against `source` and `context` (the story's other spans, or the
+    same chapter) together — a long source only as the passage around the run
+    (`_passages_around`) — and more than `NAME_SENTENCE_ORDINARY_WORDS_MAX`
+    shared ordinary words is a lift, reported with every shared run so the
+    author sees all of it.
 
     The ONE measure the P4 narration gate (`gates.lift`) and the commit
     validator (NARRATION_LIFT) share: the Moon pilot (2026-10-03) lost two
@@ -275,7 +308,9 @@ def lift_run(
         if ordinary_words(cased.group(0), opens_sentence=opens) > NAME_RUN_ORDINARY_WORDS_MAX:
             return found
         begin, end = _sentence_at(text, cased.start(), cased.end())
-        shared, runs = _sentence_shared(text[begin:end], [source, *context])
+        shared, runs = _sentence_shared(
+            text[begin:end], _passages_around(found["text"], [source, *context])
+        )
         if shared > NAME_SENTENCE_ORDINARY_WORDS_MAX:
             return {
                 "length": sum(len(run.split()) for run in runs),
@@ -715,31 +750,53 @@ def _verdict_entailed_errors(label: str, beat: Beat) -> list[str]:
     ]
 
 
-def _narration_lift_errors(label: str, beat: Beat) -> list[str]:
-    """NARRATION_LIFT: `beat.narration.text` shares an 8+ word run, measured
-    outside attributed quotation and a name with its furniture exempt
-    (`lift_run`), with one of the beat's own claim spans — or a sentence of it
-    around such a name shares too much with the beat's spans together.
-    Reports the first source span (claim/source order) whose run clears the
-    block; stops there rather than listing every span a narration lifts from.
-    """
-    spans = [source.span for claim in beat.claims for source in claim.sources]
+def lift_sources(beat: Beat, chunks_root: Path | None) -> list[tuple[str, str]]:
+    """What a beat's narration is measured against for a lift, as (what, text):
+    the chunk each claim was cited from when `chunks_root` holds it — a cited
+    span is a pointer and can stop mid-sentence, so the chunk is what the P4
+    gate reads too — and otherwise the claim's own span."""
+    sources: dict[tuple[str, str], str] = {}
     for claim in beat.claims:
         for source in claim.sources:
-            found = lift_run(
-                beat.narration.text, source.span, NARRATION_LIFT_RUN_LENGTH, context=spans
+            chunk_path = (
+                chunks_root / source.source_id / f"{source.chunk}.txt"
+                if chunks_root is not None
+                else None
             )
-            if found is not None:
-                if found.get("sentence"):
-                    return [
-                        f"NARRATION_LIFT {label}: a narration.text sentence shares "
-                        f"{found['length']} words with the beat's spans around an exempt "
-                        f"name: {found['text']!r}"
-                    ]
-                return [
-                    f"NARRATION_LIFT {label}: narration.text shares an "
-                    f"{found['length']}-word run with a source span: {found['text']!r}"
-                ]
+            if chunk_path is not None and chunk_path.is_file():
+                sources.setdefault(
+                    ("its source chunk", str(chunk_path)), chunk_path.read_text(encoding="utf-8")
+                )
+            else:
+                sources.setdefault(("a source span", source.span), source.span)
+    return [(what, text) for (what, _key), text in sources.items()]
+
+
+def _narration_lift_errors(label: str, beat: Beat, chunks_root: Path | None) -> list[str]:
+    """NARRATION_LIFT: `beat.narration.text` shares an 8+ word run, measured
+    outside attributed quotation and a name with its furniture exempt
+    (`lift_run`), with what its claims were cited from (`lift_sources`: the
+    chunks when given, else the spans) — or a sentence of it around such a
+    name shares too much with them together.
+    Reports the first source (claim/source order) whose run clears the
+    block; stops there rather than listing every one a narration lifts from.
+    """
+    sources = lift_sources(beat, chunks_root)
+    texts = [text for _what, text in sources]
+    for what, text in sources:
+        found = lift_run(beat.narration.text, text, NARRATION_LIFT_RUN_LENGTH, context=texts)
+        if found is None:
+            continue
+        if found.get("sentence"):
+            return [
+                f"NARRATION_LIFT {label}: a narration.text sentence shares "
+                f"{found['length']} words with {what} around an exempt "
+                f"name: {found['text']!r}"
+            ]
+        return [
+            f"NARRATION_LIFT {label}: narration.text shares an "
+            f"{found['length']}-word run with {what}: {found['text']!r}"
+        ]
     return []
 
 
@@ -855,7 +912,7 @@ def validate(records: list[dict[str, Any]], chunks_root: str | Path | None = Non
         errors.extend(_identity_and_arc_errors(label, beat, seen_beat_ids))
         errors.extend(_judge_independence_errors(label, beat))
         errors.extend(_verdict_entailed_errors(label, beat))
-        errors.extend(_narration_lift_errors(label, beat))
+        errors.extend(_narration_lift_errors(label, beat, root))
         span_errs: list[str] = []
         span_flagged_claim_ids: set[str] = set()
         if root is not None:

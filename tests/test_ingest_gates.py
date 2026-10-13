@@ -292,6 +292,48 @@ def test_a_name_run_does_not_launder_the_sentence_around_it():
     assert gates.lift(two, two_span, run_length=7) is None
 
 
+def test_a_sentence_is_measured_against_the_passage_around_the_name():
+    """The P4 gate reads the whole chapter (a cited span can stop mid-sentence),
+    so the sentence rule must not add up stock phrases from anywhere in it:
+    against the whole Moon chapter, "…in Central Park across from the Dakota…"
+    was refused for "is a small" and "in the morning" found pages away
+    (2026-10-12). Only the passage around the name run counts
+    (`model.LIFT_PASSAGE_CHARS` either side); a sentence that tracks THAT
+    passage is still a lift."""
+    filler = "Nothing in this stretch of the chapter concerns the garden at all. " * 12
+    far = "The kiosk is a small wooden hut, and it opens early in the morning for coffee."
+    near = "Strawberry Fields lies in Central Park across from the Dakota."
+    chapter = f"{far} {filler}{near} {filler}"
+    text = (
+        "Strawberry Fields is a small garden in Central Park across from the Dakota, "
+        "busiest in the morning."
+    )
+    assert gates.lift(text, chapter, run_length=7, context=[chapter]) is None
+
+    # Every shared piece is under seven words, so only the sentence rule — and
+    # only if the passage reaches them — can refuse this.
+    tracked = (
+        "Strawberry Fields is a small garden in Central Park across from the Dakota, and "
+        "it opens early in the morning."
+    )
+    close = (
+        f"{filler}Strawberry Fields is a small garden that lies in Central Park across "
+        f"from the Dakota. It opens early in the morning for visitors. {filler}"
+    )
+    reason = gates.lift(tracked, close, run_length=7, context=[close])
+    assert reason and reason.startswith("lift")
+
+    # Where the name cannot be found in the chapter as written (the book sets
+    # it in _italics_), there is no passage to cut out: the measure falls back
+    # to the whole chapter rather than to nothing, which would pass the copy.
+    italic = close.replace("in Central Park across", "in _Central Park_ across").replace(
+        "from the Dakota", "from _the Dakota_"
+    )
+    assert "_Central Park_" in italic
+    reason = gates.lift(tracked, italic, run_length=7, context=[italic])
+    assert reason and reason.startswith("lift")
+
+
 def test_leak_catches_apparatus_and_listing_furniture():
     apparatus_page = "See page 139 for the hours."
     apparatus_step = "Step 4 of this walk turns left."

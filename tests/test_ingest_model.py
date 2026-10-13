@@ -822,6 +822,43 @@ def test_the_commit_validator_adds_up_a_sentence_across_the_beats_spans():
     assert validate([pastry]) == []
 
 
+def test_the_commit_validator_reads_the_chunk_past_a_span_that_stops_short():
+    """A cited span is a pointer, and it can stop mid-sentence: the book wraps
+    "…(MoMA) has an extensive⏎and unique collection of contemporary and modern
+    art" and the stored span ends at the line break. Measured against spans
+    only, the validator could not see a narration copy the rest of that
+    sentence (an older sandbox held a 14-word copy it had passed). Given the
+    chunks, it reads the chunk as the P4 gate does; without them it still
+    measures the spans."""
+    chunk = "chunk-03-walk3-times-square-union-square"
+    span = "The world-famous Museum of Modern Art (MoMA) has an extensive"
+    assert span in (CHUNKS_ROOT / "moon-nyc-walks" / f"{chunk}.txt").read_text()
+
+    beat = minimal_beat(beat_type="stop_orientation")
+    beat["claims"] = [beat["claims"][0]]
+    beat["claims"][0]["sources"] = [
+        {
+            "source_id": "moon-nyc-walks",
+            "chunk": chunk,
+            "span": span,
+            "as_of": 2020,
+            "rights_basis": "owned_copy",
+            "stated_value": None,
+        }
+    ]
+    beat["narration"]["text"] = (
+        "Step inside. It has an extensive and unique collection of contemporary and "
+        "modern art."
+    )
+    beat = stamp(beat)
+
+    errors = validate([beat], chunks_root=CHUNKS_ROOT)
+    assert len(errors) == 1
+    assert errors[0].startswith("NARRATION_LIFT")
+    assert "unique collection of contemporary and modern art" in errors[0]
+    assert validate([beat]) == []  # no chunks: the spans are all it has
+
+
 def test_attributed_quotation_is_exempt_from_lift():
     """An 8+ word run inside a quotation that names who said it is not a
     lift (scripts.verbatim.run_outside_quotation, decisions — quoting a

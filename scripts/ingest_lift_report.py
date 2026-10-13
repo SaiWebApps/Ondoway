@@ -1,7 +1,9 @@
 """Narration lift report over a new-shape beats file — `make ingest-lift-report FILE=`. $0.
 
 For every beat: the longest run its narration shares with any of its claims'
-spans (outside attributed quotation), whether that whole run is a proper
+sources — the chunks its claims cite, or their spans where a chunk is missing
+(a cited span can stop mid-sentence) — outside attributed quotation, whether
+that whole run is a proper
 name, how many ordinary words it carries beside names (a run with no more than
 `model.NAME_RUN_ORDINARY_WORDS_MAX`, and no longer than
 `model.NAME_RUN_WORDS_MAX` words, is exempt — owner rulings 2026-09-13 and
@@ -23,6 +25,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from pydantic import ValidationError
+
 from scripts.verbatim import run_outside_quotation
 from src.ingest import gates, model, narrate
 
@@ -34,13 +38,27 @@ def main(argv: list[str] | None = None) -> int:
         "--run", type=int, default=narrate.NARRATION_LIFT_GATE_RUN,
         help="the run length to count refusals at (default: the narration gate's)",
     )
+    parser.add_argument(
+        "--books-root", type=Path, default=ROOT / "Books",
+        help="where the chunks live: each beat is measured against the chunks its claims "
+        "cite, as the P4 gate and the validator do, and against its spans where a chunk "
+        "is missing",
+    )
     args = parser.parse_args(argv)
 
     beats = json.loads(args.file.read_text(encoding="utf-8"))
     at_or_over = with_exemption = without = 0
     for beat in beats:
         text = (beat.get("narration") or {}).get("text") or ""
-        spans = [s["span"] for c in beat.get("claims") or [] for s in c.get("sources") or []]
+        try:
+            spans = [
+                source
+                for _what, source in model.lift_sources(
+                    model.Beat.model_validate(beat), args.books_root / beat.get("city_name", "")
+                )
+            ]
+        except ValidationError:  # a legacy or half-written record: its spans, as read
+            spans = [s["span"] for c in beat.get("claims") or [] for s in c.get("sources") or []]
         longest = {"length": 0, "text": ""}
         for span in spans:
             found = run_outside_quotation(text, span)
