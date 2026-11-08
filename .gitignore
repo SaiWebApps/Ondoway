@@ -270,6 +270,11 @@ temp/
 .claude/ledger/tracker.db-wal
 .claude/ledger/tracker.db-shm
 
+# Per-developer local memory pointer into each dev's own Obsidian vault
+# (machine-specific path, e.g. an @import of a synced vault file). Each dev
+# keeps their own; it is never committed.
+CLAUDE.local.md
+
 # Keep .env.example and .env.test.example but ignore .env and .env.test
 !.env.example
 .env.test
