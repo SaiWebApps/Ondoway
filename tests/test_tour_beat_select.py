@@ -1762,7 +1762,7 @@ def test_order_body_chronologically_is_pure_reorder_no_drops():
     assert [b.id for b in out] == ["b1500", "b1800", "b2001"]
 
 
-# --- rule 19 must not outrank spatial coherence (2026-07-19) ----------------
+# --- tone variety must not outrank spatial coherence (2026-07-19) -----------
 
 
 def _groups_in_order(beats: list[BeatRef]) -> list[str | None]:
@@ -1809,7 +1809,7 @@ def test_tone_variety_ungrouped_splits_a_sub_anchor():
 
 
 def test_tone_variety_grouped_keeps_each_sub_anchor_contiguous():
-    """Rule 19 confined to one sub-anchor at a time: no teleporting the listener."""
+    """Tone variety confined to one sub-anchor at a time: no teleporting the listener."""
     out = _enforce_tone_variety(_somber_split_case(), group_of=lambda b: b.sub_location)
     groups = _groups_in_order(out)
     assert groups == ["rue-de-paris-cells", "kitchen-pavilion"], groups
@@ -1819,7 +1819,7 @@ def test_tone_variety_grouped_keeps_each_sub_anchor_contiguous():
 
 
 def test_tone_variety_grouped_still_breaks_somber_runs_inside_a_group():
-    """Grouping must not neuter rule 19 where relief exists within the group."""
+    """Grouping must not neuter tone variety where relief exists within the group."""
     beats = [
         _beat("s1", sub_location="hall", emotional_register="somber"),
         _beat("s2", sub_location="hall", emotional_register="somber"),

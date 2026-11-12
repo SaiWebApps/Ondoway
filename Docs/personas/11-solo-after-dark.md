@@ -19,8 +19,8 @@ that are one thing at the start of it and a different thing by the end.
 ## The two and a half hours
 
 1. 14:30–14:38 — Eight minutes among the Buren columns in the Palais-Royal courtyard. Still
-   bright. **She checks the finish time — 17:00 — and then checks it against sunset, which the app
-   knows nothing about.**
+   bright. **She checks the finish time — 17:00 — and then checks it against sunset
+   herself.**
 2. 14:38–14:46 — Walks north to the Galerie Vivienne.
 3. 14:46–15:06 — Twenty minutes in the Galerie Vivienne and the Galerie Colbert. Covered, lit,
    busy. **The same three properties that made these right for Aiko in the rain make them right for
@@ -76,8 +76,8 @@ governed by a variable — the light — that appears nowhere in the request, th
   that some stops are for the visitor's body and not for their interest.**
 - **The end point needs a different rating after dark than before it.** A station, a floodlit
   monument on a main road, a busy square: these are good places to be left standing at 17:00 in
-  December and unremarkable at 17:00 in June. Nothing scores a place for being a decent place to
-  finish.
+  December and unremarkable at 17:00 in June. After dusk the planner prefers a finish rated good
+  to be left standing in the dark.
 - **She will never enter any of this, and unlike Nadia she would probably not answer a direct
   question about it either.** It has to be inferred from the date, the latitude and the finish
-  time — three things the system already has and does nothing with.
+  time — three things the system already has, and uses to work out when dusk falls.

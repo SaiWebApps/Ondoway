@@ -13,8 +13,8 @@ test asserts the deterministic structural shape.
 Design notes:
 
 - Stage 1 (cold open) prefers the first stop's ``stop_orientation``
-  beat. When absent (most tier-5 anchors per §1.4), falls back to a
-  ``SYNTHESIZED_OPENER`` template per §3.4 / Q7. This documents the
+  beat. When absent (most tier-5 anchors), falls back to a
+  ``SYNTHESIZED_OPENER`` template per §3.4. This documents the
   data gap honestly rather than masking it.
 - Stages 2/3 (anchor essay + circumnavigation) just stream the
   pre-ordered beats from ``BeatSequence``. Beat ordering already
@@ -152,7 +152,7 @@ GLUE_LABELS: frozenset[str] = frozenset(
     }
 )
 
-# Phrases generation must never emit (rule 32 + feedback_tour_tone_default).
+# Phrases generation must never emit (§3.5 + feedback_tour_tone_default).
 FORBIDDEN_PHRASES: tuple[str, ...] = ("imagine", "picture this", "envision", "visualize")
 
 #: Phase 6 S6.5 (W6.2 R4, LOCKED 8/11): phrases that can ONLY be a promise of a later
@@ -644,7 +644,7 @@ def _build_cold_open(
         sentences.extend(_beat_to_sentences(orientation, stop_idx))
         consumed.add(orientation.id)
     else:
-        # SYNTHESIZED_OPENER fallback per Q7. Phase 7.5 (Fix 2)
+        # SYNTHESIZED_OPENER fallback per §3.4. Phase 7.5 (Fix 2)
         # composes the opener from real corpus data at the start POI:
         # Area name + pronunciation + a single physical_cue + an
         # optional sensory invitation if any beat has feature_type='view'.
@@ -926,10 +926,9 @@ def _synth_pick_cue(beats: list[BeatRef]):
 def _find_orientation_beat(stop: POIBeats) -> BeatRef | None:
     """Return the first beat keyed as ``beat_type='stop_orientation'``.
 
-    Phase 1 §1.4 inventoried 13 such beats in the live corpus and
-    Phase 3.5 confirmed them: the field is ``beat_type`` (not
-    ``narrative_function``). The lookup checks both for resilience —
-    older corpus dumps used ``narrative_function`` for the same role.
+    The field is ``beat_type`` (not ``narrative_function``). The lookup checks
+    both for resilience — older corpus dumps used ``narrative_function`` for
+    the same role.
     """
     for beat in stop.beats:
         if (beat.beat_type or "").lower() == "stop_orientation":

@@ -57,9 +57,6 @@
 #      stderr open, satisfying neither exit condition. Occupying the chosen port on BOTH
 #      loopback stacks reproduces this on demand.
 #
-# Full evidence, and the SDK patch proving the hang can be bounded there, are written up in
-# docs/bug-reports/2026-08-28-flutter-test-chrome-hang.md.
-#
 # WHAT THIS RUNNER DOES ABOUT IT: it detects a stall as a stall — no growth in the log for
 # STALL_SECONDS while the process is alive — prints WHICH of the two it is from the position
 # in the log plus who holds the debugging port, and only THEN re-runs the suite — up to

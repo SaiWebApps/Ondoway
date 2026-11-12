@@ -204,7 +204,7 @@ def select_poi_beats(
         else:
             ordered = _cap_spatial_by_score(poi, ordered, interest)
 
-    # Spatial strategies pass their grouping so rule 19 cannot reorder beats
+    # Spatial strategies pass their grouping so tone variety cannot reorder beats
     # across sub-anchors (see _enforce_tone_variety); flat stops keep the
     # whole-stop interleave.
     ordered = _enforce_tone_variety(ordered, group_of=_tone_group_key(strategy))
@@ -784,7 +784,7 @@ def find_area_orientation_beat(
 
     Phase 7 (2026-04-29): the per-POI hoist in ``select_poi_beats`` only
     surfaces an orientation beat when one exists at the start POI. Most
-    tier-5 anchors (per phase-1-design §1.4) lack one, so the cold-open
+    tier-5 anchors lack one (phase-1-design §3.4), so the cold-open
     falls back to the SYNTHESIZED_OPENER even when a sibling POI in the
     same Area carries the canonical Pariswalks-format opener.
 
@@ -1133,7 +1133,7 @@ def _enforce_tone_variety(
     beats: list[BeatRef],
     group_of: Callable[[BeatRef], str | None] | None = None,
 ) -> list[BeatRef]:
-    """Avoid 3 consecutive somber/reverent beats (rule 19).
+    """Avoid 3 consecutive somber/reverent beats (§3.3 tone variety).
 
     Constructive interleave: bucket the beats into somber/reverent vs.
     relief (everything else), preserving each bucket's stable input order.
@@ -1155,7 +1155,7 @@ def _enforce_tone_variety(
 
     Tradeoff, deliberate: a wholly-somber group can still run past two, and a
     run may join across a group boundary. For a spatially-sequenced stop, walk
-    coherence outranks rule 19 — the alternative is teleporting the listener.
+    coherence outranks tone variety — the alternative is teleporting the listener.
     """
     if group_of is not None:
         out: list[BeatRef] = []

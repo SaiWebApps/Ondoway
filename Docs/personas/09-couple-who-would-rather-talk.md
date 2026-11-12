@@ -74,8 +74,8 @@ listened to: about 37. **Audio they would have called ideal: about 25.**
   be able to be short *by intent*, distinguishable from short *because the beats ran out*.
 - **A place's worth includes whether it is good to talk in.** The Palais-Royal garden wins the
   afternoon on chairs, enclosure and quiet. The Galerie Vivienne earns its audio by being too loud
-  to converse in. **Nothing in the corpus records how a place sounds or whether you can sit down in
-  it**, and for this party those two facts outrank every cultural property.
+  to converse in. **The corpus records only a yes or no for whether two people can sit and talk
+  there**, and for this party that fact outranks every cultural property.
 - **One request, one duration, one interest — and two people who disagree.** Dev would have kept
   walking at step 7; Fiona wanted to sit. Every persona before this one is a single decision-maker
   or a parent with authority. A couple negotiates, and the negotiation costs minutes the plan never

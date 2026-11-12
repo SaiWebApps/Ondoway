@@ -58,7 +58,7 @@ Exit codes: 0 = pass, 1 = validation fail, 2 = input/resolution error, 3 = densi
 ## Pipeline guardrails (per CLAUDE.md, non-negotiable)
 
 1. All queries are city-scoped. The harness threads `city_slug` everywhere.
-2. Per phase-1-design rule 8: source-traceable output is the launch gate. Don't rationalise validation failures.
+2. Per phase-1-design §3.6: source-traceable output is the launch gate. Don't rationalise validation failures.
 3. Glue is structural (navigation, staging, pacing, closing). It never invents claims, names, or dates. The whitelist is enforced in `validation.py`.
 4. SYNTHESIZED_OPENER is a graceful degradation, not a feature. When it fires, the markdown footer flags it for the user — quality gradient at first stops without `stop_orientation` beats.
 

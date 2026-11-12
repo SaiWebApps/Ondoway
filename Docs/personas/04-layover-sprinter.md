@@ -36,10 +36,10 @@ late costs him £180 and a night in a hotel.
 
 ## What this persona breaks
 
-- **A duration is not a target to hit — it is a ceiling never to cross.** The current model aims
-  for the nominal and treats 10% over as acceptable. For Marcus, 10% over is a missed train.
-  Under-running is nearly free; over-running is catastrophic. **The cost of error is asymmetric
-  and the model treats it as symmetric.**
+- **A duration is not a target to hit — it is a ceiling never to cross.** For Marcus, 10% over
+  is a missed train. Under-running is nearly free; over-running is catastrophic. **The cost of
+  error is asymmetric.** The engine refuses a day longer than the asked time, and a `wall` end
+  aims at 95% of it so the slack is planned in (`routing.py`).
 - **A plan needs a margin, and the margin should be visible.** He would rather be offered "2h 40
   of tour with 20 minutes of slack" than "3h 00 exactly".
 - **Unpredictable stops must be refusable.** A queue is not a duration, it is a distribution. Any

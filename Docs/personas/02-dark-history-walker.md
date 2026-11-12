@@ -87,7 +87,7 @@ one of those: **the Conciergerie is 0 for Camille and 65 for Théo.**
 ## What this persona breaks
 
 - **An interest must change how long you stay, not only where you go.** This is the hardest
-  requirement in the whole set, and nothing in the current model can express it. Visit time is a
+  requirement in the whole set, and the engine prices it in `visit_time.py`. Visit time is a
   property of the place *and* the visitor together.
 - **An interest must change the amount of narration a place gets.** Concorde is four minutes for
   Camille and twelve for Théo.

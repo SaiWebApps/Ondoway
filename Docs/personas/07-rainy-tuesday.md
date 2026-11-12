@@ -38,7 +38,7 @@ and the day of the week.
   a dry Wednesday and a miserable one on a wet Tuesday. Weather and weekday change which stops are
   right, how long each is worth, and what walking costs.
 - **Opening hours are not optional.** A route to a locked door is not a slightly worse tour, it is
-  a broken one. Nothing in the corpus records them today.
+  a broken one. The corpus records them, and the planner keeps a shut place out of the day.
 - **The cost of walking is not fixed.** In rain, legs should be shorter and covered routes worth a
   detour. Today walking has one price everywhere and always.
 - **Shelter is a property of a route, not only of a stop.** An arcade is a *covered leg*. There is

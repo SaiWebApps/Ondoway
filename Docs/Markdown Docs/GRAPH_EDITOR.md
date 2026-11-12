@@ -17,21 +17,24 @@ open http://localhost:8000/editor
 
 The editor loads the full graph from `/api/v1/graph` on startup. The connection badge in the header turns **green** ("connected") when the API is reachable. If it turns **red**, check that the API is running and Neo4j is up (`make db-status`).
 
+The editor needs the graph routes (`/api/v1/graph`, `/api/v1/nodes`, `/api/v1/edges`,
+`/api/v1/schema`). The API mounts them only when `WORKBENCH_API_ENABLED` is true. The
+local, test and workbench profiles under `config/profiles/` set it to true. The public
+deployment sets it to false, so the editor page loads there but cannot reach the graph.
+
 ## Interface Overview
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  Ondoway Graph Editor         [connected] 12 nodes 15 edges │
+│  Ondoway Graph Editor     [connected] 12 nodes 15 edges │
 ├──────────────────────────────────────────────────────┤
 │  [+ Node] [+ Edge] [Refresh]                         │
 │                                                      │
-│                                                      │
-│           ◉ User ─── ◉ Profile                ┌─────┤
-│            │                                  │ Side │
-│           ◉ Trip ── ◉ ItineraryItem           │Panel │
-│            │          │                       │      │
-│           ◉ Lens     ◉ POI ── ◉ Beat          │Forms │
-│                                               │      │
+│           ◉ User ─── ◉ Profile ── ◉ Family    ┌─────┤
+│                       │                       │ Side │
+│                      ◉ Trip ── ◉ ItineraryItem│Panel │
+│                                  │            │      │
+│           ◉ Lens ── ◉ Beat ── ◉ POI ── ◉ Area │Forms │
 │                                               └─────┤
 │  [User] [Profile] [Trip] [POI] [Beat] [Lens] [Item]  │
 └──────────────────────────────────────────────────────┘
@@ -53,7 +56,7 @@ The editor loads the full graph from `/api/v1/graph` on startup. The connection 
 - Physics simulation runs for ~5 seconds, then settles
 
 ### Legend (bottom)
-- Color key for all 7 node types
+- Color key for 7 of the 9 node types. Area and Family have no entry in the legend.
 
 ### Side Panel (right)
 - Slides in when creating or editing a node/edge
@@ -61,6 +64,9 @@ The editor loads the full graph from `/api/v1/graph` on startup. The connection 
 - Close with the **X** button or press **Escape**
 
 ## Node Types & Colors
+
+The graph has 9 node types. The editor gives 7 of them their own color. Area and Family
+are drawn grey, at 14 px, and do not appear in the legend.
 
 | Type           | Color      | Size  |
 |----------------|------------|-------|
@@ -71,24 +77,29 @@ The editor loads the full graph from `/api/v1/graph` on startup. The connection 
 | NarrativeBeat  | Light green| 14 px |
 | Lens           | Lime green | 14 px |
 | ItineraryItem  | Amber      | 12 px |
+| Area           | Grey       | 14 px |
+| Family         | Grey       | 14 px |
 
 ## Relationship Types
 
-11 edge types connect nodes in the graph:
+14 edge types connect nodes in the graph:
 
-| Type            | From → To                     |
-|-----------------|-------------------------------|
-| HAS_PROFILE     | User → Profile                |
-| IS_CAPTAIN_OF   | User → Trip                   |
-| IS_CREW_OF      | User → Trip                   |
-| PREFERS_LENS    | Profile → Lens                |
-| HAS_STOP        | Trip → ItineraryItem          |
-| ASSIGNED_TO     | ItineraryItem → POI           |
-| AT_POI          | NarrativeBeat → POI           |
-| PLAYS_BEAT      | POI → NarrativeBeat           |
-| HAS_BEAT        | Lens → NarrativeBeat          |
-| TAGGED_WITH     | NarrativeBeat → Lens          |
-| IS_PARENT_OF    | Lens → Lens                   |
+| Type            | From → To                       |
+|-----------------|---------------------------------|
+| HAS_PROFILE     | User → Profile                  |
+| IS_CAPTAIN_OF   | Profile → Trip                  |
+| IS_CREW_OF      | Profile → Trip                  |
+| MEMBER_OF       | Profile → Family                |
+| DAY_OF          | Trip → Family                   |
+| PREFERS_LENS    | Profile → Lens                  |
+| HAS_STOP        | Trip → ItineraryItem            |
+| ASSIGNED_TO     | ItineraryItem → Profile         |
+| AT_POI          | ItineraryItem → POI             |
+| PLAYS_BEAT      | ItineraryItem → NarrativeBeat   |
+| HAS_BEAT        | POI or Area → NarrativeBeat     |
+| TAGGED_WITH     | NarrativeBeat → Lens            |
+| IS_PARENT_OF    | Lens → Lens                     |
+| WITHIN          | POI or Area → Area              |
 
 ## Mouse & Keyboard Controls
 
@@ -120,10 +131,11 @@ The editor loads the full graph from `/api/v1/graph` on startup. The connection 
 | Field                | Required | Default |
 |----------------------|----------|---------|
 | name                 | Yes      | —       |
+| city_name            | Yes      | —       |
 | short_description    | No       | ""      |
 | latitude             | Yes      | —       |
 | longitude            | Yes      | —       |
-| importance_tier      | No       | 1       |
+| importance_tier      | Yes (1–5)| —       |
 | trigger_radius       | No       | 10      |
 | typical_duration_min | No       | 30      |
 | kid_friendly         | No       | "yes"   |
@@ -156,24 +168,36 @@ The editor loads the full graph from `/api/v1/graph` on startup. The connection 
 
 Deleting a node also deletes all its connected edges.
 
-## Working with Test Data
+## Working with Local Data
 
-After running `make setup`, the graph is populated with seed data:
+`make setup` fills the local development graph from two sources:
 
-- **1 User** (test traveler) with **1 Profile**
-- **12 Lenses** (Art, History, Food, etc.) with DAG hierarchy
-- **3 POIs** (Paris locations: Louvre, Notre-Dame, Shakespeare & Co.)
-- **4 Narrative beats** (audio tour scripts)
-- **1 Trip** with **3 itinerary items**
-- **11 relationship types** connecting them all
+- **Seed data** (`src/seed/`): 8 parent lenses and 21 child lenses linked by
+  `IS_PARENT_OF`, one test user with two profiles in one family, three Paris
+  POIs with their beats, and one sample trip with its stops.
+- **The committed city corpus**: every city under `data/` that has a
+  `poi-raw.json`, loaded the same way a deploy loads it.
 
-This gives you a representative graph to explore. You can add, edit, and delete freely — run `make setup` again to reset to the seed state (it's idempotent).
+Edits in the editor change the local dev graph only. The committed files under
+`data/` stay the same. Every target that needs dev data, such as `make api`, `make test`
+and `make tour-build`, first checks that the dev graph matches those files
+(`make db-parity` runs the same check). On a mismatch it reloads those files into the
+graph, but it never deletes. So a POI, beat or area that you add makes the check fail
+and the target refuse to run. Seed nodes outside the city corpus, such as the test
+user and its trip, are not checked.
+
+To get back to a clean graph, delete the local dev database and provision it again:
+
+```bash
+make db-reset DB=dev    # Delete the local dev graph (never cloud)
+make setup              # Start it again and reload the seed data and city corpus
+```
 
 ## Troubleshooting
 
 | Symptom                        | Fix                                   |
 |--------------------------------|---------------------------------------|
 | Badge shows "connection failed"| Run `make api` to start the server    |
-| No nodes on canvas             | Run `make setup` to seed data         |
+| No nodes on canvas             | Run `make setup` to provision data    |
 | Nodes fly off screen           | Click Refresh — physics will re-settle|
 | Form fields missing            | Schema endpoint may be down — check `curl http://localhost:8000/api/v1/schema/nodes` |

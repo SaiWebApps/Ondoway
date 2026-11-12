@@ -686,7 +686,7 @@ The honest fix on this particular beat is to drop both flagged clauses and re-em
 
 After writing the output, tell the user what to run next:
 
-1. **If any sub-POIs were emitted:** `/poi-geocode paris --missing-only` — this will fill in the `latitude`/`longitude` for every newly-created sub-POI using OpenStreetMap, with the NORTHSTAR ≥70% confidence threshold. Any sub-POI whose geocode resolves to its parent's exact coordinates or below the confidence threshold gets flagged for manual review (per AC-2c).
+1. **If any sub-POIs were emitted:** `/poi-geocode {city_slug} --missing-only` — this will fill in the `latitude`/`longitude` for every newly-created sub-POI using OpenStreetMap. Any sub-POI whose geocode is LOW confidence or resolves to its parent's exact coordinates gets flagged for manual review (per AC-2c).
 2. **If any sub-POIs were emitted:** `/poi-dedup paris` after geocoding — the strict-merge skill catches any sub-POI that's actually an alias of an existing POI we missed.
 3. **If `new_poi: true` flags exist:** `/poi-generate` can enrich those separately; they are out of scope for this extraction run.
 4. **Before Neo4j upload:** run `.venv/bin/python scripts/verify_scope4_acs.py --beats data/{city_slug}/beats.json --city {city_slug}` to check every emitted beat passes Pydantic. Upload is handled by `/upload`, not here.

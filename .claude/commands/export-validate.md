@@ -11,7 +11,7 @@ Parse the arguments:
 
 ## PURPOSE
 
-The pipeline produces two separate files — `poi-raw.json` (POIs) and `beats.json` (beats). This skill combines them into upload-ready files where beats are nested under their POIs, similar to the Data Miner V3 output format. Each export file corresponds to one book chunk, keeping file sizes manageable.
+The pipeline produces two separate files — `poi-raw.json` (POIs) and `beats.json` (beats). This skill combines them into upload-ready files where beats are nested under their POIs, in the export format shown in Phase 3. Each export file corresponds to one book chunk, keeping file sizes manageable.
 
 ---
 

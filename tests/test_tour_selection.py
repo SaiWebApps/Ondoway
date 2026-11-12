@@ -1371,7 +1371,7 @@ def test_spine_district_dominance_picks_strongest_specific_when_multiple():
 def test_notre_dame_in_ile_not_latin_quarter():
     """Live-data regression against the **production** Paris corpus.
 
-    Asserts the §1.8 polygon-overshoot bug has been fixed: Notre-Dame
+    Asserts the Latin Quarter polygon-overshoot bug has been fixed: Notre-Dame
     sits in Île de la Cité, not Latin Quarter. Uses the separately pinned
     localhost dev-graph profile because pytest's destructive fixtures use the
     disposable test DB.

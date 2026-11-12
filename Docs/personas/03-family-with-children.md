@@ -41,7 +41,7 @@ children can run. No queue longer than about five minutes. Nothing where being l
 - **Walking speed is not a constant.** With a five-year-old it is roughly half, and it varies
   within the same tour.
 - **Some required stops have no content.** A toilet and a bakery are load-bearing and carry no
-  narration at all. The current model has no way to seat a stop that says nothing.
+  narration at all. The engine seats a toilet or bench as a rest stop that says nothing.
 - **The real constraints were never entered.** Nothing in the request says "children". Either the
   app asks, or it infers, or it plans for a visitor who does not exist.
 - **Audio is shared out loud.** Content pitched at one listener with earbuds is the wrong

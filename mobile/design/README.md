@@ -9,9 +9,6 @@ repo is self-contained and the Flutter theme has a version-controlled reference.
 artifact export (includes the claude.ai frame runtime; open it in a browser to view the
 screens). When the artifact iterates to v11+, re-snapshot here and bump this note.
 
-> ⚠️ **`specs/2026-08-04-mobile-roadmap/design-system.html` is STALE (v2)** — do not build
-> against it. It predates v10 by 8 revisions. This folder supersedes it.
-
 ## Core tokens (extracted from v10 — the input for `mobile/lib/theme/`)
 
 Full light + dark. Encode these into a `Tokens` class + `ThemeData` (Slice 0.1).

@@ -9,9 +9,6 @@ extends the one arrival-window mechanism the clock already has; there is no
 second clock.
 
 Ordering itself stays clock-blind: the order is computed first, then judged.
-Content of already-served days moves when this lands, so their golden
-fixtures are re-baselined under adversarial judgment as named work, not
-discovered drift.
 
 ## Considered Options
 

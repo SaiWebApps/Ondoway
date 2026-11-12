@@ -48,7 +48,7 @@ Each persona breaks a different assumption on purpose:
 
 1. **Standing still is most of the day.** In every persona here, time spent at places exceeds
    time spent walking between them — Paulo 109 against 41, Sofia 98 against 52, Greta 116
-   against 64. The current model can only spend time walking or talking.
+   against 64. The engine prices time at a place as well as walking and talking (`visit_time.py`).
 2. **Narration and walking overlap, and for most of them it is free.** They listen on the move;
    several also listen while queueing, and one takes the earbud out entirely inside a church.
    **Two personas complicate this in opposite directions.** Fiona and Dev mute the audio on six of

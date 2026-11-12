@@ -6,19 +6,15 @@ the whole product — planner, authoring, playback, workbench.
 
 ## Language
 
-**Subject**:
-An area of interest a traveller picks to steer their day. The
-traveller-facing word; in code and data the same concept is called a lens.
-_Avoid_: category, topic, genre, interest tag
-
 **Lens**:
-The code and corpus name for a subject. One concept with four roles: it
+An area of interest a traveller picks to steer their day. The app, the code
+and the corpus all use this one word. One concept with four roles: it
 steers which places are picked, constrains which beats may speak at a stop,
-colours the diction of the narration, and names the served subject on screen.
+colours the diction of the narration, and labels the served lens on screen.
 A parent lens stands for all of its children. The vocabulary is fixed — a
 closed set, not free text.
-_Avoid_: filter (it also orders and labels), register (one of its roles, not
-the concept)
+_Avoid_: subject, category, topic, genre, interest tag, filter (it also
+orders and labels), register (one of its roles, not the concept)
 
 **Beat**:
 One unit of corpus story, tied to a place and tagged with exactly one leaf

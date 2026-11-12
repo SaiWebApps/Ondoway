@@ -1,34 +1,26 @@
-# A phase's independent tracks build concurrently in lane-isolated sandboxes
+# Independent tracks build concurrently in lane-isolated sandboxes
 
-A phase whose workstreams share no code path is built as concurrent tracks,
-one per sandbox. A sandbox is a git worktree at an explicit path plus its own
-lane: its own Neo4j graphs, API port, workbench port and simulator, selected
-by the same `LANE=` variable that names every other lane. All tracks are
-planned in one session that produces every track's plan, a conflict map
-naming an owner for each coordinated file region, and each track's budget;
-one "go" launches the set, and after it a track never idles waiting for human
-input that is not a pause-budget item.
+Workstreams that share no code path are built as concurrent tracks, one per
+sandbox. A sandbox is a git worktree plus its own lane. A lane owns its own
+Neo4j graphs (dev, test and workbench) and its own API, dashboard and
+Flutter web ports. The `LANE=` variable selects the whole set, or the
+worktree's `.ondoway-lane` file names it. A worktree with no lane refuses
+every target, so it can never fall through to the main checkout's graphs.
 
-Each checkout carries its own ledger and dashboard, because a completion
-claim is verified by re-running the milestone's test in the checkout that
-made it. Only the main checkout runs the definitive bar. A sandbox never
-starts or stops Valhalla, never deploys, and never touches another lane's
-ports. Verdict agents that only read — acceptance and QA, and the members of
-an adversarial panel — run concurrently; milestones inside a track stay
-serial.
+Lane 4 is the sandbox lane: the lane a second worktree owns outright. Lanes 2
+and 3 are shards of the full test suite, so a sandbox never takes them.
 
-Tracks exit by merging: the track that owns the phase gate merges first, the
-others rebase onto it, and one full bar plus one adversarial panel on the
-merged result is the phase exit.
+A worktree touches only its own lane's graphs: `db-up`, `db-down` and
+`db-reset` refuse another lane's database. Routing is shared. It is a
+read-only lookup, so every lane uses the one routing engine and the map tiles
+in the main checkout. A worktree never starts a second engine. The full suite
+(`make test`, `make audit`) runs only from the main checkout, because it uses
+the main graphs and lanes 2 and 3 as its shards.
 
 ## Considered Options
 
 - **A shared checkout with a file-ownership map** — ownership on paper does
   not make trampling impossible; isolation does.
-- **Continuous merges to main after every milestone** — serializes the bar
-  and multiplies per-milestone ceremony, which is the cost being removed.
 - **Duplicating the compose stack per worktree** — rebuilds what `LANE=`
-  already provides and forfeits the guards the lanes carry: the pinned
-  compose project name, heap caps, the shared read-only Valhalla root.
-- **Pipelining a track's next milestone under the previous one's QA** — same
-  files, same sandbox; the overlap is where a false green hides.
+  already provides and forfeits the guards the lanes carry, such as the
+  shared read-only routing tiles.

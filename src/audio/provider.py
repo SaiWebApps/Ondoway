@@ -170,7 +170,7 @@ class MockTTSProvider:
         duration_sec = min(max(1.0, word_count / 2.5), self._MAX_DURATION_SEC)
 
         sample_rate = 44100
-        channels = 2  # stereo per NORTHSTAR spec
+        channels = 2  # stereo
         sample_width = 2  # 16-bit
         n_frames = int(sample_rate * duration_sec)
 

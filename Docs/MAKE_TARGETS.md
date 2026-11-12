@@ -24,9 +24,10 @@ process—never a cached or filtered subset.
 | `flutter-analyze` | None | No | Yes, with Flutter |
 | `test` | Every database, data, Valhalla, browser/live/cloud shard | Where required | Yes; definitive suite, five concurrent tracks |
 | `audit` | Lint and `test` | Where required | Yes |
+| `dedup-review` | Render auth | Yes | Yes; a paid model pass over the whole codebase that looks for one question answered in two places |
 | `test-file` | Test/dev DBs, dev data, Valhalla | Only with `LIVE=1` | Yes, with `FILE` |
 | `test-live` | Render auth, test/dev DBs, dev data, Valhalla | Yes | Yes |
-| `test-workbench` | Test/workbench DBs, Valhalla; its API takes a free port | No; the shard pins mock providers | Yes; one test drives the real tour pipeline (hence Valhalla), still on mock providers |
+| `test-workbench` | Test/workbench DBs, Valhalla, Playwright browser; its API takes a free port | No | Yes; its API server pins `TTS_PROVIDER=openai`, as production does, and `ONBOARD_PROVIDER=mock`, so the beat drafter spends nothing; one test drives the real tour pipeline (hence Valhalla) |
 | `golden-probe` | Test/dev DBs, dev data, Valhalla | No | Yes |
 | `golden-diff` | Dev DB/data and Valhalla | No | Yes, with `FIXTURE` |
 | `score-saved-tours` | None; reads `data/{city}/tours/` only | No | Yes; $0, no DB or container |
@@ -36,10 +37,10 @@ process—never a cached or filtered subset.
 | `tour-batch-live` | Dev DB/data and Valhalla | Yes | Yes, with approved hash |
 | `tour-batch-review-plan` | Dev DB/data and Valhalla | No | Yes |
 | `tour-batch-review-live` | Dev DB/data and Valhalla | Yes | Yes, with approved hash |
-| `db-up` | Selected Docker service | No | Yes, `DB=dev\|test\|workbench` |
-| `db-down` | Selected Docker service resolution | No | Yes |
+| `db-up` | Selected Docker service | No | Yes, with `DB=` (default `dev`): `dev`, `test`, `workbench`, or the same three for lanes 2, 3 and 4 |
+| `db-down` | Selected Docker service resolution | No | Yes, with `DB=` (default `dev`) |
 | `db-status` | None | No | Yes |
-| `db-reset` | Exact selected service and volume | No | Yes; local only |
+| `db-reset` | Exact selected service and volume | No | Yes, with `DB=` (default `dev`); local only |
 | `db-parity` | Dev DB, or cloud read session | Cloud only | Yes |
 | `valhalla-up` | Main-checkout compose path and health wait | No | Yes |
 | `valhalla-down` | Main-checkout compose path | No | Yes |
@@ -48,9 +49,11 @@ process—never a cached or filtered subset.
 | `api` | Dev DB/data, Valhalla, :8000 | Yes | Yes; foreground server |
 | `workbench` | Dev DB/data, Valhalla, :8000 (reuses a healthy API rather than restarting it) | Yes | Yes; foreground server |
 | `dashboard` | Dev DB/data | No | Yes; foreground server |
+| `money-model` | None; serves `Docs/business` on :8765 | No | Yes; opens the money model simulator in the browser |
 | `flutter-web` | None | No | Yes, with Flutter/Chrome |
 | `flutter-ios` | Dev DB/data, simulator boot, local API | Yes | Yes, with Xcode |
 | `flutter-device` | None | No | Yes, with attached device |
+| `flutter-device-profile` | None | No | Yes, with attached device; profile mode (compiled ahead of time), against production |
 | `flutter-pub-get` | None | No | Yes |
 | `flutter-clean` | Flutter clean and dependency resolution | No | Yes |
 | `survey-area-candidates` | Exact local profile | No | Yes, with `CITY` |
@@ -58,6 +61,9 @@ process—never a cached or filtered subset.
 | `backfill-provenance` | Dev DB | No | Yes |
 | `backfill-poi-role` | Exact local profile | No | Yes |
 | `backfill-name-key` | Dev DB | No | Yes |
+| `backfill-anchors` | Dev DB | No | Yes; writes reviewed POI anchors onto the local dev graph; city in `ARGS` |
+| `backfill-beats` | Dev DB | No | Yes; re-syncs changed beat texts onto the local dev graph and clears their audio; city in `ARGS` |
+| `backfill-footprints` | Dev DB | No | Yes; re-syncs reviewed footprints and roles onto the local dev graph; city in `ARGS` |
 | `wiki-fetch` | Exact local profile | No | Yes, with `POI` |
 | `gen-within-edges` | Exact local profile | No | Yes |
 | `validate-beats` | Exact local profile | No | Yes |
@@ -65,15 +71,20 @@ process—never a cached or filtered subset.
 | `prune-orphans` | Dev DB, or explicit cloud selection | Cloud only | Yes, with `CITY`; deletes only with `APPLY=1` |
 | `fetch-boundary` | Exact local profile | No | Yes, with slug/relation |
 | `geocode-pois` | Exact local profile | No | Yes, with slug |
+| `poi-visit-duration` | None; reads/writes `data/{slug}/poi-raw.json` | Yes | Yes; a paid model pass that prices visit time; `LIMIT=` writes nothing |
+| `poi-visit-report` | None; reads `data/{slug}/poi-raw.json` | No | Yes; prints the visit-time audit table, $0, no network |
+| `poi-queues` | None; reads/writes `data/{slug}/poi-raw.json` | Yes | Yes; a paid model pass that prices queues; `LIMIT=` writes nothing |
+| `poi-trigger-radius` | None; reads/writes `data/{slug}/poi-raw.json` | No | Yes; sizes each footprint by place kind, $0, no network; `ARGS=--dry-run` writes nothing |
 | `poi-opening-hours` | None; reads/writes `data/{slug}/poi-raw.json` | Yes | Yes; two Overpass queries (the map first, as OpenStreetMap text) + a paid model pass for the doors the map does not hold; `LIMIT=` writes nothing |
 | `poi-place-category` | None; reads/writes `data/{slug}/poi-raw.json` | No | Yes; deterministic and $0, no network |
 | `poi-body-places` | None; writes `data/{slug}/body-places.json` | No | Yes; one Overpass query, $0, no model; `LIMIT=` writes nothing |
 | `poi-place-judgements` | None; reads/writes `data/{slug}/poi-raw.json` | Yes | Yes; a paid model pass; `LIMIT=` writes nothing |
 | `sync-poi-exports` | None; reads `poi-raw.json`, writes `data/{slug}/export/*.json` | No | Yes; $0, no network; `ARGS=--check` writes nothing |
 | `tour-build` | Dev DB/data and Valhalla | No | Yes |
+| `recipes-build` | Dev DB/data | Yes | Yes, with `CITY`; a paid writer and voice pass, `ARGS=--dry-run` spends nothing |
 | `measure-planned-audio` | Dev DB/data | No | Yes |
 | `measure-governor` | Dev DB/data | No | Yes |
-| `onboard-city` | Isolated temporary data and registry defaults | No | Yes, with city/modes |
+| `onboard-city` | Isolated temporary data and registry defaults | Yes | Yes, with city/modes |
 | `flutter-ipa` | None | No | Yes, with signing toolchain |
 | `testflight` | Credential validation, build-number bump, then fresh IPA | Yes | Yes, with App Store credentials |
 | `render-status` | Keychain API auth | API auth only | Yes |
@@ -93,13 +104,11 @@ process—never a cached or filtered subset.
 | `_test-cloud` | Render auth and Aura read session | Yes | Internal read-only shard |
 
 Cloud safety is structural: no pytest command receives the cloud profile,
-`db-reset` accepts only three fixed local services, and cloud data mutations
+`db-reset` accepts only the twelve local database names (four lanes of dev, test
+and workbench), and cloud data mutations
 require `TARGET=cloud CONFIRM_CLOUD_WRITE=1`.
 
 **Switch variables take the literal `1`, and nothing else.** `APPLY`, `FORCE`,
-`ALL`, `DRY_RUN` and `CONFIRM_COST` are armed by `APPLY=1`, never by `APPLY=true`
-or `APPLY=yes` — those now read as off. Make's `$(if ...)` tests for a non-empty
-value, so `APPLY=0` and `APPLY=false` previously ARMED the flag: the command a
-careful person types to preview a cloud prune deleted records instead. Erring
-towards off is the deliberate trade; a mistyped switch does nothing rather than
-something irreversible.
+`ALL`, `DRY_RUN` and `CONFIRM_COST` are armed by `APPLY=1`. Any other value, such as
+`APPLY=true`, `APPLY=yes`, `APPLY=0` or `APPLY=false`, reads as off. A mistyped
+switch does nothing rather than something irreversible.

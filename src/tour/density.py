@@ -1,16 +1,13 @@
 """Density gating — §3.7 of phase-1-design.
 
-Phase 6 added per-start-point density gating in response to the Phase 5
-quality audit (`Docs/tour-builder/phase-5-quality-audit.md`). The Phase
-5 multi-tour smoke test surfaced two failure modes the existing
-selection guards did not catch:
+Density gating guards against two failure modes that the selection
+guards alone do not catch:
 
-1. Tours from sparse starting points produced <11% audio fill — a
-   90-min "tour" that delivered 5 minutes of audio over 1.3km of
-   silence. The empirical walks ran 70-80% audio fill.
-2. Selection picked tier-3+ POIs with **zero active beats** as anchors
-   (Petit Palais in Tour 4) because routing-aware scoring did not look
-   at the beat count.
+1. A sparse starting point yields a mostly silent tour — under 11% audio
+   fill, such as 5 minutes of audio over a 1.3 km, 90-minute walk. The
+   empirical walks run 70-80% audio fill.
+2. A tier-3+ POI with **zero active beats** gets picked as an anchor,
+   because routing-aware scoring does not look at the beat count.
 
 Density gating answers "given a (start, duration, round_trip), is the
 reachable beat pool rich enough to support an honest tour?" before any
@@ -22,8 +19,7 @@ selection runs. Three outcomes:
 - **RED** — refuse to generate; return actionable alternatives (shorter
   duration, one-way to a denser destination, or a different start).
 
-The formula is canonical and matches phase-5-quality-audit.md §"Phase 6
-design". Runtime cost: one envelope-radius haversine sweep over the POI
+Runtime cost: one envelope-radius haversine sweep over the POI
 roster (303 POIs in Paris) — well under 50 ms.
 """
 
@@ -46,11 +42,10 @@ from .visit_time import stop_seconds, visit_seconds
 if TYPE_CHECKING:
     from .selection import CorpusSnapshot
 
-# §3.7 thresholds — frozen at Phase 6 calibration. These values match
-# the canonical formula in phase-5-quality-audit.md.
+# §3.7 thresholds — frozen at Phase 6 calibration.
 GREEN_FILL_RATIO_MIN: float = 1.0
 # Empirical audio-fill observed on the reference walks (module docstring:
-# "The empirical walks ran 70-80% audio fill"). Display-honesty threshold
+# "The empirical walks run 70-80% audio fill"). Display-honesty threshold
 # only — the banner may claim "below the 70-80% bar" solely under this value;
 # classification does NOT use it.
 EMPIRICAL_FILL_BAR: float = 0.70

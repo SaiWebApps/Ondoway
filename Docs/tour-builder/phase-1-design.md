@@ -1,714 +1,425 @@
-# Tour-Builder — Phase 1 Design
+# Tour engine design
 
-**Status:** DESIGN. No code, no implementation. STOP for user signoff before Phase 2.
-**Created:** 2026-04-27.
-**Inputs:** `source-study.md`, `empirical-tours/01-place-des-vosges.md`, `empirical-tours/02-ile-de-la-cite-notre-dame.md`, `empirical-tours/findings.md`, `extraction-requirements.md`, parked `design.md`, the 8 `feedback_tour_*` memories, live Paris Neo4j graph (queried 2026-04-27).
-**Authoritative source-of-truth:** the two empirical walks. Any rule contradicted by them is suspect.
+This is the design of the tour engine in `src/tour/`. It describes how the engine turns a
+walker's request into a walk and a script. Code comments cite its sections by number,
+so the section numbers stay fixed.
+
+The engine runs in the app and in the workbench. Both call the same code.
 
 ---
 
-## 1. Live-graph reconnaissance
+## 1. What the engine does
 
-Sampled the Paris corpus directly (`/tmp/sample_neo4j*.py`, 2026-04-27). Results below frame what tour-builder can rely on vs. what is thin.
+A request names a start, a length of time and, if the walker wants, a destination,
+interests and a party. The engine answers with a route and a script.
 
-### 1.1 Corpus shape
+The pipeline runs in this order:
 
-| Metric | Value |
+1. **Density gate** — is there enough to visit near the start? (§3.7)
+2. **Selection and routing** — which places to stop at, in what order, and for how long. (§3.2)
+3. **Beat selection** — which stored facts ("beats") to tell at each stop, in what order. (§3.3)
+4. **Stitching** — turn the beats into a sentence-by-sentence script, with short linking
+   lines ("glue"). (§3.4, §3.5)
+5. **Writing** — a writer model retells each stop as spoken narration, or the stop is told
+   from a stored telling of its place. (§3.4, §3.8)
+6. **Checks** — every sentence must trace to a beat or an allowed glue label. (§3.6)
+
+| Module | Job |
 |---|---|
-| Total POIs in Paris | **303** (linked via `WITHIN→Area{name:'Paris'}`) |
-| POIs by tier | t5=36, t4=52, t3=85, t2=67, t1=63 |
-| `poi_role` distribution | stop=177, walk_by_only=102, setting=23, null=1 |
-| Total NarrativeBeats | **1164** |
-| Average beats per POI by tier | t5 avg 9.75 (median 7, max 59), t4 avg 4.5 (med 3, max 24), t3 avg 3.0 (med 1, max 39), t2 avg 3.1 (med 2, max 19), t1 avg 1.8 (med 1) |
-| POIs within 1.5 km of Île de la Cité (`point.distance` works on `POI.location`) | 172 |
-| Areas roster | 1 city + 20 arrondissements + 2 islands + 11 neighborhoods + 3 corridors (orphans) + 1 unowned neighborhood (Grands Boulevards) = **38 declared**, plus 1 unowned shell (Tuileries) likely missing |
-
-POI.location is `Point(lng, lat)`; geo math (Cypher `point.distance`) is available natively. No external geocoder required at runtime.
-
-### 1.2 Tier-5 anchors — sub_location coverage
-
-Sub_location is the spatial primitive for buildings. Empirical Tour 2 confirmed it carries an interior walk on Notre-Dame.
-
-| POI | Total beats | With sub_location | Distinct sub_locations |
-|---|---|---|---|
-| Notre-Dame Cathedral | 48 | 20 | 15 |
-| Conciergerie | 16 | 8 | 6 |
-| Sainte-Chapelle | 9 | 2 | 1 |
-| Eiffel Tower | 12 | 2 | 1 |
-| Pantheon | 12 | 1 | 1 |
-
-Notre-Dame and Conciergerie are walk-ready. Sainte-Chapelle, Eiffel, Pantheon are thin — runtime should degrade gracefully (sequence by `narrative_function` instead).
-
-### 1.3 Squares — trigger_address coverage
-
-Trigger_address is the spatial primitive for circumnavigation. Empirical Tour 1 stress-tested it on Place des Vosges.
-
-| Square | Tier | Total beats | With trigger_address |
-|---|---|---|---|
-| Place des Vosges | 5 | 59 | **26** |
-| Place de la Bastille | 3 | 15 | 2 |
-| Place du Châtelet | 3 | 10 | 1 |
-| Place Vendôme | 5 | 7 | 1 |
-| Place Dauphine | 2 | 6 | 1 |
-| Place de la Concorde | 4 | 4 | 0 |
-| Place du Tertre | 4 | 4 | 1 |
-
-**Place des Vosges is the only square ready for full circumnavigation.** Other squares can do "stop and look around" but not Pariswalks-style address-by-address. This is fine for MVP; extraction can fill out the others later.
-
-### 1.4 Stop-orientation beats — known thin
-
-Per findings.md, this is the cold-open primitive. Live counts:
-
-- **13 total** `stop_orientation` beats across 12 POIs
-- Covered: Sacré-Cœur, Place des Vosges (3), Notre-Dame (1), Eiffel Tower, Palais Garnier, Catacombs, Rue Cler, Trocadéro, Saint-Germain-l'Auxerrois, Père Lachaise, Parc Monceau
-- **Conspicuously missing:** Conciergerie, Sainte-Chapelle, Louvre, Pantheon, Pont Neuf, Place Vendôme, Tuileries, Île de la Cité, Sorbonne, Luxembourg, Champs-Élysées, Arc de Triomphe, Musée d'Orsay
-
-This matches the findings.md gap. Runtime must degrade by composing a stop_orientation from `physical_cues` + `pronunciation` if available.
-
-### 1.5 Transit beats — better than expected
-
-- **87 total** transit beats; **78 carry trigger_address** (the rest carry only navigation prose).
-- Île de la Cité chain (Pont Neuf → Place Dauphine → Conciergerie → Sainte-Chapelle → Notre-Dame): all 4 bridge-stops have at least 1 transit beat. The Frommer's Walk-1 chain is reproducible from the corpus.
-- Top transit-providers: Père Lachaise (7), Rue Cler (6), Place des Vosges (3), Centre Pompidou (2), Place de la Bastille (2).
-
-Transit material is unevenly distributed. For routes outside the established Frommer's/Pariswalks corridors, runtime will need to generate structural glue. Acceptable per findings.md (glue is structural, not creative).
-
-### 1.6 Field-population health
-
-| Field | Populated / 1164 | Notes |
-|---|---|---|
-| `entities` | 1159 (99.6%) | strong |
-| `subject_tag` | 1095 (94%) | strong (489 of which are empty string — likely Vallois legacy) |
-| `physical_cues` | 1095 (94%) | strong (better than the 61% in source-study; v2 fix landed) |
-| `inline_foreign_phrases` | 1095 (94%) | strong |
-| `narrative_function` | 1159 (99.6%) | strong (establishing 380, deepen 340, climax 151, hook 135) |
-| `emotional_register` | 1159 (99.6%) | strong (neutral 424, reverent 218, somber 167, dramatic 137, wry 117, playful 96) |
-| `beat_length_class` | 599 of 1164 (51%) | **THIN** — 496 empty string + 69 null; only 296 seasoning + 255 mid + 32 micro + 16 anchor are usable |
-| `pronunciation` | 12 (1%) | **VERY THIN** — only Place des Vosges + a handful of others |
-| `book_slug` | 0 (all empty/null) | **MISSING** — no per-book filtering possible without re-attribution |
-
-`beat_length_class` and `pronunciation` are the largest data quirks tour-builder must handle. Both have backlog tickets implicit in the post-launch list.
-
-### 1.7 Lens system (live)
-
-Live count is **21 child lenses + 8 parent lenses = 29 total**. NORTHSTAR says "16 taggable lenses." This is a discrepancy worth flagging to the user — see Open Question 6 below.
-
-Lens relationship is `TAGGED_WITH` (parked design.md called it `TAGGED_LENS`).
-
-Top child-lens usage: hidden_history 269, historic_arch 170, dark_history 136, famous_residents 100, literary_heritage 90.
-
-### 1.8 Known data quirks (confirmed)
-
-- **Notre-Dame is in `Latin Quarter` Area** (polygon overshoot bug, post-launch backlog item 9). Confirmed live.
-- **Unowned shell Areas (post-launch item 10):** Rue Mouffetard, Rue Visconti, Rue Chanoinesse (corridors), Grands Boulevards (neighborhood). Tuileries shell from the docs is not visible in live data; either renamed or already cleaned.
-- **Vallois lossy `physical_cues`** (post-launch item 7): the migration default is `{cue, direction:"here", feature_type:"view"}`. Tour-builder selection should not over-weight `physical_cues` content for these.
-- **Notre-Dame does have 1 stop_orientation beat** — better than findings.md reported. Conciergerie, Sainte-Chapelle, and most other tier-5s do not.
-
-### 1.9 Le Marais and Île de la Cité as test cases
-
-Le Marais (47 POIs) and Île de la Cité (14 POIs) are dense enough to support full Phase-1-spec walks.
-
-| Area | t5 | t4 | t3 | t2 | t1 |
-|---|---|---|---|---|---|
-| Le Marais | 4 | 9 | 7 | 16 | 11 |
-| Île de la Cité | 5 | 2 | 2 | 1 | 2 |
-| Latin Quarter | 3 | 2 | 3 | 5 | 7 |
-| Saint-Germain-des-Prés | (data row dropped — query truncated) | | | | |
-
-Le Marais is the best target for the first generated tour: 4 tier-5 anchors (PdV is the killer one), enough mid-tier seasoning for between-anchor walking, and a coherent Area boundary.
-
-### 1.10 What tour-builder can rely on
-
-- **POI selection**: full coverage. Tier, location, poi_role, Area membership all populated.
-- **Beat metadata for selection**: entities, subject_tag, narrative_function, emotional_register, lens — all >94%.
-- **Spatial sequencing within a POI**: working for Notre-Dame, Conciergerie, Place des Vosges. Thin elsewhere.
-- **Cold-open assembly**: only 13 anchors have stop_orientation. Runtime must compose from physical_cues + pronunciation when missing.
-- **Transit weaving**: 87 beats, decent for established corridors, sparse off-corridor.
-- **Cross-book triangulation**: empirical walks proved this works at hand-write quality. Claim-level dedup (B8) deferred.
-
-### 1.11 What tour-builder cannot do well yet
-
-- **Pronunciation**: only 12 beats carry it. Cold-open pronunciation moments only land at PdV.
-- **Length-class budgeting**: half the corpus has no length_class. Runtime must fall back to word count from `script_body`.
-- **Per-book attribution at runtime**: `book_slug` not populated. If we want "this fact came from Pariswalks" UX, schema needs a backfill.
-- **Thin tier-5 sub_location** at Sainte-Chapelle, Eiffel, Pantheon — building-walk degrades to flat sequencing at these anchors.
+| `contract.py` | The data shapes: the request, places, beats, the route, the script, the report. |
+| `density.py` | The density gate. |
+| `selection.py` | Loads the corpus snapshot and plans the route. |
+| `routing.py`, `routing_client.py` | Walking time, the time budget, and street routing. |
+| `visit_time.py` | How long a walker spends at a place. |
+| `ordering.py` | The visiting order. |
+| `beat_select.py`, `fixtures.py` | The beats at each stop, and hand-made walk orders inside buildings. |
+| `generation.py`, `glue_client.py` | The stitched script and its glue lines. |
+| `claim_dedup.py` | Removes facts the route already told. |
+| `authoring.py`, `premium_tour.py`, `reflection.py` | The writer and the reflections on long walks. |
+| `place_recipes.py`, `recipe_reuse.py`, `recipe_store.py`, `recipe_build.py` | Stored tellings of a place, written once and reused. |
+| `validation.py`, `verify.py`, `compose_gate.py` | The checks on the script. |
+| `placement.py` | Where on the ground each piece of audio plays. |
+| `contingency.py` | Ready answers for a walker who runs late, runs early or skips a stop. |
+| `quality_certification.py`, `certification_provider.py` | The separate fact and enjoyment review used to certify tours. |
 
 ---
 
-## 2. Rule ledger
+## 2. Rules every tour keeps
 
-Walked through every rule in the parked `design.md` and the 8 `feedback_tour_*` memories. Status against the two empirical walks.
-
-| # | Rule | Status | Source-of-truth |
-|---|---|---|---|
-| **Core principles (parked design.md §"Core principles")** | | | |
-| 1 | No editorializing — every sentence traces to a beat or structural fact | **VALIDATED** | Both walks; ~6–8 glue sentences each, all structural |
-| 2 | Themes emerge from beats (entity overlap) | **REVISED** | findings.md: vocabulary inheritance is the actual mechanism, not entity overlap. Anchor essay teaches the vocabulary; seasoning uses it |
-| 3 | Themes as callbacks, never forecasts | **REVISED → DROPPED** | findings.md §"Revised patterns": real walks don't theme-callback either. Title carries the thematic work; body demonstrates without naming |
-| 4 | Audio ≤ 60% of tour time | **REVISED** | Empirical walks land 70–80% audio at 150 wpm. Aspirational target, not hard cap. Generate within an explicit time budget instead |
-| 5 | Seasoning shares entity/time/theme with adjacent anchor | **REVISED** | The actual rule: anchor teaches vocabulary; seasoning uses it. "Shared entity" framing is too loose |
-| 6 | House voice + per-lens modulations | **DEFERRED** | Empirical walks show no clear lens modulation — house voice throughout. Park; revisit if Phase 4 testers flag flatness |
-| 7 | Runtime gets only beats, no world knowledge | **VALIDATED** | Both walks; structural connectors are pure navigation, never factual claims |
-| 8 | Source-traceable output | **VALIDATED** | Both walks ship sentence-level beat IDs; validation diff is feasible |
-| **POI selection (parked design.md §"POI selection")** | | | |
-| 9 | Tier as gravity (5=anchor, 3=pause, 1–2=walk-by) | **VALIDATED** | Both walks treat anchors and seasoning per this mapping |
-| 10 | Selection scoring: `tier × beat_richness × interest × narrative_fit × distance_decay` | **REVISED** | `narrative_fit` at city scale is near-zero (parked doc admits this); replace with Area+route geometry. Routing-aware required |
-| 11 | Pre-selection theme clustering via entity co-occurrence | **DEFERRED** | Empirical walks didn't surface a "theme" via entity overlap — the Area or square IS the theme. MVP can use Area boundary as the cluster signal; revisit when corpus is multi-city |
-| 12 | Stop budget: `(planned_time − base_walk_time) / cost_per_stop` | **VALIDATED** | Walks fit ~22 stops in PdV (90 min, anchor + 18 vignettes) and ~12 in Île (90 min) under similar arithmetic |
-| 13 | Routing-aware selection (`score / marginal_route_cost`) | **VALIDATED** | The Île chain is on-corridor and that's what made it composable |
-| 14 | Stop quality floor (min beats per stop, max ~8 stops, diminishing returns) | **VALIDATED** | Walks have 4–6 beats per anchor and 1–2 per seasoning stop |
-| 15 | Geographic barriers (Seine, arterials) penalize crossings | **VALIDATED** | Île walk crosses Pont Neuf once, on purpose; doesn't bounce banks |
-| **Beat-within-POI selection (parked §"Beat selection within a POI")** | | | |
-| 16 | Cap 2–4 beats per anchor, 1 per pause | **REVISED** | Empirical anchor stops have 4–6 beats (Notre-Dame had ~12 over 6 sub_locations). Drop the cap; sequence by sub_location or trigger_address instead |
-| 17 | Filter to active beats only | **VALIDATED** | Standard hygiene |
-| 18 | Prefer beats matching emerging theme/lens/entities | **REVISED** | Drop "emerging theme" as a filter; use sub_location/trigger_address ordering as the primary signal, lens as bias |
-| 19 | Tone variety within a stop (no three-somber-in-a-row) | **VALIDATED** | `emotional_register` is populated; runtime can enforce |
-| **Time math (parked §"Time and dwell math")** | | | |
-| 20 | Walking pace ~3 km/h | **VALIDATED** | Provisional Paris value, validate per neighborhood |
-| 21 | Haversine ×1.35 correction | **VALIDATED** | Paris-wide; per-neighborhood variance documented |
-| 22 | Dwell: 4–6 min anchor, 2–3 min pause, 0 min walk-by | **VALIDATED** | Walks fit this |
-| 23 | Audio rate ~150 wpm | **VALIDATED** | Both walks audited at this rate |
-| 24 | Buffer 15% on top | **VALIDATED** | Carry forward |
-| 25 | "Err short": plan 83% of stated duration | **VALIDATED** | Carry forward |
-| 26 | "Honest length": deliver shorter when corpus thin | **VALIDATED** | findings.md ack: PdV walks ~60 min, Île ~90 min; don't pad |
-| **Narrative structure (parked §"Narrative structure")** | | | |
-| 27 | Cold open: concrete hook, no abstract theme | **REVISED** | Pariswalks sit-down staging is the gold standard, not just "concrete hook." See findings.md §"New patterns" item 1 |
-| 28 | Connective navigation between stops | **VALIDATED** | Both walks use minimal navigational glue |
-| 29 | Stop blocks 1–3 beats ordered architecture→story→consequence | **REVISED** | At tier-5 anchors, 4–6 beats; ordering is sub_location or trigger_address driven, not architecture→story |
-| 30 | Walk-bys must share entity/time/theme | **REVISED** | Same as rule 5: vocabulary inheritance is the actual rule |
-| 31 | Closing callback honors flagged hooks | **DROPPED** | Real walks just stop. Pariswalks: "you have now circled" + optional continuation. Frommer's: "End the walk here or carry on with Walk 9." No thematic summary |
-| 32 | "Imagine" / "picture this" forbidden | **VALIDATED** | feedback_tour_tone_default; both walks observe this |
-| 33 | Walk-bys must connect to spine | **VALIDATED with §5 revision** | |
-| **House voice details (parked §"House voice")** | | | |
-| 34 | 2nd person, present-then-past, conversational | **VALIDATED** | Both walks |
-| 35 | Read-aloud test (must sound spoken) | **VALIDATED** | Both walks |
-| 36 | Active verbs, fragments, varied length, no parallel lists, no abstract measurements | **VALIDATED** | Both walks |
-| 37 | One sensory prompt per stop minimum | **VALIDATED** | Empirical walks all carry at least one physical cue per stop |
-| 38 | Action-Reflection-Stakes (TAL framework) | **DEFERRED** | Philosophical scaffolding, not algorithmic. Revisit when prompting the runtime LLM |
-| 39 | Forward hook + return signal contract | **DROPPED** | Both walks don't use forward hooks. The mechanism the parked doc described isn't observed in real guidebook output |
-| 40 | Beat-to-beat glue: causal/temporal/structural linkage from beat content | **VALIDATED** | Both walks; glue cites beat-internal arithmetic only |
-| 41 | Interest is bias, not filter (esp. tier-4/5) | **VALIDATED** | Both walks include non-interest beats at anchors |
-| 42 | Assumed-knowledge test (smart traveler, no specialist background) | **VALIDATED** | Both walks observe this |
-| **Allowed structural operations (parked §"Allowed")** | | | |
-| 43 | Date arithmetic from cited beats | **VALIDATED** | Mark `[ARITH]` |
-| 44 | Sensory callouts for visible features | **VALIDATED** | |
-| 45 | Cross-POI structural callbacks ("the building you stood in front of") | **VALIDATED** | Worth keeping for multi-POI walks |
-| 46 | Place-name etymology when in cited beat | **VALIDATED** | Useful cold-open hook |
-| 47 | Light paraphrase preserving meaning | **VALIDATED** | |
-| 48 | Closing callback gets 3–5% of total tour time | **DROPPED** | Walks close with 1–2 sentences. The 3–5% allocation is a fiction |
-| **NEW patterns surfaced by empirical walks (findings.md §"New patterns")** | | | |
-| 49 | Pariswalks sit-down opener structure: heading → epigraph → métro → walking direction → pronunciation → inline definition → physical orientation → sit-down with sensory invitation → cold-weather alternative → content signal | **NEW VALIDATED** | Empirical Tour 1; the gold standard |
-| 50 | Address-level seasoning via `trigger_address` is the killer feature | **NEW VALIDATED** | Empirical Tour 1 |
-| 51 | Sub_location sequencing inside a building | **NEW VALIDATED** | Empirical Tour 2 (Notre-Dame) |
-| 52 | Cross-source claim-level dedup (B8) | **NEW REQUIREMENT, DEFERRED** | Empirical Tour 2 (Vallois/LEG overlap on Notre-Dame) |
-| 53 | Glue is structural, never invents claims | **NEW VALIDATED** | Both walks; ~6–8 glue sentences each |
-
-**Summary:** 30 validated, 11 revised, 5 dropped, 4 deferred, 4 new. The parked design's overall shape holds; the closing-callback / theme-forecast machinery doesn't.
+- **Every sentence traces to a source.** A sentence cites a beat, or it carries one of the
+  allowed glue labels in §3.5. Nothing else reaches the walker.
+- **Glue adds no facts.** It may give directions, stage the walker, set the pace or close a
+  stop. It never adds a claim, a new name or a date.
+- **Interest dims a place; it never hides a landmark.** A place outside the walker's
+  interests scores lower. A major landmark on the path is still at least mentioned.
+- **The requested time is a ceiling.** A day longer than the request is refused. A day
+  well short of the request is served and says so.
+- **A stop lasts as long as the visit needs.** Its length is the longer of the time the
+  walker spends there and the time its narration takes.
+- **The walk is honest about what it cannot do.** A shut door, a thin area or a dark
+  finish is said out loud, never hidden.
 
 ---
 
-## 3. Algorithm sketch
+## 3. The engine
 
-Designed for Haiku-scale runtime cost. No Opus-level reasoning per tour. Selection and routing are graph queries; generation is short-prompt Haiku stitching beat texts with whitelisted glue.
+### 3.1 Input contract
 
-### 3.1 INPUT contract
+`TourInput` in `contract.py` is the request. Every field except the first three is
+optional. Each optional field defaults to the plain behaviour.
 
-```
-{
-  start: { lat: float, lng: float },
-  duration_min: int,             # user-stated; algorithm targets 0.83 × this
-  lenses: [string] | null,       # 0–N child-lens slugs; empty = no interest bias
-  round_trip: bool,              # see Open Question 1
-  theme_hint: string | null,     # optional; surfaces in cold-open ("a walk about kings")
-  city_slug: string,             # mandatory per CLAUDE.md (multi-city safe)
-  start_label: string | null     # optional human-readable origin ("from your hotel near the Sorbonne")
-}
-```
+| Field | Meaning |
+|---|---|
+| `start` | Where the walk begins, as (lat, lng). |
+| `duration_min` | How long the walker has, in minutes (1–600). |
+| `city_slug` | The city. Every corpus query is scoped to it. |
+| `end` | A destination, as (lat, lng). Cannot be combined with `round_trip`. |
+| `round_trip` | The walk returns to the start. |
+| `lenses` | The walker's interests, as lens slugs. Empty means no interest stated. |
+| `theme_hint`, `start_label` | Words for the opening ("from your hotel near the Sorbonne"). |
+| `start_datetime` | When the walk starts, local ISO time. Turns on opening hours, queue times and dusk. |
+| `end_hardness` | `wall` (a hard deadline), `firm` (the default) or `open` (a rough wish). See §3.2. |
+| `party` | `solo`, `couple`, `family`, `take_it_easy` or `with_luggage`. A preset that fills in the axes below. An axis the caller sets always wins. |
+| `walking_pace` | Slows walking (2.0 is half speed). Never faster than the base pace. |
+| `max_stop_minutes` | The longest the party will spend at any one stop (at least 5). |
+| `max_leg_minutes` | The longest single walk between stops. |
+| `rest_cadence_minutes` | How much walking may pass before a bench or toilet is seated. |
+| `escape_radius_m` | Every stop must lie within this distance of the start. |
+| `route_surface` | `any`, `no_stairs` or `step_free`. Passed to the street router. |
+| `narration_register` | `solo`, `warm` or `family`. How the narration speaks. |
+| `pinned_poi_ids` | Places the walker insists on. A pin is always seated. |
+| `weather` | `dry` or `rain`, fetched by the caller. Rain halves the worth of open-air places. |
+| `stop_density` | `fewer` (fewer, longer stops) or `more` (more, shorter stops). |
+| `narration_density` | `less` or `more` talking per stop. |
+| `avoid_queues` | Places with a peak queue of 10 minutes or more score lower; 20 minutes or more, they are left out. |
+| `category_minus` | Kinds of place to leave out today (for example museums). |
 
-### 3.2 POI selection — routing-aware scoring
+`resolve_party_axes` expands a `party` preset into these axes. The preset table
+(`_PARTY_AXES`) sits next to it.
 
-**Pre-pass: route envelope.**
+### 3.2 Selection and routing
 
-1. Compute `target_audio_min = duration_min × 0.83 × 0.6` (the "err short" planned audio budget; 60% silence target).
-2. Walk-time budget: `walk_min = duration_min × 0.83 × 0.4`.
-3. Reachable envelope: `max_radius = (walk_min × 3.0 / 1.35) / 60 × 1000` meters from start. (3 km/h actual progress, ÷1.35 haversine correction.) For round-trip, halve the radius.
-4. Cypher query:
-   ```
-   MATCH (p:POI {city_name:'paris'})-[:WITHIN]->(:Area {name:'Paris'})
-   WHERE p.poi_role IN ['stop','setting'] AND p.location IS NOT NULL
-     AND point.distance(p.location, $start_point) <= $max_radius
-   RETURN p
-   ```
+`select_route(input, snapshot)` in `selection.py` plans the route. It is a pure function
+over a frozen snapshot of the city's places and beats.
 
-**Spine selection: Area-first.**
+**Time budget.** `route_planning_budget` in `routing.py` is the one home of the time
+arithmetic.
 
-The parked doc's "pre-selection theme clustering via entity co-occurrence" doesn't pay off at city scale (its own §80 admits this). Replace with: **the Area IS the spine.** When the start point falls in or near a single neighborhood Area, that Area is the spine. When it sits between two, score both and pick the one with more tier-5/4 beats inside the walk envelope.
+- A route aims at the full requested time (nominal fraction 1.00). The repair works inside a
+  band of 0.90–1.10 of the request, but the final route may not run more than one minute
+  past the request itself (see "Final checks").
+- 40% of the aimed time is for walking and 60% is for time at stops.
+- `wall` caps the aim at 0.95 of the request, so the walker keeps spare minutes.
+- `open` removes the lower bound, so a short honest day is never padded.
 
-Alternative: if user provides a `theme_hint`, score POIs by lens/subject_tag overlap and prefer Areas with higher concentration.
+**Walking time.** A leg's time comes from the street router (Valhalla) when it answers,
+and otherwise from straight-line distance × 1.35 at 3.0 km/h. A slow party divides the
+speed. `route_surface` changes the router's costing, and the route is priced and reported
+under the same costing.
 
-**Tie-break (Updated 2026-04-28 (Phase 2.6 calibration)):** if the top-scoring Area is a `district`, promote a competing `neighborhood`/`island`/`corridor` whose tier-weighted vote count is at least half the district's — i.e. the district must be ≥ 2× the more-specific Area to keep the spine. Districts naturally accumulate more votes (every district contains everything inside it), so without this lift districts always win and the algorithm can never pick "Île de la Cité" near Pont Neuf. Among multiple specific Areas the highest-vote one wins; among true score ties, fall back to `neighborhood > island > corridor > district > city` then alphabetical.
+**Reach.** The candidate area is a walking isochrone from the street router. When the
+router is down, it is a circle: walking minutes × 3.0 km/h ÷ 1.35, halved for a round
+trip. With a destination, a place qualifies only if walking start → place → destination
+fits the walking budget. `escape_radius_m` limits the area further.
 
-The Phase 2.5 5%-tolerance rule was too weak to overcome the district vote bias; replaced by the 2× dominance rule on 2026-04-28 after Smoke B (Pont Neuf) surfaced 1st Arrondissement (63 votes) winning over Île de la Cité (42) at a 33% gap.
+**Who can be a stop.** A place needs at least one active beat. Each place gets a
+spotlight score: tier × lens relevance × an on-path factor. Lens relevance is 1.0 for a
+direct lens match, 0.6 for a parent or child lens, and 0.25 for a miss (1.0 when no lens
+was asked for). The score sets the place's band:
 
-**Per-POI score:**
-
-```
-score(p) = importance_tier(p)
-         × beat_richness(p)              # log(1 + beat_count(p))
-         × interest_bias(p, lenses)      # 1.0 + 0.5 × (matching_lens_beats / total_beats); cap 2.0
-         × area_alignment(p, spine)      # 1.0 if p in spine Area, 0.5 if adjacent Area, 0.2 otherwise
-         × poi_role_multiplier(p)        # 1.0 stop, 0.7 setting, 0.0 walk_by_only (handled separately)
-```
-
-Routing-aware selection picks `argmax(score / marginal_route_cost)` greedily until either:
-- `walk_min` budget exhausted, OR
-- `target_audio_min` budget reached (estimated as `Σ dwell_min(p) × audio_density(p)`), OR
-- `max_anchors = max(1, duration_min // 10)` outer anchors selected, capped at 12 (§5 Q5; **Updated 2026-04-27 (Phase 2 calibration)** — divisor was 12, calibration against the empirical Île walk drove it to 10).
-
-`marginal_route_cost` is the additional walking minutes a candidate adds to the optimal route through already-selected stops. Computed by inserting candidate at best position in current route (TSP-light; fine for ≤12 stops).
-
-**Endpoint-pull (one-way only).** **Added 2026-04-27 (Phase 2 calibration)** to keep traverses from truncating near the start. The greedy reserves ~25% of the walk-time budget for this step; otherwise it tends to consume 95–98% of the budget on tight neighborhood clusters and leaves no headroom for a far-envelope closing stop. After the (reduced-budget) greedy completes for a `round_trip=False` route:
-
-1. Identify the top-K (=5) un-selected candidate POIs in the *far half* of the reachable envelope (haversine distance from start ≥ 0.5 × `max_radius`), ranked by score.
-2. For each candidate in score order, attempt to insert it as the closing stop. Use best-insertion to reorder the interior anchors through the route up to (but never after) the endpoint.
-3. Drop the lowest-scoring incumbent and retry, up to a bounded `max_drops` (=2) per candidate, if the new total would exceed the full walk budget or the hard anchor cap of 12.
-4. Accept the first candidate that fits. If none of the top-K fit, abandon the pull and keep the greedy result.
-
-The empirical Île walk approximates under this rule: with the reservation, the Pont Neuf 90-min one-way route picks up Hôtel de Ville (tier-5, ~820m east of start) as the closing anchor, instead of truncating at Place du Châtelet (~470m). Notre-Dame Cathedral does not currently surface as the endpoint because its `Latin Quarter` Area assignment (the §1.8 polygon overshoot) penalises its `area_alignment` score — the polygon fix in the post-launch backlog will correct this.
-
-**Walk-by enrichment (separate pass, after spine fixed):**
-
-For each walking segment between selected stops longer than ~2 min, find tier-1/2 POIs along the path within ~50 m of the route, with `poi_role IN ['walk_by_only','stop']`. Include if at least one beat at that POI shares an entity, subject_tag, or lens with the spine's vocabulary (per the revised seasoning rule). Cap walk-bys to ~1 per minute of walk-time.
-
-### 3.3 Beat selection within a POI
-
-**For tier-5/4 anchor stops:**
-
-1. Filter to active beats at the POI.
-2. Branch on spatial primitive:
-   - **Building (sub_location populated for ≥3 distinct values):** order beats by sub_location sequence. Sequence is a hand-curated ordering per POI (Notre-Dame: parvis → kilometre-zero → façade → gallery-of-kings → central-portal → side-portals → bell-tower-vestibule → nave → choir → treasury → towers → exterior-east-end). Stored as POI metadata or derived deterministically. **Pick at most 1 beat per sub_location** (the highest-scoring), then 1 fallback "no sub_location" beat at the end as a closing thought.
-   - **Square (trigger_address populated for ≥5 distinct values):** order by trigger_address. Use a stable ordering (e.g., starting at the closest address to walking-entry, then clockwise). One beat per address; sidebar beats can attach to the same address.
-   - **Flat (neither populated densely):** order by `narrative_function`: hook → establishing → deepen → climax. Pick 4–6 beats (anchor 200–400w + 2–3 mid + 1 closing).
-3. Within sub_location/trigger_address, prefer beats with higher `(lens_match × emotional_register diversity × subject_tag novelty)`.
-4. Prepend cold-open if first stop (see §3.5).
-5. Enforce tone variety: no 3 somber/reverent in a row.
-
-**For tier-3 pause stops:** 1–2 beats. Highest-scoring + lens-matching.
-
-**For tier-1/2 walk-bys:** exactly 1 beat each. Beat must share at least one entity, subject_tag, or lens with the adjacent anchor.
-
-**Length-class budgeting:** when `beat_length_class` populated, prefer 1 anchor-class + several mid + seasoning interleaved per stop. When missing, fall back to word count from `script_body` (assume ~150 wpm).
-
-**Source dedup:** Phase 1 plan does NOT do claim-level dedup at runtime — that's the deferred B8 work. For now, when two beats share ≥80% subject_tag overlap or the same `entities` list, runtime drops the lower-`narrative_function`-ranked one. Document the limitation; revisit when B8 ships.
-
-### 3.4 Generation pipeline
-
-Five stages. Each maps to a fixed beat-pool retrieval and a deterministic assembly with minimal LLM-glue.
-
-| Stage | Beats pulled | Glue allowed |
+| Band | Score | Meaning |
 |---|---|---|
-| 1. Cold open | First stop's `stop_orientation` beat (if exists) + first 1–2 establishing/hook beats | "Settle in." / "Find a bench." Opening physical staging if no stop_orientation beat exists |
-| 2. Anchor essay (per tier-5 stop) | 1 anchor-class + 2–3 mid beats by sub_location or trigger_address | Sub_location-to-sub_location or address-to-address transitions ("Now turn the corner east." / "Step inside.") |
-| 3. Circumnavigation / interior walk | All remaining beats at the anchor, ordered spatially | Per-stop transitions ("Look up." / "Press the button at no. 3.") |
-| 4. Transit | Transit beats from the corpus when present; structural glue when absent | Direction-only ("Walk for about three minutes." / "Cross the bridge ahead.") |
-| 5. Close | Last stop's closing beats + any sidebar | Physical-closure phrase ("You have now circled..." / "End here, or continue west via rue X.") |
+| headline, full, short | ≥ 5.0, ≥ 4.0, ≥ 3.0 | A real stop. |
+| vignette | ≥ 0.5 | One line as the walker passes. |
+| silent | below 0.5 | Left out. A place of tier 4 or 5 is never silent. |
 
-**Cold-open assembly (when `stop_orientation` missing):**
+A real stop that would speak for under 90 seconds becomes a vignette, unless it is
+tier 4 or 5. Opening hours remove a place that is closed for the whole visit; a closed
+place with an outside worth seeing stays and is visited from outside. Places with
+`category_minus` kinds are left out and the day says so.
 
-Compose from the first anchor's `physical_cues` + beat with `narrative_function='establishing'` + any beat carrying `pronunciation`. Pattern: physical cue → pronunciation → 1-line origin from establishing beat → "Find a bench" or "Stand here" glue. Acknowledge in `phase-1-design` that this falls short of the Pariswalks gold standard until the stop_orientation gap-fill ships.
+**Spine.** `pick_spine_area` picks the area the walk is about. Each place within 800 m of
+the start votes its tier for each of its areas. A neighbourhood, island or corridor beats
+a district unless the district has twice its votes.
 
-**Closing assembly:** physical-closure glue + one sentence from a `narrative_function='callback'` beat if available + optional continuation pointer ("End here, or continue with Tour B"). No thematic summary.
+**Score.** `poi_score` ranks stops:
+
+```
+score = tier × log(1 + beat_count) × lens_relevance × area_alignment
+        × role_multiplier × penalty × party_factor
+```
+
+- `area_alignment` is 1.0 inside the spine, 0.5 in an adjacent area, 0.2 elsewhere.
+- `role_multiplier` is 1.0 for a stop, 0.7 for a setting, 0 for a walk-by-only place and
+  0 for a bench or toilet.
+- `penalty` is a per-place factor. Rain and the queue dial set it.
+- `party_factor` is 1.25 for a place children can run in (family) or a place to sit and
+  talk (couple, take it easy).
+
+**Greedy.** Pins are seated first. Then the planner adds the stop with the best
+`score ÷ (extra walking seconds + 1)`, at its cheapest place in the route. A stop is
+skipped if it breaks the walking budget, the time-at-stops budget or the per-leg limit.
+The greedy stops when the time-at-stops budget is spent. There is no cap on the number of
+stops; the requested time is the only bound.
+
+**Stop length.** `visit_time.py` prices the time at a place as a shape: time outside,
+time inside, and a queue that depends on the hour of arrival. Interest decides how much
+of the inside a walker gets. `max_stop_minutes` caps it. Rain halves the worth of an open
+place. A `wall` deadline refuses any stop with a known queue. A stop lasts
+`max(visit time, narration time)` (`stop_seconds`).
+
+**Finish.** On a one-way walk with no destination, the planner tries to end at a strong
+place in the far half of the area (endpoint pull). If the walk ends after civil dusk, a
+place that is good after dark is preferred as the finish (`good_after_dark`,
+`civil_dusk_local`). A dark finish nothing could fix is said out loud.
+
+**Filling and repair.** If the day is still short, a fill pass adds more stops. Every
+added stop must earn its walk: at most 2 seconds of walking per second it gives the
+walker, and at most 30 minutes of pure detour (`stop_earns_its_walk`). A timebox repair
+then adds, exchanges or drops stops, or keeps a stop outside its door, until the day fits
+its band. Dropping a stop merges its two legs, and the merged leg must still respect the
+per-leg limit. Pins, rests and the finish are protected from the repair. "Fewer stops"
+then drops the weakest unprotected stops, never below three stops, and gives their minutes
+to the stops that remain.
+
+**Clean-up and order.** Two stops at the same spot merge into one. Two records of the
+same place collapse into one. `order_stops` in `ordering.py` then finds the visiting
+order: exact (Held-Karp) up to 16 points, cheapest insertion above that. A round trip is
+turned so the main stop comes late when that costs no walking.
+
+**Rests.** With `rest_cadence_minutes` set, a bench or toilet within a 150 m detour is
+seated wherever walking would otherwise run longer than the cadence. A rest has no
+narration but does have a duration.
+
+**Final checks.** The planner re-times the final route at each stop's real arrival hour.
+A door that is shut at arrival leaves the day, or keeps only its outside.
+
+- Over the request by more than one minute: refused, with alternatives.
+- Under half the request: refused, naming what binds. An `open` end is never refused for
+  being short.
+- Under 0.90 of the request: served, and the shortfall is recorded so the day can say so.
+- With `max_leg_minutes` set, the longest street leg is checked. On a breach the
+  planner retries once with a tighter limit, then refuses.
+- With lenses set and no day possible, the planner retries once without the lens gate,
+  and the day says so.
+
+**Walk-past lines.** Vignette places within 50 m of a leg get one line each, at most two
+per leg.
+
+**Promises.** The day names up to three promises: the walker's pins, the main stop, the
+finish and any rests.
+
+**Replans.** A replan calls the same planner with a `ReplanContext` that holds the day
+already walked. `contingency.py` precomputes replans for running late, running early and
+skipping a stop.
+
+### 3.3 Beat selection within a stop
+
+`select_poi_beats` in `beat_select.py` orders and trims one stop's beats.
+
+**Ordering.** `choose_ordering_strategy` picks one of three:
+
+- **sub_location** (a building walk) when the beats carry at least 3 distinct
+  sub-locations. Groups are ordered by the hand-made table in `fixtures.py` when one
+  exists, otherwise alphabetically.
+- **trigger_address** (a walk around a square) when the beats carry at least 5 distinct
+  addresses. Addresses are ordered by house number.
+- **narrative_function** otherwise: hook → establishing → deepen → climax → callback.
+
+When both spatial tests pass, the one with more distinct values wins. Beats without a
+sub-location or address follow, best first. A `stop_orientation` beat moves to the front.
+
+**Dedup.** Two beats that share a lens (or both have none) are duplicates when any of
+these holds:
+
+- their entities overlap by Jaccard ≥ 0.8;
+- their subject tags overlap by Jaccard ≥ 0.8;
+- their text overlaps by character 5-gram Jaccard ≥ 0.30;
+- they share a year and at least two normalised entities.
+
+The weaker beat is dropped. The front orientation beat is never dropped.
+
+**Caps.** A tier-4 or tier-5 stop voices at most 12 beats, a tier-3 stop 4, a tier-1 or
+tier-2 stop 1. Spatial stops keep one beat per group first, then the best of the rest, in
+walk order. The flat strategy keeps the front of its arc.
+
+**Tone variety.** No three somber or reverent beats in a row, when lighter beats exist.
+For spatial stops this applies within each group, so the walk never doubles back.
+
+**Order by date.** A flat stop's beats then run from the earliest year to the latest.
+
+**Audio limits.** No stop voices more than 180 seconds of beats (`MAX_DWELL_AUDIO_SECONDS`
+in `selection.py`). "Less talking" halves this and "more talking" adds half. On an open
+walk, an ordinary stop also gets a share of the day's time at stops (`govern_poi_beats`);
+the first stop and the finish are exempt. A stop chosen for a lens keeps at least one beat
+on that lens.
+
+**Keep exploring.** Beats that do not fit are kept as the stop's "keep exploring" extras
+(`extra_beat_ids`). They are never lost.
+
+**Last stop.** The last stop's most closing beat (callback, then climax, then the longest)
+moves to the end.
+
+**Walk-past lines.** Each vignette place gets one beat, preferring one whose first sentence
+names the place and matches the walker's lens.
+
+### 3.4 Generation
+
+`generate(beat_sequence, route, input)` in `generation.py` builds the stitched script.
+
+1. **Opening.** "Settle in." Then the first stop's `stop_orientation` beat; most major places
+   have none. If it has none,
+   an orientation beat from another stop in the same area is used, but only if it has no
+   physical cues or its place is within 100 m. Otherwise the engine builds a
+   `SYNTHESIZED_OPENER` from corpus fields: the area, the walk to the first stop, a
+   pronunciation, and one physical cue.
+2. **Stop.** The stop's beats are streamed in order, one sentence each. Walking beats are
+   kept for the leg. A stop the clock has shut says so first.
+3. **Leg.** A corpus walking beat is used only when its direction can be checked against
+   this leg, and it speaks no compass points. Otherwise one `GLUE_NAV` line is written
+   by the glue model (§3.8) or taken from a template. Its minutes are the routed leg's own.
+   Walk-past lines follow.
+4. **Close.** Every stop ends on one `GLUE_CLOSING` line. The last stop's close is the
+   day's.
+
+After stitching, `claim_dedup.py` removes sentences whose every fact the route already
+told, and exact repeats. At a stop visited only from outside, lines that invite the walker
+inside are removed.
+
+**Writing.** The stitched script is the input to the writer. The writer
+(`authoring.py`, `premium_tour.py`) retells each stop as one spoken piece. It may fuse two
+beats' tellings of one fact; such a sentence lists every beat it draws on. On long legs a
+reflection (`GLUE_REFLECTION`) recalls what the walker has seen; `reflection.py` decides
+which legs get one. A major stop can also have a longer "full telling" the walker taps for.
+
+A stop may instead be told from its place's stored telling (`recipe_reuse.py`). That
+happens only when the telling covers exactly what the stop would be asked: the same beats,
+the same door, the same lens, a solo walker, and a stop that is not the day's last.
+
+Each written stop is checked (§3.6). A stop whose writing fails keeps the sentences that
+pass and falls back to the stitched text for the rest.
 
 ### 3.5 Glue rules — whitelist
 
-Runtime LLM may write only structural connectors. No factual claims. Whitelisted phrase categories:
+Glue is the only text the engine writes without a beat behind it. Every glue sentence
+carries one of these labels (`GLUE_LABELS` in `generation.py`):
 
-1. **Navigation**: "walk east for about three minutes", "cross the bridge ahead", "turn left at the corner", "stop halfway", "exit by the northwest corner".
-2. **Physical staging**: "find a bench", "stand here", "look up at...", "press the button at no. X", "step into the courtyard".
-3. **Transition/pacing**: "settle in", "now stand up", "turn the corner east", "we're going to circle the square", "take a moment".
-4. **Cross-POI structural callbacks** (rule 45): "the building you stood in front of half an hour ago", "the same king who built the bridge you crossed earlier".
-5. **Date arithmetic** (rule 43, marked `[ARITH]` in source attribution): "four hundred years later".
-6. **Closing**: "you have now circled X", "end here, or continue with Y".
+| Label | Use |
+|---|---|
+| `GLUE_NAV` | Directions for a leg: "From X, carry on to Y, about a 6-minute walk away." |
+| `GLUE_STAGING` | Physical staging: "Look up at…", "Notice…", a shut-door line. |
+| `GLUE_PACING` | Pacing: "Settle in.", "Take a moment to take it in." |
+| `GLUE_CALLBACK` | A pointer back to a place already visited. |
+| `GLUE_CLOSING` | A stop's or the day's close. |
+| `GLUE_REFLECTION` | A recap of places already visited, spoken on a long leg. |
+| `ARITH` | Date arithmetic from cited beats ("four hundred years later"). |
+| `SYNTHESIZED_OPENER` | An opening built from corpus fields (§3.4). |
 
-**Forbidden in glue:** any new factual claim, any thematic interpretation, "imagine" / "picture this", proper names not already in cited beats, dates not derivable from cited beats.
+**Glue may not:**
 
-### 3.6 OUTPUT format
+- say "imagine", "picture this", "envision" or "visualize";
+- name a person or place, or a year, that no cited beat carries. The tour's own stops,
+  areas and city are allowed. Directions (`GLUE_NAV`) may name places;
+- promise a later stop ("at the next stop", "we'll come back");
+- give compass directions in a leg line, or speak minutes other than the routed leg's.
 
-```
-{
-  city_slug: "paris",
-  generated_at: "2026-04-27T...",
-  inputs: { ... echoed ... },
-  total_audio_seconds: int,
-  total_walking_seconds: int,
-  total_walk_distance_m: int,
-  total_planned_seconds: int,
-  selected_pois: [
-    { id, name, tier, lat, lng, area, dwell_seconds, beat_ids: [...] },
-    ...
-  ],
-  lens_coverage: { lens_slug: count_in_tour, ... },
-  script: [
-    { sentence: "...", source_id: "<beat_uuid> | GLUE_NAV | GLUE_PAUSE | ARITH | STRUCTURAL", source_type: "beat|glue|arith", stop_idx: int },
-    ...
-  ],
-  validation: {
-    untraceable_sentences: [...],   # must be empty before TTS
-    forbidden_phrase_hits: [...],   # "imagine", "picture this"
-  }
-}
-```
+### 3.6 Output format
 
-`validation.untraceable_sentences` must be empty before TTS — that's the source-traceability gate (rule 8).
+`Script` in `contract.py` is the output:
 
-### 3.7 Density gating (Phase 6)
+| Field | Meaning |
+|---|---|
+| `city_slug`, `generated_at`, `inputs` | The city, the time it was built, and the request. |
+| `total_audio_seconds` | Voiced words at 150 words a minute. |
+| `total_walking_seconds`, `total_walk_distance_m` | The route's walking. |
+| `total_planned_seconds` | The time the planner aimed at. |
+| `selected_pois` | Each stop: id, name, tier, position, area, time at the stop, the beats voiced, and the "keep exploring" extras. |
+| `lens_coverage` | How many voiced beats carry each lens. |
+| `script` | The sentences, in order. |
+| `validation` | The check report. |
+| `verify_report` | For written stops: kept as written, partly reverted, or reverted to the stitched text. |
 
-Added 2026-04-29 in response to the Phase 5 quality audit
-(`phase-5-quality-audit.md`). Two failures motivated this slice:
+Each `Sentence` has its text, a `source_id`, a `source_type` (`beat`, `glue` or `arith`)
+and its stop index. A beat sentence's `source_id` is a beat id, and `also_cites` lists any
+other beats it fuses. A glue sentence's `source_id` is a label from §3.5.
 
-1. Tours from sparse starts produced <11% audio fill (Sacré-Cœur 90min
-   round-trip ≈ 5%, Concorde 180min ≈ 5%, Pantheon 120min RT ≈ 11%).
-2. Selection picked tier-3+ POIs with **zero active beats** as anchors
-   (Petit Palais in Tour 4) because routing-aware scoring favoured the
-   corridor geometry without checking beat count.
+**The gate.** `ValidationReport.passed` decides whether a script may be served. It fails
+when any of these is non-empty:
 
-This subsection codifies a runtime gate that refuses thin tours and
-warns the user about borderline ones. It does **not** change the
-selection or generation algorithm — it adds a guard at the top of
-`select_route` and a diagnostic over the corpus.
+- `untraceable_sentences` — a sentence cites no known beat and no allowed label;
+- `forbidden_phrase_hits` — a glue sentence breaks a rule in §3.5;
+- `provenance_failures` — a beat's stored source passage does not match its source text.
 
-**Formula** (canonical; lives in `src/tour/density.py`):
+Two more checks run and are recorded, but do not block: `faithfulness_failures` (a
+sentence the entailment check finds unsupported by its beat's claims) and
+`coverage_failures` (a fact the stitched script told that the written script dropped).
+`faithfulness_checked` says whether the entailment check ran at all.
 
-```
-walk_radius_m = (duration_min × 0.83 × 0.4 × 3000 ÷ 1.35) ÷ 60
-if round_trip: walk_radius_m /= 2
+`placement_floor_hits` in `validation.py` checks that each sentence is true where it plays:
+no "you're standing here" on a leg, no walking instruction at a stop, and no invitation
+inside a door that stays shut.
 
-reachable_pois = [POI within walk_radius_m AND poi_role IN ['stop','setting']
-                  AND has > 0 active beats]
-audio_capacity_s = SUM(est_spoken_seconds for reachable_active_beats;
-                       fall back to word_count / 2.5 when est_spoken_seconds is missing)
-target_audio_s = duration_min × 0.83 × 0.6 × 60
-fill_ratio     = audio_capacity_s / target_audio_s
+### 3.7 Density gating
 
-anchor_candidates    = reachable POIs with importance_tier ≥ 3 AND beat_count ≥ 3
-cluster_compactness  = mean_pairwise_haversine(anchor_candidates) / walk_radius_m
-                       # 0.0 = colocated, 1.0 = candidates spread to envelope edge
-```
-
-**Status table:**
+`density.assess_snapshot` runs before selection. It asks whether the area around the
+start holds enough to fill the request.
 
 ```
-GREEN  if (fill_ratio ≥ 1.0 AND anchors ≥ 4 AND compactness ≤ 0.6)
-    OR (fill_ratio ≥ 1.5 AND anchors ≥ 6)         # rich-pool escape
-YELLOW if 0.5 ≤ fill_ratio < 1.0
-    OR (anchors ≥ 3 AND compactness ≤ 0.7 AND fill_ratio ≥ 0.5)
+reach_radius   = the walking circle from §3.2 (pace-adjusted; halved for a round trip)
+reachable      = places within reach_radius, role stop or setting, with ≥ 1 active beat
+capacity_s     = Σ over reachable places of stop_seconds(visit time, all its beat audio)
+target_s       = the time-at-stops budget from §3.2 (60% of the aimed time)
+fill_ratio     = capacity_s / target_s
+
+anchor_candidates   = reachable places with tier ≥ 3 and ≥ 3 active beats
+cluster_compactness = mean distance between anchor candidates / reach_radius
+                      (0 = all in one spot, 1 = spread to the edge)
+```
+
+With lenses set, `on_lens_fill_ratio` repeats the fill using only beats on those lenses.
+
+**Status:**
+
+```
+GREEN  if (fill ≥ 1.0 AND anchors ≥ 4 AND compactness ≤ 0.6)
+    OR (fill ≥ 1.5 AND anchors ≥ 6)
+YELLOW if 0.5 ≤ fill < 1.0
+    OR (anchors ≥ 3 AND compactness ≤ 0.7 AND fill ≥ 0.5)
+    OR fill ≥ 1.0
 RED    otherwise
 ```
 
-Phase 6 calibration notes:
+**What each status does:**
 
-- **Rich-pool escape on GREEN** — the canonical compactness check
-  (≤ 0.6) misfires for long one-way traverses where rich anchor
-  candidates legitimately spread across the envelope. Empirical Île
-  one-way 90min from Pont Neuf scores fill 3.95 / anchors 28 /
-  compactness 0.74 — healthy in practice. The escape (fill ≥ 1.5 AND
-  anchors ≥ 6) keeps such tours GREEN without weakening the
-  protection against thin tours.
-- **fill ≥ 0.5 floor on the YELLOW anchor-disjunct** — the literal
-  spec allowed the anchor-disjunct to fire alone, which let Sacré-Cœur
-  90min round-trip (fill 0.17, 3 colocated Montmartre anchors) pass as
-  YELLOW. The audit explicitly required RED refusal for that case.
-  Adding the same fill floor as the by-fill clause closes the
-  loophole. The disjunct now reads: "many tight anchors AND fill
-  borderline-but-not-catastrophic".
+- **GREEN** — plan as normal.
+- **YELLOW** — plan, and attach the assessment to the route (`route.tourability`) so the
+  surface can warn. The assessment suggests the longest duration the area supports and,
+  for a round trip, a denser one-way destination.
+- **RED** — selection raises `TourabilityRefusedError` with the same suggestions. No tour
+  is built. A request with a destination skips the start-area gate and is judged on the
+  start → destination corridor instead.
 
-**Capacity vs delivered semantics.** `fill_ratio` measures **corpus
-capacity** (total spoken-seconds of all reachable active beats),
-**not** the audio length the eventual tour delivers. A GREEN start
-guarantees that the corpus *could* support a tour at the requested
-duration; selection may still emit fewer beats than capacity allows,
-producing a thin generated tour even from a GREEN start. Phase 5 Tour
-4 (Concorde 180min one-way) is the canonical example: GREEN at
-fill 1.78 (capacity > target), but the selection algorithm emits 9 min
-of audio over a 180-min walk because per-stop beat budgets are
-conservative. **This is a Phase 7 follow-up**: tighten the per-stop
-budget when capacity vastly exceeds delivered audio, or add a
-post-selection delivered-fill check that downgrades GREEN→YELLOW
-when delivered/target < 0.5. Tracked outside this slice.
+A GREEN area can still yield a thin route. When the delivered route falls well short, the
+route carries the assessment with `delivered_thin` set, so the surface can say so.
 
-**Runtime behaviour:**
-
-- **GREEN** — proceed; no UI change. Skill summary line ends
-  `tourability: GREEN`.
-- **YELLOW** — proceed; the Route carries the assessment in
-  `route.tourability`. Markdown render prepends a banner naming the
-  fill percentage and the recommended alternatives
-  (`max_supportable_duration_min`, `one_way_alternative_destination`).
-  Skill summary surfaces both hints.
-- **RED** — `select_route` raises `TourabilityRefused(assessment)`.
-  The `tour-build` skill exits 3 and prints the structured refusal:
-  fill_ratio, anchor_candidates, walk_radius_m, plus actionable
-  alternatives. No tour is generated. The skill must relay the
-  refusal verbatim — do **not** silently retry with a different
-  start.
-
-**Zero-beat-POI exclusion** is bundled into this slice (separate
-guard from density). Pre-Phase-6 `select_route` filtered candidates
-by tier and envelope only. The Phase 5 Petit Palais bug surfaced when
-a tier-4 POI with zero active beats was selected as a stop because it
-sat geometrically on the route. Post-Phase-6, candidates without at
-least one active beat are dropped before scoring (`_has_active_beats`
-in `selection.py`).
-
-**Tourability map** (`scripts/tourability_map.py`) is a one-shot
-diagnostic over a 100m grid covering the Paris POI bounding box, four
-duration buckets (60/90/120/180 min) × two modes (round-trip /
-one-way). Outputs `data/paris/tourability_map.json` and a
-human-readable `tourability_summary.md` with per-bucket status mix,
-top GREEN starts, thin-tier-5 starts, and a per-Area rollup.
-
-The runtime computes density per request — the map is for
-launch-readiness analysis (what fraction of central Paris is GREEN at
-typical durations?), product UX (heatmaps), and ad-hoc lookups. It is
-**not** a runtime dependency.
-
-**Launch-readiness finding (2026-04-29).** First map run: 96.7% of
-the 11,205-cell grid is RED at 60min round-trip. GREEN coverage
-concentrates in Île de la Cité (24% of cells GREEN) and Le Marais
-(15%). Most other Areas are 0% GREEN at this duration. This is the
-honest read of a single-city corpus dominated by Le Marais / Île de
-la Cité density, with thin coverage in 5th/6th/7th arrondissements
-and effectively no coverage in the outer arrondissements. The 60min
-round-trip envelope (369 m) is small relative to Paris arrondissement
-size; coverage opens up at 90/120/180-min and especially on one-way
-modes. **Implication:** at launch, /tour-build will refuse most
-"random spot in 13th arrondissement, 60-min round-trip" requests and
-recommend either longer durations or one-way endpoints in the dense
-core. Whether that's acceptable depends on whether Paris launch
-expects users to start in the dense core or anywhere in the city.
-Re-evaluate when extraction broadens the corpus.
-
-**Updated 2026-04-29 (Phase 6 — density gates added in response to Phase 5 quality failures).**
+`scripts/tourability_map.py` runs the gate over a grid of start points for planning and
+heat maps. The engine does not depend on it.
 
 ### 3.8 Runtime cost estimate
 
-- Selection (Cypher + Python): ~50–200 ms, no LLM.
-- Beat dedup pass (claim-level overlap): ~50 ms, no LLM.
-- Cold-open + transit glue (Haiku, ~1k input + 200 output tokens): ~$0.001–0.005.
-- Validation diff: no LLM.
-- TTS: dominant cost; out of scope for tour-builder.
+Density, selection, ordering, beat selection, stitching and the checks in `validation.py`
+call no model. The models are:
 
-Total tour-builder runtime: **<$0.01 per tour**, well under the parked design's $0.01–0.05 budget.
-
----
-
-## 4. Skill structure proposal
-
-### 4.1 File layout
-
-```
-.claude/commands/tour-build.md          # the skill (orchestrator; thin)
-src/tour/
-  __init__.py
-  contract.py                            # input/output dataclasses + Pydantic validators
-  selection.py                           # POI selection (Cypher queries, scoring)
-  routing.py                             # route geometry, distance, dwell math
-  beat_select.py                         # within-POI beat selection (sub_location/trigger_address ordering)
-  generation.py                          # cold-open / transit / closing assembly + glue whitelist
-  validation.py                          # source-traceability diff; forbidden-phrase scan
-  fixtures.py                            # named ordering tables (Notre-Dame sub_location order, etc.)
-tests/
-  test_tour_selection.py                 # POI selection determinism + interest-bias unit tests
-  test_tour_beat_select.py               # ordering + length-class budgeting
-  test_tour_generation.py                # glue whitelist enforcement + traceability
-  test_tour_golden_pdv.py                # golden output for Place des Vosges round-trip
-  test_tour_golden_ile.py                # golden output for Île de la Cité one-way
-fixtures/tour_golden/
-  pdv_round_trip_60min.json              # canonical empirical Tour 1 normalized to output format
-  ile_oneway_90min.json                  # canonical empirical Tour 2
-```
-
-The skill orchestrates; Python does the work. Per CLAUDE.md style: keep the skill prompt under 200 lines and let Python handle anything testable.
-
-### 4.2 Skill contract (`.claude/commands/tour-build.md`)
-
-**Invocation:**
-```
-/tour-build --start "48.8553,2.3653" --duration 60 --lenses historic_arch,famous_residents --round-trip
-```
-or with named anchor:
-```
-/tour-build --start "Place des Vosges" --duration 60 --round-trip
-```
-
-**The skill:**
-1. Validates input against `contract.py` schema.
-2. Calls `src/tour/selection.py:select_route(input)` → returns `Route` (POIs, transitions, time budget).
-3. Calls `src/tour/beat_select.py:select_beats(route)` → returns `BeatSequence`.
-4. Calls `src/tour/generation.py:generate(beat_sequence, route)` → returns `Script` (sentence-level traceable records). Uses Haiku.
-5. Calls `src/tour/validation.py:validate(script)` → blocks on traceability or forbidden-phrase failures.
-6. Writes output to `data/{city_slug}/tours/{generated_id}.json` and prints summary.
-
-**The skill prompt body** is mostly the input schema + invocation rules + a paragraph each on the principles (no editorializing, source traceability, glue whitelist, "err short"). Python carries the algorithm.
-
-### 4.3 Test plan
-
-**Unit tests** (Phase 2–3):
-- POI selection: deterministic given seed, respects max_radius, prefers spine Area
-- Beat selection: sub_location ordering matches fixture, trigger_address ordering deterministic
-- Glue whitelist: rejects "imagine", rejects new proper nouns
-- Source traceability: untraceable sentence flagged
-
-**Golden-output tests** (Phase 4):
-- `test_tour_golden_pdv`: input `(start=PdV centroid, duration=60, round_trip=True)` → output is structurally equivalent to empirical Tour 1 (same POI list, same beat IDs in same order, glue sentences fall in whitelist categories). 90% beat-overlap threshold (allows runtime to make different choices that survive validation).
-- `test_tour_golden_ile`: input `(start=Pont Neuf metro, duration=90, round_trip=False)` → empirical Tour 2 reproduction.
-
-**Integration test** (Phase 5):
-- End-to-end CLI invocation against live Neo4j, output passes validation, total time within ±10% of stated.
-
-### 4.4 What NOT to build in tour-builder
-
-- Multi-language support — NORTHSTAR boundary
-- Full audio generation (TTS) — out of scope
-- Tour storage / serving — out of scope (tour-builder writes JSON; downstream consumes)
-- Real-time GPS triggering — out of scope (tour-builder is offline composition)
-- Beat re-extraction or POI cleanup — separate post-launch backlog
-- Claim-level dedup (B8) — deferred; document in output
-
----
-
-## 5. Open design questions (need user signoff)
-
-Each has a recommended default; flagging for explicit signoff before Phase 2.
-
-### Q1. Round-trip semantics
-
-**Question:** What does `round_trip=true` mean? "Loop returns to origin" (Pariswalks PdV is a circle ending at start) or "linear path with origin = endpoint"?
-
-**Recommendation:** **Round-trip = walk returns to origin point.** For square circumnavigation, the entire walk happens around one POI and ends at the start. For multi-POI round-trips, the algorithm picks an out-and-back loop. For one-way, the endpoint is an output of the algorithm (last selected stop).
-
-**Why:** PdV empirical walk is a circle. Île walk is a one-way bank-to-bank. These are the two genuine modes. A "linear with origin=endpoint" would be a forced loop that empirical evidence doesn't support.
-
-### Q2. Tour-internal callbacks ("the bridge you crossed earlier")
-
-**Question:** Parked design.md proposed cross-POI structural callbacks. Empirical walks don't use them — was that because the walks are short, or because the rule is wrong?
-
-**Recommendation:** **Allow but don't require.** Carry rule 45 as a generation option for tours with ≥4 anchor stops, where there's a meaningful "earlier" to point back to. Both empirical walks were on the short side (≤90 min, ≤9 anchors); a 3-hour walk through multiple neighborhoods plausibly wants this affordance. Mark uses with `[CALLBACK]` source attribution.
-
-**Why:** The mechanism is sound (no new claims, just structural pointer) but unnecessary at empirical-walk scale. Defer aggressive use until Phase 4 testers report on longer walks.
-
-### Q3. Voice modulation per lens
-
-**Question:** Parked feedback_tour_tone_default proposed lens-specific word choices. Empirical walks show only house voice — no clear modulation.
-
-**Recommendation:** **DEFER to post-MVP.** Implement house voice only in Phase 1–4. Revisit if Phase 4 testers report tonal flatness across mixed-lens walks.
-
-**Why:** Empirical walks are Pariswalks-quality without modulation. YAGNI risk if we build it now and the testers don't notice. Cheap to add later — it's a prompt-engineering tweak in `generation.py`, not an architectural change.
-
-### Q4. Theme discovery
-
-**Question:** Parked design.md proposed bottom-up theme derivation from entity overlap. Empirical walks didn't surface a clear theme — title/Area carried the work.
-
-**Recommendation:** **DROP algorithmic theme discovery. Use `theme_hint` as optional user-supplied + Area name as default.** The walk's "theme" is "Place des Vosges" or "the birthplace of Paris," not a computed cross-entity arc. Surface the Area name as the implicit theme; user can override with `theme_hint`.
-
-**Why:** Both empirical walks confirm. Algorithmic theme discovery is the most expensive part of the parked algorithm and demonstrably unnecessary. Save for post-MVP if multi-Area routes need it.
-
-### Q5. Stop budget tuning
-
-**Question:** What's the right stop count for a given duration?
-
-**Recommendation:** **1 outer anchor per 10 minutes of total tour duration, +0.5 walk-by stops per anchor.** A 60-min PdV walk has 1 anchor + 18 trigger_address vignettes (treated as one cumulative stop with internal sequencing). A 90-min Île walk has 9 anchors. Use:
-```
-max_anchors = max(1, duration_min // 10)
-max_walkbys = anchors × 2
-```
-Cap total at 12 outer anchors. Internal sub_location/trigger_address vignettes inside a single anchor do **not** count toward this cap.
-
-**Why:** Empirical anchor counts (1 PdV, 9 Île) calibrate this. The parked doc's "max ~8 stops" is too restrictive at the multi-Area scale; the 12 cap accommodates Île-style traverses.
-
-**Updated 2026-04-27 (Phase 2 calibration):** the original recommendation read `walk_min / 12`, where `walk_min` was ambiguous between *walking-minutes-of-budget* and *total tour minutes*. Calibrating against the empirical Île walk (90 min total → 9 anchors) the divisor is `duration_min // 10`. This matches both PdV (60 // 10 = 6 anchor budget; PdV consumes 1 outer slot) and Île (90 // 10 = 9). The hard cap of 12 is unchanged.
-
-### Q6. Lens count mismatch (Northstar 16 vs live 21+8)
-
-**Question:** NORTHSTAR locks "16 taggable lenses." Live graph has 21 child + 8 parent = 29 lens nodes, with 21 child lenses being taggable (TAGGED_WITH from beats).
-
-**Recommendation:** **Flag for user — this is a NORTHSTAR drift, not a tour-builder concern.** Tour-builder takes the live lens roster as authoritative. User decides whether NORTHSTAR needs updating to "21 taggable lenses" or whether some live lenses should be deprecated.
-
-**Why:** Doesn't block tour-builder design. But the phrase "16 taggable lenses" appears in the Phase 1 milestone gate — worth knowing whether the gate is met.
-
-### Q7. Stop_orientation gap-fill at runtime
-
-**Question:** Most tier-5 anchors lack a `stop_orientation` beat. Should tour-builder runtime synthesize one from `physical_cues` + `pronunciation`, or fail loud?
-
-**Recommendation:** **Synthesize when missing; mark as `[SYNTHESIZED_OPENER]` in source attribution.** The synthesizer takes the first anchor's first 2 physical_cues + any pronunciation + a fixed glue template ("Stand here. The first thing you'll notice is..."). Quality will be visibly worse than a real stop_orientation beat, which is fine — it documents the gap and motivates back-fill extraction.
-
-**Why:** Failing loud breaks any tour at Conciergerie/Sainte-Chapelle/most anchors. Synthesizing flags the gap honestly without blocking the user.
-
-### Q8. Round-trip closing for a square (Pariswalks PdV "you have now circled")
-
-**Question:** Pariswalks Walk 4 has no canonical "you have now circled" closing beat in our corpus (gap noted in Tour 1 §"Gaps surfaced"). Synthesize, or omit?
-
-**Recommendation:** **Synthesize as `STRUCTURAL` glue.** Whitelisted closing phrase: "You've now circled {square_name}." or "We've now walked {area_name} end to end." The phrase is structural (no claims), so it falls inside the glue whitelist.
-
-**Why:** Empirical walks confirm the closing pattern; the data just doesn't carry it as beats. Glue is the right home.
-
----
-
-## 6. Phase 2-and-beyond outline
-
-| Phase | Scope | Gate to advance |
+| Job | Where | Model |
 |---|---|---|
-| **Phase 1 (THIS doc)** | Diagnostic + design only. | User signoff on §5 open questions. |
-| **Phase 2** | Implement `selection.py` + `routing.py` + `beat_select.py` against live Neo4j. Unit tests for selection determinism, interest bias, sub_location ordering. | All unit tests pass; selection runs <500 ms on Paris corpus. |
-| **Phase 3** | Implement `generation.py` (cold-open, transit, closing assembly) + glue whitelist + Haiku prompt. `validation.py` enforces source traceability and forbidden-phrase scans. | A 60-min PdV tour generates without invocation errors and passes validation. |
-| **Phase 4** | Golden-output tests against the two empirical walks. Calibrate scoring weights so generated PdV ≥90% overlaps empirical Tour 1 beat IDs. Same for Île. | Golden tests pass at ≥90% overlap. |
-| **Phase 5** | End-to-end `/tour-build` CLI invocation. Multi-tour smoke test (Latin Quarter 2hr, Marais 3hr, Île 90min). Record audio_min / walk_min / total / cost telemetry. | 5 tours pass validation; cost < $0.01 each; user reads output and approves quality. |
-| **Phase 6 (post-MVP)** | Lens-modulated voice. Tour-internal callbacks for ≥4-stop walks. Per-Area haversine corrections. Claim-level dedup (B8). Stop_orientation gap-fill via extraction. | Tied to Phase-1-milestone "Boredom Test passing internally." |
+| Writing each stop, and each stored place telling | `authoring.py` | `COMPOSE_MODEL` |
+| Directions for a leg | `glue_client.py` (`HaikuGlueClient`) | `DEFAULT_HAIKU_MODEL`, at most `GLUE_MAX_OUTPUT_TOKENS` = 150 tokens out |
+| Checking each written sentence against its beat | `verify.py` (`HaikuFaithfulnessChecker`) | `FAITHFULNESS_MODEL` |
+| Fact review when a tour is certified | `quality_certification.py`, `certification_provider.py` | `FACT_REVIEW_MODEL` |
+| Voice | the audio pipeline | the text-to-speech provider |
 
----
+A failed glue call falls back to the template line and records the fallback. A stop told
+from a stored place telling skips the writer, so it costs a small part of a written one.
 
-## 7. Surfaced assumptions and gaps (audit trail)
-
-Every assumption in this doc that isn't anchored to evidence:
-
-1. **Walking pace 3 km/h** — provisional Paris value (parked design.md). Assumed valid until per-neighborhood validation in Phase 5.
-2. **Haversine ×1.35** — same. Per-neighborhood variance (Marais ×1.4, Haussmann ×1.2) acknowledged but not yet measured.
-3. **Audio at 150 wpm** — TTS-engine-dependent; ElevenLabs Conversational AI may run faster/slower. Validate against actual MP3 output in Phase 5.
-4. **8-stop hard cap from parked design** — relaxed to 12 for multi-Area walks. No empirical evidence above 9 (Île). Phase 4 calibration may revise.
-5. **`area_alignment` weights (1.0/0.5/0.2)** — calibrated against golden tests on 2026-04-29 (commit pending). Held at 1.0/0.5/0.2 — Phase 4 tuning didn't surface a need to revise.
-6. **Interest-bias multiplier (1.0–2.0)** — calibrated against golden tests on 2026-04-29. Held at 1.0 + 0.5 × match_ratio (cap 2.0) — golden tours used `lenses=null`, so this branch never fired; revisit when interest-driven tests land in Phase 5.
-7. **80% claim-overlap dedup threshold** — calibrated against golden tests on 2026-04-29. `B8_JACCARD_THRESHOLD=0.8` held — golden tests pass; deferring formal B8 to post-MVP per design.
-8. **Lens count mismatch** — flagged in Q6; assumed orthogonal to tour-builder.
-9. **`book_slug` empty in live data** — runtime cannot do per-book attribution. Acceptable for MVP; flag if user wants source attribution UX.
-10. **`pronunciation` 1% coverage** — runtime can synthesize "that's pronounced X" only at PdV. Cold-open elsewhere falls short of Pariswalks gold standard.
-11. **`beat_length_class` 51% missing** — runtime falls back to word count. Length budgeting becomes approximate.
-12. **Notre-Dame in Latin Quarter** — RESOLVED 2026-04-28 (Phase 2.6). The Latin Quarter manual polygon was tightened (NE step-down from lat 48.8530 to 48.8514 starting at lng 2.348) so the polygon respects the Seine's south bank. ND, Crypte Archéologique de l'Île de la Cité, and Mémorial des Martyrs de la Déportation no longer leak into Latin Quarter; their Île de la Cité memberships are unchanged.
-13. **`stop_orientation` synthesis quality** — unverified. Synthesized opener marked `[SYNTHESIZED_OPENER]`; user can audit and decide whether to defer launch until back-fill ships.
-14. **Spine rule hardened from tolerance-gated to district-dominance** (Phase 2.6, 2026-04-28). The Phase 2.5 5%-tolerance rule never fired in the Pont Neuf case (vote gap 33% > 5%). Replaced with the 2× district dominance rule per §3.2. Smoke B now resolves spine = "Île de la Cité" and reaches Notre-Dame as the closing endpoint.
-15. **Strategy-chooser tie-break added** (Phase 4 calibration, 2026-04-29). The §3.3 spec defined two threshold tests (sub_location ≥3, trigger_address ≥5) but didn't prescribe a tie-break when both fire. Empirical Place des Vosges (6 sub_locs, 23 trigger_addresses) confirmed trigger should win when the address pool dominates. `choose_ordering_strategy` now returns sub_location only if `sub_n ≥ SUB_LOCATION_THRESHOLD AND (trig_n < TRIGGER_ADDRESS_THRESHOLD OR sub_n ≥ trig_n)`. Conciergerie (6 sub_locs, 0 triggers) and Notre-Dame (16 sub_locs, ~0 triggers) keep sub_location; PdV switches to trigger_address. Without this, PdV's 22-beat empirical circumnavigation collapsed to 8 beats (sub_location strategy). Calibration target — golden test now passes 22/22.
-16. **`PAUSE_BEATS_MAX` bumped 2→3** (Phase 4 calibration, 2026-04-29). The empirical Vert-Galant pause stop carries establishing + view + tarnished beats. The prior cap dropped the third (the deepen). Bumped to 3; Vert-Galant deepen now lands; no regressions in the unit-test cap and no other tier-3 stop in the corpus has more than 3 strong-narrative-function beats so the audio-budget impact is negligible.
-17. **`DEFAULT_FLAT_MAX` bumped 6→8** (Phase 4 calibration, 2026-04-29). Sainte-Chapelle (9 narr_fn beats) and Île de la Cité (10 narr_fn beats) lost empirical deepens (`fluctuat_nec_mergitur`, `palais_de_justice_marcel_revolt`, `upper_chapel_glass_panels`, `sainte_chapelle_communards_petrol`) under the prior 6-beat trim. 8 keeps all empirical anchor-flat beats. Audio-budget impact: ~+8 spoken-seconds × ~2 anchors per tour = +16s, well within the 90-min Île tour's 44-min audio budget. No regressions.
-18. **`beat_richness` formula** (Phase 4 calibration, 2026-04-29). Tried `(1+n)^1.5` and `(1+n)^1.3` to flip Crypte (t3, 4 beats) over Palais de Justice (t4, 3 beats) in selection scoring. Both exponents flip the pair correctly but widen the tier-richness gap so Notre-Dame (t5, 48 beats) dominates the routing-aware greedy and consumes walk budget before Conciergerie/Hôtel-Dieu/Vert-Galant land. Net beat-overlap regressed. Held at `log(1+n)`. The Crypte-vs-Palais selection turnover is unsolved within Phase 4's strict tunables (tier weighting needs to soften, not richness alone) — Phase 5 calibration target. Crypte's 2 beats are documented as `structurally_unreachable` in the Île golden fixture.
-19. **Endpoint-pull `far_fraction = 0.5`** (Phase 4 calibration, 2026-04-29). Held — Île one-way 90min reaches Hôtel de Ville as the closing endpoint without further tuning needed.
-20. **`max_anchors_divisor = 10`** (already calibrated in Phase 2). Held: 60 // 10 = 6 anchor budget for PdV (1 used + 5 Marais neighbors); 90 // 10 = 9 anchor budget for Île (8 used). Holding.
-21. **Golden-fixture pruning for structurally unreachable beats** (Phase 4 closeout, 2026-04-29). After the 16/17 cap bumps, 19 empirical-walk beats remain unreachable under current `beat_select` shape: Notre-Dame's 8 no-sub_location beats (sub_location strategy emits ONE closing slot — needs a multi-beat closing pool), 5 Notre-Dame sub_location duplicates (one beat per sub_loc bucket — facade, central-portal, interior-nave, exterior-east-end each carry 2 empirical beats), 2 Conciergerie sub_location duplicates (tour-bonbec, rue-de-paris-cells), 1 Conciergerie no_loc closing, 1 Pont Neuf vert-galant climax (climax loses to hook+est+deepen in narr_fn ranking even at FLAT_MAX=8), 2 Crypte beats (POI not selected — see #18), plus the 2 Place Dauphine + 4 Mémorial beats whose POIs are `walk_by_only`. All documented per-tag in `fixtures/tour_golden/ile_oneway_90min.json` under `structurally_unreachable`. Phase 5/6 backlog targets: multi-beat closing pool under sub_location strategy, multi-beat-per-sub_loc support for thick anchors, transit branch in `beat_select`, role re-tagging for Place Dauphine / Mémorial.
-
-These are the points where Phase 1 design has knowingly substituted reasoned defaults for measured data. Phase 4 calibration validated 5 + 6 + 7 + 14 + 15 + 16 + 17 + 19 + 20; Phase 5 will revisit 18 once tier weighting is on the table, and 21 once `beat_select` shape gaps are addressed.
-
----
-
-## 8. What this doc does NOT do
-
-Per the prompt's constraints:
-
-- **No code.** Selection scoring, dwell math, and pipeline pseudocode are illustrative; nothing in `src/` or `.claude/commands/` is touched.
-- **No memory updates.** The 8 `feedback_tour_*` memories are inputs to the rule ledger; updating them is the user's call after signoff.
-- **No empirical-walk edits.** They are authoritative reference.
-- **No Phase 2+ specifics beyond the outline.** Each phase will get its own spec under `specs/{date}-tour-builder/`.
-- **No B8 claim-dedup design.** Deferred per findings.md and post-launch backlog.
-- **No stop_orientation back-fill plan.** Deferred per backlog item 4.
-- **No solution to the Latin Quarter polygon overshoot** beyond "use Île de la Cité as canonical." Backlog item 9 owns the fix.
-
----
-
-**End Phase 1 design. Awaiting user signoff on §5 open questions before Phase 2.**
+The measured cost of a tour, and of building a city's stored tellings, is in
+`Docs/business/tour-cost-measurement.md`.

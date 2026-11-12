@@ -41,7 +41,7 @@ NOTRE_DAME_SUB_LOCATION_ORDER: tuple[str, ...] = (
     "exterior-east-end-square-jean-xxiii",
 )
 
-# Conciergerie, from §1.2 corpus (six populated sub_locations).
+# Conciergerie, from the Paris corpus (six populated sub_locations).
 # Path: tour-bonbec entry → salle-des-gens-darmes (vaulted hall) →
 # salle-de-toilette (Marie-Antoinette prep room) → marie-antoinette-cell
 # → marie-antoinette-cell-mockup → rue-de-paris-cells (the cheap-seats

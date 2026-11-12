@@ -46,12 +46,12 @@ forty minutes than see four things.
 ## What this persona breaks
 
 - **A walking budget is not one number.** Rosemary's total (54 minutes) is unremarkable. Her
-  *per-leg* limit (12 minutes) is the binding constraint, and nothing in the model expresses it.
+  *per-leg* limit (12 minutes) is the binding constraint, and the request carries it as a cap.
   A route with one 25-minute leg and one 5-minute leg has the same total and is unusable.
-- **Rest is a first-class stop.** It has a place, a length and content. Today a stop must be a
-  POI with beats; a bench by the Seine is not in the corpus.
-- **The route surface matters as much as the route length.** Steps, kerbs and cobbles. Valhalla
-  can be asked for this; the planner never does.
+- **Rest is a first-class stop.** It has a place, a length and content. The corpus holds benches
+  and toilets as rest places, and the planner seats one as a stop with no beats.
+- **The route surface matters as much as the route length.** Steps, kerbs and cobbles. The
+  planner asks Valhalla for a step-free route when the request says so.
 - **Fewer, longer stops is a legitimate shape.** One 46-minute stop out of a three-hour tour.
   Any rule that spreads time evenly, or that requires a minimum number of stops, produces a
   worse tour for her.

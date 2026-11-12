@@ -1,5 +1,5 @@
 {
-  "_doc": "Golden fixture from Docs/tour-builder/empirical-tours/02-ile-de-la-cite-notre-dame.md (composed 2026-04-26). Resolved against live Paris Neo4j 2026-04-29.",
+  "_doc": "Golden fixture from fixtures/reference-tours/02-ile-de-la-cite-notre-dame.md, loaded by scripts/human_reference_tours.py (composed 2026-04-26). Resolved against live Paris Neo4j 2026-04-29.",
   "_resolution_method": "Tag -> beat resolution re-runs the fixture's own script_body method against data/paris/beats.json, exact-first: (1) the tag name is the tail of exactly one corpus beat_id; (2) the quoted paragraph is a verbatim prefix of exactly one beat's script_body (not used for paragraphs carrying more than one tag, where the prose blends beats); (3) the machine-similarity resolution recovered from git 4ea26683, only where it names an existing beat and the two recovered runs agree. Ids are the durable corpus slugs (b.beat_id / stable_beat_id), never the per-database UUIDs minted at upload. Anything still unresolved is listed in unresolved_tags for human review and is deliberately absent from expected_stable_beat_ids.",
   "input": {
     "start": [

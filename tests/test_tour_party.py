@@ -134,8 +134,8 @@ def test_take_it_easy_slows_the_walking_never_the_talking():
     pace, keeps the rest cadence — and leaves the register ALONE.
 
     Cites docs/personas/05-step-free-visitor.md bullet 1 (lines 48-50): "Her
-    per-leg limit (12 minutes) is the binding constraint, and nothing in the
-    model expresses it" — and design §2.4:133: "Register never follows
+    per-leg limit (12 minutes) is the binding constraint, and the request
+    carries it as a cap" — and design §2.4:133: "Register never follows
     mobility. 'Slow the walking, never the talking.'" The design table
     (01-design.md:122) gives take-it-easy the rest cadence as well as family:
     Rosemary's day sits on benches (her steps 3 and 7).
@@ -753,7 +753,7 @@ def test_a_leg_cap_prefers_more_walking_in_shorter_pieces():
     Cites docs/personas/05-step-free-visitor.md bullet 1 (lines 48-50): "A
     walking budget is not one number. Rosemary's total (54 minutes) is
     unremarkable. Her *per-leg* limit (12 minutes) is the binding constraint,
-    and nothing in the model expresses it. A route with one 25-minute leg and
+    and the request carries it as a cap. A route with one 25-minute leg and
     one 5-minute leg has the same total and is unusable" — and the Phase 1
     panel's Rosemary dissent (phase1-ledger.md W1.9 item 7: both D1 days
     carried a 17/19-minute longest leg she cannot walk).

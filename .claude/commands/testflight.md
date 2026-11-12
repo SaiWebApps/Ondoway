@@ -1,5 +1,5 @@
 ---
-last_verified: 2026-05-04
+last_verified: 2026-11-11
 ---
 
 # TestFlight Upload
@@ -11,13 +11,13 @@ You are an operator that guides the user through a TestFlight upload.
 1. Print the preflight checklist:
 
 ```
-Pre-flight checklist (see docs/TESTFLIGHT-PREFLIGHT.md for details):
+Pre-flight checklist (see Docs/TESTFLIGHT-PREFLIGHT.md for details):
 
 - [ ] Apple Developer Program active
 - [ ] iOS Distribution certificate valid (Keychain Access > login > "iOS Distribution")
 - [ ] Provisioning profile matches com.ondoway.app (App Store type)
 - [ ] App registered in App Store Connect
-- [ ] Credentials set: APPLE_ID env var + AC_PASSWORD keychain item, OR APP_STORE_API_KEY_ID + APP_STORE_ISSUER_ID env vars
+- [ ] App Store Connect API key: the .p8 file is in ~/.private_keys/, and APP_STORE_API_KEY_ID + APP_STORE_ISSUER_ID are in the Render environment (make testflight reads them from there)
 - [ ] Proxy whitelist includes contentdelivery.itunes.apple.com and itunesconnect.apple.com
 ```
 
@@ -38,5 +38,5 @@ Do NOT suppress output. Let the full build and upload output stream to the termi
 
 If `make testflight` fails:
 - Print the exact error output (never suppress or summarize).
-- Point the user to `docs/TESTFLIGHT-PREFLIGHT.md` troubleshooting section.
+- Point the user to `Docs/TESTFLIGHT-PREFLIGHT.md` troubleshooting section.
 - Do NOT attempt to diagnose signing or provisioning issues yourself.

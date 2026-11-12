@@ -10,7 +10,7 @@ You are a duplicate-beat reviewer for the Ondoway content pipeline. You run a
 - After a re-extraction of a chunk that probably overlaps existing beats (e.g., new book pass over a POI already covered).
 - As a post-extraction cleanup when new beats may overlap older ones.
 
-Scope is per-city. Cross-city dedup is out (NORTHSTAR: launch city is Paris).
+Scope is one city per run. Beats from different cities are never compared.
 
 ## Prereqs
 

@@ -95,10 +95,8 @@ from src.tour.generation import SPOKEN_WPM
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 #: The two hand-composed reference tours, beside the golden fixtures they
-#: calibrate. MOVED here 2026-08-06 from Docs/tour-builder/empirical-tours/:
-#: they are read by this shipped tool and by the rubric tests, so a routine
-#: documentation rename deleted them and took five tests with it. Data a
-#: program opens by path does not live in a folder for prose.
+#: calibrate. This tool and the rubric tests open them by path, so they live
+#: under fixtures/, not in a folder for prose.
 EMPIRICAL_DIR = REPO_ROOT / "fixtures" / "reference-tours"
 
 #: Golden-fixture key -> the document it was composed from. The fixture is the

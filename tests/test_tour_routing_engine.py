@@ -556,7 +556,7 @@ def test_routed_divisor_lets_cheaper_network_fit_more():
 def test_requests_pin_pedestrian_walking_speed_to_pace_kmh():
     """Pace pin (hostile-panel finding 2026-07-02): Valhalla defaults pedestrians
     to ~5.1 km/h while the entire budget model is spec'd at PACE_KMH = 3.0
-    (routing.py, §3.2 rule ledger 20-25). Without costing_options every routed
+    (routing.py, phase-1-design §3.2). Without costing_options every routed
     leg time assumes a walker ~70% faster than the product designs for, and the
     20-min isochrone reaches ~1.7km where the analytic envelope says 738m —
     the divergence behind the density-gate/REACH mismatch. Both request bodies

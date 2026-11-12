@@ -3,7 +3,7 @@
 Runs after ``generate(...)`` and produces a ``ValidationReport``. The
 caller (skill orchestrator, CLI, or test harness) treats a non-empty
 report as a hard failure — these checks are the gate between
-generation and TTS per phase-1-design rule 8.
+generation and TTS per phase-1-design §3.6.
 
 Two independent checks:
 
@@ -15,7 +15,7 @@ Two independent checks:
    Anything else lands in ``untraceable_sentences``.
 
 2. **Forbidden-phrase scan.** Glue sentences may not contain
-   "imagine" / "picture this" / "envision" / "visualize" (rule 32 +
+   "imagine" / "picture this" / "envision" / "visualize" (§3.5 +
    feedback_tour_tone_default). Glue sentences may not introduce a
    proper noun or 4-digit year that does not appear in any cited
    beat's ``script_body`` from the same Script.

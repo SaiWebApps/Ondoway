@@ -61,8 +61,8 @@ length of the narration understates his listening by roughly half.**
 - **Narration length is not narration cost.** Every model in the system prices a piece by its
   duration in seconds. For Paulo a seven-minute piece is a fourteen-minute event, and the
   multiplier depends on the writing, not the length.
-- **A re-listen has to be planned time.** A stop currently lasts the longer of a tier default and
-  the narration. His stops need to last about one and a half times the narration, and the
+- **A re-listen has to be planned time.** A stop lasts the longer of its visit time and its
+  narration. His stops need to last about one and a half times the narration, and the
   half is not silence — it is the same words again.
 - **The walk/talk overlap is worth less to him than to anyone else.** The engine already treats
   narration heard while walking as free minutes, and for Camille it is. Paulo cannot rewind on the

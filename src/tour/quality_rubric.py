@@ -31,6 +31,7 @@ from src.tour.contract import BeatSequence, Route, Script, Sentence
 from src.tour.generation import (
     _END_B_SENTINEL_PREFIX,
     SPOKEN_WPM,
+    _word_count,
     is_walk_concurrent,
     transit_class_beat_ids,
 )
@@ -320,10 +321,6 @@ def c3_audio_floor_seconds(walk_seconds: int) -> float:
     return MIN_AUDIO_FRAC_OF_WALKING * walk_seconds
 
 
-def _words(text: str) -> int:
-    return len(text.split())
-
-
 def _concurrent_audio_seconds(script: Script, beat_sequence: BeatSequence | None) -> int:
     """Seconds of narration the tourist hears WHILE WALKING, not while standing.
 
@@ -361,7 +358,7 @@ def _concurrent_audio_seconds(script: Script, beat_sequence: BeatSequence | None
             beat for plan in beat_sequence.poi_beats for beat in plan.beats
         )
     words = sum(
-        _words(s.text)
+        _word_count(s.text)
         for s in script.script
         if is_walk_concurrent(s, vignette_ids, transit_ids)
     )
@@ -386,7 +383,7 @@ def score_tour(
     words_by_stop: dict[int, int] = {}
     texts_by_stop: dict[int, list[str]] = {}
     for sentence in script.script:
-        words_by_stop[sentence.stop_idx] = words_by_stop.get(sentence.stop_idx, 0) + _words(
+        words_by_stop[sentence.stop_idx] = words_by_stop.get(sentence.stop_idx, 0) + _word_count(
             sentence.text
         )
         texts_by_stop.setdefault(sentence.stop_idx, []).append(sentence.text)
@@ -852,7 +849,7 @@ def score_tour(
         for s in sents:
             if s.source_type == "beat":
                 break
-            preamble += _words(s.text)
+            preamble += _word_count(s.text)
         if preamble > POINT_FIRST_PREAMBLE_MAX_WORDS:
             report.findings.append(
                 Finding(
@@ -876,7 +873,7 @@ def score_tour(
             if primary in s.cited_beat_ids:
                 landed = story_words
                 break
-            story_words += _words(s.text)
+            story_words += _word_count(s.text)
         if landed is None or landed > POINT_FIRST_STORY_WORDS:
             where = "never" if landed is None else f"{landed} words in"
             report.findings.append(

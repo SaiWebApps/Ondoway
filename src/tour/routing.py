@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 # routed version from a RoutingClient.
 LegSecondsFn = Callable[[float, float, float, float], int]
 
-# §3.2 / phase-1-design rule ledger 20-25.
+# Walking time and the time budget — §3.2 of phase-1-design.
 #: How fast a walker is assumed to move. A MEASUREMENT, and a wrong one: people walk
 #: about 4.5 km/h, so every leg time this product reports is inflated by about half.
 #:

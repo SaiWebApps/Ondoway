@@ -20,26 +20,14 @@ Placement rule (locked from the spec's deferred clarifications):
 from __future__ import annotations
 
 from .contract import BeatSequence, Route
-from .generation import _find_directional_transit_beat
-from .routing import beat_spoken_seconds, leg_walk_seconds
+from .generation import _find_directional_transit_beat, _segment_leg_seconds
+from .routing import beat_spoken_seconds
 
 # A leg qualifies for a reflection when walking exceeds its audio by this much.
 REFLECTION_MIN_DEFICIT_SECONDS: int = 90
 
 # Flat per-glue-sentence estimate — matches generation._sum_audio.
 GLUE_SENTENCE_SECONDS: int = 4
-
-
-def _leg_walk_seconds(route: Route, stop_idx: int) -> int:
-    """Walking seconds of the leg arriving at ``stop_idx`` (routed if known).
-
-    Delegates to ``routing.leg_walk_seconds``, the one per-leg expression, so a
-    reflection about how long a walk was cannot disagree with the walk the tour
-    was planned around.
-    """
-    if 0 <= stop_idx < len(route.transits):
-        return leg_walk_seconds(route.transits[stop_idx])
-    return 0
 
 
 def _leg_audio_seconds(beat_sequence: BeatSequence, stop_idx: int) -> int:
@@ -72,7 +60,7 @@ def reflection_slots(route: Route, beat_sequence: BeatSequence) -> tuple[int, ..
         return ()
     deficits: dict[int, int] = {}
     for k in range(1, n):
-        deficit = _leg_walk_seconds(route, k) - _leg_audio_seconds(beat_sequence, k)
+        deficit = _segment_leg_seconds(route, k) - _leg_audio_seconds(beat_sequence, k)
         if deficit >= REFLECTION_MIN_DEFICIT_SECONDS:
             deficits[k] = deficit
     cap = max(1, n // 2)

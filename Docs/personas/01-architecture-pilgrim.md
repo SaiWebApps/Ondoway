@@ -68,8 +68,8 @@ and those two costs behave nothing alike. See the last bullet below.
 - **A tour's time is not walking plus narration.** Four fifths of Camille's day is neither. With
   only two ways to spend time, a planner asked for five hours between two close points must
   invent four hours of walking — which is how a Rue Royale tour ends up at Parc de la Villette.
-- **A stop is not as long as its audio.** Today a stop lasts *the longer of* a tier default and
-  the narration. Camille needs the Cour Carrée to last as long as the Cour Carrée deserves.
+- **A stop is not as long as its audio.** A stop lasts *the longer of* its visit time and its
+  narration (`visit_time.py`). Camille needs the Cour Carrée to last as long as it deserves.
 - **Silence is not a defect.** Any rule that fills dwell time with speech would ruin step 5.
 - **Narration is heard on the move, and sometimes deliberately before arrival** (step 16).
 - **Lunch and a queue are real time.** Neither is walking, and neither is sized by narration — she
