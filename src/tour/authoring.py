@@ -25,7 +25,7 @@ import json
 from collections import defaultdict
 from collections.abc import Mapping
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_serializer
 
 from .artifact import CompositionTrace, sentences_payload_sha256
 from .candidate_authoring import (
@@ -104,6 +104,18 @@ class ComposeRequest(BaseModel):
     # and every request hash — the declared-breakage class; the frozen
     # certification archive re-seals on its next paid run.
     door_state: str = ""
+    # A PLACE TOLD ON ITS OWN: a stored place recipe, played later inside walks the
+    # writer cannot see, so it is never the day's last stop and its close lands the
+    # place, never the walk. Left out of the dump while False, so every tour request
+    # keeps its exact bytes and hash.
+    standalone_place: bool = False
+
+    @model_serializer(mode="wrap")
+    def _omit_standalone_place_when_off(self, handler):
+        data = handler(self)
+        if not self.standalone_place:
+            data.pop("standalone_place", None)
+        return data
 
 
 class CertificationComposition(BaseModel):
@@ -494,9 +506,9 @@ def _compose_user_prompt(
         )
         if register == "warm":
             parts.append(
-                "REGISTER — WARM (two walking together): write \"you\" as the plural "
-                "it already is in English; NEVER \"you two\", \"both of you\", "
-                "\"your partner\", or \"lovers\" as an invitation; never a sentence "
+                'REGISTER — WARM (two walking together): write "you" as the plural '
+                'it already is in English; NEVER "you two", "both of you", '
+                '"your partner", or "lovers" as an invitation; never a sentence '
                 "that addresses the relationship or stages a scene for it. Warm is "
                 "not chattier: a register may take a clause away, never add a "
                 f"sentence. {invariants}"
@@ -506,13 +518,20 @@ def _compose_user_prompt(
                 "REGISTER — FAMILY (read aloud over small heads): short declarative "
                 "sentences, under about twenty words each. Give one thing to find "
                 "with the eyes inside the stop's first minute. You may address the "
-                "child directly ONCE per stop — a \"see/look/find\" line or one "
-                "question — never \"kids\", never a made-up name. You may LEAD with "
+                'child directly ONCE per stop — a "see/look/find" line or one '
+                'question — never "kids", never a made-up name. You may LEAD with '
                 "the child-friendly true things and leave the rest to the full "
                 f"telling. Cushion DOWN from the telling as written. {invariants}"
             )
     if request.door_state:
         parts.append(f"DOOR — {request.door_state}")
+    if request.standalone_place:
+        parts.append(
+            "PLACE ON ITS OWN — this stop is told once, stored, and played later inside "
+            "many different walks you cannot see. It is NEVER the day's last stop: its "
+            "close lands THIS PLACE ('That's <the place> — …'), never the walk or the "
+            "day. No 'That's the walk', and nothing about a walk ending or going on."
+        )
     if request.already_told:
         parts.append(
             "ALREADY TOLD (the tight telling of this stop, which the walker has just "
@@ -524,7 +543,7 @@ def _compose_user_prompt(
     if request.thread_from:
         parts.append(
             "THREADS FROM (stops that may come right before this one when the day is "
-            "replanned — answer in the \"threads\" field, one sentence under fifteen words "
+            'replanned — answer in the "threads" field, one sentence under fifteen words '
             "per stop, or leave a stop out when nothing honest binds it):\n"
             f"{json.dumps(list(request.thread_from), ensure_ascii=False)}"
         )
@@ -793,15 +812,20 @@ def _certification_compose_requests(
     route: Route,
     *,
     already_told_by_stop: Mapping[int, str] | None = None,
+    standalone_place: bool = False,
 ) -> tuple[dict[str, BeatRef], list[int], dict[int, ComposeRequest]]:
     """Rebuild the canonical per-stop requests from the grounded source.
 
     ``already_told_by_stop`` (Phase 6 S6.6): set only on a FULL-TELLING plan — the
     stop's request carries the tight telling as ALREADY TOLD, and asks for NO
     threads (a full telling plays inside its stop; threads belong to the day's
-    tight compose)."""
+    tight compose).
+
+    ``standalone_place``: the stop is a place recipe, told on its own and played
+    later inside walks it cannot see. Its request names no walk (a one-name walk
+    reads to the writer as the day's last stop) and tells the writer so."""
     beats_by_id = {beat.id: beat for plan in beat_sequence.poi_beats for beat in plan.beats}
-    tour_context = tuple(poi.name for poi in route.pois)
+    tour_context = () if standalone_place else tuple(poi.name for poi in route.pois)
     by_stop: dict[int, list[Sentence]] = defaultdict(list)
     for sentence in stitched.script:
         by_stop[sentence.stop_idx].append(sentence)
@@ -853,6 +877,7 @@ def _certification_compose_requests(
             thread_from=thread_from,
             already_told=already_told,
             door_state=_door_state(route, stop_index),
+            standalone_place=standalone_place,
         )
     return beats_by_id, stops, requests
 
@@ -982,7 +1007,9 @@ def _keep_threads(
                 support = (*claims, *(piece for piece in own if piece not in claims))
                 if not support or not checker.entails(support, text):
                     drop(
-                        stop_index, from_name, text,
+                        stop_index,
+                        from_name,
+                        text,
                         "is not entailed by what the walk carries",
                     )
                     continue
@@ -1079,8 +1106,7 @@ def _require_one_close_per_stop(
             )
         if len(split_sentences(closes[0].text)) != 1:
             raise ValueError(
-                f"stop {stop_index}'s close is not ONE sentence (design §4.4.4): "
-                f"{closes[0].text!r}"
+                f"stop {stop_index}'s close is not ONE sentence (design §4.4.4): {closes[0].text!r}"
             )
         if is_fallback_close(
             closes[0].text, stitched.inputs, poi_name=names.get(stop_index, ""), n_stops=n_stops
@@ -1115,6 +1141,7 @@ def finalize_certification_composition(
     require_closes: bool = False,
     enforce_placement_floors: bool = False,
     already_told_by_stop: Mapping[int, str] | None = None,
+    standalone_place: bool = False,
 ) -> CertificationComposition:
     """Purely verify and finalize already-completed per-stop compose responses.
 
@@ -1159,7 +1186,11 @@ def finalize_certification_composition(
       candidates predate the rulings).
     """
     beats_by_id, stops, requests = _certification_compose_requests(
-        stitched, beat_sequence, route, already_told_by_stop=already_told_by_stop
+        stitched,
+        beat_sequence,
+        route,
+        already_told_by_stop=already_told_by_stop,
+        standalone_place=standalone_place,
     )
     units_by_stop: dict[int, CompletedCertificationComposeUnit] = {}
     for unit in completed_units:
@@ -1291,9 +1322,7 @@ def finalize_certification_composition(
                         script,
                         sequence,
                         spine_area=route.spine_area,
-                        disclosed_place_names=tuple(
-                            e.name for e in route.clock_exclusions
-                        ),
+                        disclosed_place_names=tuple(e.name for e in route.clock_exclusions),
                     ).forbidden_phrase_hits
                     + floor_hits
                 )

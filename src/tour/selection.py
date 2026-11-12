@@ -8,8 +8,8 @@ Two entry points:
   Neo4j-aware function in tour/. All POIs/Beats arrive frozen.
 - ``select_route(input, snapshot)`` — pure function. Computes the route
   envelope, picks the spine area, scores each POI, and runs a
-  routing-aware greedy until budget is exhausted (§3.2 cap = 12 outer
-  anchors per Q5 clarification). Returns a Route.
+  routing-aware greedy until the budget is spent (§3.2; duration is the
+  only bound on the number of stops). Returns a Route.
 
 The Cypher query is the only place where Neo4j-specific assumptions
 live. Keep it deliberate and well-commented.
@@ -1758,6 +1758,7 @@ def build_poi_beat_plans_capped(
     lenses: Iterable[str] | None,
     end_is_none: bool = False,
     narration_density: str | None = None,
+    closes_a_day: bool = True,
 ) -> tuple[tuple[POIBeats, tuple[str, ...]], ...]:
     """C9 governor v4 — the shared EMISSION choke point: ``(kept, overflow_ids)``
     per POI, in route order. All six build sites (generate, compose, preview,
@@ -1776,6 +1777,10 @@ def build_poi_beat_plans_capped(
 
     Both are WHOLE-BEAT caps via :func:`govern_poi_beats`: trimmed beats are returned
     as keep-exploring overflow (never silently dropped), so no fact is lost.
+
+    ``closes_a_day=False`` plans a place told on its own (a stored place recipe): it
+    is never the day's last stop, so no stop's closing beat is protected, and its
+    beats are capped exactly as a middle stop's are.
     """
     plans = build_poi_beat_plans(route, snapshot, lenses=lenses)
     if not plans:
@@ -1822,12 +1827,13 @@ def build_poi_beat_plans_capped(
     # reorder_final_stop_for_closing (which runs later, in generate) can only reorder
     # beats the cap KEPT — so if the cap trimmed the callback/climax, the tour ends
     # mid-fact. Skip a beatless fixed-end (A→B) sentinel and protect the real terminal.
-    for i in range(len(capped) - 1, -1, -1):
-        if capped[i][0].beats:
-            capped[i] = _keep_final_closing_beat(
-                capped[i], plans[i], allowance_seconds=final_caps[i]
-            )
-            break
+    if closes_a_day:
+        for i in range(len(capped) - 1, -1, -1):
+            if capped[i][0].beats:
+                capped[i] = _keep_final_closing_beat(
+                    capped[i], plans[i], allowance_seconds=final_caps[i]
+                )
+                break
     return tuple(capped)
 
 
@@ -4464,22 +4470,21 @@ def apply_co_located_demotion(
         # Fold beats into the ULTIMATE survivor, never an intermediate host that is
         # itself demoted (a 3-way chain would otherwise orphan a POI's whole content:
         # nothing ever reads demoted_beats for a POI that left the route).
-        survivor_id = _resolve_demotion_host(host_id, demoted_to_host)
+        survivor_id = _resolve_host_chain(host_id, demoted_to_host)
         beats = snapshot.beats_for(demoted_id)
         demoted_beats[survivor_id] = demoted_beats.get(survivor_id, ()) + tuple(beats)
     return new_selected, demoted_beats
 
 
-def _resolve_demotion_host(host_id: str, demoted_to_host: dict[str, str]) -> str:
-    """Follow a co-located demotion host-chain to its ultimate survivor — a host that
-    is not itself demoted. With 3+ co-located POIs the pairwise picks can chain
-    (A→B, B→C), so A's beats must land on C, not on the demoted intermediate B.
-    Cycle-safe via ``seen`` (``_pick_demotion_host`` is antisymmetric, so cycles
-    cannot form) — kept for parity with ``_resolve_twin_host``."""
+def _resolve_host_chain(host_id: str, moved_to_host: dict[str, str]) -> str:
+    """Follow a host chain — a co-located demotion or a name-twin drop — to its
+    ultimate survivor, a host that was not itself moved. With three or more places
+    the pairwise picks can chain (A→B, B→C), so A's beats land on C, never on the
+    moved intermediate B. Cycle-safe via ``seen``."""
     seen: set[str] = set()
-    while host_id in demoted_to_host and host_id not in seen:
+    while host_id in moved_to_host and host_id not in seen:
         seen.add(host_id)
-        host_id = demoted_to_host[host_id]
+        host_id = moved_to_host[host_id]
     return host_id
 
 
@@ -4545,18 +4550,6 @@ def _pick_twin_host(a: POI, b: POI) -> tuple[POI, POI]:
     if a.tier != b.tier:
         return (a, b) if a.tier > b.tier else (b, a)
     return (a, b) if a.id < b.id else (b, a)
-
-
-def _resolve_twin_host(host_id: str, dropped_to_host: dict[str, str]) -> str:
-    """Follow a twin host-chain to its ultimate survivor — a host that is not itself
-    dropped. With 3+ same-name twins the pairwise picks can chain (A→C, C→B), so a
-    dropped twin's beats must land on B, not the dropped intermediate C. Cycle-safe
-    via ``seen`` (``_pick_twin_host`` is antisymmetric, so cycles cannot form)."""
-    seen: set[str] = set()
-    while host_id in dropped_to_host and host_id not in seen:
-        seen.add(host_id)
-        host_id = dropped_to_host[host_id]
-    return host_id
 
 
 def collapse_name_twins(
@@ -4635,7 +4628,7 @@ def collapse_name_twins(
     for drop_id, host_id in dropped_to_host.items():
         # Fold beats into the ULTIMATE survivor, never an intermediate host that is
         # itself dropped (a 3-way chain would otherwise orphan a twin's beats).
-        survivor_id = _resolve_twin_host(host_id, dropped_to_host)
+        survivor_id = _resolve_host_chain(host_id, dropped_to_host)
         merged[survivor_id] = merged.get(survivor_id, ()) + tuple(snapshot.beats_for(drop_id))
     return new_selected, merged
 

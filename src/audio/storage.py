@@ -40,6 +40,10 @@ class StorageProvider(Protocol):
         """Delete a file. Returns True if it existed."""
         ...
 
+    def read(self, url: str) -> bytes:
+        """The bytes of a file this provider stored, given the URL ``upload`` returned."""
+        ...
+
 
 class LocalStorageProvider:
     """Store audio files on the local filesystem.
@@ -81,6 +85,18 @@ class LocalStorageProvider:
 
     def exists(self, key: str) -> bool:
         return (self._base / key).exists()
+
+    def read(self, url: str) -> bytes:
+        prefix = "/api/v1/audio/files/"
+        if not url.startswith(prefix):
+            raise StorageError(f"Not a local audio URL: {url!r}")
+        filepath = (self._base / url[len(prefix) :]).resolve()
+        if not str(filepath).startswith(str(self._base.resolve()) + os.sep):
+            raise StorageError("Invalid storage key: path traversal detected")
+        try:
+            return filepath.read_bytes()
+        except OSError as exc:
+            raise StorageError(f"Could not read {url!r}: {exc}") from exc
 
     def delete(self, key: str) -> bool:
         filepath = self._base / key
@@ -127,6 +143,15 @@ class S3StorageProvider:
             return True
         except self._s3.exceptions.ClientError:
             return False
+
+    def read(self, url: str) -> bytes:
+        prefix = f"s3://{self._bucket}/"
+        if not url.startswith(prefix):
+            raise StorageError(f"Not an audio URL in bucket {self._bucket!r}: {url!r}")
+        try:
+            return self._s3.get_object(Bucket=self._bucket, Key=url[len(prefix) :])["Body"].read()
+        except Exception as exc:
+            raise StorageError(f"Could not read {url!r}: {exc}") from exc
 
     def delete(self, key: str) -> bool:
         try:
@@ -184,6 +209,15 @@ class R2StorageProvider:
             return True
         except Exception:
             return False
+
+    def read(self, url: str) -> bytes:
+        prefix = self._public_url.rstrip("/") + "/"
+        if not url.startswith(prefix):
+            raise StorageError(f"Not an audio URL under {prefix!r}: {url!r}")
+        try:
+            return self._s3.get_object(Bucket=self._bucket, Key=url[len(prefix) :])["Body"].read()
+        except Exception as exc:
+            raise StorageError(f"Could not read {url!r}: {exc}") from exc
 
     def delete(self, key: str) -> bool:
         try:

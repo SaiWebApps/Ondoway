@@ -572,9 +572,11 @@ def test_the_certification_replay_keeps_its_own_gate_defaults() -> None:
     assert finalize["enforce_placement_floors"].default is False
     assert "enforce_placement_floors" in seam
     assert seam["enforce_placement_floors"].default is False
+    from src.tour.premium_tour import finalize_live_composition as _live_gates
     from src.tour.premium_tour import finalize_premium_tour as _live_door
 
-    assert "enforce_placement_floors=True" in inspect.getsource(_live_door), (
+    assert "finalize_live_composition(" in inspect.getsource(_live_door)
+    assert "enforce_placement_floors=True" in inspect.getsource(_live_gates), (
         "the live finalizer must hard-code the placement floors ON — an omitted "
         "knob is exactly how the workbench ran no gates for three days"
     )

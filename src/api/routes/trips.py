@@ -80,7 +80,6 @@ from src.tour.contract import (
     END_B_SENTINEL_PREFIX,
     POI,
     BeatSequence,
-    POIBeats,
     ReplanContext,
     RouteOption,
     TourabilityAssessment,
@@ -106,6 +105,7 @@ from src.tour.premium_tour import (
     finalize_premium_full_telling,
     finalize_premium_tour,
     full_telling_majors,
+    full_telling_sequence,
     plan_premium_authoring,
     plan_premium_full_telling,
     plan_premium_tour,
@@ -114,6 +114,9 @@ from src.tour.premium_tour import (
     resolve_routing_version,
 )
 from src.tour.quality_rubric import RubricReport, StopMaterial, compose_fixable, score_tour
+from src.tour.recipe_build import pinned_voice_identity
+from src.tour.recipe_reuse import RecipeFirstExecutor, full_telling_use
+from src.tour.recipe_store import link_stops_to_recipes, served_recipes
 from src.tour.render_md import stop_close_text, stop_narration_text
 from src.tour.routing import (
     PACE_KMH,
@@ -1097,6 +1100,9 @@ def compose_trip(
 
     attempts = COMPOSE_ATTEMPTS
     rerolled_for_rubric: set[int] = set()
+    # Every stop written a second time: a stop first served from its recipe and then
+    # re-rolled was told by the writer, so it no longer counts as told from the recipe.
+    rerolled_stops: set[int] = set()
 
     def _reroll_stops(stop_indexes: set[int], responses):
         """ONE targeted same-request re-roll (Phase 8 S8.3/S8.4): fresh provider
@@ -1106,6 +1112,7 @@ def compose_trip(
         never silent."""
         nonlocal attempts
         attempts += 1
+        rerolled_stops.update(stop_indexes)
         unit_index = {unit.stop_index: i for i, unit in enumerate(plan.units)}
         patched = list(responses)
         for stop_index in sorted(stop_indexes):
@@ -1133,14 +1140,24 @@ def compose_trip(
             routing_version=routing_version,
             policy_version=planning_policy.policy_id,
         )
+        # A stop whose stored place recipe tells exactly what it would be asked to tell
+        # is answered from the recipe; the writer is called for the rest. The stored
+        # telling passes the same finalizer and gates below as a written one.
+        recipe_uses = served_recipes(session, plan, voice_identity=pinned_voice_identity())
+        logging.getLogger("ondoway.api").info(
+            "Compose for trip=%s: %d of %d stops told from stored recipes",
+            trip_id,
+            len(recipe_uses),
+            len(plan.units),
+        )
         # The physical calls are the REAL number this compose will make (one per
-        # dwell stop), and they happen HERE. (Until Phase 5 S5.8 a second compose was
-        # a 409 before this point; a second compose is now version N+1 of the session
+        # dwell stop without a recipe), and they happen HERE. (Until Phase 5 S5.8 a
+        # second compose was a 409 before this point; it is now version N+1 of the session
         # — design §8.2 — and pays for its authoring like the first.)
         with _upstream_provider_errors():
             physical_responses = execute_premium_plan(
                 plan,
-                executor=premium_executor,
+                executor=RecipeFirstExecutor(premium_executor, recipe_uses),
                 receipt_sink=EphemeralReceiptSink(),
             )
             try:
@@ -1353,27 +1370,7 @@ def compose_trip(
     full_by_stop: dict[int, FullTelling] = {}
     majors = full_telling_majors(composed, seq, route)
     if majors:
-        overflow_refs_by_poi = {
-            poi.id: tuple(
-                beat
-                for beat in snapshot.beats_by_poi.get(poi.id, ())
-                if beat.id in set(seq.overflow_by_poi.get(poi.id, ()))
-            )
-            for poi in route.pois
-        }
-        full_seq = BeatSequence(
-            poi_beats=tuple(
-                POIBeats(
-                    poi_id=poi.id,
-                    poi_name=poi.name,
-                    ordering_strategy="narrative_function",
-                    beats=overflow_refs_by_poi.get(poi.id, ()),
-                )
-                for poi in route.pois
-                if overflow_refs_by_poi.get(poi.id)
-            ),
-            overflow_by_poi=seq.overflow_by_poi,
-        )
+        full_seq = full_telling_sequence(route, snapshot, seq)
         for stop_index, full_budget in majors.items():
             try:
                 full_plan = plan_premium_full_telling(
@@ -1387,17 +1384,37 @@ def compose_trip(
                     routing_version=routing_version,
                     policy_version=planning_policy.policy_id,
                 )
-                full_responses = execute_premium_plan(
-                    full_plan,
-                    executor=premium_executor,
-                    receipt_sink=EphemeralReceiptSink(),
+                full = None
+                # A stop told from its recipe offers the recipe's stored full telling
+                # first, through the same finalizer; the writer is asked only when it
+                # has none or the checks refuse it. That refusal is not the day's loss
+                # (the writer writes it next), so it is kept off the report; the
+                # writer's own refusal, if any, is the one reported.
+                stored = (
+                    full_telling_use(full_plan, recipe_uses[stop_index])
+                    if stop_index in recipe_uses and stop_index not in rerolled_stops
+                    else None
                 )
-                full = finalize_premium_full_telling(
-                    full_plan,
-                    full_responses,
-                    budget=full_budget,
-                    faithfulness_checker=faithfulness_checker,
-                )
+                if stored is not None:
+                    with degradation_scope():
+                        full = finalize_premium_full_telling(
+                            full_plan,
+                            (stored.response,),
+                            budget=full_budget,
+                            faithfulness_checker=faithfulness_checker,
+                        )
+                if full is None:
+                    full_responses = execute_premium_plan(
+                        full_plan,
+                        executor=premium_executor,
+                        receipt_sink=EphemeralReceiptSink(),
+                    )
+                    full = finalize_premium_full_telling(
+                        full_plan,
+                        full_responses,
+                        budget=full_budget,
+                        faithfulness_checker=faithfulness_checker,
+                    )
             except Exception as exc:  # provider weather or a plan fault: the stop
                 # keeps its tight telling; the on-demand route still answers.
                 record(
@@ -1450,6 +1467,14 @@ def compose_trip(
         stop["full_narration"] = full.narration if full else None
         stop["full_close_text"] = full.close_text if full else None
     item_ids = replace_trip_stops(session, trip_id, stops)
+    link_stops_to_recipes(
+        session,
+        {
+            item_ids[stop_index]: use.recipe_id
+            for stop_index, use in recipe_uses.items()
+            if stop_index not in rerolled_stops
+        },
+    )
 
     display_map = _lens_display_map(session, {s["lens_name"] for s in stops if s["lens_name"]})
     stops_out = [

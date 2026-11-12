@@ -9,7 +9,7 @@ class TestConstraints:
     def test_apply_all_returns_counts(self, driver):
         result = apply_all(driver)
         assert result["constraints"] == 11
-        assert result["indexes"] == 5
+        assert result["indexes"] == 6
 
     def test_constraints_are_idempotent(self, driver):
         """Running apply_all twice should not raise."""
@@ -33,3 +33,4 @@ class TestConstraints:
             names = result.single()["names"]
         assert "idx_poi_location" in names
         assert "idx_narrativebeat_active_status_version" in names
+        assert "idx_placerecipe_id" in names

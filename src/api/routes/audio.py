@@ -34,9 +34,11 @@ from src.api.models.audio import (
 )
 from src.audio.eval import EvalError as AudioEvalError
 from src.audio.eval import evaluate
-from src.audio.pipeline import PipelineError, generate_stop_audio
+from src.audio.pipeline import PipelineError, assemble_stop_audio, generate_stop_audio
 from src.audio.provider import TTSError, get_provider, list_providers
 from src.audio.storage import LocalStorageProvider, get_storage
+from src.tour.recipe_reuse import StoredPiece, audio_parts, stored_full_telling
+from src.tour.recipe_store import stop_recipe_pieces
 
 router = APIRouter(tags=["audio"])
 
@@ -167,9 +169,7 @@ def _artifact_missing(url: str | None) -> bool:
         return False
 
 
-def _stop_narration_hash(
-    narration: str, provider_name: str | None, voice_id: str | None
-) -> str:
+def _stop_narration_hash(narration: str, provider_name: str | None, voice_id: str | None) -> str:
     """Content key for a stop's tour audio: (provider, voice, narration).
 
     The same digest input the keep-exploring path uses below, so the two
@@ -539,6 +539,16 @@ def serve_audio_file(key: str):
 # ── Pipeline endpoints (require Neo4j) — the PER-STOP path ──
 
 
+def _stored_recipe_pieces(
+    session, stop_id: str, provider_name: str | None, voice_id: str | None
+) -> tuple[StoredPiece, ...]:
+    """The voiced pieces of the recipe this stop was told from. Only a request for the
+    pinned voice can reuse them, because that is the voice they were recorded in."""
+    if provider_name or voice_id:
+        return ()
+    return stop_recipe_pieces(session, stop_id)
+
+
 def _voice_session_lines(
     session,
     stop: dict,
@@ -551,6 +561,11 @@ def _voice_session_lines(
     from src.tour.degradations import record
 
     stop_id = stop["stop_id"]
+    # A line its recipe already recorded word for word is that recording.
+    recorded = {
+        piece.text: piece.audio_url
+        for piece in _stored_recipe_pieces(session, stop_id, provider_name, voice_id)
+    }
 
     def _voice_one(text: str, key: str) -> tuple[str, float] | None:
         try:
@@ -596,7 +611,11 @@ def _voice_session_lines(
             and not _artifact_missing(stop[url_field])
         ):
             continue
-        voiced = _voice_one(text, f"{stop_id}-{key_suffix}")
+        voiced = (
+            (recorded[text], None)
+            if duration_field is None and text in recorded
+            else _voice_one(text, f"{stop_id}-{key_suffix}")
+        )
         if voiced is not None:
             url, duration = voiced
             duration_set = f", i.{duration_field} = $dur" if duration_field else ""
@@ -776,14 +795,22 @@ def generate_stop_audio_for_trip(
                 )
             )
             continue
+        # A stop told from a place recipe reuses the recipe's recorded pieces and
+        # voices only the lines the tour added around them.
+        parts = audio_parts(
+            narration, _stored_recipe_pieces(session, stop_id, provider_name, voice_id)
+        )
+        audio_of = {
+            "stop_key": stop_id,
+            "poi_name": stop["poi_name"],
+            "provider_name": provider_name,
+            "voice_id": voice_id,
+        }
         try:
-            gen = generate_stop_audio(
-                narration,
-                stop_key=stop_id,
-                poi_name=stop["poi_name"],
-                provider_name=provider_name,
-                voice_id=voice_id,
-            )
+            if parts is None:
+                gen = generate_stop_audio(narration, **audio_of)
+            else:
+                gen = assemble_stop_audio(parts, **audio_of)
         except PipelineError as e:
             results.append(StopAudioResultItem(stop_id=stop_id, status="failed", error=str(e)))
             continue
@@ -935,6 +962,28 @@ def keep_exploring_stop_audio(
             status="generated",
             audio_url=rec["ke_url"],
             duration_sec=rec["ke_dur"],
+        )
+
+    # A full telling its place recipe already recorded word for word is that recording.
+    recorded = stored_full_telling(
+        narration, _stored_recipe_pieces(session, stop_id, provider_name, voice_id)
+    )
+    if recorded is not None and not force:
+        session.run(
+            "MATCH (i:ItineraryItem {id: $sid}) "
+            "SET i.keep_exploring_audio_url = $url, "
+            "    i.keep_exploring_audio_duration_sec = $dur, "
+            "    i.keep_exploring_audio_hash = $hash",
+            sid=stop_id,
+            url=recorded.audio_url,
+            dur=recorded.audio_duration_sec,
+            hash=narration_hash,
+        )
+        return KeepExploringAudioResponse(
+            stop_id=stop_id,
+            status="generated",
+            audio_url=recorded.audio_url,
+            duration_sec=recorded.audio_duration_sec,
         )
 
     # (A provider-name resolution used to sit here purely to tell the rate

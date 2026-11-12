@@ -41,6 +41,10 @@ class TestIndexes:
         assert area_indexes[0].index_type == "POINT"
         assert area_indexes[0].properties == ("centroid",)
 
+    def test_place_recipes_are_looked_up_by_id(self):
+        recipe_indexes = [i for i in INDEXES if i.label == "PlaceRecipe"]
+        assert [i.properties for i in recipe_indexes] == [("id",)]
+
     def test_narrative_beat_composite_index(self):
         nb_indexes = [i for i in INDEXES if i.label == "NarrativeBeat"]
         assert len(nb_indexes) == 1

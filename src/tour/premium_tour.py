@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import dataclasses
 import datetime as dt
-import hashlib
 import json
 import logging
 import os
@@ -50,6 +49,7 @@ from .authoring import (
     compose_input_sha256,
     finalize_certification_composition,
 )
+from .batch_regression_manifest import _canonical_bytes
 from .beat_select import select_vignette_beats
 from .candidate_authoring import (
     AuthoringCandidateIdentity,
@@ -64,7 +64,16 @@ from .certification_provider import (
     PhysicalProviderResponse,
 )
 from .compose_gate import ComposeVerificationError
-from .contract import BeatSequence, POIBeats, ReplanContext, Route, Script, Sentence, TourInput
+from .contract import (
+    BeatRef,
+    BeatSequence,
+    POIBeats,
+    ReplanContext,
+    Route,
+    Script,
+    Sentence,
+    TourInput,
+)
 from .generation import (
     CONCURRENT_GLUE_LABELS,
     generate,
@@ -73,6 +82,7 @@ from .generation import (
 )
 from .glue_client import NO_GLUE_SENTINEL, GlueClient
 from .premium_authorities import PREMIUM_AUTHORITIES, PremiumAuthorityHashes
+from .provider_text_review import _sha256
 from .routing import MAX_REQUESTED_FRACTION, MIN_REQUESTED_FRACTION, RoutePlanningPolicy
 from .routing_client import (
     THIS_BUILDS_ROUTING_CONFIG_SHA256S,
@@ -90,20 +100,6 @@ from .verify import FaithfulnessChecker
 
 PREMIUM_MODULE_VERSION = "ondoway-premium-tour-v1"
 REPO_ROOT = Path(__file__).resolve().parents[2]
-
-
-def _canonical_bytes(value: object) -> bytes:
-    return json.dumps(
-        value,
-        ensure_ascii=False,
-        allow_nan=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
-
-
-def _sha256(value: bytes) -> str:
-    return hashlib.sha256(value).hexdigest()
 
 
 def premium_authoring_policy_sha256() -> str:
@@ -219,6 +215,9 @@ class PremiumTourPlan:
     routing_version: str
     policy_version: str
     authorities: PremiumAuthorityHashes
+    #: A place recipe's plan: its request is a place told on its own. The finalizer
+    #: rebuilds the request the same way.
+    standalone_place: bool = False
 
     def batch_payload(
         self, *, case_id: str, archetype: str, request_sha256: str
@@ -253,8 +252,12 @@ def plan_premium_authoring(
     authorities: PremiumAuthorityHashes = PREMIUM_AUTHORITIES,
     already_told_by_stop: Mapping[int, str] | None = None,
     single_stop: int | None = None,
+    standalone_place: bool = False,
 ) -> PremiumTourPlan:
     """Build every per-stop authoring request for an ALREADY-PLANNED route.
+
+    ``standalone_place`` plans a place recipe: a place told on its own, with no walk
+    (see ``_certification_compose_requests``).
 
     ``single_stop`` + ``already_told_by_stop`` (Phase 6 S6.6, design §5.5): a FULL
     TELLING is a one-stop composition over the stop's SECOND story, planned through
@@ -275,7 +278,11 @@ def plan_premium_authoring(
     """
 
     _beats_by_id, stops, requests = _certification_compose_requests(
-        source, beat_sequence, route, already_told_by_stop=already_told_by_stop
+        source,
+        beat_sequence,
+        route,
+        already_told_by_stop=already_told_by_stop,
+        standalone_place=standalone_place,
     )
     if stops[-1] >= len(route.pois):
         raise ValueError("the stitched script names a stop the prebuilt route lacks")
@@ -343,6 +350,7 @@ def plan_premium_authoring(
         routing_version=routing_version,
         policy_version=policy_version,
         authorities=authorities,
+        standalone_place=standalone_place,
     )
 
 
@@ -778,10 +786,52 @@ class FullTellingBudget:
 
 @dataclass(frozen=True)
 class FullTelling:
-    """A major stop's authored second piece: the narration and its own close."""
+    """A major stop's authored second piece: the narration, its own close, and the
+    checked sentences they are made of."""
 
     narration: str
     close_text: str
+    sentences: tuple[Sentence, ...] = ()
+
+
+def full_telling_budget(tight_words: int) -> FullTellingBudget:
+    """A stop's two lengths from its tight telling's word count: the full telling may
+    run three times the tight one, never past the hard cap (W6.2 R3)."""
+
+    tight_seconds = round(tight_words / _WORDS_PER_SECOND)
+    return FullTellingBudget(
+        tight_seconds=tight_seconds,
+        full_budget_seconds=min(FULL_TELLING_MAX_RATIO * tight_seconds, FULL_TELLING_CAP_SECONDS),
+    )
+
+
+def full_telling_sequence(
+    route: Route, snapshot: CorpusSnapshot, sequence: BeatSequence
+) -> BeatSequence:
+    """The second stories of a route's stops: each stop's overflow beats, the ones the
+    cap trimmed, as the beat sequence a full-telling plan is written from."""
+
+    overflow_refs_by_poi = {
+        poi.id: tuple(
+            beat
+            for beat in snapshot.beats_by_poi.get(poi.id, ())
+            if beat.id in set(sequence.overflow_by_poi.get(poi.id, ()))
+        )
+        for poi in route.pois
+    }
+    return BeatSequence(
+        poi_beats=tuple(
+            POIBeats(
+                poi_id=poi.id,
+                poi_name=poi.name,
+                ordering_strategy="narrative_function",
+                beats=overflow_refs_by_poi[poi.id],
+            )
+            for poi in route.pois
+            if overflow_refs_by_poi[poi.id]
+        ),
+        overflow_by_poi=sequence.overflow_by_poi,
+    )
 
 
 def full_telling_majors(
@@ -810,17 +860,46 @@ def full_telling_majors(
         tight_words = words_by_stop.get(stop_index, 0)
         if tight_words == 0:
             continue
-        tight_seconds = round(tight_words / _WORDS_PER_SECOND)
+        budget = full_telling_budget(tight_words)
         priced = route.planned_visit_seconds.get(poi.id, 0)
-        if priced < 2 * tight_seconds:
+        if priced < 2 * budget.tight_seconds:
             continue
-        majors[stop_index] = FullTellingBudget(
-            tight_seconds=tight_seconds,
-            full_budget_seconds=min(
-                FULL_TELLING_MAX_RATIO * tight_seconds, FULL_TELLING_CAP_SECONDS
-            ),
-        )
+        majors[stop_index] = budget
     return majors
+
+
+def one_stop_source(
+    script: Script,
+    beats: tuple[BeatRef, ...] | list[BeatRef],
+    *,
+    poi_name: str,
+    stop_index: int,
+    n_stops: int,
+) -> Script:
+    """One stop's writer source: the beats' own sentences, then the stop's fallback
+    close for the writer to rewrite. It carries no opener, walking line or day close,
+    so what the writer returns tells the place and nothing about a walk."""
+    from .generation import GLUE_CLOSING, _beat_to_sentences, fallback_close_text
+
+    sentences: list[Sentence] = []
+    for beat in beats:
+        sentences.extend(_beat_to_sentences(beat, stop_index))
+    sentences.append(
+        Sentence(
+            text=fallback_close_text(
+                script.inputs,
+                poi_name=poi_name,
+                is_rest=False,
+                is_last=False,
+                n_stops=n_stops,
+                next_name=None,
+            ),
+            source_id=GLUE_CLOSING,
+            source_type="glue",
+            stop_idx=stop_index,
+        )
+    )
+    return script.model_copy(update={"script": tuple(sentences)})
 
 
 def plan_premium_full_telling(
@@ -834,8 +913,12 @@ def plan_premium_full_telling(
     snapshot_sha256: str,
     routing_version: str,
     policy_version: str,
+    standalone_place: bool = False,
 ) -> PremiumTourPlan:
     """One major stop's FULL TELLING as a one-stop plan through THE seam.
+
+    ``standalone_place`` plans a place recipe's full telling: the place told on its
+    own, stored and later played inside walks it cannot see.
 
     Design §5.5 + W6.2 R3 (LOCKED): FULL = a second COMPOSED piece from the same
     material — the stop's OVERFLOW beats — never the leftover corpus served raw.
@@ -845,14 +928,10 @@ def plan_premium_full_telling(
     ``beat_sequence`` must contain the overflow beats' bodies (the day's capped
     sequence does not — pass one whose POIBeats include them).
     """
-    from .generation import _beat_to_sentences, fallback_close_text
-
     del budget  # sized at finalize; the plan itself carries the material
     poi = route.pois[stop_index]
     overflow_ids = beat_sequence.overflow_by_poi.get(poi.id, ())
-    beats_by_id = {
-        beat.id: beat for pb in beat_sequence.poi_beats for beat in pb.beats
-    }
+    beats_by_id = {beat.id: beat for pb in beat_sequence.poi_beats for beat in pb.beats}
     overflow = [beats_by_id[bid] for bid in overflow_ids if bid in beats_by_id]
     if not overflow:
         # EXPLICIT, never inferred: the second story is exactly the overflow the
@@ -860,25 +939,9 @@ def plan_premium_full_telling(
         # this stop's beats" would re-compose the TIGHT material as the full
         # telling — the re-telling R3 exists to kill.
         raise ValueError(f"stop {stop_index} has no second story to author")
-    sentences: list[Sentence] = []
-    for beat in overflow:
-        sentences.extend(_beat_to_sentences(beat, stop_index))
-    sentences.append(
-        Sentence(
-            text=fallback_close_text(
-                script.inputs,
-                poi_name=poi.name,
-                is_rest=False,
-                is_last=False,
-                n_stops=len(route.pois),
-                next_name=None,
-            ),
-            source_id="GLUE_CLOSING",
-            source_type="glue",
-            stop_idx=stop_index,
-        )
+    mini_source = one_stop_source(
+        script, overflow, poi_name=poi.name, stop_index=stop_index, n_stops=len(route.pois)
     )
-    mini_source = script.model_copy(update={"script": tuple(sentences)})
     mini_seq = BeatSequence(
         poi_beats=(
             POIBeats(
@@ -900,6 +963,7 @@ def plan_premium_full_telling(
         policy_version=policy_version,
         already_told_by_stop={stop_index: tight_text},
         single_stop=stop_index,
+        standalone_place=standalone_place,
     )
 
 
@@ -968,6 +1032,7 @@ def finalize_premium_full_telling(
     return FullTelling(
         narration=" ".join(s.text for s in ordered),
         close_text=close.text,
+        sentences=ordered,
     )
 
 
@@ -1058,6 +1123,7 @@ def finalize_premium_composition(
             if unit.authorized_request.already_told
         }
         or None,
+        standalone_place=plan.standalone_place,
         completed_units=tuple(completed),
         model=COMPOSE_MODEL,
         faithfulness_checker=faithfulness_checker,
@@ -1065,6 +1131,31 @@ def finalize_premium_composition(
         scan_glue_for_invention=scan_glue_for_invention,
         require_closes=require_closes,
         enforce_placement_floors=enforce_placement_floors,
+    )
+
+
+def finalize_live_composition(
+    plan: PremiumTourPlan,
+    responses: tuple[PhysicalProviderResponse, ...],
+    *,
+    faithfulness_checker: FaithfulnessChecker,
+) -> CertificationComposition:
+    """THE gate set for anything a listener hears: a served tour and a stored place
+    recipe. Every gate is on, and the checker has no default, so no caller can ship
+    narration that skipped one."""
+
+    return finalize_premium_composition(
+        plan,
+        responses,
+        faithfulness_checker=faithfulness_checker,
+        enforce_claim_coverage=True,
+        scan_glue_for_invention=True,
+        # Every stop ends on its close (design §5.3); the certification replay's
+        # default stays OFF — the sealed candidates predate it.
+        require_closes=True,
+        # Every sentence must be true WHERE IT PLAYS; the certification replay's
+        # default stays OFF — the sealed candidates predate the rulings.
+        enforce_placement_floors=True,
     )
 
 
@@ -1162,23 +1253,12 @@ def finalize_premium_tour(
     the divergence cannot come back silently — a caller that forgets fails loudly at the
     call, not quietly in the output.
 
-    The two boolean gates are NOT parameters here for the same reason: a live surface
-    does not get to choose whether facts are checked. They are hard-coded ON.
+    The gates are NOT parameters here for the same reason: a live surface does not
+    get to choose whether facts are checked. ``finalize_live_composition`` holds them.
     """
 
-    composition = finalize_premium_composition(
-        plan,
-        responses,
-        faithfulness_checker=faithfulness_checker,
-        enforce_claim_coverage=True,
-        scan_glue_for_invention=True,
-        # Phase 6 S6.4: a live day's every stop ends on its close (design §5.3); the
-        # certification replay's default stays OFF — the sealed candidates predate it.
-        require_closes=True,
-        # Phase 8 S8.3 (W8.2 R1/R2/R5): a live day's every sentence must be true
-        # WHERE IT PLAYS; the certification replay's default stays OFF — the
-        # sealed candidates predate the rulings.
-        enforce_placement_floors=True,
+    composition = finalize_live_composition(
+        plan, responses, faithfulness_checker=faithfulness_checker
     )
     identity = build_identity or resolve_build_identity()
     vignette_beat_ids = frozenset(
@@ -1271,8 +1351,12 @@ __all__ = [
     "certification_planning_policy",
     "exact_snapshot_sha256",
     "execute_premium_plan",
+    "finalize_live_composition",
     "finalize_premium_composition",
     "finalize_premium_tour",
+    "full_telling_budget",
+    "full_telling_sequence",
+    "one_stop_source",
     "plan_premium_authoring",
     "plan_premium_tour",
     "premium_authoring_policy_sha256",

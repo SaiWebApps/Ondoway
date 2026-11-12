@@ -184,7 +184,7 @@ check_db = @echo " $(LOCAL_DBS) " | grep -q " $(DB) " || \
 	backfill-name-key wiki-fetch gen-within-edges validate-beats deploy prune-orphans \
 	fetch-boundary geocode-pois poi-visit-duration poi-opening-hours \
 	poi-place-category poi-visit-report poi-body-places poi-place-judgements \
-	poi-queues poi-trigger-radius sync-poi-exports tour-build \
+	poi-queues poi-trigger-radius sync-poi-exports tour-build recipes-build \
 	measure-planned-audio measure-governor \
 	onboard-city flutter-ipa testflight render-status setup-audio \
 	aura-resume-proof flutter-test clean \
@@ -892,6 +892,13 @@ tour-build: ## Build a local tour. ARGS="--start X --duration N"; GLUE=--haiku f
 		$(PREFLIGHT) --label tour-build $(PRE_TOUR); \
 	fi
 	@$(LOCAL_EXEC) uv run python scripts/tour_build.py $(GLUE) $(ARGS)
+
+# Writes each place under each lens through the tour writer and voices it: PAID.
+# A recipe the graph already holds for the same beats, rules and voice costs nothing.
+recipes-build: ## Build stored place recipes (paid). CITY=new_york ARGS="--limit-places N --max-recipes N --dry-run".
+	@test -n "$(CITY)" || { echo 'ERROR: CITY is required, e.g. CITY=new_york.' >&2; exit 2; }
+	@$(PREFLIGHT) --label recipes-build $(PRE_LOCAL_GRAPH) render-key
+	@$(RENDER_LOCAL_EXEC) env TTS_FALLBACK= uv run python scripts/build_place_recipes.py --city $(CITY) $(ARGS)
 
 measure-planned-audio: ## Measure voiced audio against tier dwell.
 	@$(PREFLIGHT) --label measure-planned-audio $(PRE_TOUR)

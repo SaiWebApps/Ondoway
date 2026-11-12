@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import struct
 import wave
+from collections.abc import Sequence
 from dataclasses import dataclass
 from io import BytesIO
+from typing import Protocol
 
 from src.audio.provider import TTSError, get_provider_with_fallback
 from src.audio.storage import StorageError, get_storage
@@ -153,6 +155,12 @@ def _build_stop_storage_key(stop_key: str, poi_name: str | None = None) -> str:
     return f"stops/{slug}/{stop_key}.mp3"
 
 
+class StoredAudioRef(Protocol):
+    """An audio file already in storage, named by the URL its upload returned."""
+
+    audio_url: str
+
+
 def generate_stop_audio(
     narration: str,
     *,
@@ -172,6 +180,35 @@ def generate_stop_audio(
     """
     if not narration or not narration.strip():
         raise PipelineError(f"Stop '{stop_key}' has empty narration")
+    return assemble_stop_audio(
+        [narration],
+        stop_key=stop_key,
+        poi_name=poi_name,
+        provider_name=provider_name,
+        storage_name=storage_name,
+        voice_id=voice_id,
+    )
+
+
+def assemble_stop_audio(
+    parts: Sequence[str | StoredAudioRef],
+    *,
+    stop_key: str,
+    poi_name: str | None = None,
+    provider_name: str | None = None,
+    storage_name: str | None = None,
+    voice_id: str | None = None,
+) -> StopAudioResult:
+    """One stop's audio file, built in playing order from text to voice now and audio
+    files already stored, joined frame to frame the way long text's chunks are.
+
+    Only the text parts reach the voice provider, so a stop whose stored pieces cover
+    most of its words pays only for the rest. A blank text part is skipped. The joined
+    file's duration is measured from its own frames.
+    """
+    spoken = [part for part in parts if not isinstance(part, str) or part.strip()]
+    if not spoken:
+        raise PipelineError(f"Stop '{stop_key}' has empty narration")
 
     # Resolution is inside the try so an unknown provider name (ValueError)
     # becomes a PipelineError — callers turn that into a soft per-stop failure
@@ -183,14 +220,12 @@ def generate_stop_audio(
     # a vendor outage costs a different narrator rather than silence. A caller
     # that names a provider still gets exactly that one. ``result.provider``
     # below is therefore who actually spoke, not who was asked.
-    try:
-        provider = get_provider_with_fallback(provider_name)
-    except ValueError as e:
-        raise PipelineError(f"TTS failed for stop '{stop_key}': {e}") from e
-    try:
-        audio_bytes = provider.generate(narration, voice_id=voice_id)
-    except TTSError as e:
-        raise PipelineError(f"TTS failed for stop '{stop_key}': {e}") from e
+    provider = None
+    if any(isinstance(part, str) for part in spoken):
+        try:
+            provider = get_provider_with_fallback(provider_name)
+        except ValueError as e:
+            raise PipelineError(f"TTS failed for stop '{stop_key}': {e}") from e
 
     # get_storage() is inside the try for the same reason as get_provider():
     # a misconfigured storage backend must surface as a soft per-stop failure.
@@ -198,6 +233,25 @@ def generate_stop_audio(
         storage = get_storage(storage_name)
     except (StorageError, ValueError, OSError) as e:
         raise PipelineError(f"Storage failed for stop '{stop_key}': {e}") from e
+
+    chunks: list[bytes] = []
+    for part in spoken:
+        try:
+            if isinstance(part, str) and provider is not None:
+                data = provider.generate(part, voice_id=voice_id)
+            elif not isinstance(part, str):
+                data = storage.read(part.audio_url)
+            else:
+                raise PipelineError(f"No voice resolved for stop '{stop_key}'")
+        except TTSError as e:
+            raise PipelineError(f"TTS failed for stop '{stop_key}': {e}") from e
+        except StorageError as e:
+            raise PipelineError(f"Storage failed for stop '{stop_key}': {e}") from e
+        # A later file's leading tag would sit mid-stream, where players and the
+        # frame walk that measures duration stop reading.
+        chunks.append(data if not chunks else data[_id3v2_size(data) :])
+    audio_bytes = b"".join(chunks)
+
     key = _build_stop_storage_key(stop_key, poi_name)
     try:
         audio_url = storage.upload(audio_bytes, key)
@@ -207,7 +261,7 @@ def generate_stop_audio(
     duration = round(_get_duration(audio_bytes), 2)
     return StopAudioResult(
         stop_key=stop_key,
-        provider=provider.name,
+        provider=provider.name if provider is not None else "stored",
         storage=storage.name,
         audio_url=audio_url,
         size_bytes=len(audio_bytes),

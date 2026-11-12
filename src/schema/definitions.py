@@ -59,6 +59,8 @@ INDEXES: list[Index] = [
     Index("Area", ("centroid",), index_type="POINT"),
     Index("User", ("google_sub",)),
     Index("User", ("apple_sub",)),
+    # Written only by the place-recipe build job, which looks each recipe up by id.
+    Index("PlaceRecipe", ("id",)),
 ]
 
 # ---------------------------------------------------------------------------
