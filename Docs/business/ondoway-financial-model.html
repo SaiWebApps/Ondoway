@@ -85,10 +85,8 @@ header.top{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:flex-end;justif
 .ctl details summary{cursor:pointer;color:var(--ink-2);text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px}
 .ctl details summary:hover{color:var(--accent)}
 .ctl details p{margin-top:6px;font-size:.84rem;line-height:1.45;color:var(--ink-2);max-width:70ch}
-.ctl .flag{font-size:.82rem;color:var(--t-guess);margin-top:4px}
 .tag{display:inline-block;font:700 .68rem/1 var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:.25rem .4rem;border-radius:4px;border:1px solid currentColor}
 .tag.measured{color:var(--t-measured)}.tag.source{color:var(--t-source)}.tag.owner{color:var(--t-owner)}.tag.guess{color:var(--t-guess)}.tag.choice{color:var(--t-choice)}
-.tag.notbuilt{color:var(--neg)}
 
 table{border-collapse:collapse;width:100%;font-size:.9rem}
 th,td{padding:.5rem .55rem;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
@@ -230,7 +228,6 @@ function control(i){
   return `<div class="ctl" id="c-${i.id}">
     <div class="row"><label for="${i.id}">${esc(i.label)}</label>${i.type==="select"?"":`<output id="o-${i.id}" for="${i.id}"></output>`}</div>
     ${field}
-    <div class="flag" id="f-${i.id}" hidden>Not built yet. This only counts once the feature exists.</div>
     <div class="meta">${tag}<details><summary>Why this number</summary><p>${esc(i.src)}</p></details></div>
   </div>`;
 }
@@ -258,7 +255,6 @@ function syncControls(){
     const box=document.getElementById("c-"+i.id);
     box.classList.toggle("changed",diff);
     box.hidden=!!i.showIf && !i.showIf(state);
-    document.getElementById("f-"+i.id).hidden=!(i.notBuilt && v===i.notBuilt);
   }
   document.getElementById("reset").hidden=!changed;
   document.querySelectorAll("[data-preset]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.preset===active)));
@@ -278,13 +274,12 @@ function render(){
   const p=state, sim=simulate(p), Y=years(sim), r=sim.rows, u=perPass(p), floor=priceFloor(p);
   const running=r[0].running, be=u.total>0?Math.ceil(running/u.total):null;
   const firstProfit=r.findIndex(x=>x.profit>0), fl=floorIn(p,floor);
-  const priceLine=p.model==="party"?`${F.usd2(p.priceSolo)} solo or pair, ${F.usd2(p.priceHH)} household`
+  const priceLine=p.model==="party"?`${F.usd2(p.priceSolo)} solo, ${F.usd2(p.priceCouple)} couple, ${F.usd2(p.priceGroup)} group`
     :p.model==="person"?`${F.usd2(p.pricePerson)} a person × ${F.x(p.partySize)} people`:`${F.usd2(p.pricePerTour)} a tour × ${F.x(p.toursBought)} tours`;
 
   // The answer
-  const big=[["tours",u.tours,"tours"],["free walks",u.free,"free walks"]].sort((a,b)=>b[1]-a[1])[0];
   document.getElementById("verdict").innerHTML=u.total<=0
-    ? `At these settings each pass <b>loses ${usd(-u.total)}</b>. A pass only covers its own costs at ${F.usd2(fl.v)} ${fl.unit}. The biggest cost is ${big[0]}: ${usd(big[1])} a pass.`
+    ? `At these settings each pass <b>loses ${usd(-u.total)}</b>. A pass only covers its own costs at ${F.usd2(fl.v)} ${fl.unit}. The biggest cost is the tours: ${usd(u.tours)} a pass.`
     : `Each pass <b class="pos">makes ${usd(u.total)}</b> before marketing. Running costs of ${money(running)} a month are covered at ${count(be)} passes a month.`;
   const figs=[
     ["Profit per pass",usd(u.total),`average price ${F.usd2(u.price)}`,u.total<0],
@@ -297,24 +292,23 @@ function render(){
   // One pass
   const feeHow=p.webShare>0?`${F.pct(1-p.webShare)} through Apple at ${F.pct(p.feeSmall)}, ${F.pct(p.webShare)} on the web at ${F.pct1(p.webPct)} + ${F.usd2(p.webFixed)}`:`Apple keeps ${F.pct(p.feeSmall)}`;
   const lines=[
-    ["Average price paid",u.price,priceLine+(p.model==="party"?`; ${F.pct(p.hhShare)} pick household`:"")],
+    ["Average price paid",u.price,priceLine+(p.model==="party"?`; ${F.pct(p.coupleShare)} pick couple, ${F.pct(p.groupShare)} group`:"")],
     ["App Store fee",-u.fee,feeHow],
-    ["Tours",-u.tours,`${F.x(toursPerBuyer(p))} ${p.model==="tour"?"tours":"tour days"} × ${F.x(stopsPerTour(p))} stops (${F.x(p.tourHours)} h × ${F.x2(p.stopsPerHour)} an hour) × ${F.usd2(p.costPerStop)} a stop`],
-    ["Free walks",-u.free,p.freeMode==="fresh"?`${F.x(freeWalksPerBuyer(p))} installs per buyer (1 ÷ ${F.pct1(p.conv)} who pay${p.freeTake<1?` × ${F.pct(p.freeTake)} who walk`:""}) × ${p.freeStops} stop${p.freeStops>1?"s":""} × ${F.usd2(p.costPerStop)}`:"One shared walk per city, so about $0 per pass. Not built yet."],
+    ["Tours",-u.tours,`${F.x(toursPerBuyer(p))} ${p.model==="tour"?"tours":"tour days"} × ${F.x(stopsPerTour(p))} stops (${p.stopsPerDay} planned + ${p.replanStops} re-planned) × ${F.usd2(stopCost(p))} a stop (${F.pct(p.recipeShare)} from recipes at ${F.usd3(p.recipeStop)}, the rest written fresh at ${F.usd2(p.freshStop)})`],
+    ["Ticket commission",u.comm,`${F.pct(p.bookShare)} book × ${p.ticketsPerBooking} tickets × ${F.usd0(p.ticket)} × ${F.pct1(p.commRate)}`],
   ];
-  if(p.commOn==="on") lines.push(["Ticket commission",u.comm,`${F.pct(p.bookShare)} book × ${p.ticketsPerBooking} tickets × ${F.usd0(p.ticket)} × ${F.pct1(p.commRate)}. Not built yet.`]);
   document.getElementById("unit").innerHTML=`<thead><tr><th>Per pass</th><th class="n">Amount</th><th>How it's worked out</th></tr></thead><tbody>${
     lines.map(([a,v,h])=>`<tr><td>${a}</td><td class="n ${v<0?"neg":""}">${usd(v)}</td><td class="how">${esc(h)}</td></tr>`).join("")
   }<tr class="total"><td>Profit per pass</td><td class="n ${u.total<0?"neg":""}">${usd(u.total)}</td><td class="how">before marketing</td></tr></tbody>`;
   const r30=priceFloor(p,p.feeStd);
-  document.getElementById("floor").innerHTML=`<p><b>Lowest price that covers a pass: ${F.usd2(fl.v)} ${fl.unit}.</b> That is the tours plus the free walks${p.commOn==="on"?", less commission,":""} divided by the ${F.pct(1-p.feeSmall)} Apple lets you keep. Once sales pass $1M a year Apple keeps 30%, and the floor rises to ${F.usd2(floorIn(p,r30).v)}.</p>
+  document.getElementById("floor").innerHTML=`<p><b>Lowest price that covers a pass: ${F.usd2(fl.v)} ${fl.unit}.</b> That is the tours, less commission, divided by the ${F.pct(1-p.feeSmall)} Apple lets you keep. Once sales pass $1M a year Apple keeps 30%, and the floor rises to ${F.usd2(floorIn(p,r30).v)}.</p>
     <p>Running costs are ${money(running)} a month: AI tools ${money(p.tools*p.toolShare)}, servers ${money(p.infra)}${p.hires?`, ${p.hires} hire${p.hires>1?"s":""} from month ${p.hireStart}`:""}${p.otherFixed?`, other ${money(p.otherFixed)}`:""}.</p>`;
 
   drawPriceChart(p,u.price);
   drawMonthChart(r);
 
   const rows=[["Cities live at year end",y=>y.live,String],["Installs",y=>y.installs,count],["Passes sold",y=>y.buyers,count],
-    ["Revenue",y=>y.revenue,money],["App Store and card fees",y=>-y.fees,money],["Tours",y=>-y.tourAI,money],["Free walks",y=>-y.freeAI,money],
+    ["Revenue",y=>y.revenue,money],["App Store and card fees",y=>-y.fees,money],["Tours",y=>-y.tourAI,money],["Free walks",y=>-y.freeAI,money],["Recipes built",y=>-y.recipes,money],
     ["Audio storage",y=>-y.storage,money],["Marketing",y=>-y.marketing,money],["Running costs",y=>-y.running,money],["Profit",y=>y.profit,money]];
   const planned=p.maxCities, live=citiesLiveBy(p,MONTHS-1);
   const notes=[];
@@ -338,7 +332,7 @@ function drawPriceChart(p,current){
   for(let v=0;v<=YMAX+1e-9;v+=.03) s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--rule)"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end">${Math.round(v*100)}%</text>`;
   for(let v=0;v<=X1;v+=20) s+=`<text x="${x(v)}" y="${H-B+18}" text-anchor="middle">$${v}</text>`;
   s+=`<text class="lab" x="${(L+W-R)/2}" y="${H-4}" text-anchor="middle">Average price paid per buyer</text>`;
-  const ref=[[.021,"typical app, 2.1%"],[.045,"top quarter, 4.5%"]];
+  const ref=[[.021,"subscription apps, median 2.1%"],[.045,"top quarter, 4.5%"]];
   for(const [v,t] of ref) s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--muted)" stroke-dasharray="3 4"/><text class="lab" x="${W-R}" y="${y(v)-5}" text-anchor="end">${t}</text>`;
   for(const [n,v] of COMPETITORS) s+=`<line x1="${x(v)}" x2="${x(v)}" y1="${H-B}" y2="${H-B-10}" stroke="var(--ink-2)" stroke-width="2"/>`;
   // the curve, broken where no share works

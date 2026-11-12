@@ -1,0 +1,165 @@
+{
+  "measured_on": "2026-11-11",
+  "city": "new_york",
+  "tour": {
+    "start": "Bethesda Terrace, Central Park",
+    "duration_min": 150,
+    "party": "solo",
+    "lenses": null,
+    "compose_seconds": 207.0,
+    "voice_seconds": 30.5,
+    "stops": [
+      {
+        "place": "Bethesda Terrace",
+        "from_recipe": true,
+        "has_longer_telling": true,
+        "audio_seconds": 133.08
+      },
+      {
+        "place": "Grand Army Plaza (Manhattan)",
+        "from_recipe": true,
+        "has_longer_telling": false,
+        "audio_seconds": 117.98
+      },
+      {
+        "place": "Radio City Music Hall",
+        "from_recipe": false,
+        "has_longer_telling": true,
+        "audio_seconds": 146.21
+      }
+    ],
+    "summary": {
+      "by_tag": {
+        "haiku_glue": {
+          "calls": 2,
+          "input_tokens": 1745,
+          "output_tokens": 35,
+          "usd": 0.0019
+        },
+        "opus_day_stop": {
+          "calls": 1,
+          "input_tokens": 3817,
+          "output_tokens": 8750,
+          "cache_read_input_tokens": 6091,
+          "usd": 0.2409
+        },
+        "haiku_fact_check": {
+          "calls": 85,
+          "input_tokens": 28298,
+          "output_tokens": 356,
+          "usd": 0.0301
+        },
+        "opus_full_telling": {
+          "calls": 1,
+          "input_tokens": 4859,
+          "output_tokens": 7246,
+          "cache_read_input_tokens": 6091,
+          "usd": 0.2085
+        },
+        "tts_stop_narration": {
+          "calls": 2,
+          "chars": 2534,
+          "audio_seconds": 151.13,
+          "usd": 0.0382
+        },
+        "tts_session_lines": {
+          "calls": 5,
+          "chars": 646,
+          "audio_seconds": 40.34,
+          "usd": 0.0102
+        }
+      },
+      "anthropic_usd": 0.4814,
+      "tts_usd": 0.0483,
+      "total_usd": 0.5297
+    },
+    "voice_calls": [
+      {
+        "tag": "tts_stop_narration",
+        "chars": 69,
+        "audio_seconds": 4.92
+      },
+      {
+        "tag": "tts_stop_narration",
+        "chars": 2465,
+        "audio_seconds": 146.21
+      },
+      {
+        "tag": "tts_session_lines",
+        "chars": 62,
+        "audio_seconds": 4.01
+      },
+      {
+        "tag": "tts_session_lines",
+        "chars": 171,
+        "audio_seconds": 11.66
+      },
+      {
+        "tag": "tts_session_lines",
+        "chars": 86,
+        "audio_seconds": 5.52
+      },
+      {
+        "tag": "tts_session_lines",
+        "chars": 103,
+        "audio_seconds": 6.05
+      },
+      {
+        "tag": "tts_session_lines",
+        "chars": 224,
+        "audio_seconds": 13.1
+      }
+    ]
+  },
+  "recipe_build": {
+    "recipes": [
+      {
+        "place": "Bethesda Terrace",
+        "lens": null,
+        "longer_telling": true,
+        "writer_output_tokens": 15824,
+        "pieces": 7,
+        "audio_seconds": 271.69
+      },
+      {
+        "place": "Grand Army Plaza (Manhattan)",
+        "lens": null,
+        "longer_telling": false,
+        "writer_output_tokens": 4698,
+        "pieces": 4,
+        "audio_seconds": 117.98
+      }
+    ],
+    "summary": {
+      "by_tag": {
+        "opus_unlabelled": {
+          "calls": 3,
+          "input_tokens": 12599,
+          "output_tokens": 20522,
+          "cache_creation_input_tokens": 6091,
+          "cache_read_input_tokens": 12182,
+          "usd": 0.6202
+        },
+        "haiku_fact_check": {
+          "calls": 51,
+          "input_tokens": 18638,
+          "output_tokens": 216,
+          "usd": 0.0197
+        },
+        "tts_stop_narration": {
+          "calls": 11,
+          "chars": 6359,
+          "audio_seconds": 389.67,
+          "usd": 0.0984
+        }
+      },
+      "anthropic_usd": 0.6399,
+      "tts_usd": 0.0984,
+      "total_usd": 0.7383
+    }
+  },
+  "new_york_recipes": {
+    "places": 396,
+    "recipes": 1455
+  }
+}

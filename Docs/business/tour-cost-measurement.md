@@ -1,77 +1,62 @@
-# What one walking tour costs us to make
+# What Ondoway costs to run, as built today
 
-Measured on 2026-10-09 with real paid calls, New York, 16 tours (6 served).
+Measured on 11 November 2026 in New York, with real paid calls.
 
-## Outcome
+## The cost structure
 
-| Tour length | Tours served | Average cost | Lowest | Highest | Average stops |
-|---|---|---|---|---|---|
-| 60 min | 2 of 3 | $0.52 | $0.49 | $0.55 | 1 |
-| 90 min | 4 of 8 | $1.02 | $0.72 | $1.45 | 2 |
-| 180 min | 0 of 5 | – | – | – | – |
+| Cost | When it is paid | Amount |
+|---|---|---|
+| Recipes for a city | Once per city, before launch | about $537 for New York (1,455 recipes at $0.37 each) |
+| A stop told from a recipe | Each stop a walker hears | $0.015 |
+| A stop written fresh | Each stop a walker hears | $0.50 |
 
-- Cost per narrated stop: **$0.51**.
-- Total spent on this measurement: **$9.49**, including tours that were refused.
-- 5 tour(s) were refused after money was spent. That money is counted in the total and in the 'with refusals' column of the JSON.
-- 5 tour(s) were refused before any money was spent.
+A tour costs $0.015 for each stop told from a recipe and $0.50 for each stop written fresh.
 
-## Where the money goes
+## Which stops are written fresh
 
-| Part of the work | Share of cost |
-|---|---|
-| Opus writes each stop | 50% |
-| Opus writes the longer telling for a main stop | 40% |
-| Haiku checks each sentence against the sources | 3% |
-| Haiku writes linking lines | 0% |
-| Voice for each stop's narration | 7% |
-| Voice for closes, links and walking lines | 1% |
+A stop is told from its place's recipe when all of these hold:
 
-## Each tour
+- The walker is solo.
+- The tour has one lens or none.
+- The visit stays outside the door.
+- The stop is not the day's last.
 
-| # | Start | Length | Party | Stops | Longer tellings | Standbys | Rewrites | Writing $ | Voice $ | Total $ |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 0 | Washington Square Park | 60 min | solo | 1 | 1 | 0 | 0 | 0.44 | 0.05 | 0.49 |
-| 1 | Bryant Park (refused) | 60 min | family | 0 | 0 | 0 | 0 | 0.00 | 0.00 | 0.00 |
-| 2 | Federal Hall | 60 min | solo | 1 | 1 | 0 | 0 | 0.51 | 0.04 | 0.55 |
-| 3 | Union Square (refused) | 90 min | solo | 0 | 0 | 0 | 0 | 0.21 | 0.00 | 0.21 |
-| 4 | Rockefeller Center (refused) | 90 min | family | 0 | 0 | 0 | 0 | 0.00 | 0.00 | 0.00 |
-| 5 | City Hall (refused) | 90 min | solo | 0 | 0 | 0 | 0 | 0.00 | 0.00 | 0.00 |
-| 6 | Flatiron Building (refused) | 90 min | family | 0 | 0 | 0 | 0 | 0.00 | 0.00 | 0.00 |
-| 7 | Grand Central Terminal (refused) | 180 min | solo | 0 | 0 | 0 | 2 | 1.31 | 0.00 | 1.31 |
-| 8 | Washington Square Park (refused) | 180 min | family | 0 | 0 | 0 | 0 | 0.00 | 0.00 | 0.00 |
-| 9 | Bowling Green Park (refused) | 180 min | solo | 0 | 0 | 0 | 1 | 0.96 | 0.00 | 0.96 |
-| 10 | Grand Central Terminal | 90 min | solo | 2 | 2 | 0 | 0 | 1.37 | 0.08 | 1.45 |
-| 11 | Wall Street | 90 min | solo | 2 | 1 | 0 | 0 | 0.72 | 0.07 | 0.79 |
-| 12 | Union Square | 90 min | solo | 2 | 1 | 0 | 0 | 0.65 | 0.08 | 0.72 |
-| 13 | Times Square | 90 min | solo | 2 | 2 | 0 | 0 | 1.06 | 0.08 | 1.14 |
-| 14 | Flatiron Building (refused) | 180 min | solo | 0 | 0 | 0 | 1 | 1.21 | 0.00 | 1.21 |
-| 15 | Central Park Bethesda (refused) | 180 min | solo | 0 | 0 | 0 | 0 | 0.66 | 0.00 | 0.66 |
+Every other stop is written fresh. The day's last stop always is, because it closes the day.
 
-Token counts, call counts, characters and audio seconds for every part of every tour are in `tour-cost-measurement.json`.
+## The measured tour
 
-## Evidence
+A 150-minute solo walk from Bethesda Terrace, Central Park, with no lens. It has 3 stops: Bethesda Terrace, Grand Army Plaza (Manhattan), Radio City Music Hall.
 
-- Each tour went through the same three steps the app uses: plan the route, write the words, record the voice.
-- The plan step made no paid calls on any tour. The script checks this.
-- Every paid call was counted where it leaves the machine, using the usage numbers the provider sent back. Nothing was estimated except the voice text tokens.
-- Prices used (checked 2026-10-09):
-  - Opus 4.8: $5 per million tokens in, $25 out. Haiku 4.5: $1 in, $5 out.
+| Stop | Told | Cost |
+|---|---|---|
+| Bethesda Terrace | From its recipe | $0.015 |
+| Grand Army Plaza (Manhattan) | From its recipe | $0.015 |
+| Radio City Music Hall | Written fresh | $0.50 |
+
+- The tour cost $0.53.
+- Writing took 3 min 27 s, and voicing 30 s.
+- At a stop told from a recipe, the walker also gets the place's longer telling, already recorded, when they tap for more.
+
+## How it was measured
+
+- The tour went through the app's own steps: write the words, then record the voice.
+- Every paid call was counted where it leaves the machine, from the usage the provider reported.
+- Each stop is charged its own writing and voice. The fact checks and short linking lines ($0.04 for the tour) are split evenly across the stops.
+- Building the recipes for Bethesda Terrace and Grand Army Plaza (Manhattan) cost $0.74, so $0.37 each. Only the first has a longer telling; a place gets one when it has more to tell than its short telling holds.
+- A city needs one recipe per place, plus one per lens its beats carry. New York has 396 places and needs 1,455 recipes.
+- Prices:
+  - Claude Opus 4.8: $5 per million tokens in, $25 out.
+  - Claude Haiku 4.5: $1 per million tokens in, $5 out.
   - Cached input: 1.25 times the input price to write, 0.1 times to read.
-  - Voice (gpt-4o-mini-tts, voice nova): $0.015 per minute of audio, plus $0.60 per million text tokens (characters divided by 4).
-- Opus thinking is billed as output and is already inside the output counts.
+  - OpenAI gpt-4o-mini-tts, voice nova: $0.015 per minute of audio, plus $0.60 per million text tokens (characters divided by 4).
 
-## Not measured
+## Not counted
 
-- Audio made only when a listener taps for more: the longer telling of a main stop and the 'keep exploring' extras. Their text sizes are in the JSON, so their cost can be worked out if they are voiced.
-- New stops written when a walker replans mid-walk.
-- Servers, database, storage and bandwidth.
-- The half-price batch option. The app writes tours live, so it does not apply.
-- Cities other than New York.
+- Voicing the longer telling a walker taps for at a stop written fresh.
+- Stops written again when a walker's day is replanned.
+- Servers, storage and the database. The money model counts these.
 
-## Limits of this sample
+## Limits
 
-- Every served tour was solo, 60 or 90 minutes, with 1 or 2 stops. Six tours is a small sample.
-- A day in a 5-day pass may be longer. Scale by the cost per narrated stop.
-- Every family tour was refused at the plan step: no start tried could fill 60 minutes or more.
-- Every 180-minute tour was refused while writing, after money was spent.
-- The runs used a working copy with uncommitted changes in src/tour/contingency.py.
+- This is one tour and two recipes. The same tour's cost varies by up to 20% from run to run.
+- A recipe's cost depends on how much its place has to tell. Other cities' recipe counts are not known yet.
