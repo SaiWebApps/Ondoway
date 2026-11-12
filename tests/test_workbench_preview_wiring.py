@@ -138,30 +138,29 @@ def test_the_plan_screen_shows_what_degraded_before_anything_can_be_written() ->
 
     Walking legs fall back to straight-line estimates when the routing service is
     unavailable, and that is reported as a degradation on the PLAN response. It
-    has to be on screen ABOVE the "Write the tour" action: once that is clicked
-    the tour is written and paid for, so a warning that only appears afterwards
-    arrives too late to change anything. (W4.2 panel: the pick is gone, but the
-    money moment moved onto the one write action — it did not go away.)
+    has to be on screen ABOVE the "Run it like the phone" action: once that is
+    clicked the day is written, voiced and paid for, so a warning that only
+    appears afterwards arrives too late to change anything.
 
     UNDO TEST: move the ``buildDegradationPanel`` block in renderTourDay below
-    the block that creates the ``tourWriteBtn`` button, or delete it -> RED.
+    the block that creates the ``tourPhoneRunBtn`` button, or delete it -> RED.
     """
     body = _js_function_body(REVIEW_HTML.read_text(), "function renderTourDay(")
 
     # Non-vacuity: prove we sliced the day renderer before asserting ordering.
-    assert "tourWriteBtn" in body, (
-        "the extracted renderTourDay body never creates the write action, so this "
-        "guard is not reading the plan screen"
+    run_at = body.find("tourPhoneRunBtn")
+    assert run_at != -1, (
+        "the extracted renderTourDay body never creates the phone-run action, so "
+        "this guard is not reading the plan screen"
     )
     panel_at = body.find("buildDegradationPanel(")
-    write_at = body.find("tourWriteBtn")
     assert panel_at != -1, (
         "the plan screen never builds the degradation panel, so a tour planned on "
         "estimated walking times looks exactly like a measured one"
     )
-    assert panel_at < write_at, (
-        "the degradation panel is built after the write action, so what went wrong "
-        "renders below the button that spends money on a tour"
+    assert panel_at < run_at, (
+        "the degradation panel is built after the phone-run action, so what went "
+        "wrong renders below the button that spends money on a tour"
     )
 
 

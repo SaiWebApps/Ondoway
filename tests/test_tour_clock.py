@@ -141,7 +141,7 @@ def test_the_request_sites_thread_the_clock_and_the_restorer_forwards_every_pers
     `start_datetime=` / `end_hardness=` at each. Compose (and both session
     endpoints) now restore the persisted request through ONE door,
     `_restore_tour_input`, which forwards EVERY persisted key by construction — so
-    the request-driven sites (generate, preview, author) still carry the clock
+    the request-driven sites (generate, preview) still carry the clock
     explicitly (the AST half below, plan S1.3b's sabotage), and the restorer is
     proven BEHAVIOURALLY: a stored record with a clock restores that clock and its
     hardness, together with the axes Phase 5 began persisting (pins, party, pace).
@@ -162,8 +162,8 @@ def test_the_request_sites_thread_the_clock_and_the_restorer_forwards_every_pers
     # forwards the persisted record (`**fields`) and names nothing.
     explicit = [c for c in call_sites if any(kw.arg is not None for kw in c.keywords)]
     forwarding = [c for c in call_sites if all(kw.arg is None for kw in c.keywords)]
-    assert len(explicit) == 3, (
-        "expected the generate/preview/author _build_tour_input sites, "
+    assert len(explicit) == 2, (
+        "expected the generate/preview _build_tour_input sites, "
         f"found {len(explicit)}"
     )
     assert len(forwarding) == 1, "exactly ONE restorer forwards the persisted record"

@@ -13,7 +13,6 @@ from src.api.models.trips import (
     TripGenerateRequest,
     TripGenerateResponse,
     TripPreviewResponse,
-    TripPreviewStop,
     TripPreviewTourability,
 )
 from src.tour.contract import RouteOption, RouteOptionStop
@@ -396,43 +395,14 @@ class TestTripPreviewSpotlightFields:
     fields — band and spotlight per stop, and the per-corridor lens note — with
     behavior-preserving defaults.
 
-    Since the plan/author split the reply carries ROUTE OPTIONS rather than one flat
-    stop list, so the lens note sits on the option it describes and the per-stop
-    annotations are checked on both stop types: ``RouteOptionStop`` for a planned or
-    written option, ``TripPreviewStop`` for the Basic fallback's own flat list.
+    The reply carries ROUTE OPTIONS rather than one flat stop list, so the lens note
+    sits on the option it describes and the per-stop annotations ride
+    ``RouteOptionStop``.
     """
-
-    def _base_stop_kwargs(self) -> dict:
-        return dict(
-            sort_order=1,
-            poi_name="Notre-Dame",
-            lat=48.853,
-            lng=2.349,
-            narration="The flying buttresses...",
-            minutes=5,
-        )
-
-    def test_preview_stop_band_spotlight_default(self):
-        """Omitting the new fields yields a full dwell at score 0.0, so existing
-        callers that do not set them keep today's behavior."""
-        stop = TripPreviewStop(**self._base_stop_kwargs())
-        assert stop.band == "dwell"
-        assert stop.spotlight == 0.0
-
-    def test_preview_stop_band_spotlight_explicit(self):
-        """The fields actually carry non-default values when set."""
-        stop = TripPreviewStop(**self._base_stop_kwargs(), band="vignette", spotlight=0.37)
-        assert stop.band == "vignette"
-        assert stop.spotlight == 0.37
-
-    def test_preview_stop_band_rejects_unknown_value(self):
-        """band is a Literal — an out-of-vocabulary band is rejected, not coerced."""
-        with pytest.raises(ValidationError):
-            TripPreviewStop(**self._base_stop_kwargs(), band="headline")
 
     def _route_option(self, **overrides) -> RouteOption:
         kwargs = dict(
-            route_id="preview-0123456789ab-opt1",
+            route_id="preview-opt1",
             stops=(
                 RouteOptionStop(
                     poi_id="poi-1",
@@ -451,10 +421,9 @@ class TestTripPreviewSpotlightFields:
     def test_preview_response_carries_only_what_planning_knows(self):
         """The plan-only preview response carries exactly what PLANNING knows.
 
-        Everything that described WRITTEN text — the flat stop list, the narrator
-        name, the candidate lane, the Basic fallback, the quality verdicts — left
-        with the authoring it described, to POST /trips/preview/author. A field
-        that survives here would advertise something planning cannot produce.
+        Nothing that describes WRITTEN text — no flat stop list, no narrator name,
+        no quality verdict — rides this reply: planning writes nothing, so such a
+        field would advertise something planning cannot produce.
 
         Phase 4 (W4.2 deviation v, S4.6 + the W4.12 close) added the pre-commit
         HONESTY SURFACE, all of it known at plan time and none of it authored

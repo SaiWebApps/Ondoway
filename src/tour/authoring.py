@@ -891,10 +891,9 @@ def _dedup_composed(sentences: list[Sentence], beat_sequence: BeatSequence) -> l
     CONSTRUCTION: it keeps the FIRST telling / any sentence carrying a novel claim
     and never empties a beat, so a script that covered every claim before still
     does (a dropped twin's fact stays voiced by its survivor). Run inside
-    ``finalize_certification_composition`` — the ONE finalizer both the persisted
-    ``/trips/{id}/compose`` path (``author_prebuilt_route``) and ``/trips/preview``
-    (``premium_tour.finalize_premium_composition``) call — so neither surface ships
-    a duplicate the other suppresses. Always run BEFORE verify (with the
+    ``finalize_certification_composition`` — the ONE finalizer every authoring caller
+    reaches, the persisted ``/trips/{id}/compose`` path included — so no caller ships
+    a duplicate another suppresses. Always run BEFORE verify (with the
     pre-compose coverage baseline, when the caller enables it), so a drop that
     would unexpectedly lose a fact fails closed rather than shipping silently."""
     out = suppress_repeated_claims(sentences, beat_sequence, include_same_beat=True)
@@ -1148,8 +1147,8 @@ def finalize_certification_composition(
     This is the durable replay boundary: it reconstructs every authorized request
     from the grounded source, rejects incomplete or alternate response sets, binds
     each parsed payload to its recorded hash, then runs VERIFY without editing the
-    provider-authored text. Unlike the Basic Tour/live availability path, certification never
-    splices or reverts to the grounded source.  It performs no provider calls and
+    provider-authored text. Certification never splices or reverts to the grounded
+    source.  It performs no provider calls and
     needs no in-memory call ledger.
 
     THE THREE GATE KNOBS, and why they are knobs (ledger decision D3).  This

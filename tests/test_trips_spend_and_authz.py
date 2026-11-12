@@ -1,30 +1,21 @@
-"""Regression guards for the /trips spend + authorization defects (2026-07-19).
+"""Spend and authorization guards on ``src/api/routes/trips.py``.
 
-Four confirmed defects, all on ``src/api/routes/trips.py``:
+1. The non-live suite's product authoring factory hands back the offline executor,
+   so no test in it can bill a provider.
+2. Anthropic provider failures (429/529/timeout) on the compose path map to a 503
+   with Retry-After or a 502, never a raw 500, so a client can tell a transient
+   upstream throttle from a server bug and back off.
+3. GET /trips, POST /trips/generate and POST /trips/{id}/compose require a signed-in
+   caller, and a foreign profile or trip is a 404 that never confirms it exists.
 
-1. POST /trips/preview was unauthenticated AND un-rate-limited while spending
-   against the owner's ANTHROPIC_API_KEY on a public Render service. The current
-   Premium path performs one Opus authoring call per routed stop, so the limiter
-   must atomically reserve the exact planned stop count before any physical call.
-   /feedback already had exactly this guard over ONE Haiku call.
-2. GET /trips and POST /trips/{id}/compose had NO authentication — a classic
-   IDOR: any profile's trips were readable, and /compose destroyed a victim's
-   stop ids and one-shot compose budget, by guessing a profile_id / trip_id.
-3. (same endpoint as 1, reported twice) the burst hole: N simultaneous callers
-   each starting a ~$1 compose while the fixed-window counter is still low.
-4. Anthropic provider failures (429/529/timeout) escaped the compose routes as
-   raw HTTP 500s with no Retry-After, so clients could not distinguish a
-   transient upstream throttle from a server bug or back off correctly.
-
-Everything here is hermetic and $0: the compose SDK is a counting fake that
-never reaches the network, and the assertions are on the fake's call count, so
-the tests prove NO SPEND happened rather than merely observing a status code.
+Everything here is hermetic and $0: no test reaches the network.
 """
 
 from __future__ import annotations
 
 import httpx
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from src.api.app import create_app
@@ -38,58 +29,18 @@ from src.api.routes import trips as trips_route
 from src.tour.premium_tour import (
     AnthropicPremiumExecutor,
     OfflinePremiumExecutor,
-    PremiumBuildIdentity,
 )
 
 # Reuse the proven hermetic corpus fakes rather than re-deriving them.
 from tests.test_trip_preview_contract import (
     START,
     _FakeDriver,
-    _FakeRoutingClient,
     _green_cluster_records,
 )
-
-PREVIEW_BODY = {
-    "center_lat": START[0],
-    "center_lng": START[1],
-    "duration_min": 30,
-    "city_slug": "paris",
-}
-
-# Writing a tour is now its own call, and it takes the plan inputs plus WHICH of the
-# offered routes to write. Planning itself is free and spends nothing, so every test
-# about spending lives on the author call.
-AUTHOR_PATH = "/api/v1/trips/preview/author"
-
-
-def _author_body(client) -> dict:
-    """The plan body plus a live selector for its first route option.
-
-    The author route re-derives the plan and refuses a selector that no longer matches
-    it, so the id has to come from a real plan rather than be invented here.
-    """
-    plan = client.post("/api/v1/trips/preview", json=PREVIEW_BODY)
-    assert plan.status_code == 200, plan.text
-    return {**PREVIEW_BODY, "route_id": plan.json()["options"][0]["route_id"]}
-
 
 # ---------------------------------------------------------------------------
 # Fakes
 # ---------------------------------------------------------------------------
-
-
-class _CountingPremiumExecutor:
-    """Billable-boundary double returning explicit offline provider bytes."""
-
-    cost_bearing = True
-    provider_name = "anthropic"
-
-    def __init__(self) -> None:
-        self.calls = 0
-
-    def execute(self, unit):
-        self.calls += 1
-        return OfflinePremiumExecutor().execute(unit)
 
 
 class _RaisingPremiumExecutor:
@@ -145,27 +96,6 @@ class _Single:
 
 
 @pytest.fixture()
-def preview_client(monkeypatch):
-    """(compose_client) -> TestClient for POST /trips/preview, fully hermetic."""
-
-    def _make(premium_executor) -> TestClient:
-        monkeypatch.setattr(trips_route, "RoutingClient", _FakeRoutingClient)
-        monkeypatch.setattr(
-            trips_route,
-            "resolve_build_identity",
-            lambda: PremiumBuildIdentity(commit_sha="1" * 40),
-        )
-        app = create_app()
-        app.dependency_overrides[get_driver] = lambda: _FakeDriver(_green_cluster_records())
-        app.dependency_overrides[get_premium_compose_executor] = lambda: premium_executor
-        # raise_server_exceptions=False so an unmapped 500 is observable as a
-        # status code — that is exactly what defect 4 is about.
-        return TestClient(app, raise_server_exceptions=False)
-
-    return _make
-
-
-@pytest.fixture()
 def auth_client():
     """(user_id, owns) -> TestClient whose session double answers the auth Cypher."""
 
@@ -173,8 +103,8 @@ def auth_client():
         app = create_app()
         app.dependency_overrides[get_session] = lambda: _FakeAuthSession(user_id, owns=owns)
         app.dependency_overrides[get_driver] = lambda: _FakeDriver(_green_cluster_records())
-        # Both trip compose paths now author through the premium executor, so THAT
-        # is the boundary a foreign caller must never reach. It raises rather than
+        # Compose authors through the premium executor, so THAT is the boundary a
+        # foreign caller must never reach. It raises rather than
         # returning a stub: if the ownership check ever stops short-circuiting, the
         # test fails loudly instead of quietly composing a victim's trip.
         app.dependency_overrides[get_premium_compose_executor] = lambda: _RaisingPremiumExecutor(
@@ -186,7 +116,7 @@ def auth_client():
 
 
 # ---------------------------------------------------------------------------
-# Defects 1/3/5 — the preview spend guard
+# The non-live suite never bills a provider
 # ---------------------------------------------------------------------------
 
 
@@ -222,58 +152,8 @@ def test_product_authoring_factory_is_offline_in_the_non_live_suite():
     assert AnthropicPremiumExecutor.cost_bearing is True
 
 
-def test_unverifiable_build_is_rejected_before_provider_spend(preview_client, monkeypatch):
-    """AC-16/AC-18: an unresolvable build fingerprint is a distinct, pre-spend fault.
-
-    ``resolve_build_identity`` runs before any provider work — this
-    must be provable at ZERO paid calls. The generic ``except Exception`` around the
-    physical-authoring call must not swallow this into ``llm_generation_failed`` /
-    ``generation_failed``: that reports "the LLM tried and failed" for a fault where
-    the LLM was never even reached, and hides an environment/config problem behind a
-    provider-authoring error message.
-    UNDO: catch resolve_build_identity()'s ValueError with the same generic
-    ``except Exception`` block used for premium-authoring failures -> this test goes
-    RED on both the rejection code and the basic_tour reason.
-    """
-    executor = _CountingPremiumExecutor()
-    client = preview_client(executor)
-    body_with_choice = _author_body(client)
-    monkeypatch.setattr(
-        trips_route,
-        "resolve_build_identity",
-        lambda: (_ for _ in ()).throw(ValueError("dirty build")),
-    )
-
-    response = client.post(AUTHOR_PATH, json=body_with_choice)
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["candidate_eligible"] is False
-    assert body["compose_status"] == "basic_available"
-    assert executor.calls == 0, "a build-fingerprint fault must never reach the provider"
-
-    assert body["basic_tour"]["reason"] != "llm_generation_failed", (
-        "an environment/config fault must not be reported as an LLM generation failure"
-    )
-    rejection = body["candidate_rejection"]
-    assert rejection["code"] == "build_fingerprint_unavailable"
-    assert "dirty build" in rejection["detail"], (
-        "the detail must carry the raised message, not a generic authoring string"
-    )
-
-    # A genuine provider-authoring failure must still produce the OLD code/reason,
-    # and the two payloads must not be byte-identical.
-    other_client = preview_client(_RaisingPremiumExecutor(RuntimeError("boom")))
-    other = other_client.post(AUTHOR_PATH, json=_author_body(other_client))
-    other_body = other.json()
-    assert other_body["candidate_rejection"]["code"] == "generation_failed"
-    assert other_body["basic_tour"]["reason"] == "llm_generation_failed"
-    assert other_body["candidate_rejection"] != rejection
-    assert other_body["basic_tour"]["reason"] != body["basic_tour"]["reason"]
-
-
 # ---------------------------------------------------------------------------
-# Defect 4 — provider failures map to 503/502, never a raw 500
+# Provider failures map to 503/502, never a raw 500
 # ---------------------------------------------------------------------------
 
 
@@ -281,11 +161,11 @@ def _http_request() -> httpx.Request:
     return httpx.Request("POST", "https://api.anthropic.com/v1/messages")
 
 
-def test_provider_throttle_is_503_with_retry_after(preview_client):
+def test_provider_throttle_is_503_with_retry_after():
     """anthropic.RateLimitError must not surface as a 500.
 
-    UNDO: drop the ``_upstream_provider_errors()`` wrapper from Premium execution
-    -> RED at 500 with no Retry-After.
+    ``_upstream_provider_errors`` wraps every provider call on the compose path.
+    UNDO: let the throttle through the wrapper -> RED (the raw SDK error escapes).
     """
     anthropic = pytest.importorskip("anthropic")
     exc = anthropic.RateLimitError(
@@ -293,26 +173,26 @@ def test_provider_throttle_is_503_with_retry_after(preview_client):
         response=httpx.Response(429, request=_http_request()),
         body=None,
     )
-    client = preview_client(_RaisingPremiumExecutor(exc))
-    resp = client.post(AUTHOR_PATH, json=_author_body(client))
-    assert resp.status_code == 503, f"expected 503 for an upstream throttle, got {resp.status_code}"
-    assert resp.headers.get("Retry-After") == "30"
+    with pytest.raises(HTTPException) as raised, trips_route._upstream_provider_errors():
+        raise exc
+    assert raised.value.status_code == 503, raised.value.status_code
+    assert raised.value.headers == {"Retry-After": "30"}
 
 
-def test_provider_timeout_is_502(preview_client):
+def test_provider_timeout_is_502():
     """anthropic.APITimeoutError (an APIError subclass) -> a clean 502.
 
-    UNDO: drop the ``_upstream_provider_errors()`` wrapper -> RED at 500.
+    UNDO: drop APIError from the wrapper's mapping -> RED (the raw SDK error escapes).
     """
     anthropic = pytest.importorskip("anthropic")
     exc = anthropic.APITimeoutError(request=_http_request())
-    client = preview_client(_RaisingPremiumExecutor(exc))
-    resp = client.post(AUTHOR_PATH, json=_author_body(client))
-    assert resp.status_code == 502, f"expected 502 for a provider fault, got {resp.status_code}"
+    with pytest.raises(HTTPException) as raised, trips_route._upstream_provider_errors():
+        raise exc
+    assert raised.value.status_code == 502, raised.value.status_code
 
 
 # ---------------------------------------------------------------------------
-# Defect 2 — authentication + ownership on the user-facing trip surface
+# Authentication + ownership on the user-facing trip surface
 # ---------------------------------------------------------------------------
 
 

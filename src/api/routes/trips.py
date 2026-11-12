@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import functools
-import hashlib
 import itertools
 import json
 import logging
 import re
-import sys
 from collections.abc import Callable
 from contextlib import contextmanager
 from datetime import date, datetime, time, timedelta
@@ -41,25 +39,17 @@ from src.api.models.trips import (
     SessionPlan,
     SessionPromise,
     SessionReplanRequest,
-    TripAuthoredTourResponse,
     TripComposeRequest,
     TripComposeResponse,
     TripGenerateRequest,
     TripGenerateResponse,
-    TripPreviewAuthorRequest,
-    TripPreviewBasicTour,
     TripPreviewPromise,
     TripPreviewRequest,
     TripPreviewResponse,
-    TripPreviewStop,
     TripPreviewTourability,
 )
 from src.city_registry import country_code
 from src.tour.beat_select import select_vignette_beats
-from src.tour.candidate_eligibility import (
-    CandidateRejection,
-    CandidateRejectionCode,
-)
 from src.tour.compose_gate import ComposeVerificationError
 from src.tour.contingency import (
     OWN_PLACE_RADIUS_M,
@@ -89,7 +79,6 @@ from src.tour.contract import (
 from src.tour.degradations import degradation_scope, record, summarize
 from src.tour.density import TourabilityRefusedError
 from src.tour.generation import _template_nav, generate
-from src.tour.narration_quality import score_narration
 from src.tour.options import build_route_option, option_eta_seconds
 from src.tour.placement import StopSegment, place_anchors, place_day, place_stops
 from src.tour.premium_tour import (
@@ -189,20 +178,14 @@ def _upstream_provider_errors():
         raise HTTPException(status_code=502, detail=f"LLM provider error: {exc}") from exc
 
 
-# RATE LIMITING REMOVED 2026-07-31 (owner order, twice stated). The preview and
-# compose paths carried four bounds — per-IP window, global window, daily ceiling
-# and an in-flight concurrency slot. All four are DELETED, not disabled: no
-# constants, no counters, no env knobs, nothing to switch back on by accident.
-#
-# Stated once, plainly: since the plan/write split of 2026-08-04 the anonymous
-# surface that spends money is /trips/preview/author, not /trips/preview — planning
-# is free and calls nobody. Writing still makes one paid call per stop with nothing
-# in front of it, so nothing bounds what an unauthenticated caller can spend.
-# If a bound is wanted later it must key on the AUTHENTICATED user rather than
-# the client IP — mobile carriers put thousands of subscribers behind a handful
-# of addresses, so the per-IP cap throttled real tour groups sharing a hotel or a
-# carrier while barely inconveniencing a determined caller. It also fired on the
-# owner's own workbench at three previews an hour.
+# NO RATE LIMIT stands in front of these routes, and none is switched off: there are
+# no constants, counters or env knobs for one. POST /trips/preview is the only
+# anonymous route here, and it calls no provider — planning is free. Every route that
+# pays a provider (compose) requires a signed-in captain, so an anonymous caller
+# cannot spend. A bound, if one is added, keys on the AUTHENTICATED user and never on
+# the client IP: mobile carriers put thousands of subscribers behind a handful of
+# addresses, so a per-IP cap throttles real tour groups sharing a hotel or a carrier
+# while barely inconveniencing a determined caller.
 
 
 def _owned_profile_id(session: Session, user_id: str, profile_id: str) -> str | None:
@@ -242,8 +225,7 @@ def _resolved_weather(
     automatic; the day merely SHOWS what the sky did). 'auto' without a dated
     request has nothing to fetch and plans as no signal. A forecast the module
     cannot answer (horizon, outage, garbage) is None — no signal — never an
-    error: the fingerprint makes a between-calls forecast flip visible as the
-    honest 409 rather than silently authoring a different day.
+    error.
     """
     if weather != "auto":
         return weather
@@ -257,9 +239,9 @@ def _resolved_weather(
 def _dial_kwargs(body) -> dict:
     """The Phase-4 request axes, threaded onto TourInput verbatim (W4.2).
 
-    ONE mapping for all three construction sites (generate, preview, author),
-    so a dial cannot reach one surface and silently miss another — the exact
-    S1.3b lesson, one function instead of three copy-paste blocks.
+    ONE mapping for both request-driven construction sites (generate, preview),
+    so a dial cannot reach one surface and silently miss another — one function
+    instead of a copy per site.
     """
     return {
         "party": body.party,
@@ -336,9 +318,10 @@ def _build_tour_input(**kwargs) -> TourInput:
     request through the harness worked. MEASURED at the W4.12 close (2026-08-18):
     the wire's "More stops" day was byte-identical to base and kept a 47-minute
     museum, while an explicit 20-minute ceiling on the same request reshaped
-    the day. This is the ONE construction door for all three API sites
-    (generate, preview, author), so resolving here keeps the surfaces one
-    engine (tests/test_workbench_matches_the_app.py's whole reason to exist).
+    the day. This is the ONE construction door for the request-driven API sites
+    (generate, preview) and the persisted-request restorer, so resolving here
+    keeps the surfaces one engine (tests/test_workbench_matches_the_app.py's
+    whole reason to exist).
     """
     try:
         return resolve_party_axes(TourInput(**kwargs))
@@ -910,7 +893,7 @@ def compose_trip(
     Rebuilds the user's PICK from the poi ids persisted at generate time —
     NEVER re-running selection, so corpus/routing drift cannot swap the
     route — then authors that prebuilt route ONE STOP AT A TIME through the
-    same seam /trips/preview and the batch runner use, and re-persists the
+    same seam the batch runner uses, and re-persists the
     trip's stops with the authored narration (fresh item ids, no audio
     fields). NO TTS here: /audio/generate-trip-stops voices the narration
     afterwards, which by then has passed the gate. A refused flavour is a
@@ -1070,7 +1053,7 @@ def compose_trip(
     stitched = generate(seq, route, tour_input)
 
     # ONE ALGORITHM, ONE SEAM. This persisted endpoint authors the route it just
-    # rebuilt through the SAME Block-2 seam /trips/preview and the batch runner use:
+    # rebuilt through the SAME Block-2 seam the batch runner uses:
     # plan_premium_authoring -> execute_premium_plan -> finalize_premium_tour. It
     # keeps its fail-before-mutation contract (nothing below this block writes until
     # authoring has passed VERIFY). Planning is provider-free, so the exact physical
@@ -1085,7 +1068,7 @@ def compose_trip(
     # (dirty local tree, malformed deploy SHA) is an environment fault, not an
     # authoring failure, and must never be relabelled compose_verification_failed —
     # that code means "the narrator wrote something untraceable" and would blame the
-    # writer for an engine fault. Same reasoning as /trips/preview.
+    # writer for an engine fault.
     try:
         build_identity = resolve_build_identity()
     except Exception as exc:
@@ -1205,8 +1188,7 @@ def compose_trip(
             composed = premium_result.blueprint.script
     except ComposeVerificationError as exc:
         # NAME WHAT BLOCKED, server-side. The 422 below carries counts only — the wire
-        # must not leak provider prose — and a count is not enough to act on (the
-        # author path learned this first: see `_author_preview_impl`'s catch-all). Only
+        # must not leak provider prose — and a count is not enough to act on. Only
         # the three STRUCTURAL classes block (contract.py `ValidationReport.passed`);
         # each is logged with its provenance and truncated text so one refused
         # compose identifies the rule instead of costing another paid run per guess.
@@ -2872,30 +2854,6 @@ def _stops_as_route_pois(stops: list[GeneratedStop], snapshot):
     return SimpleNamespace(pois=[by_id[st.poi_id] for st in stops if st.poi_id in by_id])
 
 
-def _preview_cards(option: RouteOption) -> list[TripPreviewStop]:
-    """The shared option's cards on the preview wire, one for one.
-
-    THE INTERLEAVE ITSELF IS NOT HERE. It is ``src/tour/options.build_route_option``,
-    the one implementation both surfaces use; this only renames the fields the preview
-    model spells differently and numbers the cards. ``sort_order`` counts EMITTED cards
-    (leg, vignette and dwell alike), which is what the workbench renders in order.
-    """
-    return [
-        TripPreviewStop(
-            sort_order=index,
-            poi_name=stop.name,
-            lat=stop.lat,
-            lng=stop.lng,
-            narration=stop.narration,
-            minutes=stop.minutes,
-            band=stop.band,
-            spotlight=stop.spotlight,
-            has_deeper_dive=stop.has_deeper_dive,
-        )
-        for index, stop in enumerate(option.stops, start=1)
-    ]
-
-
 def _tourability_payload(
     assessment: TourabilityAssessment | None,
 ) -> TripPreviewTourability | None:
@@ -2923,24 +2881,6 @@ def _tourability_payload(
     )
 
 
-def _preview_plan_fingerprint(plans) -> str:
-    """Stable 12-hex identity of ONE plan result: the options, in order.
-
-    The author route re-derives the plan from the same request body, and this is what
-    proves the option it authors is the option the operator was shown. Corpus or
-    routing drift between the two calls changes the fingerprint, and the author route
-    then refuses rather than silently authoring a different tour. Ordered POI ids are
-    the whole identity of an option — everything else (eta, dwell, vignettes) is a
-    pure function of them plus the routing answers.
-    """
-    payload = json.dumps(
-        [[poi.id for poi in plan.route.pois] for plan in plans],
-        ensure_ascii=False,
-        separators=(",", ":"),
-    )
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
-
-
 def _places_only(option: RouteOption) -> RouteOption:
     """The option as it looks while it is still being CHOSEN: places, order, times.
 
@@ -2949,7 +2889,7 @@ def _places_only(option: RouteOption) -> RouteOption:
     descriptive text of any kind. So the cards carry no narration, no "keep exploring"
     flag, and there are no walking-narration cards at all: such a card exists only to
     show what is heard on the way, and at plan time nothing has been written. The words
-    arrive at POST /trips/preview/author, once a route has been picked.
+    are written by POST /trips/{id}/compose, once the day is saved as a trip.
     """
     return option.model_copy(
         update={
@@ -2962,8 +2902,12 @@ def _places_only(option: RouteOption) -> RouteOption:
     )
 
 
-def _plan_options(plans, snapshot, *, fingerprint: str) -> list[RouteOption]:
-    """The plans as RouteOptions, through the ONE shared interleave."""
+def _plan_options(plans, snapshot) -> list[RouteOption]:
+    """The plans as RouteOptions, through the ONE shared interleave.
+
+    The preview saves nothing, so its option id names only its place in the list;
+    the id a later call can select by is the saved trip's, from POST /trips/generate.
+    """
     beats_by_id = {ref.id: ref for refs in snapshot.beats_by_poi.values() for ref in refs}
     return [
         _places_only(
@@ -2971,7 +2915,7 @@ def _plan_options(plans, snapshot, *, fingerprint: str) -> list[RouteOption]:
                 plan.route,
                 plan.source,
                 beats_by_id,
-                route_id=f"preview-{fingerprint}-opt{i + 1}",
+                route_id=f"preview-opt{i + 1}",
                 snapshot=snapshot,
                 sequence=plan.sequence,
             )
@@ -2983,11 +2927,8 @@ def _plan_options(plans, snapshot, *, fingerprint: str) -> list[RouteOption]:
 def _plan_preview(tour_input: TourInput, driver: Driver):
     """BLOCK 1 for the anonymous surface: plan the ONE day, refuse, or hand it back.
 
-    Shared by the plan-only preview and by the author route, which re-derives the same
-    plan before authoring the day it was handed. Provider-free and $0. Returns the
-    plan as a ONE-element list (deviation i): the wire keeps ``options`` a list, the
-    fingerprint hashes a list, and the author route's opt-N parse stays valid for
-    stored ids — there is simply exactly one now.
+    Provider-free and $0. Returns the plan as a ONE-element list (deviation i): the
+    wire keeps ``options`` a list, and there is exactly one entry in it.
     """
     snapshot = load_paris_corpus(driver, city_slug=tour_input.city_slug)
     try:
@@ -3009,13 +2950,12 @@ def preview_trip(
 
     BLOCK 1 of the two-block split: start (required), end (optional), lenses and timing
     in; routed options out. It selects the places, orders and routes them, computes the
-    ETA, dwell, vignettes and tourability, and calls no provider — so a person chooses
-    among real walks before anything is paid for. Writing the chosen one is a separate
-    call, POST /trips/preview/author.
+    ETA, dwell, vignettes and tourability, and calls no provider — so a person sees a
+    real walk before anything is paid for. Writing it is the saved-trip pair: POST
+    /trips/generate, then POST /trips/{id}/compose.
 
-    This endpoint used to plan AND write, one paid call per stop, on every request, with
-    no authentication in front of it — so a stranger could spend the project's money by
-    typing coordinates, and nobody could look at a route before it was written.
+    It is anonymous only because it spends nothing: nothing that calls a provider
+    belongs on this route.
 
     OWNER RULING 2026-07-31: "Don't just log errors. Actually show them in the workbench
     UI. Otherwise, they're invisible." The degradation scope is opened here so a route
@@ -3037,7 +2977,7 @@ def preview_trip(
         )
         snapshot, plans = _plan_preview(tour_input, driver)
         route = plans[0].route
-        options = _plan_options(plans, snapshot, fingerprint=_preview_plan_fingerprint(plans))
+        options = _plan_options(plans, snapshot)
         result = TripPreviewResponse(
             spine_area=route.spine_area,
             options=options,
@@ -3221,294 +3161,6 @@ def _preview_day_notes(route, body) -> list[str]:
         )
     )
     return notes
-
-
-# The plan's own identity, and which of its routes. The hex is a fingerprint of the
-# whole plan, so an id minted for one set of routes cannot select a route out of a
-# different set — see _preview_plan_fingerprint.
-_PREVIEW_ROUTE_ID = re.compile(r"^preview-([0-9a-f]{12})-opt(\d+)$")
-
-
-@router.post("/trips/preview/author", response_model=TripAuthoredTourResponse)
-def author_preview_tour(
-    body: TripPreviewAuthorRequest,
-    driver: Driver = Depends(get_driver),
-    premium_executor: PremiumComposeExecutor = Depends(get_premium_compose_executor),
-    faithfulness_checker: FaithfulnessChecker | None = Depends(get_faithfulness_checker),
-):
-    """Write EXACTLY the route that was chosen. Never re-plans it.
-
-    The second half of the split. It re-derives the free plan from the same request,
-    checks the plan is still the one that was shown, and writes that one route — one
-    call to the narrator per stop, no retries. Nothing here chooses a route: the
-    choice arrived with the request.
-
-    ANONYMOUS AND PAID, for the Phase-1 window only, approved on 2026-08-04 because
-    without it the workbench cannot produce a tour at all once planning stops writing.
-    As the note further up this file says, nothing bounds what an unauthenticated
-    caller can spend here, and with the stop ceiling gone the requested duration is
-    the only thing limiting how many paid calls one request makes. Phase 2 closes it
-    by giving the workbench a real identity and moving it onto the saved-trip pair.
-    """
-    with degradation_scope() as collected:
-        result = _author_preview_impl(body, driver, premium_executor, faithfulness_checker)
-        rows = summarize(collected)
-    return result.model_copy(update={"degradations": rows}) if rows else result
-
-
-def _author_preview_impl(
-    body: TripPreviewAuthorRequest,
-    driver: Driver,
-    premium_executor: PremiumComposeExecutor,
-    faithfulness_checker: FaithfulnessChecker | None,
-) -> TripAuthoredTourResponse:
-    match = _PREVIEW_ROUTE_ID.match(body.route_id)
-    if match is None:
-        raise HTTPException(422, {"reason": "invalid_route_id", "route_id": body.route_id})
-    chosen_fingerprint, option_n = match.group(1), int(match.group(2))
-
-    tour_input = _build_tour_input(
-        start=(body.center_lat, body.center_lng),
-        duration_min=body.duration_min or DEFAULT_DURATION_MIN,
-        city_slug=body.city_slug,
-        lenses=body.lenses or None,
-        round_trip=body.round_trip,
-        max_stop_minutes=body.max_stop_minutes,
-        end=_end_point(body.end_lat, body.end_lng),
-        start_datetime=body.start_datetime,
-        end_hardness=body.end_hardness,
-        **_dial_kwargs(body),
-    )
-    snapshot, plans = _plan_preview(tour_input, driver)
-    if not 1 <= option_n <= len(plans):
-        raise HTTPException(
-            404,
-            {"reason": "unknown_option", "route_id": body.route_id, "options": len(plans)},
-        )
-    # THE CHOSEN ROUTE, OR NOTHING. Planning is free and repeatable given the same
-    # corpus and the same walking times, but neither is frozen between the two calls:
-    # a content upload or a routing restart moves the plan. The fingerprint makes that
-    # visible instead of writing — and charging for — a tour nobody was shown and
-    # nobody could tell apart on screen.
-    fingerprint = _preview_plan_fingerprint(plans)
-    if fingerprint != chosen_fingerprint:
-        raise HTTPException(
-            409,
-            {
-                "reason": "plan_changed",
-                "route_id": body.route_id,
-                "current_route_id": f"preview-{fingerprint}-opt{option_n}",
-            },
-        )
-
-    plan = plans[option_n - 1]
-    route = plan.route
-    seq = plan.sequence
-    beats_by_id = {ref.id: ref for refs in snapshot.beats_by_poi.values() for ref in refs}
-    provider = premium_executor.provider_name
-
-    def _basic_tour_fallback(
-        *, reason: str, rejection: CandidateRejection
-    ) -> TripAuthoredTourResponse:
-        return TripAuthoredTourResponse(
-            route_id=body.route_id,
-            option=None,
-            spine_area=route.spine_area,
-            total_audio_min=0,
-            candidate_eligible=False,
-            narration_kind="none",
-            basic_tour=TripPreviewBasicTour(
-                reason=reason,
-                total_audio_min=round(plan.source.total_audio_seconds / 60),
-                stops=_preview_cards(
-                    build_route_option(
-                        route,
-                        plan.source,
-                        beats_by_id,
-                        route_id=body.route_id,
-                        snapshot=snapshot,
-                        sequence=seq,
-                    )
-                ),
-            ),
-            tourability=_tourability_payload(route.tourability),
-            compose_status="basic_available",
-            candidate_rejection=rejection,
-            provider=provider,
-            narration_quality=None,
-            quality=None,
-        )
-
-    # Resolved BEFORE any physical call: an unresolvable build fingerprint (dirty
-    # local tree, malformed deploy SHA) is an environment/config fault, not an LLM
-    # authoring failure — it must never be folded into the generic provider-failure
-    # branch below, which would both mislabel the cause and hide that ZERO provider
-    # spend happened.
-    try:
-        build_identity = resolve_build_identity()
-    except Exception as exc:
-        return _basic_tour_fallback(
-            reason="llm_candidate_ineligible",
-            rejection=CandidateRejection(
-                code=CandidateRejectionCode.BUILD_FINGERPRINT_UNAVAILABLE,
-                detail=str(exc),
-            ),
-        )
-
-    try:
-        with _upstream_provider_errors():
-            physical_responses = execute_premium_plan(
-                plan,
-                executor=premium_executor,
-                receipt_sink=EphemeralReceiptSink(),
-            )
-            premium_result = finalize_premium_tour(
-                plan,
-                physical_responses,
-                faithfulness_checker=faithfulness_checker,
-                build_identity=build_identity,
-            )
-    except HTTPException:
-        raise
-    except Exception:
-        # LOG BEFORE SWALLOWING. This catch-all collapses every post-planning failure
-        # -- provider error, traceability rejection, verification refusal -- into one
-        # opaque string, and the response deliberately does not leak provider prose.
-        # With no log record the cause was unrecoverable at every layer at once, so a
-        # tester's only channel was to guess. The traceback goes to the server log
-        # (/tmp/ondoway-workbench-api.log for the workbench); the wire keeps the
-        # stable, non-leaking contract below.
-        _log = logging.getLogger("ondoway.api")
-        _log.exception(
-            "Premium authoring failed after planning; returning the Basic lane "
-            "(city=%s duration=%s stops_planned=%s)",
-            body.city_slug,
-            body.duration_min,
-            len(plan.units),
-        )
-        # A VERIFY refusal names counts only ("1 untraceable"), which is not enough to
-        # act on: traceability fails for three structurally different reasons (unknown
-        # cited beat id, a glue label outside GLUE_LABELS, or an unrecognised
-        # source_type -- src/tour/validation.py:145-157). Log the offending sentences'
-        # PROVENANCE so one run identifies the rule instead of costing another paid
-        # preview per guess. Sentence TEXT is truncated and stays server-side only.
-        _report = getattr(sys.exc_info()[1], "report", None)
-        for _s in getattr(_report, "untraceable_sentences", ()) or ():
-            _log.error(
-                "  UNTRACEABLE stop=%s source_type=%r source_id=%r cited=%r text=%.120r",
-                getattr(_s, "stop_idx", None),
-                getattr(_s, "source_type", None),
-                getattr(_s, "source_id", None),
-                tuple(getattr(_s, "cited_beat_ids", ()) or ()),
-                getattr(_s, "text", ""),
-            )
-        # FAITHFULNESS and COVERAGE were counted and then thrown away, for the same
-        # reason traceability was: "27 faithfulness" names a number, not a defect, so
-        # the only way to see WHICH sentences failed was another paid preview per
-        # guess. Both carry a (subject, reason) pair the counts discard.
-        for _s, _reason in getattr(_report, "faithfulness_failures", ()) or ():
-            _log.error(
-                "  UNFAITHFUL stop=%s reason=%r source_id=%r cited=%r text=%.160r",
-                getattr(_s, "stop_idx", None),
-                _reason,
-                getattr(_s, "source_id", None),
-                tuple(getattr(_s, "cited_beat_ids", ()) or ()),
-                getattr(_s, "text", ""),
-            )
-        for _bid, _claim in getattr(_report, "coverage_failures", ()) or ():
-            _log.error("  DROPPED-FACT beat=%r claim=%.160r", _bid, _claim)
-        return _basic_tour_fallback(
-            reason="llm_generation_failed",
-            rejection=CandidateRejection(
-                code=CandidateRejectionCode.GENERATION_FAILED,
-                detail="Premium authoring did not produce a complete traced blueprint",
-            ),
-        )
-
-    script = premium_result.blueprint.script
-    narration = " ".join(s.text for s in script.script)
-    q = score_narration(narration)
-    narration_quality = {
-        "stilted_score": q.stilted_score,
-        "engagement_score": q.engagement_score,
-        "reliable": q.reliable,
-        "n_words": q.n_words,
-        "burstiness": q.burstiness,
-        "mean_sentence_words": q.mean_sentence_words,
-        "long_sentence_rate": q.long_sentence_rate,
-        "second_person_per_100w": q.second_person_rate,
-        "look_prompt_rate": q.look_prompt_rate,
-        "tells_per_100w": q.per_100w,
-    }
-
-    # THE QUALITY RUBRIC — runs on EVERY tour, deterministic and $0. The mechanical
-    # floor of fixtures/tour-quality-standard/01-standard.md: it catches the
-    # two failures the corpus-vs-render comparison can prove (a rich POI STARVED to a
-    # line, a stop GORGED past the listenable cap) plus repeats, empty stops and
-    # imbalance. Surfaced to the editor rather than silently swallowed — a tour that
-    # breaches the standard is visible in the workbench with the exact check and stop.
-    #
-    # Paid semantic FACT/ENJOY/repetition reviewers are certification concerns and never
-    # run in this interactive candidate endpoint. The advisory G4 and coverage-omission
-    # blocks this response used to carry are GONE rather than empty: their judges are
-    # deleted, so a permanently-`[]` "findings" list advertised a check that could not
-    # fire. Deterministic quality is the only local diagnostic.
-    #
-    # Scored ONCE. Two lanes each added this call with their own comment on 2026-08-05 and
-    # the duplicate scored the whole tour a second time on every request, discarding the
-    # first result. Both comments were worth keeping; the second traversal was not.
-    rubric = score_tour(script, route, snapshot.beats_by_poi, beat_sequence=seq)
-
-    # THE CHOSEN ROUTE WITH THE WORDS FILLED IN. Same places, same order, same arrival
-    # time, same walk-past sights — it is built by the one shared interleave from the
-    # SAME route object the plan produced, so there is nothing to re-derive and nothing
-    # to patch back on afterwards.
-    return TripAuthoredTourResponse(
-        route_id=body.route_id,
-        option=build_route_option(
-            route,
-            script,
-            beats_by_id,
-            route_id=body.route_id,
-            snapshot=snapshot,
-            sequence=seq,
-        ),
-        spine_area=route.spine_area,
-        total_audio_min=round(script.total_audio_seconds / 60),
-        candidate_eligible=True,
-        candidate_status="premium_candidate_eligible_for_certification",
-        narration_kind="llm_candidate",
-        basic_tour=None,
-        tourability=_tourability_payload(route.tourability),
-        compose_status="composed",
-        candidate_rejection=None,
-        provider=provider,
-        narration_quality=narration_quality,
-        quality={
-            # THE DETERMINISTIC, $0 rubric ALONE decides pass/fail.
-            "passed": rubric.passed,
-            "summary": rubric.summary(),
-            "blockers": [
-                {
-                    "check": f.check,
-                    "message": f.message,
-                    "stop_idx": f.stop_idx,
-                    "poi_name": f.poi_name,
-                }
-                for f in rubric.blockers
-            ],
-            "warnings": [
-                {
-                    "check": f.check,
-                    "message": f.message,
-                    "stop_idx": f.stop_idx,
-                    "poi_name": f.poi_name,
-                }
-                for f in rubric.warnings
-            ],
-            "stats": dict(rubric.stats),
-        },
-    )
 
 
 @router.get("/trips", response_model=list[TripGenerateResponse])

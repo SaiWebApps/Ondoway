@@ -87,10 +87,10 @@ WHAT THIS FILE CANNOT CATCH (human must watch — do not delete this list):
   quality scorer. Test 14 measures that a long request really does seat more than
   15 stops, and pins the tractability fallback that replaced the ceilings' one
   useful side effect — keeping the exponential order solver off a 25-stop route.
-* **RUNTIME DOM BEHAVIOUR.** Tests 12 and 13 read the selection/disclosure code
-  rather than executing it. Only the Playwright shard
+* **RUNTIME DOM BEHAVIOUR.** Test 12 reads the selection code rather than
+  executing it. Only the Playwright shard
   (``make test-workbench``) executes this page.
-* **A DIVERGENCE THAT NEEDS REAL DATA TO APPEAR.** Tests 16-19 drive all four
+* **A DIVERGENCE THAT NEEDS REAL DATA TO APPEAR.** Tests 16-19 drive the three
   real HTTP handlers, but against a fixed synthetic corpus, a stand-in graph and
   a stand-in walking-times service. That is deliberate — it is what makes "the
   two surfaces produced the same tour" a statement about CODE rather than about
@@ -101,7 +101,7 @@ WHAT THIS FILE CANNOT CATCH (human must watch — do not delete this list):
 
 Cost: $0 and hermetic. File reads, in-process imports, and real requests served
 by the app in this process: one with the socket layer denied before it can open,
-and four planning/authoring calls whose graph, corpus and routing upstream are
+and planning/authoring calls whose graph, corpus and routing upstream are
 all stood in for. No DB, no container, no browser, no provider call, no money.
 It does one DNS lookup per distinct upstream host named in ``src/`` (to classify
 the address, never to reach it).
@@ -130,13 +130,13 @@ WORKBENCH_SH = REPO / "scripts" / "workbench.sh"
 MAKEFILE = REPO / "Makefile"
 PROFILE_DIR = REPO / "config" / "profiles"
 
-# The human-facing surfaces of the workbench: planning the day, writing the
-# tour, and hearing it. ``authorTourDay`` joined at Phase 4 (design §8.1): the
-# pick-one-of-three flow died, so the ONE "Write the tour" action is now the
-# workbench's paid call — exactly where a spend gate would go back first.
+# The human-facing surfaces of the workbench: planning the day, running it
+# through the tourist's own endpoints, and hearing it. ``runTourAsPhone`` behind
+# "Run it like the phone" is the workbench's paid call — exactly where a spend
+# gate would go back first.
 TOURIST_FACING_FUNCTIONS = (
     "async function generateTourPreview()",
-    "async function authorTourDay()",
+    "async function runTourAsPhone()",
     "async function loadTtsProviders()",
     "async function ttsPlay(",
 )
@@ -1872,24 +1872,22 @@ def test_no_consent_gate_between_the_click_and_the_tourist_facing_call() -> None
       ``showMergePreview``'s zero-beat branch, where OK deletes the source POI —
       a data-loss guard on an editor-only screen no tourist sees, and deleting
       it would defeat test_workbench_review_regressions.py::test_defect4_*); and
-    * the dispatch to the plan AND the write buttons must be the FIRST thing
+    * the dispatch to the plan AND the phone-run buttons must be the FIRST thing
       their branches do, so a custom overlay, a required checkbox or a
       disabled-button gate cannot be wired around either call site without a
       statement appearing in between. That check names no dialog implementation
       at all — it asserts the tourist's "one click, one tour" property.
 
-    NAME ANCHORS RE-DERIVED at S4.8 (Phase 4, design §8.1 + W4.2): the generate
-    path kept its name (``generateTourPreview`` now plans THE day), the pick
-    (``authorTourOption``, one click per option card) died with the flavour UI,
-    and the paid call moved to the ONE ``authorTourDay`` behind "Write the tour"
-    — so the write dispatch is checked exactly like the plan dispatch. A dial
-    turn is the same one-tap promise through a change listener
-    (``scheduleTourReplan``), so that path is asserted gate-free too.
+    ``generateTourPreview`` plans THE day and ``runTourAsPhone`` behind "Run it
+    like the phone" is the paid call, so the phone-run dispatch is checked exactly
+    like the plan dispatch. A dial turn is the same one-tap promise through a
+    change listener (``scheduleTourReplan``), so that path is asserted gate-free
+    too.
 
     UNDO TEST: put any ``confirm(...)`` back into generateTourPreview,
-    authorTourDay or scheduleTourReplan, or into the click dispatcher, or insert
+    runTourAsPhone or scheduleTourReplan, or into the click dispatcher, or insert
     ANY statement before the dispatcher's call to generateTourPreview() or
-    authorTourDay() -> RED.
+    runTourAsPhone() -> RED.
     """
     html = REVIEW_HTML.read_text()
 
@@ -1940,14 +1938,11 @@ def test_no_consent_gate_between_the_click_and_the_tourist_facing_call() -> None
         )
 
     # Scoped to what a PERSON's tap reaches, which is the whole claim: nothing
-    # stands between pressing a button and the day being planned or written. The
-    # page's own automatic re-fetch (after the server reports the plan moved) is
-    # not a gate — nobody is being asked for anything — so it is deliberately not
-    # in scope here; it is a click listener that must be clean. Both one-tap
-    # calls are held to the same window check: the free plan AND the paid write
-    # (design §8.1's one "Write the tour" action — the exact place a spend
-    # dialog would be reintroduced first).
-    for callee in ("generateTourPreview()", "authorTourDay()"):
+    # stands between pressing a button and the day being planned or written. Both
+    # one-tap calls are held to the same window check: the free plan AND the paid
+    # phone run ("Run it like the phone" — the exact place a spend dialog would be
+    # reintroduced first).
+    for callee in ("generateTourPreview()", "runTourAsPhone()"):
         dispatching = [body for body in listeners if callee in body]
         assert dispatching, f"no click listener calls {callee} — the button is dead"
         for body in dispatching:
@@ -2000,23 +1995,17 @@ def test_the_rendered_tour_is_exactly_the_server_response() -> None:
       judges by are forged.
 
     Both die on one derived property: the page renders the parsed response and
-    nothing else. The page does this TWICE, because planning the day and
-    writing it are two calls — so both stages are checked, each with exactly one
-    call site, inside the function that performed its own fetch, whose first
-    argument is the awaited JSON. No variable to patch, no second entry point, no
-    wrapper. Both field lists are read off the endpoints' own Pydantic response
-    models, so they cannot go stale.
+    nothing else. The plan screen is checked: exactly one call site, inside the
+    function that performed its own fetch, whose first argument is the awaited
+    JSON. No variable to patch, no second entry point, no wrapper. The field list
+    is read off the endpoint's own Pydantic response model, so it cannot go
+    stale. The plan reply's ``options[0]`` IS the day and ``renderTourDay`` draws
+    it straight from ``generateTourPreview``'s fetch.
 
-    STAGES RE-DERIVED at S4.8 (Phase 4, design §8.1): ``renderTourOptions`` WAS
-    the flavour UI and died with the pick — the plan reply's ``options[0]`` IS
-    the day and ``renderTourDay`` draws it straight from ``generateTourPreview``'s
-    fetch; the write moved from the per-card ``authorTourOption`` to the ONE
-    ``authorTourDay``, which still hands ``renderTourStops`` its parsed reply.
-
-    UNDO TEST: add a second call to either renderer, wrap an argument in anything,
+    UNDO TEST: add a second call to the renderer, wrap its argument in anything,
     or assign to a response field before rendering -> RED.
     """
-    from src.api.models.trips import TripAuthoredTourResponse, TripPreviewResponse
+    from src.api.models.trips import TripPreviewResponse
 
     html = REVIEW_HTML.read_text()
 
@@ -2027,12 +2016,6 @@ def test_the_rendered_tour_is_exactly_the_server_response() -> None:
             "renderTourDay(",
             "/trips/preview",
             TripPreviewResponse,
-        ),
-        (
-            "async function authorTourDay()",
-            "renderTourStops(",
-            "/trips/preview/author",
-            TripAuthoredTourResponse,
         ),
     ]
 
@@ -2120,56 +2103,6 @@ def test_the_audio_selector_defaults_to_the_provider_production_pins() -> None:
         f"pinned production provider; a second is a fallback, and a fallback is "
         f"how an editor gets silently downgraded to whatever happens to be "
         f"available when the real key is missing."
-    )
-
-
-# --------------------------------------------------------------------------
-# TEST 13 — the Basic-lane disclosure is driven by the server's own fields
-# --------------------------------------------------------------------------
-
-
-def test_the_basic_lane_disclosure_is_driven_by_the_servers_own_fields() -> None:
-    """A refused tour must never wear the Premium label.
-
-    The backend genuinely returns an ungraded, non-certifiable grounded-stitch
-    tour whenever candidate authoring is refused or ineligible. In the page,
-    the entire disclosure hangs on one client-side boolean built from
-    ``candidate_eligible`` and ``basic_tour``; "simplifying" that condition
-    makes a degraded tour render the Premium narrator badge and the
-    certification-eligible label.
-
-    Derived from the response model: both fields exist on the reply that carries a
-    WRITTEN tour, the renderer must consult both, and it must build the
-    Premium-only quality panel exactly once (i.e. on one branch). They live on the
-    author reply rather than the plan reply because there is no Basic fallback and
-    no eligibility until something has actually been written.
-
-    UNDO TEST: drop either field from the condition, or append the Premium panel
-    unconditionally -> RED.
-    """
-    from src.api.models.trips import TripAuthoredTourResponse
-
-    fields = set(TripAuthoredTourResponse.model_fields)
-    required = {"candidate_eligible", "basic_tour"}
-    assert required <= fields, (
-        f"the authored-tour response no longer carries {sorted(required - fields)}; "
-        f"the Basic-vs-Premium disclosure this test guards is derived from those "
-        f"fields, so the derivation must be updated, not deleted"
-    )
-
-    html = REVIEW_HTML.read_text()
-    body = _js_function_body(html, "function renderTourStops(")
-    for field in sorted(required):
-        assert field in body, (
-            f"renderTourStops no longer consults {field!r}. Without it the page "
-            f"cannot tell a refused Basic tour from a certifiable Premium one, "
-            f"and the owner would grade an un-authored fallback as the product."
-        )
-    panels = _all_offsets(body, "buildNarrationQualityPanel(")
-    assert len(panels) == 1, (
-        f"renderTourStops builds the Premium narration panel {len(panels)} time(s). "
-        f"It belongs on exactly one branch — the eligible one. Rendering it "
-        f"unconditionally puts the Premium narrator badge on a Basic tour."
     )
 
 
@@ -2555,11 +2488,12 @@ AUTHOR_BLOCK = ("execute_premium_plan", "finalize_premium_tour")
 #: Where both blocks are defined. Everything else about them is derived.
 ENGINE_MODULE = "src.tour.premium_tour"
 
-#: The phone's two calls and the workbench's two, as the HTTP layer sees them.
+#: The phone's two calls and the workbench's own plan call, as the HTTP layer sees
+#: them. The workbench writes a day through the phone's compose route ("Run it like
+#: the phone"), so authoring has one route for both surfaces.
 PHONE_PLAN_PATH = "/api/v1/trips/generate"
 PHONE_AUTHOR_PATH = "/api/v1/trips/{trip_id}/compose"
 WORKBENCH_PLAN_PATH = "/api/v1/trips/preview"
-WORKBENCH_AUTHOR_PATH = "/api/v1/trips/preview/author"
 
 _PROOF_USER_ID = "one-engine-proof-user"
 _PROOF_PROFILE_ID = "one-engine-proof-profile"
@@ -2915,7 +2849,7 @@ def test_the_phone_and_the_workbench_name_one_planner_and_one_author() -> None:
     module's planner" are two attributes that can drift apart in one edit.
 
     This test says nothing about whether the handlers CALL these objects — that is
-    tests 17 and 18, which break them and watch both surfaces fail.
+    tests 17 and 18, which break them and watch the requests that use them fail.
 
     UNDO TEST: in ``src/api/routes/trips.py``, replace the
     ``from src.tour.premium_tour import plan_premium_tour`` binding with a local
@@ -3045,35 +2979,23 @@ def test_breaking_the_one_planner_breaks_both_surfaces(monkeypatch) -> None:
 
 
 # --------------------------------------------------------------------------
-# TEST 18 — breaking the ONE authoring seam breaks BOTH surfaces (BLOCK 2)
+# TEST 18 — breaking the ONE authoring seam breaks the compose route (BLOCK 2)
 # --------------------------------------------------------------------------
 
 
-def test_breaking_the_one_author_seam_breaks_both_surfaces(monkeypatch) -> None:
+def test_breaking_the_one_author_seam_breaks_compose(monkeypatch) -> None:
     """AC-1 / AC-8 — the same proof for the half that writes the words.
 
     Planning and authoring are two separate convergence points, and proving one says
-    nothing about the other. This drives the phone's ``POST /trips/{id}/compose`` and
-    the workbench's ``POST /trips/preview/author`` — a real generate-then-compose
-    round trip on the phone's side, so the compose call reads back the very inputs the
-    generate call persisted.
+    nothing about the other. Both surfaces write a day through ONE route: the phone's
+    ``POST /trips/{id}/compose``, which the workbench reaches through "Run it like the
+    phone". This drives a real generate-then-compose round trip, so the compose call
+    reads back the very inputs the generate call persisted, and requires that compose
+    went through the shared seam exactly once and could not answer without it.
 
-    The outcome assertion differs from test 17's for one honest reason: the workbench
-    authoring route wraps its seam in a blanket ``except Exception`` and falls back to
-    the Basic lane, so it answers 200 whatever happens. "Could not answer" is
-    therefore read off the BODY rather than the status — no authored option, and a
-    narration kind that is explicitly not the LLM candidate. The phone's route has no
-    such fallback and simply cannot answer.
-
-    Re-derived at S4.8 (Phase 4, design §8.1): the plan reply's ``options`` is a
-    one-element list — THE day — and its ``route_id`` is read off that reply
-    exactly as the page reads it; the opt-N spelling survives only as the wire
-    convention (deviation i: ``preview-<12hex>-opt1`` here, ``{trip_id}-opt1``
-    on the phone), not as a pick among N.
-
-    UNDO TEST: give either handler its own authoring path — reintroduce the deleted
-    ``author_prebuilt_route`` seam and call it from one of them — and that surface's
-    assertions go RED: it produces an authored tour with the stand-in never firing.
+    UNDO TEST: give the compose handler its own authoring path — reintroduce the
+    deleted ``author_prebuilt_route`` seam and call it from there — and the assertions
+    go RED: it produces an authored tour with the stand-in never firing.
     """
     plan_bindings = _seam_bindings(PLAN_BLOCK)
     author_bindings = _seam_bindings(AUTHOR_BLOCK)
@@ -3082,17 +3004,12 @@ def test_breaking_the_one_author_seam_breaks_both_surfaces(monkeypatch) -> None:
     graph = _StubGraph(_PROOF_PROFILE_ID)
     client = _proof_client(monkeypatch, graph)
 
-    # 1. Plan normally on both surfaces first — authoring needs something to author,
-    #    and the planner must be untouched while that happens.
+    # 1. Plan normally first — authoring needs something to author, and the planner
+    #    must be untouched while that happens.
     generated = client.post(PHONE_PLAN_PATH, json=_generate_request())
     assert generated.status_code == 201, generated.text
     trip = generated.json()
     assert trip["options"], "the phone planned no options, so there is nothing to author"
-
-    previewed = client.post(WORKBENCH_PLAN_PATH, json=_plan_request())
-    assert previewed.status_code == 200, previewed.text
-    preview_options = previewed.json()["options"]
-    assert preview_options, "the workbench planned no options, so there is nothing to author"
 
     # 2. NOW break the authoring seam — every binding of both of its functions.
     calls: list[str] = []
@@ -3104,51 +3021,30 @@ def test_breaking_the_one_author_seam_breaks_both_surfaces(monkeypatch) -> None:
     for dotted, attribute in author_bindings:
         monkeypatch.setattr(importlib.import_module(dotted), attribute, _refuse)
     # The planner stays REAL, and is checked to be: this test is about Block 2, and
-    # both authoring routes legitimately re-derive their plan before writing it. If
-    # the planner had been caught by the substitution too, "the seam fired once"
-    # would be measuring a request that never got past planning.
+    # compose legitimately re-derives its plan before writing it. If the planner had
+    # been caught by the substitution too, "the seam fired once" would be measuring a
+    # request that never got past planning.
     still_real = {
         _bound_object(dotted, attribute) is _refuse for dotted, attribute in plan_bindings
     }
     assert still_real == {False}, "the planner was replaced as well; this is a Block-2 test"
 
     del calls[:]
-    workbench = client.post(
-        WORKBENCH_AUTHOR_PATH,
-        json=_plan_request(route_id=preview_options[0]["route_id"]),
-    )
-    workbench_calls = len(calls)
-
-    del calls[:]
-    phone = _post(
+    composed = _post(
         client,
         PHONE_AUTHOR_PATH.format(trip_id=trip["trip_id"]),
         {"route_id": f"{trip['trip_id']}-opt1"},
     )
-    phone_calls = len(calls)
+    compose_calls = len(calls)
 
-    assert workbench_calls == 1, (
-        f"the workbench's authoring request went through the shared seam "
-        f"{workbench_calls} times, not once. Zero means the workbench writes tour "
-        f"narration with an implementation the phone does not use, which makes every "
-        f"judgement the owner forms in the workbench a judgement about a different "
-        f"product."
+    assert compose_calls == 1, (
+        f"the compose request went through the shared seam {compose_calls} times, not "
+        f"once. Zero means POST /trips/{{id}}/compose has its own author again, as it "
+        f"did while the second seam in authoring.py was alive."
     )
-    assert phone_calls == 1, (
-        f"the phone's compose request went through the shared seam {phone_calls} "
-        f"times, not once. Zero means POST /trips/{{id}}/compose has its own author "
-        f"again, as it did while the second seam in authoring.py was alive."
-    )
-    assert workbench.status_code == 200, workbench.text
-    authored = workbench.json()
-    assert authored["option"] is None and authored["narration_kind"] != "llm_candidate", (
-        f"with the shared authoring seam broken, the workbench still produced an "
-        f"authored tour ({authored['narration_kind']!r}). It is writing narration "
-        f"with something else."
-    )
-    assert phone is None, (
-        f"with the shared authoring seam broken, the phone's compose still answered "
-        f"HTTP {phone.status_code}. It is writing narration with something else."
+    assert composed is None, (
+        f"with the shared authoring seam broken, compose still answered HTTP "
+        f"{composed.status_code}. It is writing narration with something else."
     )
 
 
@@ -3170,9 +3066,8 @@ def test_both_surfaces_plan_the_identical_tour(monkeypatch) -> None:
     function of the request, the corpus and the walking times: nothing in selection
     reads a clock, a random source or a fresh identifier, and the corpus is loaded in
     a fixed order. The two residual sources of drift are the corpus and the routing
-    service, which are live in production and can genuinely change BETWEEN two calls
-    — that is exactly why the workbench's authoring route refuses a stale plan with
-    409 rather than writing a different tour than the one shown. Here both are fixed
+    service, which are live in production and can genuinely change BETWEEN two calls.
+    Here both are fixed
     for the duration of the test, so any difference that appears is a difference in
     CODE, which is what is being measured.
 

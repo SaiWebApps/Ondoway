@@ -510,8 +510,9 @@ def generate(
                 consumed_beat_ids.add(s.source_id)
         # EVERY stop ends on a close (Phase 6 S6.4; design §5.3 "every named stretch
         # carries a written one-line close that can play wherever the stretch actually
-        # ends"; §7.4.5 every prefix is decent). The stitch's line is the FALLBACK — the
-        # Basic lane plays it, and it is the GLUE_CLOSING source the one writer is
+        # ends"; §7.4.5 every prefix is decent). The stitch's line is the FALLBACK — it
+        # ships when the writer leaves it unrewritten (reported as close_not_authored),
+        # and it is the GLUE_CLOSING source the one writer is
         # licensed to rewrite into the authored close (the grounding rule: glue keeps a
         # source_id supplied in THIS stop's stitched script). The last stop's close is
         # the DAY's (W6.2 R2: one close at the end, never the stop's and the day's in

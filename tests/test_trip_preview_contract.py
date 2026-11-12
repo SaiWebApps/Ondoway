@@ -36,16 +36,12 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
-import threading
 
 import pytest
 from fastapi.testclient import TestClient
 
 from src.api.app import create_app
 from src.api.dependencies import get_driver, get_premium_compose_executor
-from src.tour.authoring import COMPOSE_MODEL
-from src.tour.certification_provider import PhysicalProviderResponse
 from src.tour.contract import Route, ValhallaLegReceipt
 from src.tour.premium_tour import PremiumBuildIdentity
 from src.tour.routing import haversine_m, pace_corrected_walk_seconds
@@ -470,8 +466,8 @@ def test_preview_green_multi_stop_has_null_tourability_and_multiple_stops(make_c
 
 
 def _green_cluster_records():
-    """A compact GREEN multi-stop cluster (same shape as the green_multi_stop test)
-    the composer can voice — reused by the compose/provider wire test below."""
+    """A compact GREEN multi-stop cluster (same shape as the green_multi_stop test),
+    shared by the plan tests below and by tests/test_trips_spend_and_authz.py."""
     offsets = [
         (0.0004, 0.0),
         (0.0, 0.0007),
@@ -516,12 +512,9 @@ class _ExplodingExecutor:
 def test_preview_returns_the_plan_and_spends_nothing(make_client, monkeypatch):
     """AC-13/AC-24: the preview PLANS. It shows the day and pays nobody.
 
-    This endpoint used to plan a tour and then immediately write it, one paid call per
-    stop, before anyone had chosen anything — on an anonymous route. It now returns
-    the planned day and stops there; the words are written only after the person
-    commits, by POST /trips/preview/author. (Renamed from "three_options" at Phase 4
-    S4.4 — design §8.1 deleted pick-one-of-three; the assertions below were already
-    count-agnostic and are unchanged.)
+    The route is anonymous, so it returns the planned day and stops there; the words
+    are written only after the day is saved as a trip, by POST /trips/{id}/compose.
+    The assertions are count-agnostic: the plan carries one option today.
 
     Anything that could spend is booby-trapped: the narrator itself, and both halves of
     the authoring seam. If any of them is reached the request fails rather than quietly
@@ -547,15 +540,10 @@ def test_preview_returns_the_plan_and_spends_nothing(make_client, monkeypatch):
     body = r.json()
     assert body["options"], "a plan with no options is not a plan"
 
-    fingerprints = set()
     for i, option in enumerate(body["options"], start=1):
-        match = re.fullmatch(r"preview-([0-9a-f]{12})-opt(\d+)", option["route_id"])
-        assert match, f"option {i} carries an unusable selector {option['route_id']!r}"
-        fingerprints.add(match.group(1))
-        assert int(match.group(2)) == i
+        assert option["route_id"] == f"preview-opt{i}", option["route_id"]
         assert option["stops"], "an option without stops is not an option"
         assert option["eta_seconds"] > 0
-    assert len(fingerprints) == 1, "every option must share one plan fingerprint"
 
     # AC-3: any options are genuinely different walks (vacuous at one — kept so a
     # future second option cannot arrive as a duplicate).
@@ -581,28 +569,8 @@ def test_preview_returns_the_plan_and_spends_nothing(make_client, monkeypatch):
             assert stop["has_deeper_dive"] is False
             assert "script" not in stop and "script_body" not in stop
 
-    # AC-13: every field that described authored text is gone from this response.
-    for authored_field in (
-        "stops",
-        "narration_kind",
-        "basic_tour",
-        "candidate_eligible",
-        "candidate_status",
-        "candidate_rejection",
-        "compose_status",
-        "provider",
-        "narration_quality",
-        "quality",
-        "total_audio_min",
-        "lens_coverage_note",
-    ):
-        assert authored_field not in body, (
-            f"the plan-only preview still advertises {authored_field!r}, which only "
-            f"means something once a tour has been written"
-        )
-    # promises/day_notes/slack_minutes joined at Phase 4 (W4.2 deviation v —
-    # the pre-commit honesty surface, ruled by all eleven personas). Still an
-    # EXHAUSTIVE set: anything else appearing here is an unreviewed leak.
+    # AC-13: no field that describes written text rides the plan. The set is
+    # EXHAUSTIVE: anything else appearing here is an unreviewed leak.
     assert set(body) == {
         "spine_area",
         "options",
@@ -679,181 +647,8 @@ def test_preview_returns_the_plan_and_spends_nothing(make_client, monkeypatch):
         assert alternative["kind"] in ("loop", "extend", "closer_b")
 
 
-class _CountingExecutor:
-    """Records which stop each call to the narrator was for; echoes the text back."""
-
-    cost_bearing = True
-    provider_name = "anthropic"
-
-    def __init__(self) -> None:
-        self.stop_calls: list[int] = []
-        self._lock = threading.Lock()
-
-    def execute(self, unit):
-        with self._lock:
-            self.stop_calls.append(unit.stop_index)
-        payload = json.dumps(
-            {
-                "sentences": [
-                    s.model_dump(mode="json") for s in unit.authorized_request.stitched.script
-                ]
-            },
-            ensure_ascii=False,
-            separators=(",", ":"),
-            sort_keys=True,
-        ).encode("utf-8")
-        return PhysicalProviderResponse(
-            body=payload,
-            input_tokens=0,
-            output_tokens=0,
-            latency_ms=0,
-            model=COMPOSE_MODEL,
-            provider_request_id=f"offline-{unit.stop_index}",
-            stop_reason="end_turn",
-        )
-
-
-def _plan(client) -> dict:
-    r = client.post(
-        "/api/v1/trips/preview",
-        json={"center_lat": START[0], "center_lng": START[1], "duration_min": 30},
-    )
-    assert r.status_code == 200, r.text
-    return r.json()
-
-
-def test_preview_compose_authors_only_the_chosen_option(make_client):
-    """AC-1/AC-8: writing produces the route that was picked, and only that route.
-
-    Planning and writing are two calls now, which creates a new way to get it wrong:
-    the second call could write a different route from the one on screen and nobody
-    could tell, because both are plausible tours of the same neighbourhood. The
-    request therefore names the route it wants, and that name also identifies the
-    PLAN it came from. Four ways of getting it wrong are refused rather than guessed
-    at, and none of them costs a penny.
-
-    The written route is the planned route with the words filled in: same places, same
-    order, same arrival time, same lens note. Nothing is re-derived, so nothing can
-    drift.
-
-    NOTE on the choice of route: the last one offered is picked deliberately, so
-    "wrote the first one regardless" cannot pass. On today's corpus the planner offers
-    only one route (see the report on the flavour collapse), which makes that
-    particular guard inert until the planner offers more again — the identity,
-    refusal and call-count checks below all have teeth either way.
-    """
-    client = make_client(_green_cluster_records())
-    plan = _plan(client)
-    chosen = plan["options"][-1]
-    assert chosen["route_id"].endswith(f"-opt{len(plan['options'])}")
-
-    executor = _CountingExecutor()
-    client.app.dependency_overrides[get_premium_compose_executor] = lambda: executor
-    try:
-        r = client.post(
-            "/api/v1/trips/preview/author",
-            json={
-                "center_lat": START[0],
-                "center_lng": START[1],
-                "duration_min": 30,
-                "route_id": chosen["route_id"],
-            },
-        )
-        assert r.status_code == 200, r.text
-        body = r.json()
-
-        # ONE call to the narrator per stop that is stood at. No retries, and none
-        # for any route other than the chosen one.
-        dwell = [s for s in chosen["stops"] if s["band"] == "dwell"]
-        assert sorted(executor.stop_calls) == list(range(len(dwell))), executor.stop_calls
-        calls_after_writing = list(executor.stop_calls)
-
-        # AC-8 — the written route IS the chosen route, field by field. Not asserted
-        # as one whole-object comparison, because the words are the one thing that is
-        # legitimately different.
-        written = body["option"]
-        assert written is not None, "a written tour with no route is not a tour"
-        assert written["route_id"] == chosen["route_id"]
-        # Every card the plan showed — the stops AND the sights passed on the way —
-        # is still there, in the same order, under the same names. Walking-narration
-        # cards are excluded because they exist only once there are words to hear.
-        assert [
-            (s["poi_id"], s["band"], s["name"]) for s in written["stops"] if s["band"] != "leg"
-        ] == [(s["poi_id"], s["band"], s["name"]) for s in chosen["stops"]]
-        assert [s["poi_id"] for s in written["stops"] if s["band"] == "dwell"] == [
-            s["poi_id"] for s in dwell
-        ]
-        assert written["eta_seconds"] == chosen["eta_seconds"]
-        assert written["lens_coverage_note"] == chosen["lens_coverage_note"]
-        assert body["tourability"] == plan["tourability"]
-
-        # And it really is WRITTEN — the plan carried no words at all.
-        assert any(s["narration"] for s in written["stops"]), (
-            "the written reply carries no narration; it is still the plan"
-        )
-        assert body["narration_kind"] == "llm_candidate"
-        assert body["compose_status"] == "composed"
-        assert body["candidate_eligible"] is True
-        assert body["provider"] == "anthropic"
-        assert body["basic_tour"] is None
-        assert body["quality"] is not None
-        assert body["narration_quality"] is not None
-        # The places must not appear twice; a surface that preferred a top-level list
-        # would silently show one tour's stops under another tour's words.
-        assert "stops" not in body
-
-        # A route number nobody offered is refused, not clamped to one that exists.
-        unknown = client.post(
-            "/api/v1/trips/preview/author",
-            json={
-                "center_lat": START[0],
-                "center_lng": START[1],
-                "duration_min": 30,
-                "route_id": f"preview-{chosen['route_id'].split('-')[1]}-opt9",
-            },
-        )
-        assert unknown.status_code == 404, unknown.text
-        assert unknown.json()["detail"]["reason"] == "unknown_option"
-
-        # A malformed name is refused before anything is planned.
-        malformed = client.post(
-            "/api/v1/trips/preview/author",
-            json={
-                "center_lat": START[0],
-                "center_lng": START[1],
-                "duration_min": 30,
-                "route_id": "not-a-route-id",
-            },
-        )
-        assert malformed.status_code == 422, malformed.text
-        assert malformed.json()["detail"]["reason"] == "invalid_route_id"
-
-        # THE ONE THAT MATTERS. A name from a plan that no longer matches is refused
-        # outright rather than used to pick "the second route" out of a different set
-        # of routes — which would write, and charge for, a tour nobody ever saw.
-        stale = client.post(
-            "/api/v1/trips/preview/author",
-            json={
-                "center_lat": START[0],
-                "center_lng": START[1],
-                "duration_min": 30,
-                "route_id": "preview-000000000000-opt1",
-            },
-        )
-        assert stale.status_code == 409, stale.text
-        assert stale.json()["detail"]["reason"] == "plan_changed"
-        assert stale.json()["detail"]["current_route_id"].startswith("preview-")
-
-        # Every refusal above cost nothing.
-        assert executor.stop_calls == calls_after_writing, (
-            "a refused request still called the narrator"
-        )
-    finally:
-        del client.app.dependency_overrides[get_premium_compose_executor]
-
-
 def test_estimated_legs_are_labelled_not_silently_shipped(make_client):
-    """AC-18/AC-20/AC-22 — a tour built on estimated walking times ships, and SAYS SO.
+    """AC-18/AC-20 — a tour built on estimated walking times ships, and SAYS SO.
 
     The walking service is a real production dependency that can cold-start or rebuild
     its map (render.yaml:98-124). Refusing would take tour generation down for every
@@ -971,37 +766,6 @@ def test_estimated_legs_are_labelled_not_silently_shipped(make_client):
     for token in ("valhalla", "/status", "_", "()"):
         assert token not in version_row["human"].lower(), version_row["human"]
 
-    # 7. AC-22 — AUTHORING STILL RUNS on the estimated route. The receipt bar lives in
-    #    PLAN and nowhere else: the traveller who picks one of these gets one written
-    #    script per stop they stand at, exactly as on a measured route.
-    chosen = body["options"][0]
-    executor = _CountingExecutor()
-    client.app.dependency_overrides[get_premium_compose_executor] = lambda: executor
-    try:
-        authored = client.post(
-            "/api/v1/trips/preview/author",
-            json={
-                "center_lat": START[0],
-                "center_lng": START[1],
-                "duration_min": 30,
-                "route_id": chosen["route_id"],
-            },
-        )
-    finally:
-        del client.app.dependency_overrides[get_premium_compose_executor]
-
-    assert authored.status_code == 200, authored.text
-    authored_body = authored.json()
-    dwell = [s for s in chosen["stops"] if s["band"] == "dwell"]
-    assert sorted(executor.stop_calls) == list(range(len(dwell))), executor.stop_calls
-    assert authored_body["candidate_eligible"] is True
-    assert any(s["narration"] for s in authored_body["option"]["stops"])
-    # And the written reply carries the same label, so the traveller is not told about
-    # the estimate at plan time and then left to assume it went away.
-    assert "walking_times_estimated" in {
-        d["kind"] for d in authored_body["degradations"]
-    }, authored_body["degradations"]
-
 
 def test_a_route_with_no_stops_is_still_a_hard_refusal(make_client):
     """Structural faults did NOT become degradations. An empty route is not a tour.
@@ -1021,80 +785,6 @@ def test_a_route_with_no_stops_is_still_a_hard_refusal(make_client):
         )
         is not None
     )
-
-
-def test_preview_returns_a_traced_premium_candidate_from_the_shared_path(make_client, monkeypatch):
-    """The wire receives the validated blueprint, not legacy Script metadata."""
-    client = make_client(_green_cluster_records())
-    plan = _plan(client)
-    payload = {
-        "center_lat": START[0],
-        "center_lng": START[1],
-        "duration_min": 30,
-        "route_id": plan["options"][0]["route_id"],
-    }
-    r = client.post("/api/v1/trips/preview/author", json=payload)
-    assert r.status_code == 200, r.text
-    body = r.json()
-    assert body["compose_status"] == "composed", body
-    assert body["provider"] == "offline", body["provider"]
-    assert body["candidate_eligible"] is True
-    assert body["candidate_status"] == "premium_candidate_eligible_for_certification"
-    assert body["option"]["stops"]
-    assert body["basic_tour"] is None
-    assert body["narration_quality"] is not None
-    assert body["quality"] is not None
-    assert body["candidate_rejection"] is None
-
-
-def test_preview_never_scores_or_returns_mixed_fallback_as_an_llm_candidate(
-    make_client, monkeypatch
-):
-    """A failed physical unit becomes a separate, ungraded Basic Tour."""
-    from src.api.routes import trips as trips_route
-
-    class FailingExecutor:
-        cost_bearing = False
-        provider_name = "offline"
-
-        def execute(self, _unit):
-            raise ValueError("deliberate physical failure")
-
-    monkeypatch.setattr(
-        trips_route,
-        "score_tour",
-        lambda *_a, **_k: pytest.fail("Basic Tour reached the quality grader"),
-    )
-    client = make_client(_green_cluster_records())
-    plan = _plan(client)
-    client.app.dependency_overrides[get_premium_compose_executor] = FailingExecutor
-
-    try:
-        response = client.post(
-            "/api/v1/trips/preview/author",
-            json={
-                "center_lat": START[0],
-                "center_lng": START[1],
-                "duration_min": 30,
-                "route_id": plan["options"][0]["route_id"],
-            },
-        )
-    finally:
-        del client.app.dependency_overrides[get_premium_compose_executor]
-
-    assert response.status_code == 200, response.text
-    body = response.json()
-    assert body["candidate_eligible"] is False
-    assert body["narration_kind"] == "none"
-    assert body["compose_status"] == "basic_available"
-    assert body["candidate_rejection"]["code"] == "generation_failed"
-    assert body["option"] is None
-    assert body["quality"] is None
-    assert body["narration_quality"] is None
-    assert body["basic_tour"]["kind"] == "basic_tour"
-    assert body["basic_tour"]["stops"]
-
-
 
 
 # ---------------------------------------------------------------------------

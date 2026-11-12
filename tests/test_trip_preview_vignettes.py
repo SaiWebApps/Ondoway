@@ -1,18 +1,16 @@
-"""Track B (API half) — the preview cards interleave walk-past vignettes.
+"""Route-option cards interleave walk-past vignettes and walking narration.
 
-These assertions are the spec for what the workbench renders. They used to run
-against ``trips._preview_stops``, the API layer's private fourth copy of the
-interleave; that copy was deleted 2026-08-04 and the local ``_preview_stops``
-helper below now drives the ONE shared implementation
-(``src.tour.options.build_route_option``) through the API's wire adapter, so the
-same assertions now pin the code the phone runs too.
+These assertions are the spec for the cards a route option carries, on the
+preview and on the phone's own generate reply alike. The local ``_preview_stops``
+helper drives the ONE shared implementation,
+``src.tour.options.build_route_option``, so the assertions pin the code both
+surfaces run.
 """
 
 from __future__ import annotations
 
 import datetime as dt
 
-from src.api.routes.trips import _preview_cards
 from src.tour.contract import (
     POI,
     BeatRef,
@@ -30,22 +28,20 @@ from src.tour.selection import CorpusSnapshot
 
 
 def _preview_stops(script, route, vignette_beats, snapshot, overflow_by_poi):
-    """The shape the API produces, through the ONE shared interleave."""
+    """The option's cards, in order, through the ONE shared interleave."""
     beats_by_id = {b.id: b for beats in snapshot.beats_by_poi.values() for b in beats}
-    return _preview_cards(
-        build_route_option(
-            route,
-            script,
-            beats_by_id,
-            route_id="test-opt1",
-            snapshot=snapshot,
-            sequence=BeatSequence(
-                poi_beats=(),
-                vignette_beats=vignette_beats,
-                overflow_by_poi=overflow_by_poi,
-            ),
-        )
-    )
+    return build_route_option(
+        route,
+        script,
+        beats_by_id,
+        route_id="test-opt1",
+        snapshot=snapshot,
+        sequence=BeatSequence(
+            poi_beats=(),
+            vignette_beats=vignette_beats,
+            overflow_by_poi=overflow_by_poi,
+        ),
+    ).stops
 
 
 def _poi(pid: str, tier: int = 2) -> POI:
@@ -109,9 +105,8 @@ def test_vignette_interleaves_before_its_leg_destination():
         {},
     )
     assert [s.band for s in stops] == ["dwell", "vignette", "dwell"]
-    assert [s.sort_order for s in stops] == [1, 2, 3]
     vignette = stops[1]
-    assert vignette.poi_name == "v1"
+    assert vignette.name == "v1"
     assert vignette.minutes == 0
     assert vignette.narration == "A tiny plaque marks the spot."
     assert vignette.spotlight > 0
@@ -147,7 +142,6 @@ def test_no_vignettes_is_todays_shape():
         _script_two_stops(), _route({}), {}, _snapshot(_poi("vx"), BeatRef(id="b", poi_id="vx")), {}
     )
     assert [s.band for s in stops] == ["dwell", "dwell"]
-    assert [s.sort_order for s in stops] == [1, 2]
 
 
 def test_unvoiceable_vignette_is_not_shown():
@@ -260,15 +254,15 @@ def test_walk_narration_gets_its_own_leg_card():
     stops = _preview_stops(_script_with_leg_glue(), _route({}), {}, _snapshot(
         _poi("v"), BeatRef(id="b", poi_id="v", script_body="x.")), {})
     legs = _legs(stops)
-    assert len(legs) == 1, [(s.band, s.poi_name) for s in stops]
-    assert legs[0].poi_name == "Walk to Dwell One"
+    assert len(legs) == 1, [(s.band, s.name) for s in stops]
+    assert legs[0].name == "Walk to Dwell One"
     assert "head on to Dwell One" in legs[0].narration
 
 
 def test_leg_card_precedes_the_stop_it_walks_to():
     stops = _preview_stops(_script_with_leg_glue(), _route({}), {}, _snapshot(
         _poi("v"), BeatRef(id="b", poi_id="v", script_body="x.")), {})
-    order = [(s.band, s.poi_name) for s in stops]
+    order = [(s.band, s.name) for s in stops]
     i = order.index(("leg", "Walk to Dwell One"))
     assert order[i + 1] == ("dwell", "Dwell One"), order
 
@@ -277,7 +271,7 @@ def test_leg_content_is_removed_from_the_dwell_card_not_duplicated():
     """No double-voicing: a sentence lives on exactly one card."""
     stops = _preview_stops(_script_with_leg_glue(), _route({}), {}, _snapshot(
         _poi("v"), BeatRef(id="b", poi_id="v", script_body="x.")), {})
-    dwell_one = next(s for s in stops if s.band == "dwell" and s.poi_name == "Dwell One")
+    dwell_one = next(s for s in stops if s.band == "dwell" and s.name == "Dwell One")
     assert "head on to Dwell One" not in dwell_one.narration
     assert dwell_one.narration == "Stop one story."
 

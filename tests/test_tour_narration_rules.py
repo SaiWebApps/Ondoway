@@ -188,7 +188,8 @@ def test_the_stitch_supplies_one_close_per_stop_and_the_last_is_the_days():
     gone (Greta, Sofia: "to someone alone, 'on your own' is a remark").
 
     The STITCH is the stitched-corpus lane AND the one writer's source: it must supply a
-    GLUE_CLOSING at EVERY stop — the fallback the Basic lane plays, and the sentence the
+    GLUE_CLOSING at EVERY stop — the fallback that ships when the writer leaves it
+    unrewritten (reported as close_not_authored), and the sentence the
     composer is licensed to rewrite (authoring.py's grounding rule: glue keeps a source_id
     supplied in this stop's stitched script). MEASURED 2026-08-19 (W6.1 (b)): only the last
     stop carried closing lines — two of them, the second the thank-you-and-keep-exploring

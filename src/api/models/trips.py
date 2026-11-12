@@ -8,7 +8,6 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from src import city_registry
-from src.tour.candidate_eligibility import CandidateRejection
 from src.tour.contract import RouteOption, normalized_lens_list
 from src.tour.placement import PlacementPolicy, StopSegment, StopTrigger
 
@@ -504,8 +503,8 @@ class SessionReplanRequest(BaseModel):
 
 
 class TripPreviewRequest(BaseModel):
-    """Web-first preview (Phase 1.5): generate a tour's per-stop narration WITHOUT
-    a profile and WITHOUT persisting anything."""
+    """Input for POST /trips/preview: plan a day WITHOUT a profile, WITHOUT writing
+    any narration, and WITHOUT persisting anything."""
 
     center_lat: float = Field(..., ge=-90, le=90)
     center_lng: float = Field(..., ge=-180, le=180)
@@ -516,17 +515,15 @@ class TripPreviewRequest(BaseModel):
     # because neither sets model_config, so both inherit pydantic's default
     # extra="ignore" and would silently DROP an unknown field rather than reject
     # it — the caller would get a tour with no ceiling and no error saying why.
-    # TripPreviewAuthorRequest subclasses this and inherits it.
     max_stop_minutes: int | None = Field(default=None, ge=5, le=600)
     # THE PLANNER'S CLOCK — declared here for the same silently-dropped-field
     # reason as max_stop_minutes above; see TripGenerateRequest for the full
-    # story. TripPreviewAuthorRequest subclasses this and inherits both.
+    # story.
     start_datetime: str | None = None
     end_hardness: Literal["wall", "firm", "open"] = "firm"
     # WHO IS WALKING + THE DIALS (Phase 4, W4.2 panel — the workbench's whole
-    # request surface; TripPreviewAuthorRequest inherits every one, which is
-    # what lets the author call replay the exact dialed body). Same fields,
-    # same defaults, same normalization as TripGenerateRequest above.
+    # request surface). Same fields, same defaults, same normalization as
+    # TripGenerateRequest above.
     party: str | None = None
     walking_pace: float | None = Field(default=None, ge=1.0)
     max_leg_minutes: int | None = Field(default=None, ge=1)
@@ -585,61 +582,6 @@ class TripPreviewRequest(BaseModel):
             )
         return cleaned
 
-    # No narration flags: every preview uses the shared Premium certification
-    # planner, one immutable zero-retry authoring request per stop, and the pure
-    # traced-blueprint finalizer. Certification reviewers run separately.
-
-
-class TripPreviewAuthorRequest(TripPreviewRequest):
-    """The SAME plan inputs, plus which of the offered routes to write.
-
-    It builds on the plan request rather than restating it: writing re-derives the
-    plan, so every value that fed the plan has to come back unchanged, and one shared
-    definition is what guarantees "unchanged" — including the unknown-lens rejection.
-    """
-
-    route_id: str = Field(
-        ...,
-        description="The chosen route's id, copied exactly from the plan reply: "
-        "'preview-<12 hex>-optN'. The hex identifies the plan itself and N picks one "
-        "of its routes. An id that no longer matches a freshly derived plan is "
-        "refused, never quietly swapped for a different tour.",
-    )
-
-
-class TripPreviewStop(BaseModel):
-    """One stop in one explicitly typed preview artifact.
-
-    ``TripPreviewResponse.stops`` contains only complete LLM-candidate text.
-    Deterministic grounded narration, when available, lives under the separate
-    ``basic_tour`` object and is never eligible for grading.
-    """
-
-    sort_order: int
-    poi_name: str
-    lat: float
-    lng: float
-    narration: str
-    minutes: int
-    # Phase 3 spotlight model (spec s7). Additive with behavior-preserving
-    # defaults: a full dwell stop with a zero score until Step 3.5 wires the
-    # spotlight effect into selection.
-    # "leg" (added 2026-07-19) is narration spoken WHILE WALKING between stops —
-    # navigation lines and reflections. It was always emitted, but folded into the
-    # following dwell stop's narration, so an editor could not see it, could not
-    # play it on its own, and could not tell how much of a 10-minute walk was
-    # actually filled. Per the product ruling ("Audio overlaps the walking. It is a
-    # part of the tour experience.") this is real tour content and gets its own card.
-    band: Literal["dwell", "vignette", "leg"] = "dwell"
-    spotlight: float = 0.0
-    # KE9: this dwell stop has "keep exploring here" EXTRAS — beats the tour's
-    # time budget capped out (poi_id present in overflow_by_poi with non-empty
-    # overflow). A bool flag, not the extra_beat_ids list: the workbench only
-    # needs to render a badge, and the preview must not leak full beat-id lists.
-    # Always False for vignette (walk-past) stops. Default False is
-    # behavior-preserving.
-    has_deeper_dive: bool = False
-
 
 class TripPreviewTourability(BaseModel):
     """Density / delivery disclosure shipped alongside a generated preview.
@@ -662,15 +604,6 @@ class TripPreviewTourability(BaseModel):
     one_way_alternative_destination: str | None = None
 
 
-class TripPreviewBasicTour(BaseModel):
-    """Emergency grounded guide, deliberately outside the LLM grading lane."""
-
-    kind: Literal["basic_tour"] = "basic_tour"
-    reason: Literal["llm_generation_failed", "llm_candidate_ineligible"]
-    total_audio_min: int = Field(..., ge=0)
-    stops: list[TripPreviewStop]
-
-
 class TripPreviewPromise(BaseModel):
     """One promised item of the planned day, as the pre-commit surface shows it.
 
@@ -691,22 +624,20 @@ class TripPreviewPromise(BaseModel):
 class TripPreviewResponse(BaseModel):
     """THE PLAN, and nothing else — route options, no narration, no spend.
 
-    The first of the two halves the tour engine was split into on 2026-08-04. This
-    endpoint picks the places, orders and routes them, and prices the walk; it calls
-    no provider, so its answer is free and it is what a person chooses FROM. Writing
-    the chosen route is a separate call, POST /trips/preview/author.
+    This endpoint picks the places, orders and routes them, and prices the walk; it
+    calls no provider, so its answer is free. Writing the day is the saved-trip pair,
+    POST /trips/generate then POST /trips/{id}/compose.
 
-    Everything that described WRITTEN text — the flat stop list, the narrator's name,
-    the candidate lane, the Basic fallback, the quality verdicts — moved there with
-    the writing. Keeping any of it here would advertise something planning cannot
-    produce, on a reply that is now sent before anyone has chosen anything.
+    It carries nothing that describes WRITTEN text — no flat stop list, no narrator's
+    name, no quality verdict — because planning produces none, and a field here would
+    advertise something planning cannot produce.
     """
 
     spine_area: str | None = None
     # THE day, as a one-element list (Phase 4, design §8.1). The field stays a list
-    # because the author route's opt-N ids and every stored pre-Phase-4 payload are
-    # list-shaped; there is simply exactly one entry now, carrying its stops, its
-    # arrival time and its per-corridor lens note.
+    # because TripGenerateResponse.options, which carries the same RouteOption, is a
+    # list; there is exactly one entry, carrying its stops, its arrival time and its
+    # per-corridor lens note.
     options: list[RouteOption] = Field(default_factory=list)
     # None = GREEN (no warning needed). RED never reaches a 200 response.
     tourability: TripPreviewTourability | None = None
@@ -731,61 +662,3 @@ class TripPreviewResponse(BaseModel):
     # Claude to fix it. Empty list means nothing degraded, which is a real statement
     # rather than an absence. See src/tour/degradations.py.
     degradations: list[dict] = Field(default_factory=list)
-
-
-class TripAuthoredTourResponse(BaseModel):
-    """THE WRITING: the one route that was chosen, now narrated.
-
-    The second of the two halves. It never re-plans. Its places, their order, its
-    arrival time and its walk-past sights are the chosen route's, unchanged — only
-    the words are new. The Basic fallback, the narrator's name and the quality
-    verdicts live here because they all describe written text, which the plan-only
-    reply no longer has.
-
-    ``stops`` is gradeable only when ``candidate_eligible`` is true. A grounded
-    emergency guide is returned under ``basic_tour`` instead of being mixed into the
-    written stops or assigned a quality score — and there is deliberately NO
-    top-level stop list, so a surface cannot render one tour's places under another
-    tour's words.
-    """
-
-    # Which route this is, echoed back exactly as it was sent.
-    route_id: str
-    # THE WRITTEN ROUTE. Same places, same order, same arrival time and same
-    # walk-past sights as the option that was chosen, with the narration filled in.
-    # None when nothing was written (the Basic lane below).
-    option: RouteOption | None = None
-    spine_area: str | None = None
-    total_audio_min: int
-    candidate_eligible: bool = False
-    candidate_status: Literal["premium_candidate_eligible_for_certification"] | None = None
-    narration_kind: Literal["llm_candidate", "none"] = "none"
-    basic_tour: TripPreviewBasicTour | None = None
-    # None = GREEN (no warning needed). RED never reaches a 200 response.
-    tourability: TripPreviewTourability | None = None
-    # ``composed`` is the only gradeable state. ``basic_available`` means no LLM
-    # candidate crossed the provenance gate; the separate basic_tour may still be
-    # offered to a stranded user. None exists only on legacy serialized payloads.
-    compose_status: str | None = None
-    # Present only when a generated artifact was deliberately kept out of the
-    # LLM-candidate lane. This exposes provenance failure without leaking or
-    # grading the discarded mixed narration.
-    candidate_rejection: CandidateRejection | None = None
-    # Which narrator actually wrote this tour ('anthropic' | 'openai'), so the
-    # workbench can label an Opus-vs-ChatGPT comparison. None when not composed.
-    provider: str | None = None
-    # EVERYTHING THAT SILENTLY DEGRADED while writing this tour. Same channel, same
-    # row shape and same rendering as the plan reply's. See src/tour/degradations.py.
-    degradations: list[dict] = Field(default_factory=list)
-    # Objective spoken-narration quality signals for the composed tour (stilted vs
-    # engagement scores + the per-100-word tells), so the comparison is MEASURED,
-    # not vibes. None when not composed. See tour.narration_quality.
-    narration_quality: dict | None = None
-    # THE QUALITY RUBRIC verdict for this tour — the mechanical floor of the tour
-    # quality standard (fixtures/tour-quality-standard/01-standard.md), run
-    # on EVERY tour at $0. Carries {passed, blockers[], warnings[], stats{}}. A
-    # failing verdict means the tour breached the standard (a rich POI starved to a
-    # line, a stop gorged past the listenable cap, a repeated sentence) and the
-    # workbench shows the editor exactly which check fired and where, instead of
-    # leaving them to notice it by reading. See tour.quality_rubric.
-    quality: dict | None = None

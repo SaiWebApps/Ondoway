@@ -377,8 +377,7 @@ the SAME engine.** The whole-tour composer it described — `compose_script`,
 
 | surface | endpoint | composer | on gate failure |
 |---|---|---|---|
-| workbench | `POST /trips/preview` | per-stop authoring (`src/tour/authoring.py`) | HTTP 200 + labelled Basic tour |
-| mobile app | `POST /trips/{id}/compose` | per-stop authoring, via the author-a-prebuilt-route seam | raises → **HTTP 422, trip left UNMUTATED** |
+| workbench and mobile app | `POST /trips/{id}/compose` | per-stop authoring (`src/tour/authoring.py`) | raises → **HTTP 422, trip left UNMUTATED** |
 
 **The persistence argument that forced the 2026-07-19 revert still holds, and is
 honoured rather than overridden.** `/trips/{id}/compose` writes to Neo4j

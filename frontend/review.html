@@ -1162,23 +1162,15 @@
   });
 
   // Tour-preview state + ONE delegated listener (installed once at init) for the tour view's
-  // Generate button and per-stop Listen buttons. Keyed on data-tour-stop, disjoint from the
-  // incoming beat-TTS handler's data-beat-tts, so they never cross-fire.
-  let tourStops = [];
-  // THE planned day currently on screen (the plan reply's one RouteOption —
-  // design §8.1 deleted the pick, so `options` is a list of exactly one).
-  // Null whenever the page is showing written stops, a refusal, or nothing.
-  let tourDay = null;
-  // The exact body of the last PLAN request, replayed verbatim on the AUTHOR
-  // call so the endpoint rebuilds the day the operator is looking at. EVERY
-  // dial writes into this object (W4.2 panel hazard: a dial that skips it
-  // authors yesterday's knobs and 409s).
+  // buttons. The per-stop audio buttons are keyed on data-phone-stop and
+  // data-phone-keep-exploring, disjoint from the incoming beat-TTS handler's data-beat-tts,
+  // so they never cross-fire.
+  //
+  // The exact body of the last PLAN request. "Run it like the phone" builds its
+  // /trips/generate request from it (phoneGenerateBody), so the day the phone path
+  // writes is the day on screen. EVERY dial writes into this object; a dial that
+  // skips it would send the phone path a different day.
   let lastTourPlanBody = null;
-  // The minutes the operator asked for, needed by renderTourStops's thin-tour note.
-  let lastTourRequestedMinutes = 60;
-  // A one-line message to show above the next rendered day. Set only when the
-  // plan was re-fetched on the operator's behalf (see authorTourDay).
-  let tourPlanNotice = null;
   // Debounce handle for the live replan (W4.2 panel): a burst of dial changes
   // costs ONE plan request, ~400ms after the last turn.
   let tourReplanTimer = null;
@@ -1191,19 +1183,14 @@
   let tourPointLayer = null;   // A/B pins dropped by map clicks (dies with the map on re-init)
   detailBody.addEventListener('click', (e) => {
     if (e.target.closest('#tourGenerateBtn')) { generateTourPreview(); return; }
-    if (e.target.closest('#tourWriteBtn')) { authorTourDay(); return; }
     if (e.target.closest('#tourPhoneRunBtn')) { runTourAsPhone(); return; }
     if (e.target.closest('#tourClearBtn')) { clearTourPoints(); return; }
-    if (e.target.closest('#tourFeedbackUp')) { submitTourFeedback('up'); return; }
-    if (e.target.closest('#tourFeedbackDown')) { submitTourFeedback('down'); return; }
     // The tourist's two audio doors, per stop: the scheduled narration the voicing
     // pass wrote, and the on-demand deep dive behind "keep exploring here".
     const hear = e.target.closest('.tts-play-btn[data-phone-stop]');
     if (hear) { playPhoneStopAudio(parseInt(hear.dataset.phoneStop, 10)); return; }
     const more = e.target.closest('.tts-play-btn[data-phone-keep-exploring]');
     if (more) { playKeepExploring(parseInt(more.dataset.phoneKeepExploring, 10)); return; }
-    const play = e.target.closest('.tts-play-btn[data-tour-stop]');
-    if (play) { ttsPlayTourStop(parseInt(play.dataset.tourStop, 10)); return; }
   });
   const completionBanner = document.getElementById('completionBanner');
   const mainLayout = document.getElementById('mainLayout');
@@ -2189,8 +2176,8 @@
   function renderDetail() {
     if (detailListeners) detailListeners.abort();
     detailListeners = new AbortController();
-    // Tour-preview view (Phase 1.5e): generate + audition a walking tour from this corpus.
-    // Reuses the workbench's own field/button components and the shared ttsPlay player.
+    // Tour-preview view (Phase 1.5e): plan a walking day from this corpus, then run it
+    // through the tourist's own endpoints. Reuses the workbench's own field/button components.
     if (activeSelection.source === 'tour') {
       detailEmpty.style.display = 'none';
       detailView.style.display = '';
@@ -2327,8 +2314,8 @@
       // THE LIVE REPLAN (W4.2 panel): any dial or input change re-plans the day
       // automatically. 'change' rather than 'input' so a half-typed coordinate is
       // never planned mid-keystroke; the debounce folds a burst of dial turns into
-      // one request. Controls inside #tourStops (the feedback note) are part of the
-      // rendered day, not dials, and must not trigger a replan. The listener dies
+      // one request. Anything inside #tourStops is part of the rendered day, not a
+      // dial, and must not trigger a replan. The listener dies
       // with detailListeners on the next renderDetail(), like every other view's.
       detailBody.querySelector('.tour-preview').addEventListener('change', (e) => {
         if (e.target.closest('#tourStops')) return;
@@ -3264,9 +3251,9 @@
   ttsProviderSelect.addEventListener('change', () => { ttsProvider = ttsProviderSelect.value; });
 
   // Reusable TTS core: replay from cache or fetch+play `text` through `audioEl`,
-  // with the play-button lifecycle. ONE audio implementation, shared by beat TTS
-  // (ttsPlayBeat) and the tour-preview stops. The origText capture/restore stays
-  // INSIDE here so any caller's button (with any label) restores correctly.
+  // with the play-button lifecycle. Beat TTS (ttsPlayBeat) plays through it. The
+  // origText capture/restore stays INSIDE here so any caller's button (with any
+  // label) restores correctly.
   // DEFECT 5: cacheKeys with a POST /audio/preview in flight. The cache alone
   // cannot deduplicate concurrent callers — they all pass the cache check
   // before the first response lands, so N callers issue N REAL PAID TTS calls
@@ -3369,7 +3356,7 @@
     await ttsPlay({ text, cacheKey, btn, audioEl });
   }
 
-  // ── Tour preview: plan (POST /trips/preview) → render THE day → write via authorTourDay ──
+  // ── Tour preview: plan (POST /trips/preview) → render THE day → run it like the phone ──
 
   // The live replan (W4.2 panel): every dial change funnels here, and ~400ms
   // after the last one the day is re-planned. One debounce, one request, however
@@ -3406,8 +3393,8 @@
       }
     }
     // THE DIALS (W4.2 panel). Read every control here so all of them land in the
-    // ONE body below — the author call replays that body verbatim, so a dial read
-    // anywhere else would author yesterday's knobs and 409. "Omit" semantics are
+    // ONE body below — the phone path builds its request from that body, so a dial
+    // read anywhere else would send it a different day. "Omit" semantics are
     // literal: an off dial contributes NO field, never a null.
     const dateVal = (document.getElementById('tourDate') || {}).value || '';
     const timeVal = (document.getElementById('tourTime') || {}).value || '';
@@ -3421,8 +3408,6 @@
     const avoidQueuesEl = document.getElementById('tourAvoidQueues');
     const categoryMinus = Array.from(
       document.querySelectorAll('#tourCategoryMinus input:checked')).map(c => c.value);
-    // One shared Premium algorithm, with one zero-retry authoring call per routed
-    // stop. Certification reviewers are separate and do not run here.
     // NO spend confirmation here, ever. The owner ordered the cost dialog removed
     // on 2026-07-31: the workbench must replicate the tourist's app experience as
     // closely as possible, and a tourist is never asked to approve spend. Do not
@@ -3436,12 +3421,11 @@
     dialEls.forEach(el => { el.disabled = true; });
     const replanNote = document.getElementById('tourReplanNote');
     if (replanNote) replanNote.style.display = '';
-    stopsEl.innerHTML = ''; tourStops = []; tourDay = null; drawTourRoute([]);  // clear map unconditionally (D5a)
-    lastTourRequestedMinutes = duration;
+    stopsEl.innerHTML = ''; drawTourRoute([]);  // clear map unconditionally (D5a)
     try {
       // ONE body, built once. Remembered so the degradation panel's "Copy report
-      // for Claude" can say WHAT WAS ASKED FOR, and replayed VERBATIM on the
-      // authoring call so the endpoint rebuilds the very plan this day came from.
+      // for Claude" can say WHAT WAS ASKED FOR, and so the phone path's generate
+      // request carries the very inputs this day came from.
       const body = {
         center_lat: lat, center_lng: lng, duration_min: duration,
         lenses: lenses.length ? lenses : null, round_trip: roundTrip,
@@ -3491,10 +3475,6 @@
       genBtn.disabled = false; genBtn.textContent = 'Plan the day';
       dialEls.forEach(el => { el.disabled = false; });
       if (replanNote) replanNote.style.display = 'none';
-      // A successful render has already consumed it. Anything else — a refusal, an
-      // error, a thrown request — means the line was never shown, and it must not
-      // survive to caption a later, unrelated day.
-      tourPlanNotice = null;
     }
   }
 
@@ -3503,7 +3483,6 @@
   function renderTourRefusal(detail) {
     const stopsEl = document.getElementById('tourStops');
     if (!stopsEl) return;
-    tourStops = [];
     lastTourDaySignature = null;  // a refusal replaced the day — nothing to be "already true" of
     drawTourRoute([]);  // no route on a refusal — clear any prior line/pins
     stopsEl.innerHTML = '';
@@ -3584,7 +3563,7 @@
     // their destination stop's coordinates (there is no single point for a walk),
     // so plotting them would stack a duplicate numbered pin exactly on top of the
     // dwell pin that follows and add a zero-length segment to the polyline. The map
-    // shows PLACES; the leg cards below the map show what is heard between them.
+    // shows PLACES only.
     const located = (stops || []).filter(s =>
       s.band !== 'leg' && typeof s.lat === 'number' && typeof s.lng === 'number');
     const pts = located.map(s => [s.lat, s.lng]);
@@ -3610,15 +3589,13 @@
     persistentMap.fitBounds(pts, { padding: [40, 40], maxZoom: 15 });
   }
 
-  // Adapt a RouteOption's stops to the card shape this page already draws and
-  // renders, so the map sketch and the stop list stay ONE implementation for both
-  // the plan options and the authored tour.
+  // Adapt a RouteOption's stops to the shape drawTourRoute plots.
   //
   // The wire shapes differ in two places and only two: a RouteOptionStop calls the
-  // place `name` where a rendered card calls it `poi_name`, and it carries no
+  // place `name` where drawTourRoute reads `poi_name`, and it carries no
   // `sort_order` at all — that is a 1-based counter over the EMITTED cards, which
-  // is what `enumerate(option.stops, start=1)` means on the server side. Everything
-  // else passes through untouched, INCLUDING `band`: a 'leg' card is narration heard
+  // is what `enumerate(option.stops, start=1)` means on the server side. The fields
+  // the map reads pass through untouched, INCLUDING `band`: a 'leg' card is narration heard
   // while walking rather than a place, and drawTourRoute drops it by that exact
   // value. Coercing it to 'dwell' here would stack a duplicate pin on the stop the
   // walk arrives at, which is the bug drawTourRoute's own comment exists to prevent.
@@ -3648,80 +3625,8 @@
       visit_or_walk_past: s.visit_or_walk_past,
       sort_order: i + 1,
       poi_name: s.name || '',
-      narration: s.narration || '',
       minutes: s.minutes || 0,
-      spotlight: s.spotlight,
-      has_deeper_dive: !!s.has_deeper_dive,
-      // W4.2 honesty surface: per-stop queue price and door-side. Undefined until
-      // the server lands them; every consumer renders them conditionally.
-      queue_minutes: s.queue_minutes,
-      goes_inside: s.goes_inside,
     }));
-  }
-
-  // ONE narrator engine: the premium Opus authoring path. The second narrator label
-  // this used to carry went with the deleted Opus-vs-alternate-provider compose
-  // comparison (D9 loss 1); the 'openai' the workbench still speaks of elsewhere is
-  // the TTS voice, not a narrator.
-  function _providerLabel(p) {
-    if (p === 'anthropic') return 'Claude Opus 4.8';
-    return p || '—';
-  }
-  function _composeStatusLabel(s) {
-    return ({
-      composed: '✓ Premium candidate — eligible for certification',
-      refused: '✗ compose refused — showing grounded stitch',
-      basic_available: 'Basic grounded guide — not Premium and not graded',
-      // Kept so an older/legacy response still renders something honest instead
-      // of a raw key.
-      stitched: 'grounded stitch only — no AI voice reached this tour',
-    })[s] || s || '—';
-  }
-  function _q(v) { return (v === 0 || v) ? v : '—'; }
-  // Objective spoken-narration quality panel — measured, not vibes. Lower stilted
-  // is better; higher engagement/burstiness is better.
-  // Render the server-side quality-rubric verdict. Returns null when the response
-  // carries none (older API), so this is purely additive.
-  function buildQualityRubricPanel(data) {
-    const q = data && data.quality;
-    if (!q) return null;
-    const wrap = document.createElement('div');
-    const ok = !!q.passed;
-    const accent = ok ? '90,190,120' : '230,110,110';
-    wrap.style.cssText = `background:rgba(${accent},0.10);border:1px solid rgba(${accent},0.45);`
-      + 'border-radius:6px;padding:8px 10px;margin:0 0 10px;font-size:0.82rem;';
-    const s = (q.stats) || {};
-    let html = `<b>Quality rubric:</b> ${ok ? '✓ passes the standard'
-      : '✗ FAILS the standard — this tour breaches the quality bar'}`;
-    if (s.total_words != null) {
-      // "narrated stops" — the rubric scores stops that carry script sentences. The
-      // header count above is higher because it also includes walk-past VIGNETTES,
-      // which are one-liners with no dwell and are not gorge/starve candidates.
-      html += ` &nbsp;·&nbsp; ${s.n_stops || 0} narrated stops · ${s.total_words} words · `
-        + `${s.audio_minutes != null ? s.audio_minutes : '—'} min audio`;
-    }
-    const rows = [].concat(
-      (q.blockers || []).map(f => ({ f, sev: 'BLOCKER', col: '#e06c6c' })),
-      (q.warnings || []).map(f => ({ f, sev: 'warn', col: '#d8b45a' })),
-    );
-    if (rows.length) {
-      html += '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">';
-      for (const { f, sev, col } of rows) {
-        const where = f.poi_name || (f.stop_idx != null ? `stop ${f.stop_idx + 1}` : '—');
-        html += `<div><span style="color:${col};font-weight:600;">${sev}</span> `
-          + `<span style="color:var(--text-muted);">${escHtml(f.check)}</span> · `
-          + `<b>${escHtml(where)}</b> — ${escHtml(f.message)}</div>`;
-      }
-      html += '</div>';
-    }
-    if (s.words_by_stop) {
-      const per = Object.entries(s.words_by_stop)
-        .map(([k, v]) => `${Number(k) + 1}:${v}w`).join('  ');
-      html += `<div style="margin-top:4px;color:var(--text-muted);font-size:0.74rem;">`
-        + `words per stop — ${escHtml(per)}</div>`;
-    }
-    wrap.innerHTML = html;
-    return wrap;
   }
 
   // ── What quietly went wrong while building this tour ──────────────────────
@@ -3813,81 +3718,99 @@
     return panel;
   }
 
-  function buildNarrationQualityPanel(data) {
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'background:rgba(120,140,255,0.08);border:1px solid rgba(120,140,255,0.35);'
-      + 'border-radius:6px;padding:8px 10px;margin:0 0 10px;font-size:0.82rem;';
-    const q = data && data.narration_quality;
-    let html = `<b>Narrator:</b> ${escHtml(_providerLabel(data && data.provider))}`
-      + ` &nbsp;·&nbsp; <b>${escHtml(_composeStatusLabel(data && data.compose_status))}</b>`;
-    if (q) {
-      const t = q.tells_per_100w || {};
-      html += '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:12px;">'
-        + `<span title="Lower is better: moralizing closers, puffery, uniform rhythm, dense dates">Stilted <b>${_q(q.stilted_score)}</b></span>`
-        + `<span title="Higher is better: second-person address, look-here prompts, sentence variation">Engagement <b>${_q(q.engagement_score)}</b></span>`
-        + `<span title="Sentence-length variation — higher = more human, less robotic">Burstiness <b>${_q(q.burstiness)}</b></span>`
-        + `<span title="Average words per sentence — lower is easier to hear">Avg sentence <b>${_q(q.mean_sentence_words)}w</b></span>`
-        + `<span title="Em-dashes per 100 words">Em-dash <b>${_q(t.em_dash)}</b></span>`
-        + `<span title="4-digit years per 100 words — date density">Dates <b>${_q(t.year_density)}</b></span>`
-        + '</div>';
-      if (q.reliable === false) {
-        html += `<div style="margin-top:4px;color:#c99;font-size:0.72rem;">⚠ short sample (${_q(q.n_words)} words) — the Stilted/Engagement composites are noisy here; trust the individual tells, not small deltas.</div>`;
-      }
-    }
-    wrap.innerHTML = html;
-    return wrap;
-  }
-
-  function renderTourStops(data, requestedMinutes) {
+  // The PLAN screen: THE day. Design §8.1 deleted the three-route pick — the
+  // plan reply's `options` is a list of exactly ONE route, and that one day
+  // renders immediately: the map, the ordered places, the timing split, and the
+  // honesty surface (promises, day notes, unplanned slack — W4.2 panel). Places
+  // only, by owner ruling: names, order, walking time and ETA, and no
+  // descriptive text of any kind. NOTHING has been written or voiced yet; the
+  // one "Run it like the phone" action below is what writes and voices the day.
+  // `requestedMinutes` is the duration asked for, which the short-tour notes name.
+  function renderTourDay(data, requestedMinutes) {
     const stopsEl = document.getElementById('tourStops');
     if (!stopsEl) return;
-    const basicTour = data && data.candidate_eligible === false && data.basic_tour;
-    const activeTour = basicTour || data || {};
-    const isBasic = !!basicTour;
-    // The authored tour arrives as the ONE option the operator picked, so its stops
-    // are `option.stops` — there is no top-level stop list any more, because there
-    // is now a single interleave and the authored route IS that option. The Basic
-    // fallback lane still carries its own flat `stops`, so read that first and fall
-    // back to the option; reading only one of the two renders an empty tour.
-    tourStops = Array.isArray(activeTour.stops)
-      ? activeTour.stops
-      : tourOptionMapStops(activeTour.option);
-    const activeAudioMinutes = activeTour.total_audio_min || 0;
-    drawTourRoute(tourStops);
+    const day = (data && Array.isArray(data.options) && data.options.length)
+      ? data.options[0] : null;
     stopsEl.innerHTML = '';
-    const summary = document.createElement('div');
-    summary.className = 'tour-summary';
-    summary.style.cssText = 'color:var(--muted,#888);font-size:0.85rem;margin:8px 0;';
-    // Count PLACES as stops. A band='leg' card is narration heard on the way to a
-    // stop, not a stop — counting it made a 4-stop tour report 7. Legs are reported
-    // separately so the editor can see how many walks carry any narration at all.
-    const placeCount = tourStops.filter(s => s.band !== 'leg').length;
-    const legCount = tourStops.length - placeCount;
-    const legNote = legCount ? ` · ${legCount} narrated walk${legCount === 1 ? '' : 's'}` : '';
-    summary.textContent = `${placeCount} stops${legNote} · spine: ${(data && data.spine_area) || '—'} · ~${activeAudioMinutes} min of audio`;
-    stopsEl.appendChild(summary);
-    // OWNER RULING 2026-07-31: "Don't just log errors. Actually show them in the
-    // workbench UI. Otherwise, they're invisible." Anything that quietly degraded
-    // while building this tour arrives on `degradations` and is rendered HERE,
-    // above the stops, where it cannot be missed. A soft failure that only
-    // reaches a server log looks exactly like success on this screen.
+
+    // Dead-notch honesty (W4.2 panel): a dial that changes nothing must say so,
+    // or the editor believes it did something. "Identical stop-for-stop" means
+    // the same places, order, timing, door-sides and queue prices — exactly what
+    // the cards below show.
+    const signature = day ? JSON.stringify((day.stops || []).map(s =>
+      [s.name, s.minutes, s.band, s.goes_inside, s.queue_minutes])) : null;
+    const unchanged = !!(signature && lastTourDaySignature && signature === lastTourDaySignature);
+    lastTourDaySignature = signature;
+
+    drawTourRoute(day ? tourOptionMapStops(day) : []);
+
+    if (!day) {
+      const empty = document.createElement('div');
+      empty.className = 'tour-options-empty db-beat-card';
+      empty.textContent = 'No route was found from here for this timing.';
+      stopsEl.appendChild(empty);
+      return;
+    }
+
+    // A 'leg' card is narration heard on the WAY to a stop, not a place, and a
+    // walk-past (isWalkPast) is something walked past without stopping, so neither
+    // counts as a stop. A seated stop with a low narration band IS a stop and its minutes
+    // are standing still (W5.1). The A→B finish point (is_finish_point, W4.12) is
+    // where the day ENDS, not a place: not a stop, not counted, rendered as an ending.
+    const dwell = (day.stops || []).filter(
+      s => !isWalkPast(s) && s.band !== 'leg' && !s.is_finish_point);
+    const finishPoint = (day.stops || []).find(s => s.is_finish_point) || null;
+    const walkPast = (day.stops || []).filter(s => isWalkPast(s)).length;
+    const dwellMin = dwell.reduce((sum, s) => sum + (s.minutes || 0), 0);
+    const totalMin = Math.round((day.eta_seconds || 0) / 60);
+    const walkMin = Math.max(0, totalMin - dwellMin);
+
+    const head = document.createElement('div');
+    head.className = 'tour-day-head';
+    head.style.cssText = 'color:var(--muted,#888);font-size:0.85rem;margin:8px 0;';
+    // The longest single walk (W4.12): the number the "Shorter walks" dial is
+    // named after, so a person can see whether a turn had anything to do.
+    const longestWalk = (data && typeof data.longest_walk_minutes === 'number')
+      ? ` · longest single walk ${data.longest_walk_minutes} min` : '';
+    head.textContent = `${dwell.length} stops · ${totalMin} min total · `
+      + `about ${walkMin} min walking and ${dwellMin} min standing still${longestWalk}`
+      + (walkPast ? ` · ${walkPast} walk-past sight${walkPast === 1 ? '' : 's'}` : '')
+      + ` · spine: ${(data && data.spine_area) || '—'}`;
+    stopsEl.appendChild(head);
+
+    // The dead notch says so out loud, briefly — and TRUTHFULLY. "Already true"
+    // is only true if the day really honours what was asked. The leg cap is
+    // enforced by the planner on its estimated legs and the street-routed leg
+    // can land a little over (measured at the W4.12 close: 473 s estimated,
+    // 576 s routed, against a 540 s cap), so a 9-minute cap can hand back the
+    // identical day with a 10-minute longest walk on the head line. That is not
+    // "already true"; it is "the closest day", and it says so with the number.
+    if (unchanged) {
+      const capMin = lastTourPlanBody && Number(lastTourPlanBody.max_leg_minutes);
+      const longest = data && typeof data.longest_walk_minutes === 'number'
+        ? data.longest_walk_minutes : null;
+      const capMissed = capMin > 0 && longest !== null && longest > capMin;
+      const same = document.createElement('div');
+      same.className = 'tour-dead-notch-note';
+      same.style.cssText = 'color:var(--text-muted);font-size:0.82rem;font-style:italic;margin:0 0 8px;';
+      same.textContent = capMissed
+        ? `the closest day — its longest walk is ${longest} min by the street route, over the ${capMin}-minute limit`
+        : 'already true of this day';
+      stopsEl.appendChild(same);
+      if (!capMissed) setTimeout(() => { same.remove(); }, 2500);
+    }
+
+    const note = document.createElement('div');
+    note.className = 'tour-day-note';
+    note.style.cssText = 'color:var(--text-muted);font-size:0.8rem;margin:0 0 10px;';
+    note.textContent = 'Nothing has been written or recorded yet. Run it like the phone and the narration and audio are made for this day.';
+    stopsEl.appendChild(note);
+
+    // Anything that went wrong while PLANNING is shown here, before the operator
+    // can spend anything on writing — the same panel the phone run uses.
     const degradePanel = buildDegradationPanel(data);
     if (degradePanel) stopsEl.appendChild(degradePanel);
-    if (isBasic) {
-      const lane = document.createElement('div');
-      lane.className = 'tour-basic-lane';
-      lane.style.cssText = 'background:rgba(120,160,255,0.10);border:1px solid rgba(120,160,255,0.45);'
-        + 'color:#7fa3ff;font-size:0.85rem;padding:8px 10px;border-radius:6px;margin:0 0 10px;';
-      lane.textContent = 'Basic grounded guide — not Premium and not graded. '
-        + 'These grounded stops remain available while Premium narration is ineligible.';
-      stopsEl.appendChild(lane);
-    } else {
-      // Premium narrator and measured spoken-narration signals belong only to the
-      // eligible customer-visible LLM lane.
-      stopsEl.appendChild(buildNarrationQualityPanel(data));
-      const rubricPanel = buildQualityRubricPanel(data);
-      if (rubricPanel) stopsEl.appendChild(rubricPanel);
-    }
+
     // Phase 6 contract: YELLOW = generate but WARN. Present only for thin areas
     // (e.g. one isolated mega-anchor -> a legitimate single-stop tour); without
     // this banner such tours read as silent bugs. C11a: the engine also attaches
@@ -3916,19 +3839,16 @@
     }
     // Thin-delivery disclosure. The density gate rates the reachable POOL, so a
     // rich area reads GREEN even when the DELIVERED route is far shorter than
-    // requested (observed live: 30-min Louvre request -> 1 stop / 2 min of audio,
-    // silent). C11a made this engine-authoritative: selection now flags
-    // GREEN-but-delivered_thin (delivered audio < half the target, or a single
-    // dominating stop) and attaches the assessment with status GREEN. This note
-    // is now driven by that signal -- it REPLACES the prior client-side
-    // total_audio_min < 25% heuristic (which double-counted glue and could not
-    // see the real per-stop audio the engine measures).
+    // requested. Selection flags GREEN-but-delivered_thin (delivered audio < half
+    // the target, or a single dominating stop) and attaches the assessment with
+    // status GREEN; this note is driven by that signal. The plan reply carries no
+    // audio total, so the note names the request rather than a minute count.
     if (data && data.tourability && data.tourability.delivered_thin) {
       const note = document.createElement('div');
       note.className = 'tour-thin-delivery-note';
       note.style.cssText = 'background:rgba(120,160,255,0.10);border:1px solid rgba(120,160,255,0.45);'
         + 'color:#7fa3ff;font-size:0.85rem;padding:8px 10px;border-radius:6px;margin:0 0 8px;';
-      note.textContent = `ⓘ Short tour: ~${activeAudioMinutes} min of audio`
+      note.textContent = 'ⓘ Short tour'
         + (requestedMinutes ? ` for a ${requestedMinutes}-min request` : '')
         + `. This area is rich, but this route delivers fewer stops than it could — `
         + `an honest thin tour, not a data problem.`;
@@ -3937,24 +3857,13 @@
     // HONESTLY SHORT. Duration is a ceiling, not a contract to fill: when the area
     // cannot support the length asked for, the planner returns the longest tour it
     // CAN support rather than walking the tourist somewhere pointless to pad the
-    // clock. That padding was the reported bug, so this sentence is what makes
-    // removing it safe — without it a five-hour request silently comes back as
-    // four hours forty and looks broken.
+    // clock. This sentence is what makes that safe — without it a five-hour request
+    // silently comes back as four hours forty and looks broken.
     //
-    // READ FROM THE OPTION, NOT `data.tourability`. That channel is null on exactly
+    // READ FROM THE DAY, NOT `data.tourability`. That channel is null on exactly
     // this tour: the engine attaches it only when the assessment is YELLOW or the
     // delivery is thin, and an honestly-short tour out of a rich area is neither.
-    //
-    // Two shapes, both deliberate: the authored reply carries the written route on
-    // `option`, and a plan-shaped reply carries THE day as `options` — a list of
-    // exactly one since design §8.1 deleted the pick, so options[0] IS the day,
-    // not a fallback among three.
-    const planDay = (data && Array.isArray(data.options) && data.options.length)
-      ? data.options[0] : null;
-    const shortfallSeconds =
-      (activeTour.option && activeTour.option.elapsed_shortfall_seconds)
-      || (planDay && planDay.elapsed_shortfall_seconds)
-      || 0;
+    const shortfallSeconds = day.elapsed_shortfall_seconds || 0;
     if (shortfallSeconds > 0) {
       const note = document.createElement('div');
       note.className = 'tour-elapsed-shortfall-note';
@@ -3968,189 +3877,16 @@
         + 'of tour without walking somewhere that is not worth the walk.';
       stopsEl.appendChild(note);
     }
-    // Phase 3 spotlight: the per-corridor lens coverage note (present only when
-    // the engine surfaces it — off-genre corridors read "only N places speak to …").
-    // The live note now travels on the chosen option (RouteOption.lens_coverage_note);
-    // the top-level field it used to sit on is gone from the authored response. Read
-    // both, or an off-genre corridor silently stops explaining itself.
-    const lensCoverageNote = (data && data.lens_coverage_note)
-      || (data && data.option && data.option.lens_coverage_note);
-    if (lensCoverageNote) {
+    // Phase 3 spotlight: the per-corridor lens coverage note, present only when the
+    // engine surfaces it (off-genre corridors read "only N places speak to …"). It
+    // travels on the day itself (RouteOption.lens_coverage_note).
+    if (day.lens_coverage_note) {
       const note = document.createElement('div');
       note.className = 'tour-lens-coverage';
       note.style.cssText = 'color:var(--muted,#888);font-size:0.8rem;font-style:italic;margin:0 0 8px;';
-      note.textContent = lensCoverageNote;
+      note.textContent = day.lens_coverage_note;
       stopsEl.appendChild(note);
     }
-    tourStops.forEach((s, i) => {
-      const el = document.createElement('div');
-      // Step B.5: walk-past sights render distinctly — 0-minute (walk past) styling;
-      // a non-dwell NARRATION band still shows as a tag on the title, but only a
-      // place that is walked past (isWalkPast) is drawn as one. Seated stops keep
-      // their minutes whatever band their spotlight earned.
-      const isVignette = isWalkPast(s);
-      el.className = 'tour-stop db-beat-card' + (isVignette ? ' tour-stop--vignette' : '');
-      // Phase 3 spotlight score (and band, when not a plain dwell stop).
-      const spot = (typeof s.spotlight === 'number') ? ` · spotlight ${s.spotlight.toFixed(2)}` : '';
-      const bandTag = (s.band && s.band !== 'dwell')
-        ? ` <span class="tour-vignette-tag">${escHtml(s.band)}</span>` : '';
-      // KE9: a dwell stop the budget capped out beats on carries "keep exploring
-      // here" extras — flag it with a chip (never on vignette/walk-past stops).
-      const deeperDiveTag = (!isVignette && s.has_deeper_dive)
-        ? ` <span class="tour-deeper-dive-tag" title="This stop has extra beats — keep exploring here">Keep exploring</span>` : '';
-      // A leg card's `minutes` is the WALK, not time standing still — labelling it
-      // "min here" would invert the whole point of the card, which exists to show
-      // how much of a walk is filled with narration. Measured on the live Paris
-      // graph: a 4-minute walk to the Conciergerie carries 11 words (4 seconds).
-      const isLeg = s.band === 'leg';
-      const legSecs = Math.round((String(s.narration || '').split(/\s+/).filter(Boolean).length / 150) * 60);
-      // W4.2 honesty surface, dwell stops only: which side of the door the visit
-      // lives on, and the queue price spelled "N min wait" (never "Nm"). Both are
-      // absent until the server sends them, so both render conditionally.
-      const doorTag = (typeof s.goes_inside === 'boolean')
-        ? (s.goes_inside ? ' · inside' : ' · outside') : '';
-      const queueTag = (s.queue_minutes > 0) ? ` · ${s.queue_minutes} min wait` : '';
-      const dwellText = isVignette
-        ? 'walk past · 0 min'
-        : isLeg
-          ? `walking · ${s.minutes} min · ${legSecs}s narrated`
-          : `~${s.minutes} min here${doorTag}${queueTag}`;
-      el.innerHTML = `
-        <h4>Stop ${s.sort_order} · ${escHtml(s.poi_name)}${bandTag}${deeperDiveTag}</h4>
-        <div class="meta">${dwellText}${spot}</div>
-        <div class="script-preview">${escHtml(s.narration || '')}</div>
-        <div class="tts-row">
-          <button class="tts-play-btn" data-tour-stop="${i}" title="Generate and play TTS audio">&#9654; Listen</button>
-          <audio class="tts-audio" data-tour-stop-audio="${i}" controls preload="none"></audio>
-        </div>`;
-      stopsEl.appendChild(el);
-    });
-    // Step B.7 eval loop (human-mediated): after a tour renders, offer 👍/👎 + an optional
-    // note — clicking files the verdict + tour context through the existing /feedback
-    // pipeline (GitHub issue). Nothing here tunes the engine automatically.
-    if (tourStops.length > 0) {
-      const fb = document.createElement('div');
-      fb.className = 'tour-feedback db-beat-card';
-      fb.innerHTML = `
-        <div class="meta" style="margin-bottom:6px;">How was this tour?</div>
-        <div class="tts-row">
-          <button class="btn btn-outline" id="tourFeedbackUp" title="Good tour — file 👍 feedback">👍</button>
-          <button class="btn btn-outline" id="tourFeedbackDown" title="Bad tour — file 👎 feedback">👎</button>
-          <input type="text" id="tourFeedbackNote" style="flex:1;"
-                 placeholder="Optional note — what worked / what didn't" />
-        </div>`;
-      stopsEl.appendChild(fb);
-    }
-  }
-
-  // The PLAN screen: THE day. Design §8.1 deleted the three-route pick — the
-  // plan reply's `options` is a list of exactly ONE route, and that one day
-  // renders immediately: the map, the ordered places, the timing split, and the
-  // honesty surface (promises, day notes, unplanned slack — W4.2 panel). Places
-  // only, by owner ruling: names, order, walking time and ETA, and no
-  // descriptive text of any kind. NOTHING has been written or voiced yet; the
-  // one "Write the tour" action below is what calls the AUTHOR endpoint.
-  function renderTourDay(data, requestedMinutes) {
-    const stopsEl = document.getElementById('tourStops');
-    if (!stopsEl) return;
-    tourStops = [];
-    const day = (data && Array.isArray(data.options) && data.options.length)
-      ? data.options[0] : null;
-    if (requestedMinutes) lastTourRequestedMinutes = requestedMinutes;
-    stopsEl.innerHTML = '';
-
-    // Dead-notch honesty (W4.2 panel): a dial that changes nothing must say so,
-    // or the editor believes it did something. "Identical stop-for-stop" means
-    // the same places, order, timing, door-sides and queue prices — exactly what
-    // the cards below show.
-    const signature = day ? JSON.stringify((day.stops || []).map(s =>
-      [s.name, s.minutes, s.band, s.goes_inside, s.queue_minutes])) : null;
-    const unchanged = !!(signature && lastTourDaySignature && signature === lastTourDaySignature);
-    lastTourDaySignature = signature;
-
-    tourDay = day;
-    drawTourRoute(day ? tourOptionMapStops(day) : []);
-
-    if (!day) {
-      const empty = document.createElement('div');
-      empty.className = 'tour-options-empty db-beat-card';
-      empty.textContent = 'No route was found from here for this timing.';
-      stopsEl.appendChild(empty);
-      return;
-    }
-
-    // A 'leg' card is narration heard on the WAY to a stop, not a place, and a
-    // walk-past (isWalkPast) is something walked past without stopping. Counting
-    // either as a stop is what made a 4-stop tour report 7 on the authored screen;
-    // the same arithmetic has to hold here or the two screens disagree about the
-    // same route. A seated stop with a low narration band IS a stop and its minutes
-    // are standing still (W5.1). The A→B finish point (is_finish_point, W4.12) is
-    // where the day ENDS, not a place: not a stop, not counted, rendered as an ending.
-    const dwell = (day.stops || []).filter(
-      s => !isWalkPast(s) && s.band !== 'leg' && !s.is_finish_point);
-    const finishPoint = (day.stops || []).find(s => s.is_finish_point) || null;
-    const walkPast = (day.stops || []).filter(s => isWalkPast(s)).length;
-    const dwellMin = dwell.reduce((sum, s) => sum + (s.minutes || 0), 0);
-    const totalMin = Math.round((day.eta_seconds || 0) / 60);
-    const walkMin = Math.max(0, totalMin - dwellMin);
-
-    const head = document.createElement('div');
-    head.className = 'tour-day-head';
-    head.style.cssText = 'color:var(--muted,#888);font-size:0.85rem;margin:8px 0;';
-    // The longest single walk (W4.12): the number the "Shorter walks" dial is
-    // named after, so a person can see whether a turn had anything to do.
-    const longestWalk = (data && typeof data.longest_walk_minutes === 'number')
-      ? ` · longest single walk ${data.longest_walk_minutes} min` : '';
-    head.textContent = `${dwell.length} stops · ${totalMin} min total · `
-      + `about ${walkMin} min walking and ${dwellMin} min standing still${longestWalk}`
-      + (walkPast ? ` · ${walkPast} walk-past sight${walkPast === 1 ? '' : 's'}` : '')
-      + ` · spine: ${(data && data.spine_area) || '—'}`;
-    stopsEl.appendChild(head);
-
-    // Set only when this day was re-fetched on the operator's behalf, because
-    // the one they were looking at had gone stale. Shown once, then cleared.
-    if (tourPlanNotice) {
-      const notice = document.createElement('div');
-      notice.className = 'tour-plan-notice';
-      notice.style.cssText = 'background:rgba(120,160,255,0.10);border:1px solid rgba(120,160,255,0.45);'
-        + 'color:#7fa3ff;font-size:0.85rem;padding:8px 10px;border-radius:6px;margin:0 0 10px;';
-      notice.textContent = tourPlanNotice;
-      stopsEl.appendChild(notice);
-      tourPlanNotice = null;
-    }
-
-    // The dead notch says so out loud, briefly — and TRUTHFULLY. "Already true"
-    // is only true if the day really honours what was asked. The leg cap is
-    // enforced by the planner on its estimated legs and the street-routed leg
-    // can land a little over (measured at the W4.12 close: 473 s estimated,
-    // 576 s routed, against a 540 s cap), so a 9-minute cap can hand back the
-    // identical day with a 10-minute longest walk on the head line. That is not
-    // "already true"; it is "the closest day", and it says so with the number.
-    if (unchanged) {
-      const capMin = lastTourPlanBody && Number(lastTourPlanBody.max_leg_minutes);
-      const longest = data && typeof data.longest_walk_minutes === 'number'
-        ? data.longest_walk_minutes : null;
-      const capMissed = capMin > 0 && longest !== null && longest > capMin;
-      const same = document.createElement('div');
-      same.className = 'tour-dead-notch-note';
-      same.style.cssText = 'color:var(--text-muted);font-size:0.82rem;font-style:italic;margin:0 0 8px;';
-      same.textContent = capMissed
-        ? `the closest day — its longest walk is ${longest} min by the street route, over the ${capMin}-minute limit`
-        : 'already true of this day';
-      stopsEl.appendChild(same);
-      if (!capMissed) setTimeout(() => { same.remove(); }, 2500);
-    }
-
-    const note = document.createElement('div');
-    note.className = 'tour-day-note';
-    note.style.cssText = 'color:var(--text-muted);font-size:0.8rem;margin:0 0 10px;';
-    note.textContent = 'Nothing has been written or recorded yet. Write the tour and the narration and audio are made for this day.';
-    stopsEl.appendChild(note);
-
-    // Anything that went wrong while PLANNING is shown here, before the operator
-    // can spend anything on writing — the same panel the authored view uses.
-    const degradePanel = buildDegradationPanel(data);
-    if (degradePanel) stopsEl.appendChild(degradePanel);
 
     // ── The honesty surface (W4.2 panel, deviation v). Every field renders ONLY
     // when the server sends it — these land server-side in their own step, and a
@@ -4235,74 +3971,24 @@
       stopsEl.appendChild(endEl);
     }
 
-    // TWO lanes out of this one planned day, and they are different questions.
-    //
-    // "Write the tour" is the editor's fast audition: the anonymous preview author
-    // (POST /trips/preview/author), one paid call per stop, nothing saved.
-    //
-    // "Run it like the phone" is the TOURIST's own path, end to end — the same
-    // endpoints the app calls, in the same order, with a real signed-in identity:
-    // generate the trip, compose it, voice every stop, then tap for more. CLAUDE.md
-    // rule 1 is why it exists rather than a workbench copy of the same steps: the
-    // full telling and the keep-exploring extras are written ONLY by /compose and
-    // voiced ONLY by /audio/stops/{id}/keep-exploring, so before this button no
-    // editor could hear a word of either, on any screen. It costs the same as the
-    // day a tourist would get, and it is not asked to confirm that — a tourist
-    // never is (owner ruling 2026-07-31, the deleted spend dialog).
+    // The one action out of this planned day: "Run it like the phone", the
+    // TOURIST's own path, end to end — the same endpoints the app calls, in the
+    // same order, with a real signed-in identity: generate the trip, compose it,
+    // voice every stop, then tap for more. CLAUDE.md rule 1 is why it calls the
+    // app's endpoints rather than a workbench copy of the same steps: the full
+    // telling and the keep-exploring extras are written ONLY by /compose and
+    // voiced ONLY by /audio/stops/{id}/keep-exploring. It costs the same as the
+    // day a tourist would get, and it is not asked to confirm that, because a
+    // tourist never is.
     const row = document.createElement('div');
     row.className = 'tts-row';
-    const writeBtn = document.createElement('button');
-    writeBtn.className = 'btn btn-primary';
-    writeBtn.id = 'tourWriteBtn';
-    writeBtn.title = 'Write and voice this day';
-    writeBtn.textContent = 'Write the tour';
-    row.appendChild(writeBtn);
     const phoneBtn = document.createElement('button');
-    phoneBtn.className = 'btn btn-outline';
+    phoneBtn.className = 'btn btn-primary';
     phoneBtn.id = 'tourPhoneRunBtn';
     phoneBtn.title = 'Run the tourist path: generate, compose, voice, and tap for more';
     phoneBtn.textContent = 'Run it like the phone';
     row.appendChild(phoneBtn);
     stopsEl.appendChild(row);
-  }
-
-  // The AUTHOR call. Exactly the day on screen, identified by its route_id —
-  // the endpoint never re-plans and never swaps in a different tour.
-  async function authorTourDay() {
-    const stopsEl = document.getElementById('tourStops');
-    if (!stopsEl || !tourDay || !lastTourPlanBody) return;
-    const writeBtn = document.getElementById('tourWriteBtn');
-    if (writeBtn) { writeBtn.disabled = true; writeBtn.textContent = '⏳ Writing the tour…'; }
-    try {
-      const resp = await fetch(`${API_BASE}/trips/preview/author`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(Object.assign({}, lastTourPlanBody, { route_id: tourDay.route_id })),
-      });
-      if (!resp.ok) {
-        // The day on screen is no longer the one this start, timing and dials
-        // produce — the corpus moved underneath it. Writing it anyway would voice
-        // a tour nobody chose, and the whole point of naming the route is to make
-        // that impossible. So say it in one plain line and re-plan, rather than
-        // leaving the operator on a screen whose button can never work.
-        if (resp.status === 409) {
-          tourPlanNotice = 'The plan changed since you loaded it, so this is the current day. Check it and write it again.';
-          await generateTourPreview();
-          return;
-        }
-        let detail = null;
-        try { detail = (await resp.json()).detail; } catch (_) { /* keep null */ }
-        showError(typeof detail === 'string' ? detail : `Could not write this tour (${resp.status}).`);
-        return;
-      }
-      tourDay = null;
-      renderTourStops(await resp.json(), lastTourRequestedMinutes);
-    } catch (err) {
-      showError('Writing the tour failed: ' + err.message);
-    } finally {
-      // After a successful render the button is gone with the plan screen; this
-      // restores it only on the error paths, where it is still on screen.
-      if (writeBtn) { writeBtn.disabled = false; writeBtn.textContent = 'Write the tour'; }
-    }
   }
 
   // ── The tourist path, run from the workbench ──────────────────────────────
@@ -4440,10 +4126,8 @@
     const stopsEl = document.getElementById('tourStops');
     if (!stopsEl || !lastTourPlanBody) return;
     const btn = document.getElementById('tourPhoneRunBtn');
-    const writeBtn = document.getElementById('tourWriteBtn');
     const busy = (label) => {
       if (btn) { btn.disabled = !!label; btn.textContent = label || 'Run it like the phone'; }
-      if (writeBtn) writeBtn.disabled = !!label;
     };
     // NO spend confirmation, ever — a tourist is never asked to approve spend, and
     // the workbench reproduces the tourist experience (owner ruling 2026-07-31).
@@ -4533,8 +4217,6 @@
   function renderPhoneDay(composed, voiced) {
     const stopsEl = document.getElementById('tourStops');
     if (!stopsEl) return;
-    tourStops = [];
-    tourDay = null;
     stopsEl.innerHTML = '';
 
     const fullTellings = phoneStops.filter((s) => s.full_narration).length;
@@ -4558,7 +4240,7 @@
     stopsEl.appendChild(note);
 
     // Anything that quietly degraded while composing is shown here, above the stops
-    // (owner ruling 2026-07-31), through the same panel every other lane uses.
+    // through the same panel the plan screen uses.
     const degradePanel = buildDegradationPanel(composed);
     if (degradePanel) stopsEl.appendChild(degradePanel);
 
@@ -4673,63 +4355,6 @@
       btn.disabled = false;
       btn.innerHTML = origText;
     }
-  }
-
-  // Step B.7: POST the verdict + note + tour context (current form inputs + rendered
-  // stops) to the existing /feedback pipeline; toast the created issue number.
-  async function submitTourFeedback(verdict) {
-    const parseCoords = (el) => {
-      if (!el || !el.value.trim()) return null;
-      const p = el.value.split(',').map(s => parseFloat(s.trim()));
-      return (p.length === 2 && !p.some(isNaN)) ? p : null;
-    };
-    const start = parseCoords(document.getElementById('tourStart'));
-    if (!start || tourStops.length === 0) { showError('Generate a tour before rating it.'); return; }
-    const noteEl = document.getElementById('tourFeedbackNote');
-    const note = noteEl ? noteEl.value.trim() : '';
-    const duration = parseInt(document.getElementById('tourDuration').value, 10) || 60;
-    const lenses = document.getElementById('tourLenses').value.split(',').map(s => s.trim()).filter(Boolean);
-    const upBtn = document.getElementById('tourFeedbackUp');
-    const downBtn = document.getElementById('tourFeedbackDown');
-    if (upBtn) upBtn.disabled = true;
-    if (downBtn) downBtn.disabled = true;
-    try {
-      const resp = await fetch(`${API_BASE}/feedback`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transcript: note || `Tour feedback (${verdict}) from workbench`,
-          current_route: 'workbench/tour-preview',
-          tour_context: {
-            start,
-            end: parseCoords(document.getElementById('tourEnd')),
-            duration_min: duration,
-            lenses,
-            stops: tourStops.map(s => ({ name: s.poi_name || '', band: s.band || 'dwell' })),
-            verdict,
-            note: note || null,
-          },
-        }),
-      });
-      if (!resp.ok) { throw new Error(`(${resp.status})`); }
-      const data = await resp.json();
-      showSuccess(`Feedback filed as issue #${data.issue_number}`);
-    } catch (err) {
-      showError('Feedback failed: ' + err.message);
-    } finally {
-      if (upBtn) upBtn.disabled = false;
-      if (downBtn) downBtn.disabled = false;
-    }
-  }
-
-  async function ttsPlayTourStop(i) {
-    const s = tourStops[i];
-    if (!s) return;
-    const btn = document.querySelector(`.tts-play-btn[data-tour-stop="${i}"]`);
-    const audioEl = document.querySelector(`.tts-audio[data-tour-stop-audio="${i}"]`);
-    if (!btn || !audioEl) return;
-    // Separate cache namespace from beat TTS so the two never collide.
-    const cacheKey = `tour-${i}-${ttsTextHash(s.narration || '')}-${ttsProvider}`;
-    await ttsPlay({ text: s.narration || '', cacheKey, btn, audioEl });
   }
 
   // ── Task 4: Jaccard similarity ──

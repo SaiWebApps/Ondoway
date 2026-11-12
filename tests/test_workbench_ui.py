@@ -449,27 +449,24 @@ def _stubbed_audio_preview(page: Page):
 
 
 # ---------------------------------------------------------------------------
-# The tour view is TWO calls: a free PLAN that returns ONE day, and a paid
-# AUTHOR that writes it. Phase 4 (design §8.1) deleted pick-one-of-three: the
-# plan response still carries ``options`` as a LIST — of exactly one — because
-# trips persisted before Phase 4 store multi-option lists and the compose
-# reader keeps serving them forever (deviation i), but no card is picked any
-# more; the one day renders and a single "write the tour" action authors it.
-# Every stub below answers both endpoints in the shapes they really return —
-# a stub that fulfils a shape no endpoint can produce is the same lie as a
-# mock narrator.
+# The tour view plans ONE day with a free POST /trips/preview, and its one action,
+# "Run it like the phone", walks the tourist's own endpoints (stubbed in
+# TestWorkbenchRunsThePhonePath). The plan response carries ``options`` as a LIST —
+# of exactly one — because trips persisted before Phase 4 store multi-option lists
+# and the compose reader keeps serving them (deviation i), but no card is picked;
+# the one day renders. Every stub below answers in the shape the endpoint really
+# returns — a stub that fulfils a shape no endpoint can produce is the same lie as
+# a mock narrator.
 #
-# PLAN   POST /trips/preview        -> {spine_area, options[1], tourability,
-#                                       promises, day_notes, slack_minutes, degradations}
-# AUTHOR POST /trips/preview/author -> {route_id, option, ...} and NO top-level stops
+# PLAN   POST /trips/preview -> {spine_area, options[1], tourability,
+#                                promises, day_notes, slack_minutes, degradations}
 #
-# The authored stops live on ``option.stops`` because there is exactly one
-# interleave and the authored tour IS the day that was planned. The plan reply
-# also carries the W4.2 honesty surface (promises / day_notes / slack_minutes,
-# empty by default), and each stop carries its queue price and door side.
+# The plan reply carries the W4.2 honesty surface (promises / day_notes /
+# slack_minutes, empty by default), and each stop carries its queue price and
+# door side.
 # ---------------------------------------------------------------------------
 
-#: A plan fingerprint the author route would accept: ``preview-<12 hex>-opt<N>``.
+#: A route id in the shape the plan reply mints: ``preview-<12 hex>-opt<N>``.
 _PLAN_FINGERPRINT = "preview-0123456789ab"
 
 
@@ -564,46 +561,18 @@ def _plan_payload(stops, *, spine_area="Île de la Cité", degradations=None, op
     }
 
 
-def _authored_payload(payload: dict, *, route_id=f"{_PLAN_FINGERPRINT}-opt1") -> dict:
-    """The AUTHOR response, built from the flat tour dict these stubs already write.
-
-    Everything that describes authored text — the narrator, the lane, the quality
-    verdicts, the Basic fallback — stays at the top level exactly as it is today.
-    Only two things move: the stops become ``option.stops``, and the per-corridor
-    lens note becomes ``option.lens_coverage_note``. The Basic lane authors
-    nothing, so it has no option at all and keeps its own stops.
-    """
-    stops = payload.get("stops") or []
-    rest = {k: v for k, v in payload.items() if k not in ("stops", "lens_coverage_note")}
-    option = None
-    if stops:
-        option = _route_option(stops, route_id=route_id)
-        option["stops"] = [_option_stop(s, index=i) for i, s in enumerate(stops)]
-        option["lens_coverage_note"] = payload.get("lens_coverage_note")
-    rest.setdefault("total_audio_min", sum(int(s.get("minutes", 0)) for s in stops))
-    return {"route_id": route_id, "option": option, **rest}
-
-
-def _route_two_step(page, *, plan, compose):
-    """Answer BOTH calls of the two-step flow. The plan pattern cannot match the
-    author URL (a Playwright glob is a full match), so registration order is
-    irrelevant."""
+def _route_plan(page, plan):
+    """Answer the free PLAN call with ``plan``. The glob is a full match, so it
+    answers /trips/preview and nothing under it."""
     page.route(
         "**/trips/preview",
         lambda route: route.fulfill(
             status=200, content_type="application/json", body=json.dumps(plan)
         ),
     )
-    page.route(
-        "**/trips/preview/author",
-        lambda route: route.fulfill(
-            status=200, content_type="application/json", body=json.dumps(compose)
-        ),
-    )
 
 
-def _unroute_two_step(page):
-    page.unroute("**/trips/preview/author")
+def _unroute_plan(page):
     page.unroute("**/trips/preview")
 
 
@@ -639,22 +608,6 @@ def _plan_the_day(page, *, timeout=30000):
         lambda r: r.url.endswith("/trips/preview"), timeout=timeout
     ) as caught:
         page.locator("#tourGenerateBtn").click()
-    page.wait_for_timeout(300)
-    return caught.value
-
-
-def _write_the_tour(page, *, timeout=30000):
-    """Click the ONE "Write the tour" action and wait for the authored render.
-
-    Writing is the only decision left after the plan renders (design §8.1): one
-    button, one paid POST /trips/preview/author. Returns the author response.
-    """
-    write_btn = page.locator("#tourWriteBtn")
-    write_btn.wait_for(state="visible", timeout=10000)
-    with page.expect_response(
-        lambda r: "/trips/preview/author" in r.url, timeout=timeout
-    ) as caught:
-        write_btn.click()
     page.wait_for_timeout(300)
     return caught.value
 
@@ -2516,57 +2469,30 @@ class TestDetailViewAndEditing:
             _assert_asked_for_a_served_provider(audio_calls)
         _take_screenshot(page, "beat-tts-decode")
 
-    def test_tour_preview_generates_and_plays(self, browser_page):
-        """INVARIANT (audit E :2414): a composed day renders its stops and every stop
-        plays through the ONE shared player — design §5.1 (per-stop authoring
-        unchanged) + §8 "Kept deliberately: per-stop speech synthesis".
-
-        Rewritten for the one-day surface (S4.8, design §8.1): Plan the day POSTs
-        /trips/preview, THE day (options[0]) renders immediately with its honesty
-        surface (W4.2 deviation v — promise names, per-stop "N min wait" queue
-        price and door side, named slack), and the ONE "Write the tour" action
-        POSTs /trips/preview/author; the written stops then play via the shared
-        ttsPlay (real fetch + real blob decode). Both endpoints are stubbed in the
-        server's own shapes (their API tests cover them; the fixture corpus can't
-        route) and the paid synthesis is answered in the browser — the
-        form->request, both renders, the audio fetch and the decode are all REAL.
-
-        KNOWN GAP, reported at S4.8 and asserted nowhere: the plan screen reads
-        ``n.text`` off each day note while the server sends day_notes as PLAIN
-        STRINGS (TripPreviewResponse.day_notes: list[str]), so a real day note
-        never renders; same class, the promises line reads ``p.window`` where the
-        server sends arrives_hhmm/departs_hhmm. The stub still sends the real
-        string shape so this test breaks the day the page starts consuming it."""
+    def test_tour_preview_plans_the_day_with_its_honesty_surface(self, browser_page):
+        """Plan the day POSTs /trips/preview, and THE day (options[0]) renders
+        immediately with its honesty surface (W4.2 deviation v — promise names and
+        windows, day notes, per-stop "N min wait" queue price and door side, named
+        slack) and its one action, "Run it like the phone". The endpoint is stubbed
+        in the server's own shape (its API tests cover it; the fixture corpus can't
+        route) — the form->request and the render are REAL. The day notes travel as
+        PLAIN STRINGS, exactly as TripPreviewResponse.day_notes sends them."""
         page, _seed_data, _reporter = browser_page
-        authored_stops = [
+        planned_stops = [
             {"sort_order": 1, "poi_name": "Notre-Dame", "minutes": 5,
-             "narration": "Settle in. A grounded opening line.",
              "queue_minutes": 20, "goes_inside": True},
             {"sort_order": 2, "poi_name": "Sainte-Chapelle", "minutes": 4,
-             "narration": "Walk on. Another grounded line.",
              "goes_inside": False},
         ]
-        _route_two_step(
+        _route_plan(
             page,
-            plan=_plan_payload(
-                authored_stops,
+            _plan_payload(
+                planned_stops,
                 promises=[{"kind": "anchor", "name": "Notre-Dame",
                            "arrives_hhmm": "10:20", "departs_hhmm": "10:25",
                            "goes_inside": True, "queue_minutes": 20}],
                 day_notes=["The Louvre is closed today, so it is not on this day."],
                 slack_minutes=25,
-            ),
-            compose=_authored_payload(
-                {
-                    "stops": authored_stops,
-                    "spine_area": "Île de la Cité",
-                    "total_audio_min": 9,
-                    "candidate_eligible": True,
-                    "candidate_status": "premium_candidate_eligible_for_certification",
-                    "narration_kind": "llm_candidate",
-                    "compose_status": "composed",
-                    "provider": "anthropic",
-                }
             ),
         )
         try:
@@ -2583,12 +2509,8 @@ class TestDetailViewAndEditing:
             )
             assert "2 stops" in panel_text, f"day head missing the place count: {panel_text!r}"
             assert "Nothing has been written or recorded yet" in panel_text
-            # The honesty surface (W4.2 deviation v), from the server's own fields.
-            # W4.12 re-derivation: the WINDOW and the NOTE are pinned, not just the
-            # name. Both were on the wire and never on the screen — the promise
-            # line read a `window` key that never existed, and the notes loop
-            # read `.text` off plain strings — so the D5 demo shipped with neither,
-            # and this test's name-only assertion let it through.
+            # The honesty surface (W4.2 deviation v), from the server's own fields:
+            # the WINDOW and the NOTE are pinned, not just the name.
             assert "Promises: Notre-Dame 10:20-10:25" in panel_text, (
                 f"the promise line must carry its window: {panel_text!r}"
             )
@@ -2605,91 +2527,98 @@ class TestDetailViewAndEditing:
             assert "· inside" in first_card, f"door side missing from the card: {first_card!r}"
             assert "· outside" in (day_cards.last.text_content() or "")
 
-            # ONE action writes it.
-            assert _write_the_tour(page).status == 200
+            # ONE action out of the day: the tourist's own path.
+            run_btn = page.locator("#tourStops #tourPhoneRunBtn")
+            assert run_btn.count() == 1, "the planned day must offer 'Run it like the phone'"
+            assert (run_btn.text_content() or "").strip() == "Run it like the phone"
+            assert page.locator("#tourStops button.btn-primary").count() == 1, (
+                "the planned day must offer exactly one primary action"
+            )
+            _take_screenshot(page, "step4-tour-plan-honesty-surface")
+        finally:
+            _unroute_plan(page)
 
-            stops = page.locator("#tourStops .tour-stop")
-            assert stops.count() == 2, f"expected 2 rendered stops, got {stops.count()}"
-            assert "Notre-Dame" in (stops.first.text_content() or ""), "stop name not rendered"
-            assert "Premium candidate" in (page.locator("#tourStops").text_content() or "")
-            assert "eligible for certification" in (
-                page.locator("#tourStops").text_content() or ""
+    def test_plan_screen_shows_the_four_plan_notices(self, browser_page):
+        """The four notices that describe the PLAN render on the plan screen, read
+        off the /trips/preview reply in its own shapes (TripPreviewTourability, and
+        RouteOption's elapsed_shortfall_seconds and lens_coverage_note):
+
+        1. a YELLOW tourability -> the amber "Thin area" banner;
+        2. a GREEN, delivered_thin tourability -> the blue "Short tour" note;
+        3. elapsed_shortfall_seconds on the day -> "Shorter than you asked for",
+           naming the minutes asked for and the minutes served;
+        4. lens_coverage_note on the day -> the note itself.
+
+        YELLOW and delivered_thin never arrive together (delivered_thin is only set
+        on GREEN), so two plans are planned: one YELLOW, one GREEN-thin.
+
+        UNDO TEST: delete any of the four blocks from renderTourDay -> RED.
+        """
+        page, _seed_data, _reporter = browser_page
+        stops = [
+            {"sort_order": 1, "poi_name": "Notre-Dame", "minutes": 6},
+            {"sort_order": 2, "poi_name": "Sainte-Chapelle", "minutes": 4},
+        ]
+        lens_note = "Only 2 places along this walk speak to dark history."
+        day = _route_option(stops, route_id=f"{_PLAN_FINGERPRINT}-opt1")
+        day["elapsed_shortfall_seconds"] = 20 * 60
+        day["lens_coverage_note"] = lens_note
+        yellow = {
+            "status": "YELLOW", "delivered_thin": False, "fill_ratio": 0.42,
+            "on_lens_fill_ratio": None, "anchor_candidates": 1,
+            "reachable_poi_count": 3, "max_supportable_duration_min": 45,
+            "one_way_alternative_destination": "Le Marais",
+        }
+        green_thin = dict(yellow, status="GREEN", delivered_thin=True,
+                          max_supportable_duration_min=None,
+                          one_way_alternative_destination=None)
+
+        page.locator("#tourPreviewBtn").click()
+        page.wait_for_timeout(300)
+        _set_tour_inputs(page, start="48.8566,2.3522", duration=90)
+
+        _route_plan(page, _plan_payload(stops, options=[day], tourability=yellow))
+        try:
+            assert _plan_the_day(page).status == 200
+            warn = page.locator("#tourStops .tour-tourability-warn")
+            assert warn.count() == 1, "a YELLOW plan rendered no thin-area banner"
+            warn_text = warn.first.text_content() or ""
+            assert "Thin area (YELLOW): audio fill 42% of target, 1 anchor candidate in reach." in warn_text
+            assert "A ~45-min tour fits this area better." in warn_text, warn_text
+            assert "Or go one-way toward Le Marais." in warn_text, warn_text
+            assert page.locator("#tourStops .tour-thin-delivery-note").count() == 0, (
+                "a YELLOW plan must not also carry the GREEN thin-delivery note"
             )
 
-            # Play stop 0 through the shared player -> real POST /audio/preview + real decode.
-            with _stubbed_audio_preview(page) as audio_calls:
-                with page.expect_response(lambda r: "/audio/preview" in r.url) as ar:
-                    stops.first.locator('.tts-play-btn[data-tour-stop]').click()
-                assert ar.value.status == 200
-                page.wait_for_function(
-                    "sel => { const el = document.querySelector(sel);"
-                    " return !!el && el.src.startsWith('blob:') && el.readyState >= 2; }",
-                    arg='.tts-audio[data-tour-stop-audio="0"]',
-                    timeout=15000,
-                )
-                _assert_asked_for_a_served_provider(audio_calls)
-            _take_screenshot(page, "step4-tour-generate-play")
-        finally:
-            _unroute_two_step(page)
+            short = page.locator("#tourStops .tour-elapsed-shortfall-note")
+            assert short.count() == 1, "a day with a shortfall rendered no shortfall note"
+            assert "Shorter than you asked for: about 70 min rather than 90" in (
+                short.first.text_content() or ""
+            ), short.first.text_content()
+            assert "20 more minutes" in (short.first.text_content() or "")
 
-    def test_tour_preview_renders_basic_lane_honestly(self, browser_page):
-        """INVARIANT (audit E :2474): a refused tour never wears the Premium label —
-        design §7.2 (the mechanical exam starts blocking) + §8 "Kept deliberately:
-        honest refusal". Rewritten for the one-day surface (S4.8, design §8.1):
-        the day is planned, the ONE "Write the tour" action authors it, and when
-        Premium is ineligible the page must render the usable Basic lane and say
-        so — never the Premium narrator badge, never a quality panel."""
-        page, _seed_data, _reporter = browser_page
-        payload = {
-            "stops": [],
-            "spine_area": "Île de la Cité",
-            "total_audio_min": 0,
-            "candidate_eligible": False,
-            "narration_kind": "none",
-            "provider": "anthropic",
-            "compose_status": "basic_available",
-            "quality": {"passed": True},
-            "basic_tour": {
-                "kind": "basic_tour",
-                "reason": "llm_candidate_ineligible",
-                "total_audio_min": 7,
-                "stops": [
-                    {
-                        "sort_order": 1,
-                        "poi_name": "Notre-Dame",
-                        "minutes": 7,
-                        "narration": "A grounded Basic guide to the cathedral square.",
-                    }
-                ],
-            },
-        }
-        _route_two_step(
-            page,
-            plan=_plan_payload([{"sort_order": 1, "poi_name": "Notre-Dame", "minutes": 7}]),
-            compose=_authored_payload(payload),
-        )
+            lens = page.locator("#tourStops .tour-lens-coverage")
+            assert lens.count() == 1 and (lens.first.text_content() or "") == lens_note
+            _take_screenshot(page, "plan-notices-yellow")
+        finally:
+            _unroute_plan(page)
+
+        _route_plan(page, _plan_payload(stops, tourability=green_thin))
         try:
-            page.locator("#tourPreviewBtn").click()
-            page.wait_for_timeout(300)
-            _set_tour_inputs(page, start="48.8566,2.3522")
             assert _plan_the_day(page).status == 200
-            assert _write_the_tour(page).status == 200
-
-            panel = page.locator("#tourStops")
-            assert panel.locator(".tour-stop").count() == 1
-            rendered = panel.text_content() or ""
-            assert "Notre-Dame" in rendered
-            assert "1 stops" in rendered
-            assert "~7 min of audio" in rendered
-            assert "Basic" in rendered
-            assert "not Premium" in rendered
-            assert "not graded" in rendered
-            assert "Claude" not in rendered
-            assert "full AI voice" not in rendered
-            assert "Quality rubric" not in rendered
-            _take_screenshot(page, "step4-tour-basic-lane")
+            thin = page.locator("#tourStops .tour-thin-delivery-note")
+            assert thin.count() == 1, "a GREEN delivered_thin plan rendered no short-tour note"
+            assert "Short tour for a 90-min request" in (thin.first.text_content() or ""), (
+                thin.first.text_content()
+            )
+            assert page.locator("#tourStops .tour-tourability-warn").count() == 0, (
+                "a GREEN plan must not carry the amber thin-area banner"
+            )
+            # The default day carries no shortfall and no lens note, so neither shows.
+            assert page.locator("#tourStops .tour-elapsed-shortfall-note").count() == 0
+            assert page.locator("#tourStops .tour-lens-coverage").count() == 0
         finally:
-            _unroute_two_step(page)
+            _unroute_plan(page)
 
     def test_tour_preview_untourable_shows_error(self, browser_page):
         """Step 4: a 422 from /trips/preview surfaces an error toast (no silent failure)."""
@@ -2716,55 +2645,28 @@ class TestDetailViewAndEditing:
         finally:
             page.unroute("**/trips/preview")
 
-    def _route_tour_preview(self, page, stops):
-        """Helper: answer BOTH calls — the free plan, then the authored tour."""
-        _route_two_step(
-            page,
-            plan=_plan_payload(stops),
-            compose=_authored_payload(
-                {"stops": stops, "spine_area": "Île de la Cité",
-                 "total_audio_min": sum(s.get("minutes", 0) for s in stops)}
-            ),
-        )
+    def test_plan_screen_counts_places_not_walks(self, browser_page):
+        """INVARIANT (audit E :2562): a leg is never counted as a stop and never
+        pinned — design §3.1 (promises connected by fabric) + §5.6 ("Legs carry
+        only losable content").
 
-    def test_leg_cards_render_as_walks_not_stops(self, browser_page):
-        """INVARIANT (audit E :2562): walking time is never labelled standing time
-        and a leg is never counted as a stop — design §3.1 (promises connected by
-        fabric) + §5.6 ("Legs carry only losable content").
-
-        band='leg' cards must render as WALKS, with no map pin and no stop count.
-        Rewritten for the one-day surface (S4.8, design §8.1): the plan screen
-        shows PLACES ONLY (a leg is narration heard while walking, so it does not
-        exist at plan time), and the walk cards appear on the AUTHORED screen.
-
-        REAL-BROWSER PROOF for the three defects an adversarial review found in the
-        first cut of this feature (all confirmed by direct read of review.html):
-
-          1. drawTourRoute plotted every located card, and a leg card carries its
-             DESTINATION stop's lat/lng — so it stacked a duplicate full-size
-             numbered pin exactly on top of the following dwell pin.
-          2. dwellText read `~${s.minutes} min here` for every non-vignette card, so
-             a leg card labelled WALK minutes as time standing still — the precise
-             inversion of what the card exists to show.
-          3. The summary counted leg cards as stops: a 2-stop tour reported 3.
-
-        The payload mirrors the shape measured on the live Paris graph, where a
-        4-minute walk to the Conciergerie carries 11 words (~4 seconds).
+        A band='leg' card is narration heard while walking, so the plan screen
+        shows PLACES ONLY: no walk card, a head that counts the places, and no map
+        pin for a walk. drawTourRoute drops a leg by its band because a leg carries
+        its DESTINATION stop's lat/lng and would otherwise stack a duplicate pin on
+        top of the following stop.
         """
         page, _seed_data, _reporter = browser_page
-        self._route_tour_preview(
+        _route_plan(
             page,
-            [
+            _plan_payload([
                 {"sort_order": 1, "poi_name": "Sainte-Chapelle", "minutes": 5,
-                 "lat": 48.8554, "lng": 2.3450, "band": "dwell",
-                 "narration": "Look up at the windows. A grounded opening line."},
+                 "lat": 48.8554, "lng": 2.3450, "band": "dwell"},
                 {"sort_order": 2, "poi_name": "Walk to Conciergerie", "minutes": 4,
-                 "lat": 48.8561, "lng": 2.3465, "band": "leg",
-                 "narration": "Leaving Sainte-Chapelle behind, head for the Conciergerie."},
+                 "lat": 48.8561, "lng": 2.3465, "band": "leg"},
                 {"sort_order": 3, "poi_name": "Conciergerie", "minutes": 5,
-                 "lat": 48.8561, "lng": 2.3465, "band": "dwell",
-                 "narration": "Look at the towers. Another grounded line."},
-            ],
+                 "lat": 48.8561, "lng": 2.3465, "band": "dwell"},
+            ]),
         )
         try:
             page.locator("#tourPreviewBtn").click()
@@ -2772,112 +2674,92 @@ class TestDetailViewAndEditing:
             _set_tour_inputs(page, start="48.8566,2.3522")
             assert _plan_the_day(page).status == 200
 
-            # The PLAN shows places only: 2 cards, no walk card, and the day head
-            # counts 2 stops — a leg does not exist before anything is written.
             plan_cards = page.locator("#tourStops .tour-stop")
             assert plan_cards.count() == 2, (
                 f"the plan screen must show the day's 2 PLACES, got {plan_cards.count()}"
             )
             head = page.locator("#tourStops .tour-day-head").text_content() or ""
             assert "2 stops" in head, f"plan head counted a non-place: {head!r}"
-
-            assert _write_the_tour(page).status == 200
-
-            cards = page.locator("#tourStops .tour-stop")
-            assert cards.count() == 3, f"expected 3 cards, got {cards.count()}"
-
-            leg_text = cards.nth(1).text_content() or ""
-
-            # DEFECT 2: the leg card must describe a WALK, never "min here".
-            assert "min here" not in leg_text, (
-                f"leg card labels walk time as standing time: {leg_text!r}"
-            )
-            assert "walking" in leg_text, f"leg card does not read as a walk: {leg_text!r}"
-
-            # DEFECT 3: the summary counts PLACES, not leg cards.
-            summary = page.locator("#tourStops .tour-summary").first.text_content() or ""
-            assert "2 stops" in summary, f"leg card counted as a stop: {summary!r}"
-            assert "1 narrated walk" in summary, f"walks not surfaced: {summary!r}"
-
-            # DEFECT 1: no map pin for the leg (2 pins for 2 places, not 3).
             pins = page.evaluate(
                 "() => window.__lastTourRoute && window.__lastTourRoute.stops"
             )
-            assert pins == 2, f"expected 2 map pins (dwell stops only), got {pins}"
-
-            # Scroll the cards into view so the screenshot shows the leg card
-            # itself, not just the map above it.
-            cards.nth(1).scroll_into_view_if_needed()
-            page.wait_for_timeout(200)
-            _take_screenshot(page, "leg-cards-render-as-walks")
+            assert pins == 2, f"expected 2 map pins (places only), got {pins}"
+            _take_screenshot(page, "plan-counts-places-not-walks")
         finally:
-            _unroute_two_step(page)
+            _unroute_plan(page)
 
-    def test_tour_stop_audio_caches_on_replay(self, browser_page):
-        """INVARIANT (audit E :2631): one press = one paid request; the delegated
-        listener never stacks — design §8 "Kept deliberately: per-stop speech
-        synthesis". Replaying a stop reuses the cached blob (no 2nd /audio/preview),
-        and re-planning + re-writing the day does NOT stack the delegated listener
-        (a stacked one fires 2 fetches/click). One delegated listener + the shared
-        ttsAudioCache are the two correctness properties here. Rewritten for the
-        one-day surface (S4.8, design §8.1): a cycle is plan -> write, twice."""
+    def _select_multi_lens_poi(self, page):
+        """Open the 4-beat 'UI Test — Les Halles Multi-Lens' POI from the worklist."""
+        rows = page.locator(WORKLIST_ROW)
+        for i in range(rows.count()):
+            if "Les Halles Multi-Lens" in (rows.nth(i).text_content() or ""):
+                rows.nth(i).click()
+                page.wait_for_timeout(500)
+                return
+        raise AssertionError("expected the 'UI Test — Les Halles Multi-Lens' POI in the worklist")
+
+    def _set_beat_script(self, page, beat_idx: int, text: str) -> None:
+        """Type ``text`` into one beat's script, the way an editor does."""
+        field = page.locator(f'{DATA_BEAT_INDEX.format(beat_idx)} {DATA_BEAT_FIELD.format("script_body")}')
+        field.fill(text)
+        field.dispatch_event("input")
+
+    def test_beat_audio_caches_on_replay(self, browser_page):
+        """INVARIANT (audit E :2631): one press = one paid request. Replaying a
+        beat reuses the cached blob (no second /audio/preview), and re-rendering
+        the detail view does NOT stack the delegated listener (a stacked one fires
+        two fetches per click). One delegated listener + the shared ttsAudioCache
+        are the two correctness properties here.
+
+        The beat's text is set to a line unique to this test: browser_page is
+        module-scoped, so ttsAudioCache persists across tests, and a line an
+        earlier test played would be a cache HIT on the "first" play here."""
         page, _seed_data, _reporter = browser_page
-        # UNIQUE narration: browser_page is module-scoped, so ttsAudioCache persists across
-        # tests. A narration reused by an earlier test would be a cache HIT on the "first"
-        # play here (no fetch). These strings are unique to this test -> first play is a
-        # guaranteed miss, replay a guaranteed hit, regardless of run order.
-        self._route_tour_preview(
-            page,
-            [{"sort_order": 1, "poi_name": "Notre-Dame", "minutes": 5,
-              "narration": "Cache-replay edge test — unique opening line for stop zero."},
-             {"sort_order": 2, "poi_name": "Sainte-Chapelle", "minutes": 4,
-              "narration": "Cache-replay edge test — unique line for stop one."}],
-        )
-        audio_calls = []
+        unique = "Cache-replay edge test — a line no other test plays."
+        self._select_multi_lens_poi(page)
+        original = page.locator(
+            f'{DATA_BEAT_INDEX.format(1)} {DATA_BEAT_FIELD.format("script_body")}'
+        ).input_value()
+        audio_calls: list[str] = []
         page.on("request", lambda r: audio_calls.append(r.url) if "/audio/preview" in r.url else None)
         try:
-            page.locator("#tourPreviewBtn").click()
-            page.wait_for_timeout(300)
-            _set_tour_inputs(page, start="48.8566,2.3522")
-            # Plan + write TWICE — the re-renders must not duplicate the delegated listener.
+            self._set_beat_script(page, 1, unique)
+            # Re-render the detail view twice — it must not duplicate the listener.
+            rows = page.locator(WORKLIST_ROW)
             for _ in range(2):
-                assert _plan_the_day(page).status == 200
-                assert _write_the_tour(page).status == 200
-            stops = page.locator("#tourStops .tour-stop")
-            assert stops.count() == 2, f"expected 2 stops after re-generate, got {stops.count()}"
+                rows.first.click()
+                page.wait_for_timeout(300)
+                self._select_multi_lens_poi(page)
+            btn = page.locator('.tts-play-btn[data-beat-tts="1"]')
+            audio_sel = '.tts-audio[data-beat-audio="1"]'
 
             with _stubbed_audio_preview(page) as stubbed:
-                # First play of stop 0 -> exactly ONE /audio/preview (no stacked listener).
                 with page.expect_response(lambda r: "/audio/preview" in r.url) as ar:
-                    stops.first.locator('.tts-play-btn[data-tour-stop]').click()
+                    btn.click()
                 assert ar.value.status == 200
                 page.wait_for_function(
                     "sel => { const el = document.querySelector(sel);"
                     " return !!el && el.src.startsWith('blob:') && el.readyState >= 2; }",
-                    arg='.tts-audio[data-tour-stop-audio="0"]', timeout=15000)
-                first_src = page.locator('.tts-audio[data-tour-stop-audio="0"]').get_attribute("src")
+                    arg=audio_sel, timeout=15000)
+                first_src = page.locator(audio_sel).get_attribute("src")
                 assert len(audio_calls) == 1, f"expected 1 /audio/preview, got {len(audio_calls)} (listener stacked?)"
+                assert stubbed[0].get("text") == unique, stubbed[0]
 
-                # Replay stop 0 -> cache hit: same blob, NO new /audio/preview.
-                stops.first.locator('.tts-play-btn[data-tour-stop]').click()
+                # Replay -> cache hit: same blob, NO new /audio/preview.
+                btn.click()
                 page.wait_for_timeout(800)
                 assert len(audio_calls) == 1, f"replay refetched ({len(audio_calls)} calls) — cache miss"
-                assert page.locator('.tts-audio[data-tour-stop-audio="0"]').get_attribute("src") == first_src
-                # The stub saw exactly the one request the browser reported, so the
-                # cache-hit assertion above is measuring the same thing twice over.
+                assert page.locator(audio_sel).get_attribute("src") == first_src
                 assert len(stubbed) == 1, f"the server was asked {len(stubbed)} times, not once"
                 _assert_asked_for_a_served_provider(stubbed)
-            _take_screenshot(page, "step5-tour-cache-replay")
+            _take_screenshot(page, "beat-audio-cache-replay")
         finally:
-            _unroute_two_step(page)
+            self._set_beat_script(page, 1, original)
 
-    def test_tour_stop_long_narration_plays(self, browser_page):
+    def test_beat_long_narration_plays_untruncated(self, browser_page):
         """INVARIANT (audit E :2685): the workbench never truncates narration
-        client-side — and it matters MORE under design §5.5 (two lengths per major
-        stop make long single-stop narrations normal). A long stop narration
-        (> the 4096 TTS cap) plays through the chunked /audio/preview path and
-        decodes — the UI passes the full text. Rewritten for the one-day surface
-        (S4.8, design §8.1): plan, then write, then play.
+        client-side. A long script (> the 4096 TTS cap) plays through the chunked
+        /audio/preview path and decodes — the page passes the full text.
 
         The no-truncation property is asserted DIRECTLY on the outbound request body
         (the browser stub records it) instead of being inferred from a 200; the server's
@@ -2885,36 +2767,29 @@ class TestDetailViewAndEditing:
         page, _seed_data, _reporter = browser_page
         long_narration = ("Settle in by the river. " * 260).strip()  # ~6000 chars, > 4096 cap
         assert len(long_narration) > 4096
-        self._route_tour_preview(
-            page,
-            [{"sort_order": 1, "poi_name": "Notre-Dame", "minutes": 9,
-              "narration": long_narration}],
-        )
+        self._select_multi_lens_poi(page)
+        original = page.locator(
+            f'{DATA_BEAT_INDEX.format(2)} {DATA_BEAT_FIELD.format("script_body")}'
+        ).input_value()
         try:
-            page.locator("#tourPreviewBtn").click()
-            page.wait_for_timeout(300)
-            _set_tour_inputs(page, start="48.8566,2.3522")
-            assert _plan_the_day(page).status == 200
-            assert _write_the_tour(page).status == 200
-            stops = page.locator("#tourStops .tour-stop")
-            assert stops.count() == 1
+            self._set_beat_script(page, 2, long_narration)
             with _stubbed_audio_preview(page) as audio_calls:
                 with page.expect_response(lambda r: "/audio/preview" in r.url) as ar:
-                    stops.first.locator('.tts-play-btn[data-tour-stop]').click()
+                    page.locator('.tts-play-btn[data-beat-tts="2"]').click()
                 assert ar.value.status == 200, "long narration should play, not error"
                 page.wait_for_function(
                     "sel => { const el = document.querySelector(sel);"
                     " return !!el && el.src.startsWith('blob:') && el.readyState >= 2; }",
-                    arg='.tts-audio[data-tour-stop-audio="0"]', timeout=20000)
+                    arg='.tts-audio[data-beat-audio="2"]', timeout=20000)
                 sent = audio_calls[0].get("text", "")
                 assert sent == long_narration, (
                     f"the workbench truncated the narration client-side: sent "
                     f"{len(sent)} of {len(long_narration)} chars"
                 )
                 _assert_asked_for_a_served_provider(audio_calls)
-            _take_screenshot(page, "step5-tour-long-narration")
+            _take_screenshot(page, "beat-long-narration")
         finally:
-            _unroute_two_step(page)
+            self._set_beat_script(page, 2, original)
 
     def test_tour_view_then_back_to_poi_restores_workbench(self, browser_page):
         """Step 6 (seamless): the tour view lives IN the existing detail pane — switching to it and
@@ -3054,38 +2929,26 @@ class TestDetailViewAndEditing:
     def test_tour_preview_vignette_renders_tag_and_hollow_pin(self, browser_page):
         """INVARIANT (audit E :2907): a walk-past sight renders as a walk-past —
         tag, 0 min, distinct hollow pin — never as a stop — design §5.6 ("colour,
-        walk-past one-liners"). Rewritten for the one-day surface (S4.8, design
-        §8.1): asserted on BOTH screens. The plan screen tags the card "walk past",
-        counts it separately in the day head ("1 walk-past sight") and pins it
-        hollow; the authored screen keeps the band tag and the hollow pin. Dwell
-        stops are unchanged on both."""
+        walk-past one-liners"). The plan screen tags the card "walk past", counts
+        it separately in the day head ("1 walk-past sight") and pins it hollow.
+        Dwell stops are unchanged."""
         page, _seed_data, _reporter = browser_page
         vignette_stops = [
             {"sort_order": 1, "poi_name": "Notre-Dame", "minutes": 6,
-             "lat": 48.8530, "lng": 2.3499, "narration": "A grounded line.",
-             "spotlight": 5.0, "band": "dwell"},
+             "lat": 48.8530, "lng": 2.3499, "spotlight": 5.0, "band": "dwell"},
             {"sort_order": 2, "poi_name": "Fontaine du Palmier", "minutes": 0,
-             "lat": 48.8576, "lng": 2.3470,
-             "narration": "On your right, the Palmier fountain.",
-             "spotlight": 1.2, "band": "vignette"},
+             "lat": 48.8576, "lng": 2.3470, "spotlight": 1.2, "band": "vignette"},
             {"sort_order": 3, "poi_name": "Sainte-Chapelle", "minutes": 4,
-             "lat": 48.8554, "lng": 2.3450, "narration": "Another line.",
-             "spotlight": 3.6, "band": "dwell"},
+             "lat": 48.8554, "lng": 2.3450, "spotlight": 3.6, "band": "dwell"},
         ]
-        _route_two_step(
-            page,
-            plan=_plan_payload(vignette_stops),
-            compose=_authored_payload(
-                {"stops": vignette_stops, "spine_area": "Île de la Cité", "total_audio_min": 10}
-            ),
-        )
+        _route_plan(page, _plan_payload(vignette_stops))
         try:
             page.locator("#tourPreviewBtn").click()
             page.wait_for_timeout(300)
             _set_tour_inputs(page, start="48.8566,2.3522")
             assert _plan_the_day(page).status == 200
 
-            # PLAN screen: the walk-past is a tagged 0-minute card, never a stop.
+            # The walk-past is a tagged 0-minute card, never a stop.
             head = page.locator("#tourStops .tour-day-head").text_content() or ""
             assert "2 stops" in head, f"the walk-past was counted as a stop: {head!r}"
             assert "1 walk-past sight" in head, f"walk-past not surfaced in the head: {head!r}"
@@ -3095,39 +2958,20 @@ class TestDetailViewAndEditing:
             assert plan_tag.count() == 1, "the plan card should show a visible walk-past tag"
             assert (plan_tag.first.text_content() or "").strip() == "walk past"
             assert "walk past · 0 min" in (plan_vignette.first.text_content() or "")
-            assert page.locator(".tour-route-pin").count() == 3, "all 3 places pin on the plan map"
-            assert page.locator(".tour-route-pin--vignette").count() == 1, (
-                "the walk-past pin should be hollow on the plan map"
-            )
-
-            assert _write_the_tour(page).status == 200
-
-            stops = page.locator("#tourStops .tour-stop")
-            assert stops.count() == 3, f"expected 3 rendered stops, got {stops.count()}"
-
-            # The vignette stop card: visible tag + walk-past (0-minute) styling.
-            vignette_card = page.locator("#tourStops .tour-stop--vignette")
-            assert vignette_card.count() == 1, "the vignette stop should carry the vignette card class"
-            tag = vignette_card.locator(".tour-vignette-tag")
-            assert tag.count() == 1, "the vignette card should show a visible band tag"
-            assert (tag.first.text_content() or "").strip() == "vignette"
-            card_text = vignette_card.first.text_content() or ""
-            assert "walk past" in card_text, "the vignette card should read walk past (0-minute styling)"
-            assert "0 min" in card_text, "the vignette card should show 0 min"
 
             # Dwell stops unchanged: no tag, dwell minutes still shown.
-            first = stops.first
+            first = page.locator("#tourStops .tour-stop").first
             assert first.locator(".tour-vignette-tag").count() == 0, "dwell stops must not carry the tag"
             assert "~6 min here" in (first.text_content() or ""), "dwell minutes must render unchanged"
 
             # Map pins: 3 total, exactly the vignette one hollow.
-            assert page.locator(".tour-route-pin").count() == 3, "all 3 stops should pin on the map"
+            assert page.locator(".tour-route-pin").count() == 3, "all 3 places pin on the plan map"
             assert page.locator(".tour-route-pin--vignette").count() == 1, (
-                "the vignette stop's pin should use the hollow tour-route-pin--vignette style"
+                "the walk-past pin should be hollow on the plan map"
             )
             _take_screenshot(page, "b5-vignette-tag-and-hollow-pin")
         finally:
-            _unroute_two_step(page)
+            _unroute_plan(page)
 
     def test_tour_preview_seated_stop_with_a_low_spotlight_is_a_stop_not_a_walk_past(
         self, browser_page
@@ -3140,12 +2984,9 @@ class TestDetailViewAndEditing:
         you pass), and a seated stop with a low spotlight carries it WITH minutes —
         Rosemary's 8-minute Bench (05-step-free-visitor.md:25-27, "The bench is a
         stop. It has a location, a duration, and content — it simply is not a sight")
-        and a 5-minute stand outside the Orangerie. Reading band as SHAPE rendered
-        both as "walk-past sights", dropped their minutes from "standing still", and
-        listed the Bench as a walk-past and as a rest promise on the same day (Phase 4
-        carried finding 8). Walked past vs stopped at is ``visit_or_walk_past``, the
-        field that says so (design §3.1: a rest is a stop; §1.1 truth 1: standing
-        still is most of the day).
+        and a 5-minute stand outside the Orangerie. Walked past vs stopped at is
+        ``visit_or_walk_past``, the field that says so (design §3.1: a rest is a stop;
+        §1.1 truth 1: standing still is most of the day).
 
         UNDO: make ``isWalkPast`` in review.html read ``s.band === 'vignette'`` again
         → the head says "2 stops · 1 walk-past sight" for a 3-stop day and the Bench
@@ -3154,35 +2995,27 @@ class TestDetailViewAndEditing:
         page, _seed_data, _reporter = browser_page
         stops = [
             {"sort_order": 1, "poi_name": "Musée de l'Orangerie", "minutes": 5,
-             "lat": 48.8638, "lng": 2.3226, "narration": "One line as you pass.",
-             "spotlight": 1.1, "band": "vignette", "visit_or_walk_past": "visit",
-             "goes_inside": False},
+             "lat": 48.8638, "lng": 2.3226, "spotlight": 1.1, "band": "vignette",
+             "visit_or_walk_past": "visit", "goes_inside": False},
             {"sort_order": 2, "poi_name": "Bench", "minutes": 8,
-             "lat": 48.8635, "lng": 2.3282, "narration": "Sit here a while.",
-             "spotlight": 0.9, "band": "vignette", "visit_or_walk_past": "visit",
-             "goes_inside": False},
+             "lat": 48.8635, "lng": 2.3282, "spotlight": 0.9, "band": "vignette",
+             "visit_or_walk_past": "visit", "goes_inside": False},
             {"sort_order": 3, "poi_name": "Pont Royal", "minutes": 0,
-             "lat": 48.8608, "lng": 2.3300, "narration": "On your left, the bridge.",
-             "spotlight": 1.0, "band": "vignette", "visit_or_walk_past": "walk_past"},
+             "lat": 48.8608, "lng": 2.3300, "spotlight": 1.0, "band": "vignette",
+             "visit_or_walk_past": "walk_past"},
             {"sort_order": 4, "poi_name": "Musée d'Orsay", "minutes": 100,
-             "lat": 48.8600, "lng": 2.3266, "narration": "The station clock.",
-             "spotlight": 5.0, "band": "dwell", "goes_inside": True},
+             "lat": 48.8600, "lng": 2.3266, "spotlight": 5.0, "band": "dwell",
+             "goes_inside": True},
         ]
-        _route_two_step(
-            page,
-            plan=_plan_payload(stops),
-            compose=_authored_payload(
-                {"stops": stops, "spine_area": "Rive Gauche", "total_audio_min": 12}
-            ),
-        )
+        _route_plan(page, _plan_payload(stops))
         try:
             page.locator("#tourPreviewBtn").click()
             page.wait_for_timeout(300)
             _set_tour_inputs(page, start="48.8600,2.3266")
             assert _plan_the_day(page).status == 200
 
-            # PLAN screen: three SEATED places are three stops; the one walk-past is
-            # counted apart; every seated minute is standing still.
+            # Three SEATED places are three stops; the one walk-past is counted
+            # apart; every seated minute is standing still.
             head = page.locator("#tourStops .tour-day-head").text_content() or ""
             assert "3 stops" in head, f"a seated stop was read as a walk-past: {head!r}"
             assert "1 walk-past sight" in head, f"the real walk-past vanished: {head!r}"
@@ -3204,99 +3037,16 @@ class TestDetailViewAndEditing:
             assert page.locator(".tour-route-pin--vignette").count() == 1, (
                 "only the walked-past place pins hollow"
             )
-
-            # AUTHORED screen: the same shape rule; the narration band tag may stay.
-            assert _write_the_tour(page).status == 200
-            cards = page.locator("#tourStops .tour-stop")
-            texts = [cards.nth(i).text_content() or "" for i in range(cards.count())]
-            bench = next(t for t in texts if "Bench" in t)
-            assert "~8 min here" in bench, f"authored screen: the Bench is a stop: {bench!r}"
-            assert "walk past" not in bench, bench
-            pont = next(t for t in texts if "Pont Royal" in t)
-            assert "walk past" in pont and "0 min" in pont, pont
-            assert page.locator("#tourStops .tour-stop--vignette").count() == 1
-            assert page.locator(".tour-route-pin--vignette").count() == 1
         finally:
-            _unroute_two_step(page)
-
-    def test_tour_preview_deeper_dive_badge_on_extras_stop(self, browser_page):
-        """INVARIANT (audit E :2972): a stop with capped-out extras says so —
-        design §5.5 promotes this to core ("two lengths per major stop") and §8
-        keeps "the keep-exploring machinery". KE10: a dense Île-de-la-Cité tour
-        (Notre-Dame) whose budget capped out extra beats surfaces a "Keep
-        exploring" badge on the stop that has extras (has_deeper_dive=True) and
-        NOT on the stop without extras.
-
-        Driver re-pointed at S4.8 (plan the day -> write the tour; the badge lives
-        on the WRITTEN screen — plan cards carry no extras signal, by design §8.1's
-        places-only plan). Audit E assigns the fuller two-lengths rewrite to
-        Phase 6; the surviving assertions are unchanged here.
-
-        /trips/preview is mocked (the has_deeper_dive wiring is unit-tested in
-        tests/test_trip_preview_vignettes.py); this test asserts the render."""
-        page, _seed_data, _reporter = browser_page
-        dive_stops = [
-            # Notre-Dame: beat-dense, budget capped extras out.
-            {"sort_order": 1, "poi_name": "Notre-Dame", "minutes": 8,
-             "lat": 48.8530, "lng": 2.3499, "narration": "The cathedral rises.",
-             "spotlight": 5.0, "band": "dwell", "has_deeper_dive": True},
-            # Sainte-Chapelle: no extras -> no badge.
-            {"sort_order": 2, "poi_name": "Sainte-Chapelle", "minutes": 5,
-             "lat": 48.8554, "lng": 2.3450, "narration": "Stained glass glows.",
-             "spotlight": 3.6, "band": "dwell", "has_deeper_dive": False},
-        ]
-        _route_two_step(
-            page,
-            plan=_plan_payload(dive_stops),
-            compose=_authored_payload(
-                {"stops": dive_stops, "spine_area": "Île de la Cité", "total_audio_min": 13}
-            ),
-        )
-        try:
-            page.locator("#tourPreviewBtn").click()
-            page.wait_for_timeout(300)
-            _set_tour_inputs(page, start="48.8566,2.3522")
-            assert _plan_the_day(page).status == 200
-            assert _write_the_tour(page).status == 200
-
-            stops = page.locator("#tourStops .tour-stop")
-            assert stops.count() == 2, f"expected 2 rendered stops, got {stops.count()}"
-
-            # Exactly one "Keep exploring" badge, on the extras stop.
-            badges = page.locator("#tourStops .tour-deeper-dive-tag")
-            assert badges.count() == 1, (
-                f"expected exactly 1 deeper-dive badge (Notre-Dame), got {badges.count()}"
-            )
-            assert badges.first.is_visible(), "the deeper-dive badge should be visible"
-            assert "Keep exploring" in (badges.first.text_content() or ""), (
-                "the badge should read 'Keep exploring'"
-            )
-
-            # The extras stop (Notre-Dame) carries the badge; the other does not.
-            notre_dame = stops.nth(0)
-            sainte_chapelle = stops.nth(1)
-            assert notre_dame.locator(".tour-deeper-dive-tag").count() == 1, (
-                "the has_deeper_dive stop should carry the badge"
-            )
-            assert sainte_chapelle.locator(".tour-deeper-dive-tag").count() == 0, (
-                "a stop without extras must not carry the badge"
-            )
-            _take_screenshot(page, "ke10-deeper-dive-badge")
-        finally:
-            _unroute_two_step(page)
+            _unroute_plan(page)
 
     _COORD_5DEC = r"-?\d+\.\d{5},-?\d+\.\d{5}"
 
     def _clear_tour_route_pins(self, page):
         """Generate an empty mocked preview to clear any leftover tour-route L.Markers
         (they swallow map clicks; circleMarkers bubble). Leaves the tour view open."""
-        # One-day stub (D4.0 re-point): an empty plan renders the empty state and
-        # clears the map. Nothing is authored, so the author call is never made.
-        _route_two_step(
-            page,
-            plan=_plan_payload([], spine_area="-", options=[]),
-            compose=_authored_payload({"stops": [], "spine_area": "-", "total_audio_min": 0}),
-        )
+        # An empty plan renders the empty state and clears the map.
+        _route_plan(page, _plan_payload([], spine_area="-", options=[]))
         try:
             page.locator("#tourPreviewBtn").click()
             page.wait_for_timeout(300)
@@ -3304,7 +3054,7 @@ class TestDetailViewAndEditing:
                 page.locator("#tourGenerateBtn").click()
             page.wait_for_timeout(200)
         finally:
-            _unroute_two_step(page)
+            _unroute_plan(page)
         assert page.locator(".tour-route-pin").count() == 0, "route pins should be cleared"
 
     def test_tour_map_click_sets_start_end_and_clear_resets(self, browser_page):
@@ -3388,8 +3138,7 @@ class TestDetailViewAndEditing:
                 body=json.dumps(_plan_payload([], spine_area="-", options=[])),
             )
 
-        # Only the PLAN call is made here: this test inspects the OUTBOUND body, and
-        # nothing is picked, so no authoring call exists to answer.
+        # Only the PLAN call is made here: this test inspects the OUTBOUND body.
         page.route("**/trips/preview", _handler)
         try:
             with page.expect_response(lambda r: r.url.endswith("/trips/preview")):
@@ -3493,8 +3242,8 @@ class TestDetailViewAndEditing:
                 head = page.locator("#tourStops .tour-day-head")
                 assert head.count() == 1, f"the day did not re-render after turn {turn_no}"
                 assert "2 stops" in (head.text_content() or "")
-                assert page.locator("#tourWriteBtn").count() == 1, (
-                    "the re-rendered day lost its one 'Write the tour' action"
+                assert page.locator("#tourPhoneRunBtn").count() == 1, (
+                    "the re-rendered day lost its one 'Run it like the phone' action"
                 )
         finally:
             page.unroute("**/trips/preview")
@@ -5372,13 +5121,10 @@ class TestBugReport:
 # (tests/fixtures/ile_de_la_cite_tourable.json) into the dedicated 7689 graph,
 # and removes it again.
 #
-# IT COSTS NOTHING, and here is the actual mechanism now that the
-# ONDOWAY_ENABLE_PAID_LLM_CALLS gate has been removed (2026-07-31): conftest.py
-# blanks ANTHROPIC_API_KEY (and the other paid keys) for every non-live run, and
-# the api_server subprocess inherits that environment. The premium executor is
-# therefore constructed but cannot authenticate, so it fails and the response is
-# the Basic grounded lane — real route, real stops, real corpus prose, no billable
-# call. Proving the PREMIUM lane needs a real key and belongs in a live shard.
+# IT COSTS NOTHING: the test only PLANS the day, and planning makes no provider
+# call. conftest.py also blanks ANTHROPIC_API_KEY (and the other paid keys) for
+# every non-live run, and the api_server subprocess inherits that environment.
+# Writing and voicing a real day needs a real key and belongs in a live shard.
 
 TOURABLE_FIXTURE = Path(__file__).parent / "fixtures" / "ile_de_la_cite_tourable.json"
 
@@ -5430,8 +5176,8 @@ class TestRealTourGeneration:
         """INVARIANT (audit E :5234): the workbench really builds a tour from the
         seeded corpus, unstubbed, and the seeded names appear on screen. Press
         "Plan the day" and let the real endpoint answer — no route interception —
-        then write THE day with the one "Write the tour" action (S4.8, design
-        §8.1: the plan reply carries exactly one day; there is no pick).
+        then read THE day off the wire and off the screen (the plan reply carries
+        exactly one day; there is no pick).
 
         Asserts the stops that render came from the SEEDED corpus, not from a
         fixture in this file — a canned payload cannot satisfy it, because the
@@ -5496,12 +5242,12 @@ class TestRealTourGeneration:
 
         # PLANNING is free and returns THE day. Nothing is written yet, so there
         # is no narration to check here — only that the engine really routed the
-        # seeded corpus into one day (§8.1: options is a list of exactly one).
+        # seeded corpus into one day (options is a list of exactly one).
         body = response.json()
         options = body.get("options") or []
         assert len(options) == 1, (
             f"the endpoint answered 200 but did not return THE one-day plan "
-            f"(design §8.1; got {len(options)} options): {str(body)[:400]}"
+            f"(got {len(options)} options): {str(body)[:400]}"
         )
         planned_names = {s.get("name") for s in (options[0].get("stops") or [])}
         assert planned_names & seeded_names, (
@@ -5509,206 +5255,159 @@ class TestRealTourGeneration:
             f"come from the corpus under test. Seeded: {sorted(seeded_names)}. "
             f"Planned: {sorted(n for n in planned_names if n)}"
         )
-        # The day renders immediately, places only — seeded names on screen
-        # BEFORE anything is written. The write button is the render's last
-        # element, so its visibility is what proves the day finished drawing.
-        write_btn = page.locator("#tourWriteBtn")
-        write_btn.wait_for(state="visible", timeout=20000)
-        plan_text = page.locator("#tourStops").inner_text()
-        assert {name for name in seeded_names if name in plan_text}, (
-            f"the planned day rendered none of the seeded POIs: {plan_text[:400]}"
-        )
-
-        # Now WRITE the day — the only call that writes and spends. This shard
-        # runs without a usable ANTHROPIC_API_KEY (conftest blanks it), so it
-        # lands in the Basic grounded lane; either lane proves a tour was BUILT.
-        _diag_reqs: list[str] = []
-        _diag_msgs: list[str] = []
-        page.on(
-            "request",
-            lambda r: _diag_reqs.append(
-                f"{r.url.split('/api/v1')[-1]} BODY={(r.post_data or '')[:600]}"
-            ),
-        )
-        page.on("console", lambda m: _diag_msgs.append(f"{m.type}: {m.text[:200]}"))
-        page.on("pageerror", lambda e: _diag_msgs.append(f"PAGEERROR: {str(e)[:200]}"))
-        try:
-            with page.expect_response(
-                lambda r: "/trips/preview/author" in r.url, timeout=30000
-            ) as authored:
-                write_btn.click()
-        except Exception:
-            print("DIAG requests:", [u.split("/api/v1")[-1] for u in _diag_reqs][-10:])
-            print("DIAG console:", _diag_msgs[-10:])
-            print("DIAG btn disabled:", write_btn.is_disabled(), "text:", write_btn.text_content())
-            raise
-        assert authored.value.status == 200, (
-            f"the workbench could not write the planned day: HTTP "
-            f"{authored.value.status} {authored.value.text()[:400]}"
-        )
-
-        rendered = page.locator(".tour-stop")
-        rendered.first.wait_for(state="visible", timeout=20000)
+        # The day renders immediately, places only — seeded names on screen. The
+        # "Run it like the phone" button is the render's last element, so its
+        # visibility is what proves the day finished drawing.
+        page.locator("#tourPhoneRunBtn").wait_for(state="visible", timeout=20000)
+        rendered = page.locator("#tourStops .tour-stop")
         assert rendered.count() >= 1, "stops came back over the wire but none rendered"
-
-        page_text = page.locator("#tourStops").inner_text()
-        matched = {name for name in seeded_names if name in page_text}
+        plan_text = page.locator("#tourStops").inner_text()
+        matched = {name for name in seeded_names if name in plan_text}
         assert matched, (
-            f"none of the SEEDED POIs appear in the rendered tour, so this did not come "
+            f"none of the SEEDED POIs appear in the rendered day, so this did not come "
             f"from the corpus under test. Seeded: {sorted(seeded_names)}. "
-            f"Rendered: {page_text[:400]}"
+            f"Rendered: {plan_text[:400]}"
         )
 
-    def test_a_degraded_tour_shows_the_problem_panel_with_a_copy_button(
-        self, browser_page, tourable_corpus
-    ):
-        """OWNER RULING 2026-07-31: "Don't just log errors. Actually show them in
-        the workbench UI. Otherwise, they're invisible."
 
-        This is that ruling's proof. The whole degradation feature shipped once
-        with no test at all — a judge caught it, and a feature whose purpose is
-        "stop trusting that a problem was noticed" is the last thing that should
-        be taken on trust.
+class TestFailuresAreShown:
+    """What went wrong reaches the screen, in words a person can act on.
 
-        The degrade is REAL, not injected: this shard runs with a blanked
-        ANTHROPIC_API_KEY (conftest), and the api_server subprocess inherits it,
-        so the narrator cannot authenticate. That used to be a silent log line;
-        it must now be on screen.
+    Each test reloads the page, so the provider availability and the tour view it
+    reads are the page's own, not state an earlier test left behind.
+    """
 
-        RE-DERIVED 2026-08-18 (Phase 4 close) against what this path ACTUALLY
-        does. The old body asserted ``glue_call_failed`` / ``HaikuGlueClient``,
-        which CANNOT occur here and never could: walk-transition glue is written
-        at PLAN time, and Block 1 plans with ``SilentGlueClient`` by default
-        because planning is free (premium_tour.plan_premium_tour). The real
-        HaikuGlueClient is only ever defaulted in ``generation.py`` for the
-        compose path. On preview->author the FIRST thing that needs the provider
-        is per-stop authoring, which fails to authenticate and raises, so the
-        request falls to the Basic lane before any transition is written.
-        MEASURED, not reasoned: the identical assertion fails the identical way
-        at 258933fd (Phase 3's tree, scoped-stash probe) — an inherited red that
-        the api_server pipe deadlock had been hiding, because this class timed
-        out before ever reaching the assertion.
-
-        So the invariant this test defends is unchanged and the scenario is
-        unchanged; only the NAME of the honest failure is corrected.
-
-        UNDO TEST: delete the buildDegradationPanel(...) call from
-        frontend/review.html's renderTourStops -> RED (no panel).
-        """
-        page, _seed, _reporter = browser_page
+    def _open_paris(self, page):
         page.goto(WORKBENCH_URL)
         page.wait_for_load_state("networkidle")
-
         paris_value = page.evaluate(
             "() => [...document.getElementById('citySelect').options]"
             ".filter(o => o.textContent.trim().toLowerCase().startsWith('paris'))"
             ".map(o => o.value)[0] ?? null"
         )
-        assert paris_value is not None, "the seeded corpus never reached the graph"
+        assert paris_value is not None, "the city picker offers no Paris option"
         page.locator("#citySelect").select_option(value=paris_value)
         page.locator("#citySubmitBtn").click()
+        page.locator(CITY_OVERLAY).wait_for(state="hidden", timeout=15000)
+
+    def test_a_degraded_plan_shows_the_problem_panel_with_a_copy_button(self, browser_page):
+        """Errors are shown in the workbench, not only logged.
+
+        The plan reply carries ``degradations``, and the plan screen must render
+        them ABOVE the "Run it like the phone" action, in both registers: the
+        plain sentence a person reads, and the technical half (component and
+        cause) for whoever fixes it, plus the one-click "Copy report for Claude".
+
+        The plan is answered in the browser with a degradation the planner really
+        records (``subject_gate_relaxed``, from ``selection.select_route``), in the
+        shape ``degradations.collapse`` sends: a counted row.
+
+        UNDO TEST: delete the buildDegradationPanel(...) call from
+        frontend/review.html's renderTourDay -> RED (no panel).
+        """
+        page, _seed, _reporter = browser_page
+        self._open_paris(page)
         page.locator("#tourPreviewBtn").click()
-        _set_tour_inputs(page, start="48.852966,2.349902", duration=60)
+        page.wait_for_timeout(300)
 
-        with page.expect_response(
-            lambda r: r.url.endswith("/trips/preview"), timeout=180000
-        ):
-            page.locator("#tourGenerateBtn").click()
-
-        # The degrade under test is the NARRATOR failing, and nothing is narrated
-        # until the day is written — planning makes no provider call at all. So
-        # write the tour (S4.8, design §8.1: the one action left): that is the
-        # call that tries to write, fails to reach the narrator, and must say so.
-        write_btn = page.locator("#tourWriteBtn")
-        write_btn.wait_for(state="visible", timeout=20000)
-        with page.expect_response(
-            lambda r: "/trips/preview/author" in r.url, timeout=180000
-        ) as caught:
-            write_btn.click()
-        body = caught.value.json()
-
-        # The API must report the degrade at all — panel or no panel.
-        rows = body.get("degradations") or []
-        assert rows, (
-            "the narrator was unreachable, so the day could not be written, but "
-            "the response reported NO degradations — the failure is invisible "
-            f"again. lane={body.get('narration_kind')!r}"
+        human = (
+            "This area is thin for the subjects you chose, so some stops sit outside "
+            "them rather than serving no day at all."
         )
-        # And it must be THE failure that really happened, named as itself: a stop
-        # that could not be composed, because the provider could not be reached.
-        # Asserting the kind AND the provider's own error keeps this from passing
-        # on some unrelated degradation that happens to be present.
-        failed = [r for r in rows if r.get("kind") == "premium_unit_failed"]
-        assert failed, rows
-        assert any(
-            "authentication" in (r.get("error_message") or "").lower() for r in failed
-        ), failed
-
-        # And it must be ON SCREEN, which is what the owner actually asked for.
-        panel = page.locator(".tour-degradations")
-        panel.first.wait_for(state="visible", timeout=20000)
-        _take_screenshot(page, "degradation-panel-visible")
-
-        panel_text = panel.first.inner_text()
-        assert "problem" in panel_text.lower(), panel_text
-        # Plain English for the human: the traveller's sentence, no jargon in it.
-        assert "failed to compose" in panel_text, panel_text
-        # ...and the technical half for whoever fixes it: what broke, and why.
-        assert "execute_premium_plan.invoke" in panel_text, panel_text
-        assert "authentication" in panel_text.lower(), panel_text
-        # ...and the one-click handoff.
-        assert page.locator(".tour-degradations button").count() >= 1, (
-            "the panel renders no 'Copy report for Claude' button, so the report "
-            "cannot be handed over in one action"
+        _route_plan(
+            page,
+            _plan_payload(
+                [
+                    {"sort_order": 1, "poi_name": "Notre-Dame", "minutes": 6},
+                    {"sort_order": 2, "poi_name": "Sainte-Chapelle", "minutes": 4},
+                ],
+                degradations=[{
+                    "kind": "subject_gate_relaxed",
+                    "human": human,
+                    "component": "selection.select_route",
+                    "error_type": "",
+                    "error_message": "",
+                    "context": {},
+                    "count": 1,
+                }],
+            ),
         )
+        try:
+            _set_tour_inputs(page, start="48.8566,2.3522")
+            assert _plan_the_day(page).status == 200
 
-    def test_an_unavailable_voice_refuses_before_spending_a_request(
-        self, browser_page, tourable_corpus
-    ):
+            panel = page.locator("#tourStops .tour-degradations")
+            panel.first.wait_for(state="visible", timeout=10000)
+            _take_screenshot(page, "degradation-panel-visible")
+
+            panel_text = panel.first.inner_text()
+            assert "1 problem" in panel_text, panel_text
+            # Plain English for the human, and the technical half for the fixer.
+            assert human in panel_text, panel_text
+            assert "selection.select_route" in panel_text, panel_text
+            # ...and the one-click handoff.
+            assert panel.locator("button").count() >= 1, (
+                "the panel renders no 'Copy report for Claude' button, so the report "
+                "cannot be handed over in one action"
+            )
+            # Above the paid action, so the warning arrives before the spend.
+            order = page.evaluate(
+                "() => { const p = document.querySelector('#tourStops .tour-degradations');"
+                " const b = document.getElementById('tourPhoneRunBtn');"
+                " return !!(p && b && (p.compareDocumentPosition(b)"
+                " & Node.DOCUMENT_POSITION_FOLLOWING)); }"
+            )
+            assert order, "the problem panel is not above the 'Run it like the phone' action"
+        finally:
+            _unroute_plan(page)
+
+    def test_an_unavailable_voice_refuses_before_spending_a_request(self, browser_page):
         """Pressing Listen on a voice the server cannot serve must fail FAST and
         SAY WHY, without issuing a doomed request.
 
-        Before this, the page fired the request anyway and showed a bare
-        "TTS failed (502)" with no cause. This shard's server runs with a blanked
+        A refusal names the cause rather than a bare HTTP status, so the editor
+        can act on it. This shard's server runs with a blanked
         OPENAI_API_KEY, so /audio/providers honestly reports openai unavailable —
         the exact condition. Note this test must NOT use the
         ``_stubbed_audio_preview`` fixture, which stubs the availability probe to
         report the voice available and would route around the branch under test.
 
+        The Listen button is a beat's, on an incoming POI staged through the
+        page's own ``poiData`` and ``selectPoi``: ``ttsPlay`` is the one player
+        behind it, and its availability refusal is what is under test.
+
         UNDO TEST: delete the availability refusal from ttsPlay -> a request is
         issued and `asked` becomes non-empty -> RED.
         """
         page, _seed, _reporter = browser_page
-        page.goto(WORKBENCH_URL)
-        page.wait_for_load_state("networkidle")
-
-        paris_value = page.evaluate(
-            "() => [...document.getElementById('citySelect').options]"
-            ".filter(o => o.textContent.trim().toLowerCase().startsWith('paris'))"
-            ".map(o => o.value)[0] ?? null"
+        self._open_paris(page)
+        # The premise, read off the page itself: the provider list has loaded and
+        # it says the production voice is unavailable on this server.
+        page.wait_for_function(
+            "() => { const o = document.querySelector("
+            "'#ttsProviderSelect option[value=\"openai\"]'); return !!o && o.disabled; }",
+            timeout=15000,
         )
-        page.locator("#citySelect").select_option(value=paris_value)
-        page.locator("#citySubmitBtn").click()
-        page.locator("#tourPreviewBtn").click()
-        _set_tour_inputs(page, start="48.852966,2.349902", duration=60)
-        with page.expect_response(lambda r: r.url.endswith("/trips/preview"), timeout=180000):
-            page.locator("#tourGenerateBtn").click()
-        # Listen buttons exist only on a written tour, so the day must be written
-        # before there is anything to press play on (S4.8, design §8.1).
-        write_btn = page.locator("#tourWriteBtn")
-        write_btn.wait_for(state="visible", timeout=20000)
-        with page.expect_response(
-            lambda r: "/trips/preview/author" in r.url, timeout=180000
-        ):
-            write_btn.click()
+
+        page.evaluate(
+            """async () => {
+            window.poiData = [{
+              poi_name: 'UI Test — Unavailable Voice Probe',
+              latitude: 48.90, longitude: 2.50, _status: 'pending',
+              beats: [{ script_body: 'A line for a voice this server cannot serve.',
+                        lens: 'hidden_history', gravity: 3 }],
+            }];
+            await window.selectPoi(0);
+        }"""
+        )
 
         # Record every preview request the page issues from here on.
         asked: list[str] = []
         page.on("request", lambda r: asked.append(r.url) if "/audio/preview" in r.url else None)
 
-        listen = page.locator(".tts-play-btn[data-tour-stop]")
-        listen.first.wait_for(state="visible", timeout=20000)
-        listen.first.click()
+        listen = page.locator('.tts-play-btn[data-beat-tts="0"]')
+        listen.wait_for(state="visible", timeout=20000)
+        listen.click()
 
         toast = page.locator("#errorToast")
         toast.wait_for(state="visible", timeout=15000)
@@ -5945,13 +5644,12 @@ class TestWorkbenchRunsThePhonePath:
         calls: list[dict] = []
         # The plan is stubbed only to put a day on screen — the phone action lives
         # on the rendered day, and the plan body is what its request is built from.
-        _route_two_step(
+        _route_plan(
             page,
-            plan=_plan_payload([
+            _plan_payload([
                 {"sort_order": 1, "poi_name": "Notre-Dame", "minutes": 12},
                 {"sort_order": 2, "poi_name": "Sainte-Chapelle", "minutes": 8},
             ]),
-            compose=_authored_payload({"stops": [], "spine_area": "-", "total_audio_min": 0}),
         )
         self._install_phone_stubs(page, calls)
         try:
@@ -6059,4 +5757,4 @@ class TestWorkbenchRunsThePhonePath:
             _take_screenshot(page, "phone-path-tap-for-more")
         finally:
             self._unroute_phone_stubs(page)
-            _unroute_two_step(page)
+            _unroute_plan(page)

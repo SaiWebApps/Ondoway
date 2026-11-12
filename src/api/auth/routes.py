@@ -234,9 +234,9 @@ def me(current_user: dict = Depends(get_current_user)):
 # THOSE endpoints. Both are ownership-scoped and authenticated, and that stays exactly
 # as it is: adding an auth-optional branch to the phone's routes would be a second door
 # into one stage AND a security regression on the tourist's surface. So the workbench
-# signs in like anybody else, and this is where it gets its identity — the move
-# `author_preview_tour`'s docstring has named since 2026-08-04 ("Phase 2 closes it by
-# giving the workbench a real identity and moving it onto the saved-trip pair").
+# signs in like anybody else, and this is where it gets its identity: the workbench
+# writes a tour only through the saved-trip pair (POST /trips/generate, then
+# POST /trips/{id}/compose), exactly as the phone does.
 #
 # The workbench has no inbox and no Apple/Google account, so there is no link to send
 # and no token to verify; it mints its session directly. That makes it a real
@@ -268,24 +268,15 @@ RETURN p.id AS profile_id
 """
 
 
-def _workbench_api_enabled() -> bool:
-    """Fail-closed parse of the workbench gate (mirrors app._workbench_api_enabled).
-
-    ONLY an explicit truthy value opens the surface; unset, empty, or a typo
-    ("flase", "disbaled") keeps it CLOSED. Defined locally rather than imported from
-    src.api.app to avoid a circular import (app imports this module) — the same
-    reason src/api/routes/audio.py keeps its own copy of this parser.
-    """
-    return os.getenv("WORKBENCH_API_ENABLED", "").strip().lower() in (
-        "true",
-        "1",
-        "yes",
-        "on",
-    )
-
-
 def require_workbench() -> None:
-    """Dependency: 404 unless the workbench surface is explicitly enabled."""
+    """Dependency: 404 unless the workbench surface is explicitly enabled.
+
+    The gate is ``app._workbench_api_enabled``, the one fail-closed parser: only an
+    explicit truthy value opens the surface. It is imported here, at request time,
+    because app imports this module at load.
+    """
+    from src.api.app import _workbench_api_enabled  # circular at module load
+
     if not _workbench_api_enabled():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
 
