@@ -8,10 +8,12 @@ the planner, the tour gates, the piece cutter, the graph writes and the build lo
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import pytest
 
+import scripts.build_place_recipes as build_command
 from src.connection import get_database
 from src.tour.authoring import COMPOSE_MODEL
 from src.tour.certification_provider import PhysicalProviderResponse
@@ -128,7 +130,37 @@ class _Voice:
         return _Audio(audio_url=f"/audio/{stop_key}.mp3", duration_sec=len(text.split()) / 2.5)
 
 
-def _build(session, snapshot, writer, voice, seen: list[RecipeOutcome] | None = None):
+class _Unreachable:
+    """A writer and a voice that fail the test the moment either is asked for work.
+
+    ``pytest.fail`` raises past the build's ``except Exception``, so a call cannot be
+    swallowed into a refused outcome."""
+
+    cost_bearing = False
+    provider_name = "unreachable"
+
+    def execute(self, unit):
+        pytest.fail(f"the writer was asked to write {unit.poi_name}")
+
+    def __call__(self, text: str, *, stop_key: str, poi_name: str) -> _Audio:
+        pytest.fail(f"the voice was asked to speak for {poi_name}")
+
+
+def _build(
+    session,
+    snapshot,
+    writer,
+    voice,
+    seen: list[RecipeOutcome] | None = None,
+    *,
+    dry_run: bool = False,
+    should_continue: Callable[[RecipeOutcome], bool] | None = None,
+):
+    def keep_going(outcome: RecipeOutcome) -> bool:
+        if seen is not None:
+            seen.append(outcome)
+        return True
+
     return list(
         build_recipes(
             session,
@@ -141,12 +173,20 @@ def _build(session, snapshot, writer, voice, seen: list[RecipeOutcome] | None = 
             voice=voice,
             voice_identity=VOICE,
             build_identity=PremiumBuildIdentity(commit_sha="0" * 40),
-            dry_run=False,
-            should_continue=lambda outcome: (
-                seen.append(outcome) is None if seen is not None else True
-            ),
+            dry_run=dry_run,
+            should_continue=should_continue or keep_going,
         )
     )
+
+
+def _graph_size(session) -> tuple[int, int]:
+    nodes = session.run("MATCH (n) RETURN count(n) AS n").single()["n"]
+    edges = session.run("MATCH ()-[e]->() RETURN count(e) AS n").single()["n"]
+    return nodes, edges
+
+
+def _recipe_count(session) -> int:
+    return session.run("MATCH (r:PlaceRecipe) RETURN count(r) AS n").single()["n"]
 
 
 def _seed_graph(session, snapshot: CorpusSnapshot) -> None:
@@ -308,9 +348,75 @@ def test_a_telling_the_checks_refuse_is_never_stored(session):
     assert session.run("MATCH (r:PlaceRecipe) RETURN count(r) AS n").single()["n"] == 0
 
 
-def test_a_tour_request_keeps_its_exact_bytes_and_hash():
-    """The told-on-its-own field leaves every tour request untouched: it is absent
-    from the dump while off, so sealed request hashes still match."""
+def test_a_build_stops_before_the_next_recipe_when_the_spend_check_says_stop(session):
+    snapshot = _snapshot()
+    _seed_graph(session, snapshot)
+    writer, voice = _Writer(), _Voice()
+    asked: list[RecipeOutcome] = []
+
+    def stop(outcome: RecipeOutcome) -> bool:
+        asked.append(outcome)
+        return False
+
+    outcomes = _build(session, snapshot, writer, voice, should_continue=stop)
+    assert [o.status for o in outcomes] == ["built"], "nothing is written after the stop"
+    assert asked == outcomes
+    assert writer.calls == 1
+    assert _recipe_count(session) == 1
+
+
+def test_a_dry_run_writes_nothing_voices_nothing_and_leaves_the_graph_alone(session):
+    snapshot = _snapshot()
+    _seed_graph(session, snapshot)
+    before = _graph_size(session)
+    unreachable = _Unreachable()
+    outcomes = _build(session, snapshot, unreachable, unreachable, dry_run=True)
+    assert [o.status for o in outcomes] == ["planned"] * 5
+    assert all(o.output_tokens == 0 and o.pieces == 0 for o in outcomes)
+    assert _graph_size(session) == before
+
+
+def _patch_build_command(monkeypatch, snapshot: CorpusSnapshot, writer, voice) -> None:
+    """Point the build command at the test graph's snapshot and the test doubles.
+    The command binds its providers at import, so they are replaced on it."""
+
+    monkeypatch.setenv("TTS_PROVIDER", "test")
+    monkeypatch.delenv("TTS_FALLBACK", raising=False)
+    monkeypatch.setattr(build_command, "load_paris_corpus", lambda driver, city_slug: snapshot)
+    monkeypatch.setattr(build_command, "AnthropicPremiumExecutor", lambda: writer)
+    monkeypatch.setattr(build_command, "HaikuFaithfulnessChecker", MockFaithfulnessChecker)
+    monkeypatch.setattr(build_command, "generate_stop_audio", voice)
+    monkeypatch.setattr(
+        build_command,
+        "resolve_build_identity",
+        lambda: PremiumBuildIdentity(commit_sha="0" * 40),
+    )
+
+
+def test_the_build_command_writes_at_most_max_recipes_and_current_ones_are_free(
+    session, monkeypatch
+):
+    snapshot = _snapshot()
+    _seed_graph(session, snapshot)
+    writer, voice = _Writer(), _Voice()
+    _patch_build_command(monkeypatch, snapshot, writer, voice)
+    args = build_command.parse_args(["--city", CITY, "--max-recipes", "1"])
+
+    first = build_command.run(args)
+    assert [(o.poi_name, o.lens, o.status) for o in first] == [("Test Hall", None, "built")]
+    assert writer.calls == 1 and _recipe_count(session) == 1
+
+    second = build_command.run(args)
+    assert [(o.poi_name, o.lens, o.status) for o in second] == [
+        ("Test Hall", None, "current"),
+        ("Test Hall", "hidden_history", "built"),
+    ], "a recipe already current is skipped and does not use up the limit"
+    assert writer.calls == 2 and _recipe_count(session) == 2
+
+
+def test_a_tour_request_leaves_the_told_on_its_own_field_out_of_its_dump():
+    """The told-on-its-own field is absent from a request's dump while it is off, so
+    a tour request serializes as it does without the field."""
     recipe = plan_place_recipe(
         _snapshot().pois[0],
         _snapshot(),

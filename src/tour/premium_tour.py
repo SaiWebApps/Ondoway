@@ -74,6 +74,7 @@ from .contract import (
     Sentence,
     TourInput,
 )
+from .corpus_places import bytes_sha256
 from .generation import (
     CONCURRENT_GLUE_LABELS,
     generate,
@@ -82,7 +83,6 @@ from .generation import (
 )
 from .glue_client import NO_GLUE_SENTINEL, GlueClient
 from .premium_authorities import PREMIUM_AUTHORITIES, PremiumAuthorityHashes
-from .provider_text_review import _sha256
 from .routing import MAX_REQUESTED_FRACTION, MIN_REQUESTED_FRACTION, RoutePlanningPolicy
 from .routing_client import (
     THIS_BUILDS_ROUTING_CONFIG_SHA256S,
@@ -105,7 +105,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 def premium_authoring_policy_sha256() -> str:
     """Hash the exact physical authoring policy shared by every caller."""
 
-    return _sha256(
+    return bytes_sha256(
         _canonical_bytes(
             {
                 "model": COMPOSE_MODEL,
@@ -146,14 +146,14 @@ def exact_snapshot_sha256(snapshot: CorpusSnapshot) -> str:
             for k, values in snapshot.lens_neighbors.items()
         ),
     }
-    return _sha256(_canonical_bytes(payload))
+    return bytes_sha256(_canonical_bytes(payload))
 
 
 def route_summary(route: Route) -> dict[str, object]:
     """Canonical public route record used by Premium plan identities."""
 
     return {
-        "route_sha256": _sha256(_canonical_bytes(route.model_dump(mode="json"))),
+        "route_sha256": bytes_sha256(_canonical_bytes(route.model_dump(mode="json"))),
         "routed": route.routed,
         "total_walk_seconds": route.total_walk_seconds,
         "total_walk_distance_m": route.total_walk_distance_m,
@@ -237,7 +237,7 @@ class PremiumTourPlan:
             "application_deadline_seconds": None,
             "units": [unit.public_payload() for unit in self.units],
         }
-        return {**core, "tour_plan_sha256": _sha256(_canonical_bytes(core))}
+        return {**core, "tour_plan_sha256": bytes_sha256(_canonical_bytes(core))}
 
 
 def plan_premium_authoring(
@@ -330,7 +330,7 @@ def plan_premium_authoring(
                 poi_name=route.pois[stop_index].name,
                 authorized_request=requests[stop_index],
                 authoring_request=stop_request,
-                request_sha256=_sha256(encoded),
+                request_sha256=bytes_sha256(encoded),
                 input_byte_count=len(encoded),
                 output_token_ceiling=CERTIFICATION_COMPOSE_MAX_OUTPUT_TOKENS,
                 sdk_request=sdk_request,
@@ -1048,18 +1048,16 @@ def finalize_premium_composition(
 ) -> CertificationComposition:
     """Purely bind physical response bytes and run the certification finalizer.
 
-    THE THREE GATES ARE FORWARDED, and the defaults are for the CERTIFICATION REPLAY
+    THE GATES ARE FORWARDED, and the defaults are for the CERTIFICATION REPLAY
     ONLY (``scripts/tour_batch_candidate.py``), whose judgement of prose is semantic and
-    owned by factual review. Every LIVE surface must pass all three — see
-    ``finalize_premium_tour``, which requires the checker and hard-codes both booleans.
+    owned by factual review. Every LIVE surface passes every gate through
+    ``finalize_live_composition``, which requires the checker and turns each gate on.
 
-    MEASURED 2026-08-03: this function called the shared finalizer with only
-    ``completed_units`` and ``model``, so ``/trips/preview`` ran NO entailment check, NO
-    coverage baseline and NO invented-noun/year scan, while ``POST /trips/{id}/compose``
-    ran all three. ``authoring.py`` then set ``allow_unverified_faithfulness=True`` and
-    ``compose_gate.py`` substituted ``MockFaithfulnessChecker``, which approves every
-    sentence. The editorial workbench — the instrument used to judge tour quality — was
-    reviewing narration nothing had checked, and hiding refusals the phone would raise.
+    With the defaults and no checker, nothing checks entailment, claim coverage or
+    invented names and years: ``authoring.py`` allows unverified faithfulness and
+    ``compose_gate.py`` substitutes ``MockFaithfulnessChecker``, which approves every
+    sentence. A live surface that calls this function directly would therefore serve
+    narration nothing has checked.
     """
 
     if len(responses) != len(plan.units):
@@ -1081,7 +1079,7 @@ def finalize_premium_composition(
         except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
             raise ValueError("provider response is not a valid Premium sentence payload") from exc
         parsed_sha256 = sentences_payload_sha256(sentences)
-        response_sha256 = _sha256(response.body)
+        response_sha256 = bytes_sha256(response.body)
         authoring_responses.append(
             AuthoringStopResponse(
                 request=unit.authoring_request,
@@ -1245,13 +1243,15 @@ def finalize_premium_tour(
 ) -> PremiumTourResult:
     """Pure finalization into a validated, certification-eligible blueprint.
 
-    ``faithfulness_checker`` is REQUIRED and deliberately has NO default. This is the
-    function ``/trips/preview`` calls, and an optional checker is exactly how the
-    workbench came to run no entailment gate at all for three days while the phone ran
-    one: nothing at the call site had to say "skip the fact-checking", it simply never
-    mentioned it, and an omission is invisible to code review. Making it required means
-    the divergence cannot come back silently — a caller that forgets fails loudly at the
-    call, not quietly in the output.
+    This is the finalizer for a written walking tour: ``POST /trips/{trip_id}/compose``
+    calls it for the day's stops and for each standby's piece. A stored place recipe
+    has no walk and no blueprint, so the recipe build calls
+    ``finalize_live_composition`` directly and passes the same gates.
+
+    ``faithfulness_checker`` is REQUIRED and has NO default. An optional checker lets
+    a caller skip the fact checks by never mentioning them, and an omission is invisible
+    to code review. A caller that forgets fails loudly at the call, not quietly in the
+    output.
 
     The gates are NOT parameters here for the same reason: a live surface does not
     get to choose whether facts are checked. ``finalize_live_composition`` holds them.

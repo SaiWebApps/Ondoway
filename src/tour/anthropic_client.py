@@ -1,21 +1,13 @@
 """ONE bounded Anthropic client factory for every model call the tour engine makes.
 
-WHY THIS EXISTS (measured 2026-07-19). Every Anthropic client in the tour engine
-was constructed bare — ``anthropic.Anthropic()`` at ``compose.py:536``,
-``verify.py:117``, ``compose_correct.py:212``, ``factcheck.py`` x3 and
-``claim_repetition.py:349``. A bare client inherits the SDK defaults: a **600 s
-timeout with 2 retries**, i.e. **up to 30 minutes for a single stalled call**.
+Every Anthropic client in the tour engine is built here, never bare. A bare
+``anthropic.Anthropic()`` inherits the SDK defaults: a **600 s timeout with 2
+retries**, i.e. **up to 30 minutes for a single stalled call**, multiplied by every
+call a request fans out to.
 
-That is not a theoretical bound. A workbench ``POST /trips/preview`` was observed
-holding **128 sockets to api.anthropic.com — 91 CLOSE_WAIT, 34 ESTABLISHED and
-unmoving — and had not returned after 32 minutes**, against a UI that promises
-"~1 min". The Anthropic API itself was healthy throughout (a direct Haiku call
-answered in 1.2 s), so the fault was entirely local: unbounded waits with no
-ceiling, multiplied by the compose ladder's fan-out.
-
-The fix is deliberately NOT "make it faster" — it is "make it FAIL, visibly and
-soon, instead of hanging". A bounded client turns a 30-minute silent hang into a
-prompt, catchable error the compose ladder already knows how to degrade from.
+The bound does not make a call faster; it makes a stalled call FAIL, visibly and
+soon, instead of hanging. A bounded client turns a silent hang into a prompt,
+catchable error that the caller degrades from.
 
 THRESHOLD PROVENANCE — measured or reasoned, none invented:
 

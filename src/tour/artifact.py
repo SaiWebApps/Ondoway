@@ -30,6 +30,7 @@ from .corpus_places import (
     canonical_payload_bound_to_hash,
     check_place_assessment_references,
     check_reference_lane,
+    text_sha256,
     valid_coordinates,
 )
 from .generation import is_walk_concurrent
@@ -46,10 +47,6 @@ ObservationAction = Literal[
     "compare_visible_features",
     "trace_visible_feature",
 ]
-
-
-def _sha256_text(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def _canonical_sha256(value: BaseModel) -> str:
@@ -89,11 +86,11 @@ class NarrationChunk(BaseModel):
 
     @model_validator(mode="after")
     def _hash_matches_text(self) -> NarrationChunk:
-        if self.narration_sha256 != _sha256_text(self.text):
+        if self.narration_sha256 != text_sha256(self.text):
             raise ValueError("narration_sha256 does not match chunk text")
         if self.tts_text != normalize_for_tts(self.text):
             raise ValueError("tts_text is not the canonical normalized narration")
-        if self.tts_text_sha256 != _sha256_text(self.tts_text):
+        if self.tts_text_sha256 != text_sha256(self.tts_text):
             raise ValueError("tts_text_sha256 does not match normalized narration")
         if len(set(self.sentence_indexes)) != len(self.sentence_indexes):
             raise ValueError("a narration chunk repeats a sentence index")
@@ -490,9 +487,9 @@ def partition_final_script(
                     index=stop_index,
                     sentence_indexes=tuple(index for index, _ in sentences),
                     text=text,
-                    narration_sha256=_sha256_text(text),
+                    narration_sha256=text_sha256(text),
                     tts_text=normalize_for_tts(text),
-                    tts_text_sha256=_sha256_text(normalize_for_tts(text)),
+                    tts_text_sha256=text_sha256(normalize_for_tts(text)),
                     normalization_version=TTS_NORMALIZATION_VERSION,
                 )
             )
@@ -568,13 +565,13 @@ def remap_provider_playback_assignments(
     freeze would have produced had the composer emitted that sentence at plan time.
     Nothing is read from prose.
 
-    Why it is opt-in: the interactive preview (``finalize_premium_tour``, the ONLY
-    caller) discards this artifact via EphemeralReceiptSink, whereas the certification
-    batch runner reaches ``finalize_premium_composition`` directly and never enters
-    this function. Keeping the default fail-closed means certification replay cannot
-    be loosened by this change even accidentally. Measured 2026-07-26: the composer
-    legitimately adds a transition sentence, and without this every such tour was
-    discarded whole -- a 6-stop authored Paris tour thrown away for one sentence.
+    Why it is opt-in: its ONLY caller is ``finalize_premium_tour``, which finalizes
+    the tours ``POST /trips/{trip_id}/compose`` writes and keeps no receipts
+    (EphemeralReceiptSink). The certification batch runner reaches
+    ``finalize_premium_composition`` directly and never enters this function, so the
+    fail-closed default keeps certification replay strict. The composer may add a
+    transition sentence the frozen source lacks; without this relaxation such a tour
+    is refused whole for that one sentence.
     """
 
     if tuple(item.sentence_index for item in source_assignments) != tuple(
@@ -708,7 +705,7 @@ class FinalTourBlueprint(BaseModel):
         for item in self.derived_narration_evidence:
             sentence = self.script.script[item.sentence_index]
             if (
-                item.sentence_sha256 != _sha256_text(sentence.text)
+                item.sentence_sha256 != text_sha256(sentence.text)
                 or item.source_id != sentence.source_id
             ):
                 raise ValueError("derived narration evidence does not match final narration")
@@ -753,7 +750,7 @@ class FinalTourBlueprint(BaseModel):
                         "composition trace sentence indexes differ from the final stop"
                     )
                 expected_hashes = tuple(
-                    _sha256_text(self.script.script[index].text) for index in expected_indexes
+                    text_sha256(self.script.script[index].text) for index in expected_indexes
                 )
                 if item.sentence_sha256s != expected_hashes:
                     raise ValueError(
@@ -787,7 +784,7 @@ class FinalTourBlueprint(BaseModel):
             sentence = self.script.script[observation.sentence_index]
             if sentence.stop_idx != observation.stop_index:
                 raise ValueError("observation stop does not match its final sentence")
-            if _sha256_text(sentence.text) != observation.sentence_sha256:
+            if text_sha256(sentence.text) != observation.sentence_sha256:
                 raise ValueError("observation sentence hash does not match final narration")
             if observation.instruction != sentence.text:
                 raise ValueError("observation instruction differs from final narration")
@@ -805,7 +802,7 @@ class FinalTourBlueprint(BaseModel):
                 if assessment.sentence_index >= len(self.script.script):
                     raise ValueError("place assessment references an absent sentence")
                 sentence = self.script.script[assessment.sentence_index]
-                if assessment.sentence_sha256 != _sha256_text(sentence.text):
+                if assessment.sentence_sha256 != text_sha256(sentence.text):
                     raise ValueError(
                         "place assessment sentence hash does not match final narration"
                     )
@@ -926,12 +923,12 @@ def _route_narration_evidence(
         evidence.append(
             DerivedNarrationEvidence(
                 sentence_index=sentence_index,
-                sentence_sha256=_sha256_text(sentence.text),
+                sentence_sha256=text_sha256(sentence.text),
                 source_id=sentence.source_id,
                 claim_requirement="REVIEW_ALL",
                 evidence_kind="route_snapshot",
                 payload_json=canonical,
-                payload_sha256=_sha256_text(canonical),
+                payload_sha256=text_sha256(canonical),
             )
         )
     return tuple(evidence)

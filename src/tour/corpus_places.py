@@ -60,6 +60,10 @@ def text_sha256(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def bytes_sha256(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
 def valid_coordinates(value: tuple[float, float]) -> tuple[float, float]:
     """Is this a real point on Earth? THE ONE ANSWER.
 
@@ -701,6 +705,7 @@ __all__ = [
     "PerceivabilityState",
     "PlaceResolutionState",
     "StableBeatIdentity",
+    "bytes_sha256",
     "canonical_json",
     "canonical_sha256",
     "check_place_assessment_references",

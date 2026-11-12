@@ -5102,15 +5102,15 @@ class TestBugReport:
         _take_screenshot(page, "final-state")
 
 
-# ── Real tour generation, UNSTUBBED ─────────────────────────────────────────
+# ── Real day planning, UNSTUBBED ────────────────────────────────────────────
 #
 # Every other tour test in this file answers its own /trips/preview with a canned
-# payload, so none of them can notice that the workbench cannot build a tour.
+# payload, so none of them can notice that the workbench cannot plan a day.
 # That is not hypothetical: on 2026-07-31 the whole suite was green while the UI
 # produced nothing. tests/test_suite_honesty.py fails if this class disappears.
 #
 # The original stub's excuse was accurate — "the test DB's tier-1 fixture POIs
-# can't produce a tour". Two things made it impossible, both fixed here:
+# can't produce a day". Two things made it impossible, both fixed here:
 #   1. the density gate needs tier >= 3 POIs carrying >= 3 active beats
 #      (src/tour/density.py ANCHOR_CANDIDATE_TIER_MIN / _BEAT_COUNT_MIN), and the
 #      shared fixture creates tier 1;
@@ -5170,14 +5170,16 @@ def tourable_corpus(api_server):
 
 
 class TestRealTourGeneration:
-    """The one test in this file that lets the workbench actually build a tour."""
+    """The one test in this file that lets the real engine plan the workbench's day."""
 
-    def test_workbench_generates_a_real_tour_unstubbed(self, browser_page, tourable_corpus):
-        """INVARIANT (audit E :5234): the workbench really builds a tour from the
+    def test_workbench_plans_a_real_day_unstubbed(self, browser_page, tourable_corpus):
+        """INVARIANT (audit E :5234): the workbench really plans a day from the
         seeded corpus, unstubbed, and the seeded names appear on screen. Press
         "Plan the day" and let the real endpoint answer — no route interception —
         then read THE day off the wire and off the screen (the plan reply carries
-        exactly one day; there is no pick).
+        exactly one day; there is no pick). Planning writes and voices nothing:
+        hearing the day is "Run it like the phone", covered by
+        ``TestWorkbenchRunsThePhonePath``.
 
         Asserts the stops that render came from the SEEDED corpus, not from a
         fixture in this file — a canned payload cannot satisfy it, because the
@@ -5235,10 +5237,10 @@ class TestRealTourGeneration:
         response = caught.value
 
         assert response.status == 200, (
-            f"the workbench could not generate a tour: HTTP {response.status} "
+            f"the workbench could not plan a day: HTTP {response.status} "
             f"{response.text()[:400]}"
         )
-        _take_screenshot(page, "real-tour-generated-unstubbed")
+        _take_screenshot(page, "real-day-planned-unstubbed")
 
         # PLANNING is free and returns THE day. Nothing is written yet, so there
         # is no narration to check here — only that the engine really routed the

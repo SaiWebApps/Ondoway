@@ -8,7 +8,6 @@ enjoyment veto.  Every report is bound to the exact blueprint fingerprint.
 
 from __future__ import annotations
 
-import hashlib
 import json
 from collections.abc import Callable
 from pathlib import Path
@@ -22,7 +21,7 @@ from .artifact import (
     validate_blueprint_integrity,
     validate_llm_composed_blueprint,
 )
-from .corpus_places import canonical_payload_bound_to_hash
+from .corpus_places import bytes_sha256, canonical_payload_bound_to_hash, text_sha256
 
 SHA256_PATTERN = r"^[0-9a-f]{64}$"
 FACT_PROMPT_POLICY_VERSION = "tour-fact-review-v2"
@@ -38,17 +37,9 @@ ENJOY_AXIS_NAMES = (
 GateState = Literal["PASS", "FAIL", "INCONCLUSIVE", "ERROR"]
 
 
-def _sha256_text(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
-
-
-def _sha256_bytes(value: bytes) -> str:
-    return hashlib.sha256(value).hexdigest()
-
-
 def _opaque_enjoyment_id(kind: Literal["item", "segment"], stable_id: str) -> str:
     """Derive a stable provider-visible ID without leaking semantic reference names."""
-    return f"{kind}-{_sha256_text(f'{kind}:{stable_id}')[:24]}"
+    return f"{kind}-{text_sha256(f'{kind}:{stable_id}')[:24]}"
 
 
 def _canonical_sha256(value: BaseModel) -> str:
@@ -58,7 +49,7 @@ def _canonical_sha256(value: BaseModel) -> str:
         separators=(",", ":"),
         sort_keys=True,
     ).encode("utf-8")
-    return _sha256_bytes(payload)
+    return bytes_sha256(payload)
 
 
 class ReviewUsage(BaseModel):
@@ -362,7 +353,7 @@ class FactGateReport(BaseModel):
 
 def source_evidence_fingerprint(source: SourceEvidence) -> str:
     """Hash evidence content while excluding its self-declared fingerprint."""
-    return _sha256_bytes(
+    return bytes_sha256(
         json.dumps(
             source.model_dump(mode="json", exclude={"evidence_sha256"}),
             ensure_ascii=False,
@@ -379,7 +370,7 @@ def validate_source_evidence(
     """Reload the exact source span or raise a typed infrastructure error."""
     if source.evidence_sha256 != source_evidence_fingerprint(source):
         raise EvidenceInfrastructureError(f"evidence fingerprint mismatch: {source.evidence_id}")
-    if source.source_passage_sha256 != _sha256_text(source.source_passage):
+    if source.source_passage_sha256 != text_sha256(source.source_passage):
         raise EvidenceInfrastructureError(f"source passage hash mismatch: {source.evidence_id}")
     try:
         blob = source_bytes_loader(source)
@@ -387,7 +378,7 @@ def validate_source_evidence(
         raise EvidenceInfrastructureError(
             f"source blob unavailable for {source.evidence_id}: {exc}"
         ) from exc
-    if _sha256_bytes(blob) != source.source_blob_sha256:
+    if bytes_sha256(blob) != source.source_blob_sha256:
         raise EvidenceInfrastructureError(f"source blob hash mismatch: {source.evidence_id}")
     if source.passage_byte_end > len(blob):
         raise EvidenceInfrastructureError(
@@ -490,7 +481,7 @@ def build_fact_review_input(
                             code="missing_evidence",
                             severity="blocker",
                             sentence_index=sentence_index,
-                            sentence_sha256=_sha256_text(sentence.text),
+                            sentence_sha256=text_sha256(sentence.text),
                             passage_byte_start=0,
                             passage_byte_end=len(sentence.text.encode("utf-8")),
                             material_claim=sentence.text,
@@ -540,7 +531,7 @@ def build_fact_review_input(
             FactSentenceInput(
                 sentence_index=sentence_index,
                 stop_index=sentence.stop_idx,
-                sentence_sha256=_sha256_text(sentence.text),
+                sentence_sha256=text_sha256(sentence.text),
                 text=sentence.text,
                 source_type=sentence.source_type,
                 claim_requirement=(
@@ -579,7 +570,7 @@ def fact_finding_claim_id(finding: FactFinding) -> str:
         "material_type": finding.material_type,
         "evidence_ids": sorted(finding.evidence_ids),
     }
-    return _sha256_bytes(json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8"))
+    return bytes_sha256(json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8"))
 
 
 def _exact_utf8_span(text: str, start: int, end: int) -> str | None:
@@ -903,7 +894,7 @@ class EnjoymentSegment(BaseModel):
 
     @model_validator(mode="after")
     def _hash_matches_narration(self) -> EnjoymentSegment:
-        if self.narration_sha256 != _sha256_text(self.narration):
+        if self.narration_sha256 != text_sha256(self.narration):
             raise ValueError("segment narration hash does not match text")
         return self
 
@@ -921,7 +912,7 @@ class EnjoymentItem(BaseModel):
 
     @model_validator(mode="after")
     def _hash_matches_narration(self) -> EnjoymentItem:
-        if self.narration_sha256 != _sha256_text(self.narration):
+        if self.narration_sha256 != text_sha256(self.narration):
             raise ValueError("narration_sha256 does not match enjoyment narration")
         if self.narration != "\n".join(segment.narration for segment in self.segments):
             raise ValueError("enjoyment narration does not match ordered segments")
@@ -1265,7 +1256,7 @@ class QualityCalibrationInputs(BaseModel):
 
 
 def quality_calibration_inputs_fingerprint(inputs: QualityCalibrationInputs) -> str:
-    return _sha256_bytes(
+    return bytes_sha256(
         json.dumps(
             inputs.model_dump(mode="json", exclude={"bundle_sha256"}),
             ensure_ascii=False,
@@ -1280,9 +1271,9 @@ def validate_quality_calibration_inputs(
 ) -> str | None:
     if inputs.bundle_sha256 != quality_calibration_inputs_fingerprint(inputs):
         return "quality calibration input bundle fingerprint mismatch"
-    if _sha256_text(inputs.calibration_manifest_text) != inputs.calibration_manifest_sha256:
+    if text_sha256(inputs.calibration_manifest_text) != inputs.calibration_manifest_sha256:
         return "quality calibration manifest bytes mismatch"
-    if _sha256_text(inputs.reference_manifest_text) != inputs.reference_manifest_sha256:
+    if text_sha256(inputs.reference_manifest_text) != inputs.reference_manifest_sha256:
         return "quality reference manifest bytes mismatch"
     try:
         manifest = json.loads(inputs.calibration_manifest_text)
@@ -1347,7 +1338,7 @@ class QualityCalibrationReport(BaseModel):
 
 
 def quality_calibration_report_fingerprint(report: QualityCalibrationReport) -> str:
-    return _sha256_bytes(
+    return bytes_sha256(
         json.dumps(
             report.model_dump(mode="json", exclude={"report_sha256"}),
             ensure_ascii=False,
@@ -1492,7 +1483,7 @@ class QualityAdjudicationBatch(BaseModel):
 
 
 def _provider_payload_sha256(payload: object) -> str:
-    return _sha256_bytes(
+    return bytes_sha256(
         json.dumps(
             payload,
             ensure_ascii=False,
@@ -1871,11 +1862,11 @@ def _items_sha256(items: tuple[EnjoymentItem, ...]) -> str:
         separators=(",", ":"),
         sort_keys=True,
     ).encode("utf-8")
-    return _sha256_bytes(payload)
+    return bytes_sha256(payload)
 
 
 def _anchors_sha256(anchors: tuple[EnjoymentCalibrationAnchor, ...]) -> str:
-    return _sha256_bytes(
+    return bytes_sha256(
         json.dumps(
             [anchor.model_dump(mode="json") for anchor in anchors],
             ensure_ascii=False,
@@ -1890,7 +1881,7 @@ def _enjoyment_review_input_sha256(
     anchors: tuple[EnjoymentCalibrationAnchor, ...],
 ) -> str:
     neutral_items = _neutral_enjoyment_items(items, anchors)
-    return _sha256_bytes(
+    return bytes_sha256(
         json.dumps(
             {"items": [item.model_dump(mode="json") for item in neutral_items]},
             ensure_ascii=False,
@@ -2028,7 +2019,7 @@ def _quality_calibration_input_sha256(
     fact_cases: tuple[FactPolicyCalibrationCase, ...],
     enjoyment_anchors: tuple[EnjoymentCalibrationAnchor, ...],
 ) -> str:
-    return _sha256_bytes(
+    return bytes_sha256(
         json.dumps(
             {
                 "fact_cases": [case.model_dump(mode="json") for case in fact_cases],
@@ -2046,7 +2037,7 @@ def _quality_calibration_input_sha256(
 def _fact_calibration_suite_sha256(
     fact_cases: tuple[FactPolicyCalibrationCase, ...],
 ) -> str:
-    return _sha256_bytes(
+    return bytes_sha256(
         json.dumps(
             [case.model_dump(mode="json") for case in fact_cases],
             ensure_ascii=False,
@@ -2213,7 +2204,7 @@ def _blueprint_enjoyment_item(blueprint: FinalTourBlueprint) -> EnjoymentItem:
         item_id=_opaque_enjoyment_id("item", blueprint.fingerprint()),
         source_payload_sha256=sentences_payload_sha256(blueprint.script.script),
         narration=narration,
-        narration_sha256=_sha256_text(narration),
+        narration_sha256=text_sha256(narration),
         segments=segments,
     )
 
@@ -2819,7 +2810,7 @@ def load_enjoyment_anchors(
         document = docs[anchor["reference_document_id"]]
         path = reference_document_path(repo_root, document["path"])
         raw = path.read_bytes()
-        if _sha256_bytes(raw) != document["sha256"]:
+        if bytes_sha256(raw) != document["sha256"]:
             raise ValueError(f"reference document hash mismatch: {document['id']}")
         slice_spec = anchor["slice"]
         start_marker = slice_spec["start_marker"].encode("utf-8")
@@ -2840,7 +2831,7 @@ def load_enjoyment_anchors(
                 candidate = raw[start:end]
                 if (
                     len(candidate) == slice_spec["size_bytes"]
-                    and _sha256_bytes(candidate) == slice_spec["sha256"]
+                    and bytes_sha256(candidate) == slice_spec["sha256"]
                 ):
                     candidates.append(candidate)
                 search_at = end + 1
@@ -2851,7 +2842,7 @@ def load_enjoyment_anchors(
             selected = candidates[0]
         if len(selected) != slice_spec["size_bytes"]:
             raise ValueError(f"anchor byte size mismatch: {anchor['id']}")
-        if _sha256_bytes(selected) != slice_spec["sha256"]:
+        if bytes_sha256(selected) != slice_spec["sha256"]:
             raise ValueError(f"anchor slice hash mismatch: {anchor['id']}")
         narration = selected.decode("utf-8")
         opaque_item_id = _opaque_enjoyment_id("item", anchor["id"])
@@ -2862,14 +2853,14 @@ def load_enjoyment_anchors(
                     item_id=opaque_item_id,
                     source_payload_sha256=slice_spec["sha256"],
                     narration=narration,
-                    narration_sha256=_sha256_text(narration),
+                    narration_sha256=text_sha256(narration),
                     segments=(
                         EnjoymentSegment(
                             segment_id=opaque_segment_id,
                             stop_index=0,
                             placement="stop",
                             narration=narration,
-                            narration_sha256=_sha256_text(narration),
+                            narration_sha256=text_sha256(narration),
                         ),
                     ),
                 ),
@@ -2878,7 +2869,7 @@ def load_enjoyment_anchors(
         )
     if not anchors:
         raise ValueError("frozen calibration contains no exact enjoyment anchors")
-    return _sha256_bytes(calibration_bytes), tuple(anchors)
+    return bytes_sha256(calibration_bytes), tuple(anchors)
 
 
 def load_quality_calibration_inputs(
@@ -2907,13 +2898,13 @@ def load_quality_calibration_inputs(
     )
     if not boundary_cases:
         raise ValueError("frozen FACT policy calibration must contain boundary cases")
-    if calibration_sha != _sha256_bytes(calibration_bytes):
+    if calibration_sha != bytes_sha256(calibration_bytes):
         raise ValueError("calibration manifest changed during load")
     inputs = QualityCalibrationInputs(
         calibration_manifest_text=calibration_bytes.decode("utf-8"),
         reference_manifest_text=reference_bytes.decode("utf-8"),
         calibration_manifest_sha256=calibration_sha,
-        reference_manifest_sha256=_sha256_bytes(reference_bytes),
+        reference_manifest_sha256=bytes_sha256(reference_bytes),
         fact_cases=boundary_cases,
         enjoyment_anchors=anchors,
         bundle_sha256="0" * 64,

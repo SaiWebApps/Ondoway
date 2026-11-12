@@ -7,6 +7,8 @@
    upstream throttle from a server bug and back off.
 3. GET /trips, POST /trips/generate and POST /trips/{id}/compose require a signed-in
    caller, and a foreign profile or trip is a 404 that never confirms it exists.
+4. Every API route whose dependencies build a paid client also requires a signed-in
+   caller.
 
 Everything here is hermetic and $0: no test reaches the network.
 """
@@ -16,12 +18,16 @@ from __future__ import annotations
 import httpx
 import pytest
 from fastapi import HTTPException
+from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
+from src.api import dependencies as api_dependencies
 from src.api.app import create_app
+from src.api.auth.dependencies import get_current_user
 from src.api.auth.tokens import create_access_token
 from src.api.dependencies import (
     get_driver,
+    get_faithfulness_checker,
     get_premium_compose_executor,
     get_session,
 )
@@ -263,3 +269,64 @@ def test_composing_another_users_trip_is_404_and_never_mutates(auth_client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 404, f"foreign trip was composable ({resp.status_code})"
+
+
+# ---------------------------------------------------------------------------
+# Every route that can pay a provider requires a signed-in caller
+# ---------------------------------------------------------------------------
+
+#: The dependencies in ``src/api/dependencies.py`` that hand out a database handle and
+#: spend nothing. Every other dependency defined there builds a paid client.
+_FREE_DEPENDENCIES = frozenset({get_session, get_driver})
+
+
+def _builds_a_paid_client(call) -> bool:
+    return (
+        getattr(call, "__module__", None) == api_dependencies.__name__
+        and call not in _FREE_DEPENDENCIES
+    )
+
+
+def _dependency_calls(dependant) -> set:
+    """Every callable a route's dependency tree resolves, at any depth."""
+    calls = set()
+    for sub in dependant.dependencies:
+        calls.add(sub.call)
+        calls |= _dependency_calls(sub)
+    return calls
+
+
+def _api_routes(routes):
+    """Every API route of an app, including those inside mounted sub-applications."""
+    for route in routes:
+        if isinstance(route, APIRoute):
+            yield route
+        else:
+            yield from _api_routes(getattr(route, "routes", ()))
+
+
+def test_every_route_that_can_pay_a_writer_requires_a_signed_in_caller(monkeypatch):
+    """A route whose dependency tree builds a paid writer or checker also resolves the
+    signed-in caller, so an anonymous request cannot spend through it. The walk reads
+    every mounted route, the workbench's included, so a new route is checked without
+    being named here.
+
+    A dependency walk sees only spending that arrives through a dependency. Voicing and
+    feedback structuring that call their provider inside the route body are outside it.
+    """
+    monkeypatch.setenv("WORKBENCH_API_ENABLED", "true")
+    assert _builds_a_paid_client(get_premium_compose_executor)
+    assert _builds_a_paid_client(get_faithfulness_checker)
+
+    paying: dict[str, bool] = {}
+    for route in _api_routes(create_app().routes):
+        calls = _dependency_calls(route.dependant)
+        if any(_builds_a_paid_client(call) for call in calls):
+            for method in sorted(route.methods):
+                paying[f"{method} {route.path}"] = get_current_user in calls
+
+    assert paying.get("POST /api/v1/trips/{trip_id}/compose") is True, (
+        f"premise: the walk finds the compose route and its signed-in caller: {paying}"
+    )
+    anonymous = sorted(route for route, signed_in in paying.items() if not signed_in)
+    assert anonymous == [], f"these routes can pay a provider for an anonymous caller: {anonymous}"

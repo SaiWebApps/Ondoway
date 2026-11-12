@@ -113,20 +113,15 @@ class HaikuGlueClient:
             .replace("{{REQUEST}}", request.strip() or "(no specific request)")
         )
         # FAIL SOFT. Glue is one decorative sentence between stops; the tour is
-        # the stops. This call had no exception handling at all until 2026-07-31,
-        # so ANY provider failure propagated out of generate() and destroyed the
-        # whole tour — measured with a blank ANTHROPIC_API_KEY, where the SDK
-        # raises TypeError("Could not resolve authentication method") and
-        # POST /trips/preview answered HTTP 500 in 3.3s. The route's Basic-lane
-        # fallback never ran, because this happens during PLANNING, before the
-        # try block that degrades.
+        # the stops. Any provider failure, including missing credentials (the SDK
+        # raises TypeError then), returns the sentinel instead of propagating out
+        # of generate() and losing the whole tour.
         #
         # NO_GLUE_SENTINEL is the engine's existing "no transition available"
         # value: callers already replace it with a deterministic template
         # sentence (_coerce_glue_output(out, default=template_nav)). So a failure
-        # here costs one nicety and keeps every stop. Logged with the traceback,
-        # never silent — an unnoticed degrade is how canned transitions shipped
-        # as the default for months.
+        # here costs one nicety and keeps every stop. It is logged with the
+        # traceback and recorded as a degradation, never silent.
         try:
             response = self._client.messages.create(  # type: ignore[attr-defined]
                 model=self.model,

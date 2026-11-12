@@ -72,8 +72,12 @@ WHAT THIS FILE CANNOT CATCH (human must watch — do not delete this list):
 * **A CACHE ON THE COMPOSE PATH.** Test 4 proves nothing is pre-seeded at
   import, and test 3 proves a fresh Listen really leaves the machine, but a
   cache that fills on the FIRST call and replays on the second is only visible
-  by issuing the same ``/trips/preview`` twice against a live server and
-  requiring two different ``provider_request_id`` values. That spends money.
+  by composing the same saved trip twice (``POST /trips/{id}/compose``, the
+  route "Run it like the phone" calls; a second compose is the trip's next
+  version, not a conflict) against a live server and requiring a fresh
+  ``provider_request_id`` for every stop the writer told. A stop told from its
+  stored place recipe legitimately repeats its ``recipe:<id>`` value on both
+  runs, because it makes no writer call. That spends money.
 * **VOICE/MODEL AS A CLASS CONSTANT.** ``DEFAULT_MODEL = "tts-1-hd"`` is shared
   by workbench and production, so downgrading it is not a workbench-vs-prod
   divergence at all — it is a product change and no parity check can see it.
@@ -1689,9 +1693,10 @@ def test_no_request_handler_lets_anything_but_the_request_choose_the_response() 
       key, absent from render.yaml entirely, so nothing to compare against.
     * A dependency-provider function that constructs a DIFFERENT class under an
       env var. ``get_premium_compose_executor`` is the actual narration LLM for
-      ``POST /trips/preview`` — the endpoint ``generateTourPreview`` calls — and
-      one added branch returning ``OfflinePremiumExecutor()`` serves the owner
-      un-authored stitch text at $0 while every label still says Premium. This
+      ``POST /trips/{id}/compose`` — the endpoint the phone calls and the
+      workbench's "Run it like the phone" calls — and one added branch returning
+      ``OfflinePremiumExecutor()`` serves un-authored stitch text at $0 while
+      every label still says Premium. This
       never touches ``dependency_overrides``: it changes what the DEFAULT
       dependency returns.
     * Middleware keyed on request metadata. ``review.html`` is opened as a
@@ -1790,8 +1795,9 @@ def test_no_request_handler_lets_anything_but_the_request_choose_the_response() 
             f"the dependency provider {expression} can construct {sorted(constructed)} "
             f"— more than one implementation. Whichever branch is taken is decided "
             f"inside the function, invisibly to app.dependency_overrides and to "
-            f"every registry guard. The compose executor for POST /trips/preview "
-            f"is the narration the owner reads: it must have exactly one answer."
+            f"every registry guard. The compose executor for POST "
+            f"/trips/{{id}}/compose writes the narration both the tourist and the "
+            f"owner hear: it must have exactly one answer."
         )
     assert checked_dependencies, "resolved no dependency providers — derivation broken"
 
@@ -1985,14 +1991,14 @@ def test_the_rendered_tour_is_exactly_the_server_response() -> None:
 
     Two shapes, neither of which touches Python:
 
-    * a canned tour rendered through the real pipeline — the renderer called a
+    * a canned day rendered through the real pipeline — the renderer called a
       second time from the failure branch with a hand-written object literal
-      produces byte-for-byte the same DOM, badges and quality panels as a live
-      Premium result; and
-    * a label rewrite — one line between ``await resp.json()`` and the render
-      call setting ``provider``/``compose_status``/``candidate_eligible``, so
-      the narration is genuinely live but the tier and cost labels the owner
-      judges by are forged.
+      produces byte-for-byte the same stop cards, times and panels as a live
+      plan; and
+    * a field rewrite — one line between ``await resp.json()`` and the render
+      call setting ``slack_minutes``/``longest_walk_minutes``/``tourability``,
+      so the stops are genuinely planned but the numbers the owner judges the
+      day by are forged.
 
     Both die on one derived property: the page renders the parsed response and
     nothing else. The plan screen is checked: exactly one call site, inside the
@@ -2027,8 +2033,8 @@ def test_the_rendered_tour_is_exactly_the_server_response() -> None:
             f"{callee} is called from {len(call_sites)} places. Exactly one call "
             f"site — the one holding the live {path} response — can be proved to "
             f"render what the server sent; a second one renders whatever its caller "
-            f"made up, through the identical DOM, badges and quality panels the "
-            f"owner reads as proof of a live Premium tour."
+            f"made up, through the identical stop cards and panels the owner "
+            f"reads as a live plan."
         )
 
         body = _js_function_body(html, declaration)
@@ -2055,10 +2061,10 @@ def test_the_rendered_tour_is_exactly_the_server_response() -> None:
                 if tail.startswith("=") and not tail.startswith("=="):
                     raise AssertionError(
                         f"{declaration!r} writes to the response field {field!r} "
-                        f"before rendering. The narration can be perfectly live "
-                        f"while the tier, narrator and certification labels are "
-                        f"forged — and those labels are what the owner judges cost "
-                        f"and quality by."
+                        f"before rendering. The stops can be genuinely planned "
+                        f"while the slack, walking and tourability numbers are "
+                        f"forged — and those numbers are what the owner judges "
+                        f"the day by."
                     )
 
 

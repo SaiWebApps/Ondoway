@@ -15,8 +15,12 @@ import pytest
 
 from src.api.auth.tokens import create_access_token
 from src.audio.provider import MockTTSProvider
+from src.audio.storage import get_storage
 from src.connection import get_database
+from src.tour.recipe_store import link_stops_to_recipes, stop_recipe_pieces
 from tests.conftest import needs_neo4j
+from tests.test_place_recipes import _Audio, _build, _seed_graph, _Writer
+from tests.test_recipe_reuse import _FRAME, _FRAME_SECONDS, _TAG, _tower_first
 
 TRIP_ID = "stop-audio-test-trip"
 #: The trip's captain — /audio/generate-trip-stops is reader-scoped (captain
@@ -836,3 +840,172 @@ class TestTheFinishSentinelIsARealStop:
                     [self._stop("no-such-poi-anywhere", 1, "text")],
                 )
             )
+
+
+# ── a stop told from a place recipe: its recorded pieces are reused ──
+
+RECIPE_TRIP_ID = "recipe-audio-test-trip"
+RECIPE_ITEM_ID = f"{RECIPE_TRIP_ID}-item1"
+TOWER_RECIPE = "tower:no-lens:solo:outside"
+#: The line the tour adds in front of the recipe's telling.
+RECIPE_LEAD = "Settle in. You're standing at Test Tower."
+#: Frames in each stored piece, and in each file the voice records fresh.
+PIECE_FRAMES = 3
+FRESH_FRAMES = 10
+
+
+class _PieceVoice:
+    """Records each recipe piece as a short MP3 file in the test's audio storage."""
+
+    def __call__(self, text: str, *, stop_key: str, poi_name: str) -> _Audio:
+        del text, poi_name
+        url = get_storage("local").upload(_TAG + _FRAME * PIECE_FRAMES, f"pieces/{stop_key}.mp3")
+        return _Audio(audio_url=url, duration_sec=round(PIECE_FRAMES * _FRAME_SECONDS, 2))
+
+
+class _FramesRecorder:
+    """Speaks any text as an MP3 file and records each text with the voice asked for."""
+
+    name = "mock"
+
+    def __init__(self) -> None:
+        self.asked: list[tuple[str, str | None]] = []
+
+    def generate(self, text: str, *, voice_id: str | None = None) -> bytes:
+        self.asked.append((text, voice_id))
+        return _TAG + _FRAME * FRESH_FRAMES
+
+
+def _seed_recipe_stop(driver) -> dict[str, list]:
+    """The tower's recipe built and voiced into storage, and a trip whose one stop was
+    told from it: the tour's lead line, then the recipe's short telling, its close and
+    its longer telling. Returns the recipe's stored pieces by kind."""
+    snapshot = _tower_first()
+    with driver.session(database=get_database()) as s:
+        _seed_graph(s, snapshot)
+        _build(s, snapshot, _Writer(), _PieceVoice())
+        recipe_pieces = s.run(
+            "MATCH (:PlaceRecipe {id: $id})-[h:HAS_PIECE]->(p) "
+            "RETURN p.kind AS kind, p.text AS text ORDER BY h.order",
+            id=TOWER_RECIPE,
+        ).data()
+        by_kind: dict[str, list[str]] = {}
+        for row in recipe_pieces:
+            by_kind.setdefault(row["kind"], []).append(row["text"])
+        short = " ".join(
+            text for kind in ("opening", "body", "close") for text in by_kind.get(kind, [])
+        )
+        s.run(
+            """
+            MERGE (u:User {id: $uid}) SET u.email = $email
+            MERGE (p:Profile {id: $pid})
+            MERGE (u)-[:HAS_PROFILE]->(p)
+            CREATE (t:Trip {id: $tid, name: 'Recipe audio test', status: 'planning',
+                            created_at: datetime()})
+            CREATE (i:ItineraryItem {id: $iid, sort_order: 1, narration: $narration,
+                                     close_text: $close, full_narration: $full,
+                                     full_close_text: $full_close})
+            MERGE (p)-[:IS_CAPTAIN_OF]->(t)
+            CREATE (t)-[:HAS_STOP]->(i)
+            WITH i MATCH (poi:POI {id: 'tower'}) CREATE (i)-[:AT_POI]->(poi)
+            """,
+            uid=CAPTAIN_USER_ID,
+            email=CAPTAIN_EMAIL,
+            pid=CAPTAIN_PROFILE_ID,
+            tid=RECIPE_TRIP_ID,
+            iid=RECIPE_ITEM_ID,
+            narration=f"{RECIPE_LEAD} {short}",
+            close=by_kind["close"][0],
+            full=by_kind["full"][0],
+            full_close=by_kind["full_close"][0],
+        )
+        link_stops_to_recipes(s, {RECIPE_ITEM_ID: TOWER_RECIPE})
+        stored = stop_recipe_pieces(s, RECIPE_ITEM_ID)
+    grouped: dict[str, list] = {}
+    for piece in stored:
+        grouped.setdefault(piece.kind, []).append(piece)
+    return grouped
+
+
+def _recipe_item(driver) -> dict:
+    with driver.session(database=get_database()) as s:
+        return s.run(
+            "MATCH (i:ItineraryItem {id: $iid}) "
+            "RETURN i.narration AS narration, i.audio_url AS audio_url, "
+            "       i.audio_duration_sec AS duration, i.close_audio_url AS close_url, "
+            "       i.full_close_audio_url AS full_close_url",
+            iid=RECIPE_ITEM_ID,
+        ).single().data()
+
+
+@needs_neo4j
+class TestRecipeStopAudio:
+    """The voicing door and the keep-exploring door reuse a recipe-told stop's recorded
+    pieces in the pinned voice, and voice everything fresh when a caller names a
+    provider or a voice, because the pieces were recorded in the pinned one."""
+
+    def test_trip_voicing_sends_only_the_new_line_and_reuses_the_recorded_pieces(
+        self, client, clean_driver, _temp_audio_storage
+    ):
+        pieces = _seed_recipe_stop(clean_driver)
+        short = [p for kind in ("opening", "body", "close") for p in pieces.get(kind, [])]
+        recorder = _FramesRecorder()
+        with patch("src.audio.pipeline.get_provider_with_fallback", return_value=recorder):
+            resp = client.post(
+                f"/api/v1/audio/generate-trip-stops/{RECIPE_TRIP_ID}", headers=_bearer()
+            )
+            keep = client.post(f"/api/v1/audio/stops/{RECIPE_ITEM_ID}/keep-exploring")
+
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["generated"] == 1, resp.text
+        assert recorder.asked == [(RECIPE_LEAD, None)], (
+            "only the tour's own line reaches the voice; the telling, the close and the "
+            "longer telling's close are the recipe's recordings"
+        )
+        item = _recipe_item(clean_driver)
+        joined = get_storage("local").read(item["audio_url"])
+        assert joined.count(b"ID3") == 1
+        frames = FRESH_FRAMES + PIECE_FRAMES * len(short)
+        assert item["duration"] == pytest.approx(round(frames * _FRAME_SECONDS, 2))
+        assert item["close_url"] == pieces["close"][0].audio_url
+        assert item["full_close_url"] == pieces["full_close"][0].audio_url
+
+        assert keep.status_code == 200, keep.text
+        full = pieces["full"][0]
+        assert keep.json()["audio_url"] == full.audio_url
+        assert keep.json()["duration_sec"] == full.audio_duration_sec
+        assert len(recorder.asked) == 1, "the longer telling is not voiced again"
+
+    @pytest.mark.parametrize(
+        ("asked_for", "voice"),
+        [({"voice_id": "alice"}, "alice"), ({"provider": "mock"}, None)],
+    )
+    def test_a_named_provider_or_voice_voices_every_piece_fresh(
+        self, client, clean_driver, _temp_audio_storage, asked_for, voice
+    ):
+        pieces = _seed_recipe_stop(clean_driver)
+        recorder = _FramesRecorder()
+        with patch("src.audio.pipeline.get_provider_with_fallback", return_value=recorder):
+            resp = client.post(
+                f"/api/v1/audio/generate-trip-stops/{RECIPE_TRIP_ID}",
+                json=asked_for,
+                headers=_bearer(),
+            )
+            keep = client.post(
+                f"/api/v1/audio/stops/{RECIPE_ITEM_ID}/keep-exploring", json=asked_for
+            )
+
+        assert resp.status_code == 200, resp.text
+        assert keep.status_code == 200, keep.text
+        item = _recipe_item(clean_driver)
+        full = pieces["full"][0]
+        assert recorder.asked == [
+            (item["narration"], voice),
+            (pieces["close"][0].text, voice),
+            (pieces["full_close"][0].text, voice),
+            (full.text, voice),
+        ]
+        recorded = {p.audio_url for group in pieces.values() for p in group}
+        fresh = (item["audio_url"], item["close_url"], item["full_close_url"])
+        assert not recorded & set(fresh)
+        assert keep.json()["audio_url"] not in recorded

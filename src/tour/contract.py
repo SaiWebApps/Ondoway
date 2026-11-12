@@ -8,7 +8,6 @@ OUTPUT: Script + Sentence + ValidationReport (§3.6 of phase-1-design).
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 from collections.abc import Mapping
@@ -17,7 +16,12 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from src import city_registry
-from src.tour.corpus_places import CoordinateProvenance, valid_coordinates
+from src.tour.corpus_places import (
+    CoordinateProvenance,
+    canonical_json,
+    text_sha256,
+    valid_coordinates,
+)
 
 # Cities with a loaded corpus (data/{slug}/ + graph nodes scoped by city_name).
 # The API validates request city_slug against this so an unknown city is a clear
@@ -564,20 +568,6 @@ class BeatRef(BaseModel):
 _SHA256_PATTERN = r"^[0-9a-f]{64}$"
 
 
-def _canonical_json(value: object) -> str:
-    return json.dumps(
-        value,
-        ensure_ascii=False,
-        allow_nan=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    )
-
-
-def _text_sha256(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
-
-
 class ValhallaLegReceipt(BaseModel):
     """Canonical request/result evidence for one successful pedestrian leg.
 
@@ -615,15 +605,15 @@ class ValhallaLegReceipt(BaseModel):
                 value = json.loads(raw)
             except json.JSONDecodeError as exc:
                 raise ValueError(f"{name} is not JSON") from exc
-            if not isinstance(value, dict) or _canonical_json(value) != raw:
+            if not isinstance(value, dict) or canonical_json(value) != raw:
                 raise ValueError(f"{name} is not a canonical JSON object")
             parsed[name] = value
 
-        if _text_sha256(self.request_json) != self.request_sha256:
+        if text_sha256(self.request_json) != self.request_sha256:
             raise ValueError("request_sha256 does not match request_json")
-        if _text_sha256(self.routing_config_json) != self.routing_config_sha256:
+        if text_sha256(self.routing_config_json) != self.routing_config_sha256:
             raise ValueError("routing_config_sha256 does not match routing_config_json")
-        if _text_sha256(self.response_json) != self.response_sha256:
+        if text_sha256(self.response_json) != self.response_sha256:
             raise ValueError("response_sha256 does not match response_json")
 
         request = parsed["request_json"]
@@ -639,7 +629,7 @@ class ValhallaLegReceipt(BaseModel):
         # in the build-bound hash.  An allowlist here would let a newly added
         # Valhalla option alter routing while retaining the old config identity.
         config = {key: value for key, value in request.items() if key != "locations"}
-        if _canonical_json(config) != self.routing_config_json:
+        if canonical_json(config) != self.routing_config_json:
             raise ValueError("routing configuration differs from canonical request")
 
         response = parsed["response_json"]

@@ -24,12 +24,12 @@ numbers, which ``summarise_route`` surfaces as ``TransitSegment.source``.
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 
 import httpx
 
 from .contract import ValhallaLegReceipt
+from .corpus_places import canonical_json
 from .routing import PACE_KMH, REACH_PACE_KMH, haversine_m, pace_corrected_walk_seconds
 
 # Pace pin (2026-07-02, hostile-panel finding): Valhalla defaults pedestrians to
@@ -71,17 +71,7 @@ ROUTE_SURFACE_COSTING_OVERRIDES: dict[str, dict | None] = {
 }
 
 
-def _canonical_json(value: object) -> str:
-    return json.dumps(
-        value,
-        ensure_ascii=False,
-        allow_nan=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    )
-
-
-VALHALLA_ROUTING_CONFIG_JSON = _canonical_json(_ROUTING_CONFIG)
+VALHALLA_ROUTING_CONFIG_JSON = canonical_json(_ROUTING_CONFIG)
 VALHALLA_ROUTING_CONFIG_SHA256 = hashlib.sha256(
     VALHALLA_ROUTING_CONFIG_JSON.encode("utf-8")
 ).hexdigest()
@@ -96,7 +86,7 @@ VALHALLA_ROUTING_CONFIG_SHA256_BY_SURFACE: dict[str, str] = {
         VALHALLA_ROUTING_CONFIG_SHA256
         if override is None
         else hashlib.sha256(
-            _canonical_json(
+            canonical_json(
                 {
                     **_ROUTING_CONFIG,
                     "costing_options": {
@@ -244,7 +234,7 @@ class RoutingClient:
                     }
                 },
             }
-            routing_config_json = _canonical_json(routing_config)
+            routing_config_json = canonical_json(routing_config)
             routing_config_sha256 = hashlib.sha256(
                 routing_config_json.encode("utf-8")
             ).hexdigest()
@@ -266,8 +256,8 @@ class RoutingClient:
             seconds = round(leg["summary"]["time"])
             distance_m = float(leg["summary"]["length"]) * _KM_TO_M
             shape = leg["shape"]
-            request_json = _canonical_json(request_payload)
-            response_json = _canonical_json(response_payload)
+            request_json = canonical_json(request_payload)
+            response_json = canonical_json(response_payload)
             receipt = ValhallaLegReceipt(
                 requested_from=(from_lat, from_lng),
                 requested_to=(to_lat, to_lng),

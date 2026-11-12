@@ -10,6 +10,7 @@ import pytest
 from src.audio.storage import (
     LocalStorageProvider,
     R2StorageProvider,
+    S3StorageProvider,
     StorageError,
     StorageProvider,
     get_storage,
@@ -197,3 +198,101 @@ class TestR2Storage:
         s = get_storage("r2")
         assert s.name == "r2"
         assert isinstance(s, R2StorageProvider)
+
+    @patch("boto3.client")
+    def test_read_downloads_the_key_behind_a_public_url(self, mock_boto_client, monkeypatch):
+        monkeypatch.setenv("R2_ENDPOINT_URL", "https://abc123.r2.cloudflarestorage.com")
+        monkeypatch.setenv("R2_PUBLIC_URL", "https://audio.ondoway.com/")
+        monkeypatch.setenv("R2_BUCKET", "my-bucket")
+        mock_s3 = MagicMock()
+        mock_s3.get_object.return_value = {"Body": MagicMock(read=lambda: b"stored audio")}
+        mock_boto_client.return_value = mock_s3
+
+        provider = R2StorageProvider()
+        url = provider.upload(b"stored audio", "paris/eiffel.mp3")
+
+        assert provider.read(url) == b"stored audio"
+        mock_s3.get_object.assert_called_once_with(Bucket="my-bucket", Key="paris/eiffel.mp3")
+
+    @patch("boto3.client")
+    def test_read_refuses_a_url_from_another_origin(self, mock_boto_client, monkeypatch):
+        monkeypatch.setenv("R2_ENDPOINT_URL", "https://abc123.r2.cloudflarestorage.com")
+        monkeypatch.setenv("R2_PUBLIC_URL", "https://audio.ondoway.com")
+        mock_s3 = MagicMock()
+        mock_boto_client.return_value = mock_s3
+
+        provider = R2StorageProvider()
+
+        for foreign in (
+            "https://evil.example.com/paris/eiffel.mp3",
+            "https://audio.ondoway.com.evil.example.com/paris/eiffel.mp3",
+            "/api/v1/audio/files/paris/eiffel.mp3",
+        ):
+            with pytest.raises(StorageError, match="Not an audio URL under"):
+                provider.read(foreign)
+        mock_s3.get_object.assert_not_called()
+
+    @patch("boto3.client")
+    def test_read_turns_a_download_error_into_storage_error(self, mock_boto_client, monkeypatch):
+        monkeypatch.setenv("R2_ENDPOINT_URL", "https://abc123.r2.cloudflarestorage.com")
+        monkeypatch.setenv("R2_PUBLIC_URL", "https://audio.ondoway.com")
+        mock_s3 = MagicMock()
+        mock_s3.get_object.side_effect = Exception("NoSuchKey")
+        mock_boto_client.return_value = mock_s3
+
+        provider = R2StorageProvider()
+
+        with pytest.raises(StorageError, match="Could not read") as caught:
+            provider.read("https://audio.ondoway.com/missing.mp3")
+        assert "NoSuchKey" in str(caught.value.__cause__)
+
+
+@pytest.mark.skipif(
+    not _HAS_BOTO3, reason="boto3 not installed; run `uv sync --extra aws` to enable S3 tests"
+)
+class TestS3Read:
+    """Reading audio back from AWS S3 by the ``s3://`` URL ``upload`` returned."""
+
+    @patch("boto3.client")
+    def test_read_downloads_the_key_behind_an_s3_url(self, mock_boto_client, monkeypatch):
+        monkeypatch.setenv("AWS_S3_BUCKET", "my-bucket")
+        mock_s3 = MagicMock()
+        mock_s3.get_object.return_value = {"Body": MagicMock(read=lambda: b"stored audio")}
+        mock_boto_client.return_value = mock_s3
+
+        provider = S3StorageProvider()
+        url = provider.upload(b"stored audio", "paris/eiffel.mp3")
+
+        assert url == "s3://my-bucket/paris/eiffel.mp3"
+        assert provider.read(url) == b"stored audio"
+        mock_s3.get_object.assert_called_once_with(Bucket="my-bucket", Key="paris/eiffel.mp3")
+
+    @patch("boto3.client")
+    def test_read_refuses_a_url_from_another_bucket(self, mock_boto_client, monkeypatch):
+        monkeypatch.setenv("AWS_S3_BUCKET", "my-bucket")
+        mock_s3 = MagicMock()
+        mock_boto_client.return_value = mock_s3
+
+        provider = S3StorageProvider()
+
+        for foreign in (
+            "s3://other-bucket/paris/eiffel.mp3",
+            "s3://my-bucket-2/paris/eiffel.mp3",
+            "https://my-bucket.s3.amazonaws.com/paris/eiffel.mp3",
+        ):
+            with pytest.raises(StorageError, match="Not an audio URL in bucket"):
+                provider.read(foreign)
+        mock_s3.get_object.assert_not_called()
+
+    @patch("boto3.client")
+    def test_read_turns_a_download_error_into_storage_error(self, mock_boto_client, monkeypatch):
+        monkeypatch.setenv("AWS_S3_BUCKET", "my-bucket")
+        mock_s3 = MagicMock()
+        mock_s3.get_object.side_effect = Exception("AccessDenied")
+        mock_boto_client.return_value = mock_s3
+
+        provider = S3StorageProvider()
+
+        with pytest.raises(StorageError, match="Could not read") as caught:
+            provider.read("s3://my-bucket/missing.mp3")
+        assert "AccessDenied" in str(caught.value.__cause__)

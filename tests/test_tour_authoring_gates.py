@@ -437,8 +437,8 @@ def test_the_endpoint_consults_the_real_checker_even_though_entailment_only_advi
     REFUSAL can no longer be used as the proof that the checker is wired — which is what
     the previous version of this test relied on. The durable proof is the checker's own
     call log: a checker that is built-but-ignored fails this, and so does one the
-    endpoint never asks for. That distinction is exactly what was false for
-    ``/trips/preview`` for three days, and a demotion must not quietly re-hide it.
+    endpoint never asks for. A demotion to advisory must not quietly hide that
+    distinction.
 
     The tour now COMPOSES despite entailing nothing, and that is the intended behaviour:
     the failures are recorded on the report and logged per sentence by the route, so a
@@ -1086,18 +1086,21 @@ def test_cross_stop_echo_is_suppressed() -> None:
     into that identical stream but never called the pass — so the same cross-stop
     echo would ship on every authoring surface that finalizer serves.
 
-    AC-6 names BOTH surfaces, so both are DRIVEN here rather than argued from
-    the fact that they share a callee:
+    AC-6 requires the pass to sit on the SHARED finalizer. Two live surfaces end
+    there, both through ``finalize_live_composition``: the persisted
+    ``POST /trips/{id}/compose`` (through ``finalize_premium_tour``) and the
+    place-recipe build (through ``finalize_place_recipe``). So the finalizer is
+    DRIVEN twice here rather than argued from the fact that they share a callee:
 
-    * the persisted ``POST /trips/{id}/compose`` engine — the Block-2 seam it drives,
-      ``execute_premium_plan`` + ``finalize_premium_composition``;
-    * the ``/trips/preview`` engine — ``premium_tour.finalize_premium_composition``,
-      the function ``preview_trip`` reaches through ``finalize_premium_tour``.
+    * through the fan-out both surfaces use — ``execute_premium_plan`` +
+      ``finalize_premium_composition``;
+    * with the responses handed to ``finalize_premium_composition`` directly,
+      with no fan-out above it.
 
-    Driving only the first would leave a port that moved the pass UP into
-    the persisted path fully green while ``/trips/preview`` still shipped
-    the echo — which is exactly the fix AC-6 forbids. The preview clause is what
-    pins the pass to the SHARED finalizer.
+    Driving only the first would leave a port that moved the pass UP, out of the
+    finalizer and into the fan-out or a route, fully green — which is exactly the
+    fix AC-6 forbids. The direct clause is what pins the pass to the SHARED
+    finalizer.
 
     The last block pins the composition trace, because suppression and
     attestation pull against each other — and an earlier version of this test got
@@ -1130,7 +1133,7 @@ def test_cross_stop_echo_is_suppressed() -> None:
     )
     executor = _EchoExecutor()
 
-    # --- surface 1: POST /trips/{id}/compose -------------------------------
+    # --- through the fan-out (compose and the recipe build) ----------------
     phone_responses = execute_premium_plan(
         plan, executor=executor, receipt_sink=EphemeralReceiptSink()
     )
@@ -1150,24 +1153,25 @@ def test_cross_stop_echo_is_suppressed() -> None:
     stop0_texts = [s.text for s in script.script if s.stop_idx == 0 and s.source_type == "beat"]
     assert stop0_texts == [_DUP_TEXT], "stop 0's own (first) telling must survive untouched"
 
-    # --- surface 2: /trips/preview -----------------------------------------
+    # --- the finalizer alone, with no fan-out above it ---------------------
     premium_plan = plan
     responses = tuple(executor.execute(unit) for unit in premium_plan.units)
     composition = finalize_premium_composition(premium_plan, responses)
 
-    preview_texts = [s.text for s in composition.script.script]
-    assert preview_texts.count(_DUP_TEXT) == 1, (
-        "the /trips/preview finalizer shipped the cross-stop echo: "
-        f"{_DUP_TEXT!r} appears {preview_texts.count(_DUP_TEXT)} times in "
-        f"{preview_texts!r} — the dedup pass is not on the SHARED choke point"
+    direct_texts = [s.text for s in composition.script.script]
+    assert direct_texts.count(_DUP_TEXT) == 1, (
+        "the shared finalizer, driven without the fan-out, shipped the cross-stop "
+        f"echo: {_DUP_TEXT!r} appears {direct_texts.count(_DUP_TEXT)} times in "
+        f"{direct_texts!r} — the dedup pass is not on the SHARED choke point"
     )
-    assert _NOVEL_TEXT in preview_texts, (
-        "the preview surface dropped stop 1's only novel sentence — the dedup "
-        "pass is deleting a fact on the surface the editor reviews"
+    assert _NOVEL_TEXT in direct_texts, (
+        "the shared finalizer dropped stop 1's only novel sentence — the dedup "
+        "pass is deleting a fact, not suppressing a repeat"
     )
-    assert preview_texts == all_texts, (
-        "the two surfaces diverged on identical input; AC-6 requires the same "
-        f"suppression on both ({preview_texts!r} vs {all_texts!r})"
+    assert direct_texts == all_texts, (
+        "the finalizer gave different output with and without the fan-out on "
+        f"identical input; AC-6 requires the same suppression on both "
+        f"({direct_texts!r} vs {all_texts!r})"
     )
 
     # --- the trace still attests the provider response ----------------------
@@ -1212,33 +1216,30 @@ def test_cross_stop_echo_is_suppressed() -> None:
         )
 
 
-def test_the_preview_surface_runs_the_same_three_gates_as_the_phone() -> None:
-    """AC-20 — the WORKBENCH must run the same three anti-hallucination gates as the phone.
+def test_every_live_surface_runs_the_same_three_gates() -> None:
+    """AC-20 — every surface a listener hears runs the same three anti-hallucination gates.
 
-    MEASURED 2026-08-03, on the live tree: ``/trips/preview`` reached the shared
-    finalizer with all three gate knobs at their OFF defaults
-    (``premium_tour.finalize_premium_composition`` passed only ``completed_units`` and
-    ``model``), so ``authoring.py`` set ``allow_unverified_faithfulness=True`` and
-    ``compose_gate.py`` substituted ``MockFaithfulnessChecker`` — the stub that approves
-    every sentence. Every tour the owner reviewed in the workbench was therefore
-    unchecked for entailment, for invented proper nouns and years in glue, and for facts
-    silently deleted by a bold fusion — while the tour a tourist receives was checked for
-    all three. The instrument was measuring something the product does not do.
+    The shared finalizer runs the three gates (entailment, invented proper nouns and
+    years in glue, facts deleted by a bold fusion) only when its caller passes them in;
+    at their defaults it verifies with ``MockFaithfulnessChecker``, the stub that
+    approves every sentence. Two live surfaces reach it, both through
+    ``finalize_live_composition``, which holds the gates: the persisted
+    ``POST /trips/{id}/compose`` (through ``finalize_premium_tour``), which is also how
+    the workbench hears a tour, and the place-recipe build (through
+    ``finalize_place_recipe``).
 
-    Two docstrings asserted this could not happen (``authoring.py``'s "The live API never
-    takes this branch" and ``compose_gate.py``'s "The live API was never affected").
-    ``/trips/preview`` is a live API route and took that branch on every request. Comments
-    are claims; this test is a measurement.
+    The finalizer is DRIVEN twice here on ONE fixture with the SAME doubles — once
+    through the fan-out, once with the responses handed straight in — rather than argued
+    from the fact that callers share it, because sharing a callee says nothing about the
+    ARGUMENTS each caller passes to it.
 
-    Both surfaces are DRIVEN here on ONE fixture with the SAME doubles, rather than
-    argued from the fact that they share a callee — that argument is precisely what hid
-    the divergence, because sharing a callee says nothing about the ARGUMENTS each caller
-    passes to it.
-
-    UNDO (either half turns this RED): drop ``faithfulness_checker`` from
-    ``finalize_premium_tour``'s call into ``finalize_premium_composition``, or give that
-    parameter a default so a caller can silently omit it.
+    UNDO: give the checker parameter of ``finalize_premium_tour``,
+    ``finalize_live_composition`` or ``finalize_place_recipe`` a default, so a caller can
+    silently omit it -> RED.
     """
+    from src.tour.place_recipes import finalize_place_recipe
+    from src.tour.premium_tour import finalize_live_composition
+
     stitched, sequence, route = _cross_stop_echo_fixture()
     plan = plan_premium_authoring(
         stitched,
@@ -1251,57 +1252,57 @@ def test_the_preview_surface_runs_the_same_three_gates_as_the_phone() -> None:
     )
     executor = _RewritingExecutor()
 
-    # Entailment is ADVISORY since 2026-08-03, so neither surface REFUSES here. What
-    # parity means is that both surfaces CONSULT the same checker — which is the thing
-    # that was false, and which a refusal was only ever a proxy for. See
+    # Entailment is ADVISORY, so neither call REFUSES here. What parity means is that
+    # both CONSULT the same checker. See
     # ``test_faithfulness_and_dropped_facts_are_advisory_not_blocking`` for the demotion.
 
-    # --- surface 1: the phone (POST /trips/{id}/compose) — already wired ------
-    phone_checker = _RejectingChecker()
-    phone_responses = execute_premium_plan(
+    # --- through the fan-out, as compose and the recipe build run it ---------
+    fanned_checker = _RejectingChecker()
+    fanned_responses = execute_premium_plan(
         plan, executor=executor, receipt_sink=EphemeralReceiptSink()
     )
     finalize_premium_composition(
         plan,
-        phone_responses,
-        faithfulness_checker=phone_checker,
+        fanned_responses,
+        faithfulness_checker=fanned_checker,
         enforce_claim_coverage=True,
         scan_glue_for_invention=True,
     )
-    assert phone_checker.calls, "baseline broken: the phone path never consulted its checker"
+    assert fanned_checker.calls, "baseline broken: the fan-out path never consulted its checker"
 
-    # --- surface 2: the workbench (POST /trips/preview) — must consult IDENTICALLY
-    preview_plan = plan
-    responses = tuple(executor.execute(unit) for unit in preview_plan.units)
-    preview_checker = _RejectingChecker()
+    # --- the responses handed straight to the finalizer — must consult IDENTICALLY
+    direct_plan = plan
+    responses = tuple(executor.execute(unit) for unit in direct_plan.units)
+    direct_checker = _RejectingChecker()
     finalize_premium_composition(
-        preview_plan,
+        direct_plan,
         responses,
-        faithfulness_checker=preview_checker,
+        faithfulness_checker=direct_checker,
         enforce_claim_coverage=True,
         scan_glue_for_invention=True,
     )
-    assert preview_checker.calls, (
-        "the preview surface never consulted the injected faithfulness checker — it is "
-        "still verifying with the trusting offline stub, so the workbench is showing "
-        "unchecked narration as if it were checked"
+    assert direct_checker.calls, (
+        "the finalizer never consulted the injected faithfulness checker when handed "
+        "responses directly — it is verifying with the trusting offline stub, so "
+        "unchecked narration would read as checked"
     )
-    assert len(preview_checker.calls) == len(phone_checker.calls), (
-        f"the two surfaces asked the checker a DIFFERENT number of questions "
-        f"(phone {len(phone_checker.calls)}, workbench {len(preview_checker.calls)}) — "
+    assert len(direct_checker.calls) == len(fanned_checker.calls), (
+        f"the two calls asked the checker a DIFFERENT number of questions "
+        f"(fan-out {len(fanned_checker.calls)}, direct {len(direct_checker.calls)}) — "
         "same engine, same tour, so the entailment work must be identical"
     )
 
     # --- the LIVE wiring cannot silently skip them ----------------------------
-    # A working parameter proves nothing if the live caller omits it: that IS the bug.
-    # finalize_premium_tour is what preview_trip calls, so the checker must be
-    # REQUIRED there — a default would let the whole divergence return unnoticed.
-    checker_param = inspect.signature(finalize_premium_tour).parameters["faithfulness_checker"]
-    assert checker_param.default is inspect.Parameter.empty, (
-        "finalize_premium_tour takes an OPTIONAL faithfulness checker, so /trips/preview "
-        "can reach the shared finalizer with no entailment gate again — exactly the "
-        "divergence measured on 2026-08-03"
-    )
+    # A working parameter proves nothing if a live caller omits it. compose_trip calls
+    # finalize_premium_tour, the recipe build calls finalize_place_recipe, and both end
+    # in finalize_live_composition, so the checker must be REQUIRED at each of them — a
+    # default would let a caller reach the shared finalizer with no entailment gate.
+    for live_entry in (finalize_premium_tour, finalize_live_composition, finalize_place_recipe):
+        checker_param = inspect.signature(live_entry).parameters["faithfulness_checker"]
+        assert checker_param.default is inspect.Parameter.empty, (
+            f"{live_entry.__name__} takes an OPTIONAL faithfulness checker, so a live "
+            "surface can reach the shared finalizer with no entailment gate"
+        )
 
 
 def test_faithfulness_and_dropped_facts_are_advisory_not_blocking() -> None:

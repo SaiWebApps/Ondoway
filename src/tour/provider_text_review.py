@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 
 from .authoring import COMPOSE_MODEL
 from .contract import Sentence
+from .corpus_places import bytes_sha256
 from .quality_certification import (
     EnjoymentItem,
     EnjoymentScoredReviewBatch,
@@ -41,12 +41,8 @@ _MODEL_PRICING: dict[str, tuple[int, int]] = {
 _DEFAULT_PRICING = (5, 25)
 
 
-def _sha256(value: bytes) -> str:
-    return hashlib.sha256(value).hexdigest()
-
-
 def _canonical_hash(value: object) -> str:
-    return _sha256(
+    return bytes_sha256(
         json.dumps(
             value,
             ensure_ascii=False,
@@ -102,7 +98,7 @@ def evidence_for_sentence(
                     claim_requirement="MATERIAL",
                     derivation_kind="corpus_field",
                     derivation_payload_json=payload_json,
-                    derivation_payload_sha256=_sha256(payload_json.encode("utf-8")),
+                    derivation_payload_sha256=bytes_sha256(payload_json.encode("utf-8")),
                 )
             )
         return tuple(result)
@@ -124,7 +120,7 @@ def evidence_for_sentence(
             claim_requirement="REVIEW_ALL",
             derivation_kind="route_snapshot",
             derivation_payload_json=payload_json,
-            derivation_payload_sha256=_sha256(payload_json.encode("utf-8")),
+            derivation_payload_sha256=bytes_sha256(payload_json.encode("utf-8")),
         ),
     )
 
@@ -156,7 +152,7 @@ def build_fact_input(
             FactSentenceInput(
                 sentence_index=sentence_index,
                 stop_index=stop_index,
-                sentence_sha256=_sha256(sentence.text.encode("utf-8")),
+                sentence_sha256=bytes_sha256(sentence.text.encode("utf-8")),
                 text=sentence.text,
                 source_type=sentence.source_type,
                 claim_requirement=("MATERIAL" if sentence.source_type == "beat" else "REVIEW_ALL"),
@@ -180,19 +176,19 @@ def build_enjoyment_item(
         narration = " ".join(sentence.text for sentence in sentences_by_stop[stop_index])
         segments.append(
             EnjoymentSegment(
-                segment_id=f"segment-{_sha256(f'{candidate_sha256}:{stop_index}'.encode())[:24]}",
+                segment_id=f"segment-{bytes_sha256(f'{candidate_sha256}:{stop_index}'.encode())[:24]}",
                 stop_index=stop_index,
                 placement="stop",
                 narration=narration,
-                narration_sha256=_sha256(narration.encode("utf-8")),
+                narration_sha256=bytes_sha256(narration.encode("utf-8")),
             )
         )
     narration = "\n".join(segment.narration for segment in segments)
     return EnjoymentItem(
-        item_id=f"item-{_sha256(f'item:{candidate_sha256}'.encode())[:24]}",
+        item_id=f"item-{bytes_sha256(f'item:{candidate_sha256}'.encode())[:24]}",
         source_payload_sha256=candidate_sha256,
         narration=narration,
-        narration_sha256=_sha256(narration.encode("utf-8")),
+        narration_sha256=bytes_sha256(narration.encode("utf-8")),
         segments=tuple(segments),
     )
 

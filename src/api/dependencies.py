@@ -109,7 +109,9 @@ def get_driver() -> Driver:
 
 
 def get_premium_compose_executor():
-    """Zero-retry, receipt-preserving author for the Premium preview path."""
+    """The paid writer for POST /trips/{id}/compose: zero-retry and receipt-preserving.
+    It writes the day's stops, their longer tellings and the standby stops. The
+    place-recipe build constructs its own writer and does not use this factory."""
 
     import src.tour.premium_tour as premium_tour
 

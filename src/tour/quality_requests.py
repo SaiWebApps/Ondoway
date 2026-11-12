@@ -7,13 +7,13 @@ input instead of merely proving that some response happened.
 
 from __future__ import annotations
 
-import hashlib
 import json
 from typing import Literal
 
 import anthropic
 from pydantic import BaseModel, ConfigDict, Field
 
+from .corpus_places import text_sha256
 from .quality_certification import (
     ENJOY_AXIS_NAMES,
     EnjoymentAxisAssessment,
@@ -293,10 +293,6 @@ class AdjudicationPayload(BaseModel):
     enjoyment_assessments: tuple[EnjoymentScoredAssessment, ...] = ()
 
 
-def _sha(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
-
-
 def _provider_schema(model: type[BaseModel]) -> dict[str, object]:
     """Compile Pydantic constraints to Anthropic's supported JSON Schema subset.
 
@@ -318,12 +314,12 @@ def _provider_schema(model: type[BaseModel]) -> dict[str, object]:
     return schema
 
 
-FACT_PROMPT_SHA256 = _sha(SHARED_POLICY + FACT_TASK)
-BATCH_FACT_PROMPT_SHA256 = _sha(SHARED_POLICY + BATCH_FACT_TASK)
-ENJOY_PROMPT_SHA256 = _sha(SHARED_POLICY + ENJOY_TASK)
-QUALITY_POLICY_SHA256 = _sha(SHARED_POLICY)
-CALIBRATION_PROMPT_SHA256 = _sha(SHARED_POLICY + CALIBRATION_TASK)
-ADJUDICATION_PROMPT_SHA256 = _sha(
+FACT_PROMPT_SHA256 = text_sha256(SHARED_POLICY + FACT_TASK)
+BATCH_FACT_PROMPT_SHA256 = text_sha256(SHARED_POLICY + BATCH_FACT_TASK)
+ENJOY_PROMPT_SHA256 = text_sha256(SHARED_POLICY + ENJOY_TASK)
+QUALITY_POLICY_SHA256 = text_sha256(SHARED_POLICY)
+CALIBRATION_PROMPT_SHA256 = text_sha256(SHARED_POLICY + CALIBRATION_TASK)
+ADJUDICATION_PROMPT_SHA256 = text_sha256(
     SHARED_POLICY + FACT_TASK + ENJOY_TASK + ADJUDICATION_TASK
 )
 
@@ -490,7 +486,7 @@ def adjudication_request_envelope(
 
 
 def request_envelope_sha256(envelope: str) -> str:
-    return _sha(envelope)
+    return text_sha256(envelope)
 
 
 __all__ = [

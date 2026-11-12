@@ -52,6 +52,7 @@ from src.tour.recipe_reuse import (
     stored_full_telling,
 )
 from src.tour.recipe_store import (
+    current_input_sha256,
     link_stops_to_recipes,
     served_recipes,
     stop_recipe_pieces,
@@ -214,6 +215,44 @@ def test_a_recipe_built_from_other_beats_or_another_voice_is_not_used():
     uses = plan_recipe_reuse(_tour(changed), stored, voice_identity=VOICE)
     assert 0 not in uses and 1 in uses, "only the edited place loses its recipe"
     assert plan_recipe_reuse(_tour(snapshot), stored, voice_identity="other-voice") == {}
+
+
+def test_a_change_to_the_writing_rules_alone_retires_every_recipe(monkeypatch):
+    snapshot = _snapshot()
+    stored = _all_stored(snapshot)
+    plan = _tour(snapshot)
+    assert sorted(plan_recipe_reuse(plan, stored, voice_identity=VOICE)) == [0, 1], "premise"
+    monkeypatch.setattr("src.tour.place_recipes.premium_authoring_policy_sha256", lambda: "f" * 64)
+    assert plan_recipe_reuse(plan, stored, voice_identity=VOICE) == {}
+
+
+def test_a_current_recipe_is_not_used_by_a_stop_asking_for_other_beats():
+    """The input hash reads only the place, so a stop's own beat set is checked apart
+    from it."""
+    snapshot = _snapshot()
+    stored = _all_stored(snapshot)
+    plan = _tour(snapshot)
+    assert 0 in plan_recipe_reuse(plan, stored, voice_identity=VOICE), "premise"
+    unit = plan.units[0]
+    request = unit.authorized_request
+    assert len(request.beats_by_id) > 1, "premise: the hall's stop seats two beats"
+    fewer = dict(list(request.beats_by_id.items())[:1])
+    narrowed = dataclasses.replace(
+        unit, authorized_request=request.model_copy(update={"beats_by_id": fewer})
+    )
+    other_beats = dataclasses.replace(plan, units=(narrowed, *plan.units[1:]))
+    uses = plan_recipe_reuse(other_beats, stored, voice_identity=VOICE)
+    assert 0 not in uses and 1 in uses
+
+
+def test_a_current_recipe_written_by_another_model_is_not_used():
+    snapshot = _snapshot()
+    stored = _all_stored(snapshot)
+    plan = _tour(snapshot)
+    hall = plan_recipe_reuse(plan, stored, voice_identity=VOICE)[0].recipe_id
+    older = {**stored, hall: dataclasses.replace(stored[hall], compose_model="older-model")}
+    uses = plan_recipe_reuse(plan, older, voice_identity=VOICE)
+    assert 0 not in uses and 1 in uses
 
 
 def test_a_tour_for_another_walker_or_several_lenses_takes_no_recipe():
@@ -393,6 +432,40 @@ def test_a_served_stop_links_to_its_recipe_and_reads_back_its_pieces(session):
     assert stop_recipe_pieces(session, "item-2") == ()
 
 
+@pytest.mark.parametrize(
+    "damage",
+    [
+        pytest.param(
+            "MATCH (:PlaceRecipe {id: $id})-[:HAS_PIECE]->(p) DETACH DELETE p", id="no-pieces"
+        ),
+        pytest.param(
+            "MATCH (:PlaceRecipe {id: $id})-[:HAS_PIECE {order: 0}]->(p) REMOVE p.audio_url",
+            id="a-piece-without-audio",
+        ),
+    ],
+)
+def test_an_unplayable_recipe_is_neither_current_nor_served_and_a_build_repairs_it(session, damage):
+    snapshot = _snapshot()
+    _seed_graph(session, snapshot)
+    _build(session, snapshot, _Writer(), _Voice())
+    hall = "hall:no-lens:solo:outside"
+    session.run(damage, id=hall)
+
+    assert current_input_sha256(session, hall) is None
+    uses = served_recipes(session, _tour(snapshot), voice_identity=VOICE)
+    assert 0 not in uses and 1 in uses, "only the damaged place loses its recipe"
+
+    repaired = {o.recipe_id: o.status for o in _build(session, snapshot, _Writer(), _Voice())}
+    assert repaired.pop(hall) == "built"
+    assert set(repaired.values()) == {"current"}, "the whole recipes are not rebuilt"
+    assert current_input_sha256(session, hall) is not None
+    assert sorted(served_recipes(session, _tour(snapshot), voice_identity=VOICE)) == [0, 1]
+    orphans = session.run(
+        "MATCH (p:RecipePiece) WHERE NOT ()-[:HAS_PIECE]->(p) RETURN count(p) AS n"
+    ).single()["n"]
+    assert orphans == 0, "the repair leaves no stray piece behind"
+
+
 def test_piece_split_matches_what_the_store_reads_back():
     """The stored pieces are the cut ``split_pieces`` makes of the stored telling."""
     snapshot = _snapshot()
@@ -427,7 +500,7 @@ def _long_beat(poi_id: str, index: int, function: str, body: str) -> BeatRef:
     )
 
 
-def _tower_first() -> CorpusSnapshot:
+def _tower_first(facts=TOWER_FACTS) -> CorpusSnapshot:
     """A walk whose first stop, the tower, has a second story. Its climax beat comes
     last, so a cap that protected a final stop's closing beat would seat different
     beats in the recipe than at this middle stop."""
@@ -436,7 +509,7 @@ def _tower_first() -> CorpusSnapshot:
     return CorpusSnapshot(
         pois=(tower, bridge),
         beats_by_poi={
-            "tower": tuple(_long_beat("tower", i, f, b) for i, (f, b) in enumerate(TOWER_FACTS)),
+            "tower": tuple(_long_beat("tower", i, f, b) for i, (f, b) in enumerate(facts)),
             "bridge": (_beat("bridge", 0, "waterways_views", BEATS["bridge"][0][1]),),
         },
         area_types={},
@@ -581,3 +654,59 @@ def test_a_build_stores_the_full_telling_and_voices_it(session):
     assert row["voiced"] == row["pieces"]
     again = _build(session, snapshot, _Writer(), voice)
     assert {o.status for o in again} == {"current"}
+
+
+def _recipe_for(snapshot: CorpusSnapshot, poi_index: int):
+    return plan_place_recipe(
+        snapshot.pois[poi_index],
+        snapshot,
+        lens=None,
+        city_slug=CITY,
+        snapshot_sha256=SNAPSHOT_SHA,
+        voice_identity=VOICE,
+    )
+
+
+def _seated_ids(sequence: BeatSequence, poi_id: str) -> list[str]:
+    seated = next(plan for plan in sequence.poi_beats if plan.poi_id == poi_id)
+    return [beat.id for beat in seated.beats]
+
+
+def test_a_recipe_seats_the_beats_a_tour_seats_where_the_stop_does_not_close_the_day():
+    """A stop takes its recipe only when both ask for the same beats, so a recipe
+    caps its beats as a middle stop's are."""
+    snapshot = _tower_first()
+    recipe = _recipe_for(snapshot, 0)
+    tour = _tour(snapshot)
+    assert [poi.id for poi in tour.route.pois] == ["tower", "bridge"], "premise"
+    assert _seated_ids(recipe.plan.sequence, "tower") == _seated_ids(tour.sequence, "tower")
+    assert recipe.plan.sequence.overflow_by_poi["tower"] == tour.sequence.overflow_by_poi["tower"]
+    ((closing, _overflow),) = build_poi_beat_plans_capped(
+        recipe.plan.route, snapshot, lenses=None, end_is_none=True
+    )
+    assert [beat.id for beat in closing.beats] != _seated_ids(recipe.plan.sequence, "tower"), (
+        "premise: a stop that closes the day seats other beats, so this test can tell"
+    )
+
+
+def test_a_change_to_the_second_story_alone_retires_the_recipe():
+    """The longer telling's beats join the input hash although the short telling's
+    request never names them."""
+    snapshot = _tower_first()
+    before = _recipe_for(snapshot, 0)
+    stored = _stored(snapshot, 0)
+    assert 0 in plan_recipe_reuse(_tour(snapshot), {stored.recipe_id: stored}, voice_identity=VOICE)
+    later = before.plan.sequence.overflow_by_poi["tower"][-1]
+    index = int(later.rsplit("-", 1)[1])
+    facts = list(TOWER_FACTS)
+    facts[index] = (facts[index][0], "Sailors used its lamp as a harbour mark until 1985.")
+    edited = _tower_first(tuple(facts))
+
+    after = _recipe_for(edited, 0)
+    assert after.plan.units[0].request_sha256 == before.plan.units[0].request_sha256, (
+        "premise: the short telling's request is unchanged"
+    )
+    assert _seated_ids(after.plan.sequence, "tower") == _seated_ids(before.plan.sequence, "tower")
+    assert after.input_sha256 != before.input_sha256
+    uses = plan_recipe_reuse(_tour(edited), {stored.recipe_id: stored}, voice_identity=VOICE)
+    assert 0 not in uses
