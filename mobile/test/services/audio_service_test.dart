@@ -16,34 +16,36 @@ void main() {
     // poll (GET /audio/status/{beatId}) — the per-beat audio library the
     // design deletes. Deleted, not adapted; the per-STOP poll below survives.
 
-    test('checkStopAudioStatus hits the per-STOP endpoint and parses on 200',
-        () async {
-      final client = MockClient((request) async {
-        expect(request.method, 'GET');
-        // Per-stop endpoint, NOT the per-beat /audio/status/{beatId}.
-        expect(request.url.path, contains('/audio/stop-status/stop-7'));
-        return http.Response(
-          jsonEncode({
-            'stop_id': 'stop-7',
-            'has_audio': true,
-            'audio_url': 'https://cdn.example.com/stop-7.mp3',
-            'duration_sec': 95,
-          }),
-          200,
+    test(
+      'checkStopAudioStatus hits the per-STOP endpoint and parses on 200',
+      () async {
+        final client = MockClient((request) async {
+          expect(request.method, 'GET');
+          // Per-stop endpoint, NOT the per-beat /audio/status/{beatId}.
+          expect(request.url.path, contains('/audio/stop-status/stop-7'));
+          return http.Response(
+            jsonEncode({
+              'stop_id': 'stop-7',
+              'has_audio': true,
+              'audio_url': 'https://cdn.example.com/stop-7.mp3',
+              'duration_sec': 95,
+            }),
+            200,
+          );
+        });
+
+        final service = AudioService(httpClient: client);
+        final result = await service.checkStopAudioStatus(
+          'http://localhost:8000/api/v1',
+          'stop-7',
         );
-      });
 
-      final service = AudioService(httpClient: client);
-      final result = await service.checkStopAudioStatus(
-        'http://localhost:8000/api/v1',
-        'stop-7',
-      );
-
-      expect(result, isNotNull);
-      expect(result!['has_audio'], true);
-      expect(result['audio_url'], 'https://cdn.example.com/stop-7.mp3');
-      expect(result['duration_sec'], 95);
-    });
+        expect(result, isNotNull);
+        expect(result!['has_audio'], true);
+        expect(result['audio_url'], 'https://cdn.example.com/stop-7.mp3');
+        expect(result['duration_sec'], 95);
+      },
+    );
 
     test('checkStopAudioStatus returns null on 404', () async {
       final client = MockClient((request) async {
@@ -71,6 +73,31 @@ void main() {
       );
 
       expect(result, isNull);
+    });
+  });
+
+  group('AudioService.audioUri', () {
+    test(
+      'a path on the server is read against the server the app talks to',
+      () {
+        expect(
+          AudioService.audioUri(
+            '/api/v1/audio/files/stops/hall/item-1.mp3',
+            apiBaseUrl: 'http://localhost:8000/api/v1',
+          ).toString(),
+          'http://localhost:8000/api/v1/audio/files/stops/hall/item-1.mp3',
+        );
+      },
+    );
+
+    test('a full address is used as given', () {
+      expect(
+        AudioService.audioUri(
+          'https://audio.ondoway.com/stops/hall/item-1.mp3',
+          apiBaseUrl: 'http://localhost:8000/api/v1',
+        ).toString(),
+        'https://audio.ondoway.com/stops/hall/item-1.mp3',
+      );
     });
   });
 

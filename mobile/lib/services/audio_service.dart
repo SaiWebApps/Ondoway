@@ -10,6 +10,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:ondoway/services/native_audio_backend.dart';
 import 'package:ondoway/services/providers.dart';
+import 'package:ondoway/services/trip_service.dart';
 
 export 'package:ondoway/services/providers.dart' show BeatAudioInfo;
 
@@ -19,8 +20,9 @@ class AudioService extends ChangeNotifier implements AudioProvider {
   /// and hands us interruptions; this one ACTIVATES the session natively, which
   /// is what the AVAudioPlayer below needs in order to be audible once the
   /// screen locks.
-  static const MethodChannel _sessionChannel =
-      MethodChannel('com.ondoway/audio_session');
+  static const MethodChannel _sessionChannel = MethodChannel(
+    'com.ondoway/audio_session',
+  );
 
   final http.Client _httpClient;
   final NativeAudioBackend? _injectedNative;
@@ -137,10 +139,11 @@ class AudioService extends ChangeNotifier implements AudioProvider {
   AudioService({
     http.Client? httpClient,
     NativeAudioBackend? nativeBackend,
-    @visibleForTesting Future<String?> Function(String beatId)? cachedPathResolver,
-  })  : _httpClient = httpClient ?? http.Client(),
-        _injectedNative = nativeBackend,
-        _cachedPathResolver = cachedPathResolver;
+    @visibleForTesting
+    Future<String?> Function(String beatId)? cachedPathResolver,
+  }) : _httpClient = httpClient ?? http.Client(),
+       _injectedNative = nativeBackend,
+       _cachedPathResolver = cachedPathResolver;
 
   /// The native bridge, created lazily on first native playback — the same
   /// rule as [_player] and for the same reason. Constructing it installs a
@@ -155,6 +158,15 @@ class AudioService extends ChangeNotifier implements AudioProvider {
     _nativeInstance = backend;
     return backend;
   }
+
+  /// Where a stop's audio file is fetched from. A server that stores audio on
+  /// its own disk answers with a path on itself (`/api/v1/audio/files/...`),
+  /// which is read against the server the app talks to; a full address is used
+  /// as given.
+  static Uri audioUri(
+    String audioUrl, {
+    String apiBaseUrl = TripService.baseUrl,
+  }) => Uri.parse(apiBaseUrl).resolve(audioUrl);
 
   /// iOS is the only platform carrying the native AVAudioPlayer bridge;
   /// everywhere else a cached file falls back to just_audio.
@@ -187,6 +199,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
   bool get isBuffering => _isBuffering;
   @override
   Duration get position => _position;
+
   /// S7.8: the player's decoded length, through the provider door (R6).
   @override
   Duration get duration => _duration;
@@ -218,7 +231,12 @@ class AudioService extends ChangeNotifier implements AudioProvider {
   /// seeks, then plays; never a cut word. `void` because the provider's door is
   /// synchronous; the work is the same one start path [play] uses.
   @override
-  void playFrom(String beatId, String audioUrl, Duration from, {String? title}) {
+  void playFrom(
+    String beatId,
+    String audioUrl,
+    Duration from, {
+    String? title,
+  }) {
     _start(beatId, audioUrl, isDeeperDive: false, from: from, title: title);
   }
 
@@ -260,7 +278,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
         await _player.setAudioSource(AudioSource.file(cachedPath, tag: tag));
       } else {
         await _player.setAudioSource(
-          AudioSource.uri(Uri.parse(audioUrl), tag: tag),
+          AudioSource.uri(audioUri(audioUrl), tag: tag),
         );
       }
       if (from != null && from > Duration.zero) {
@@ -309,8 +327,9 @@ class AudioService extends ChangeNotifier implements AudioProvider {
 
   void _startNativePolling() {
     _nativePosTimer?.cancel();
-    _nativePosTimer =
-        Timer.periodic(const Duration(milliseconds: 300), (_) async {
+    _nativePosTimer = Timer.periodic(const Duration(milliseconds: 300), (
+      _,
+    ) async {
       if (!_nativeActive || !_isPlaying) return;
       _position = await _native.getPosition();
       notifyListeners();
@@ -428,7 +447,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
         continue;
       }
       try {
-        final response = await _httpClient.get(Uri.parse(beat.audioUrl!));
+        final response = await _httpClient.get(audioUri(beat.audioUrl!));
         if (response.statusCode == 200) {
           await file.writeAsBytes(response.bodyBytes);
           cached++;
@@ -524,7 +543,8 @@ class AudioService extends ChangeNotifier implements AudioProvider {
 
   void _onPlayerStateChanged(PlayerState state) {
     _isPlaying = state.playing;
-    _isBuffering = state.processingState == ProcessingState.loading ||
+    _isBuffering =
+        state.processingState == ProcessingState.loading ||
         state.processingState == ProcessingState.buffering;
 
     _isCompleted = state.processingState == ProcessingState.completed;
