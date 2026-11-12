@@ -19,7 +19,7 @@ const TAGS = {
 // scenario. main: shown in the main sliders. showIf: only relevant for some settings.
 const INPUTS = [
   // Price
-  {g:"Price",id:"model",label:"How we charge",type:"select",tag:"choice",main:true,base:"party",
+  {g:"Price",id:"model",label:"How we charge",type:"select",tag:"choice",base:"party",
    options:[["party","A pass per party"],["person","A pass per person"],["tour","Pay per tour"]],
    src:"A party shares one trip, and the app stores audio per trip stop (src/api/routes/audio.py), so one family listens to one set of audio. That makes per-party passes cost the same to serve as per-person ones."},
   {g:"Price",id:"priceSolo",label:"Solo pass",min:4.99,max:99.99,step:1,base:19.99,fmt:"usd2",tag:"choice",main:true,showIf:p=>p.model==="party",
@@ -50,13 +50,13 @@ const INPUTS = [
    src:MEASURE+": a New York tour run on 11 Nov 2026. The stop it wrote fresh cost $0.50: writing its short and longer telling (Claude Opus), fact checks (Claude Haiku) and voice (OpenAI). The same tour varies by up to 20% from run to run, which sets the low and high cases."},
   {g:"What a tour costs",id:"recipeStop",label:"A stop told from a recipe",min:0,max:.2,step:.005,base:.015,fmt:"usd3",tag:"measured",
    src:MEASURE+": the same tour's two stops told from stored recipes cost $0.015 each: fact checks and a short opening line. Their stored audio is reused."},
-  {g:"What a tour costs",id:"recipeShare",label:"Stops told from a recipe",min:0,max:1,step:.05,base:.5,low:.3,high:.67,fmt:"pct",tag:"guess",main:true,
+  {g:"What a tour costs",id:"recipeShare",label:"Stops told from a stored recipe",min:0,max:1,step:.05,base:.5,low:.3,high:.67,fmt:"pct",tag:"guess",main:true,
    src:"A stop is told from its recipe when the walker is solo, the tour has one lens or none, the visit stays outside the door, and it is not the day's last stop. The measured tour told 2 of its 3 stops from recipes. Days with museum visits, couples or families run lower."},
-  {g:"What a tour costs",id:"stopsPerDay",label:"Narrated stops in a tour day",min:1,max:20,step:1,base:6,fmt:"int",tag:"choice",main:true,
+  {g:"What a tour costs",id:"stopsPerDay",label:"Narrated stops in a tour day",min:1,max:20,step:1,base:6,fmt:"int",tag:"choice",
    src:"A full day of about six narrated stops, between the places the traveller already planned (museums, meals, rests). Each stop costs the measured price above."},
   {g:"What a tour costs",id:"replanStops",label:"Stops re-written when the day changes",min:0,max:10,step:1,base:1,low:2,high:0,fmt:"int",tag:"guess",
    src:"The day re-plans live. Each re-planned stop is written and voiced at the same price. No data yet on how often days change."},
-  {g:"What a tour costs",id:"daysPerPass",label:"Tour days used per pass",min:1,max:10,step:.5,base:4,low:5,high:2,fmt:"x",tag:"guess",main:true,showIf:p=>p.model!=="tour",
+  {g:"What a tour costs",id:"daysPerPass",label:"Tour days each buyer uses",min:1,max:10,step:.5,base:4,low:5,high:2,fmt:"x",tag:"guess",main:true,showIf:p=>p.model!=="tour",
    src:"The pass covers 5 days from first use. Assumes people tour on 4 of them. Low case: all 5. High case: 2."},
 
   // Recipes
@@ -78,13 +78,13 @@ const INPUTS = [
    src:"No official New York figure exists."},
   {g:"Who buys",id:"categoryUse",label:"Travellers who use tour apps",min:0,max:.5,step:.01,base:.13,fmt:"pct",tag:"source",
    src:"Arival, 4 Aug 2026: 13% of US and European travellers took a self-guided phone tour in the past year."},
-  {g:"Who buys",id:"ourShare",label:"Tour-app users who install us",min:0,max:1,step:.01,base:.10,low:.03,high:.25,fmt:"pct",tag:"guess",main:true,
+  {g:"Who buys",id:"ourShare",label:"Tour-app users who install Ondoway",min:0,max:1,step:.01,base:.10,low:.03,high:.25,fmt:"pct",tag:"guess",main:true,
    src:"The biggest unknown. Prove it in New York."},
-  {g:"Who buys",id:"conv",label:"Installs who pay",min:.002,max:.15,step:.001,base:.05,low:.02,high:.10,fmt:"pct1",tag:"guess",main:true,
+  {g:"Who buys",id:"conv",label:"Installs that buy a pass",min:.002,max:.15,step:.001,base:.05,low:.02,high:.10,fmt:"pct1",tag:"guess",main:true,
    src:"A free first walk is a trial of a one-off trip pass, so it should convert better than subscription apps (RevenueCat 2026: 2.1% median, 4.5% top quarter, for apps with a free tier). 5% is the base to prove in New York; low 2%, high 10%."},
 
   // Cities
-  {g:"Cities",id:"maxCities",label:"Cities planned",min:1,max:30,step:1,base:23,fmt:"int",tag:"choice",main:true,
+  {g:"Cities",id:"maxCities",label:"Cities planned",min:1,max:30,step:1,base:23,fmt:"int",tag:"choice",
    src:"The deck plans up to 23 cities. City two is Paris, already built."},
   {g:"Cities",id:"nycOnly",label:"Months of New York only",min:1,max:24,step:1,base:6,fmt:"int",tag:"choice",
    src:"The deck: six months of New York only."},
