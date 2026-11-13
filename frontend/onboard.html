@@ -280,7 +280,7 @@
 
 </div>
 
-<!-- OWNER RULING 2026-07-31: no spend dialog on the workbench, here either. The
+<!-- No spend dialog on the workbench, here either. The
      cost-confirmation modal that used to sit here made Draft Beats a two-step
      confirm. It is removed for the same reason generateTourPreview's
      window.confirm was (see tests/test_workbench_preview_wiring.py): the
@@ -484,7 +484,7 @@ document.getElementById('onboardStartBtn').addEventListener('click', async () =>
 });
 
 // ── Beats: draft, no spend dialog ──
-// OWNER RULING 2026-07-31: never ask the operator to approve spend here. This
+// Never ask the operator to approve spend here. This
 // used to POST with confirm_cost:false, catch the API's 409 cost estimate, and
 // raise a modal. The workbench mirrors the tourist's app experience, and a
 // tourist is never asked to approve spend — the same ruling that removed the

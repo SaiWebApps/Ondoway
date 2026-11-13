@@ -183,12 +183,12 @@
     border-radius: 50%; font-size: 12px; font-weight: 700; border: 2px solid #fff;
     box-shadow: 0 1px 3px rgba(0,0,0,0.4);
   }
-  /* Walk-past vignette pins (Step B.5): hollow + smaller — visually distinct from dwell pins. */
+  /* Walk-past vignette pins (hollow + smaller): visually distinct from dwell pins. */
   .tour-route-pin--vignette span {
     width: 16px; height: 16px; background: rgba(255,255,255,0.9); color: #3b82f6;
     border: 2px dashed #3b82f6; font-size: 9px;
   }
-  /* Vignette stop cards (Step B.5): visible tag + 0-minute (walk past) styling. */
+  /* Vignette stop cards (walk-past stops): visible tag + 0-minute (walk past) styling. */
   .tour-vignette-tag {
     display: inline-block; margin-left: 6px; padding: 0 6px; border: 1px dashed #3b82f6;
     border-radius: 9px; color: #3b82f6; font-size: 0.68rem; font-weight: 600;
@@ -196,9 +196,8 @@
   }
   .tour-stop--vignette { border-left: 3px dashed #3b82f6; }
   .tour-stop--vignette .meta { font-style: italic; }
-  /* PLAN screen: THE day. Design §8.1 deleted the three-route pick — the plan
-     reply carries exactly one route — so what renders is one day plus the dial
-     controls (W4.2 panel) that reshape it live. */
+  /* PLAN screen: THE day. The plan reply carries exactly one route, so what
+     renders is one day plus the controls (the dials) that reshape it live. */
   .tour-preview select,
   .tour-preview input[type="date"],
   .tour-preview input[type="time"] {
@@ -221,7 +220,7 @@
   .tour-preview .tour-chip:has(input:checked) {
     border-color: var(--accent); color: var(--accent); background: var(--accent-dim);
   }
-  /* KE9: "keep exploring here" — a dwell stop whose budget capped out extra
+  /* "Keep exploring here" — a dwell stop whose budget capped out extra
      beats. A small chip on the stop title, matching the vignette-tag idiom but
      in the accent (amber) token so it reads as an opt-in, not a walk-past. */
   .tour-deeper-dive-tag {
@@ -230,7 +229,7 @@
     font-size: 0.68rem; font-weight: 600; vertical-align: middle;
     text-transform: uppercase; letter-spacing: 0.04em; background: var(--accent-dim);
   }
-  /* Click-to-set start/destination pins (Step B.6): A = start (green), B = destination (red). */
+  /* Click-to-set pins (start/destination): A = start (green), B = destination (red). */
   .tour-point-pin span {
     display: flex; align-items: center; justify-content: center;
     width: 22px; height: 22px; color: #fff; border-radius: 50%;
@@ -1171,13 +1170,13 @@
   // writes is the day on screen. EVERY dial writes into this object; a dial that
   // skips it would send the phone path a different day.
   let lastTourPlanBody = null;
-  // Debounce handle for the live replan (W4.2 panel): a burst of dial changes
+  // Debounce handle for the live replan (after each dial turn): a burst of dial changes
   // costs ONE plan request, ~400ms after the last turn.
   let tourReplanTimer = null;
-  // Stop-for-stop identity of the last day rendered, for the panel's dead-notch
+  // Stop-for-stop identity of the last day rendered, for dead-notch
   // honesty: a dial that changes nothing must say "already true of this day".
   let lastTourDaySignature = null;
-  // Step B.6 click-to-set state: 0 -> next map click sets the start, 1 -> sets the
+  // Click-to-set state: 0 -> next map click sets the start, 1 -> sets the
   // destination, 2 -> both set (further clicks ignored until Clear points).
   let tourClickStage = 0;
   let tourPointLayer = null;   // A/B pins dropped by map clicks (dies with the map on re-init)
@@ -1375,7 +1374,7 @@
     cityName = (name || '').trim().toLowerCase();
     cityDisplay = titleCaseCity(cityName);
     cityLabel.textContent = `${cityDisplay} (${cityCentre.lat.toFixed(4)}, ${cityCentre.lng.toFixed(4)}) — 50 km geofence`;
-    // DEFECT 16: do NOT hide the overlay before the DB fetch succeeds. Previously
+    // Do NOT hide the overlay before the DB fetch succeeds. Previously
     // the overlay was hidden here (before the await) and a fetch failure was caught
     // internally WITHOUT rethrowing — so on a DB failure the overlay was already
     // gone, the Set City button stayed disabled (the click handler's outer catch
@@ -1542,7 +1541,7 @@
     }
 
     // Check exact-name duplicates.
-    // DEFECT 12: normalize the key (trim + collapse inner whitespace + lowercase)
+    // Normalize the key (trim + collapse inner whitespace + lowercase)
     // so casing/whitespace forks ('Louvre' / 'louvre' / 'Louvre ') collapse to one
     // key and the duplicate resolver fires — mirroring the alt-name check below,
     // which already compares lowercased names. Without this, forks slip past the
@@ -1602,7 +1601,7 @@
       // Find first match with name similarity >= 50%
       const match = matches.find(m => nameSimilarity(entry.poi_name, m.existingPoi.properties.name) >= 0.5);
       if (match) {
-        // DEFECT 5: ACCUMULATE, don't overwrite. When two incoming POIs both
+        // ACCUMULATE, don't overwrite. When two incoming POIs both
         // match the same DB POI, a plain assignment made the second match clobber
         // the first — silently dropping the first entry's beats (both incoming
         // entries are spliced out of poiData below, so the loss was invisible).
@@ -1849,7 +1848,7 @@
       dbSection.className = 'db-section-header';
       const dbCount = cachedPoiList.length;
       const incomingCount = cachedPoiList.filter(p => p._incomingBeats).length;
-      // DEFECT 8: never present a truncated cache as the full graph.
+      // Never present a truncated cache as the full graph.
       const dbCountLabel = poiCacheComplete ? `${dbCount}` : `${dbCount} \u2014 INCOMPLETE`;
       dbSection.innerHTML = `<span>Database POIs (${dbCountLabel})${incomingCount > 0 ? ` \u00B7 ${incomingCount} with incoming` : ''}</span>`;
       const sortBtn = document.createElement('button');
@@ -2086,7 +2085,7 @@
       return;
     }
 
-    // DEFECT 6: conflict-detection errors were rendered but never blocked the
+    // Conflict-detection errors were rendered but never blocked the
     // upload, so a failed /beats fetch (which reports zero conflicts) let every
     // incoming beat POST as new. If detection did not run, refuse to upload.
     if (poi._conflicts && Array.isArray(poi._conflicts.errors) && poi._conflicts.errors.length > 0) {
@@ -2141,7 +2140,7 @@
       return;
     } catch (err) {
       poi._status = 'pending';
-      // DEFECT 9: the old message ("POI reverted to reviewable state") implied
+      // The old message ("POI reverted to reviewable state") implied
       // nothing was written and invited a retry that re-POSTs already-created
       // beats as duplicates. The upload is NOT atomic — say so, and re-run
       // conflict detection so a retry sees what actually landed.
@@ -2160,7 +2159,7 @@
 
   // ── Render detail panel ──
 
-  // DEFECT 5: renderDetail() attaches DELEGATED click listeners to the
+  // renderDetail() attaches DELEGATED click listeners to the
   // long-lived #detailBody element. Every conflict-resolution click calls
   // renderDetail() again, so the listener count DOUBLED per click (1→2→4→8…)
   // and each of the N handlers did a full innerHTML rebuild — O(2^clicks),
@@ -2176,7 +2175,7 @@
   function renderDetail() {
     if (detailListeners) detailListeners.abort();
     detailListeners = new AbortController();
-    // Tour-preview view (Phase 1.5e): plan a walking day from this corpus, then run it
+    // Tour-preview view (the Tour Preview button): plan a walking day from this corpus, then run it
     // through the tourist's own endpoints. Reuses the workbench's own field/button components.
     if (activeSelection.source === 'tour') {
       detailEmpty.style.display = 'none';
@@ -2311,7 +2310,7 @@
           <span id="tourReplanNote" style="display:none;color:var(--text-muted);font-size:0.8rem;margin-left:8px;">replanning…</span>
           <div id="tourStops" class="tour-stops"></div>
         </div>`;
-      // THE LIVE REPLAN (W4.2 panel): any dial or input change re-plans the day
+      // THE LIVE REPLAN (no button press needed): any dial or input change re-plans the day
       // automatically. 'change' rather than 'input' so a half-typed coordinate is
       // never planned mid-keystroke; the debounce folds a burst of dial turns into
       // one request. Anything inside #tourStops is part of the rendered day, not a
@@ -2321,7 +2320,7 @@
         if (e.target.closest('#tourStops')) return;
         scheduleTourReplan();
       }, { signal: detailListeners.signal });
-      // Step B.6: (re)entering the tour view resets the click-to-set state — the inputs
+      // (Re)entering the tour view resets the click-to-set state — the inputs
       // above rendered fresh, so any previously dropped A/B pins are stale. The
       // dead-notch memory resets too: nothing is on screen to be "already true" of.
       tourClickStage = 0;
@@ -2549,7 +2548,7 @@
               renderDetail();
             });
           }
-        }, { signal: detailListeners.signal });  // DEFECT 5: dropped on the next render
+        }, { signal: detailListeners.signal });  // dropped on the next render
       }
 
       return;
@@ -2681,7 +2680,7 @@
       html += '</div>';
     }
 
-    // Manual match panel (Task 7)
+    // Manual match panel (match to an existing POI)
     if (!isUploaded) {
       const manualMatch = conflicts.matchedExistingPoi;
       const isManualOverride = manualMatch && (!conflicts.proximityMatches || conflicts.proximityMatches.length === 0 ||
@@ -2885,7 +2884,7 @@
           return;
         }
 
-        // Manual match handlers (Task 7)
+        // Manual match handlers (match to an existing POI)
         const manualMatchBtn = e.target.closest('[data-action="open-manual-match"]');
         if (manualMatchBtn) {
           openManualMatchDropdown();
@@ -2966,7 +2965,7 @@
             <button class="btn btn-outline btn-sm" data-beat-action="change-lens" data-beat-idx="${bi}">Change Lens</button>
           `;
         }
-      }, { signal: detailListeners.signal });  // DEFECT 5: dropped on the next render
+      }, { signal: detailListeners.signal });  // dropped on the next render
     }
   }
 
@@ -3228,7 +3227,7 @@
         opt.disabled = !p.available;
         ttsProviderSelect.appendChild(opt);
       }
-      // OWNER RULING 2026-07-31: the workbench replicates the tourist's app
+      // The workbench replicates the tourist's app
       // experience as closely as possible, so it defaults to REAL audio. This
       // block used to force-select 'mock' here, silently overriding the 'openai'
       // default declared above and in the static <select>, so every workbench
@@ -3254,7 +3253,7 @@
   // with the play-button lifecycle. Beat TTS (ttsPlayBeat) plays through it. The
   // origText capture/restore stays INSIDE here so any caller's button (with any
   // label) restores correctly.
-  // DEFECT 5: cacheKeys with a POST /audio/preview in flight. The cache alone
+  // cacheKeys with a POST /audio/preview in flight. The cache alone
   // cannot deduplicate concurrent callers — they all pass the cache check
   // before the first response lands, so N callers issue N REAL PAID TTS calls
   // and leak N-1 blob URLs. Guards duplicate listeners AND plain double-clicks.
@@ -3296,7 +3295,7 @@
       return;
     }
 
-    // DEFECT 5: a request for this exact text is already paid for and pending.
+    // A request for this exact text is already paid for and pending.
     if (ttsInFlight.has(cacheKey)) return;
     ttsInFlight.add(cacheKey);
 
@@ -3358,7 +3357,7 @@
 
   // ── Tour preview: plan (POST /trips/preview) → render THE day → run it like the phone ──
 
-  // The live replan (W4.2 panel): every dial change funnels here, and ~400ms
+  // The live replan (debounced): every dial change funnels here, and ~400ms
   // after the last one the day is re-planned. One debounce, one request, however
   // many dials were turned.
   function scheduleTourReplan() {
@@ -3392,7 +3391,7 @@
         return;
       }
     }
-    // THE DIALS (W4.2 panel). Read every control here so all of them land in the
+    // THE DIALS (date, finish, party and the rest). Read every control here so all of them land in the
     // ONE body below — the phone path builds its request from that body, so a dial
     // read anywhere else would send it a different day. "Omit" semantics are
     // literal: an off dial contributes NO field, never a null.
@@ -3413,7 +3412,7 @@
     // closely as possible, and a tourist is never asked to approve spend. Do not
     // reintroduce a spend dialog in this function.
     genBtn.disabled = true; genBtn.textContent = '⏳ Planning…';
-    // While replanning, the dials go quiet and a small note says so (W4.2 panel).
+    // While replanning, the dials go quiet and a small note says so (the replanning note).
     // Snapshot the controls OUTSIDE #tourStops: the stop area is about to be wiped.
     const dialEls = Array.from(
       document.querySelectorAll('.tour-preview input, .tour-preview select, .tour-preview button'))
@@ -3421,7 +3420,7 @@
     dialEls.forEach(el => { el.disabled = true; });
     const replanNote = document.getElementById('tourReplanNote');
     if (replanNote) replanNote.style.display = '';
-    stopsEl.innerHTML = ''; drawTourRoute([]);  // clear map unconditionally (D5a)
+    stopsEl.innerHTML = ''; drawTourRoute([]);  // clear map (unconditionally)
     try {
       // ONE body, built once. Remembered so the degradation panel's "Copy report
       // for Claude" can say WHAT WAS ASKED FOR, and so the phone path's generate
@@ -3460,7 +3459,7 @@
       if (!resp.ok) {
         let detail = null;
         try { detail = (await resp.json()).detail; } catch (_) { /* keep null */ }
-        // Step 2.6 structured refusal: {reason, gap_minutes, alternatives:[...]}.
+        // Structured refusal: {reason, gap_minutes, alternatives:[...]}.
         if (detail && typeof detail === 'object' && Array.isArray(detail.alternatives)) {
           renderTourRefusal(detail);
         } else {
@@ -3478,7 +3477,7 @@
     }
   }
 
-  // Render a Step-2.6 structured feasibility refusal (A→B over budget / sparse origin)
+  // Render a structured feasibility refusal (A→B over budget / sparse origin)
   // as readable, actionable alternatives — never a raw JSON dump.
   function renderTourRefusal(detail) {
     const stopsEl = document.getElementById('tourStops');
@@ -3488,7 +3487,7 @@
     stopsEl.innerHTML = '';
     const box = document.createElement('div');
     box.className = 'tour-refusal db-beat-card';
-    // `reason` is the sentence a person reads; `technical` (W4.12) is the
+    // `reason` is the sentence a person reads; `technical` (when present) is the
     // operator's line — the policy id and the band in seconds — kept small
     // and below it, never in the sentence itself.
     box.innerHTML = `
@@ -3514,7 +3513,7 @@
     stopsEl.appendChild(box);
   }
 
-  // ── Tour view map click-to-set (Step B.6) ──
+  // ── Tour view map (click-to-set) ──
   // While the Tour Preview view is open, the 1st persistent-map click sets #tourStart
   // (5-decimal lat,lng) + drops a start pin, the 2nd sets #tourEnd + a destination pin.
   // Guarded on the active view so it never interferes with the marker/merge click
@@ -3574,7 +3573,7 @@
       L.polyline(pts, { color: '#3b82f6', weight: 3, opacity: 0.85 }).addTo(tourRouteLayer);
     }
     located.forEach((s, i) => {
-      // Step B.5: walk-past sights get a distinct hollow, smaller pin (walked
+      // Walk-past sights get a distinct hollow, smaller pin (walked
       // past, not a low narration band — see isWalkPast).
       const isVignette = isWalkPast(s);
       L.marker([s.lat, s.lng], {
@@ -3602,12 +3601,12 @@
   // WALKED PAST vs STOPPED AT is `visit_or_walk_past` — the field that says so.
   // `band` is the NARRATION tier the spotlight classifier assigns (selection.py
   // band_for_spotlight: "vignette" = one line as you pass), and a SEATED stop with
-  // a low spotlight — Rosemary's 8-minute Bench, a 5-minute stand outside the
+  // a low spotlight — an 8-minute bench rest, a 5-minute stand outside the
   // Orangerie — carries band "vignette" WITH real minutes. Reading band as SHAPE
   // rendered both as "walk-past sights", dropped their minutes from "standing
-  // still", and listed the Bench as a walk-past and a rest promise on the same day
-  // (Phase 5 W5.1, measured on the live wire; Phase 4 carried finding 8's root
-  // cause). A stop that never says (an older payload) falls back to band + no minutes.
+  // still", and listed the bench as a walk-past and a rest promise on the same day
+  // (measured on the live wire). A stop that never says (an older payload) falls
+  // back to band + no minutes.
   function isWalkPast(s) {
     if (!s) return false;
     // A LEG is narration heard while walking — never a place walked past, whatever
@@ -3630,7 +3629,7 @@
   }
 
   // ── What quietly went wrong while building this tour ──────────────────────
-  // OWNER RULING 2026-07-31: errors must be VISIBLE here, not buried in a log,
+  // Errors must be VISIBLE here, not buried in a log,
   // and must serve two readers at once — the human ("what did I lose?") and
   // Claude ("what do I fix?"). So each row shows plain English, and one button
   // copies a complete, self-contained report to the clipboard.
@@ -3718,11 +3717,10 @@
     return panel;
   }
 
-  // The PLAN screen: THE day. Design §8.1 deleted the three-route pick — the
-  // plan reply's `options` is a list of exactly ONE route, and that one day
-  // renders immediately: the map, the ordered places, the timing split, and the
-  // honesty surface (promises, day notes, unplanned slack — W4.2 panel). Places
-  // only, by owner ruling: names, order, walking time and ETA, and no
+  // The PLAN screen: THE day. The plan reply's `options` is a list of exactly
+  // ONE route, and that one day renders immediately: the map, the ordered places,
+  // the timing split, and the honesty surface (promises, day notes, unplanned
+  // slack). Places only, by owner ruling: names, order, walking time and ETA, and no
   // descriptive text of any kind. NOTHING has been written or voiced yet; the
   // one "Run it like the phone" action below is what writes and voices the day.
   // `requestedMinutes` is the duration asked for, which the short-tour notes name.
@@ -3733,7 +3731,7 @@
       ? data.options[0] : null;
     stopsEl.innerHTML = '';
 
-    // Dead-notch honesty (W4.2 panel): a dial that changes nothing must say so,
+    // Dead-notch honesty (a notch that does nothing): a dial that changes nothing must say so,
     // or the editor believes it did something. "Identical stop-for-stop" means
     // the same places, order, timing, door-sides and queue prices — exactly what
     // the cards below show.
@@ -3755,7 +3753,7 @@
     // A 'leg' card is narration heard on the WAY to a stop, not a place, and a
     // walk-past (isWalkPast) is something walked past without stopping, so neither
     // counts as a stop. A seated stop with a low narration band IS a stop and its minutes
-    // are standing still (W5.1). The A→B finish point (is_finish_point, W4.12) is
+    // are standing still (not walking). The A→B finish point (is_finish_point) is
     // where the day ENDS, not a place: not a stop, not counted, rendered as an ending.
     const dwell = (day.stops || []).filter(
       s => !isWalkPast(s) && s.band !== 'leg' && !s.is_finish_point);
@@ -3768,7 +3766,7 @@
     const head = document.createElement('div');
     head.className = 'tour-day-head';
     head.style.cssText = 'color:var(--muted,#888);font-size:0.85rem;margin:8px 0;';
-    // The longest single walk (W4.12): the number the "Shorter walks" dial is
+    // The longest single walk (when the server sends it): the number the "Shorter walks" dial is
     // named after, so a person can see whether a turn had anything to do.
     const longestWalk = (data && typeof data.longest_walk_minutes === 'number')
       ? ` · longest single walk ${data.longest_walk_minutes} min` : '';
@@ -3781,7 +3779,7 @@
     // The dead notch says so out loud, briefly — and TRUTHFULLY. "Already true"
     // is only true if the day really honours what was asked. The leg cap is
     // enforced by the planner on its estimated legs and the street-routed leg
-    // can land a little over (measured at the W4.12 close: 473 s estimated,
+    // can land a little over (measured once: 473 s estimated,
     // 576 s routed, against a 540 s cap), so a 9-minute cap can hand back the
     // identical day with a 10-minute longest walk on the head line. That is not
     // "already true"; it is "the closest day", and it says so with the number.
@@ -3811,9 +3809,9 @@
     const degradePanel = buildDegradationPanel(data);
     if (degradePanel) stopsEl.appendChild(degradePanel);
 
-    // Phase 6 contract: YELLOW = generate but WARN. Present only for thin areas
+    // YELLOW = generate but WARN. Present only for thin areas
     // (e.g. one isolated mega-anchor -> a legitimate single-stop tour); without
-    // this banner such tours read as silent bugs. C11a: the engine also attaches
+    // this banner such tours read as silent bugs. The engine also attaches
     // tourability for GREEN-but-delivered_thin routes, but those are an
     // informational note (below), NOT this amber density warning -- so gate the
     // banner on YELLOW explicitly. (delivered_thin is only ever set on GREEN, so
@@ -3877,7 +3875,7 @@
         + 'of tour without walking somewhere that is not worth the walk.';
       stopsEl.appendChild(note);
     }
-    // Phase 3 spotlight: the per-corridor lens coverage note, present only when the
+    // The per-corridor lens coverage note, present only when the
     // engine surfaces it (off-genre corridors read "only N places speak to …"). It
     // travels on the day itself (RouteOption.lens_coverage_note).
     if (day.lens_coverage_note) {
@@ -3888,7 +3886,7 @@
       stopsEl.appendChild(note);
     }
 
-    // ── The honesty surface (W4.2 panel, deviation v). Every field renders ONLY
+    // ── The honesty surface (promises, day notes, slack). Every field renders ONLY
     // when the server sends it — these land server-side in their own step, and a
     // missing field must never crash the plan screen. ──
     if (Array.isArray(data.promises) && data.promises.length) {
@@ -3897,7 +3895,7 @@
       promises.style.cssText = 'color:var(--green);font-size:0.82rem;margin:0 0 8px;';
       // The window is two wire fields (arrives_hhmm / departs_hhmm), not one —
       // this used to read a `window` key that never existed, so the ruled-for
-      // windows were on the wire and never on the screen (W4.12). A finish
+      // windows were on the wire and never on the screen (nothing rendered them). A finish
       // point has no stay, so it shows one time, not "12:50-12:50".
       const windowOf = (p) => {
         if (!p || !p.arrives_hhmm) return '';
@@ -3911,9 +3909,8 @@
     }
     // Day notes are plain STRINGS on the wire (TripPreviewResponse.day_notes:
     // list[str]). This read `n.text` — a shape that never existed — so every
-    // closed-today line and every "we could not confirm opening times" line the
-    // panel ruled for was sent and never shown (W4.12; visible in the D5 demo
-    // transcript, which has none of them). Tolerate an object with `.text` too,
+    // closed-today line and every "we could not confirm opening times" line was
+    // sent and never shown (nothing rendered them). Tolerate an object with `.text` too,
     // so a future richer note cannot blank the screen the same way.
     (Array.isArray(data.day_notes) ? data.day_notes : []).forEach((n) => {
       const text = (typeof n === 'string') ? n : (n && n.text);
@@ -3924,9 +3921,9 @@
       dayNote.textContent = text;
       stopsEl.appendChild(dayNote);
     });
-    // Zero is a real answer and is said out loud (W4.12 panel, Marcus: "a day with
-    // 10 minutes of margin and a day with 0 are different days — one I take and
-    // one I refuse — and this screen rendered both with the same word"). Only a
+    // Zero is a real answer and is said out loud (a visitor may take a day with
+    // 10 minutes of margin and refuse a day with 0, so the two must never read
+    // the same). Only a
     // MISSING field stays silent, because an older server never sent it.
     if (typeof data.slack_minutes === 'number') {
       const slack = document.createElement('div');
@@ -3945,7 +3942,7 @@
       const el = document.createElement('div');
       const isVignette = isWalkPast(s);
       el.className = 'tour-stop db-beat-card' + (isVignette ? ' tour-stop--vignette' : '');
-      // Per-stop honesty (W4.2 panel): the queue price is spelled "N min wait"
+      // Per-stop honesty (queue and door side): the queue price is spelled "N min wait"
       // (never "Nm"), and the door-side tag says which side of the door this
       // visit lives on. Both absent until the server sends them.
       const doorTag = (typeof s.goes_inside === 'boolean')
@@ -4357,7 +4354,7 @@
     }
   }
 
-  // ── Task 4: Jaccard similarity ──
+  // ── Jaccard similarity ──
 
   const STOP_WORDS = new Set([
     'a','an','the','is','was','in','on','at','to','of','and','or','for','with',
@@ -4384,7 +4381,7 @@
   let lensSlugSet = new Set();  // { 'hidden_history', ... }
   let lensSlugToId = {};        // { 'hidden_history': 'neo4j-id', ... }
   let cachedPoiList = [];       // cached POI nodes from DB for conflict detection
-  // DEFECT 8: true ONLY after a page-complete, count-verified POI fetch. When
+  // True ONLY after a page-complete, count-verified POI fetch. When
   // false the cache is not a trustworthy corpus, so nothing may be auto-routed
   // to "new" (that is how duplicate POI nodes get minted at the same coords).
   let poiCacheComplete = false;
@@ -4409,7 +4406,7 @@
 
     // Fetch POIs for conflict detection caching (paginate to avoid cap)
     // Then filter to only POIs within the selected city's geofence
-    // DEFECT 8: the pager used to `break` on a non-ok page and swallow every
+    // The pager used to `break` on a non-ok page and swallow every
     // failure in a no-op catch, so a mid-page error left cachedPoiList holding a
     // SILENTLY TRUNCATED subset. findProximityMatches is the only guard against
     // creating duplicate POIs, so every POI in the missing pages read as "no
@@ -4475,7 +4472,7 @@
     return null;
   }
 
-  // DEFECT 2 helper: normalize a name_variations value that may arrive as an
+  // Helper: normalize a name_variations value that may arrive as an
   // array, as a JSON-encoded string (serialize_neo4j_props), or as absent.
   function normalizeNameVariations(raw) {
     if (Array.isArray(raw)) return raw.filter(v => typeof v === 'string');
@@ -4508,7 +4505,7 @@
   }
 
   function mapPoiForApi(poi, options = {}) {
-    // DEFECT 1: this used to hardcode importance_tier: 1 and always send a
+    // This used to hardcode importance_tier: 1 and always send a
     // short_description (empty string when the incoming record had none).
     // POST /nodes/POI MERGEs on (name_key, city_name) and then SETs every
     // supplied property, so a "Same place" re-upload onto an existing tier-5
@@ -4569,7 +4566,7 @@
     };
   }
 
-  // ── Task 6: Conflict detection ──
+  // ── Conflict detection ──
 
   async function detectConflicts(completePois) {
     const result = { newPois: [], matchedPois: [], conflicts: [], reviewItems: [], errors: [] };
@@ -4578,7 +4575,7 @@
       const poi = completePois[pi];
       updateProgressOverlay(`Checking for conflicts... (${pi + 1}/${completePois.length} POIs scanned)`);
 
-      // AC 7: Missing coordinates check
+      // Missing coordinates check
       const lat = parseFloat(poi.latitude);
       const lng = parseFloat(poi.longitude);
       if (isNaN(lat) || isNaN(lng) || !isValidLat(lat) || !isValidLng(lng)) {
@@ -4590,14 +4587,14 @@
       const proxMatches = findProximityMatches(poi, cachedPoiList);
 
       if (proxMatches.length === 0) {
-        // DEFECT 8: "no proximity match" is only meaningful against a COMPLETE
+        // "No proximity match" is only meaningful against a COMPLETE
         // POI corpus. With a truncated/failed cache the same finding is
         // indistinguishable from "we never looked", so refuse to auto-create.
         if (!poiCacheComplete) {
           result.errors.push(`POI "${poi.poi_name}" skipped: POI cache incomplete, duplicate detection could not run. Reload and retry.`);
           continue;
         }
-        // AC 1, AC 8: Auto-new — no proximity match regardless of name
+        // Auto-new — no proximity match regardless of name
         result.newPois.push({ poi, beats: poi.beats.map(b => ({ beat: b, action: 'create' })) });
       } else {
         // Proximity match found — editor must resolve in triage view
@@ -4615,7 +4612,7 @@
         };
 
         // Fetch beats from the closest match for beat-level conflict preview.
-        // DEFECT 7: the status was never checked, so an API error produced
+        // The status was never checked, so an API error produced
         // existingBeats=[] — indistinguishable from "this POI has no beats".
         // Every incoming beat was then planned as `create`, duplicating beats
         // onto an existing POI while the summary reported zero errors. An
@@ -4686,7 +4683,7 @@
       matchedExistingPoi: null, nameSimilarity: null, missingCoords: false,
     };
 
-    // AC 7: Missing coordinates check
+    // Missing coordinates check
     const lat = parseFloat(poi.latitude);
     const lng = parseFloat(poi.longitude);
     if (isNaN(lat) || isNaN(lng) || !isValidLat(lat) || !isValidLng(lng)) {
@@ -4698,9 +4695,9 @@
     // Proximity check against cached POI list
     const proxMatches = findProximityMatches(poi, cachedPoiList);
 
-    // AC 1, AC 8: No matches within threshold → auto-new
+    // No matches within threshold → auto-new
     if (proxMatches.length === 0) {
-      // DEFECT 8: only trustworthy against a verified-complete POI cache.
+      // Only trustworthy against a verified-complete POI cache.
       if (!poiCacheComplete) {
         result.errors.push('POI cache incomplete — duplicate detection could not run. Reload before uploading.');
         return result;
@@ -4709,7 +4706,7 @@
       return result;
     }
 
-    // AC 2, AC 3: One or more proximity matches → editor must decide
+    // One or more proximity matches → editor must decide
     result.isNew = false;
     result.proximityMatches = proxMatches.map(m => ({
       existingPoi: m.existingPoi,
@@ -4726,7 +4723,7 @@
   async function runBeatConflictDetection(poi, existingPoiName) {
     const result = { existingBeats: [], beatConflicts: [], beatReviewItems: [], errors: [] };
     try {
-      // DEFECT 6: without these guards an API error (or a well-formed but
+      // Without these guards an API error (or a well-formed but
       // shapeless 200) yielded existingBeats=[], so the hard-match and Jaccard
       // loops iterated nothing and the function returned "zero conflicts, zero
       // errors". The mark-complete gate then passed VACUOUSLY and every
@@ -4782,7 +4779,7 @@
     return result;
   }
 
-  // ── Task 7: Conflict resolution overlay ──
+  // ── Conflict resolution overlay ──
 
   function showConflictOverlay(uploadPlan) {
     return new Promise((resolve) => {
@@ -4988,7 +4985,7 @@
 
   // ── Progressive single-POI upload ──
 
-  // DEFECT 9 (partial): the upload loop validated each beat's lens only when it
+  // Lens pre-flight (a partial fix): the upload loop validated each beat's lens only when it
   // reached that beat, so a bad lens on beat 3 threw AFTER beats 1 and 2 were
   // already committed to Neo4j — a non-atomic partial write the UI then
   // reported as "nothing uploaded". POST /nodes/NarrativeBeat CREATEs (ids are
@@ -5020,7 +5017,7 @@
     const lensMap = lensSlugToId;
     const conflicts = poi._conflicts || {};
 
-    // DEFECT 9: fail every lens problem BEFORE the first write.
+    // Fail every lens problem BEFORE the first write.
     preflightBeatLenses(poi.beats, lensMap);
 
     // Build POI payload based on proximity resolution
@@ -5029,7 +5026,7 @@
       // "Same place" → use existing POI name so MERGE hits the correct node
       const existingProps = conflicts.matchedExistingPoi.properties || {};
       const existingName = existingProps.name;
-      // DEFECT 1: carry the existing node's curated importance_tier through, so
+      // Carry the existing node's curated importance_tier through, so
       // the MERGE's unconditional SET rewrites the SAME value instead of
       // demoting a tier-5 landmark to the hardcoded 1.
       poiPayload = mapPoiForApi(poi, {
@@ -5037,7 +5034,7 @@
         existingImportanceTier: existingProps.importance_tier,
         existingShortDescription: existingProps.short_description,
       });
-      // DEFECT 2: this flow exists to ADD an alias, but it used to SET
+      // This flow exists to ADD an alias, but it used to SET
       // name_variations = [incomingName], destroying every previously-curated
       // alternative name on the node (unrecoverable, and it breaks alt-name
       // duplicate detection on later runs). Seed from the existing node's list
@@ -5130,7 +5127,7 @@
       if (!beatResp.ok) throw new Error(`Beat create failed: ${beatResp.status}`);
       const beatNode = await beatResp.json();
 
-      // HAS_BEAT edge — DEFECT 13: check .ok. An unchecked edge POST could 500
+      // HAS_BEAT edge — check .ok. An unchecked edge POST could 500
       // yet the upload still "succeeded", leaving an orphaned beat (a beat node
       // with no POI link). Throw so a failed link surfaces as an upload error.
       const hasBeatResp = await fetch(`${API_BASE}/edges/HAS_BEAT`, {
@@ -5139,7 +5136,7 @@
       });
       if (!hasBeatResp.ok) throw new Error(`HAS_BEAT link failed: ${hasBeatResp.status}`);
 
-      // TAGGED_WITH edge — DEFECT 13: check .ok for the same reason.
+      // TAGGED_WITH edge — check .ok for the same reason.
       const taggedWithResp = await fetch(`${API_BASE}/edges/TAGGED_WITH`, {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ source: {label: 'NarrativeBeat', id: beatNode.id}, target: {label: 'Lens', id: lensId} }),
@@ -5158,7 +5155,7 @@
     const poiName = dbPoi.properties.name;
     const lensMap = lensSlugToId;
 
-    // DEFECT 9: same non-atomic loop as uploadSinglePoi — validate every lens
+    // Same non-atomic loop as uploadSinglePoi — validate every lens
     // before the first write so a bad lens on a later beat costs zero writes.
     try {
       preflightBeatLenses(incomingBeats, lensMap);
@@ -5261,7 +5258,7 @@
         if (!beatResp.ok) throw new Error(`Beat create failed: ${beatResp.status}`);
         const beatNode = await beatResp.json();
 
-        // HAS_BEAT edge (link to existing POI) — DEFECT 13: check .ok so a failed
+        // HAS_BEAT edge (link to existing POI) — check .ok so a failed
         // link is an upload error, not a silent orphaned beat.
         const hasBeatResp = await fetch(`${API_BASE}/edges/HAS_BEAT`, {
           method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -5269,7 +5266,7 @@
         });
         if (!hasBeatResp.ok) throw new Error(`HAS_BEAT link failed: ${hasBeatResp.status}`);
 
-        // TAGGED_WITH edge — DEFECT 13: check .ok for the same reason.
+        // TAGGED_WITH edge — check .ok for the same reason.
         const taggedWithResp = await fetch(`${API_BASE}/edges/TAGGED_WITH`, {
           method: 'POST', headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ source: {label: 'NarrativeBeat', id: beatNode.id}, target: {label: 'Lens', id: lensId} }),
@@ -5294,7 +5291,7 @@
     markCompleteBtn.disabled = false;
   }
 
-  // ── Task 8: Upload execution with progress ──
+  // ── Upload execution with progress ──
 
   let progressOverlayEl = null;
 
@@ -5405,7 +5402,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ source: {label: 'POI', id: poiNode.id}, target: {label: 'NarrativeBeat', id: beatNode.id} }),
             });
-            // DEFECT 4: stats.relsLinked++ previously ran unconditionally, so a
+            // stats.relsLinked++ previously ran unconditionally, so a
             // failed HAS_BEAT link (an orphaned beat, invisible in tours) was
             // still counted as linked and the run reported success. Throw so the
             // catch surfaces the failure and the count is not overstated.
@@ -5417,7 +5414,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ source: {label: 'NarrativeBeat', id: beatNode.id}, target: {label: 'Lens', id: lensId} }),
             });
-            // DEFECT 4: same as HAS_BEAT above — do not count a failed tag link.
+            // Same as HAS_BEAT above — do not count a failed tag link.
             if (!taggedWithResp.ok) throw new Error(`TAGGED_WITH link failed: ${taggedWithResp.status}`);
             stats.relsLinked++;
           }
@@ -5431,7 +5428,7 @@
             method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(mapPoiForApi(entry.poi)),
           });
-          // DEFECT 3: without this guard a failed POI merge returned an error
+          // Without this guard a failed POI merge returned an error
           // body (no `id`), poiNode.id was undefined, and the following beat +
           // HAS_BEAT link created an orphaned beat while stats still reported
           // success. Throw so the run stops and surfaces the error.
@@ -5464,7 +5461,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ source: {label: 'POI', id: poiNode.id}, target: {label: 'NarrativeBeat', id: beatNode.id} }),
             });
-            // DEFECT 4: stats.relsLinked++ previously ran unconditionally, so a
+            // stats.relsLinked++ previously ran unconditionally, so a
             // failed HAS_BEAT link (an orphaned beat, invisible in tours) was
             // still counted as linked and the run reported success. Throw so the
             // catch surfaces the failure and the count is not overstated.
@@ -5475,7 +5472,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ source: {label: 'NarrativeBeat', id: beatNode.id}, target: {label: 'Lens', id: lensId} }),
             });
-            // DEFECT 4: same as HAS_BEAT above — do not count a failed tag link.
+            // Same as HAS_BEAT above — do not count a failed tag link.
             if (!taggedWithResp.ok) throw new Error(`TAGGED_WITH link failed: ${taggedWithResp.status}`);
             stats.relsLinked++;
           }
@@ -5501,7 +5498,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify(mapPoiForApi(conflict.poi)),
             });
-            // DEFECT 3: guard the POI merge — a failed merge returns an error
+            // Guard the POI merge — a failed merge returns an error
             // body with no `id`, so poiNode.id would be undefined and the beat
             // it links would be orphaned while stats falsely reported success.
             if (!poiResp.ok) throw new Error(`POI merge failed: ${poiResp.status}`);
@@ -5519,7 +5516,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ source: {label: 'POI', id: poiNode.id}, target: {label: 'NarrativeBeat', id: beatNode.id} }),
             });
-            // DEFECT 4: stats.relsLinked++ previously ran unconditionally, so a
+            // stats.relsLinked++ previously ran unconditionally, so a
             // failed HAS_BEAT link (an orphaned beat, invisible in tours) was
             // still counted as linked and the run reported success. Throw so the
             // catch surfaces the failure and the count is not overstated.
@@ -5529,7 +5526,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ source: {label: 'NarrativeBeat', id: beatNode.id}, target: {label: 'Lens', id: lensId} }),
             });
-            // DEFECT 4: same as HAS_BEAT above — do not count a failed tag link.
+            // Same as HAS_BEAT above — do not count a failed tag link.
             if (!taggedWithResp.ok) throw new Error(`TAGGED_WITH link failed: ${taggedWithResp.status}`);
             stats.relsLinked++;
             continue;
@@ -5555,7 +5552,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify(mapPoiForApi(conflict.poi)),
             });
-            // DEFECT 3: guard the POI merge — a failed merge returns an error
+            // Guard the POI merge — a failed merge returns an error
             // body with no `id`, so poiNode.id would be undefined and the beat
             // it links would be orphaned while stats falsely reported success.
             if (!poiResp.ok) throw new Error(`POI merge failed: ${poiResp.status}`);
@@ -5573,7 +5570,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ source: {label: 'POI', id: poiNode.id}, target: {label: 'NarrativeBeat', id: beatNode.id} }),
             });
-            // DEFECT 4: stats.relsLinked++ previously ran unconditionally, so a
+            // stats.relsLinked++ previously ran unconditionally, so a
             // failed HAS_BEAT link (an orphaned beat, invisible in tours) was
             // still counted as linked and the run reported success. Throw so the
             // catch surfaces the failure and the count is not overstated.
@@ -5583,7 +5580,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ source: {label: 'NarrativeBeat', id: beatNode.id}, target: {label: 'Lens', id: lensId} }),
             });
-            // DEFECT 4: same as HAS_BEAT above — do not count a failed tag link.
+            // Same as HAS_BEAT above — do not count a failed tag link.
             if (!taggedWithResp.ok) throw new Error(`TAGGED_WITH link failed: ${taggedWithResp.status}`);
             stats.relsLinked++;
             continue;
@@ -5616,7 +5613,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify(mapPoiForApi(conflict.poi)),
             });
-            // DEFECT 3: guard the POI merge — a failed merge returns an error
+            // Guard the POI merge — a failed merge returns an error
             // body with no `id`, so poiNode.id would be undefined and the beat
             // it links would be orphaned while stats falsely reported success.
             if (!poiResp.ok) throw new Error(`POI merge failed: ${poiResp.status}`);
@@ -5634,7 +5631,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ source: {label: 'POI', id: poiNode.id}, target: {label: 'NarrativeBeat', id: beatNode.id} }),
             });
-            // DEFECT 4: stats.relsLinked++ previously ran unconditionally, so a
+            // stats.relsLinked++ previously ran unconditionally, so a
             // failed HAS_BEAT link (an orphaned beat, invisible in tours) was
             // still counted as linked and the run reported success. Throw so the
             // catch surfaces the failure and the count is not overstated.
@@ -5644,7 +5641,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ source: {label: 'NarrativeBeat', id: beatNode.id}, target: {label: 'Lens', id: lensId} }),
             });
-            // DEFECT 4: same as HAS_BEAT above — do not count a failed tag link.
+            // Same as HAS_BEAT above — do not count a failed tag link.
             if (!taggedWithResp.ok) throw new Error(`TAGGED_WITH link failed: ${taggedWithResp.status}`);
             stats.relsLinked++;
             continue;
@@ -5662,7 +5659,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify(mapPoiForApi(conflict.poi)),
             });
-            // DEFECT 3: guard the POI merge — a failed merge returns an error
+            // Guard the POI merge — a failed merge returns an error
             // body with no `id`, so poiNode.id would be undefined and the beat
             // it links would be orphaned while stats falsely reported success.
             if (!poiResp.ok) throw new Error(`POI merge failed: ${poiResp.status}`);
@@ -5680,7 +5677,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ source: {label: 'POI', id: poiNode.id}, target: {label: 'NarrativeBeat', id: beatNode.id} }),
             });
-            // DEFECT 4: stats.relsLinked++ previously ran unconditionally, so a
+            // stats.relsLinked++ previously ran unconditionally, so a
             // failed HAS_BEAT link (an orphaned beat, invisible in tours) was
             // still counted as linked and the run reported success. Throw so the
             // catch surfaces the failure and the count is not overstated.
@@ -5690,7 +5687,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ source: {label: 'NarrativeBeat', id: beatNode.id}, target: {label: 'Lens', id: lensId} }),
             });
-            // DEFECT 4: same as HAS_BEAT above — do not count a failed tag link.
+            // Same as HAS_BEAT above — do not count a failed tag link.
             if (!taggedWithResp.ok) throw new Error(`TAGGED_WITH link failed: ${taggedWithResp.status}`);
             stats.relsLinked++;
             continue;
@@ -5708,7 +5705,7 @@
     return stats;
   }
 
-  // ── Task 9: Summary screen + upload button ──
+  // ── Summary screen + upload button ──
 
   const uploadDbBtn = document.getElementById('uploadDbBtn');
 
@@ -5812,23 +5809,23 @@
   }
 
   // ══════════════════════════════════════════════════════════════
-  // ── Persistent Map (Tasks 2–12) ──
+  // ── Persistent Map (DB and incoming markers) ──
   // ══════════════════════════════════════════════════════════════
 
-  // ── Task 2: Initialize persistent map with database POI markers ──
+  // ── Initialize persistent map with database POI markers ──
 
   function initPersistentMap() {
     if (persistentMap) { persistentMap.remove(); persistentMap = null; }
     persistentMarkers = new Map();
     incomingMarkers = new Map();
-    // Step B.6: any click-set A/B pins died with the removed map instance.
+    // Any click-set A/B pins died with the removed map instance.
     tourPointLayer = null;
     tourClickStage = 0;
 
     const centre = cityCentre ? [cityCentre.lat, cityCentre.lng] : [42.36, -71.06]; // Boston default
     persistentMap = L.map('persistent-map', { zoomControl: true, preferCanvas: true }).setView(centre, 12);
 
-    // Step B.6: click-to-set start/destination — the handler self-guards on the tour view.
+    // Click-to-set start/destination — the handler self-guards on the tour view.
     persistentMap.on('click', handleTourMapClick);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -5876,12 +5873,12 @@
       persistentMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
     }
 
-    // Resize handler (EC5)
+    // Resize handler (window resize)
     window.addEventListener('resize', () => { if (persistentMap) persistentMap.invalidateSize(); });
     setTimeout(() => { if (persistentMap) persistentMap.invalidateSize(); }, 200);
   }
 
-  // DEFECT 15: build the popup as a real DOM element and wire the merge button via
+  // Build the popup as a real DOM element and wire the merge button via
   // addEventListener with a closure over poi.id — no hand-interpolation of poi.id
   // into an inline onclick attribute. The previous version put poi.id inside a
   // single-quoted inline JS string, and escHtml did NOT escape single quotes (or
@@ -5921,13 +5918,13 @@
     return container;
   }
 
-  // ── Task 6: Lazy-load beat count ──
+  // ── Lazy-load beat count ──
 
   function lazyLoadBeatCount(poi, marker) {
     if (marker._beatCountLoaded) return;
     marker._beatCountLoaded = true;
     fetch(`${API_BASE}/graph/poi/${encodeURIComponent(poi.properties.name)}/beats?city_name=${encodeURIComponent(cityName)}`)
-      // DEFECT 6 (sibling): an unchecked non-200 rendered "0 beats" in the map
+      // Status check (like the other beat fetches): an unchecked non-200 rendered "0 beats" in the map
       // popup — a factual claim about the graph derived from a failed request.
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(data => {
@@ -5943,7 +5940,7 @@
       });
   }
 
-  // ── Task 3: Add incoming POI markers on JSON load ──
+  // ── Add incoming POI markers on JSON load ──
 
   function addIncomingMarkers() {
     if (!persistentMap || !incomingMarkerLayer) return;
@@ -5958,7 +5955,7 @@
       const m = L.circleMarker([lat, lng], {
         radius: 7, fillColor: '#e67e22', color: '#d35400', weight: 1, fillOpacity: 0.7
       });
-      // Task 4: Click incoming marker → select in worklist
+      // Click incoming marker → select in worklist
       m._poiIdx = i;
       m.on('click', () => {
         if (mergeMode) return; // Don't select during merge mode
@@ -5977,7 +5974,7 @@
     }
   }
 
-  // ── Task 5: Worklist → Map pan/zoom ──
+  // ── Worklist → Map pan/zoom ──
 
   function panPersistentMapTo(sel) {
     if (!persistentMap) return;
@@ -6020,7 +6017,7 @@
     }
   }
 
-  // ── Task 7: Manual match — searchable dropdown ──
+  // ── Manual match — searchable dropdown ──
 
   function openManualMatchDropdown() {
     const dropdown = document.getElementById('manualMatchDropdown');
@@ -6086,7 +6083,7 @@
     searchInput.addEventListener('input', () => renderList(searchInput.value));
   }
 
-  // ── Task 8: Merge mode — target + source selection ──
+  // ── Merge mode — target + source selection ──
 
   // Expose merge start to popup onclick
   window._startMergeMode = function(poiId) {
@@ -6133,7 +6130,7 @@
     if (!mergeMode) return;
     const targetPoi = mergeMode.target;
 
-    // EC1: Self-merge prevention
+    // Self-merge prevention
     if (sourcePoi.id === targetPoi.id) {
       showError('Cannot merge a POI into itself.');
       return;
@@ -6144,13 +6141,13 @@
     showMergePreview(targetPoi, sourcePoi);
   }
 
-  // ── Task 9: Merge preview & beat conflict resolution ──
+  // ── Merge preview & beat conflict resolution ──
 
   async function showMergePreview(targetPoi, sourcePoi) {
     // Fetch beats for both POIs
     let targetBeats = [], sourceBeats = [];
-    // DEFECT 4: these fetches used `.then(r => r.json())` with NO status check,
-    // so a transient HTTP error yielded `{}` → `sourceBeats = []` → the EC4
+    // These fetches used `.then(r => r.json())` with NO status check,
+    // so a transient HTTP error yielded `{}` → `sourceBeats = []` → the zero-beats
     // branch below told the editor "Source POI X has no beats. Merge will
     // delete it." about a POI that may hold dozens. On OK, executeMerge ran
     // with an empty beatItems list (no beat transferred) and DELETEd the source
@@ -6174,7 +6171,7 @@
       return;
     }
 
-    // EC4: Zero beats on source — now a VERIFIED zero (the fetch above cannot
+    // Zero beats on source — now a VERIFIED zero (the fetch above cannot
     // return [] on failure), re-checked by node id inside executeMerge before
     // anything is deleted.
     if (sourceBeats.length === 0) {
@@ -6311,12 +6308,12 @@
     });
   }
 
-  // ── Task 10: Execute merge — beat transfer + source deletion ──
+  // ── Execute merge — beat transfer + source deletion ──
 
   async function executeMerge(targetPoi, sourcePoi, beatItems) {
     console.log(`Merge start: ${sourcePoi.properties.name} → ${targetPoi.properties.name}`);
 
-    // DEFECT 6: await a fetch AND assert its HTTP status in one step. Previously
+    // Await a fetch AND assert its HTTP status in one step. Previously
     // executeMerge never checked response.ok on its write/delete fetches, so a DB
     // 500 mid-merge still fell through to postMergeUpdate (which splices the source
     // POI out of the cache + drops its map marker) and showed a green "Merged"
@@ -6329,7 +6326,7 @@
       return resp;
     }
 
-    // DEFECT 1: the edges API exposes DELETE only by edge id
+    // The edges API exposes DELETE only by edge id
     // (DELETE /edges/{rel_type}/{edge_id}); there is no bodiless
     // DELETE /edges/{rel_type}. To delete a relationship by its endpoints we
     // must first resolve its edge id via the source_id-filtered list endpoint
@@ -6359,7 +6356,7 @@
       let maxSortOrder = 0;
       try {
         const tResp = await fetch(`${API_BASE}/graph/poi/${encodeURIComponent(targetPoi.properties.name)}/beats?city_name=${encodeURIComponent(cityName)}`);
-        // DEFECT 4: non-fatal, but an unchecked non-200 silently reset the
+        // Non-fatal, but an unchecked non-200 silently reset the
         // baseline to 0 and collided sort_orders on the target.
         if (!tResp.ok) throw new Error(`HTTP ${tResp.status}`);
         const tData = await tResp.json();
@@ -6372,7 +6369,7 @@
         const beat = item.sourceBeat;
 
         if (item.resolution === 'skip') {
-          // DEFECT 3: "skip" used to just `continue`. The source POI is
+          // "Skip" used to just `continue`. The source POI is
           // DETACH DELETEd at the end of the merge, removing the only HAS_BEAT
           // edge to this beat — so the node SURVIVED with active_status
           // 'active', attached to nothing: unreachable by every POI-scoped
@@ -6408,7 +6405,7 @@
               method: 'POST', headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ source: {label: 'NarrativeBeat', id: beat.id}, target: {label: 'Lens', id: newLensId} }),
             }), `Change lens for beat ${beat.id}`);
-            // DEFECT 2: the new TAGGED_WITH edge was created but the beat's
+            // The new TAGGED_WITH edge was created but the beat's
             // original TAGGED_WITH edge was never removed, so the beat ended up
             // tagged with BOTH lenses — the collision this branch resolves
             // silently persisted. Delete the old lens tag so the tag is MOVED,
@@ -6436,13 +6433,13 @@
         }), `Transfer beat ${beat.id} to target`);
         console.log(`Transferred beat ${beat.id} to target (sort_order: ${maxSortOrder})`);
 
-        // Delete old HAS_BEAT edge from source POI → beat. DEFECT 1: the edges
+        // Delete old HAS_BEAT edge from source POI → beat. The edges
         // API has no bodiless DELETE /edges/HAS_BEAT route (only GET+POST +
         // DELETE-by-id), so the previous bodiless DELETE returned 405, aborted
         // executeMerge AFTER the target→beat edge was created but BEFORE the
         // source→beat edge and source POI were removed — double-linking the beat
         // and leaving the source POI in place. Resolve the edge id first, then
-        // DELETE by id. DEFECT 6: still checked so a failed delete aborts the
+        // DELETE by id. Still checked so a failed delete aborts the
         // merge (throws to the catch) rather than proceeding to source-POI deletion.
         await deleteEdgeByEndpoints(
           'HAS_BEAT', sourcePoi.id, beat.id,
@@ -6451,11 +6448,11 @@
         console.log(`Deleted old HAS_BEAT edge from source for beat ${beat.id}`);
       }
 
-      // DEFECT 4 (part B): positively verify the source POI holds no beats
+      // A second safeguard (after the preview check): positively verify the source POI holds no beats
       // BEFORE the destructive DELETE, and verify it by NODE ID — the beats
       // endpoint keys on (name, city_name), the one coordinate that can
       // silently mismatch (casing, a rename, a duplicate node). This converts
-      // the EC4 "source has no beats" ASSUMPTION into a checked precondition,
+      // the "source has no beats" ASSUMPTION into a checked precondition,
       // so a transient error on the preview fetch can no longer lead to
       // DETACH DELETEing a POI that actually holds content.
       const residualResp = await fetch(
@@ -6479,14 +6476,14 @@
         throw new Error(`Source POI "${sourcePoi.properties.name}" still holds ${unaccounted.length} beat(s) this merge never saw — refusing to delete it`);
       }
 
-      // Delete source POI — DEFECT 6: checked so a failed delete does not fall
+      // Delete source POI — checked so a failed delete does not fall
       // through to postMergeUpdate (which would drop the still-present source POI
       // from the cache/map and falsely report a completed merge).
       await mustOk(fetch(`${API_BASE}/nodes/POI/${sourcePoi.id}`, { method: 'DELETE' }),
         `Delete source POI ${sourcePoi.properties.name}`);
       console.log(`Deleted source POI ${sourcePoi.properties.name}`);
 
-      // Task 11: Post-merge map + cache update
+      // Post-merge map + cache update
       postMergeUpdate(targetPoi, sourcePoi);
 
       showSuccess(`Merged "${sourcePoi.properties.name}" into "${targetPoi.properties.name}"`);
@@ -6497,7 +6494,7 @@
     }
   }
 
-  // ── Refresh DB markers after upload (AC7) ──
+  // ── Refresh DB markers (after upload) ──
 
   function refreshDbMarkers() {
     if (!persistentMap || !dbMarkerLayer) return;
@@ -6535,7 +6532,7 @@
     }
   }
 
-  // ── Task 11: Post-merge map + cache update ──
+  // ── Post-merge map + cache update ──
 
   function postMergeUpdate(targetPoi, sourcePoi) {
     // Remove source marker from map
@@ -6560,7 +6557,7 @@
     }
   }
 
-  // ── Task 10: beforeunload warning ──
+  // ── beforeunload warning ──
 
   window.addEventListener('beforeunload', (e) => {
     const hasUnreviewed = poiData.some(p => p._status === 'pending' || p._status === 'deferred');
