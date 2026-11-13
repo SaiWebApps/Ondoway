@@ -1,6 +1,6 @@
 // Ondoway money model: every input with its evidence, and the math.
-// It models the MVP being built, not today's code. The page (ondoway-financial-model.html) and
-// tools/deck_numbers.py both load this file; nothing else holds a copy of the math. No DOM access here.
+// It models the MVP being built, not today's code. The page (ondoway-financial-model.html) loads
+// this file; nothing else holds a copy of the math. No DOM access here.
 "use strict";
 
 const CHECKED = "checked 9 Oct 2026";
@@ -296,10 +296,4 @@ function payShareNeeded(p, x) {
   if (hi === null || lo === 0) return hi;
   for (let i = 0; i < 20; i++) { const mid = (lo + hi) / 2; if (y3(mid) < 0) lo = mid; else hi = mid; }
   return hi;
-}
-
-if (typeof module !== "undefined") {
-  module.exports = {TAGS, INPUTS, FIXED_RULES, NOT_COUNTED, MONTHS, byId, preset, stopsPerTour,
-    stopCost, tourCost, toursPerBuyer, freeWalkCost, cityRecipeCost, averagePrice, commissionPerBuyer,
-    perPass, priceFloor, withAveragePrice, citiesLiveBy, simulate, years, payShareNeeded};
 }
