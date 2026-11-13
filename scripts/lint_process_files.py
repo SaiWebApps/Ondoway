@@ -2,19 +2,19 @@
 
 Process files — CLAUDE.md, the agent/command/rule definitions under .claude/,
 settings.json, .gitignore, the Makefile — describe the repo to every session
-that works on it, and Docs/ plus README.md describe it to every human. The
+that works on it, and the documentation folder plus README.md describe it to every human. The
 defects this lint refuses, each with a file:line:
 
 - a reference to a path that no longer exists, left behind when the thing it
-  named was deleted (process files, Docs/ and README.md);
+  named was deleted (process files, the documentation folder and README.md);
 - an incident narrative (recognized by its ISO date) baked into a rule, which
   states history instead of the present constraint (process files only — a
   document may record history; incidents go to git history and
   .claude/LEARNINGS.md, which is exempt as the incident log);
 - a backticked `make <target>` naming a target the live Makefile does not
   define (every scanned markdown file);
-- a `specs/<path>` citation in src/ or scripts/ Python — the spec tree is
-  retired, so a path citation there points at fixtures/ or at git history.
+- a path citation into the retired spec tree in src/ or scripts/ Python — the tree
+  is retired, so a path citation there points at fixtures/ or at git history.
 
 Three things a reference scan over prose must NOT flag: a `~`-prefixed home
 path (not a repo claim), a gitignored path (a machine-local artifact, judged
@@ -87,7 +87,7 @@ MAKEFILE_RULE_RE = re.compile(r"^([A-Za-z][\w-]*(?:\s+[A-Za-z][\w-]*)*)\s*:(?!=)
 #: a citation and stays legal.
 SPECS_CITATION_RE = re.compile(r"specs/[\w-]")
 #: A line that narrates a removal is the one sentence allowed to name what is
-#: gone; the reference scan on Docs/README skips it.
+#: gone; the reference scan on the documentation and README skips it.
 REMOVAL_NARRATION_RE = re.compile(r"\b(deleted|retired|removed|git history)\b", re.IGNORECASE)
 
 

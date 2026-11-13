@@ -10,29 +10,25 @@ here, is it OK to be left standing here after dark — not time. Folding it in w
 two prompts, two validators and two review protocols into one CLI whose halves succeed
 and fail independently.
 
-WHAT IT PRODUCES, per POI in ``data/{slug}/poi-raw.json`` (the redesign's data
-row 6.4; the spec tree is retired — git history):
+WHAT IT PRODUCES, per POI in ``data/{slug}/poi-raw.json``:
 
-``children_can_run``  Can children be loud, fast and free-range here? Nadia's finding:
-                      38 of her 55 place-minutes were valuable BECAUSE the kids could
-                      run, and the corpus had no channel for it.
+``children_can_run``  Can children be loud, fast and free-range here? A family's
+                      place-minutes are most valuable where the kids can run, and the
+                      corpus had no channel for it.
 ``sit_and_talk``      Can two people sit down somewhere quiet enough to hear each
-                      other? Fiona & Dev's two green chairs: the Palais-Royal garden
-                      wins their afternoon on seating, enclosure and quiet — "three
-                      properties no POI in the corpus carries"
-                      (docs/personas/09-couple-who-would-rather-talk.md:34-37, 75-78).
-``good_after_dark``   Good to be LEFT STANDING there in the dark? The design's finish
-                      rule: "a finish after dark must be somewhere rated good to be
-                      left standing in the dark" (01-design.md §3.1). Consumed only in
-                      Phase 3 (it needs legs priced by hour) — priced NOW so the data
-                      exists when Phase 3 arrives.
+                      other? A couple who would rather talk picks the Palais-Royal
+                      garden on seating, enclosure and quiet — three properties the
+                      corpus had no field for.
+``good_after_dark``   Good to be LEFT STANDING there in the dark? On a dated walk
+                      that finishes after dusk, the planner prefers a finishing place
+                      marked true here, and discloses a dark finish when none fits.
 ``judgement_basis``   ONE sentence arguing all three verdicts, written so a reviewer
                       who has never been to the city can judge them.
 
 THESE ARE AI JUDGEMENTS WITH NO EXTERNAL SOURCE — SAMPLE THEM AT TWICE THE NORMAL
-RATE IN REVIEW. Row 6.4 is the only data row in the redesign with no external source
-behind it (no OSM tag, no observable fact — 01-design.md:375-377): the model's verdict
-is the whole provenance. The review step (W2.9) therefore samples these rows at twice
+RATE IN REVIEW. These three are the only data fields with no external source
+behind them (no OSM tag, no observable fact): the model's verdict
+is the whole provenance. The review step therefore samples these rows at twice
 the rate of the externally-sourced passes, and ``judgement_basis`` exists because it is
 the only audit trail a reviewer gets. This script refuses to write a verdict without it.
 

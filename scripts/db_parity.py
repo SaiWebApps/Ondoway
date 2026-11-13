@@ -116,7 +116,7 @@ def _expected(slug: str) -> dict:
     def _hours_text(raw) -> str | None:
         return raw.strip() if isinstance(raw, str) and raw.strip() else None
 
-    # The door and its hours (Docs/adr/0006): the verdict, the source and the
+    # The door and its hours: the verdict, the source and the
     # OpenStreetMap text. In the parity set so the upload hop is mechanically
     # enforced — a field that reaches poi-raw.json and never the graph turns
     # the lane's dev-data preflight red instead of silently serving days that
@@ -158,7 +158,7 @@ def _expected(slug: str) -> dict:
 
 def _actual(session, slug: str) -> dict:
     q = lambda c, **kw: session.run(c, city=slug, **kw)  # noqa: E731
-    # Body places (toilets/benches, redesign row 6.3, plan S2.5) are uploaded
+    # Body places (toilets/benches) are uploaded
     # as poi_role="body" :POI nodes — deliberately, so they flow through the
     # SAME planner loader — but they come from data/{slug}/body-places.json,
     # never poi-raw.json, so they are NOT part of the repo-vs-db POI

@@ -3,7 +3,7 @@
 Outputs two artifacts under ``data/{city_slug}/``:
 
 - ``tourability_map.json`` — per-grid-cell density assessment for every
-  (duration, round_trip) bucket. The schema mirrors the §3.7 spec:
+  (duration, round_trip) bucket. The schema:
 
   ``{"generated_at": ..., "grid_resolution_m": 100, "duration_buckets":
   [60,90,120,180], "round_trip_modes": [true,false], "cells": [

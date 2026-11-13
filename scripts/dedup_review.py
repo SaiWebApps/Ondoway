@@ -12,7 +12,7 @@ reading. So this reads.
 
 WHY IT IS IN THE BUILD AND NOT AN AGENT SOMEONE INVOKES. The thing that keeps
 producing this defect is a coding model, and a rule a model has to remember is the
-same as no rule. ``CLAUDE.md`` records the precedent: prose caps were tried and
+same as no rule. The precedent: prose caps were tried and
 died when ``/dev``'s loop counters called a hook that did not exist.
 
 TWO MODES, because one guard cannot be both fast enough to run after every edit and
@@ -23,7 +23,7 @@ code answer a question the codebase already answers? — against a cached invent
 of what everything else is for. It is advisory ON PURPOSE. A multi-file change is
 legitimately incoherent in the middle: this repo's own plan has a step where the
 app must raise until the next step lands. A guard that blocks there gets switched
-off, and a guard that is off catches nothing. The precedent is in ``CLAUDE.md``:
+off, and a guard that is off catches nothing. The precedent:
 a regex command guard blocked 16 of 20 harmless commands, caught 0 of 70 real
 ones, and was deleted.
 
@@ -80,7 +80,7 @@ CACHE_PATH = REPO_ROOT / ".claude" / "dedup-inventory.json"
 
 #: Reading a whole module and judging what it is for is the expensive half of this
 #: job, and a small model reads badly. The full pass runs at close, not in a loop.
-#: Cost is not a constraint here (``CLAUDE.md`` §1.11).
+#: Cost is not a constraint here.
 FULL_MODEL = "claude-opus-4-8"
 #: The after-every-edit pass asks a much narrower question — does this one function
 #: match anything on a list — and has to answer while somebody is waiting.

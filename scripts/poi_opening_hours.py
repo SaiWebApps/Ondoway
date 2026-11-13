@@ -10,7 +10,7 @@ round-trip guard) and `records_for_batch` (the one reader of a model reply — t
 fence strip, the parse and the alignment check) come straight from the capacity
 pass, so the two passes can never drift into different file conventions.
 
-WHAT IT PRODUCES, per POI in ``data/{slug}/poi-raw.json`` (Docs/adr/0006):
+WHAT IT PRODUCES, per POI in ``data/{slug}/poi-raw.json``:
 
 ``gated``                 The door verdict: true when a door, gate or ticket
                           line stands between the street and the experience;
@@ -72,7 +72,7 @@ ROOT = Path(__file__).resolve().parent.parent
 #: to re-run, and a full pass stays a handful of calls.
 DEFAULT_BATCH_SIZE: int = 15
 
-#: The only vocabulary a door's hours may carry (CONTEXT.md "Hours source").
+#: The only vocabulary a door's hours source may carry.
 SOURCE_MAP = "map"
 SOURCE_GUESS = "guess"
 HOURS_SOURCES: tuple[str, ...] = (SOURCE_MAP, SOURCE_GUESS)

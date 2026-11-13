@@ -1,4 +1,4 @@
-"""Verify AC-4, AC-5, AC-8 for the unified-beat-extract skill.
+"""Verify the beats and skill source of the unified-beat-extract skill.
 
 Usage:
     .venv/bin/python scripts/verify_scope4_acs.py --beats <path> [--city <slug>]
@@ -8,9 +8,9 @@ Example after running the skill against the fixture chunk:
         --beats data/test_city_xx/beats.json --city test_city_xx
 
 Verifies:
-- AC-4: every beat has all required fields populated; passes Pydantic validation
-- AC-5: sensory_anchor=true implies non-empty, structured physical_cues
-- AC-8 (code half): no city name is hardcoded in the skill source file
+- every beat has all required fields populated; passes Pydantic validation
+- sensory_anchor=true implies non-empty, structured physical_cues
+- no city name is hardcoded in the skill source file
 - Within-run beat_id uniqueness
 - Beat_id prefix matches --city
 """
@@ -188,7 +188,7 @@ def main() -> int:
 
     all_pass = True
 
-    # AC-8 (code half) always runs
+    # The skill-source city check always runs
     print("=== AC-8 (code half): no city hardcoding in skill source ===")
     ok, errors = check_ac8_code(Path(args.skill))
     if ok:

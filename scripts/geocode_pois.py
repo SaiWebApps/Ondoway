@@ -46,7 +46,7 @@ def nominatim(query: str) -> tuple[float, float, str] | None:
     return None
 
 
-#: THE one footprint table by PLACE KIND (Phase 7 S7.4; design §5.6 C7; W7.2 R1): how far
+#: THE one footprint table by PLACE KIND: how far
 #: from the pin a walker is AT a place of this kind, in metres, for a record nobody has
 #: reviewed by name. Keyed by the closed place-category vocabulary
 #: (scripts/poi_place_category.py). A place you are IN (a garden, a bridge, an arcade, a
@@ -73,7 +73,7 @@ def trigger_radius_for(
     name: str, default: int, *, place_category: str | None = None
 ) -> tuple[int, str]:
     """The footprint for a record nobody reviewed by name: by PLACE KIND when the record
-    carries one (the Paris corpus, redesign 6.7), else by name token (the New York
+    carries one (the Paris corpus), else by name token (the New York
     corpus, which has no kinds yet) — the original table, unchanged. Returns (metres,
     the sentence that argues it)."""
     if place_category in FOOTPRINT_BY_KIND:

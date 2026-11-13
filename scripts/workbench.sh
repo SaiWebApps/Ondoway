@@ -50,7 +50,7 @@ else
   # (ONDOWAY_ALLOW_DIRTY_LOCAL_BUILD used to be set here. A dirty local tree is
   # no longer a refusal anywhere — resolve_build_identity() stamps HEAD tagged
   # dirty and warns, with no flag to remember — so the line is gone, 2026-08-18.)
-  # TTS_PROVIDER=openai: OWNER RULING 2026-07-31 — the workbench must resolve the
+  # TTS_PROVIDER=openai: the workbench must resolve the
   # SAME real implementations production resolves. Without this line the server
   # inherited get_provider()'s "mock" fallback (src/audio/provider.py), so any
   # /audio request that omitted an explicit provider was answered with a SILENT

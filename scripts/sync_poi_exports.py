@@ -1,12 +1,12 @@
 """Propagate enriched POI fields from poi-raw.json into every export chunk — one command.
 
-EXTENDS, per CLAUDE.md §1.7 (the third manual copy becomes the template). This same
+EXTENDS, by the rule that the third manual copy becomes the template. This same
 block was performed by hand three times before it became a script:
 
   1. the hand-sync `.claude/commands/poi-visit-duration.md` mandates under
      "MANDATORY — SYNC THE EXPORT FILES" ("the step that gets skipped, and skipping
      it makes the whole pass invisible");
-  2. the scratch script W1.8 wrote to push the opening-hours trio and
+  2. the scratch script written to push the opening-hours trio and
      ``place_category`` into the 48 Paris chunks (1,384 fields), deleted with its
      spec folder;
   3. the identical "NEXT, AND MANDATORY: sync data/{city}/export/*.json" warning all
@@ -23,7 +23,7 @@ which enriched fields flow poi-raw -> export; the pass trailers deliberately do 
 restate it, and ``tests/test_export_consistency.py`` fails when a pass starts writing
 a field this list does not carry.
 
-NULL IS A STATEMENT (W1.8's ledger: "nulls propagated deliberately"). A null
+NULL IS A STATEMENT. A null
 ``visit_seconds_inside`` means "no interior"; a null ``opening_hours`` means "not
 gated". So a null — and an absent field, for a pass that has not run on this city
 yet — propagates as an explicit null rather than being skipped.
@@ -58,14 +58,14 @@ from scripts.poi_visit_duration import dump_pois, load_pois, serialise
 ROOT = Path(__file__).resolve().parent.parent
 
 #: THE one list of enriched fields that flow poi-raw -> export chunks. One fact, one
-#: place (CLAUDE.md §1.7): the pass scripts' trailer messages name the make target and
+#: place: the pass scripts' trailer messages name the make target and
 #: never restate this list. Ordered as the passes landed.
 SYNCED_FIELDS: tuple[str, ...] = (
     # Visit-capacity trio — scripts/poi_visit_duration.py.
     "visit_seconds_inside",
     "visit_basis",
     "typical_duration_min",
-    # The door and its hours (Docs/adr/0006) — scripts/poi_opening_hours.py:
+    # The door and its hours — scripts/poi_opening_hours.py:
     # the door verdict, the OpenStreetMap text, its source and its basis.
     "gated",
     "opening_hours",
@@ -73,24 +73,24 @@ SYNCED_FIELDS: tuple[str, ...] = (
     "opening_hours_basis",
     # Place category — scripts/poi_place_category.py.
     "place_category",
-    # Place judgements — redesign S2.6's pass, landing this same phase; listed ahead
-    # of it so the sync never lags the pass (plan step S2.9).
+    # Place judgements — the place-judgements pass; listed ahead
+    # of it so the sync never lags the pass.
     "children_can_run",
     "sit_and_talk",
     "good_after_dark",
     "judgement_basis",
-    # Queue pass — scripts/poi_queues.py (redesign data row 6.5, plan W3.1);
-    # registered with the pass so the sync never lags it, the S2.9 precedent.
+    # Queue pass — scripts/poi_queues.py;
+    # registered with the pass so the sync never lags it.
     "queue_class",
     "queue_minutes_peak",
     "queue_minutes_offpeak",
     "queue_peak_hours",
     "queue_basis",
-    # The footprint — scripts/poi_trigger_radius.py (Phase 7 S7.4, design §5.6 C7).
-    # Registered with the pass, the S2.9 precedent; this is the field the
+    # The footprint — scripts/poi_trigger_radius.py.
+    # Registered with the pass; this is the field the
     # tests/test_export_consistency.py TODO had recorded as drifting (19 entries).
     "trigger_radius",
-    # The reviewed anchors of a marquee (Phase 7 S7.7 B, design §5.6 segments) —
+    # The reviewed anchors of a marquee —
     # placed by hand on poi-raw.json; the graph reads them through the upload.
     "anchors",
 )

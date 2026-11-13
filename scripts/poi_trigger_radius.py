@@ -1,14 +1,14 @@
 """Size each POI's FOOTPRINT — `trigger_radius` — by place kind, with the marquees reviewed
-by name. Phase 7 S7.4 (design §5.6 C7; W7.2 R1). Deterministic, $0, re-runnable at will.
+by name. Deterministic, $0, re-runnable at will.
 
 WHY. `trigger_radius` is how far from the pin a walker is AT the place: the audio placement
 rule (src/tour/placement.py) puts it on the wire and the phone's one predicate reads it. The
-Paris corpus carried the field on every record since the first upload and nothing read it
-(plan defect 1); 177 of 370 records sat at the uploader's 10 m default — the Louvre, the
+Paris corpus carried the field on every record since the first upload and nothing read it;
+177 of 370 records sat at the uploader's 10 m default — the Louvre, the
 Orsay, Notre-Dame, the Pont Neuf, Sainte-Chapelle, Parc de la Villette among them — so the
-phone drew one doorway for a 140 m square and a doorway alike. The W7.2 panel ruled 11/11
-that "at the stop" is the place's own footprint (Nadia: the Place des Vosges is 140 m
-across; Théo: Concorde's three positions; Aiko: "read the field, fix the 177 defaults").
+phone drew one doorway for a 140 m square and a doorway alike. The rule: "at the stop"
+is the place's own footprint: the Place des Vosges is 140 m across, and a walker stands at
+Concorde in three different spots.
 
 WHAT IT WRITES, per POI in ``data/{slug}/poi-raw.json``:
 
@@ -17,7 +17,7 @@ WHAT IT WRITES, per POI in ``data/{slug}/poi-raw.json``:
   (``scripts/geocode_pois.py::FOOTPRINT_BY_KIND``, reached through the one function
   ``trigger_radius_for`` — EXTENDED, never copied).
 - A record named in ``REVIEWED`` takes the reviewed footprint, whatever it carried: the
-  marquees and every stop of the eleven personas' days (W6.12 / W7.1), each with the
+  marquees and every stop of the eleven sample visitor days, each with the
   sentence that argues it, written so someone who has never been to Paris can judge it.
 - Every other record keeps its curated value (the area-radius fix of 2026-06-16, the
   geocoder's curated streets and squares) — this pass never lowers a reviewed-elsewhere
@@ -30,9 +30,8 @@ imported from the capacity pass, never copied. Then, AND MANDATORY: ``make sync-
 — a field written here does not reach the export chunks, or the graph the API upload
 builds, until that sync runs; `tests/test_export_consistency.py` now pins the two equal.
 
-CARRIED (not this pass): a line for a street, a polygon for a cemetery or a garden's walls
-(W7.2 R1 d — Théo, Greta, Sofia, Julien, Camille, Marcus); the corpus holds no such
-geometry and the rule's ``kind`` field is where it lands.
+CARRIED (not this pass): a line for a street, a polygon for a cemetery or a garden's walls;
+the corpus holds no such geometry and the rule's ``kind`` field is where it lands.
 """
 
 from __future__ import annotations
@@ -55,7 +54,7 @@ UPLOADER_DEFAULT_M: int = 10
 #: guards (tests/test_poi_trigger_radius.py, tests/test_export_consistency.py). Adding a
 #: slug says "this city's footprints are sized and its export chunks carry them";
 #: removing one to reach green is forbidden. New York is not here yet — but the reason
-#: has changed: its normalise-then-sync job HAS run (Phase 8 S8.7). Its poi-raw.json and
+#: has changed: its normalise-then-sync job HAS run. Its poi-raw.json and
 #: 15 of its 34 export chunks had been committed at 1-SPACE indent (not 4, as this
 #: comment used to say), which `dump_pois` refuses to reformat; all of them are
 #: byte-faithful and fully synced now, and `tests/test_export_consistency.py` pins it.
@@ -63,14 +62,14 @@ UPLOADER_DEFAULT_M: int = 10
 CITIES_WITH_FOOTPRINTS: tuple[str, ...] = ("paris",)
 
 #: THE REVIEWED FOOTPRINTS, by the corpus name, each with its argument. The marquees, the
-#: W7.2 panel's named places, and every stop of the eleven personas' days
-#: (evidence/phase7-audio/w71-trigger.tsv). Metres from the corpus pin.
+#: places a review named, and every stop of the eleven sample visitor days.
+#: Metres from the corpus pin.
 REVIEWED: dict[str, tuple[int, str]] = {
-    # W7.13 (the closing panel; Camille's "unreviewed footprint" CLASS): a value that
+    # The "unreviewed footprint" CLASS: a value that
     # was neither the uploader's default nor on this list was never looked at. The two
-    # instances the panel named, reviewed now; the class rule from here on: a stop the
+    # instances a review named, reviewed now; the class rule from here on: a stop the
     # visit GOES INSIDE must have a footprint that covers its BUILDING, or leaving the
-    # circle happens indoors and the next leg piece can start under the roof (Marcus).
+    # circle happens indoors and the next leg piece can start under the roof.
     "Jardin des Tuileries": (
         430,
         "The garden runs about 900 m gate to gate and the pin sits mid-garden: at the "

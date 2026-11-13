@@ -10,8 +10,8 @@ to nothing, calls NO model ($0 end to end), and writes a SEPARATE file. What IS
 shared is imported rather than copied: ``OVERPASS_URL`` (the one endpoint
 constant) comes from the opening-hours pass, and ``assert_ingestable`` /
 ``ONBOARD_USER_AGENT`` come from ``src/onboard/fetch.py`` — the guarded-door,
-descriptive-User-Agent pattern (Overpass 406s an anonymous client; W1.8 paid for
-that lesson). The one-retry-then-abort rule is the same as
+descriptive-User-Agent pattern (Overpass 406s an anonymous client). The
+one-retry-then-abort rule is the same as
 ``poi_opening_hours.fetch_osm_hours``: Overpass unreachable after 2 attempts
 aborts nonzero, never a silent pass, because a body-places file that silently
 came out empty would read as "this city has no toilets".
@@ -20,18 +20,15 @@ WHERE THE RESULTS GO, AND WHERE THEY MUST NEVER GO. Records land in
 ``data/{slug}/body-places.json`` — NEVER in ``poi-raw.json``. Body places are
 not narrated places: they carry no beats, no tier judgement, no story, and must
 never enter the beat pipeline or the dedup/review flows that read the POI file.
-The upload half (owned by plan step S2.5's coordinating session) reads this file
+The upload half reads this file
 and uploads each record with ``poi_role="body"``; the planner prices the "body"
 role at 0.0 in ``POI_ROLE_MULTIPLIER``, so a body place can never seat as a
 narrated stop — only the cadence axis may ever schedule one.
 
-WHY THE DATA EXISTS AT ALL (the tour-algorithm redesign; its spec tree is
-retired — git history): design §3.1 makes body stops first-class promises — "a
-rest window with no bench under it is thirteen minutes standing on a stick". Nadia's
-toilet stop is "ten minutes, zero cultural content, entirely non-negotiable"
-(docs/personas/03-family-with-children.md step 5), and Rosemary's bench IS a
-stop, with a location and a duration (docs/personas/05-step-free-visitor.md
-steps 3 and 7).
+WHY THE DATA EXISTS AT ALL: body stops are first-class promises. A rest window
+with no bench under it means standing. A family's toilet stop is real minutes
+with no story in it, and it cannot be skipped. A slow walker's bench IS a stop,
+with a location and a duration.
 
 RECORD SHAPE, one object per OSM node, sorted by (kind, osm id) for stable
 diffs::

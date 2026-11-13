@@ -4,19 +4,19 @@ WHY A THIRD SCRIPT. One script answers one question (the header rule in
 `scripts/poi_visit_duration.py`): the capacity pass prices time, the hours pass
 prices the calendar, this one names WHAT KIND OF PLACE each POI is. It is
 deliberately NOT folded into the opening-hours pass, and deliberately NOT a
-model call: the design prices 6.7 as "cheap derivation" — deterministic, $0,
+model call: it is a cheap derivation — deterministic, $0,
 re-runnable at will — from name tokens, the description, and `poi_role`.
 The write path (`load_pois` / `dump_pois`, the refuse-to-write-on-reformat
 guard) is imported from the capacity pass, never copied.
 
-THE VOCABULARY IS CLOSED. Twelve values, fixed by the redesign plan (S1.7):
+THE VOCABULARY IS CLOSED. Twelve values, fixed:
 
     gallery | museum | church | square | arcade | market | park | garden |
     bridge | street | monument | other
 
-`other` is a real answer, not a dumping ground — the Phase 3 consumer
-(category-diverse replacement: never offer Greta a third gallery before 10:30)
-only needs the big classes to be right, and the W1.8 human review reads the
+`other` is a real answer, not a dumping ground — the consumer
+(category-diverse replacement: prefers a set of stops that is not mostly one kind)
+only needs the big classes to be right, and the human review reads the
 full assignment table.
 
 FRENCH TOPONYMY, two deliberate readings: a name starting "Place " is a
@@ -26,8 +26,7 @@ not a plaza. And "Galerie" alone is ambiguous (Galerie Vivienne is a covered
 arcade; the Galerie nationale du Jeu de Paume is an art venue), so `galerie`
 resolves to `arcade` only when the description says covered/passage/arcade.
 
-Consumer lands in Phase 3; Phase 1 surfaces the labels in the harness corridor
-printout so the owner can see them.
+The harness corridor printout surfaces the labels so the owner can see them.
 """
 
 from __future__ import annotations
@@ -42,7 +41,7 @@ from scripts.poi_visit_duration import dump_pois, load_pois
 
 ROOT = Path(__file__).resolve().parent.parent
 
-#: THE closed vocabulary (redesign plan S1.7). The structural test asserts every
+#: THE closed vocabulary. The structural test asserts every
 #: written value is one of these and that this tuple never silently widens.
 PLACE_CATEGORIES: tuple[str, ...] = (
     "gallery",
@@ -99,7 +98,7 @@ _DESC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
 
 
 def categorise(name: str, description: str, poi_role: str | None) -> str:
-    """THE one derivation of a POI's place category (redesign 6.7). Pure, $0.
+    """THE one derivation of a POI's place category. Pure, $0.
 
     Order matters and is part of the contract: French toponyms are decided by
     the name's leading word first (Place/Square/Rue/Pont/Jardin/Parc/Marche),

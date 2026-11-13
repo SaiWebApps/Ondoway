@@ -66,9 +66,8 @@ def _lookup_place(
     """THE one place-lookup ladder: coordinate string or POI/Area name →
     ``(poi_id, (lat, lng), label)``, or None when nothing matches.
 
-    ``--start``, ``--end`` and ``--pin`` all resolve HERE (plan S3.1's
-    sabotage list forbids a second lookup), so a name means the same place
-    at every flag. Tries (in order):
+    ``--start``, ``--end`` and ``--pin`` all resolve HERE and through no
+    second lookup, so a name means the same place at every flag. Tries (in order):
     1. ``"lat,lng"`` literal.
     2. POI exact name (case-insensitive).
     3. POI substring match (case-insensitive contains).
@@ -173,7 +172,7 @@ def _resolve_start(driver, start_arg: str, city_slug: str) -> tuple[tuple[float,
     """Coordinate string or POI/Area name \u2192 (lat, lng) + display label.
 
     A thin wrapper over ``_lookup_place`` \u2014 the ladder lives THERE so --pin
-    can share it (plan S3.1); the raise and its message are unchanged from
+    can share it; the raise and its message are unchanged from
     before the extraction.
     """
     found = _lookup_place(driver, start_arg, city_slug)
@@ -190,7 +189,7 @@ def _resolve_pinned_poi_ids(
     driver, parser: argparse.ArgumentParser, pins: list[str] | None, city_slug: str
 ) -> tuple[str, ...]:
     """Each ``--pin`` through the one lookup ladder \u2192 a corpus POI id, in
-    command-line order (design \u00a73.2: a pin is the visitor's decision on a
+    command-line order (a pin is the visitor's decision on a
     SPECIFIC place, so it lands as an id, never a string). A pin that
     resolves to nothing \u2014 unknown text, or a coordinate with no corpus POI
     within snapping range \u2014 is an argparse-level error naming the pin text.
@@ -211,7 +210,7 @@ def _resolve_pinned_poi_ids(
 
 def _build_beat_sequence(route, snapshot, lenses) -> BeatSequence:
     capped = build_poi_beat_plans_capped(route, snapshot, lenses=lenses, end_is_none=True)
-    # Render the walk-past vignettes too (Track B + filler-stub demotions):
+    # Render the walk-past vignettes too (including filler-stub demotions):
     # select_route already populated route.vignettes; without this the CLI
     # markdown silently drops every walk-by one-liner, including a thin stop that
     # the governor demoted from a dedicated stop to a vignette. Mirrors the
@@ -313,21 +312,21 @@ def _print_breakdown(
     fixed-destination planner searched ~12,259 m, and the harness built to expose
     that bug would have hidden it.
 
-    Plan S3.1 adds the promise view: a ``promises:`` line above the per-stop
+    The promise view adds a ``promises:`` line above the per-stop
     table (kind, stop name, arrive-depart window), a SHAPE column (``44m in``
     / ``15m out`` / ``closed—out``) and a QUEUE column. A stop no Promise has
     shaped falls back to the route's priced minutes, with in/out read off the
     POI's own capacity numbers — a pre-promise value: the planner has not
     shaped this stop, and the fallback reports what today's planner actually
     committed to rather than pretending a promise exists. On a dated run the
-    table is followed by Aiko's honesty line, ``hours: N from the map, M
-    guessed, K unknown of L doors on this route`` (plan deviation ii).
+    table is followed by the hours honesty line, ``hours: N from the map, M
+    guessed, K unknown of L doors on this route``.
     """
     radius_m, iso_minutes = reach_envelope_searched(tour_input)
     absent = "— no route was produced, so this cannot be measured"
 
     print("  ── breakdown ──────────────────────────────────────────────")
-    # WHO THIS DAY IS FOR (plan S2.1/D2) — printed even when every mobility
+    # WHO THIS DAY IS FOR — printed even when every mobility
     # axis happens to tie two runs (e.g. a preset pair whose only new axis is
     # the register, which touches no other number in this table): the day
     # must be visibly different in the OUTPUT, not just in the code path that
@@ -413,17 +412,16 @@ def _print_breakdown(
     print(f"  reach radius:       {radius_m:6.0f} m circle — {note}")
     print(f"  wall clock:         {wall_clock_s:6.2f} s")
     # CLOCK EXCLUSIONS — printed on every DATED run, including when empty, so a
-    # Monday and a Tuesday breakdown keep the same shape and read side by side
-    # (D1 demo). Omitted entirely on a dateless run, which is what keeps that
+    # Monday and a Tuesday breakdown keep the same shape and read side by side.
+    # Omitted entirely on a dateless run, which is what keeps that
     # output byte-identical to the pre-clock harness. Reads the field
-    # defensively: the section lands (printing "none") before Route learns to
-    # record exclusions in S1.6, and lists them once it has.
+    # defensively: a route without it prints "none".
     if tour_input.start_datetime is not None:
         exclusions = getattr(route, "clock_exclusions", ()) if route is not None else ()
         print("  clock exclusions:")
         if exclusions:
             # The record carries the closure FACT and the pool DECISION as a flag
-            # (ClockExclusion.kept_outside, W4.12); the harness spells the
+            # (ClockExclusion.kept_outside); the harness spells the
             # decision out so a breakdown reads the same as the wire's day notes.
             on_route = {p.id for p in route.pois} if route is not None else set()
             for excl in exclusions:
@@ -436,25 +434,24 @@ def _print_breakdown(
                 print(f"    • {excl.name} — {excl.reason}{tail}")
         else:
             print("    none")
-    # PER-STOP TABLE (plan S2.1; promise columns plan S3.1) — the DAY, not the
-    # total: one line per stop with the place category (the carried Phase 1
-    # gap: S1.7 promised category labels in the harness printout), the priced
+    # PER-STOP TABLE — the DAY, not the
+    # total: one line per stop with the place category, the priced
     # stand/visit minutes ("—" when the route carries no pricing — the four
     # legacy harnesses' shape, never a zero that reads as a measurement), the
     # promise SHAPE and QUEUE, and the walking leg INTO that stop
     # (route.transits leg i is the walk into stop i). Printed on EVERY run
-    # that has a route, same shape priced or not; W2.11's side-by-side demo
-    # table is assembled from these lines verbatim. Sits BELOW the
-    # seven-number block so the D1 evidence stays readable above it.
+    # that has a route, same shape priced or not, so two runs read side by
+    # side. Sits BELOW the
+    # seven-number block so those numbers stay readable above it.
     if route is not None and route.pois:
-        # THE PROMISE VIEW (plan S3.1; design §3.1 "each promise carries a
-        # clock window"). One cumulative clock feeds BOTH the promises line
+        # THE PROMISE VIEW: each promise carries a
+        # clock window. One cumulative clock feeds BOTH the promises line
         # and the table rows — the same legs in, the same time at each stop —
         # so the printed window and the printed table can never disagree.
         promises_by_poi = {p.poi_id: p for p in route.promises}
         # A stop the clock voided but the day KEEPS, from the outside — the
         # promise-native planner records it as a clock exclusion flagged
-        # `kept_outside` (W4.12: this used to string-match the reason for
+        # `kept_outside` (this used to string-match the reason for
         # "outside only", and went silently blank the day the wording was made
         # plain — a decision belongs in a field, not in a sentence). Distinct
         # from an excluded-and-dropped POI, which never appears in route.pois
@@ -489,7 +486,7 @@ def _print_breakdown(
             windows[poi.id] = (arrive, elapsed)
 
         # The promises line, ABOVE the table: kind, stop name, arrive-depart.
-        # An empty tuple (every pre-S3.6 route) prints no line at all — the
+        # An empty tuple (a route with no promises) prints no line at all — the
         # identity default.
         if route.promises:
             names = {p.id: p.name for p in route.pois}
@@ -523,8 +520,8 @@ def _print_breakdown(
                 shape = "closed — outside only"
             elif promise is not None:
                 # The at-place minutes are outside + inside, NEVER the queue —
-                # design §3.3: "folding them into one 66 makes the wait
-                # permanent". The queue has its own column; the sum is the
+                # folding the wait into the visit makes the wait
+                # permanent. The queue has its own column; the sum is the
                 # pricer's own named quantity.
                 at_place = shape_at_place_seconds(promise.shape)
                 side = "in" if promise.shape.goes_inside else "out"
@@ -552,9 +549,9 @@ def _print_breakdown(
                 f"     {i + 1:>2}  {poi.name:<34} {poi.place_category:<10} "
                 f"{visit:>7}  {shape:>10}  {queue:>5}  {walk_in:>7}"
             )
-        # AIKO'S HONESTY LINE (plan S3.1 deviation ii; design §6: clock-native
-        # planning is "a promise without hours under it"): on a dated run, say
-        # where the doors' hours come from (Docs/adr/0006). DOORS = `gated is
+        # THE HOURS HONESTY LINE (clock-native planning without known hours is
+        # a promise with nothing under it): on a dated run, say
+        # where the doors' hours come from. DOORS = `gated is
         # True`, or hours on record (hours imply a door on a legacy row); from
         # the map = `HOURS_SOURCE_MAP`; guessed = hours from any other source;
         # unknown = a door with no hours at all. Printed whenever the route
@@ -587,7 +584,7 @@ def _print_refusal(
     duration_min: int,
     round_trip: bool,
 ) -> None:
-    """Structured stdout for a refusal — a Phase 6 RED density refusal OR an empty
+    """Structured stdout for a refusal — a RED density refusal OR an empty
     delivery (density passed but no stop survived selection, e.g. a lensed thin
     area where every reachable POI fell to a walk-by).
 
@@ -642,9 +639,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--round-trip", action="store_true")
     parser.add_argument("--theme", default="", help="Optional theme hint")
     parser.add_argument("--city-slug", default="paris")
-    # THE PLANNER'S CLOCK (redesign §2.2/§2.3). No --date = dateless planning,
-    # byte-identical to before the clock existed — which is also what keeps the
-    # W1.1 before-picture comparable to a post-clock dateless run.
+    # THE PLANNER'S CLOCK. No --date = dateless planning,
+    # byte-identical to before the clock existed — which is also what keeps an
+    # old dateless run comparable to a new one.
     parser.add_argument(
         "--date",
         default=None,
@@ -662,7 +659,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         help="How hard the end is: wall keeps visible slack, firm is today's "
         "behaviour, open never pads toward the requested length.",
     )
-    # WHO IS WALKING (redesign §2.4, plan S2.1). A preset is a SHORTCUT over
+    # WHO IS WALKING. A preset is a SHORTCUT over
     # the axis flags below — main() feeds both onto TourInput and through
     # resolve_party_axes, where an explicitly-passed axis always wins. No
     # flags = today's behaviour, byte-identical.
@@ -717,11 +714,11 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "a preset PAIR (e.g. take-it-easy + solo, design §2.4) can be built "
         "without a party value for the pair itself.",
     )
-    # PROMISES AND THE SKY (plan S3.1 — the harness speaks promises before
+    # PROMISES AND THE SKY (the harness speaks promises before
     # the planner emits them). --pin resolves through the SAME lookup ladder
-    # as --start (design §3.2: Théo pins one thing absolutely; Julien pins
+    # as --start (one visitor pins one thing absolutely; another pins
     # nothing and wants an open walk). --weather hands the planner the sky's
-    # decision (design §2.5: fetched, never asked). Both omitted = today's
+    # decision (fetched, never asked). Both omitted = today's
     # request, byte-identical.
     parser.add_argument(
         "--pin",
@@ -814,7 +811,7 @@ def main() -> int:
         # error (exit 2, naming the pin), not something to discover after
         # seconds of snapshot work.
         pinned_poi_ids = _resolve_pinned_poi_ids(driver, parser, args.pin, args.city_slug)
-        # THE SKY (design §2.5, plan S3.1): dry/rain are the caller's own
+        # THE SKY: dry/rain are the caller's own
         # statement; auto asks open-meteo for the walk's date at the start
         # point. A None answer is "no signal" — say so in one honest line and
         # plan a plain day, never block and never guess.
@@ -826,7 +823,7 @@ def main() -> int:
         snapshot = load_paris_corpus(driver, city_slug=args.city_slug)
 
         lenses = [s.strip() for s in args.lenses.split(",") if s.strip()] or None
-        # PARTY FLAGS RIDE CONDITIONALLY (plan S2.1): an omitted flag must stay
+        # PARTY FLAGS RIDE CONDITIONALLY: an omitted flag must stay
         # OUT of the constructor kwargs, because resolve_party_axes reads
         # `model_fields_set` to tell an explicit `--route-surface any` (wins
         # over the preset) from the untouched default (preset may fill it).
@@ -873,7 +870,7 @@ def main() -> int:
 
         t_select = time.perf_counter()
         try:
-            # M3: routed leg costs when the local Valhalla is up; total
+            # Routed leg costs when the local Valhalla is up; total
             # haversine fallback (sticky-degraded after one refusal) when not.
             with RoutingClient() as routing_client:
                 route = select_route(tour_input, snapshot, routing_client=routing_client)

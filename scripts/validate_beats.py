@@ -32,8 +32,8 @@ Checks collection-level invariants the Pydantic model can't enforce:
    upload's disputed-exclusion can't be defeated by a "dispute" typo).
 
 Scoped to the beats file's own city directory + the repo's `Books/{City}/`
-chunk sources; never reads any other city or global state. The pre-upload gate
-(AC-9), end-of-extraction gate (AC-11), and `beats_io.commit` all call this
+chunk sources; never reads any other city or global state. The pre-upload gate,
+the end-of-extraction gate, and `beats_io.commit` all call this
 script with the city's beats path.
 
 Exit codes:

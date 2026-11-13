@@ -21,10 +21,9 @@ WHAT IT PRODUCES, per POI in ``data/{slug}/poi-raw.json``:
 ``visit_basis``           One sentence that argues for both numbers, written so
                           somebody who has never been to Paris can judge it.
 
-WHY TWO NUMBERS. One number cannot serve two visitors. Camille gives
-Sainte-Chapelle 38 minutes inside plus 28 more in the queue to get in; Theo gives
-the same building 15 from the outside and never goes in
-(``docs/personas/02-dark-history-walker.md:77``). The pair is what lets an
+WHY TWO NUMBERS. One number cannot serve two visitors. One visitor gives
+Sainte-Chapelle 38 minutes inside plus 28 more in the queue to get in; another gives
+the same building 15 from the outside and never goes in. The pair is what lets an
 interest change how long you stay, not only where you go.
 
 QUEUES COUNT, AND THE BASIS SENTENCE RECORDS THE SPLIT (owner ruling 2026-08-06).
@@ -67,8 +66,8 @@ DEFAULT_BATCH_SIZE: int = 15
 #: Ceiling on an interior visit, in seconds (90 minutes). A concrete cap rather
 #: than a derived one: ``src/tour/contract.py:49`` allows any duration in
 #: ``0 < duration_min <= 600``, so there is no "shortest supported tour" to derive
-#: a bound from. 90 minutes is above Camille's 66-minute Sainte-Chapelle, so the
-#: cap rejects absurdity without rejecting the persona set's longest real visit.
+#: a bound from. 90 minutes is above the 66-minute Sainte-Chapelle visit, so the
+#: cap rejects absurdity without rejecting the longest real visit observed.
 VISIT_SECONDS_INSIDE_MAX: int = 5400
 
 #: Floor on the outside number, in minutes. A place nobody pauses at for even two

@@ -35,7 +35,7 @@ def audit_chunk(
     poi_index: dict[str, dict],
     live_beats: list[dict] | None = None,
 ) -> dict[str, Any]:
-    """Produce the §PIPELINE REPORT dict for a single-chunk extraction.
+    """Produce the PIPELINE REPORT dict for a single-chunk extraction.
 
     Args:
         beats: the new beats emitted in this run (only — not the full

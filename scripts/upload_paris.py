@@ -102,7 +102,7 @@ def _beat_blocked(beat: dict) -> bool:
 
 
 def _assert_beats_valid(beats_path: Path) -> None:
-    """Run the full validate_beats gate before any DB write (AC-9). Aborts the
+    """Run the full validate_beats gate before any DB write. Aborts the
     upload if the beats file fails — so grounding, verification-freshness,
     uniqueness, and status checks all gate the upload, not just extraction."""
     result = subprocess.run(
@@ -161,7 +161,7 @@ def _upload_pois(session, pois: list[dict], city_name: str, bbox: tuple) -> dict
 
         params.append({
             "name": poi["name"],
-            # Canonical dedup key (defect 3), computed identically to create_node
+            # Canonical dedup key, computed identically to create_node
             # so a later API create/edit MERGEs onto this node instead of forking.
             "name_key": canonical_name_key(poi["name"]),
             "city_name": city_name,
@@ -192,7 +192,7 @@ def _upload_pois(session, pois: list[dict], city_name: str, bbox: tuple) -> dict
             "typical_duration_min": poi.get("typical_duration_min"),
             "visit_seconds_inside": poi.get("visit_seconds_inside"),
             "visit_basis": (poi.get("visit_basis") or "").strip() or None,
-            # The planner's clock (Docs/adr/0006). `opening_hours` is
+            # The planner's clock. `opening_hours` is
             # OpenStreetMap text in poi-raw.json and travels as that text; the
             # clock rule reads it through the hours library. Same no-defaults
             # rule as the visit fields above: absence stays absent (`SET x =
@@ -209,14 +209,14 @@ def _upload_pois(session, pois: list[dict], city_name: str, bbox: tuple) -> dict
             # a corpus the pass never reached claims nothing.
             "gated": poi.get("gated") if isinstance(poi.get("gated"), bool) else None,
             "place_category": (poi.get("place_category") or "").strip() or None,
-            # Place judgements (redesign row 6.4, plan S2.6) — three AI verdicts
+            # Place judgements — three AI verdicts
             # with no external source, same no-defaults rule as the fields
             # above: absence stays absent, never a made-up affordance.
             "children_can_run": poi.get("children_can_run"),
             "sit_and_talk": poi.get("sit_and_talk"),
             "good_after_dark": poi.get("good_after_dark"),
             "judgement_basis": (poi.get("judgement_basis") or "").strip() or None,
-            # The queue (redesign row 6.5, plan S3.4) — the wait BEFORE entering,
+            # The queue — the wait BEFORE entering,
             # priced separately from visit time. `queue_peak_hours` is a list of
             # [start, end] hour bands in poi-raw.json; JSON-encoded here exactly
             # like `opening_hours` above and decoded by the pricing in
@@ -232,7 +232,7 @@ def _upload_pois(session, pois: list[dict], city_name: str, bbox: tuple) -> dict
                 else None
             ),
             "queue_basis": (poi.get("queue_basis") or "").strip() or None,
-            # The reviewed anchors (Phase 7 S7.7 B, design §5.6 segments): a list of
+            # The reviewed anchors (a place's story segments): a list of
             # dicts in poi-raw.json, JSON-encoded here exactly like `opening_hours`
             # and decoded by the corpus loader (src/tour/selection.py). Same
             # no-defaults rule: absence stays absent, so a place nobody reviewed has
@@ -289,7 +289,7 @@ def _upload_pois(session, pois: list[dict], city_name: str, bbox: tuple) -> dict
 
 def _upload_body_places(session, city_slug: str, bbox: tuple) -> dict[str, int]:
     """Upload toilets/benches from ``data/{slug}/body-places.json`` as
-    ``poi_role="body"`` POI nodes — the S2.5 OSM pass
+    ``poi_role="body"`` POI nodes — the OSM pass
     (``scripts/poi_body_places.py``). Absent file = this city has not run the
     pass yet; skipped, not an error, so every other city's upload is
     unaffected by this function's existence.
@@ -325,9 +325,9 @@ def _upload_body_places(session, city_slug: str, bbox: tuple) -> dict[str, int]:
             "lat": float(lat),
             "lon": float(lng),
             "poi_role": "body",
-            # A body stop carries ZERO NARRATION but real minutes (plan S2.5:
-            # "seated as a zero-narration stop" — narration, not duration).
-            # Nadia's toilet stop and Rosemary's bench sits are both real
+            # A body stop carries ZERO NARRATION but real minutes (it is
+            # seated as a zero-narration stop — narration, not duration).
+            # A toilet stop and a bench sit are both real
             # time the day spends; these are conservative fixed minutes, not
             # narration-derived, since a body place has no beats to price by.
             "typical_duration_min": 5 if kind == "toilet" else 8,
@@ -357,7 +357,7 @@ def _upload_body_places(session, city_slug: str, bbox: tuple) -> dict[str, int]:
 
 
 def _provenance_fields(beat: dict) -> dict:
-    """The three VERIFY provenance/faithfulness fields (M7 / Phase 4 Step 4.0).
+    """The three VERIFY provenance/faithfulness fields.
 
     Normalized so absence stays absent: `SET x = null` in Neo4j REMOVES the
     property, so a beat without provenance never gains a null-valued key.
@@ -779,7 +779,7 @@ def main() -> None:
             driver.close()
         return
 
-    # AC-9: every integrity gate (grounding, verification-freshness, uniqueness,
+    # Every integrity gate (grounding, verification-freshness, uniqueness,
     # status vocab) must pass before we touch the database. Fail fast, pre-connect.
     print("  [0/5] Validating beats (validate_beats gate)...")
     _assert_beats_valid(beats_file)
@@ -803,7 +803,7 @@ def main() -> None:
         return
 
     if provenance_only:
-        # Step 4.0 backfill: ONLY the three provenance fields, matched by
+        # Provenance backfill: ONLY the three provenance fields, matched by
         # beat_id. Never the full upload path (it plain-SETs audio_url='').
         beats = _load_json(beats_file)
         driver = create_driver()

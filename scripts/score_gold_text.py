@@ -82,7 +82,7 @@ from src.tour.quality_rubric import Severity, score_tour
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 #: The owner's own gold passage. This script READS it, so it is a fixture and
-#: lives under `fixtures/` — `specs/` was deleted 2026-09-02 and is refused by
+#: lives under `fixtures/` — the spec tree was deleted 2026-09-02 and is refused by
 #: the junk guard.
 STANDARD = REPO_ROOT / "fixtures" / "tour-quality-standard" / "01-standard.md"
 GOLD_HEADING = "## 1. The North Star"
@@ -106,9 +106,9 @@ NOT_APPLICABLE = {
 
 
 def extract_gold_text(path: Path = STANDARD) -> str:
-    """Pull the §1 blockquote out of the standard, by document structure only.
+    """Pull the North Star blockquote out of the standard, by document structure only.
 
-    Walks lines: find the §1 heading, then take every markdown blockquote line until the
+    Walks lines: find the North Star heading, then take every markdown blockquote line until the
     next heading. No pattern matching — a prefix test and a slice, so an empty result is
     impossible to mistake for a match.
     """

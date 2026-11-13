@@ -8,20 +8,17 @@ window grammar as the opening-hours pass (``_TIME_RE`` is imported, not restated
 "what is a valid HH:MM" keeps exactly one definition). It is a separate script because
 it answers a DIFFERENT QUESTION (the header rule in ``scripts/poi_visit_duration.py``):
 not how long a place absorbs a visitor, not when its door is open, but how long the
-LINE in front of that door costs — a fourth kind of time (the redesign's §3.3;
-its spec tree is retired — git history): "a queue is priced separately, by hour
-and season, it belongs to the day rather than to the building, and it is
-excluded entirely under `wall`".
+LINE in front of that door costs — a fourth kind of time: a queue is priced
+separately, by hour at the busy season's level, it belongs to the day rather
+than to the building, and it is excluded entirely under `wall`.
 
-WHAT IT PRODUCES, per POI in ``data/{slug}/poi-raw.json`` (the redesign's data
-row 6.5):
+WHAT IT PRODUCES, per POI in ``data/{slug}/poi-raw.json``:
 
 ``queue_class``           ``none | short | long | unpredictable``. ``none`` means no
                           line exists to stand in — a street, a bridge, a square, an
                           ungated church door. ``unpredictable`` is the catacombs
-                          class: a wait that CANNOT BE BOUNDED, which §2.3
-                          (01-design.md:106) bans from ever being offered under a
-                          ``wall`` end — Marcus's row-6.5 half.
+                          class: a wait that CANNOT BE BOUNDED, which is never
+                          offered under a ``wall`` end.
 ``queue_minutes_peak``    Integer minutes of line at the WORST normal hour.
 ``queue_minutes_offpeak`` Integer minutes of line at a quiet hour. Peak >= off-peak
                           by definition; both 0 for ``none``.
@@ -37,12 +34,12 @@ THE QUEUE IS THE WAIT BEFORE ENTERING — security and ticket line — AND IT IS
 SEPARATELY FROM VISIT TIME. ``visit_seconds_inside`` currently folds a typical queue
 into the visit (owner ruling 2026-08-06: the basis sentence records the split so a
 later pass "can separate the two without re-pricing the city"); this pass is that
-later pass. Camille's Sainte-Chapelle is the anchor: 28 minutes of line plus 38 under
-the glass are TWO facts (docs/personas/01-architecture-pilgrim.md), and folding them
+later pass. The Sainte-Chapelle is the anchor: 28 minutes of line plus 38 under
+the glass are TWO facts, and folding them
 into one 66 makes the wait permanent — unskippable by someone who only wants the
-outside, unshrinkable at opening time (01-design.md:180-182).
+outside, unshrinkable at opening time.
 
-REVIEW AT THE STANDARD RATE, WITH NAMED SPOT CHECKS. Unlike row 6.4's judgements,
+REVIEW AT THE STANDARD RATE, WITH NAMED SPOT CHECKS. Unlike the place judgements,
 queues have observable external sources (timed-ticket pages, institutions' own
 "expect security lines" guidance), so the double-rate rule does not apply. The
 reviewer MUST individually check: the Louvre, Sainte-Chapelle, the Musée d'Orsay,
@@ -91,7 +88,7 @@ except ModuleNotFoundError:  # imported as `scripts.poi_queues` (pytest)
 
 ROOT = Path(__file__).resolve().parent.parent
 
-#: THE closed vocabulary (design row 6.5, 01-design.md:369). The structural test
+#: THE closed vocabulary. The structural test
 #: asserts every written value is one of these and that this tuple never silently
 #: widens — an unreviewed fifth class would change what a `wall` day may be offered.
 QUEUE_CLASSES: tuple[str, ...] = ("none", "short", "long", "unpredictable")

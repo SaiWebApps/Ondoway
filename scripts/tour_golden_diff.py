@@ -56,13 +56,13 @@ def main(name: str) -> int:
         start_label=inp.get("start_label"),
     )
 
-    # M3: routed leg costs when the local Valhalla is up (make valhalla-up);
+    # Routed leg costs when the local Valhalla is up (make valhalla-up);
     # identical to the haversine path when it isn't (total fallback).
     with RoutingClient() as routing_client:
         route = select_route(tour_input, snapshot, routing_client=routing_client)
 
-    # R2 measurement parity: build through the SHIPPED path (merges co-located
-    # demoted_beats + applies the C9 governor cap) and count SCRIPT-level beat
+    # Measurement parity: build through the SHIPPED path (merges co-located
+    # demoted_beats + applies the governor cap) and count SCRIPT-level beat
     # sentences after generate() — exactly what the authoritative gate does
     # (tests/test_tour_golden_*.py). Previously this CLI called select_poi_beats on
     # the raw pool and counted plan.beats, so its numbers drifted from the gate.

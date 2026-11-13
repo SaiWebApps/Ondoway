@@ -28,7 +28,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 #: The labeled set this bake-off scores against. A fixture the code OPENS, so it
-#: lives under `fixtures/` — `specs/` was deleted 2026-09-02 and is refused by
+#: lives under `fixtures/` — the spec tree was deleted 2026-09-02 and is refused by
 #: the junk guard.
 _SET = Path(__file__).resolve().parents[1] / "fixtures" / "tour-craft" / "coverage_calibration_set.json"
 

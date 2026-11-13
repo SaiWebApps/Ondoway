@@ -7,7 +7,7 @@ STRUCTURAL, and this report is what makes that possible: it puts the extremes an
 the reasoning side by side, where a wrong number shows up as an implausible
 RELATIONSHIP rather than as a wrong fact.
 
-THE THREE CHECKS IT IS BUILT TO SUPPORT (the plan's Phase 2 verification):
+THE THREE CHECKS IT IS BUILT TO SUPPORT:
 
 1. A niche museum has a HIGH inside capacity despite a LOW tier. If importance
    leaked into the number, the top-20 table is where it shows — it will read as a
@@ -17,8 +17,8 @@ THE THREE CHECKS IT IS BUILT TO SUPPORT (the plan's Phase 2 verification):
 3. The biggest monuments land in a plausible SPREAD, not all pinned at one value.
 
 WHY THE CORRIDOR SECTION EXISTS. A parish church's interior is neither top-20 nor
-bottom-20 of 370, so the extremes alone cannot answer the one question the plan
-asks before Phase 3 starts: do the interiors between Rue Royale and Notre-Dame
+bottom-20 of 370, so the extremes alone cannot answer the one question this
+report exists for: do the interiors between Rue Royale and Notre-Dame
 carry enough visit time between them to fill roughly two and a half hours? The
 corridor section lists exactly those places so that question is answerable by
 reading, not by guessing.
@@ -44,8 +44,8 @@ RUE_ROYALE: tuple[float, float] = (48.8686, 2.3229)
 NOTRE_DAME: tuple[float, float] = (48.8530, 2.3499)
 
 #: A place is "on the corridor" when going A -> place -> B costs no more than this
-#: multiple of going A -> B directly. The standard corridor ellipse, and the shape
-#: the plan's own 3B verification asks for rather than a fixed off-axis distance.
+#: multiple of going A -> B directly. The standard corridor ellipse, rather than
+#: a fixed off-axis distance.
 DEFAULT_CORRIDOR_FACTOR: float = 1.5
 
 EXTREME_ROWS: int = 20

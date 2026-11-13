@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""AC-8 live assertion for the Val-de-Grace cleanup.
+"""Live duplicate-beat assertion for the Val-de-Grace cleanup.
 
 Computes exact pairwise Jaccard over 5-gram word shingles on every
 Val-de-Grace beat in `data/paris/beats.json`. Asserts that no pair scores
