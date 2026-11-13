@@ -1,15 +1,15 @@
-"""Step-4 CORE: merge cross-source candidates into a writable ``data/{slug}/``.
+"""Onboarding CORE: merge cross-source candidates into a writable ``data/{slug}/``.
 
 Two surfaces, one wall between them:
 
 - ``assemble`` is PURE (no I/O): it merges the ``PoiCandidate`` hits from every
-  Step-3 ``ConnectorResult`` into deduplicated POI dicts, geofences them to the
+  connector's ``ConnectorResult`` into deduplicated POI dicts, geofences them to the
   city bbox, and forces a healthy gravity-tier distribution — returning an
   ``AssembledCity``. It reads ONLY ``result.candidates``; it NEVER touches
   ``result.pointers`` or ``result.documents``, so a shadow-library
   ``DiscoveryPointer`` has no path into the assembled city (grey-zone wall 3).
 - ``write_city`` is the ONLY disk/registry touch: it atomically writes the exact
-  ``data/{slug}/`` corpus the Step-8 uploader consumes and registers the city.
+  ``data/{slug}/`` corpus the uploader consumes and registers the city.
 
 The merge/dedup + forced distribution are designed against the silent CI guards
 that turn RED the instant ``data/{slug}/`` exists:
@@ -219,7 +219,7 @@ def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Frozen interface consumed by Step-4 beat_draft / cli (Devs B & C).
+# Frozen interface consumed by beat_draft / cli.
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
 class WikiExtract:
@@ -655,7 +655,7 @@ def _is_notable(sig: dict) -> bool:
     A place with its OWN English Wikipedia article near the city centre is a
     landmark by definition, so ``has_enwiki`` keeps it — this is the graceful
     default that keeps real landmarks from an OLDER fixture whose connectors did
-    not yet attach ``sitelinks``/``enwiki`` scalars (the spec keep-clauses
+    not yet attach ``sitelinks``/``enwiki`` scalars (the keep-clauses
     ``has_enwiki AND sitelinks_max>=3`` and ``has_enwiki AND agreement>=2`` are
     the stronger, corroborated cases of this same signal). With NO English
     article we demand a strong independent signal: heavy cross-wiki linkage
@@ -871,7 +871,7 @@ def _register(city: AssembledCity, ctx: CityContext, registry_path: Path | None)
     writes the real ``src/cities.json``; otherwise it redirects the module global
     to ``registry_path`` under try/finally so the global is NEVER leaked to
     sibling tests (the target is seeded from the current registry first)."""
-    # THE COUNTRY IS PART OF BEING ONBOARDED (Docs/adr/0006). Public holidays are
+    # THE COUNTRY IS PART OF BEING ONBOARDED. Public holidays are
     # a country's, so a door tagged `PH off` is open or shut by this and nothing
     # else — and the planner refuses a dated day in a city that has none. Caught
     # HERE, where the city is registered and the person is watching, rather than

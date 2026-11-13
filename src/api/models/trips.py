@@ -87,7 +87,7 @@ class TripGenerateRequest(BaseModel):
         le=600,
         description="Optional ceiling on time spent at any single stop, in minutes (min 5)",
     )
-    # THE PLANNER'S CLOCK (redesign §2.2/§2.3). Declared on BOTH request models
+    # THE PLANNER'S CLOCK. Declared on BOTH request models
     # for the same reason max_stop_minutes records above: neither model sets
     # model_config, so an undeclared field would be silently dropped rather
     # than rejected, and the caller would get a clockless tour with no error
@@ -103,7 +103,7 @@ class TripGenerateRequest(BaseModel):
         description="How hard the end is: 'wall' keeps visible spare minutes, "
         "'firm' is today's behaviour, 'open' never pads toward the requested length",
     )
-    # WHO IS WALKING + THE DIALS (Phase 4, W4.2 panel — declared on BOTH request
+    # WHO IS WALKING + THE DIALS (declared on BOTH request
     # models for the same silently-dropped-field reason max_stop_minutes records
     # above; every default is today's behaviour). See src/tour/contract.py for
     # each axis's meaning; the route threads them onto TourInput verbatim.
@@ -217,23 +217,23 @@ class GeneratedStop(BaseModel):
         description="KE: composed 'keep exploring here' narration for this stop's extra beats, "
         "voiced on demand off the tour's time budget; null until /compose has run.",
     )
-    #: Phase 6 S6.4 (design §5.3 "closes that land anywhere"): the stop's one-line CLOSE —
+    #: The stop's one-line CLOSE — a close that lands anywhere:
     #: the last sentence of its narration, and the line [Head back now] shows and plays
-    #: for this stretch. Also on screen (§5.7). None on a legacy item.
+    #: for this stretch. Also on screen. None on a legacy item.
     close_text: str | None = None
-    #: Phase 6 S6.5 (design §5.4; W6.2 R5): THREADS — one sentence per stop that may come
+    #: THREADS — one sentence per stop that may come
     #: right BEFORE this one when the day is replanned, keyed by that stop's name. The
     #: phone speaks the pair's line at the departure seam and keeps it on screen through
     #: the leg. None when no replanned pair binds (none rather than glue), and always
     #: None on the stitched-corpus lane (threads are authored at compose time).
     thread_lines: dict[str, str] | None = None
-    #: Phase 6 S6.6 (design §5.5; W6.2 R3): a MAJOR stop's FULL TELLING — the second
+    #: A MAJOR stop's FULL TELLING — the second
     #: composed piece from the stop's own second story, with its own close. None on a
     #: minor stop, a legacy item, or when the writer's full telling was dropped by its
     #: gates (the stop keeps the tight telling; the on-demand route still answers).
     full_narration: str | None = None
     full_close_text: str | None = None
-    #: Phase 6 S6.8 (owner ruling: the tour's own voice): the pre-recorded files for
+    #: The tour's own voice (owner ruling): the pre-recorded files for
     #: the authored session lines — the stop's close, its thread lines (keyed like
     #: thread_lines), the full telling's close. Null until the voicing pass has run;
     #: the phone falls back to the plain spoken line.
@@ -241,13 +241,13 @@ class GeneratedStop(BaseModel):
     thread_audio_urls: dict[str, str] | None = None
     full_close_audio_url: str | None = None
     dwell_seconds: int = Field(default=0, description="Engine-computed time spent at this stop")
-    #: Phase 7 S7.3 (design §5.6; W7.2 R1): WHERE this stop's piece plays — the place's
+    #: WHERE this stop's piece plays — the place's
     #: own footprint, placed ONCE by the one rule (src/tour/placement.py) at generate and
     #: compose, persisted on the item, and carried here so the phone SELECTS from it and
     #: draws no circle of its own. None on an item written before the rule existed: no
     #: geometry, so nothing auto-plays there (a tap still does).
     trigger: StopTrigger | None = None
-    #: Phase 7 S7.7 (design §5.6 C7; plan defect 7): the stop's LEG piece — its walking
+    #: The stop's LEG piece — its walking
     #: line (and a reflection or walk-past one-liner on that leg), split from the story by
     #: the one leg-vs-stop rule and voiced as its own file, played ON THE LEG: the first
     #: stop's at the start, every later stop's once the walker leaves the previous
@@ -262,7 +262,7 @@ class GeneratedStop(BaseModel):
     leg_from_poi_id: str | None = None
     leg_audio_url: str | None = None
     leg_audio_duration_sec: float | None = None
-    #: Phase 7 S7.7 (B) (design §5.6 "segments"; W7.2 R4): a marquee's CHAPTERS — its
+    #: A marquee's CHAPTERS (segments) — its
     #: story cut at the reviewed anchors, each its own piece at its own place inside the
     #: footprint (outdoor: auto at a standstill; under a roof: a tap). Empty for every
     #: stop without reviewed anchors; the file fields fill when the voicing pass runs.
@@ -294,7 +294,7 @@ class TripGenerateResponse(BaseModel):
     #: Whether the CALLER's profile captains this trip. profile_id above is the
     #: caller's own profile (the one the request named), never the captain's —
     #: this flag, derived from the relationship the row was matched through, is
-    #: how a client tells its own day from one shared with it (crew, ADR 0005).
+    #: how a client tells its own day from one shared with it (crew).
     #: Defaults True: generate answers only ever describe the caller's own trip.
     captained: bool = True
     total_stops: int
@@ -350,7 +350,7 @@ class TripComposeResponse(BaseModel):
     #: Everything that silently degraded while writing this tour — see the identical
     #: field on TripGenerateResponse for why it exists and what a row carries.
     degradations: list[dict] = Field(default_factory=list)
-    #: THE LIVING SESSION'S VERSION (Phase 5 S5.8, design §8.2): every write mints one
+    #: THE LIVING SESSION'S VERSION: every write mints one
     #: — a second compose is version 2, never a 409. 1 for the first write.
     plan_version: int = 1
 
@@ -395,9 +395,8 @@ class SessionContingency(BaseModel):
     at_risk_stop_id: str | None = None
     finish_hhmm: str = ""
 
-    # THE WIRE ENFORCES WHAT IT CAN (Phase 5 S5.11; design §4.4, W5.2 R2): the
-    # screen always carries the line (§4.4.2), a question is ONE sentence
-    # (§4.4.4, R2.1) and names its default (R2.4/R2.5). Wording itself is the
+    # THE WIRE ENFORCES WHAT IT CAN: the screen always carries the line, a
+    # question is ONE sentence and names its default. Wording itself is the
     # server's business (`contingency.plain`, `one_sentence`); this is the last
     # door before the phone.
     @model_validator(mode="after")
@@ -439,28 +438,28 @@ class SessionPlan(BaseModel):
     contingencies: list[SessionContingency] = Field(default_factory=list)
     degradations: list[dict] = Field(default_factory=list)
     #: The walking speed this day was planned at — the preset the phone re-times
-    #: with until it has learned the person's own pace (design §4.1; S5.10).
+    #: with until it has learned the person's own pace.
     walking_pace_kmh: float = Field(default=3.0, gt=0)
     #: When the day's clock starts ("HH:MM") — the frame every stop clock and the
-    #: phone's own re-timing share (S5.10's seam compares in this frame).
+    #: phone's own re-timing share.
     day_start_hhmm: str = ""
     #: When the day is planned to END ("HH:MM"): the phone's minutes-left on an OPEN
-    #: day (W5.2 R1.3 bands by minutes left) count down to this.
+    #: day (banded by minutes left) count down to this.
     planned_end_hhmm: str = ""
     #: Where the day ends (the declared end, or the start of a round trip) and what
-    #: to call it, so the phone re-times the finish itself (W5.13: a precomputed
+    #: to call it, so the phone re-times the finish itself (a precomputed
     #: line's clock is stale by the time it fires; the phone's clock is not). None
     #: on an open walk with no end — the day ends where its last stop does.
     finish_lat: float | None = None
     finish_lng: float | None = None
     finish_name: str = "your finish"
     #: wall | firm | open — the phone says ONE screen line when a firm or wall finish
-    #: has moved past the tolerance (W5.14 Q3); an open day's finish moves in silence.
+    #: has moved past the tolerance; an open day's finish moves in silence.
     end_hardness: str = "firm"
     #: The party the day was planned for (solo/couple/family/take_it_easy/
-    #: with_luggage or None): the phone's screen-only switch is per PARTY (W5.2 R4).
+    #: with_luggage or None): the phone's screen-only switch is per PARTY.
     party: str | None = None
-    #: Phase 7 S7.3 (design §5.6; W7.2 R1): the day's placement POLICY — who starts a
+    #: The day's placement POLICY — who starts a
     #: piece at the footprint's edge and who at the first standstill inside it, and the
     #: radius of the person's own place — decided on the server from the party
     #: (src/tour/placement.py), never a branch the phone invents. None from an older
@@ -477,7 +476,7 @@ class SessionReplanRequest(BaseModel):
     lng: float = Field(..., ge=-180, le=180)
     #: Real seconds since the day started (a pause does NOT stop this one).
     wall_elapsed_seconds: int = Field(..., ge=0)
-    #: The tour clock — seconds since the day started with pauses suspended (§4.3).
+    #: The tour clock — seconds since the day started with pauses suspended.
     tour_elapsed_seconds: int = Field(..., ge=0)
     #: Learned walking pace as a multiplier on the preset (>= 1.0 slows), or None.
     observed_pace: float | None = Field(default=None, ge=1.0)
@@ -486,13 +485,12 @@ class SessionReplanRequest(BaseModel):
     #: Index into the current plan's stops of the next stop not yet reached.
     next_stop_index: int = Field(default=0, ge=0)
     #: The phone's OWN re-timed clock (HH:MM) for that next stop — an observation
-    #: the server compares with its one expression and REPORTS on, never adopts
-    #: (S5.10's seam).
+    #: the server compares with its one expression and REPORTS on, never adopts.
     phone_next_stop_hhmm: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
     #: The POI id of a planned stop still ahead whose door the walker found SHUT
-    #: (Docs/adr/0006 rule 5) — an observation: the server takes that stop out of
-    #: the day it replans and counts the report on the place, so the next walker
-    #: with a guess there hears it. None: an ordinary replan.
+    #: — an observation: the server takes that stop out of the day it replans and
+    #: counts the report on the place, so the next walker with a guess there hears
+    #: it. None: an ordinary replan.
     closed_stop_id: str | None = None
     #: With ``closed_stop_id``: the answer the phone already applied from a held
     #: `door_closed` entry — the stops it is now keeping to, in order, each one a
@@ -521,7 +519,7 @@ class TripPreviewRequest(BaseModel):
     # story.
     start_datetime: str | None = None
     end_hardness: Literal["wall", "firm", "open"] = "firm"
-    # WHO IS WALKING + THE DIALS (Phase 4, W4.2 panel — the workbench's whole
+    # WHO IS WALKING + THE DIALS (the workbench's whole
     # request surface). Same fields, same defaults, same normalization as
     # TripGenerateRequest above.
     party: str | None = None
@@ -634,22 +632,21 @@ class TripPreviewResponse(BaseModel):
     """
 
     spine_area: str | None = None
-    # THE day, as a one-element list (Phase 4, design §8.1). The field stays a list
+    # THE day, as a one-element list. The field stays a list
     # because TripGenerateResponse.options, which carries the same RouteOption, is a
     # list; there is exactly one entry, carrying its stops, its arrival time and its
     # per-corridor lens note.
     options: list[RouteOption] = Field(default_factory=list)
     # None = GREEN (no warning needed). RED never reaches a 200 response.
     tourability: TripPreviewTourability | None = None
-    # THE HONESTY SURFACE (Phase 4, W4.2 deviation v — ruled to land this
-    # phase, all eleven personas): what the day PROMISES, what the clock and
+    # THE HONESTY SURFACE: what the day PROMISES, what the clock and
     # the dials excluded (in plain sentences), and where the unplanned minutes
     # live. All additive with empty defaults, so every earlier payload and
     # every consumer that ignores them is untouched.
     promises: list[TripPreviewPromise] = Field(default_factory=list)
     day_notes: list[str] = Field(default_factory=list)
     slack_minutes: int | None = None
-    # The longest single walk in the day, in minutes (W4.12 — the number the
+    # The longest single walk in the day, in minutes (the number the
     # "Shorter walks" dial is named after; the surface used to print only the
     # total). None only from an older server; 0 on a day with no walking legs.
     longest_walk_minutes: int | None = None

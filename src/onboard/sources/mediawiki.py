@@ -8,7 +8,7 @@ neither re-implements the query shape; the actual fetch goes through
 
 Do NOT call ``scripts/wiki_fetch.fetch_article`` from a connector: it uses
 ``urllib`` straight to wikipedia and BYPASSES the ``fetch.py`` allowlist door.
-``wiki_fetch`` is reused in Step 4 for its pinned-revision save path only.
+``wiki_fetch`` is reused later for its pinned-revision save path only.
 """
 
 from __future__ import annotations

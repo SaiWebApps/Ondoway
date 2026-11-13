@@ -23,7 +23,7 @@ def _normalized_script_body_hash(script_body: str) -> str:
 
 
 def canonical_name_key(name: str) -> str:
-    """Derive the canonical dedup key for a POI `name` (defect 3).
+    """Derive the canonical dedup key for a POI `name`.
 
     Collapses internal whitespace runs, trims, and lowercases so casing and
     whitespace variants ('Notre-Dame', 'notre-dame', 'Notre-Dame ') map to a
@@ -37,16 +37,16 @@ def canonical_name_key(name: str) -> str:
 # rewritten by a partial update — doing so orphans the node from every
 # id-keyed query/edge (id/created_at) or forks the idempotent MERGE key
 # (name/name_key/city_name/area_type/script_body). update_node/update_edge
-# reject any update touching these (defect 1).
+# reject any update touching these.
 _UNIVERSAL_PROTECTED_KEYS: frozenset[str] = frozenset({"id", "created_at"})
 
 _LABEL_MERGE_KEY_FIELDS: dict[str, frozenset[str]] = {
     # POI MERGE key is (name_key, city_name); `name` is the display source of
-    # name_key so it is protected too (defect 3 canonicalization).
+    # name_key so it is protected too (canonicalization).
     "POI": frozenset({"name", "name_key", "city_name"}),
     # Area MERGE key is (name, area_type, city_name).
     "Area": frozenset({"name", "area_type", "city_name"}),
-    # NarrativeBeat is created by id (defect 4); id is already universal.
+    # NarrativeBeat is created by id; id is already universal.
     "NarrativeBeat": frozenset(),
 }
 
@@ -135,7 +135,7 @@ POIRole = Literal["stop", "setting", "walk_by_only"]
 
 
 class POIAnchor(BaseModel):
-    """One reviewed anchor of a marquee place (Phase 7 S7.7 B) as the export chunks
+    """One reviewed anchor of a marquee place as the export chunks
     carry it — the API-side twin of `src.tour.contract.Anchor`, declared here because
     POICreate ignores undeclared fields (see the capacity trio below). Stored
     JSON-encoded by `_encode_complex_props` (a list of dicts), read back by the corpus
@@ -165,9 +165,9 @@ class POICreate(BaseModel):
     # `typical_duration_min` is MINUTES spent WITHOUT going in; it is the only
     # number a street, bridge or square ever gets. `visit_seconds_inside` is
     # SECONDS spent INSIDE, and is None for anything with no interior. Two are
-    # needed because one cannot serve two visitors: Camille gives Sainte-Chapelle
-    # 66 minutes including the queue, Theo gives the same building 15 from the
-    # outside (docs/personas/01-architecture-pilgrim.md, 02-dark-history-walker.md).
+    # needed because one cannot serve two visitors: an architecture lover gives
+    # Sainte-Chapelle 66 minutes including the queue, while a visitor who only wants
+    # the outside gives the same building 15.
     # POICreate has no model_config, so pydantic's default extra="ignore" applies:
     # any field NOT declared here is silently dropped from a POST /api/nodes/POI
     # body. These three are declared for exactly that reason.
@@ -181,13 +181,13 @@ class POICreate(BaseModel):
     kid_friendly: str = Field(default="yes", max_length=50)
     name_variations: list[str] = []
     poi_role: POIRole = "stop"
-    # The reviewed anchors (Phase 7 S7.7 B); null/absent = none, the safe default.
+    # The reviewed anchors; null/absent = none, the safe default.
     anchors: list[POIAnchor] | None = None
     parent_poi: str | None = None  # Set on sub-POIs; names the parent POI
-    source_passage: str = ""  # Required when parent_poi is set (AC-9):
+    source_passage: str = ""  # Required when parent_poi is set:
     # verbatim/near-verbatim quote from source
     # text grounding the poi_role classification
-    establishing_not_applicable: bool = False  # Per AC-6: auto-flag set during
+    establishing_not_applicable: bool = False  # Auto-flag set during
     # extraction when a poi_role: stop
     # POI has tier ≤ 2 and lacks an
     # establishing beat. Higher-tier
@@ -217,7 +217,7 @@ class POICreate(BaseModel):
 
     @model_validator(mode="after")
     def sub_poi_requires_source_passage(self) -> POICreate:
-        """Per AC-9: any POI with parent_poi set must carry a non-empty
+        """Any POI with parent_poi set must carry a non-empty
         source_passage quoting the source text that grounds the poi_role."""
         if self.parent_poi and not self.source_passage.strip():
             raise ValueError(
@@ -252,7 +252,7 @@ class PhysicalCue(BaseModel):
 
 
 class InlineForeignPhrase(BaseModel):
-    """Structured companion to inline foreign-phrase preservation (B3).
+    """Structured companion to inline foreign-phrase preservation.
 
     When a source text contains `foreign-word (gloss)` or `foreign-word, meaning X`,
     the extractor keeps both the word and gloss verbatim in `script_body` AND

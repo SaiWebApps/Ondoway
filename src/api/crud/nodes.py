@@ -102,7 +102,7 @@ def create_node(session: Session, label: str, properties: dict[str, Any]) -> dic
     if label == "POI" and isinstance(params.get("city_name"), str):
         params["city_name"] = params["city_name"].strip().lower()
 
-    # Name-key normalization guard (2026-07-06, defect 3): the previous guard
+    # Name-key normalization guard (2026-07-06): the previous guard
     # normalized city_name but NOT name, so 'Notre-Dame' / 'notre-dame' /
     # 'Notre-Dame ' forked the MERGE key into duplicate nodes. Derive a
     # canonical `name_key` (collapse internal whitespace + trim + lower) and
@@ -150,7 +150,7 @@ def create_node(session: Session, label: str, properties: dict[str, Any]) -> dic
                 f"RETURN n.id AS id, labels(n) AS labels, properties(n) AS props"
             )
     elif label == "NarrativeBeat":
-        # Create-by-id (2026-07-06, defect 4): the old MERGE key was a bare,
+        # Create-by-id (2026-07-06): the old MERGE key was a bare,
         # GLOBAL script_body — two beats with identical narration across
         # different POIs/cities collided into one shared node, so an upload for
         # one POI silently overwrote another's beat. Each beat is now an
@@ -226,7 +226,7 @@ def update_node(
 
     _validate_property_keys(properties)
 
-    # Defect 1: never rewrite identity/merge-key properties. A PUT with {"id":X}
+    # Never rewrite identity/merge-key properties. A PUT with {"id":X}
     # would orphan the node from every id-keyed query and edge; {"name"}/
     # {"city_name"}/{"area_type"} would fork the idempotent MERGE key. Reject
     # the whole update (422) if it touches any protected key.
@@ -249,7 +249,7 @@ def update_node(
     set_parts: list[str] = []
 
     # POI: convert latitude/longitude to spatial point.
-    # Defect 9: coordinates must be supplied as a PAIR — a lone latitude (or
+    # Coordinates must be supplied as a PAIR — a lone latitude (or
     # longitude) previously produced an empty SET clause -> CypherSyntaxError
     # (500). Reject partial coordinates with a clean 422.
     if label == "POI" and ("latitude" in properties or "longitude" in properties):
@@ -289,7 +289,7 @@ def update_node(
         set_parts.append(f"n.{key} = ${key}")
         params[key] = val
 
-    # Defect 9: never emit an empty SET clause (invalid Cypher -> 500). This can
+    # Never emit an empty SET clause (invalid Cypher -> 500). This can
     # happen if the only supplied properties were popped above (e.g. a payload
     # of solely {"latitude","longitude"} whose pair became the point SET is
     # fine, but a payload that reduces to nothing must be a no-op). If nothing

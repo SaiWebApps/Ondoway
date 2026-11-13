@@ -1,6 +1,6 @@
 """Typed contracts for the new-city onboarding flow.
 
-These models are the CONTRACT that Steps 3-5 depend on, so field names and the
+These models are the CONTRACT the later onboarding steps depend on, so field names and the
 structural walls below are load-bearing:
 
 - ``SourceDocument`` is the ONLY thing carrying ingestable full text, and it
@@ -8,7 +8,7 @@ structural walls below are load-bearing:
 - ``DiscoveryPointer`` is metadata-only BY DESIGN: it has no text field and
   forbids extras, so a shadow-library (Anna's Archive / WeLib) result can never
   smuggle copyrighted body text into the pipeline (grey-zone wall 1).
-- ``OnboardEvent`` / ``OnboardJob`` are what the live progress stream (Step 5)
+- ``OnboardEvent`` / ``OnboardJob`` are what the live progress stream
   serialises so the user watches sources being consulted in real time.
 """
 
@@ -89,7 +89,7 @@ OnboardEventKind = Literal[
 
 
 class OnboardEvent(BaseModel):
-    """One live progress record. The snapshot/SSE endpoint (Step 5) streams
+    """One live progress record. The snapshot/SSE endpoint streams
     these in ``seq`` order so the user watches every source being consulted.
 
     ``seq`` is assigned by the job store (monotonic, strictly increasing,
@@ -121,8 +121,8 @@ class OnboardJob(BaseModel):
     """One onboarding run.
 
     Mutable by design (NOT frozen): the job store appends events and advances
-    status in place. ``result`` is filled incrementally by later steps — Step 3
-    appends a ``pointers`` list (``DiscoveryPointer`` payloads), Step 4 fills
+    status in place. ``result`` is filled incrementally by later steps — the connector
+    step appends a ``pointers`` list (``DiscoveryPointer`` payloads), the assemble step fills
     POIs/beats — so it is left as an open ``dict``.
     """
 
@@ -137,7 +137,7 @@ class OnboardJob(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Step-3 connector contract (NEW): what a source connector produces.
+# Connector contract: what a source connector produces.
 # ---------------------------------------------------------------------------
 
 
@@ -146,7 +146,7 @@ class PoiCandidate(BaseModel):
     Wikipedia geosearch result, one Overpass node).
 
     This is NOT a POI yet: ``tier`` / ``poi_role`` / ``gravity`` are assigned
-    later by the Step-4 assemble pass that merges candidates across sources —
+    later by the assemble pass that merges candidates across sources —
     never here. ``meta`` carries provenance SCALARS ONLY (e.g. ``revid`` /
     ``qid`` / ``osm_id`` / copyright-status), never body text.
     """
@@ -164,7 +164,7 @@ class PoiCandidate(BaseModel):
 
 
 class ConnectorResult(BaseModel):
-    """The uniform return type every Step-3 connector produces: the typed
+    """The uniform return type every source connector produces: the typed
     ``candidates`` it found, any license-clean full-text ``documents``
     (``SourceDocument``), and any shadow-library ``pointers``
     (``DiscoveryPointer``) surfaced for legal acquisition.
@@ -191,7 +191,7 @@ class CityContext(BaseModel):
     display_name: str
     bbox: tuple[float, float, float, float]  # (min_lat, max_lat, min_lon, max_lon)
     #: The two-letter country whose public holidays this city's opening hours are
-    #: read against (Docs/adr/0006). A door tagged `PH off` is open or shut by
+    #: read against. A door tagged `PH off` is open or shut by
     #: this and nothing else, and a country guessed wrong reads every holiday as
     #: an ordinary open day — so there is no default, and a city registered
     #: without one refuses its first dated day in plain words.

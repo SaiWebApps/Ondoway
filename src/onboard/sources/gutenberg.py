@@ -1,4 +1,4 @@
-"""Project Gutenberg (public-domain books) — Step-3 source connector.
+"""Project Gutenberg (public-domain books) — source connector.
 
 Gutenberg is the license-clean full-text well: every book Project Gutenberg
 distributes is public domain, and gutendex (the JSON API in front of it) tags
@@ -7,11 +7,11 @@ False`` — a book whose ``copyright`` is ``True`` (still in copyright), missing
 or ``None`` is EXCLUDED — so nothing that isn't demonstrably public domain can
 enter the pipeline as an ingestable ``SourceDocument``.
 
-PURE, like every Step-3 connector: ``consult_url`` names the gutendex query and
+PURE, like every source connector: ``consult_url`` names the gutendex query and
 ``parse`` maps the JSON payload to a typed ``ConnectorResult`` — neither touches
 the network or filesystem, and this module never imports ``src.onboard.fetch``.
 
-The real full-text DOWNLOAD is deferred to Step 8; here the gutendex payload
+The real full-text DOWNLOAD is deferred; here the gutendex payload
 carries a short ``excerpt`` per book which stands in as the document ``text`` so
 the emitted ``SourceDocument`` is complete.
 """

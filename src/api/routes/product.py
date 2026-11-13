@@ -17,9 +17,9 @@ from src.api.dependencies import get_session
 router = APIRouter(tags=["product"])
 
 #: The attribution the map's share-alike licence requires of anyone who
-#: republishes its hours (Docs/adr/0006: "each city's hours file is published
-#: openly and the app carries a credit line"). Spelled ONCE, here, and served
-#: with the file itself so a copy of the data cannot travel without its credit.
+#: republishes its hours: each city's hours file is published openly with this
+#: credit line. Spelled ONCE, here, and served with the file itself so a copy of
+#: the data cannot travel without its credit.
 HOURS_LICENSE = "© OpenStreetMap contributors, ODbL"
 
 

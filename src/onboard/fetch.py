@@ -1,6 +1,6 @@
 """The ONLY ingest HTTP door (grey-zone wall 2).
 
-Every Step-3 source connector calls ``assert_ingestable(url)`` BEFORE any
+Every source connector calls ``assert_ingestable(url)`` BEFORE any
 network I/O. Only registrable domains that are license-clean / public-domain
 are allowed; a shadow library (Anna's Archive / WeLib) or any non-allowlisted
 host raises ``IngestDomainError``. Shadow libraries are DISCOVERY-ONLY: their
@@ -10,7 +10,7 @@ and their text is NEVER fetched or ingested here.
 The client itself is deliberately tiny — the value of this module is the guard,
 not a feature-rich HTTP layer. It defaults to ``fixture`` mode so the test bar
 NEVER touches the network; ``live`` mode (real ``httpx``) is opt-in via
-``ONDOWAY_ONBOARD_HTTP=live`` and only exercised in Step 8.
+``ONDOWAY_ONBOARD_HTTP=live``.
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ def is_ingest_host_allowed(url: str) -> bool:
 def assert_ingestable(url: str) -> None:
     """Raise ``IngestDomainError`` (naming the host) if ``url`` is not ingestable.
 
-    Called BEFORE any network I/O by every Step-3 connector. Shadow libraries
+    Called BEFORE any network I/O by every source connector. Shadow libraries
     (Anna's Archive / WeLib) are discovery-only and never ingested; their text
     must never reach this door.
     """

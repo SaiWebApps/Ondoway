@@ -1,4 +1,4 @@
-"""New-city onboarding HTTP surface (Step 5).
+"""New-city onboarding HTTP surface.
 
 A small live-progress API the workbench onboarding panel drives: create a run,
 watch every source being consulted (snapshot poll or SSE), review the merged
@@ -125,7 +125,7 @@ class CreateJobRequest(BaseModel):
     bbox: tuple[float, float, float, float] | None = None  # (min_lat,max_lat,min_lon,max_lon)
     modes: list[str] = []
     #: The two-letter country whose public holidays this city's opening hours are
-    #: read against (Docs/adr/0006). Asked for here, at the one door a new city
+    #: read against. Asked for here, at the one door a new city
     #: comes in through, because a city registered without one cannot plan a
     #: dated day — and the upload refuses rather than discovering that later.
     country: str | None = None

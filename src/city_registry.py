@@ -77,8 +77,8 @@ def _effective_registry_path() -> Path:
     so ``assemble._register`` SEEDS/materializes that file before the write. If the
     env is set but the file is never materialized and ``register_city`` is called
     directly (no ``registry_path``), this resolver falls back to the committed
-    ``src/cities.json`` and the onboarded city would land in the real registry (the
-    Step-5 clobber). Both current callers (routes/onboard.py, cli.py) honor this."""
+    ``src/cities.json`` and the onboarded city would land in the real registry.
+    Both current callers (routes/onboard.py, cli.py) honor this."""
     env = os.environ.get("ONBOARD_REGISTRY_PATH")
     if env:
         path = Path(env)
@@ -116,7 +116,7 @@ def country_code(slug: str) -> str:
     """The two-letter country a city's opening hours are read in.
 
     ``PH`` in a place's hours means the public holidays of the city's own
-    country, so the planner reads hours WITH this code (Docs/adr/0006). There
+    country, so the planner reads hours WITH this code. There
     is no default: a registry entry without a country is refused in plain
     words, because a country guessed wrong reads every holiday as an open day.
     An unknown slug raises ``KeyError``.
@@ -183,7 +183,7 @@ def _validate_entry(entry: dict) -> None:
     (a silently-missing or wrong-typed field would surface far downstream).
 
     The ``cloud_deployed`` type-check is a safety property, not a nicety: an
-    untrusted caller (the Step-5 onboarding API / CLI) that hands a stringly-typed
+    untrusted caller (the onboarding API / CLI) that hands a stringly-typed
     ``"false"`` through JSON/form deserialization would, absent this check, write a
     truthy value that ``servable_cities()`` serves in prod — leaking a local-only
     city into the public API, the exact failure this registry exists to prevent."""

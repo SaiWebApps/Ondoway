@@ -44,7 +44,7 @@ MERGE (p)-[:MEMBER_OF]->(f)
 
 TEST_USER_EMAIL = "testuser@ondoway.app"
 
-#: The seeded family both profiles share (docs/adr/0005: a family is a
+#: The seeded family both profiles share (a family is a
 #: persistent group of PROFILES — Mom and Kid are two profiles of one user,
 #: and a couple is a family of two). A fixed id keeps the MERGE idempotent
 #: under the Family unique-id constraint.

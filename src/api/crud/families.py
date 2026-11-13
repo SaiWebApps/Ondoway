@@ -1,4 +1,4 @@
-"""Graph operations for families — a persistent group of profiles (docs/adr/0005).
+"""Graph operations for families — a persistent group of profiles.
 
 Membership hangs off the PROFILE, not the user: everything a family coordinates
 already belongs to profiles (trips are captained and crewed by profiles, lens
@@ -32,7 +32,7 @@ RETURN f.id AS family_id
 #: family's day is one BORN in the family: the trip's DAY_OF mark, written at
 #: creation exactly when its captain already belongs to the family
 #: (src/api/crud/trips.py). The joiner becomes crew on THAT family's marked
-#: trips (ADR 0005 — a trip's crew derives from family membership; the captain
+#: trips (a trip's crew derives from family membership; the captain
 #: is never their own crew), which closes the plan-first order, where the day
 #: exists before the joiner does. Unmarked days gain NO crew edges here — a
 #: member's pre-family history stays private, the joiner's own captained trips

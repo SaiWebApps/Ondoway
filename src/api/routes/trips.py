@@ -221,10 +221,9 @@ def _resolved_weather(
 ) -> str | None:
     """The sky, resolved at the edge: 'auto' fetches the forecast (fail-open).
 
-    design §2.5 ("fetched, never asked") + the W4.2 panel (Aiko: weather stays
-    automatic; the day merely SHOWS what the sky did). 'auto' without a dated
-    request has nothing to fetch and plans as no signal. A forecast the module
-    cannot answer (horizon, outage, garbage) is None — no signal — never an
+    'auto' keeps weather automatic; the day merely SHOWS what the sky did.
+    'auto' without a dated request has nothing to fetch and plans as no signal. A
+    forecast the module cannot answer (horizon, outage, garbage) is None — no signal — never an
     error.
     """
     if weather != "auto":
@@ -237,7 +236,7 @@ def _resolved_weather(
 
 
 def _dial_kwargs(body) -> dict:
-    """The Phase-4 request axes, threaded onto TourInput verbatim (W4.2).
+    """The request axes, threaded onto TourInput verbatim.
 
     ONE mapping for both request-driven construction sites (generate, preview),
     so a dial cannot reach one surface and silently miss another — one function
@@ -264,10 +263,10 @@ def _resolve_persisted_pick(poi_ids: list[str], pois_by_id: dict[str, POI]) -> l
     """The compose rebuild's corpus check: every persisted stop id must still
     resolve, or the trip is refused 409 corpus_changed.
 
-    THE ENGINE'S OWN END SENTINEL IS NOT CORPUS DRIFT (Phase 6 W6.12): an A→B
+    THE ENGINE'S OWN END SENTINEL IS NOT CORPUS DRIFT: an A→B
     day whose destination has no corpus POI within snapping distance persists
     a synthesized `__end_b__<lat>_<lng>` stop — its id carries its coordinate,
-    so the rebuild re-materializes it. Measured: Sofia's Châtelet day 409'd
+    so the rebuild re-materializes it. Measured: a Châtelet day 409'd
     "corpus_changed" on every compose, permanently uncomposable.
     """
     for pid in poi_ids:
@@ -286,7 +285,7 @@ def _restore_tour_input(tour_input_dict: dict) -> TourInput:
     axis's identity default (dateless, `firm`, no party, no pins …), which is
     exactly what that trip was planned with. ONE restorer for compose and both
     session endpoints, so a key added to the record cannot reach one and miss
-    another (the S1.3b lesson).
+    another.
     """
     known = set(TourInput.model_fields)
     fields = {k: v for k, v in tour_input_dict.items() if k in known and v is not None}
@@ -311,11 +310,11 @@ def _build_tour_input(**kwargs) -> TourInput:
 
     RESOLVED, exactly as the harness resolves it (scripts/tour_build.py). The
     party presets and the "more stops" dial are shortcuts over axes, and "the
-    axes are what the planner reads" (design §2.4) — but `resolve_party_axes`
+    axes are what the planner reads" — but `resolve_party_axes`
     was called by the harness ALONE. On this wire a preset never expanded and
     `stop_density="more"` never became its stop ceiling, so the workbench's
     Party dropdown and its More-stops dial were dead while the identical
-    request through the harness worked. MEASURED at the W4.12 close (2026-08-18):
+    request through the harness worked. MEASURED 2026-08-18:
     the wire's "More stops" day was byte-identical to base and kept a 47-minute
     museum, while an explicit 20-minute ceiling on the same request reshaped
     the day. This is the ONE construction door for the request-driven API sites
@@ -360,16 +359,15 @@ def _refusal_detail(
             if isinstance(exc, CertificationPlanningInfeasibleError)
             else "tourability"
         ),
-        # THE SENTENCE A PERSON READS, and the line an operator reads, apart
-        # (W4.12, Paulo — the panel's language judge): the workbench prints
-        # `reason` straight onto the page, and it carried the whole exception
+        # THE SENTENCE A PERSON READS, and the line an operator reads, apart: the
+        # workbench prints `reason` straight onto the page, and it carried the whole exception
         # text — "Certification planning infeasible under ondoway-premium-tour-v1:
         # ... required 9720-10800s, best eligible bounded route 4248s." — a
         # product codename, the word "certification", and time in seconds, wrapped
         # around the one plain clause the planner had written for a traveller.
         # `reason` is now that clause alone; `technical` keeps the whole line, so
-        # nothing an operator needs is lost, and the AC-24 pin ("the refusal
-        # names the budget it could not fill") holds on the field that names it.
+        # nothing an operator needs is lost, and the refusal still names the
+        # budget it could not fill, on the field that keeps the whole line.
         "reason": (
             exc.reason if isinstance(exc, CertificationPlanningInfeasibleError) else str(exc)
         ),
@@ -472,7 +470,7 @@ def _resolve_lenses(session: Session, body: TripGenerateRequest) -> list[str] | 
 
     Profile lens names are sorted so the engine input is deterministic
     regardless of edge-traversal order. A computed per-city default starter
-    set is a future feature (see ondoway-lens-defaults-spec.md); until it
+    set is a future feature; until it
     exists, a no-lens profile runs the engine without lens bias.
     """
     if body.lenses:
@@ -533,9 +531,9 @@ def _reports_degradations(
 ) -> Callable[..., _ReportsDegradations]:
     """Hand back everything that quietly degraded while the handler ran.
 
-    OWNER RULING 2026-07-31: a soft failure that only reaches a log file is
-    indistinguishable from success to the person looking at the screen. The preview
-    has opened a collection scope inline since then; these two did not, so
+    A soft failure that only reaches a log file is indistinguishable from success
+    to the person looking at the screen. The preview has opened a collection
+    scope inline since 2026-07-31; these two did not, so
     ``degradations.record`` was a silent no-op on the phone's own endpoints
     (src/tour/degradations.py:137-139) and a tour planned on estimated walking legs
     looked exactly like one planned on measured ones.
@@ -603,7 +601,7 @@ def generate_trip(
         round_trip=body.round_trip,
         max_stop_minutes=body.max_stop_minutes,
         end=_end_point(body.end_lat, body.end_lng),
-        # THE DAY HAS A CLOCK (Phase 5 S5.10, defect 13): the phone sends the date
+        # THE DAY HAS A CLOCK: the phone sends the date
         # and the time as two halves and never the joined field, so every
         # phone-planned day was "dateless" to the planner and the living session
         # could not place NOW. Both halves are always present; join them.
@@ -616,9 +614,9 @@ def generate_trip(
     try:
         # ONE ALGORITHM. plan_premium_tour is BLOCK 1, the only planner on either
         # surface: it applies the certification walk budget (0.90-1.10, nominal 1.00)
-        # and enforces the Premium receipt bar. Phase 4 (design §8.1) deleted
-        # pick-one-of-three: the planner plans THE day, and the dials on the request
-        # are how a person changes it.
+        # and enforces the Premium receipt bar. There is no pick-one-of-three: the
+        # planner plans THE day, and the dials on the request are how a person
+        # changes it.
         #
         # Provider-free: Block 1 defaults to the silent glue client, so planning here
         # costs nothing. The words arrive at /trips/{id}/compose.
@@ -634,8 +632,8 @@ def generate_trip(
     except (PremiumRouteInfeasibleError, ValueError) as exc:
         raise HTTPException(422, _infeasible_detail()) from exc
 
-    # ONE-element lists on purpose (deviation i): trips persisted before Phase 4
-    # store multi-option lists and the compose reader serves them forever, so the
+    # ONE-element lists on purpose: older persisted trips store multi-option
+    # lists and the compose reader serves them forever, so the
     # stored shape stays a LIST — new trips simply always store one.
     flavours = [plan.route]
     scripts = [plan.source]
@@ -655,7 +653,7 @@ def generate_trip(
         )
 
     beats_by_id = {ref.id: ref for refs in snapshot.beats_by_poi.values() for ref in refs}
-    # KE1: per-stop "keep exploring" extras (un-voiced beats), computed from the
+    # Per-stop "keep exploring" extras (un-voiced beats), computed from the
     # SAME merged pool the voiced plan used so they are exactly full-minus-voiced.
     extra_by_poi = build_poi_extra_beats(
         flavours[0],
@@ -672,23 +670,23 @@ def generate_trip(
         clocks,
         script=script,
         extra_by_poi=extra_by_poi,
-        # Phase 7 S7.3: WHERE each stop's piece plays — placed ONCE by the one rule,
-        # stored on the item, carried on the wire (design §5.6; W7.2 R1).
+        # WHERE each stop's piece plays — placed ONCE by the one rule,
+        # stored on the item, carried on the wire.
         triggers=place_stops(route),
-        # Phase 7 S7.7 (B): the marquee's reviewed anchors, off the same route — the
-        # story is cut at them into chapters (design §5.6 segments; W7.2 R4).
+        # The marquee's reviewed anchors, off the same route — the
+        # story is cut at them into chapters.
         anchors=place_anchors(route),
-        # Phase 9 S3: the label answers the request — the asked family, expanded
+        # The label answers the request — the asked family, expanded
         # the same one hop the matcher and the gate use.
         prefer_lenses=expanded_interest_lenses(tour_input.lenses, snapshot),
     )
 
-    # Step 4.6: persist the RESOLVED engine input + every flavour's ordered
+    # Persist the RESOLVED engine input + every flavour's ordered
     # poi ids so /compose rebuilds the user's PICK without re-running
     # selection (corpus/routing drift must never swap the picked route).
     tour_input_json = json.dumps(
         {
-            # THE WHOLE RESOLVED INPUT (Phase 5 S5.8): every axis and dial the
+            # THE WHOLE RESOLVED INPUT: every axis and dial the
             # day was planned with — pins, party, pace, cap, cadence, weather,
             # the four dials — because the living session replans FROM this
             # record and the person's protected set (pins, requested rests, a
@@ -703,7 +701,7 @@ def generate_trip(
             "lenses": tour_input.lenses,
             "round_trip": tour_input.round_trip,
             "start_time": body.start_time,
-            # The planner's clock (redesign §2.2/§2.3): compose rebuilds the
+            # The planner's clock: compose rebuilds the
             # pick from THIS record, so a clock not persisted here is a clock
             # the composed tour silently loses.
             "start_datetime": tour_input.start_datetime,
@@ -741,12 +739,12 @@ def generate_trip(
                 # collapses back to the length of its own narration, which is the
                 # planned tour quietly becoming a different, shorter tour.
                 "planned_visit_seconds": dict(flavour.planned_visit_seconds),
-                # The seconds of line priced at each stop's arrival hour (Phase 7
-                # S7.5; design §5.6): priced at selection's one site against the
-                # snapshot, like the visit above, and read by the audio placement
-                # rule — a rebuild without it silently unqueues every stop.
+                # The seconds of line priced at each stop's arrival hour: priced at
+                # selection's one site against the snapshot, like the visit above,
+                # and read by the audio placement rule — a rebuild without it
+                # silently unqueues every stop.
                 "planned_queue_seconds": dict(flavour.planned_queue_seconds),
-                # The door and the seconds before it (Phase 7 S7.6): which side
+                # The door and the seconds before it: which side
                 # of the door each visit lives on and the placed outside seconds
                 # — priced at the same site; the rule's threshold under a roof.
                 "visit_goes_inside": dict(flavour.visit_goes_inside),
@@ -778,7 +776,7 @@ def generate_trip(
     display_map = _lens_display_map(session, {s["lens_name"] for s in stops if s["lens_name"]})
     audio_by_beat = _primary_beat_audio(session, [s["primary_beat_id"] for s in stops])
     # Walking leg INTO each stop (transits[i] arrives at pois[i]); response-only
-    # in M2 — not persisted on ItineraryItem until routing runs in production.
+    # — not persisted on ItineraryItem until routing runs in production.
     polyline_by_poi = {t.to_poi_id: t.polyline for t in route.transits if t.to_poi_id}
     stops_out = [
         GeneratedStop(
@@ -838,12 +836,12 @@ def generate_trip(
 
 
 # The per-stop authoring seam fires exactly ONE physical call per dwell stop with no
-# retry of its own (src/tour/premium_tour.py::execute_premium_plan). Phase 8 S8.3/S8.4
-# re-derived the attempt count into a real counter again: the compose endpoint may
+# retry of its own (src/tour/premium_tour.py::execute_premium_plan). The attempt
+# count is a real counter: the compose endpoint may
 # spend ONE bounded targeted re-roll of only the failing stops after a VERIFY refusal
-# (S8.3's "bounded retry" — measured live 2026-08-23: Camille's day died 422 on one
+# (the bounded retry — measured live 2026-08-23: one day died 422 on one
 # bad roll that two clean rolls served) and ONE more after a fixable rubric blocker
-# (S8.4, `compose_fixable`), so the count the phone reads out of the 422 detail
+# (`compose_fixable`), so the count the phone reads out of the 422 detail
 # (mobile/lib/services/trip_service.dart:229) is 1, 2 or 3 — honestly counted.
 COMPOSE_ATTEMPTS = 1
 
@@ -851,8 +849,8 @@ COMPOSE_ATTEMPTS = 1
 def _rubric_fixable_stops(rubric: RubricReport, composed, seq: BeatSequence) -> set[int]:
     """The stops whose BLOCKERs one targeted recompose could plausibly fix.
 
-    THE one classifier is ``quality_rubric.compose_fixable`` (standard §7's
-    amendment: servable and loop-worthy are different predicates); this helper
+    THE one classifier is ``quality_rubric.compose_fixable`` (servable and
+    loop-worthy are different predicates); this helper
     only builds each finding's ``StopMaterial`` from what the composer actually
     HAD (the seated beats' body words) and PRODUCED (the rendered words the
     rubric already counted). Findings with no stop (C3, C7) classify themselves
@@ -911,7 +909,7 @@ def compose_trip(
     inputs = get_trip_compose_inputs(session, trip_id)
     if inputs is None:
         raise HTTPException(404, f"Trip '{trip_id}' not found")
-    # THE FROZEN TRIP IS DELETED (Phase 5 S5.8, design §8.2): a second compose is
+    # THE FROZEN TRIP IS DELETED: a second compose is
     # not a conflict, it is the living session's version N+1 — the trip's stops are
     # re-persisted through the same `replace_trip_stops`, and `composed_route_id`
     # (read for legacy trips by the crud reader) is ignored.
@@ -1000,7 +998,7 @@ def compose_trip(
             # existed restores at 0, which reads as "not short enough to mention"
             # and reproduces exactly how those trips have always composed.
             elapsed_shortfall_seconds=int(chosen.get("elapsed_shortfall_seconds") or 0),
-            # The SEVENTH extra (Phase 7 S7.5): the priced line per stop, so the
+            # The SEVENTH extra: the priced line per stop, so the
             # composed day's triggers carry the queue the planned day's did. A trip
             # saved before this key restores to the empty map — no stop queued,
             # exactly how those trips have always composed.
@@ -1008,7 +1006,7 @@ def compose_trip(
                 str(poi_id): int(seconds)
                 for poi_id, seconds in (chosen.get("planned_queue_seconds") or {}).items()
             },
-            # The EIGHTH and NINTH (Phase 7 S7.6): the door and the placed outside
+            # The EIGHTH and NINTH: the door and the placed outside
             # seconds, the same fail-open shape — an older trip has no door anywhere.
             visit_goes_inside={
                 str(poi_id): bool(inside)
@@ -1018,17 +1016,17 @@ def compose_trip(
                 str(poi_id): int(seconds)
                 for poi_id, seconds in (chosen.get("planned_outside_seconds") or {}).items()
             },
-            # THE SURFACE THE DAY WAS PLANNED UNDER (Phase 6 S6.1a; design §2.4, plan
-            # S2.7: "never a route selected under one costing and reported under
-            # another"). Selection routes a take-it-easy day step-free; until this
-            # line the rebuild here routed the SAME pick on the default surface, so
-            # the composed day's legs, clocks and polylines were not the day the
-            # person was shown (measured 2026-08-19 on Rosemary's day). "any" = None.
+            # THE SURFACE THE DAY WAS PLANNED UNDER: a route is never selected under
+            # one costing and reported under another. Selection routes a take-it-easy
+            # day step-free; until this line the rebuild here routed the SAME pick on
+            # the default surface, so the composed day's legs, clocks and polylines
+            # were not the day the person was shown (measured 2026-08-19 on a
+            # take-it-easy day). "any" = None.
             costing_options_override=ROUTE_SURFACE_COSTING_OVERRIDES[tour_input.route_surface],
         )
         # SAY SO IF THE LEGS WERE ESTIMATED. This route is rebuilt here rather than
         # planned, so it never passes the planner that labels an unmeasured walk — and
-        # AC-18 allows no path on which such a route reaches a person unlabelled.
+        # such a route must never reach a person unlabelled.
         record_routing_degradations(route, component="trips.compose_trip")
 
     # C9f-i: compose goes through the SAME shared governor seam as
@@ -1088,7 +1086,7 @@ def compose_trip(
     rerolled_stops: set[int] = set()
 
     def _reroll_stops(stop_indexes: set[int], responses):
-        """ONE targeted same-request re-roll (Phase 8 S8.3/S8.4): fresh provider
+        """ONE targeted same-request re-roll: fresh provider
         rolls for ONLY the named stops — the SAME unit and the SAME envelope, so
         every replay hash still binds — spliced into the response set. Recorded
         on the degradations channel: a re-roll is real spend and a real signal,
@@ -1134,9 +1132,9 @@ def compose_trip(
             len(plan.units),
         )
         # The physical calls are the REAL number this compose will make (one per
-        # dwell stop without a recipe), and they happen HERE. (Until Phase 5 S5.8 a
-        # second compose was a 409 before this point; it is now version N+1 of the session
-        # — design §8.2 — and pays for its authoring like the first.)
+        # dwell stop without a recipe), and they happen HERE. (A second compose used
+        # to be a 409 before this point; it is now version N+1 of the session and pays
+        # for its authoring like the first.)
         with _upstream_provider_errors():
             physical_responses = execute_premium_plan(
                 plan,
@@ -1151,10 +1149,9 @@ def compose_trip(
                     build_identity=build_identity,
                 )
             except ComposeVerificationError as refusal:
-                # Phase 8 S8.3 — THE BOUNDED RETRY, the step's own words:
-                # untraceable writer output "refuses at AUTHORING time with the
-                # bounded retry, so her day composes deterministically". Measured
-                # live 2026-08-23: Camille's run-1 compose died 422 on ONE bad
+                # THE BOUNDED RETRY: untraceable writer output refuses at AUTHORING
+                # time with one bounded retry, so a day composes deterministically.
+                # Measured live 2026-08-23: one day's first compose died 422 on ONE bad
                 # roll (`fused_across_playback_contexts`, stop 3) while the
                 # identical request rolled clean twice after. The failing stops
                 # are the ones the report NAMES; a provenance failure is
@@ -1224,7 +1221,7 @@ def compose_trip(
             422,
             {
                 "reason": "compose_verification_failed",
-                # The REAL count this endpoint made (S8.3's bounded retry may
+                # The REAL count this endpoint made (the bounded retry may
                 # have spent a targeted re-roll before this refusal stood).
                 "attempts": attempts,
                 "untraceable": len(exc.report.untraceable_sentences),
@@ -1258,14 +1255,13 @@ def compose_trip(
             },
         ) from exc
 
-    # ── Phase 8 S8.4 (design §7.2; quality standard §7): THE FLOOR GATES SERVING.
-    # W8.1(b) proved the gap live: Greta's served W7.11 day carried `BLOCKER
+    # ── THE FLOOR GATES SERVING. A live day proved the gap: it carried `BLOCKER
     # C3-thin` and was composed, persisted, voiced and served, because only the
     # workbench's advisory preview ever ran `score_tour`. The persisted path now
     # refuses a blocker-carrying day BEFORE the full tellings' spend and BEFORE
     # any write — after spending at most ONE targeted recompose on the stops
-    # `compose_fixable` says a fresh roll could plausibly fix (the standard §7
-    # amendment: a defect that is upstream of compose reproduces identically, so
+    # `compose_fixable` says a fresh roll could plausibly fix (a defect that is
+    # upstream of compose reproduces identically, so
     # looping there is spend with zero chance of convergence).
     rubric = score_tour(composed, route, snapshot.beats_by_poi, beat_sequence=seq)
     if not rubric.passed:
@@ -1305,7 +1301,7 @@ def compose_trip(
                 len(rubric.blockers),
                 len(rubric.warnings),
             )
-            # R8 (W8.2): the named gate, the stop, and OUR OWN message with its
+            # The named gate, the stop, and OUR OWN message with its
             # numbers — logged in full here, and carried on the wire below (the
             # rubric's prose is this engine's, never the provider's).
             for finding in rubric.blockers:
@@ -1336,7 +1332,7 @@ def compose_trip(
             )
 
     beats_by_id = {ref.id: ref for refs in snapshot.beats_by_poi.values() for ref in refs}
-    # KE2: recompute the keep-exploring extras HERE (never trust generate-time
+    # Recompute the keep-exploring extras HERE (never trust generate-time
     # values) from the composed script's voiced beats, the SAME way generate does
     # (build_poi_extra_beats over the rebuilt route), so extra_beat_ids stays
     # exactly full-minus-voiced. The extras are curated corpus beats — faithful by
@@ -1344,7 +1340,7 @@ def compose_trip(
     # script_bodies (build_poi_extra_narration), NOT re-composed through the LLM
     # VERIFY gate: there is nothing freely-composed to entail. The stops carry BOTH
     # extra_beat_ids (via route_script_to_stops) and extra_narration, keyed by poi.
-    # Phase 6 S6.6 (design §5.5; W6.2 R3): THE FULL TELLING for every MAJOR stop —
+    # THE FULL TELLING for every MAJOR stop —
     # a second COMPOSED piece from the stop's own second story (the overflow the cap
     # trimmed), through the same one-stop seam, with the tight telling as ALREADY
     # TOLD. Optional enrichment end to end: a gate miss or provider fault drops THAT
@@ -1429,22 +1425,22 @@ def compose_trip(
         clocks,
         script=composed,
         extra_by_poi=extra_by_poi,
-        # Phase 7 S7.3: the rebuilt route's stops placed by the SAME one rule generate
+        # The rebuilt route's stops placed by the SAME one rule generate
         # used — the composed day's geometry is the day's geometry.
         triggers=place_stops(route),
-        # Phase 7 S7.7 (B): the marquee's reviewed anchors, off the same route — the
-        # story is cut at them into chapters (design §5.6 segments; W7.2 R4).
+        # The marquee's reviewed anchors, off the same route — the
+        # story is cut at them into chapters.
         anchors=place_anchors(route),
-        # Phase 9 S3: the label answers the request — the asked family, expanded
+        # The label answers the request — the asked family, expanded
         # the same one hop the matcher and the gate use.
         prefer_lenses=expanded_interest_lenses(tour_input.lenses, snapshot),
     )
     for idx, stop in enumerate(stops):
         stop["extra_narration"] = extra_narration_by_poi.get(stop["poi_id"])
-        # Phase 6 S6.5: the writer's THREADS ride beside the narration, keyed by the
+        # The writer's THREADS ride beside the narration, keyed by the
         # name of the stop that may come right before this one when the day replans.
         stop["thread_lines"] = premium_result.threads_by_stop.get(idx) or None
-        # Phase 6 S6.6: a major stop's full telling rides beside its tight one.
+        # A major stop's full telling rides beside its tight one.
         full = full_by_stop.get(idx)
         stop["full_narration"] = full.narration if full else None
         stop["full_close_text"] = full.close_text if full else None
@@ -1492,8 +1488,8 @@ def compose_trip(
         )
         for i, s in enumerate(stops)
     ]
-    # THE LIVING SESSION, VERSION N+1 (Phase 5 S5.8): the day the person will
-    # stand in, with its contingency set beside it (§4.6), computed ONCE here on
+    # THE LIVING SESSION, VERSION N+1: the day the person will
+    # stand in, with its contingency set beside it, computed ONCE here on
     # the server and persisted — the phone SELECTS from it, it never decides.
     plan_version = int(inputs["plan_version"] or 0) + 1
     session_plan = _session_plan(
@@ -1536,7 +1532,7 @@ def compose_trip(
 
 
 # ---------------------------------------------------------------------------
-# THE LIVING SESSION (Phase 5 S5.8, design §4.6/§8.2). The frozen trip — a stop list
+# THE LIVING SESSION. The frozen trip — a stop list
 # written once, narrated once, refusing a second compose — is deleted. A trip's day
 # is a SESSION with versions: compose writes version N+1 of the stops and, beside
 # them, the CONTINGENCY SET the phone selects from; a replan mints version N+1 over
@@ -1546,7 +1542,7 @@ def compose_trip(
 
 def _finish_name(tour_input: TourInput, route=None) -> str:
     """What the finish is called in a line or an arm. The PLACE when the day ends at
-    one the person named (W5.14: "say 'the Orsay' — 'your finish' is your word");
+    one the person named, by its own name;
     else "your finish" / "your start"."""
     if route is not None:
         finish = tour_input.end if tour_input.end is not None else tour_input.start
@@ -1559,12 +1555,12 @@ def _finish_name(tour_input: TourInput, route=None) -> str:
 
 
 def _person_protected(tour_input: TourInput, route) -> tuple[str, ...]:
-    """W5.2 R1.5 — the person's own promises: the stops they pinned and the rests
-    the party or dial asked for (the body stops seated in the day), and — W5.14 —
+    """The person's own promises: the stops they pinned and the rests
+    the party or dial asked for (the body stops seated in the day), and
     the place they NAMED as where the day begins or ends when the day visits it
     (`own_place_ids`). A declared finish is protected by construction (every tail
     ends there); the planner's anchor is NOT protected on an open, unpinned walk —
-    a session never asks a question about it (Fiona & Dev, Julien)."""
+    a session never asks a question about it."""
     rests = sorted(p.id for p in route.pois if p.poi_role == "body")
     return tuple(
         dict.fromkeys([*tour_input.pinned_poi_ids, *own_place_ids(route, tour_input), *rests])
@@ -1593,10 +1589,10 @@ def _wire_clocks(
     clock_start: datetime | None,
     listening_rate: float = 1.0,
 ) -> tuple[dict[str, str], dict[str, int]]:
-    """Every stop's HH:MM on the wire, from THE one expression (`stop_clocks`, Phase
-    5 S5.10) priced with the SAME audio map the final gate used — and that map,
-    for the contingency set. Until this helper the CRUD adapter ran a second,
-    walk-less clock (dwell only) that the phone showed as arrival times.
+    """Every stop's HH:MM on the wire, from THE one expression (`stop_clocks`) priced
+    with the SAME audio map the final gate used — and that map, for the contingency
+    set. Until this helper the CRUD adapter ran a second, walk-less clock (dwell
+    only) that the phone showed as arrival times.
     **Extends** `stop_clocks`; nothing here sums."""
     audio = planned_audio_by_poi(
         route,
@@ -1629,17 +1625,16 @@ def _session_promises(
     audio_seconds_by_id: dict[str, int] | None = None,
 ) -> list[SessionPromise]:
     """The day's promises as the phone reads them, off THE one arrival walk
-    (`stop_clocks`) with the coarse windows the W4.2 panel locked (F&D)."""
+    (`stop_clocks`) with coarse windows, rounded to marks a person would say."""
     marquee = route.start_anchor_poi_id
     if marquee is None and route.pois:
         marquee = max(route.pois, key=lambda p: (p.tier, p.id)).id
-    # THE PLACE THE PERSON NAMED IS ON THE LIST (Phase 8 S8.5; W5.14, design
-    # §3.1 — a promise is "the finish — a place and a time"). `_person_protected`
-    # has held it since S5.16 through `own_place_ids`, but this list only ever
-    # emitted four shapes, and a declared end that snapped onto a REAL stop is
+    # THE PLACE THE PERSON NAMED IS ON THE LIST: a promise is the finish — a place
+    # and a time. `_person_protected` holds it through `own_place_ids`, but this
+    # list only ever emitted four shapes, and a declared end that snapped onto a REAL stop is
     # none of them: it is not the A→B sentinel, not pinned, not a rest, and only
-    # by luck the marquee. MEASURED 2026-08-24 on Camille's own day
-    # (01-architecture-pilgrim.md: "end Notre-Dame"): her end sits 0.0 m from the
+    # by luck the marquee. MEASURED 2026-08-24 on a day declared to end at
+    # Notre-Dame: its end sits 0.0 m from the
     # Notre-Dame POI, the session protects it through every replan — and the wire
     # listed ONE promise, the Arc de Triomphe du Carrousel, marked unprotected.
     # The day protected a promise the phone could not see it had.
@@ -1660,8 +1655,8 @@ def _session_promises(
             kind = "rest"
         elif poi.id == marquee:
             # A stop that is BOTH the day's anchor and the place the person named
-            # (Rosemary's Orsay round trip) keeps the anchor's name, as it has
-            # since S5.8 — it is already protected either way, below.
+            # (an Orsay round trip) keeps the anchor's name — it is already
+            # protected either way, below.
             kind = "anchor"
         elif poi.id in own:
             kind = "finish"
@@ -1695,20 +1690,19 @@ def _session_plan(
     defer_set: bool = False,
 ) -> SessionPlan:
     """Version N of the living session: the stops, the promises, and the contingency
-    set — computed ONCE, here, on the server (§4.6). Every entry of the set is THE
+    set — computed ONCE, here, on the server. Every entry of the set is THE
     planner (`select_route` under the certification policy — the same call
     `plan_premium_tour` makes, without the premium wrapper's per-entry version read
     and assembly) called with a `ReplanContext`; never a second decision procedure.
 
-    ``defer_set`` (W5.12, the design's own remedy for the LIVE REPLAN bar — "narrow
-    the live path"): the day, its clocks and its promises are assembled here and the
-    contingency set is left EMPTY for the caller to fill — a live replan answers with
-    the day at once and computes the full set right after the reply (see
+    ``defer_set`` narrows the live path: the day, its clocks and its promises are
+    assembled here and the contingency set is left EMPTY for the caller to fill — a
+    live replan answers with the day at once and computes the full set right after the reply (see
     `replan_trip_session`), so the set's ~0.4 s per entry never sits between the
     phone's fire and the new day rendered.
     """
     protected = _person_protected(tour_input, route)
-    # THE SESSION'S CLOCK (S5.10): every stop's HH:MM re-read off the one
+    # THE SESSION'S CLOCK: every stop's HH:MM re-read off the one
     # expression for THIS version — a replan's stops would otherwise carry the
     # clocks of the day they were composed into.
     clocks, audio_by_id = _wire_clocks(
@@ -1727,7 +1721,7 @@ def _session_plan(
         "finish_lng": finish[1] if finish else None,
         "finish_name": _finish_name(tour_input, route),
         "end_hardness": tour_input.end_hardness,
-        # Phase 7 S7.3: the day's placement policy, from the party (design §5.6; R1).
+        # The day's placement policy, from the party.
         "placement": place_day(tour_input),
     }
     if defer_set:
@@ -1811,7 +1805,7 @@ def _session_plan(
         retime_tolerance_seconds=cset.retime_tolerance_seconds,
         contingencies=contingencies,
         standbys=_standby_stops(cset, stops_out),
-        # The preset the phone starts from until it has learned its own (§4.1):
+        # The preset the phone starts from until it has learned its own:
         # the speed THIS day was planned at.
         walking_pace_kmh=PACE_KMH / float(tour_input.walking_pace or 1.0),
         day_start_hhmm=day_start_hhmm,
@@ -1823,7 +1817,7 @@ def _session_plan(
 
 def _standby_stops(cset: ContingencySet, stops_out: list[GeneratedStop]) -> list[GeneratedStop]:
     """The places a `door_closed` entry can carry the day to, as stops the phone can
-    hold (M6b). Each entry's own route is the KEPT arm — the day with the standby in
+    hold. Each entry's own route is the KEPT arm — the day with the standby in
     it — so the standby is whatever that route names and the planned day does not.
 
     They are returned for their OWN list, never merged into the day: the phone drops
@@ -1863,7 +1857,8 @@ def _standby_stops(cset: ContingencySet, stops_out: list[GeneratedStop]) -> list
     return out
 
 
-#: A standby whose words could not be written: the door keeps M5's simpler answer.
+#: A standby whose words could not be written: its door keeps the plain replan
+#: without the shut stop.
 STANDBY_DROPPED_DEGRADATION = "standby_dropped"
 
 
@@ -1881,14 +1876,14 @@ def _compose_standby_narration(
     """Write each standby's own piece through the ONE per-stop authoring seam.
 
     A standby the walker is sent to in silence is a place they were promised
-    something at and got nothing — Nadia's child walks to a second dead stop. So
+    something at and got nothing — a child walks to a second dead stop. So
     each one is composed exactly the way a stop of the day is: a one-POI route,
     the same capped beat plan, the same stitch, and `plan_premium_authoring`
     with `single_stop` — never a second composer, and never the leftover corpus.
 
     Optional enrichment end to end (the full telling's precedent): a standby
     whose words fail any gate is DROPPED and reported, and its door falls back to
-    the answer M5 already gives — replan without the shut stop. The day is never
+    the plain answer — replan without the shut stop. The day is never
     refused for a standby.
     """
     if not plan.standbys:
@@ -1967,7 +1962,7 @@ def _compose_standby_narration(
         update={
             "standbys": written,
             # An entry whose standby lost its words offers a silent place: drop the
-            # entry with it, and the door falls back to the replan M5 already does.
+            # entry with it, and the door falls back to the plain replan.
             "contingencies": [
                 e
                 for e in plan.contingencies
@@ -2002,7 +1997,7 @@ def _persist_standbys(session: Session, trip_id: str, plan: SessionPlan) -> Sess
     by, and are left out of the saved day by the one reader that lists it.
 
     A standby the graph refuses (a POI that has since gone) is DROPPED and
-    reported, never the day: the door simply keeps M5's answer, which is to
+    reported, never the day: the door simply keeps the plain answer, which is to
     replan without it.
     """
     if not plan.standbys:
@@ -2048,8 +2043,8 @@ def _persist_standbys(session: Session, trip_id: str, plan: SessionPlan) -> Sess
 
 
 def _carry_forward_entries(previous: SessionPlan, new_day: SessionPlan) -> list[SessionContingency]:
-    """The previous version's answers that are still answers for the NEW day (W5.12,
-    "widen the precomputed set"): an entry whose trigger stop is still ahead and whose
+    """The previous version's answers that are still answers for the NEW day, which
+    widens the precomputed set: an entry whose trigger stop is still ahead and whose
     stops (and alternate) all lie on the new day is a replan of a day the person is
     still walking — it stays on the phone under the new version until the full set,
     computed right after the reply, replaces it on the next fetch. Ids are kept (the
@@ -2164,7 +2159,7 @@ def get_trip_session(
     if not inputs["session"]:
         raise HTTPException(404, {"reason": "no_session_yet", "detail": "compose the trip first"})
     plan = SessionPlan(**inputs["session"])
-    # Phase 6 S6.8: AUDIO FACTS LIVE ON THE ITEMS, THE SESSION HOLDS THE PLAN.
+    # AUDIO FACTS LIVE ON THE ITEMS, THE SESSION HOLDS THE PLAN.
     # The saved payload snapshots its stops at compose time; the voicing pass
     # writes the narration and session-line files onto the ItineraryItems
     # afterwards — so the session's audio fields are re-read from the live items
@@ -2222,12 +2217,12 @@ def _with_live_audio(session: Session, plan: SessionPlan) -> SessionPlan:
                         ),
                         "full_close_audio_url": live["full_close_audio_url"]
                         or stop.full_close_audio_url,
-                        # Phase 7 S7.7: the leg piece's file rides the same overlay.
+                        # The leg piece's file rides the same overlay.
                         "leg_audio_url": live["leg_audio_url"] or stop.leg_audio_url,
                         "leg_audio_duration_sec": (
                             live["leg_audio_duration_sec"] or stop.leg_audio_duration_sec
                         ),
-                        # Phase 7 S7.7 (B): the chapters, with the files the voicing
+                        # The chapters, with the files the voicing
                         # pass wrote into the item's list, ride the same overlay.
                         "segments": (
                             [
@@ -2373,8 +2368,8 @@ def _prefer_keeping_over_a_longer_leg(
     base_stops,
     remaining_ids: tuple[str, ...],
 ):
-    """§4.5.3 on the live path: a replan that DROPS a stop may not mint a walking
-    leg longer than the day it replans already carried.
+    """On the live path, a replan that DROPS a stop may not mint a walking leg
+    longer than the day it replans already carried.
 
     Detection first, spend second: only when the replanned route both dropped a
     stop still ahead AND carries a leg past the base day's own longest (plus one
@@ -2411,8 +2406,8 @@ def _prefer_keeping_over_a_longer_leg(
     # inserted and cannot bound the walk that is left when nothing is (the
     # reverted always-on form proved it). A protected stop force-seats, so the
     # retry holds the dropped stops as promises; a finish that then moves is
-    # the disclosed trade (R2.4/R2.5), a fused walk past the day's own longest
-    # is the forbidden one (§4.5.3).
+    # the disclosed trade, a fused walk past the day's own longest
+    # is the forbidden one.
     keeping_ctx = ctx.model_copy(
         update={
             "protected_poi_ids": tuple(
@@ -2519,7 +2514,7 @@ def replan_trip_session(
         protected_poi_ids=protected,
         keep_to_poi_ids=remaining_ids,
         visited_poi_ids=tuple(st.poi_id for st in visited),
-        # §4.5.3's CEILING IS NOT PASSED ON THE FIRST CALL. The always-on form
+        # THE LONGEST-LEG CEILING IS NOT PASSED ON THE FIRST CALL. The always-on form
         # was tried and reverted (the ceiling refused the middle stops and the
         # remainder fused LONGER than anything it rejected — the Arc straight to
         # Notre-Dame at thirty-nine minutes). The rule lives in
@@ -2566,8 +2561,8 @@ def replan_trip_session(
         != (was.leg_narration, was.leg_from_poi_id)
     ]
     plan_version = int(inputs["plan_version"] or 0) + 1
-    # THE LIVE PATH IS THE DAY (W5.12, measured: the set is ~0.4 s per entry and the
-    # planner ~1 s — the design's remedy is to narrow the live path). The reply
+    # THE LIVE PATH IS THE DAY (measured: the set is ~0.4 s per entry and the
+    # planner ~1 s, so the live path stays narrow). The reply
     # carries the replanned day, its clocks and promises, and the previous
     # version's answers that still hold; the full set is computed right after the
     # reply and persisted as this same version for the phone's next fetch.
@@ -2640,11 +2635,11 @@ def _without_the_shut_door(
     remaining: list[GeneratedStop],
     visited: list[GeneratedStop],
 ) -> tuple[list[GeneratedStop], list[GeneratedStop]]:
-    """The walker's shut-door report applied to the split (Docs/adr/0006 rule
-    5): the reported stop leaves the remainder the planner keeps to and joins
-    the visited list, so the pool never offers it again, no carried-forward
-    answer names it, and the walk in starts from that door. A stop not ahead
-    of the walker cannot be reported — refused by name, never silently kept."""
+    """The walker's shut-door report applied to the split: the reported stop leaves
+    the remainder the planner keeps to and joins the visited list, so the pool never
+    offers it again, no carried-forward answer names it, and the walk in starts from
+    that door. A stop not ahead of the walker cannot be reported — refused by name,
+    never silently kept."""
     if closed_stop_id is None:
         return remaining, visited
     shut = [st for st in remaining if st.poi_id == closed_stop_id]
@@ -2699,8 +2694,8 @@ def _hold_only_voiced_standbys(full: SessionPlan, previous: SessionPlan) -> Sess
     """The full set rebuilt after a live replan names its standbys as fresh stops
     with no item and no audio. A standby the previous version already composed is
     held with its item, so its voice rides along; a door entry whose standby was
-    never composed is dropped and reported, and that door keeps M5's simpler
-    answer — a walker is never sent to a place that plays nothing."""
+    never composed is dropped and reported, and that door keeps the plain
+    replan — a walker is never sent to a place that plays nothing."""
     voiced = {st.poi_id: st for st in previous.standbys if st.stop_id}
     walked = {st.poi_id for st in full.stops}
     standbys = [
@@ -2758,9 +2753,9 @@ def _live_question(
     policy,
     at_stop: str | None,
 ) -> SessionContingency | None:
-    """THE PROMISE TIER ON THE LIVE PATH (W5.14, all eleven: the live replan dropped
-    Rosemary's Orsay in silence). When the replanned remainder still overruns with the
-    protected things kept, the reply carries the ONE question — the same R2 text the
+    """THE PROMISE TIER ON THE LIVE PATH (a live replan once dropped a named place in
+    silence). When the replanned remainder still overruns with the protected things
+    kept, the reply carries the ONE question — the same text the
     precomputed set uses (`question_text`): keep the protected thing and arrive later,
     or shorten the rest / go straight on and arrive by the clock. It rides as an entry
     of kind "live" that the phone applies at once (default in force, two big buttons).
@@ -2813,7 +2808,7 @@ def _live_question(
 def _report_phone_clock(
     body: SessionReplanRequest, session_plan: SessionPlan, *, next_planned: GeneratedStop | None
 ) -> None:
-    """THE SESSION CLOCK SEAM, server half (Phase 5 S5.10; design §4.6). The phone
+    """THE SESSION CLOCK SEAM, server half. The phone
     sends its OWN re-timed clock for the stop it is heading to; the server compares
     it with what its one expression says for the same stop in the version it just
     minted, and a gap beyond the session's tolerance is REPORTED — a row on the
@@ -2861,8 +2856,8 @@ def _tourability_payload(
 
     The engine attaches the assessment only for YELLOW (GREEN carries None,
     RED raised long before a 200). Dropping it here is what made thin-area
-    single-stop tours look like silent bugs (hostile-panel finding,
-    2026-07-02) — the Phase 6 contract is "generate but WARN"."""
+    single-stop tours look like silent bugs (2026-07-02) — the contract is
+    "generate but WARN"."""
     if assessment is None:
         return None
     return TripPreviewTourability(
@@ -2884,7 +2879,7 @@ def _tourability_payload(
 def _places_only(option: RouteOption) -> RouteOption:
     """The option as it looks while it is still being CHOSEN: places, order, times.
 
-    OWNER RULING 1, 2026-08-04: during route planning, on both surfaces, an option
+    During route planning, on both surfaces, an option
     shows the POI names, their order, the walking times and the ETA — and no
     descriptive text of any kind. So the cards carry no narration, no "keep exploring"
     flag, and there are no walking-narration cards at all: such a card exists only to
@@ -2927,7 +2922,7 @@ def _plan_options(plans, snapshot) -> list[RouteOption]:
 def _plan_preview(tour_input: TourInput, driver: Driver):
     """BLOCK 1 for the anonymous surface: plan the ONE day, refuse, or hand it back.
 
-    Provider-free and $0. Returns the plan as a ONE-element list (deviation i): the
+    Provider-free and $0. Returns the plan as a ONE-element list: the
     wire keeps ``options`` a list, and there is exactly one entry in it.
     """
     snapshot = load_paris_corpus(driver, city_slug=tour_input.city_slug)
@@ -2985,8 +2980,7 @@ def preview_trip(
             promises=_preview_promises(route),
             day_notes=_preview_day_notes(route, body),
             # THE UNPLANNED MINUTES, NAMED — against what was ASKED FOR, always a
-            # number (W4.12 panel, Marcus/Sofia/Aiko/Julien; the W4.2 ruling was
-            # "the unaccounted minutes are NAMED"). This used to ride
+            # number: the unaccounted minutes are NAMED. This used to ride
             # `elapsed_shortfall_seconds`, which the planner sets ONLY when the day
             # dips under its internal band FLOOR — so a 170-of-180 day printed no
             # slack at all, and a 270-of-300 day hid thirty minutes. The field
@@ -2996,24 +2990,21 @@ def preview_trip(
             # priced on, not a second opinion. Zero is a real answer ("the day is
             # full") and is sent as 0, never as null.
             slack_minutes=max(0, (tour_input.duration_min * 60 - options[0].eta_seconds) // 60),
-            # THE LONGEST SINGLE WALK (W4.12 panel — Rosemary, Sofia, Marcus, Aiko,
-            # Julien, F&D): the number the "Shorter walks" dial is NAMED after, and
-            # the one number a person with a stick, a bag or a December dusk decides
-            # on. The surface printed only a walking TOTAL, so nobody could check
-            # the dial ("a walking budget is not one number" — Rosemary's headline
-            # breakage). THE one expression (routing.longest_walk_minutes) — the
-            # same number, through the same rounding, that the planner certifies
-            # the leg cap against (Phase 5 S5.4), so the head line and the cap can
-            # never disagree by a rounding.
+            # THE LONGEST SINGLE WALK: the number the "Shorter walks" dial is NAMED
+            # after, and the one number a person with a stick, a bag or a December
+            # dusk decides on. The surface printed only a walking TOTAL, so nobody
+            # could check the dial ("a walking budget is not one number"). THE one
+            # expression (routing.longest_walk_minutes) — the same number, through
+            # the same rounding, that the planner certifies the leg cap against, so
+            # the head line and the cap can never disagree by a rounding.
             longest_walk_minutes=longest_walk_minutes(route.transits),
         )
         rows = summarize(collected)
     return result.model_copy(update={"degradations": rows}) if rows else result
 
 
-#: A promise window is COARSE on the surface (F&D's ruling, W4.2 deviation v,
-#: re-judged at W4.12 on the built thing): the planner records the exact minute
-#: — the fact Phase 5's replan will need — and the traveller reads a window
+#: A promise window is COARSE on the surface: the planner records the exact minute
+#: — the fact the replan needs — and the traveller reads a window
 #: rounded to marks a person would say out loud. Arrival rounds DOWN, departure
 #: rounds UP, so the spoken window always CONTAINS the planned one and never
 #: promises a minute earlier or later than the plan.
@@ -3046,13 +3037,13 @@ def _coarse_window(arrives_hhmm: str, departs_hhmm: str) -> tuple[str, str]:
 
 
 def _preview_promises(route) -> list[TripPreviewPromise]:
-    """The day's promises as the pre-commit surface shows them (W4.2 dev. v).
+    """The day's promises as the pre-commit surface shows them.
 
     Names resolved off the route's own stops; shapes carried verbatim from the
     planner's promise assembly. The WINDOW is the planner's exact minute made
-    coarse for a person (F&D at W4.12: "11:32 is not a thing anybody says" —
-    the model's own docstring quoted their ruling and shipped six
-    minute-precision timestamps under it).
+    coarse for a person (nobody says an exact minute out loud — the model's own
+    docstring once stated this and shipped six minute-precision timestamps
+    under it).
     """
     names = {p.id: p.name for p in route.pois}
     out: list[TripPreviewPromise] = []
@@ -3072,16 +3063,16 @@ def _preview_promises(route) -> list[TripPreviewPromise]:
 
 
 def _preview_day_notes(route, body) -> list[str]:
-    """The day's plain-language notes (W4.2 deviation v; Paulo's wordings).
+    """The day's plain-language notes.
 
     EVERY SENTENCE HERE IS A STATEMENT ABOUT THE BUILT DAY, never about the
-    request. The W4.12 closing panel caught two notes that were printed from the
+    request. Two notes were once printed from the
     request alone — "Left out today, as asked: museum." on a day byte-identical
     to the un-dialled one, and "Places with long waits were left out, as asked."
-    above a stop whose wait had gone UP from 3 to 10 minutes — and ruled a
-    receipt for work not done the single most damaging string on the surface
-    (Julien: "if it will tell me it removed a museum it did not remove, I stop
-    believing whatever it tells me at Hôtel Lambert"). So a dial note now says
+    above a stop whose wait had gone UP from 3 to 10 minutes — and a receipt
+    for work not done is the single most damaging string on the surface: a
+    visitor who catches one false claim stops believing the rest. So a dial
+    note now says
     what is TRUE of this day: the kinds that are absent, or the ones that are
     not; the longest wait that remains, by name. The exclusion RULE the dial
     applied is stated as a rule ("nothing with a long queue was considered"),
@@ -3091,14 +3082,14 @@ def _preview_day_notes(route, body) -> list[str]:
     (ClockExclusion.kept_outside); which sentence the traveller reads depends
     on whether the place is actually ON this route, which only this reader
     knows — "we will see it from the outside" was printed for a Montmartre
-    cabaret on a Tuileries→Notre-Dame day (W4.12, Julien: "I live here. These
-    are checkable, and they are false."). A door the day never reaches gets
-    NO sentence at all (owner ruling, P10H-M11): the notes answer this day,
+    cabaret on a Tuileries→Notre-Dame day, which a local can check and find
+    false. A door the day never reaches gets NO sentence at all (owner
+    ruling): the notes answer this day,
     and a true line about a place the walker never goes near is noise that
     buries the lines they can act on.
 
-    Hours that are not the map's NAME the stops (Paulo: "gated" is jargon, an
-    unnamed count "is worse than silence").
+    Hours that are not the map's NAME the stops ("gated" is jargon, and an
+    unnamed count is worse than silence).
     """
     on_route = {p.id for p in route.pois}
     notes: list[str] = []
@@ -3148,7 +3139,7 @@ def _preview_day_notes(route, body) -> list[str]:
         else:
             notes.append(f"{rule}; no waits in this day.")
 
-    # The doors' hours by source (Docs/adr/0006) — the ONE writer the harness
+    # The doors' hours by source — the ONE writer the harness
     # prints too, so the screen and the breakdown never disagree. A guess on a
     # DATED day is spoken with the time we think it opens, read from the guess
     # for that day in the city's own country.

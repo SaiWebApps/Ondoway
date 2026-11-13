@@ -98,17 +98,17 @@ def _structure_feedback(transcript: str) -> dict:
             messages=[{"role": "user", "content": transcript}],
         )
     except anthropic.RateLimitError as exc:
-        # Defect #3: upstream throttling -> 503 with a retry hint, not a 500.
+        # Upstream throttling -> 503 with a retry hint, not a 500.
         raise HTTPException(
             status_code=503,
             detail=f"LLM provider rate limited: {exc}",
             headers={"Retry-After": "30"},
         ) from exc
     except anthropic.APIError as exc:
-        # Defect #3: any other provider failure (connection/status) -> clean 502.
+        # Any other provider failure (connection/status) -> clean 502.
         raise HTTPException(status_code=502, detail=f"LLM provider error: {exc}") from exc
 
-    # Defect #1: an empty content list or a non-text first block would raise
+    # An empty content list or a non-text first block would raise
     # IndexError/AttributeError here — uncaught, that surfaces as a 500. Guard the
     # access so a missing/non-text response degrades to the deterministic fallback
     # below (empty text -> _extract_json_object returns None).
@@ -123,7 +123,7 @@ def _structure_feedback(transcript: str) -> dict:
         if isinstance(parsed, dict):
             return parsed
 
-    # Defect #2: the LLM returned prose / malformed JSON. Never lose the report —
+    # The LLM returned prose / malformed JSON. Never lose the report —
     # degrade to a deterministic issue built straight from the transcript.
     return {
         "title": f"[Feedback] {transcript[:60]}",
@@ -135,7 +135,7 @@ def _structure_feedback(transcript: str) -> dict:
 def _tour_context_section(ctx: TourContext) -> str:
     """Render the workbench tour-eval context as a '## Tour Context' markdown section.
 
-    Human-mediated loop (Track B Step B.7): the context is rendered for a human
+    Human-mediated loop: the context is rendered for a human
     reader on the GitHub issue — nothing here feeds back into the engine.
     """
     verdict_label = "👍 up" if ctx.verdict == "up" else "👎 down"
@@ -172,7 +172,7 @@ def _create_github_issue(title: str, body: str, labels: list[str]) -> dict:
                 json={"title": title, "body": body, "labels": labels},
             )
     except httpx.TimeoutException as exc:
-        # Defect #2: a transport timeout must degrade to a clean 503 with a
+        # A transport timeout must degrade to a clean 503 with a
         # retry hint, not a raw 500 stack trace that loses the tester's report.
         raise HTTPException(
             status_code=503,
@@ -180,7 +180,7 @@ def _create_github_issue(title: str, body: str, labels: list[str]) -> dict:
             headers={"Retry-After": "30"},
         ) from exc
     except httpx.RequestError as exc:
-        # Defect #2: connection/network errors (ConnectError, etc.) -> clean 502.
+        # Connection/network errors (ConnectError, etc.) -> clean 502.
         raise HTTPException(status_code=502, detail=f"GitHub API unreachable: {exc}") from exc
 
     if resp.status_code != 201:
@@ -208,7 +208,7 @@ def submit_feedback(request: Request, body: FeedbackRequest):
     metadata_section = "\n".join(metadata_lines)
 
     structured = _structure_feedback(body.transcript)
-    # Defect #4: the LLM output is untrusted. Coerce the shape defensively so a
+    # The LLM output is untrusted. Coerce the shape defensively so a
     # non-dict top level or a non-list/non-str 'labels' can never crash the route
     # (or forward junk labels to the GitHub API and trigger a 422 -> 502).
     if not isinstance(structured, dict):
@@ -220,7 +220,7 @@ def submit_feedback(request: Request, body: FeedbackRequest):
     if metadata_section:
         issue_body = f"{issue_body}\n\n---\n{metadata_section}"
 
-    # Track B Step B.7: append the tour eval context when present (absent -> unchanged).
+    # Append the tour eval context when present (absent -> unchanged).
     if body.tour_context is not None:
         issue_body = f"{issue_body}\n\n{_tour_context_section(body.tour_context)}"
 

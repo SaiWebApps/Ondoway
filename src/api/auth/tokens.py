@@ -61,7 +61,7 @@ def create_magic_token(email: str) -> str:
 
 
 #: How long a family invite link stays usable. A shareable link travels over
-#: any channel (docs/adr/0005) and may sit in a chat for days before it is
+#: any channel and may sit in a chat for days before it is
 #: tapped, so it lives longer than a magic link — but it still expires, because
 #: an invite is a standing door into a family's shared days.
 INVITE_TOKEN_EXPIRE_DAYS: int = 7

@@ -143,7 +143,7 @@ def update_edge(
 
     _validate_property_keys(properties)
 
-    # Defect 1: r.id / r.created_at identify the edge and must never be rewritten
+    # r.id / r.created_at identify the edge and must never be rewritten
     # by a partial update (overwriting r.id orphans the edge from every id-keyed
     # lookup). Reject the update (422) if it touches a protected key.
     protected = protected_edge_keys()

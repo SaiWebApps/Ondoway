@@ -1,4 +1,4 @@
-"""INTERNET_ARCHIVE Step-3 connector — with the F6 per-item public-domain wall.
+"""INTERNET_ARCHIVE source connector — with the F6 per-item public-domain wall.
 
 archive.org is allowlisted BY HOST (grey-zone wall 2), but the SAME host also
 serves in-copyright Controlled-Digital-Lending scans. Being reachable through
@@ -20,11 +20,11 @@ status is intentionally NOT auto-ingested here — reach for the Manual book-dro
 instead. This is deliberately fail-closed: it is a copyright wall, and refusing
 a real PD item is cheap while ingesting one in-copyright scan is not.
 
-PURE, like every Step-3 connector: ``consult_url`` names the advancedsearch URL
+PURE, like every source connector: ``consult_url`` names the advancedsearch URL
 + params, ``parse`` maps the raw JSON to a typed result. Neither touches the
 network or the filesystem, and this module does NOT import ``src.onboard.fetch``
 — the single fetch happens in ``base.run_connector``. Live full-text download is
-deferred to Step 8; the fixture/search response supplies an ``excerpt``.
+deferred; the fixture/search response supplies an ``excerpt``.
 """
 
 from __future__ import annotations

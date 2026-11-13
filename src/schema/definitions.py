@@ -32,7 +32,7 @@ class Index:
 
 
 # ---------------------------------------------------------------------------
-# Constraints — Schema_v3 §3
+# Constraints — every unique constraint the schema applies
 # ---------------------------------------------------------------------------
 
 UNIQUE_CONSTRAINTS: list[UniqueConstraint] = [
@@ -50,7 +50,7 @@ UNIQUE_CONSTRAINTS: list[UniqueConstraint] = [
 ]
 
 # ---------------------------------------------------------------------------
-# Indexes — Schema_v3 §3.5, §3.6
+# Indexes
 # ---------------------------------------------------------------------------
 
 INDEXES: list[Index] = [
@@ -64,7 +64,7 @@ INDEXES: list[Index] = [
 ]
 
 # ---------------------------------------------------------------------------
-# Relationship types — Schema_v3 §4
+# Relationship types
 # ---------------------------------------------------------------------------
 
 RELATIONSHIP_TYPES: list[str] = [
@@ -86,7 +86,7 @@ RELATIONSHIP_TYPES: list[str] = [
 
 
 # ---------------------------------------------------------------------------
-# Relationship property schemas — Schema_v3 §4.1
+# Relationship property schemas
 # ---------------------------------------------------------------------------
 
 

@@ -7,8 +7,8 @@ Usage:
     provider = get_provider("openai")   # or "elevenlabs"
     audio_bytes = provider.generate("Hello, welcome to Paris.")
 
-OWNER RULING, 2026-07-31 — NO FAKE PROVIDER IS EVER SERVED
-----------------------------------------------------------
+NO FAKE PROVIDER IS EVER SERVED
+-------------------------------
 ``MockTTSProvider`` returns a silent WAV. It exists so the test suite can drive
 the whole audio pipeline for $0. It is therefore DEFINED here but deliberately
 NOT REGISTERED: ``_PROVIDERS`` holds only implementations that GENUINELY

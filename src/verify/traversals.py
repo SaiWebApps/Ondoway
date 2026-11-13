@@ -1,4 +1,4 @@
-"""Execute and validate the three core traversal patterns from Schema_v3."""
+"""Execute and validate the three core traversal patterns the graph must answer."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ ORDER BY i.sort_order
 
 
 def run_planner_traversal(driver: Driver) -> TraversalResult:
-    """Schema_v3 §5.1 — Structured Discovery."""
+    """Structured Discovery: a trip's stops, their POIs, beats and lenses."""
     with driver.session(database=get_database()) as session:
         records = list(session.run(_PLANNER_QUERY))
     rows = [dict(r) for r in records]
@@ -59,7 +59,7 @@ RETURN pr.display_name AS profile, l.display_label AS lens,
 
 
 def run_wanderer_traversal(driver: Driver) -> TraversalResult:
-    """Schema_v3 §5.2 — Spontaneous Exploration."""
+    """Spontaneous Exploration: beats near a point on a profile's preferred lenses."""
     with driver.session(database=get_database()) as session:
         records = list(session.run(_WANDERER_QUERY))
     rows = [dict(r) for r in records]

@@ -36,27 +36,26 @@ def route_script_to_stops(
     Pure function — no DB, no engine run. Each ScriptPOI becomes one stop in route
     order; ALL of its beats are kept (`beat_ids`) with `primary_beat_id` = the first
     (so single-beat read paths still work); the per-stop lens is the dominant lens of
-    its beats (computed, not fabricated). Per the M0b design (its spec tree is
-    retired — git history).
+    its beats (computed, not fabricated).
 
-    THE CLOCK IS NOT SPELLED HERE (Phase 5 S5.10). ``clocks`` is poi id -> "HH:MM"
+    THE CLOCK IS NOT SPELLED HERE. ``clocks`` is poi id -> "HH:MM"
     from THE one expression (`src.tour.contingency.stop_clocks`, walks and priced
-    visits); until then this adapter ran a second, walk-less clock (dwell only)
+    visits); this adapter once ran a second, walk-less clock (dwell only)
     that the phone showed as arrival times. A stop the caller did not clock (a
     dateless request with no start) reads "".
 
-    Phase 1 (Step 1.2): when ``script`` is passed, each stop also carries its
+    When ``script`` is passed, each stop also carries its
     ``narration`` — the stitched per-stop text (cold-open, transit glue, beats,
-    closing) from ``stop_narration_text``, the text Phase 1 hands to TTS. Omitted
+    closing) from ``stop_narration_text``, the text handed to TTS. Omitted
     (``""``) when no script is given, so existing callers stay back-compatible.
 
-    THE FOOTPRINT IS NOT SPELLED HERE EITHER (Phase 7 S7.3; design §5.6). ``triggers``
+    THE FOOTPRINT IS NOT SPELLED HERE EITHER. ``triggers``
     is poi id -> the stop's placed trigger geometry from THE one rule
     (`src.tour.placement.place_stops`, the same shape as ``clocks`` above); each stop
     carries it as a plain dict (``trigger``) so the item stores it and the wire model
     validates it. A stop the caller did not place reads None — no geometry.
     """
-    # Phase 7 S7.7 (B) (design §5.6 "segments"; W7.2 R4): a marquee's reviewed anchors
+    # A marquee's reviewed anchors
     # — ``anchors``, poi id -> its anchors from THE one rule (`place_anchors(route)`,
     # the `triggers` shape) — cut its STORY into chapters: the resolver says which
     # anchor a sentence is told at, the story keeps the rest, and each chapter rides
@@ -70,13 +69,13 @@ def route_script_to_stops(
     segments_by_stop = (
         place_segments(script, resolve) if script is not None and resolve is not None else {}
     )
-    # Phase 6 S6.4: the stop's CLOSE travels beside its narration (design §5.3).
+    # The stop's CLOSE travels beside its narration.
     close_by_stop = stop_close_text(script) if script is not None else {}
-    # Phase 7 S7.7 (design §5.6 C7; plan defect 7): the stop's LEG piece — its walking
+    # The stop's LEG piece — its walking
     # line, a reflection on that leg, the walk-past one-liners — travels beside the
     # STORY, its own file played on the leg; the story opens on the stop's own first
     # sentence. None when the leg carries nothing. The SAME resolver the story is cut
-    # by is passed here (W7.11 defect 17): a sentence belonging to a reviewed anchor is
+    # by is passed here: a sentence belonging to a reviewed anchor is
     # told AT that anchor and never on the walk toward it.
     leg_by_stop = stop_leg_text(script, anchor_of=resolve) if script is not None else {}
     extras = extra_by_poi or {}
@@ -107,7 +106,7 @@ def route_script_to_stops(
                 "narration": narration_by_stop.get(idx, ""),
                 "close_text": close_by_stop.get(idx),
                 "leg_narration": leg_by_stop.get(idx),
-                # S1.M4: the stop this leg was written FROM. A leg line names both its
+                # The stop this leg was written FROM. A leg line names both its
                 # ends, so it is true of one pair only; a replan re-orders the same
                 # stops, and this is what lets it tell a line that still fits from one
                 # describing a walk nobody is taking. Recorded for every stop, whether
@@ -151,17 +150,16 @@ def create_trip_with_stops(
       family's day — a later joiner is crewed onto marked days alone
       (src/api/crud/families.py), so pre-family history stays private.
     - Profile -[:IS_CREW_OF]-> Trip for every family co-member of the captain
-      (ADR 0005: a trip's crew derives from family membership; the captain is
+      (a trip's crew derives from family membership; the captain is
       never their own crew)
     - For each stop: ItineraryItem with HAS_STOP, ASSIGNED_TO, AT_POI, and one
       PLAYS_BEAT edge per beat in the stop's `beat_ids`. The item stores
       `beat_ids` (engine narration order), `primary_beat_id` (= beat_ids[0],
       for single-beat read paths), the stop's dominant `lens_name` (nullable),
-      and the stitched per-stop `narration` (Phase 1, Step 1.2; nullable — a
-      null/absent value is simply not stored). Per the M0b design (its spec
-      tree is retired — git history).
+      and the stitched per-stop `narration` (nullable — a
+      null/absent value is simply not stored).
 
-    Phase 4 (Step 4.6): ``tour_input_json`` (the RESOLVED engine input incl.
+    ``tour_input_json`` (the RESOLVED engine input incl.
     lenses + start_time) and ``options_json`` (per flavour, the ORDERED poi id
     list; index+1 = the option number in ``route_id``) persist on the Trip so
     POST /trips/{id}/compose can rebuild the user's PICK without re-running
@@ -195,8 +193,8 @@ def create_trip_with_stops(
         MATCH (trip:Trip {id: $trip_id})
         MERGE (trip)-[:DAY_OF]->(f)
     """
-    # The crew derives from the captain's FAMILY at creation time (ADR 0005:
-    # `IS_CREW_OF` finally read and written by production). Same transaction as
+    # The crew derives from the captain's FAMILY at creation time (`IS_CREW_OF`,
+    # read and written by production). Same transaction as
     # the trip CREATE, so a trip never exists half-crewed.
     crew_query = """
         MATCH (captain:Profile {id: $profile_id})-[:MEMBER_OF]->(:Family)
@@ -236,7 +234,7 @@ def _create_itinerary_items(
 
     A null $lens_name is simply not stored (Cypher drops null map entries).
 
-    W7.13 (Sofia; the closing panel): the POI match is OPTIONAL. The old
+    The POI match is OPTIONAL. The old
     ``MATCH (poi:POI {id: $poi_id})`` made the whole CREATE silently match
     nothing for the A→B finish SENTINEL (whose id names no POI node), so the
     finish stop — the day's goodbye — was never stored, never under HAS_STOP,
@@ -302,7 +300,7 @@ def _create_itinerary_items(
             extra_narration=stop.get("extra_narration"),
             close_text=stop.get("close_text"),
             # Neo4j properties cannot hold maps: the THREADS travel as ONE JSON
-            # string; GeneratedStop's validator decodes rows back (Phase 6 S6.5).
+            # string; GeneratedStop's validator decodes rows back.
             thread_lines=(
                 json.dumps(stop["thread_lines"], ensure_ascii=False)
                 if stop.get("thread_lines")
@@ -310,22 +308,22 @@ def _create_itinerary_items(
             ),
             full_narration=stop.get("full_narration"),
             full_close_text=stop.get("full_close_text"),
-            # Phase 7 S7.3: the stop's placed trigger geometry, ONE JSON string (the
+            # The stop's placed trigger geometry, ONE JSON string (the
             # thread_lines precedent) — the saved-trips reader hands it back so a
             # walk started from a saved trip has the same geometry the session has.
             trigger_json=(
                 json.dumps(stop["trigger"], ensure_ascii=False) if stop.get("trigger") else None
             ),
-            # Phase 7 S7.7: the stop's leg piece text; its file lands on the item when
+            # The stop's leg piece text; its file lands on the item when
             # the voicing pass runs (leg_audio_url / leg_audio_duration_sec).
             leg_narration=stop.get("leg_narration"),
             leg_from_poi_id=stop.get("leg_from_poi_id"),
-            # Phase 7 S7.7 (B): the chapters as a JSON list (the thread_lines precedent);
+            # The chapters as a JSON list (the thread_lines precedent);
             # the voicing pass writes each chapter's file back INTO this list.
             segments_json=(
                 json.dumps(stop["segments"], ensure_ascii=False) if stop.get("segments") else None
             ),
-            # M6c: the door this place STANDS BY for. A standby is a real item —
+            # The door this place STANDS BY for. A standby is a real item —
             # so the one voicing pass finds it and gives it a file like any other
             # stop — and it is not part of the walked day, so the reader that
             # lists a day's stops leaves it out. Null on every ordinary stop.
@@ -337,7 +335,7 @@ def _create_itinerary_items(
             raise ValueError(f"Stop {stop['poi_id']!r}: the item CREATE returned no row")
         # A stop naming a POI the graph does not hold fails LOUDLY — the sentinel (a
         # waypoint at the person's own finish, not a place) is the one id allowed to
-        # have none (W7.13, Sofia: the silent no-op class).
+        # have none (the silent no-op class).
         if not record["poi_found"] and not stop["poi_id"].startswith(END_B_SENTINEL_PREFIX):
             raise ValueError(
                 f"Stop {stop['poi_id']!r}: no POI with that id in the graph — the item "
@@ -394,7 +392,7 @@ def add_itinerary_items(
 ) -> list[str]:
     """Create extra ItineraryItems on a trip WITHOUT touching the ones it has.
 
-    The standbys (M6c) are written through here after the day's own stops: they
+    The standbys are written through here after the day's own stops: they
     must be real items so the one voicing pass gives them a file, and they must
     not disturb the day, so this adds and never deletes. Item ids come back in
     the order the stops were passed. `replace_trip_stops` is the other door and
@@ -418,7 +416,7 @@ def add_itinerary_items(
 def write_trip_session(
     session: Session, trip_id: str, *, plan_version: int, session_json: str
 ) -> None:
-    """Persist the living session's current version (Phase 5 S5.8, design §8.2).
+    """Persist the living session's current version.
 
     Replaces `mark_trip_composed` and its 409: a write is never a conflict, it is
     version N+1. The trip's ItineraryItems are the composed day's stops (rewritten
@@ -437,8 +435,8 @@ def get_trip_compose_inputs(session: Session, trip_id: str) -> dict[str, Any] | 
 
     Returns ``{"tour_input": dict | None, "options": list | None,
     "composed_route_id": str | None, "plan_version": int, "session": dict | None}``.
-    ``composed_route_id`` is READ for trips written before Phase 5 and ignored —
-    the frozen trip's one-compose lock is deleted (design §8.2); nothing writes it
+    ``composed_route_id`` is READ for older trips and ignored —
+    the frozen trip's one-compose lock is deleted; nothing writes it
     any more. ``plan_version`` is 0 for a trip that has never been composed.
     """
     record = session.run(
@@ -469,7 +467,7 @@ def list_trips_for_profile(
     One row per item: its PLAYS_BEAT beats are collected, with stored
     `beat_ids`/`primary_beat_id`/`lens_name` item properties taking precedence
     and edge-derived values as the fallback for legacy single-beat items
-    (e.g. seeded trips) that predate M0b's multi-beat persistence.
+    (e.g. seeded trips) that predate multi-beat persistence.
     """
     # First verify profile exists
     check = session.run(
@@ -480,7 +478,7 @@ def list_trips_for_profile(
         return None  # type: ignore[return-value]
 
     # Every trip this profile can READ: the days it captains and the days it
-    # crews (the family's shared days — ADR 0005). One row per trip even when
+    # crews (the family's shared days). One row per trip even when
     # the profile holds both edges; `captained` says WHICH relationship the row
     # was matched through, so a client can tell its own day from a shared one.
     trips_query = """
@@ -565,7 +563,7 @@ def list_trips_for_profile(
         stop_records = session.run(stops_query, tid=trip["trip_id"])
         stops = [dict(r) for r in stop_records]
         for s in stops:
-            # Phase 7 S7.3: the placed geometry back as the dict the wire model reads.
+            # The placed geometry back as the dict the wire model reads.
             raw = s.pop("trigger_json", None)
             s["trigger"] = json.loads(raw) if raw else None
             raw_segments = s.pop("segments_json", None)

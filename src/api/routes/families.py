@@ -1,6 +1,6 @@
 """Family routes — create a family, invite into it, join it, list your own.
 
-docs/adr/0005: a family is a persistent group of profiles
+A family is a persistent group of profiles
 (`Profile -[:MEMBER_OF]-> Family`); one member invites the others with a
 shareable link (which the phone also renders as a QR) minted from the same
 token machinery as the magic-link sign-in. The group changes NOTHING the
@@ -39,7 +39,7 @@ router = APIRouter(prefix="/families", tags=["families"])
 class FamilyCreateRequest(BaseModel):
     name: str | None = None
     #: Which of the caller's profiles founds the family. Membership hangs off
-    #: the profile (ADR 0005); omitted, the caller's latest profile is used —
+    #: the profile; omitted, the caller's latest profile is used —
     #: the same resolution GET /profile documents.
     profile_id: str | None = None
 

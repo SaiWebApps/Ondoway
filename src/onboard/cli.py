@@ -1,6 +1,6 @@
-"""Step-4 onboarding CLI — assemble a city + draft its beats, end to end.
+"""Onboarding CLI — assemble a city + draft its beats, end to end.
 
-Runs the same Step-3 → Step-4 flow the live onboarding API will drive, but in
+Runs the same connect → assemble flow the live onboarding API will drive, but in
 FIXTURE mode: the connectors' network door (``src.onboard.fetch``) defaults to
 ``fixture`` and raises on any real GET, so this CLI never touches the network.
 Instead it loads each connector's committed run fixture from
@@ -90,7 +90,7 @@ def _geocode(city: str) -> CityContext:
         slug=data["slug"],
         display_name=data["display_name"],
         bbox=tuple(data["bbox"]),
-        # The country the city's opening hours are read against (Docs/adr/0006).
+        # The country the city's opening hours are read against.
         # Absent from an older fixture, which `write_city` then refuses by name.
         country=data.get("country"),
     )

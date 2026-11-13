@@ -4,7 +4,7 @@ Pipeline: a stop's stitched narration → TTS Provider → Storage → the calle
 the url and the MEASURED duration on the ItineraryItem (src/api/routes/audio.py).
 
 The per-beat library — ``generate_beat_audio`` / ``generate_batch`` / ``check_audio_status``
-over ``NarrativeBeat.audio_url`` — was DELETED at Phase 7 S7.10 (design §8.5): the per-stop
+over ``NarrativeBeat.audio_url`` — was DELETED: the per-stop
 path (``generate_stop_audio``) and the keep-exploring door are the only voicing doors.
 
 Usage:
@@ -33,7 +33,7 @@ def _get_duration(audio_bytes: bytes) -> float:
     """Extract duration in seconds from audio bytes (WAV or MP3).
 
     WAV: parsed exactly via stdlib wave module.
-    MP3: MEASURED from the frame table (Phase 7 S7.8) — every Layer III frame
+    MP3: MEASURED from the frame table — every Layer III frame
     walked and its samples summed, exact for constant- and variable-bitrate files
     and for MPEG-1, MPEG-2 and MPEG-2.5 alike.
     Returns 0.0 if the format cannot be determined.
@@ -103,14 +103,14 @@ def _l3_frame(data: bytes, i: int) -> tuple[int, float] | None:
 
 
 def _mp3_duration(data: bytes) -> float:
-    """MEASURE an MP3's duration from its frame table (Phase 7 S7.8; W7.2 R6).
+    """MEASURE an MP3's duration from its frame table.
 
     Skips a leading ID3v2 tag, scans to the first valid Layer III frame, then walks
     frame by frame — each frame's length from its own header, each frame's seconds
     as samples / sample rate — and sums. Exact for CBR and VBR, MPEG-1/2/2.5. A
     truncated tail counts no frame; the walk ends at the first non-frame after the
-    stream (an ID3v1 tag, trailing garbage). 0.0 when no frame is found. Until S7.8
-    this read ONE header and divided the file size by that bitrate: a VBR file was off
+    stream (an ID3v1 tag, trailing garbage). 0.0 when no frame is found. Before the
+    frame walk this read ONE header and divided the file size by that bitrate: a VBR file was off
     by the bitrate ratio and every MPEG-2 / 2.5 file measured 0.0 — the phone's
     sentence arithmetic then cut at the wrong place, or at once.
     """
@@ -137,7 +137,7 @@ def _mp3_duration(data: bytes) -> float:
 
 @dataclass
 class StopAudioResult:
-    """Result of generating audio for one stop's stitched narration (Phase 1)."""
+    """Result of generating audio for one stop's stitched narration."""
 
     stop_key: str
     provider: str
@@ -172,10 +172,10 @@ def generate_stop_audio(
 ) -> StopAudioResult:
     """Generate + store TTS audio for one stop's stitched narration.
 
-    Phase 1 (Step 1.3): mirrors ``generate_beat_audio`` but voices the per-stop
+    Mirrors ``generate_beat_audio`` but voices the per-stop
     narration (cold-open + transit glue + beats + closing) instead of a single
     beat, and does NOT touch Neo4j — the prepare-trip wiring and per-stop
-    persistence land in Step 1.4. ``MockTTSProvider`` + ``LocalStorageProvider``
+    persistence live with the caller. ``MockTTSProvider`` + ``LocalStorageProvider``
     are the offline defaults so ``make test`` stays free.
     """
     if not narration or not narration.strip():

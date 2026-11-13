@@ -53,10 +53,10 @@ router = APIRouter(tags=["audio"])
 #   POST /audio/eval            -> up to 3 paid TTS + 9 paid Whisper calls
 #
 # (The per-beat library — POST /audio/generate-batch, /audio/generate/{id},
-# /audio/generate-trip, GET /audio/status/{id} — was DELETED at Phase 7 S7.10,
-# design §8.5: the per-stop path and the keep-exploring door are the only voicing
-# doors.) None of these has a product caller (mobile uses generate-trip-stops /
-# keep-exploring; the web preview uses /audio/preview) — they are operator tools. Gate
+# /audio/generate-trip, GET /audio/status/{id} — was DELETED: the per-stop path and
+# the keep-exploring door are the only voicing doors.) None of these has a product
+# caller (mobile uses generate-trip-stops / keep-exploring; the web preview uses
+# /audio/preview) — they are operator tools. Gate
 # them behind the SAME fail-closed flag that already protects the workbench CRUD
 # routers in src/api/app.py, so the public Render deployment (which pins
 # WORKBENCH_API_ENABLED="false") never exposes them.
@@ -184,7 +184,7 @@ def _stop_narration_hash(narration: str, provider_name: str | None, voice_id: st
 
 # Max chars of narration handed to TTS for the on-demand keep-exploring deep
 # dive. Mirrors AudioPreviewRequest's cap so a huge extra_narration can't fan
-# out into unbounded TTS chunk requests (Defect 17).
+# out into unbounded TTS chunk requests.
 _KEEP_EXPLORING_MAX_CHARS = 20000
 
 
@@ -557,7 +557,7 @@ def _voice_session_lines(
     voice_id: str | None,
     force: bool,
 ) -> None:
-    """Voice one stop's authored session lines (Phase 6 S6.8) — see the caller."""
+    """Voice one stop's authored session lines — see the caller."""
     from src.tour.degradations import record
 
     stop_id = stop["stop_id"]
@@ -591,10 +591,9 @@ def _voice_session_lines(
             return None
 
     # THE ONE TABLE of a stop's small authored pieces, each voiced once and
-    # hash-guarded: the close, the full telling's close, and — Phase 7 S7.7 (design
-    # §5.6 C7; plan defect 7) — the LEG piece, the walking line into the stop, played
-    # on the leg. The leg piece also stores its measured length (the phone's clocks
-    # read it); the closes need none.
+    # hash-guarded: the close, the full telling's close, and the LEG piece, the
+    # walking line into the stop, played on the leg. The leg piece also stores its
+    # measured length (the phone's clocks read it); the closes need none.
     for text_field, url_field, hash_field, key_suffix, duration_field in (
         ("close_text", "close_audio_url", "close_audio_hash", "close", None),
         ("full_close_text", "full_close_audio_url", "full_close_audio_hash", "full-close", None),
@@ -659,10 +658,10 @@ def _voice_session_lines(
                         hash=combined_hash,
                     )
 
-    # Phase 7 S7.7 (B) (design §5.6 "segments"; W7.2 R4): a marquee's CHAPTERS — each
-    # voiced once as its own file, `{stop}-seg-{i}`, hash-guarded like the lines above;
-    # the url, the measured length and the hash are written back INTO the item's
-    # chapter list (the thread-urls precedent), which the session GET overlays.
+    # A marquee's CHAPTERS — each voiced once as its own file, `{stop}-seg-{i}`,
+    # hash-guarded like the lines above; the url, the measured length and the hash
+    # are written back INTO the item's chapter list (the thread-urls precedent),
+    # which the session GET overlays.
     raw_segments = stop.get("segments_json")
     if raw_segments:
         try:
@@ -835,13 +834,13 @@ def generate_stop_audio_for_trip(
             StopAudioResultItem(stop_id=stop_id, status="generated", audio_url=gen.audio_url)
         )
 
-    # Phase 6 S6.8 (W6.2 R6a, 11/0; owner ruling 2026-08-19: the tour's own voice,
-    # never the robot). The AUTHORED SESSION LINES ride the same voicing pass as
-    # their own small artifacts — each stop's close, its thread lines, the full
-    # telling's close — hash-guarded exactly like the narration, so a line is
-    # billed once. The contingency set's fixed lines ("Next: X") stay SCREEN-ONLY
-    # (R6, 8/11) and are never sent here. A failed line leaves its url null (the
-    # phone falls back to the plain spoken line) and is recorded, never silent.
+    # (Owner ruling 2026-08-19: the tour's own voice, never the robot.) The
+    # AUTHORED SESSION LINES ride the same voicing pass as their own small
+    # artifacts — each stop's close, its thread lines, the full telling's close —
+    # hash-guarded exactly like the narration, so a line is billed once. The
+    # contingency set's fixed lines ("Next: X") stay SCREEN-ONLY and are never sent
+    # here. A failed line leaves its url null (the phone falls back to the plain
+    # spoken line) and is recorded, never silent.
     for stop in stops:
         _voice_session_lines(
             session,
@@ -926,15 +925,14 @@ def keep_exploring_stop_audio(
     if rec is None:
         raise HTTPException(404, f"Stop '{stop_id}' not found")
 
-    # Phase 6 S6.6 (W6.2 R3, 11/11 "a dump, not a telling"): a MAJOR stop's tap
-    # for more plays THE FULL TELLING — the writer's second composed piece with
-    # its own close — never the raw keep-exploring stitch. Stops without an
-    # authored full telling keep the on-demand extras route exactly as before.
+    # A MAJOR stop's tap for more plays THE FULL TELLING — the writer's second
+    # composed piece with its own close — never the raw keep-exploring stitch.
+    # Stops without an authored full telling keep the on-demand extras route exactly as before.
     narration = rec["full_narration"] or rec["extra_narration"]
     if not narration or not narration.strip():
         raise HTTPException(409, f"Stop '{stop_id}' has no keep-exploring extras")
 
-    # Defect 17: cap the input before TTS so a huge extra_narration can't fan out
+    # Cap the input before TTS so a huge extra_narration can't fan out
     # into unbounded TTS chunk requests. Mirror AudioPreviewRequest's 20000-char
     # cap; truncate on a sentence boundary so the deep dive still voices cleanly.
     narration = _cap_narration(narration)
@@ -943,16 +941,16 @@ def keep_exploring_stop_audio(
     voice_id = body.voice_id if body else None
     force = body.force if body else False
 
-    # Defect 11: cache the artifact on the ItineraryItem keyed by a hash of the
+    # Cache the artifact on the ItineraryItem keyed by a hash of the
     # (capped) extra_narration. A repeat call with the same narration returns the
     # cached url WITHOUT re-running paid TTS; force=True or a changed narration
     # (hash mismatch) regenerates.
-    # Defect 1: the cache key must also discriminate on provider/voice — otherwise
+    # The cache key must also discriminate on provider/voice — otherwise
     # a client requesting a different voice/provider silently gets audio generated
     # with the ORIGINAL voice. Mix provider_name and voice_id into the hash so a
     # voice/provider change yields a mismatch and regenerates.
     narration_hash = _stop_narration_hash(narration, provider_name, voice_id)
-    # Mobile calls this anonymously (KE5), so a cache MISS spends real TTS money
+    # Mobile calls this anonymously, so a cache MISS spends real TTS money
     # for an anonymous caller: bound the paid path the same way /audio/preview
     # is bounded. Checked after the cache lookup below would be too late, but
     # before it would rate-limit free cache hits — so limit only on the miss.
