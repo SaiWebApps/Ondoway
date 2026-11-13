@@ -1,4 +1,4 @@
-"""M8 GRADE—rubric checks plus the live regression gate.
+"""Tour grade: rubric checks plus the live regression gate.
 
 The grade shard owns this entire file. It runs the pure rubric checks and the
 real dev-graph gate together, with no marker deselections.
@@ -68,13 +68,12 @@ def test_lost_pois_and_beats_fail_baseline():
 
 
 def test_wrong_spine_and_failed_validation_dock_their_weights():
-    """RE-DERIVED at Phase 8 S8.4b (audit F's ordered rewrite; design §7.2): the
-    axis ARITHMETIC is unchanged — validation still reports its 0.10 weight in
-    the breakdown — but a failed validation now FAILS the grade outright,
-    never a 0.10 dock. Audit F's measured contradiction: a fabricating tour
+    """The axis ARITHMETIC is unchanged — validation still reports its 0.10
+    weight in the breakdown — but a failed validation FAILS the grade outright,
+    never a 0.10 dock. The measured contradiction: a fabricating tour
     (validation=0) could score 0.90 and clear the 0.65 baseline, so the gate
-    blessed exactly the tour the validation gate refuses to serve. A written
-    decision, not a quiet edit. UNDO: return `passed = score >= baseline`
+    blessed exactly the tour the validation gate refuses to serve.
+    UNDO: return `passed = score >= baseline`
     alone -> a failed-validation 0.70 passes again -> RED."""
     g = grade_tour(
         generated_poi_names=["A", "B", "C", "D"],
@@ -93,7 +92,7 @@ def test_wrong_spine_and_failed_validation_dock_their_weights():
 
 
 def test_a_fabricating_tour_cannot_buy_its_way_past_the_baseline():
-    """S8.4b's exact measured case (audit F): perfect recall/overlap/spine with a
+    """The exact measured case: perfect recall/overlap/spine with a
     FAILED validation scores 0.90 — above the 0.65 baseline — and must still
     fail. The same axes with validation TRUE pass, so the hard zero bites on
     validation alone."""

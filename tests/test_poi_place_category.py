@@ -1,11 +1,10 @@
 """Structural guard on per-POI place categories in `data/{city}/poi-raw.json`.
 
-Data row 6.7 of the redesign (specs/2026-08-07-tour-algorithm-redesign): every
-POI carries `place_category`, one value from a CLOSED twelve-word vocabulary,
-derived deterministically at $0 by `scripts/poi_place_category.py`. Phase 3's
-category-diverse replacement is the consumer — a repair must never offer Greta
-a third gallery before 10:30 (design §4.5.5), which only works if the classes
-are assigned and the vocabulary cannot silently widen.
+Every POI carries `place_category`, one value from a CLOSED twelve-word
+vocabulary, derived deterministically at $0 by `scripts/poi_place_category.py`.
+The category-diverse replacement is the consumer — a repair must never offer a
+visitor a third gallery before 10:30, which only works if the classes are
+assigned and the vocabulary cannot silently widen.
 
 Same split as the sibling guards (`tests/test_poi_visit_duration.py`,
 `tests/test_poi_opening_hours.py`): the pure derivation is pinned here with
@@ -28,13 +27,13 @@ DATA_ROOT = REPO_ROOT / "data"
 # Cities whose corpus has been through the categoriser and must satisfy the
 # data checks below. Same contract as CITIES_WITH_VISIT_CAPACITY: adding a slug
 # is the deliberate act of declaring the pass ran; removing one to reach green
-# is forbidden. EMPTY until Phase 1's W1.8 adds "paris".
+# is forbidden.
 CITIES_WITH_PLACE_CATEGORY: tuple[str, ...] = ("paris",)
 
 
 def test_the_vocabulary_is_closed_and_exactly_the_plan_s_twelve() -> None:
-    """The plan (S1.7) fixes twelve values; a silently widened vocabulary gives
-    the Phase 3 consumer classes nobody reviewed. Order-insensitive on purpose:
+    """The vocabulary is fixed at twelve values; a silently widened one gives
+    the category-diverse replacement classes nobody reviewed. Order-insensitive on purpose:
     the tuple's ORDER is presentation, its SET is the contract."""
     assert set(PLACE_CATEGORIES) == {
         "gallery",
@@ -55,8 +54,7 @@ def test_the_vocabulary_is_closed_and_exactly_the_plan_s_twelve() -> None:
 @pytest.mark.parametrize(
     ("name", "description", "expected"),
     [
-        # The three pinned precedents from plan S1.7 — Greta's and Aiko's own
-        # anchors — with their real corpus descriptions.
+        # The three pinned precedents, with their real corpus descriptions.
         (
             "Place des Vosges",
             "Oldest planned square in Paris built in 1612 with 36 uniform "

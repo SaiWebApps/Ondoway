@@ -1,15 +1,12 @@
-"""Phase 4 dial tests — the W4.2 panel's dials, carried and obeyed. Hermetic.
+"""Dial tests — the four dials, carried and obeyed. Hermetic.
 
 One hand per file (the test_tour_clock.py model): this file is the DIALS hand.
-Every gating test cites its source — the W4.2 panel's locked semantics
-(specs/2026-08-07-tour-algorithm-redesign/phase4-ledger.md, "LOCKED DIAL
-SEMANTICS", all eleven personas, 2026-08-11) and design §8.1/§9 Phase 4.
 
-The four dials and their engine meanings, as the panel ruled them:
+The four dials and their engine meanings:
 - stop_density   — "Fewer stops, longer at each" / "More stops, shorter at each"
 - narration_density — "Less talking / More talking" (supply, never topic)
 - avoid_queues   — "Skip the queues" (the retired "quieter", named plainly)
-- category_minus — "Less of THIS today" (Greta's kind chips; swap, never starve)
+- category_minus — "Less of THIS today" (kind chips; swap, never starve)
 """
 
 from __future__ import annotations
@@ -38,8 +35,8 @@ def _queued(poi: POI, minutes_peak: int) -> POI:
 
 
 def test_tour_input_carries_the_four_dials():
-    """W4.2 locked semantics: the four dials are request axes (deviation iv —
-    existing axes preferred; these four are the genuinely new ones, S3.2 mould).
+    """The four dials are request axes (existing axes are preferred; these four
+    are the genuinely new ones).
     RED before the fields existed: TourInput is extra="forbid", so construction
     raised (the guard on that forbid is
     tests/test_tour_contract.py::test_tour_input_rejects_extra_keys)."""
@@ -68,7 +65,7 @@ def test_tour_input_carries_the_four_dials():
 
 
 def test_stop_density_more_resolves_to_the_short_stop_ceiling():
-    """W4.2 ruling 4: the "more" direction is the proven short-stop shape (the
+    """The "more" direction is the proven short-stop shape (the
     measured a-stop20 cell); an explicitly-set ceiling always wins (the
     resolver's one rule)."""
     resolved = resolve_party_axes(
@@ -92,9 +89,8 @@ def test_stop_density_more_resolves_to_the_short_stop_ceiling():
 
 
 def test_category_minus_swaps_the_kind_out():
-    """W4.2 ruling 7 (Greta: "not what I did yesterday"; Julien: "zero museums
-    today, and it must behave like the lens — swap in different places, not
-    starve them"): an excluded kind leaves the dwell pool; the day still plans.
+    """An excluded kind leaves the dwell pool and different places are swapped
+    in, like the lens: the day still plans and is never starved.
     """
     from src.tour.selection import select_route
 
@@ -125,10 +121,10 @@ def test_category_minus_swaps_the_kind_out():
 
 
 def test_avoid_queues_prefers_the_queue_free_rival():
-    """W4.2 ruling 6 ("Skip the queues" — Théo: "the darkest thing in the day
-    was the queue"; Sofia: a 40-minute outdoor stand-still): a peak-queue-heavy
-    stop is dimmed so its queue-free rival wins; without the dial the heavier
-    stop is seated (the premise that makes the flip real)."""
+    """"Skip the queues" (a long stand-still in a line is the worst part of a
+    day): a peak-queue-heavy stop is dimmed so its queue-free rival wins;
+    without the dial the heavier stop is seated (the premise that makes the flip
+    real)."""
     from src.tour.selection import select_route
 
     # Queue a member of the calibrated corpus (guaranteed worth seating), and
@@ -155,8 +151,8 @@ def test_avoid_queues_prefers_the_queue_free_rival():
 
 
 def test_stop_density_fewer_concentrates_the_day():
-    """W4.2 ruling 4 (Camille's label: "Fewer stops, longer at each" — count
-    down, anchors kept whole): the concentrate pass drops the weakest stops,
+    """"Fewer stops, longer at each" (count down, anchors kept whole): the
+    concentrate pass drops the weakest stops,
     never below three, never below the concentrate floor — a dial must not
     steer the day into its own underfill refusal."""
     from src.tour.selection import select_route
@@ -183,8 +179,8 @@ def test_stop_density_fewer_concentrates_the_day():
 
 
 def test_narration_density_scales_the_one_emission_ceiling():
-    """W4.2 ruling 5 (Fiona & Dev's dial, Paulo's label "Less talking / More
-    talking" — narration SUPPLY, never topic): the per-stop ceiling scales at
+    """"Less talking / More talking" sets narration SUPPLY, never topic: the
+    per-stop ceiling scales at
     the ONE emission choke point; trimmed beats land in keep-exploring
     overflow, never on the floor."""
     from src.tour.selection import (
@@ -248,11 +244,10 @@ def test_narration_density_scales_the_one_emission_ceiling():
     )
 
 def test_the_dials_ride_both_request_models_and_normalize_the_wire_forms():
-    """W4.2 + the S4.7 workbench build: the page sends hyphenated presets
-    ("take-it-easy") and weather "auto"; the engine spells presets with
-    underscores and knows dry/rain. Normalized at the API edge — declared on
-    BOTH request models (the S1.3a precedent: neither sets model_config, so an
-    undeclared field would be silently dropped, and the caller would get an
+    """The workbench page sends hyphenated presets ("take-it-easy") and weather
+    "auto"; the engine spells presets with underscores and knows dry/rain.
+    Normalized at the API edge — declared on BOTH request models (neither sets
+    model_config, so an undeclared field would be silently dropped, and the caller would get an
     undialed tour with no error saying why)."""
     from src.api.models.trips import TripGenerateRequest, TripPreviewRequest
 
@@ -300,7 +295,7 @@ def test_the_dials_ride_both_request_models_and_normalize_the_wire_forms():
 
 
 # --- the day notes are statements about the BUILT day, never the request -----
-# (W4.12 closing panel — Julien, Greta, Théo, Camille, Marcus, Nadia, Aiko, Sofia:
+# (Each of these once shipped:
 # "Left out today, as asked: museum." printed on a day byte-identical to the
 # un-dialled one; "Places with long waits were left out, as asked." printed above
 # a stop whose wait had gone UP from 3 to 10 minutes; "we will see it from the
@@ -391,7 +386,7 @@ def test_the_queue_note_names_the_longest_wait_that_remains():
 
 
 def test_a_closure_note_names_only_the_doors_the_day_actually_reaches():
-    """Owner ruling, 2026-09-19 (P10H-M11): the day's notes answer the day. A
+    """Owner ruling, 2026-09-19: the day's notes answer the day. A
     shut door the route visits is named, with the outside promise when it is
     kept at outside price. A shut door the day never goes near answers a
     question nobody asked — a Tuileries day once trailed a Montmartre cabaret
@@ -437,7 +432,7 @@ def test_a_closure_note_names_only_the_doors_the_day_actually_reaches():
 
 def test_the_could_not_confirm_note_keys_on_the_hours_source():
     """The doubt sentences name exactly the on-route doors whose hours are a
-    guess, or carry no source at all (Docs/adr/0006). Map hours escape the
+    guess, or carry no source at all. Map hours escape the
     doubt — the map is the top source and is spoken plainly — and an ungated
     stop was never in question. Nothing doubted, no sentence at all.
 
@@ -492,7 +487,7 @@ def test_a_doubted_door_is_doubted_once_on_the_notes_channel():
     function, for pool and arrival closures alike), so repeating it in the
     could-not-confirm list is the same ignorance said twice two lines apart.
     The skip keys on the exclusion's `kept_outside` FIELD, never on the
-    reason's words (W4.12). A doubted door with no exclusion stays listed —
+    reason's words. A doubted door with no exclusion stays listed —
     the list is its only doubt."""
     from src.api.routes.trips import _preview_day_notes
     from src.tour.contract import ClockExclusion
@@ -521,11 +516,11 @@ def test_a_doubted_door_is_doubted_once_on_the_notes_channel():
 
 
 def test_a_door_with_no_hours_on_record_is_named_not_silent():
-    """Docs/adr/0006: a door with unknown hours fails open WITH that
-    disclosure. The doubt sentence above is about hours somebody wrote down;
-    this one counts DOORS — a gated stop with no hours at all is the
-    least-known door. It gets its own plain sentence; an ungated square stays
-    silent, and the no-record door never leaks into the could-not-confirm list.
+    """A door with unknown hours fails open WITH that disclosure. The doubt
+    sentence above is about hours somebody wrote down; this one counts DOORS —
+    a gated stop with no hours at all is the least-known door. It gets its own
+    plain sentence; an ungated square stays silent, and the no-record door never
+    leaks into the could-not-confirm list.
 
     UNDO TEST: key the note on `opening_hours is not None` -> Notre-Dame
     vanishes from every note -> RED."""
@@ -543,11 +538,11 @@ def test_a_door_with_no_hours_on_record_is_named_not_silent():
 
 
 def test_the_api_resolves_presets_and_the_more_dial_exactly_as_the_harness_does():
-    """ONE ENGINE (memory: workbench and app share ONE path). `resolve_party_axes`
+    """ONE ENGINE (workbench and app share ONE path). `resolve_party_axes`
     expands presets and the "more stops" dial into the axes the planner reads —
     and it was called by scripts/tour_build.py ALONE. Through the API the Party
     dropdown never expanded and `stop_density="more"` never became its stop
-    ceiling. MEASURED at the W4.12 close on the live wire: the "More stops" day
+    ceiling. MEASURED on the live wire: the "More stops" day
     was byte-identical to base and kept a 47-minute museum, while an explicit
     20-minute ceiling on the identical request reshaped the day. Every API
     request goes through `_build_tour_input`, so that is where the resolve
@@ -567,7 +562,7 @@ def test_the_api_resolves_presets_and_the_more_dial_exactly_as_the_harness_does(
     easy = _build_tour_input(
         start=PDV, duration_min=180, city_slug="paris", round_trip=True, party="take_it_easy"
     )
-    # 13: owner ruling 2026-08-19 (Phase 6, ruling 4).
+    # 13: owner ruling 2026-08-19.
     assert easy.max_leg_minutes == 13 and easy.rest_cadence_minutes == 20, (
         "the take-it-easy preset did not expand into its axes on the API path"
     )
@@ -580,10 +575,9 @@ def test_the_api_resolves_presets_and_the_more_dial_exactly_as_the_harness_does(
 
 
 def test_promise_windows_are_coarse_on_the_wire_and_contain_the_planned_minute():
-    """F&D own the coarse-window ruling (W4.2 deviation v) and re-judged the built
-    thing at W4.12: "11:32-12:02" is minute-fiction — the width is the stop's
-    duration, not uncertainty, and 11:32 is not a time anybody says. The planner
-    keeps the exact minute (Phase 5's replan needs it); the WIRE rounds arrival
+    """"11:32-12:02" is minute-fiction — the width is the stop's duration, not
+    uncertainty, and 11:32 is not a time anybody says. The planner keeps the
+    exact minute (the replan needs it); the WIRE rounds arrival
     DOWN and departure UP to five-minute marks, so the spoken window always
     contains the planned one. A zero-length window (the A→B finish point) stays
     one time — it must never widen into a stay that does not exist. Dateless
@@ -629,7 +623,7 @@ def test_the_wire_promise_carries_the_coarse_window_not_the_planners_minute():
 
 
 # ---------------------------------------------------------------------------
-# Phase 5 — the composed dials and the ONE underfill line (S5.3)
+# The composed dials and the ONE underfill line
 # ---------------------------------------------------------------------------
 
 
@@ -656,20 +650,16 @@ def _ring(center: tuple[float, float], radius_m: float, count: int, prefix: str,
 
 
 def test_composed_dials_cannot_duck_under_the_one_underfill_line():
-    """Phase 5 S5.3 — ONE underfill line, at ONE final gate.
+    """ONE underfill line, at ONE final gate.
 
-    W4.11's carried finding (phase4-ledger.md): "COMPOSED extreme dials can duck
-    under the 50% underfill line through pass-composition (leg9+rest40+fewer lands
-    a 2-stop 68-of-180 day): each pass respects its own floor, but they do not
-    compose into one final line." Re-fetched at W5.1 (evidence/phase5-session/
-    w51-cells.txt, PDV-stacked): 2 stops, 68 of 180 minutes, 111 unplanned,
-    shipped 200. The W4.2 panel's unanimous worst finding (D-i) rules the line:
-    a best-possible day under HALF the ask is "no day, mislabelled" (Aiko: "never
-    quietly hand back a sixth of what I asked"; Rosemary: "never silently return
-    less day than asked"; Greta: "make leg6 refuse like c-leg12 does"). Design
-    §8.3 keeps the floor SOFT above that line.
+    COMPOSED extreme dials could duck under the 50% underfill line through
+    pass-composition (leg9+rest40+fewer landed a 2-stop 68-of-180 day): each
+    pass respected its own floor, but they did not compose into one final line.
+    Measured: 2 stops, 68 of 180 minutes, 111 unplanned, shipped 200. A
+    best-possible day under HALF the ask is "no day, mislabelled": never quietly
+    hand back a fraction of what was asked. The floor stays SOFT above that line.
 
-    THE HOLE, read in the code (plan re-plan 2026-08-18): the 0.5 check lived
+    THE HOLE, read in the code (2026-08-18): the 0.5 check lived
     inside the timebox repair's under-fill fallback and compared against the
     REPAIR budget — which a rest cadence has already shrunk by its rest reserve
     (`selection.py` "RESTS ARE PART OF THE DAY THE REPAIR PLANS"). Under cadence 20
@@ -680,9 +670,8 @@ def test_composed_dials_cannot_duck_under_the_one_underfill_line():
     floor. This test composes exactly that: a leg cap that pins the day to a near
     ring, a rest cadence that shrinks the repair budget, and the fewer dial.
 
-    Also W5.1 defect 7: the refusal said "132 minutes asked for" to a person who
-    asked for 180 (Paulo's plain-language rulings bind — the number is the
-    request's).
+    Also: the refusal said "132 minutes asked for" to a person who asked for
+    180 (in plain language, the number is the request's).
 
     UNDO: put the 0.5 refusal back inside the repair's fallback and remove it from
     the final gate → the composed day ships again → RED.
@@ -734,14 +723,14 @@ def test_composed_dials_cannot_duck_under_the_one_underfill_line():
     assert "overruns" not in message, message
     assert caught.value.alternatives, "a refusal must offer a way out"
 
-    # THE OPEN EXEMPTION — `open` zeroes the floor (design §2.3), so the same
+    # THE OPEN EXEMPTION — `open` zeroes the floor, so the same
     # composed day ships, disclosed, instead of refusing.
     open_day = select_route(composed.model_copy(update={"end_hardness": "open"}), snap)
     assert 1 <= len(open_day.pois) <= 4, "open ships the short honest day"
 
     # THE TOMBSTONE — one line, two licensed readers: the fraction is read at
-    # the final gate and at the dead-door drop's floor guard (Docs/adr/0004's
-    # underfill carve-out — the guard refuses a drop the gate would refuse to
+    # the final gate and at the dead-door drop's floor guard (the underfill
+    # carve-out — the guard refuses a drop the gate would refuse to
     # ship, so both sites MUST share the one constant) — and nowhere inside
     # the repair (an absence-of-code invariant, so it is a source read; the
     # behaviour above is what proves the gate works).
@@ -760,7 +749,7 @@ def test_composed_dials_cannot_duck_under_the_one_underfill_line():
 
 
 # ---------------------------------------------------------------------------
-# Phase 5 — ONE drop primitive: merge the legs, re-check the cap, redistribute (S5.5)
+# ONE drop primitive: merge the legs, re-check the cap, redistribute
 # ---------------------------------------------------------------------------
 
 
@@ -773,21 +762,20 @@ def _interior_stand(poi: POI, *, outside_min: int, inside_min: int) -> POI:
 
 
 def test_fewer_stops_hands_the_freed_minutes_to_the_survivors_within_their_ceilings():
-    """Phase 5 S5.5 (Phase-4 CARRIED 2; W4.2 locked semantics 4 — Camille's label
-    "Fewer places, longer at each": stop count down "with the freed minutes flowing
-    to the anchors within shape ceilings"). Measured at W4.12 and re-fetched at
-    W5.1 (b)2: the flagship "fewer" freed 100 minutes (6 → 4 stops) and NOT ONE
-    surviving stop was a minute longer — 40/10/38/12 before and after, 129 minutes
-    to slack; PdV byte-identical. Read in the code (plan re-plan): the concentrate
+    """"Fewer places, longer at each": stop count down "with the freed minutes
+    flowing to the anchors within shape ceilings". Measured: the flagship
+    "fewer" freed 100 minutes (6 → 4 stops) and NOT ONE surviving stop was a
+    minute longer — 40/10/38/12 before and after, 129 minutes to slack; PdV
+    byte-identical. Read in the code: the concentrate
     pass dropped and never redistributed (`selected = trial_set` and nothing
     re-priced the survivors).
 
     ONE drop primitive now does the drop: merge the two legs, re-check the cap on
-    the merged leg (§4.5.3), and hand the freed minutes to the surviving protected
+    the merged leg, and hand the freed minutes to the surviving protected
     and anchor stops — strongest first, never past a stop's shape ceiling (the
     full interior for a place with one; the outside number for a place without),
-    never to the weakest because it has the most headroom (the plan's sabotage
-    line). The concentrate pass CALLS it (tombstone below).
+    never to the weakest because it has the most headroom. The concentrate pass
+    CALLS it (tombstone below).
 
     UNDO: make the primitive grant nothing (or the concentrate pass ignore its
     grants) → survivors' visits identical to base → RED.
@@ -845,16 +833,16 @@ def _line(start: tuple[float, float], spacing_m: float, count: int, prefix: str,
 
 
 def test_a_drop_whose_merged_leg_breaks_the_cap_is_not_taken():
-    """Phase 5 S5.5 — design §4.5.3: "Every drop re-checks the longest-single-walk
-    cap. Dropping a stop merges its two legs — drop Rosemary's bench and a 12-minute
-    and a 9-minute leg fuse into 21 continuous minutes, double her limit. Without
-    this rule every drop is a trap." Four 15-minute stands in a line north of the
+    """Every drop re-checks the longest-single-walk cap. Dropping a stop merges
+    its two legs — drop a bench and a 12-minute and a 9-minute leg fuse into 21
+    continuous minutes, double a visitor's limit. Without this rule every drop is
+    a trap. Four 15-minute stands in a line north of the
     start, 212 m (5.7 min) apart, an open walk under a 6-minute cap. The weakest
     stop by score is the FIRST (equal scores, id order); dropping it — or any
     middle stop — fuses two hops into 11.4 minutes. The "fewer" dial must not
     take such a drop: it drops the END stop instead (no merged leg), the day keeps
-    every walk under six and is not refused (S5.4 would refuse a day that shipped
-    the merged leg; the right answer is never to make it).
+    every walk under six and is not refused (the street certification would
+    refuse a day that shipped the merged leg; the right answer is never to make it).
 
     UNDO: let the concentrate pass drop without the merged-leg check → the first
     stop goes, the 11-minute leg reaches the street certification → refused → RED.
@@ -886,10 +874,10 @@ def test_a_drop_whose_merged_leg_breaks_the_cap_is_not_taken():
 
 
 def test_the_one_drop_primitive_never_drops_a_protected_stop_and_the_pass_calls_it():
-    """§4.5.2 — rests, meals, toilets, pins and the finish are never auto-cut; they
+    """Rests, meals, toilets, pins and the finish are never auto-cut; they
     trigger the question instead. The primitive REFUSES a protected drop outright
     (a caller that wants to drop a promise must ask, not call this). And the
-    tombstone (plan §10.8): the concentrate pass has no inline drop of its own — an
+    tombstone: the concentrate pass has no inline drop of its own — an
     absence-of-code invariant, so it is a source read."""
     import inspect
 

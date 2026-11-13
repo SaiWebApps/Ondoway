@@ -1,5 +1,5 @@
 """Hermetic tests for _snapshot_from_records — the Neo4j → CorpusSnapshot
-parse, including the M7 provenance fields. No DB."""
+parse, including the provenance fields. No DB."""
 
 from __future__ import annotations
 
@@ -80,7 +80,7 @@ def test_optional_stable_place_fields_round_trip_without_replacing_graph_ids():
     snap = _snapshot_from_records([poi_record], [beat_record], [], [], [])
     poi = snap.pois[0]
     beat = snap.beats_for("p1")[0]
-    assert poi.id == "p1"  # D2 migrates graph/API identity; D1 is additive.
+    assert poi.id == "p1"  # graph/API identity is unchanged; the place fields are additive.
     assert poi.canonical_place_id == "paris:place-des-vosges"
     assert poi.aliases == ("Place Royale", "Vosges")
     assert poi.coordinate_provenance == coordinates
@@ -91,7 +91,7 @@ def test_optional_stable_place_fields_round_trip_without_replacing_graph_ids():
 
 
 def test_placeholder_beats_without_stable_ids_are_excluded():
-    """AC-26: an `active` beat with beat_id NULL AND placeholder audio is a
+    """An `active` beat with beat_id NULL AND placeholder audio is a
     seed artifact, never corpus content, and must never reach a tour.
 
     MEASURED on the dev graph 2026-07-25: Eiffel Tower and Shakespeare and

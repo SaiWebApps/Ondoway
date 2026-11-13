@@ -1,10 +1,9 @@
-"""Phase 5 — the two SEAMS of the living session (design §4.6; plan S5.9/S5.10).
+"""The two SEAMS of the living session.
 
-The 2026-08-18 amendment to the plan (phase4-ledger.md "TEST CULL"): each seam is
-BEHAVIOURAL wherever a behavioural check can exist, and a source scan ONLY where the
-invariant is about the source itself — and says so in its docstring. The one-engine
+Each seam is BEHAVIOURAL wherever a behavioural check can exist, and a source scan
+ONLY where the invariant is about the source itself — and says so in its docstring. The one-engine
 moulds this file replaces (`test_tour_one_engine.py`, `_mentions`, the tombstones)
-were retired with the cull; the shape kept here from them is what made them honest:
+were retired in a test cull; the shape kept here from them is what made them honest:
 NON-VACUITY FIRST (the files exist and are the ones we mean), a git-index check (a
 file that vanished from the tree is not "clean"), and an anti-over-deletion clause
 naming what must SURVIVE.
@@ -21,12 +20,11 @@ MOBILE_LIB = ROOT / "mobile" / "lib"
 MOBILE_TEST = ROOT / "mobile" / "test"
 
 #: The ONE Dart method that changes the current plan; its only decision input is a
-#: server contingency id (design §4.6; plan S5.9 — "the phone SELECTS, it never
-#: DECIDES").
+#: server contingency id (the phone SELECTS, it never DECIDES).
 THE_ONE_SELECTOR = "bool applyContingency(String contingencyId)"
 
 #: Vocabulary of a second replan brain. Any of these under mobile/ is a defect: the
-#: phone holds "no scoring, no candidate pool, no policy" (§4.6). Matched as whole
+#: phone holds "no scoring, no candidate pool, no policy". Matched as whole
 #: words / identifiers, case-insensitive on the words, exact on the identifiers.
 BANNED_BRAIN_WORDS: tuple[str, ...] = (
     r"\bcandidate(s)?\b",
@@ -50,8 +48,8 @@ BANNED_BRAIN_WORDS: tuple[str, ...] = (
 )
 
 #: What must SURVIVE under mobile/lib — the anti-over-deletion clause: the phone's
-#: arithmetic (§4.6's one permitted computation), the prefetch door (§4.7), and the
-#: session vocabulary this phase adds. An over-eager sweep that deleted these would
+#: arithmetic (its one permitted computation), the prefetch door, and the
+#: session vocabulary. An over-eager sweep that deleted these would
 #: pass the ban and fail here.
 SURVIVING_MOBILE_NEIGHBOURS: tuple[str, ...] = (
     "haversineDistance",
@@ -63,7 +61,7 @@ SURVIVING_MOBILE_NEIGHBOURS: tuple[str, ...] = (
     "SessionContingency",
     "fetchSession",
     "replanSession",
-    # Phase 7 S7.3: the placement vocabulary the phone READS (never defines).
+    # The placement vocabulary the phone READS (never defines).
     "StopTrigger",
     "PlacementPolicy",
     "_atPlace",
@@ -86,9 +84,9 @@ def _tracked() -> set[str]:
 
 
 def test_the_replan_brain_is_only_on_the_server():
-    """SEAM 1 (plan S5.9; design §4.6 "One replan brain — the phone SELECTS, it never
-    DECIDES"). The invariant is an ABSENCE of code — no scoring, ranking, candidate
-    pool or plan construction anywhere under mobile/ — which cannot be proven
+    """SEAM 1 (one replan brain: the phone SELECTS, it never DECIDES). The invariant
+    is an ABSENCE of code — no scoring, ranking, candidate pool or plan construction
+    anywhere under mobile/ — which cannot be proven
     behaviourally, so this half is a source scan and says so. The BEHAVIOURAL half
     of the seam lives in mobile/test/services/session_selection_test.dart: the
     first matching entry in server order is selected, exactly one method changes the
@@ -132,10 +130,10 @@ def test_the_replan_brain_is_only_on_the_server():
     # THE POSITIVE CLAUSE: exactly ONE method changes the current plan, keyed on a
     # server contingency id, and the working stop list is assigned only by the
     # tour lifecycle, that method's re-ordering, the audio catch-up's
-    # same-words adoption (P9R-S6: it swaps a held stop for a copy carrying the
+    # same-words adoption (it swaps a held stop for a copy carrying the
     # file the server voiced for the SAME words, id-matched — no stop added,
     # dropped or moved, so it is not a plan decision), and holdSession's
-    # remap of a NEW server plan version onto the held stops (P10H-M6b: the
+    # remap of a NEW server plan version onto the held stops (the
     # server already decided the order; the phone seats what it holds, standbys
     # included, in the server's own sequence — no local ranking anywhere).
     # A plan change still arrives only through the one selector.
@@ -161,12 +159,12 @@ def _body_of(source: str, signature: str) -> str:
 
 
 def test_the_session_clock_is_checked_against_the_server():
-    """SEAM 2 (plan S5.10; design §4.6 — the silent-divergence bug the one-brain
-    rule exists to prevent). Exactly ONE re-timing expression each side; the
-    reconnect path COMPARES them; a divergence beyond `retime_tolerance_seconds`
-    is REPORTED (a row on the degradations channel on the server, a line for the
-    screen on the phone) and never silently corrected — no assignment from the
-    server's clock back into the local one, and none the other way.
+    """SEAM 2 (the silent-divergence bug the one-brain rule exists to prevent).
+    Exactly ONE re-timing expression each side; the reconnect path COMPARES them; a
+    divergence beyond `retime_tolerance_seconds` is REPORTED (a row on the
+    degradations channel on the server, a line for the screen on the phone) and
+    never silently corrected — no assignment from the server's clock back into the
+    local one, and none the other way.
 
     The BEHAVIOURAL halves live where behaviour can be run: on the server,
     tests/test_trip_api.py::TestLivingSession::test_a_phone_clock_that_diverges_is_reported_never_corrected
@@ -199,7 +197,7 @@ def test_the_session_clock_is_checked_against_the_server():
     )
     for view in ("def _wire_clocks(", "def _session_promises("):
         assert "stop_clocks(" in _body_of(py[routes], view), f"{view} does not read the one clock"
-    # The CRUD adapter's walk-less running clock is gone (S5.10): it writes what
+    # The CRUD adapter's walk-less running clock is gone: it writes what
     # it is handed.
     adapter = _body_of(py[crud], "def route_script_to_stops(")
     assert "current_minute" not in adapter and "current_hour" not in adapter, (
@@ -245,19 +243,18 @@ def test_the_session_clock_is_checked_against_the_server():
 
 
 def test_the_audio_placement_rule_has_one_definition():
-    """SEAM 3 (plan S7.3; design §5.6 C7, §8.4; W7.2 R1). ONE definition of WHERE a
-    stop's piece plays: the server places each stop (`place_stops`, one module,
-    src/tour/placement.py), the wire carries it (`GeneratedStop.trigger`,
-    `SessionPlan.placement`), the item stores it, and the phone asks ONE predicate
-    (`_atPlace`, over the one distance-within-radius spelling `_within`) that reads the
-    wire's radius — no literal circle anywhere in the playback service. Until S7.3 the
-    app drew two circles of its own (10 m to start, 40 m to be "at"), for a 140 m square
-    and a doorway alike.
+    """SEAM 3. ONE definition of WHERE a stop's piece plays: the server places each
+    stop (`place_stops`, one module, src/tour/placement.py), the wire carries it
+    (`GeneratedStop.trigger`, `SessionPlan.placement`), the item stores it, and the
+    phone asks ONE predicate (`_atPlace`, over the one distance-within-radius spelling
+    `_within`) that reads the wire's radius — no literal circle anywhere in the
+    playback service. Before this rule the app drew two circles of its own (10 m to
+    start, 40 m to be "at"), for a 140 m square and a doorway alike.
 
     The BEHAVIOURAL halves live where behaviour can be run: tests/test_tour_placement.py
     (the rule: courtyard 140 m, door 10 m, the sentinel's own-place radius, the family's
     standstill, the wire) and mobile/test/services/tour_playback_service_test.dart, group
-    "the footprint is the place (S7.3)" (a 140 m courtyard triggers ~130 m from its
+    "the footprint is the place" (a 140 m courtyard triggers ~130 m from its
     centroid, a 10 m door stays silent at 30 m, the family piece waits for the standstill,
     told once is told, no trigger = no auto-play). What ONLY a source read can assert is
     the ONE-ness and the ABSENCE — one definition, one construction site, every wire site
@@ -300,7 +297,7 @@ def test_the_audio_placement_rule_has_one_definition():
     assert "trigger_json" in _body_of(py[crud], "def list_trips_for_profile(")
     adapter = _body_of(py[crud], "def route_script_to_stops(")
     assert '"trigger": placed[sp.id].model_dump()' in adapter
-    # S7.5: the priced queue is a planner decision compose cannot work out again — it is
+    # The priced queue is a planner decision compose cannot work out again — it is
     # persisted with the pick and handed back to the ONE rebuild (summarise_route's slot),
     # so a composed day's triggers carry the same seconds of line the planned day's did.
     generate = _body_of(py[routes], "def generate_trip(")
@@ -310,7 +307,7 @@ def test_the_audio_placement_rule_has_one_definition():
     assert "route.planned_queue_seconds.get(" in _body_of(
         py[src_dir / "tour" / "placement.py"], "def place_stops("
     ), "the rule does not READ the one queue map (a mention is not a read)"
-    # S7.6: the door and the placed outside seconds ride the same three hops — priced at
+    # The door and the placed outside seconds ride the same three hops — priced at
     # selection's ONE site beside the queue map, persisted with the pick, handed back to
     # the one rebuild, read by the rule.
     selection = py[src_dir / "tour" / "selection.py"]
@@ -324,7 +321,7 @@ def test_the_audio_placement_rule_has_one_definition():
     place_stops_body = _body_of(py[src_dir / "tour" / "placement.py"], "def place_stops(")
     assert "route.visit_goes_inside.get(" in place_stops_body
     assert "route.planned_outside_seconds.get(" in place_stops_body
-    # S7.7: the LEG piece (design §5.6 C7; plan defect 7) is split from the story by THE
+    # The LEG piece is split from the story by THE
     # one leg-vs-stop rule (`is_walk_concurrent` — the workbench's leg cards and the
     # blueprint's playback assignments read the same one), rides every wire site as
     # `leg_narration`, is voiced through the one session-line voicing table, stored on the
@@ -343,7 +340,7 @@ def test_the_audio_placement_rule_has_one_definition():
     assert '"leg_narration"' in voicing and '"leg_audio_url"' in voicing, (
         "the leg piece is not voiced through the one session-line table"
     )
-    # S7.7 (B): THE CHAPTERS — one rule cuts a marquee's story at its reviewed anchors
+    # THE CHAPTERS — one rule cuts a marquee's story at its reviewed anchors
     # (`place_segments`, reading the anchor off the POI through `anchor_of`), the
     # adapter carries them, generate and compose hand the route's anchors in through
     # ONE placement call (`place_anchors(route)`), the item stores `segments_json`,
@@ -382,21 +379,21 @@ def test_the_audio_placement_rule_has_one_definition():
     assert not literal, f"a literal circle in the playback service: {literal}"
     assert re.search(r"\b(?:10|40)\.0\b", playback) is None, "a 10 m / 40 m literal survives"
     assert "ownPlaceM" in playback, "the start square / finish do not read the day's own place"
-    # S7.7: the leg piece plays ON THE LEG — one start site, told once, off the wire's field.
+    # The leg piece plays ON THE LEG — one start site, told once, off the wire's field.
     assert playback.count("void _maybeStartLeg(") == 1, "the leg piece has not one start site"
     assert "legAudioUrl" in model and "legAudioUrl" in _body_of(playback, "void _maybeStartLeg(")
-    # S7.7 (B): the chapters — one model, one start site, the radius off the wire.
+    # The chapters — one model, one start site, the radius off the wire.
     assert "class StopSegment" in model and "final List<StopSegment> segments;" in model
     assert playback.count("void _maybeStartSegment(") == 1
-    # RE-DERIVED at W7.13: `_chapterDue()` split into `_chaptersAtThisStop` /
-    # `_chapterAtHand` / `_chapterOffered` for the panel's two chapter findings (an
-    # unheard chapter stays on the screen — Aiko; a told one replays by tap where you
-    # stand — Camille, R1(c)). The invariant is unchanged: the anchor's radius is read
-    # through the ONE within-a-radius spelling, in the one at-hand check.
+    # RE-DERIVED: `_chapterDue()` split into `_chaptersAtThisStop` /
+    # `_chapterAtHand` / `_chapterOffered` so an unheard chapter stays on the screen
+    # and a told one replays by tap where you stand. The invariant is unchanged: the
+    # anchor's radius is read through the ONE within-a-radius spelling, in the one
+    # at-hand check.
     assert "_within(" in _body_of(playback, "_chapterAtHand("), (
         "the chapter's radius is not read through the one within-a-radius spelling"
     )
-    # W7.13 (F&D): the R6 cap and the R5 resume rule ride the WIRE's policy block —
+    # The sentence cap and the resume rule ride the WIRE's policy block —
     # the server decides them (place_day), the model carries them, and the phone's
     # readers consult the policy before any party stand-in.
     assert "sentence_cap_s" in py[placement] and "interruption_resume" in py[placement]

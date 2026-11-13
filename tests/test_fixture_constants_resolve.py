@@ -50,7 +50,7 @@ def test_the_gold_standard_passage_is_where_the_scorer_looks():
     from scripts.score_gold_text import STANDARD, extract_gold_text
 
     assert STANDARD.is_file(), f"missing: {STANDARD}"
-    # Not just present — still the document the extractor can find its §1 in.
+    # Not just present — still carries the North Star heading the extractor looks for.
     # A moved file that no longer carries the heading is the same outage with a
     # friendlier traceback.
     assert extract_gold_text().strip(), "the §1 blockquote came back empty"

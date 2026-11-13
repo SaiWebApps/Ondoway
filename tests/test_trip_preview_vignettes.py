@@ -156,7 +156,7 @@ def test_unvoiceable_vignette_is_not_shown():
 
 
 def test_deeper_dive_flag_reflects_overflow_by_poi():
-    """KE9: a dwell stop gets has_deeper_dive=True iff its poi_id has non-empty
+    """A dwell stop gets has_deeper_dive=True iff its poi_id has non-empty
     overflow in overflow_by_poi; other dwell stops are False. Vignette stops are
     always False (walk-past has no 'keep exploring here' extras)."""
     vpoi = _poi("v1")
@@ -181,7 +181,7 @@ def test_deeper_dive_flag_reflects_overflow_by_poi():
 
 
 def test_deeper_dive_flag_false_when_no_overflow():
-    """KE9: with an empty overflow_by_poi every stop stays has_deeper_dive=False —
+    """With an empty overflow_by_poi every stop stays has_deeper_dive=False —
     behavior-preserving default."""
     stops = _preview_stops(
         _script_two_stops(), _route({}), {}, _snapshot(_poi("vx"), BeatRef(id="b", poi_id="vx")), {}

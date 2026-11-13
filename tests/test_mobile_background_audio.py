@@ -1,5 +1,5 @@
-"""Phase 7 S7.9 (design §5.6 C7 audio; W7.2 R5, 11/11 "background audio is not a feature, the
-product"): the phone KEEPS PLAYING pocketed and hears interruptions through ONE door.
+"""Background audio is not a feature, it is the product: the phone KEEPS PLAYING pocketed
+and hears interruptions through ONE door.
 
 What only a file read can assert — the iOS background modes the app declares, the audio
 session dependency, the one provider door the interruption events come through and the
@@ -50,7 +50,7 @@ def test_interruptions_reach_the_service_through_one_provider_door():
         "the interruption policy has not exactly one site"
     )
     assert "interruptions.listen(" in playback
-    # The policy resumes through the ONE door to a position (S7.6's playFrom), never a
+    # The policy resumes through the ONE door to a position (playFrom), never a
     # second seek path, and the missed close goes through the ONE queue door.
     policy = playback[playback.index("void _onInterruption(AudioInterruptionKind kind)") :]
     policy = policy[: policy.index("\n  }\n") + 4]

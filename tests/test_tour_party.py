@@ -1,14 +1,10 @@
-"""Phase 2 party tests — does the planner know WHO is walking?
+"""Party tests — does the planner know WHO is walking?
 
-One party-hand per file, on the `tests/test_tour_clock.py` model: every gating
-test cites the design section or persona line it enforces
-(specs/2026-08-07-tour-algorithm-redesign/04-implementation-plan.md §0.1.1).
+The party tests live here: the contract axes and presets, the resolver, the
+harness flags and per-stop table, the leg cap, pace, route surface, and the
+escape radius.
 
-Phase 2 party tests live here (plan steps S2.1-S2.4, S2.7, S2.8): the contract
-axes and presets, the resolver, the harness flags and per-stop table, the leg
-cap, pace, route surface, and the escape radius.
-
-The RED that proved S2.2 was real: `TourInput` is `extra="forbid"`
+The RED that proved the axes real: `TourInput` is `extra="forbid"`
 (src/tour/contract.py), so constructing it with `party` / the axis fields
 raised before the fields existed. That forbid is load-bearing for this file
 and its only guard is
@@ -40,16 +36,16 @@ def _resolved(**overrides) -> TourInput:
     return resolve_party_axes(_base_input(**overrides))
 
 
-# --- S2.2: the axes and the presets ------------------------------------------
+# --- the axes and the presets ------------------------------------------------
 
 
 def test_presets_are_shortcuts_over_axes_and_explicit_axes_win():
     """A preset is a SHORTCUT over the axes, and an explicitly-set axis always
     beats its preset's value.
 
-    Cites design §2.4 (01-design.md:136-137): "A party tap may set several
-    axes at once … the presets are shortcuts over axes, and the axes are what
-    the planner reads." A preset that could silently overwrite an axis the
+    A party tap may set several axes at once; the presets are shortcuts over
+    axes, and the axes are what the planner reads. A preset that could
+    silently overwrite an axis the
     visitor set by hand would make the tap an override, not a shortcut.
     """
     kept_ceiling = _resolved(party="family", max_stop_minutes=10)
@@ -68,8 +64,7 @@ def test_presets_are_shortcuts_over_axes_and_explicit_axes_win():
 def test_no_party_and_no_axes_is_todays_behaviour_byte_identical():
     """No party, no axes → nothing moves: every axis defaults to None (surface
     to "any"), and the resolver returns the input unchanged. The identity
-    default is what keeps every existing caller and golden byte-identical
-    (plan S2.2 declared breakage: none)."""
+    default is what keeps every existing caller and golden byte-identical."""
     from src.tour.contract import resolve_party_axes
 
     inp = _base_input()
@@ -84,12 +79,10 @@ def test_no_party_and_no_axes_is_todays_behaviour_byte_identical():
 
 
 def test_solo_preset_sets_no_ceiling():
-    """`solo` sets NO per-stop ceiling — Théo's anchor is 65 minutes inside
-    one building, and the panel locked this as cost D6: "party-preset stop
-    ceiling under 65 min DECAPITATES his day — ceiling must be lens-aware or
-    absent for solo" (03-panel-findings.md:193; docs/personas/
-    02-dark-history-walker.md). Design §2.4:130-132: "A per-stop ceiling is
-    never set by mobility."
+    """`solo` sets NO per-stop ceiling — a solo history walker's anchor can be
+    65 minutes inside one building, and a preset stop ceiling under 65 minutes
+    cuts the heart out of that day. A per-stop ceiling is never set by
+    mobility.
     """
     resolved = _resolved(party="solo")
     assert resolved.max_stop_minutes is None
@@ -98,10 +91,9 @@ def test_solo_preset_sets_no_ceiling():
 
 
 def test_couple_register_is_warm_never_romantic():
-    """`couple` sets the register to warm — and never romantic (design
-    §2.4:126: "warm (**never romantic**)"). No mobility axis moves: Fiona and
-    Dev walk at normal pace and need no caps
-    (docs/personas/09-couple-who-would-rather-talk.md)."""
+    """`couple` sets the register to warm — and never romantic. No mobility
+    axis moves: a couple who would rather talk walks at normal pace and needs
+    no caps."""
     resolved = _resolved(party="couple")
     assert resolved.narration_register == "warm"
     assert resolved.walking_pace is None
@@ -113,12 +105,10 @@ def test_family_preset_matches_nadias_day():
     """`family` sets the ceiling ~6 min, half pace, the rest cadence, the
     escape radius, no-stairs surface, and the family register.
 
-    Cites docs/personas/03-family-with-children.md — step 3: "Six minutes is
-    the ceiling here, not the floor" (line 20); step 4: "Pace drops to roughly
-    half" (line 21); step 5: the toilet stop, "Ten minutes, zero cultural
-    content, entirely non-negotiable" (lines 22-23) — and the panel's locked
-    cost D4: "cap DISTANCE FROM EXIT not just leg length — family days = tight
-    loops around short escape radius" (03-panel-findings.md:166).
+    On a family day six minutes is the ceiling at a stop, not the floor; pace
+    drops to roughly half; the toilet stop is non-negotiable; and the distance
+    from the exit is capped, not just the leg length, so family days are tight
+    loops around a short escape radius.
     """
     resolved = _resolved(party="family")
     assert resolved.max_stop_minutes == 6
@@ -133,16 +123,14 @@ def test_take_it_easy_slows_the_walking_never_the_talking():
     """`take-it-easy` caps the leg at 13 minutes, goes step-free, slows the
     pace, keeps the rest cadence — and leaves the register ALONE.
 
-    Cites docs/personas/05-step-free-visitor.md bullet 1 (lines 48-50): "Her
-    per-leg limit (12 minutes) is the binding constraint, and the request
-    carries it as a cap" — and design §2.4:133: "Register never follows
-    mobility. 'Slow the walking, never the talking.'" The design table
-    (01-design.md:122) gives take-it-easy the rest cadence as well as family:
-    Rosemary's day sits on benches (her steps 3 and 7).
+    A step-free visitor's per-leg limit is the binding constraint, and the
+    request carries it as a cap. Register never follows mobility: slow the
+    walking, never the talking. Take-it-easy gets the rest cadence as well as
+    family: a visitor who needs frequent rests sits on benches.
     """
     resolved = _resolved(party="take_it_easy")
-    # OWNER RULING 2026-08-19 (Phase 6, ruling 4): 12 produced a one-stop day on
-    # Rosemary's own ground; her doctor's measured number is 13, the cap every
+    # Owner decision, 2026-08-19: 12 produced a one-stop day on a step-free
+    # visitor's own ground; her doctor's measured number is 13, the cap every
     # good demo day already uses. RE-DERIVED from 12 with that written reason.
     assert resolved.max_leg_minutes == 13
     assert resolved.route_surface == "step_free"
@@ -157,10 +145,9 @@ def test_take_it_easy_slows_the_walking_never_the_talking():
 
 def test_with_luggage_slows_and_keeps_stairs_off_the_route():
     """`with-luggage` slows the pace and avoids stairs (and cobbles, which
-    ride S2.7's costing): Marcus walks "Slower than his normal pace, and the
-    wheels make cobbles genuinely unpleasant"
-    (docs/personas/04-layover-sprinter.md step 2, lines 17-19; "Luggage
-    changes the route surface", line 51). Register stays solo; no ceiling."""
+    ride the route-surface costing): a traveller with wheeled luggage walks
+    slower than normal, and the wheels make cobbles unpleasant. Luggage
+    changes the route surface. Register stays solo; no ceiling."""
     resolved = _resolved(party="with_luggage")
     assert resolved.walking_pace is not None and 1.0 < resolved.walking_pace < 2.0
     assert resolved.route_surface == "no_stairs"
@@ -170,8 +157,7 @@ def test_with_luggage_slows_and_keeps_stairs_off_the_route():
 
 def test_walking_pace_below_one_is_rejected():
     """The pace multiplier's fast direction is LOCKED: a multiplier below 1.0
-    would re-open the raised-and-held-back `PACE_KMH` pin from the slow side
-    (plan S2.2/S2.4: "the fast direction is the pace pin's locked half").
+    would re-open the raised-and-held-back `PACE_KMH` pin from the slow side.
     Slow is a fact about real walkers; fast is a lie about the city."""
     with pytest.raises(ValidationError):
         _base_input(walking_pace=0.8)
@@ -186,14 +172,14 @@ def test_party_axes_round_trip_through_model_dump():
     assert again == inp
 
 
-# --- S2.1: the harness speaks party, and shows a DAY --------------------------
+# --- the harness speaks party, and shows a DAY --------------------------------
 
 
 def test_party_flags_parse_and_flagless_parse_carries_no_party():
     """`scripts/tour_build.py` accepts --party and the six axis flags, and a
     flagless parse carries no party and no axes — the identity default that
-    keeps a legacy invocation byte-identical (plan S2.1; design §9 D2: "six
-    visibly different days" needs the flags; §10.9 measurement-first)."""
+    keeps a legacy invocation byte-identical. The flags are what let the
+    harness build visibly different days side by side."""
     import importlib
 
     tour_build = importlib.import_module("scripts.tour_build")
@@ -266,11 +252,9 @@ def test_breakdown_prints_one_line_per_stop_with_category_and_minutes(capsys):
     """The breakdown shows a DAY, not a total: one line per stop — name,
     place category, stand/visit minutes, and the walking leg INTO that stop.
 
-    Cites design §9 D2 ("six visibly different days side by side" — the
-    side-by-side table is assembled from these lines verbatim) and the
-    carried Phase 1 gap (S1.7 promised category labels in the harness
-    corridor printout; only the review tables showed them — plan deviation
-    register ii).
+    The side-by-side table of different days is assembled from these lines
+    verbatim, and the harness printout carries the category labels, not only
+    the review tables.
     """
     import importlib
 
@@ -299,7 +283,7 @@ def test_breakdown_prints_dash_when_route_carries_no_pricing(capsys):
     """A legacy-shape route (empty `planned_visit_seconds` — the four legacy
     harnesses' shape, per the field's own comment in contract.py) prints the
     SAME table with a dash in the visit column, never a different shape and
-    never a zero that reads as a measurement (plan S2.1 sabotage list)."""
+    never a zero that reads as a measurement."""
     import importlib
 
     tour_build = importlib.import_module("scripts.tour_build")
@@ -317,13 +301,13 @@ def test_breakdown_prints_dash_when_route_carries_no_pricing(capsys):
     assert "—" in tuileries[0], "unpriced visit minutes print as a dash, not a zero"
 
 
-# --- S2.4: pace reaches the clock, in the slow direction ----------------------
+# --- pace reaches the clock, in the slow direction ----------------------------
 
 
 def test_pace_multiplier_of_one_is_byte_identical():
     """The identity default: 1.0 is the same arithmetic as before this
     parameter existed, in both the seconds calculation and the reach circle
-    (plan S2.4 declared breakage: none — multiplier unset/1.0 = today)."""
+    (multiplier unset/1.0 = today)."""
     from src.tour.routing import envelope_radius_m, pace_corrected_walk_seconds
 
     assert pace_corrected_walk_seconds(1000.0) == pace_corrected_walk_seconds(
@@ -336,10 +320,8 @@ def test_pace_multiplier_of_one_is_byte_identical():
 
 def test_half_pace_doubles_legs_and_halves_the_circle():
     """A multiplier of 2.0 doubles a leg's seconds and halves the envelope
-    radius — Nadia's day: "Pace drops to roughly half"
-    (docs/personas/03-family-with-children.md step 4, line 21). Cites design
-    §2.4 and Marcus step 2 (docs/personas/04-layover-sprinter.md: "Slower
-    than his normal pace" — the with-luggage preset's own slow multiplier)."""
+    radius — a family's pace drops to roughly half, and the with-luggage
+    preset has its own slow multiplier."""
     from src.tour.routing import envelope_radius_m, pace_corrected_walk_seconds
 
     normal_seconds = pace_corrected_walk_seconds(1000.0)
@@ -352,8 +334,8 @@ def test_half_pace_doubles_legs_and_halves_the_circle():
 
 
 def test_density_assessment_for_a_paced_request_reports_the_smaller_walk_radius():
-    """The tourability gate and the planner must shrink together (plan S2.4
-    re-plan finding: `density.assess` computes its own `envelope_radius_m`,
+    """The tourability gate and the planner must shrink together
+    (`density.assess` computes its own `envelope_radius_m`,
     so pace has to thread there too or the gate offers a circle the planner
     will refuse to walk). Same corpus, same request, only `walking_pace`
     differs — the paced assessment's `walk_radius_m` is exactly half."""
@@ -376,13 +358,12 @@ def test_select_route_prices_a_slower_partys_legs_when_seating_stops():
     the scaled leg cost when deciding what fits. Proof: a rich anchor a
     normal-pace round trip affords (worth the there-and-back walk) a
     half-pace round trip cannot, because every leg toward it now costs twice
-    as long against the SAME walk budget. Cites Nadia step 4 (pace halves)
-    and design §2.4 ("a half-pace family both walks slower and is offered a
-    smaller world" — plan S2.4's own line)."""
+    as long against the SAME walk budget. A half-pace family both walks
+    slower and is offered a smaller world."""
     from src.tour.selection import select_route
     from tests.test_tour_selection import PDV, _density_fillers, _poi, _snap
 
-    # RE-DERIVED for the three-minute tight (Phase 6 S6.6): six fillers filled an
+    # RE-DERIVED for the three-minute tight: six fillers filled an
     # hour at 270 s a stop; at 180 the same pool is "far short" and the day
     # refuses before the pace question is even asked. n=None derives the pool
     # from the planner's own constants (the sweep's fix).
@@ -411,8 +392,8 @@ def test_select_route_prices_a_slower_partys_legs_when_seating_stops():
 
 def test_isochrone_walking_speed_override_rides_the_request(monkeypatch):
     """The Valhalla reach contour's `walking_speed` scales by
-    `REACH_PACE_KMH / multiplier` per request when pace is set (plan S2.4:
-    "the road polygon must shrink with the circle"), and stays the documented
+    `REACH_PACE_KMH / multiplier` per request when pace is set (the road
+    polygon must shrink with the circle), and stays the documented
     default when it is not — proven against the real request body, the same
     MockTransport-recording shape `test_tour_routing_engine.py` already uses.
     """
@@ -449,19 +430,17 @@ def test_isochrone_walking_speed_override_rides_the_request(monkeypatch):
     )
 
 
-# --- S2.7: route surface rides per-request costing -----------------------------
+# --- route surface rides per-request costing -----------------------------------
 
 
 def test_step_free_axis_rides_the_costing_options():
     """`route_surface` set → the mock transport sees the step-avoiding
     override in the request body; unset → byte-identical body to today.
 
-    Cites Rosemary step 4 ("The riverside stairs down to the water, which any
-    shortest-path router would love, are unusable to her" —
-    docs/personas/05-step-free-visitor.md line 29) and Marcus step 2 ("the
-    wheels make cobbles genuinely unpleasant" — 04-layover-sprinter.md line
-    18). Mapping proven live at W2.1 (phase2-ledger.md): `no_stairs` ->
-    `step_penalty`; `step_free` adds `type: wheelchair`.
+    Riverside stairs that any shortest-path router would love are unusable to
+    a step-free visitor, and wheeled luggage makes cobbles unpleasant. Mapping
+    proven live: `no_stairs` -> `step_penalty`; `step_free` adds
+    `type: wheelchair`.
     """
     import json
 
@@ -552,7 +531,7 @@ def test_route_with_receipt_surface_override_produces_a_self_consistent_receipt(
         assert plain_receipt.routing_config_json == VALHALLA_ROUTING_CONFIG_JSON
 
 
-# --- S2.6: place judgements — one poi_score consumer per judgement -----------
+# --- place judgements — one poi_score consumer per judgement -----------------
 
 
 def test_family_days_weight_children_can_run_places_up():
@@ -560,9 +539,9 @@ def test_family_days_weight_children_can_run_places_up():
     otherwise-identical rival; no party (or a non-family party) leaves the two
     tied.
 
-    Cites Nadia (03-panel-findings.md: "38 of her 55 place-minutes valuable
-    because kids can be loud/fast/free-range; corpus has no 'children can run
-    here' channel") and design row 6.4.
+    Much of a family's day is valuable because the kids can be
+    loud/fast/free-range, and the corpus otherwise has no 'children can run
+    here' channel.
     """
     from src.tour.selection import poi_score
     from tests.test_tour_selection import PDV, _poi, _snap
@@ -595,10 +574,8 @@ def test_take_it_easy_and_couple_days_weight_sit_and_talk_places_up():
     """Take-it-easy and couple days weight a `sit_and_talk` place up; family
     and solo do not.
 
-    Cites Fiona & Dev's two green chairs ("The Palais-Royal garden wins the
-    afternoon on seating, enclosure and quiet — three properties no POI in
-    the corpus carries" — docs/personas/09-couple-who-would-rather-talk.md)
-    and design row 6.4.
+    A couple who would rather talk picks a garden for its seating, enclosure
+    and quiet, properties no POI in the corpus otherwise carries.
     """
     from src.tour.selection import poi_score
     from tests.test_tour_selection import PDV, _poi, _snap
@@ -622,8 +599,8 @@ def test_take_it_easy_and_couple_days_weight_sit_and_talk_places_up():
 
 
 def test_spotlight_does_not_gain_the_affordance_factor():
-    """`spotlight` (the banding function) is UNCHANGED by S2.6 — the plan's
-    own instruction: "banding is not party-aware in this phase". A
+    """`spotlight` (the banding function) is UNCHANGED by the place
+    judgements: banding is not party-aware. A
     `children_can_run` place scores identically under `spotlight` regardless
     of party; only `poi_score` (ranking) moves."""
     from src.tour.selection import spotlight
@@ -635,13 +612,13 @@ def test_spotlight_does_not_gain_the_affordance_factor():
     corpus = _snap([runnable])
 
     # spotlight() takes no `party` argument at all — its signature itself is
-    # the proof; this call would raise TypeError if S2.6 had added one.
+    # the proof; this call would raise TypeError if one were added.
     value_a = spotlight(runnable, lenses=None, snapshot=corpus)
     value_b = spotlight(runnable, lenses=None, snapshot=corpus)
     assert value_a == value_b
 
 
-# --- S2.8: escape radius as a candidate filter --------------------------------
+# --- escape radius as a candidate filter --------------------------------------
 
 
 def test_escape_radius_refuses_a_far_anchor_on_family_but_seats_it_on_solo():
@@ -649,16 +626,14 @@ def test_escape_radius_refuses_a_far_anchor_on_family_but_seats_it_on_solo():
     is set (family) and seated when it is not (solo) — the SAME corpus, the
     SAME distance, only the axis differs.
 
-    Cites design §2.4: "a meltdown 25 minutes from the exit means carrying a
-    child for 25 minutes" — escape radius is a constraint on distance from
-    the START, not on any one leg — and the panel's locked cost D4
-    (03-panel-findings.md: "cap DISTANCE FROM EXIT not just leg length —
-    family days = tight loops around short escape radius").
+    A meltdown 25 minutes from the exit means carrying a child for 25 minutes,
+    so escape radius is a constraint on distance from the START, not on any
+    one leg: family days are tight loops around a short escape radius.
     """
     from src.tour.selection import select_route
     from tests.test_tour_selection import PDV, _density_fillers, _poi, _snap
 
-    # RE-DERIVED for the three-minute tight (Phase 6 S6.6): eight fillers filled
+    # RE-DERIVED for the three-minute tight: eight fillers filled
     # 90 minutes at 270 s a stop; at 180 the day is "far short" and refuses before
     # the axis is asked. Swept 14-22: 14-18 hold both arms (solo seats the far
     # anchor, the family radius refuses it); 20+ out-competes it even solo. 16 is
@@ -689,7 +664,7 @@ def test_escape_radius_refuses_a_far_anchor_on_family_but_seats_it_on_solo():
     )
 
 
-# --- S2.3: the per-leg cap becomes a constraint ------------------------------
+# --- the per-leg cap becomes a constraint ------------------------------------
 
 #: ~555 m north of PDV: a ~15-minute leg at the corpus pace (1.62 s/m) — over
 #: a 12-minute cap. The two stones flank the midpoint ±100 m east/west, each
@@ -703,7 +678,7 @@ _LEG_CAP_SECONDS = 12 * 60
 def _leg_cap_corpus(*, with_stones: bool):
     from tests.test_tour_selection import PDV, _density_fillers, _poi, _snap
 
-    # RE-DERIVED for the three-minute tight (Phase 6 S6.6): 13/15 fillers filled
+    # RE-DERIVED for the three-minute tight: 13/15 fillers filled
     # 120 minutes at 270 s a stop; at 180 the pool starves and every arm refuses,
     # while the fully-derived pool (32) is so rich the far anchor is out-competed
     # and never seated. Swept 18-30 against every arm: 18-24 hold all of them
@@ -750,13 +725,10 @@ def test_a_leg_cap_prefers_more_walking_in_shorter_pieces():
     the far anchor with MORE total walking in shorter pieces when the city
     offers stepping stones, and trades it away when it does not.
 
-    Cites docs/personas/05-step-free-visitor.md bullet 1 (lines 48-50): "A
-    walking budget is not one number. Rosemary's total (54 minutes) is
-    unremarkable. Her *per-leg* limit (12 minutes) is the binding constraint,
-    and the request carries it as a cap. A route with one 25-minute leg and
-    one 5-minute leg has the same total and is unusable" — and the Phase 1
-    panel's Rosemary dissent (phase1-ledger.md W1.9 item 7: both D1 days
-    carried a 17/19-minute longest leg she cannot walk).
+    A walking budget is not one number. A step-free visitor's total can be
+    unremarkable while her *per-leg* limit is the binding constraint, and the
+    request carries it as a cap. A route with one 25-minute leg and one
+    5-minute leg has the same total as a gentler one and is unusable.
     """
     from src.tour.selection import select_route
 
@@ -793,8 +765,8 @@ def test_a_leg_cap_prefers_more_walking_in_shorter_pieces():
 
 
 def test_a_leg_cap_the_uncapped_day_already_honours_is_already_true():
-    """W4.2 locked semantics 1, measured at the W4.12 close: "when a turn cannot
-    bind it SAYS already true" — and changes nothing. A cap the un-capped day
+    """When a dial turn cannot bind it SAYS already true, and changes
+    nothing. A cap the un-capped day
     already satisfies must return THAT day, byte-identical, and never enter the
     bounded search.
 
@@ -803,10 +775,9 @@ def test_a_leg_cap_the_uncapped_day_already_honours_is_already_true():
     the cap — so under a cap the repair could not shrink an over-long day into
     band. On the live flagship (Tuileries→Notre-Dame, 300 min) whose un-capped
     day has an 18-minute longest walk, a 25-MINUTE cap REFUSED with the same
-    numbers a 9-minute cap did (Camille: "loosening a constraint deleted my
-    tour"; Rosemary: "if loosening a limit changes not one digit, the limit is
-    not in the sum"). The fix is the ruling itself: plan without the cap first;
-    if it already honours the cap, it is the day.
+    numbers a 9-minute cap did: loosening a constraint deleted the tour, and a
+    limit whose loosening changes not one digit is not in the sum. The fix:
+    plan without the cap first; if it already honours the cap, it is the day.
 
     UNDO TEST: delete the "ALREADY TRUE" block at the top of select_route ->
     the 20-minute cap runs the bounded search and returns a different route
@@ -856,25 +827,18 @@ def test_a_leg_cap_the_uncapped_day_already_honours_is_already_true():
 
 
 def test_a_leg_cap_that_starves_the_day_refuses_with_the_cap_named():
-    """Phase 4 S4.5, the W4.2 panel's unanimous worst finding (D-i): a dial turn
-    may refuse with a reason, or re-plan a full day; it may NEVER quietly hand
-    back a sixth of what was asked for.
+    """A dial turn may refuse with a reason, or re-plan a full day; it may
+    NEVER quietly hand back a sixth of what was asked for.
 
-    Measured 2026-08-11 (evidence/phase4-dials/a-leg6, b-leg6): the "shorter
-    walks" strawman at 6 minutes collapsed a 180-minute round trip to ONE stop,
-    zero walking, ~30 minutes of day — shipped as "planned 180", tourability
-    GREEN. Cites the panel by name: Aiko ("a dial turn may refuse with a
-    reason, or re-plan a full day; it may never quietly hand back a sixth of
-    what I asked"), Greta ("c-leg12 shows the honest behaviour: it REFUSES —
-    make leg6 refuse like that"), Rosemary ("the dial must never silently
-    return less day than asked").
+    Measured 2026-08-11: the "shorter walks" strawman at 6 minutes collapsed a
+    180-minute round trip to ONE stop, zero walking, ~30 minutes of day —
+    shipped as "planned 180", tourability GREEN.
 
-    The floor stays SOFT for honest near-misses (design §8.3: duration is a
-    ceiling, not a contract to fill — the well-liked base days run 62-68% and
-    ship disclosed). What refuses is the EXTREME: a best-possible day under
-    HALF the ask. And the refusal must name what binds — the leg cap — not
-    claim the day "overruns" (the wrong-template defect the panel read at
-    c-leg12).
+    The floor stays SOFT for honest near-misses (duration is a ceiling, not a
+    contract to fill — the well-liked base days run 62-68% and ship
+    disclosed). What refuses is the EXTREME: a best-possible day under HALF the
+    ask. And the refusal must name what binds — the leg cap — not claim the
+    day "overruns" (the wrong-template defect).
     """
     from src.tour.selection import CertificationPlanningInfeasibleError, select_route
     from tests.test_tour_selection import PDV, _density_fillers, _poi, _snap
@@ -920,7 +884,7 @@ def test_a_leg_cap_that_starves_the_day_refuses_with_the_cap_named():
         "the refusal claims the day OVERRUNS while it starved — the c-leg12 "
         "wrong-template defect the panel named"
     )
-    # W4.12 (Paulo): named in the dial's own words — "the N-minute limit on any
+    # Named in the dial's own words — "the N-minute limit on any
     # single walk" — never "walking-leg cap ... binds", which the language judge
     # ruled three second meanings of everyday words in one clause.
     assert "limit on any single walk" in message and "6-minute" in message, (
@@ -931,7 +895,7 @@ def test_a_leg_cap_that_starves_the_day_refuses_with_the_cap_named():
 
     # THE OPEN EXEMPTION — the same starved request under end_hardness='open'
     # ships the short day instead of refusing: open means "however long it is"
-    # (design §2.3, Julien's leavable-blank clock).
+    # (a visitor may leave the end of the day blank).
     open_day = select_route(
         TourInput(
             start=PDV,
@@ -951,8 +915,7 @@ def test_breakdown_prints_the_resolved_party_even_when_it_moves_no_number(capsys
     whose only new axis is the narration register, which touches none of
     walk/dwell/leg/table cells) must still print visibly different output —
     the day has to be different in the OUTPUT, not just in the code path
-    that built it. Cites design §9 D2 ("six visibly different days") and
-    §2.4 ("take-it-easy + solo is a legitimate pair")."""
+    that built it. Take-it-easy + solo is a legitimate pair."""
     import importlib
 
     tour_build = importlib.import_module("scripts.tour_build")
@@ -980,9 +943,8 @@ def test_breakdown_prints_the_resolved_party_even_when_it_moves_no_number(capsys
 
 
 def test_seven_number_block_is_unchanged_above_the_per_stop_table(capsys):
-    """The Phase 1 seven-number block still opens the breakdown, above the new
-    table, so the D1 evidence stays readable (plan S2.1: "The seven-number
-    block is unchanged above the new table")."""
+    """The seven-number block still opens the breakdown, unchanged, above the
+    new table, so earlier measurements stay readable."""
     import importlib
 
     tour_build = importlib.import_module("scripts.tour_build")
@@ -1004,13 +966,13 @@ def test_seven_number_block_is_unchanged_above_the_per_stop_table(capsys):
 
 
 # ---------------------------------------------------------------------------
-# Phase 5 S5.4 — the leg cap is certified on the EXACT legs of the FINAL route
+# The leg cap is certified on the EXACT legs of the FINAL route
 # ---------------------------------------------------------------------------
 
 
 def _ring_of(center, radius_m, count, prefix, **kw):
     """`count` POIs on a ring around `center` (consecutive ones radius*sqrt(2)
-    apart at four points) — the same fixture shape S5.3 uses."""
+    apart at four points)."""
     import math
 
     from tests.test_tour_selection import _poi
@@ -1032,7 +994,7 @@ def _street_minutes(transits) -> int:
     """The test's OWN oracle for the longest street leg — deliberately spelled
     apart from `routing.longest_walk_minutes`, because a certification that reads
     the estimate would fool an assertion that reads it through the same helper
-    (S5.4's undo probe proved exactly that)."""
+    (an undo probe proved exactly that)."""
     worst = 0
     for t in transits:
         exact = t.leg_seconds if (t.source == "valhalla" and t.leg_seconds is not None) else None
@@ -1057,22 +1019,20 @@ def _at(center, distance_m, bearing_deg, pid, **kw):
 
 
 def test_the_leg_cap_is_certified_on_the_street_route_not_the_estimate():
-    """Phase 5 S5.4 (Phase-4 CARRIED 1; W4.12 fix 11 made the screen honest
-    meanwhile): a day whose ESTIMATED legs honour "no single walk longer than N
+    """A day whose ESTIMATED legs honour "no single walk longer than N
     minutes" and whose STREET-ROUTED legs do not must never ship with a head line
-    that contradicts the dial the person turned. Measured live at W5.1 (b)1:
+    that contradicts the dial the person turned. Measured live:
     Carnavalet -> Place des Vosges est 473 s <= 540 < exact 576 s under a 9-minute
-    cap; Rosemary's Tuileries -> Orsay est 11.1 min, 13.8 by the street under her
-    12 (05-step-free-visitor.md, breaks bullet 1: "A walking budget is not one
-    number ... a route with one 25-minute leg ... is unusable"). W5.2 R1.6 (Marcus,
-    Rosemary, Sofia, Nadia, Aiko): every entry is timed on the STREET route.
+    cap; a step-free visitor's Tuileries -> Orsay est 11.1 min, 13.8 by the street
+    under her 12. A walking budget is not one number: one long leg makes a route
+    unusable. Every entry is timed on the STREET route.
 
     After ``summarise_route`` has produced the final routed transits, the cap is
     certified on ``leg_walk_seconds`` — THE one expression, exact when a polyline
     came back — through the same rounding the head line reads
     (``routing.longest_walk_minutes``); on a breach the planner tightens once and
     retries at the exceeded value, and if the street still breaks the cap it
-    REFUSES with the cap named (W4.12 fix 10's plain words) rather than shipping a
+    REFUSES with the cap named in plain words rather than shipping a
     contradiction.
 
     Arm A uses ``tests/routing_doubles.DivergentRoutingClient`` — the only double in
@@ -1130,19 +1090,19 @@ def test_the_leg_cap_is_certified_on_the_street_route_not_the_estimate():
 
 
 def test_a_fold_that_merges_two_legs_cannot_leave_the_merged_leg_over_the_cap():
-    """Phase 5 S5.4, arm B — the LIVE mechanism behind Phase-4 CARRIED 1 (measured
-    in-process 2026-08-18, phase5-ledger.md defect 11): on the PdV cap-9 day the
+    """The second arm — the LIVE mechanism behind a shipped leg over the cap
+    (measured in-process 2026-08-18): on the PdV cap-9 day the
     repair certified Carnavalet -> Victor Hugo 538 s and Victor Hugo -> Place des
     Vosges 176 s, both under 540; co-located demotion then folded Victor Hugo into
     Place des Vosges and the MERGED leg Carnavalet -> Place des Vosges (576 s) was
-    never re-checked. Design §4.5.3: "Every drop re-checks the longest-single-walk
-    cap. Dropping a stop MERGES its two legs" — and a fold IS a drop.
+    never re-checked. Dropping a stop MERGES its two legs, and a fold IS a drop,
+    so the merged leg must honour the longest-single-walk cap too.
 
     Hermetic on default legs (no double): a name-twin pair on one bearing — the
     lower-tier twin is the stepping stone the higher-tier twin needs to be reached
     under the cap; the twin collapse drops the stepping stone and the merged leg
-    breaks the cap. The invariant, robust to HOW it is honoured (S5.4 certifies and
-    refuses; S5.5's one drop primitive may later re-check the fold itself and keep
+    breaks the cap. The invariant, robust to HOW it is honoured (the street
+    certification refuses; a drop that re-checks the fold itself may instead keep
     the day): a shipped day's longest STREET leg honours the cap, or the day is
     refused with the cap named. Never a shipped contradiction.
     """
@@ -1182,12 +1142,12 @@ def test_a_fold_that_merges_two_legs_cannot_leave_the_merged_leg_over_the_cap():
 
 
 def test_a_cap_retry_that_loses_a_rest_is_the_honest_line_not_a_gutted_day(monkeypatch):
-    """W5.14, all eleven (Q1), on Rosemary's real day: under her preset's 12-minute cap
-    the street-certified retry (S5.4) tightened to 11, dropped the Orangerie AND her
+    """On a step-free visitor's real day: under her preset's 12-minute cap
+    the street-certified retry tightened to 11, dropped the Orangerie AND her
     bench, and shipped a one-stop day with 80 unplanned minutes and no rest — while
     the same build says the honest line for a ten-minute leg at Place des Vosges.
-    Rosemary: "removing my rest to satisfy my leg cap is backwards — the rest exists
-    because of the legs". So the retry may not pay with a rest: a retried day that
+    Removing a rest to satisfy a leg cap is backwards: the rest exists because of
+    the legs. So the retry may not pay with a rest: a retried day that
     lost a rest the first day had seated is REFUSED with the line that names the
     street number and her limit, and SHE decides (allow the longer walk, or a
     shorter day). A retry that keeps every rest still ships. UNDO: return the retry
@@ -1221,7 +1181,7 @@ def test_a_cap_retry_that_loses_a_rest_is_the_honest_line_not_a_gutted_day(monke
 
     # The first pass breaks the cap on the street (one leg stretched); the retry
     # "lands" under the cap but without the bench. Both are stand-ins for what the
-    # planner produced on Rosemary's day (a stretched leg; a retry that paid with
+    # planner produced on a step-free visitor's day (a stretched leg; a retry that paid with
     # her rest).
     stretched = honest.model_copy(
         update={
@@ -1268,11 +1228,11 @@ def test_a_cap_retry_that_loses_a_rest_is_the_honest_line_not_a_gutted_day(monke
 
 
 def test_a_walking_cap_that_leaves_a_one_stop_day_says_what_a_longer_walk_would_buy():
-    """W5.14, all eleven (Q1), Rosemary's preset day: under her 12-minute cap the
+    """A step-free visitor's preset day: under her 12-minute cap the
     planner's own estimate cannot reach the Orangerie, so she gets ONE stop, no walking,
     no rest, 90 minutes of 180 — "a museum ticket", served with its shortfall
-    disclosed because the W4.2 line (50 %) stands. The panel: "say the line to me, and
-    offer the answer you already own". So a day of one or two story stops under a cap,
+    disclosed because the 50 % line stands. She needs the line said to her, with the
+    answer the planner already owns. So a day of one or two story stops under a cap,
     below its nominal, is looked at ONCE at a cap one to three minutes longer, and a
     materially fuller day there becomes ONE honest line on the degradations channel
     (the itinerary shows it): what the longer walk would buy, in her words — she
@@ -1286,7 +1246,7 @@ def test_a_walking_cap_that_leaves_a_one_stop_day_says_what_a_longer_walk_would_
     # One long stand 150 m from the start (5.4 min: inside a 6-minute cap; 50 minutes
     # there, so the one-stop day sits ABOVE the 50 % line and ships) and a
     # cluster 270 m out (7.3 min: over 6, under 8) — the cap is what keeps the day to
-    # one stop, exactly Rosemary's shape.
+    # one stop, exactly that step-free day's shape.
     near = _at(PDV, 150.0, 0.0, "near", tier=5, beat_count=5).model_copy(
         update={"typical_duration_min": 70}
     )
@@ -1309,7 +1269,7 @@ def test_a_walking_cap_that_leaves_a_one_stop_day_says_what_a_longer_walk_would_
     assert line.startswith("With walks of up to 8 minutes this day would have"), line
     assert "allow longer walks to get it" in line, line
     assert "instead of" in line, line
-    # Control: a day of three stops or more under its cap (S5.4's six-stand ring,
+    # Control: a day of three stops or more under its cap (the six-stand ring,
     # with the same far cluster beyond the cap) is never looked at again, and
     # nothing is offered — the line is for the one-or-two-stop shape only.
     ring = [
@@ -1325,9 +1285,8 @@ def test_a_walking_cap_that_leaves_a_one_stop_day_says_what_a_longer_walk_would_
 
 
 def test_a_step_free_day_is_not_labelled_as_routed_with_foreign_settings():
-    """W5.14 (Rosemary's dissent: "I will not sign 'a little off' as a degradation on
-    my legs"): every take-it-easy day carried `routing_setup_unexpected` — its legs
-    are routed STEP-FREE (plan S2.7's override), their receipts hash that
+    """Every take-it-easy day carried `routing_setup_unexpected` — its legs
+    are routed STEP-FREE (the route-surface override), their receipts hash that
     configuration, and the check expected only the default one. This build's
     settings under ANY route-surface override are this build's settings; only a
     receipt matching none of them was routed by something else. UNDO: compare
@@ -1363,7 +1322,7 @@ def test_a_step_free_day_is_not_labelled_as_routed_with_foreign_settings():
     )
 
 
-# --- Phase 6 S6.1a: the route surface rides through compose and finalize -----
+# --- the route surface rides through compose and finalize --------------------
 
 
 def test_a_surface_routed_day_finalizes_under_its_own_routing_identity():
@@ -1372,10 +1331,9 @@ def test_a_surface_routed_day_finalizes_under_its_own_routing_identity():
     config hash, so the blueprint's self-consistency check passes and the
     workbench can author a take-it-easy or family day at all.
 
-    Cites design §2.4 (route surface: "no stairs (buggy)" / "step-free") and plan
-    S2.7's own sentence ("never a route selected under one costing and reported
-    under another"). MEASURED 2026-08-19 (Phase 6 W6.1, the in-process compose of
-    Rosemary's take-it-easy day): `finalize_premium_tour` stamped the DEFAULT
+    A route is never selected under one costing and reported under another.
+    MEASURED 2026-08-19 (the in-process compose of a take-it-easy day):
+    `finalize_premium_tour` stamped the DEFAULT
     `VALHALLA_ROUTING_CONFIG_SHA256` into the fingerprint while every leg receipt
     carried the step-free hash, so `FinalTourBlueprint` raised "Valhalla receipt
     routing configuration differs from build fingerprint" — three attempts, three
@@ -1405,7 +1363,7 @@ def test_a_surface_routed_day_finalizes_under_its_own_routing_identity():
         stitched, sequence, route = _cross_stop_echo_fixture()
         override = ROUTE_SURFACE_COSTING_OVERRIDES[surface]
         # Real receipts from the real client over a mock transport, routed under
-        # the surface's costing exactly as selection routes them (S2.7).
+        # the surface's costing exactly as selection routes them.
         legs = []
         with _client(_valhalla_handler) as rc:
             prev = route.pois[0]

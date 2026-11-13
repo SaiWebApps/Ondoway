@@ -1,8 +1,8 @@
-"""Step-4 CORE tests for ``src/onboard/assemble.py`` (pure ``assemble`` +
+"""CORE tests for ``src/onboard/assemble.py`` (pure ``assemble`` +
 disk/registry ``write_city``).
 
 Pure — no Neo4j, no network. Candidates are built from the committed
-``tests/fixtures/onboard/london/`` fixtures via the real Step-3 connectors
+``tests/fixtures/onboard/london/`` fixtures via the real connectors
 (``run/`` for the fuller geosearch + extracts, the flat wikidata/osm/wikivoyage
 files for cross-source signal), then merged/written into ``tmp_path``. Each
 behavior below has a mutation/undo target documented on the test so a reverted
@@ -296,12 +296,12 @@ def test_registry_entry_written_without_centre(tmp_path: Path) -> None:
     assert entry["bbox"] == [51.28, 51.7, -0.51, 0.33]
     assert entry["cloud_deployed"] is False
     assert "centre" not in entry
-    # M10 (Docs/adr/0006): the country its opening hours are read against.
+    # The country its opening hours are read against.
     assert entry["country"] == "GB"
 
 
 def test_a_city_with_no_country_is_refused_before_it_is_registered(tmp_path: Path) -> None:
-    """M10: public holidays are a country's, so a door tagged ``PH off`` is open
+    """Public holidays are a country's, so a door tagged ``PH off`` is open
     or shut by that and nothing else — and the planner refuses a dated day in a
     city that has none. A city onboarded without one would look finished and then
     fail at its first walker's first dated request, months later and far from

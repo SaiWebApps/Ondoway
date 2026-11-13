@@ -1,7 +1,6 @@
 """Pins the mechanical FLOOR of the tour quality standard.
 
-Standard: ``specs/2026-07-19-tour-quality-standard/01-standard.md`` §4 (the checks)
-and §5 (threshold provenance). Module under test: ``src/tour/quality_rubric.py``.
+Module under test: ``src/tour/quality_rubric.py``.
 
 Every test here is a DISCRIMINATOR: delete the check it names from
 ``quality_rubric.py`` and the test must go RED. Each docstring states the defect it
@@ -192,9 +191,9 @@ def _checks(report) -> list[str]:
 
 
 def test_c1_starved_fires_on_the_measured_sainte_chapelle_case() -> None:
-    """GUARDS: a rich POI reduced to a one-liner (standard §4 C1, §3 P7).
+    """GUARDS: a rich POI reduced to a one-liner (C1).
 
-    The REAL measured case, §5: on the Ile de la Cite 60-min tour, Sainte-Chapelle
+    The REAL measured case: on the Ile de la Cite 60-min tour, Sainte-Chapelle
     (tier 5, 12 corpus beats) rendered as 9 words = 0.75 words/beat, against a floor
     of 12 x 12 = 144. UNDO: delete the ``if available >= STARVE_MIN_BEATS`` block in
     ``score_tour`` (or raise STARVE_MIN_WORDS_PER_BEAT's effect by making the
@@ -221,7 +220,7 @@ def test_c1_starved_fires_on_the_measured_sainte_chapelle_case() -> None:
 
 
 def test_c1_does_not_fire_for_a_legitimately_thin_poi() -> None:
-    """GUARDS: false positives on genuinely thin POIs (standard §5: the thin POIs
+    """GUARDS: false positives on genuinely thin POIs (measured: the thin POIs
     around Sainte-Chapelle had 3 beats and were correctly short).
 
     3 corpus beats is below STARVE_MIN_BEATS=5, so a short render is an editorial
@@ -247,9 +246,9 @@ def test_c1_does_not_fire_for_a_legitimately_thin_poi() -> None:
 
 
 def test_c8_gorged_fires_on_the_measured_over_cap_stop() -> None:
-    """GUARDS: an unbroken wall of narration at one stop (standard §4 C8).
+    """GUARDS: an unbroken wall of narration at one stop (C8).
 
-    The REAL measured shape, §5: Notre-Dame rendered ~1022-1038 words in a single
+    The REAL measured shape: Notre-Dame rendered ~1022-1038 words in a single
     stop, over even the walking-tour ADAPTATION of the museum sector's 250-word
     station ceiling (750 words ~ 5 min at 150 wpm). UNDO: delete the
     ``if words > GORGE_MAX_WORDS_PER_STOP`` block and this goes RED.
@@ -298,7 +297,7 @@ def test_c8_does_not_fire_at_exactly_the_cap() -> None:
 
 def test_c2_tier_inversion_fires_when_a_rich_tier5_poi_is_only_a_vignette() -> None:
     """GUARDS: the headline POI demoted to a walk-past line while a lesser POI gets
-    the full stop (standard §4 C2).
+    the full stop (C2).
 
     Fixture: tier-5 Sainte-Chapelle with 12 beats sits in ``route.vignettes`` while
     tier-4 Palais de Justice is the anchor. UNDO: delete the ``for vig in
@@ -351,11 +350,11 @@ def test_c2_does_not_fire_when_the_vignette_is_also_an_anchor() -> None:
 
 
 def test_c12_close_stops_is_a_warn_not_a_blocker() -> None:
-    """GUARDS: the C12 severity demotion (standard §4/§5). MEASURED, 2026-07-19,
+    """GUARDS: the C12 severity demotion. MEASURED, 2026-07-19,
     across the full real Paris/New York corpora: distance alone cannot separate a
     true duplicate (0.0-1.7 m, a corpus geocoding defect) from a genuinely distinct,
     adjacent landmark — the product owner's OWN gold-text stops, Hotel Le Meurice
-    and Angelina, sit **8.4 m** apart (standard §1). A BLOCKER at 50 m would refuse
+    and Angelina, sit **8.4 m** apart. A BLOCKER at 50 m would refuse
     to serve the gold-standard tour, which is worse than the defect C12 was written
     to catch (see tests/test_tour_selection.py::
     test_selection_does_not_filter_close_but_distinct_pois for the corpus
@@ -420,8 +419,7 @@ def test_c12_does_not_fire_on_a_real_walking_separation() -> None:
 
 
 def test_c5_verbatim_repeat_fires_on_a_repeated_sentence() -> None:
-    """GUARDS: the same sentence spoken twice in one tour (standard §4 C5, §2 S5,
-    §3 P3 "say it once").
+    """GUARDS: the same sentence spoken twice in one tour (C5, "say it once").
 
     Case-and-whitespace normalised, so a re-cased echo still counts. UNDO: delete the
     C5 loop (or the ``if key in seen`` branch) and this goes RED.
@@ -485,7 +483,7 @@ def test_c5_does_not_fire_on_short_glue_lines_that_legitimately_recur() -> None:
 
 
 def test_c6_empty_stop_fires_on_a_stop_with_zero_words() -> None:
-    """GUARDS: a stop the tourist walks to and hears nothing at (standard §4 C6).
+    """GUARDS: a stop the tourist walks to and hears nothing at (C6).
 
     UNDO: delete the ``if words == 0`` loop and this goes RED.
     """
@@ -595,8 +593,8 @@ def test_stats_n_stops_counts_the_roster_not_the_rendered_stops() -> None:
 
 
 def test_passed_is_false_with_a_blocker_and_true_with_only_warnings() -> None:
-    """GUARDS: the serve/regenerate decision itself (standard §4 severity column,
-    §7 "a BLOCKER verdict regenerates the script").
+    """GUARDS: the serve/regenerate decision itself (a BLOCKER verdict regenerates
+    the script).
 
     A WARN must never refuse a tour, and a BLOCKER must always refuse it. UNDO:
     change ``RubricReport.passed`` to ``not self.findings`` and the WARN half goes
@@ -636,8 +634,8 @@ def test_passed_is_false_with_a_blocker_and_true_with_only_warnings() -> None:
 
 
 def test_c4_imbalance_is_a_warn_and_does_not_flip_passed() -> None:
-    """GUARDS: severity misclassification of C4 (standard §4: C4 is WARN, surfaced to
-    the editor, NOT a regeneration trigger).
+    """GUARDS: severity misclassification of C4 (C4 is WARN, surfaced to the editor,
+    NOT a regeneration trigger).
 
     200/20 words = 91% in one stop, over BALANCE_MAX_SHARE=0.60. UNDO: change C4's
     severity to ``Severity.BLOCKER`` and this goes RED. Deleting the C4 block
@@ -707,14 +705,14 @@ def test_stats_report_word_and_audio_totals(audio_seconds: int, expected_minutes
 
 
 # ---------------------------------------------------------------------------
-# C7 — time-budget overrun (BLOCKER). standard §4, INHERITED from routing.py.
+# C7 — time-budget overrun (BLOCKER). INHERITED from routing.py.
 # ---------------------------------------------------------------------------
 
 
 def test_c7_fires_when_walk_plus_listening_exceeds_the_err_short_total() -> None:
     """GUARDS: the tour exceeding the ENGINE'S OWN err-short planning ceiling —
     ``duration_min * ERR_SHORT`` (83% of the request), a deliberately-short PLAN,
-    not the tourist's promised duration (standard §4 C7). The check and the number
+    not the tourist's promised duration. The check and the number
     are correct (they mirror the engine's own move ceiling, commit 6f6bc39); only
     the message must not claim the tourist "runs over the time they asked for" —
     a 41.7-min tour against this ceiling can still be comfortably UNDER a 60-min
@@ -730,8 +728,8 @@ def test_c7_fires_when_walk_plus_listening_exceeds_the_err_short_total() -> None
     unchanged — 2000 + 500 = 2500 against 2400 — but the 2000 is now the seconds the
     traveller SPENDS at the stop rather than the seconds it speaks. Under the old
     model those were the same number by definition, which is exactly the assumption
-    this release removed: Camille stands twenty minutes at Concorde for four minutes
-    of audio.
+    this release removed: a visitor can stand twenty minutes at Concorde for four
+    minutes of audio.
     """
     poi = _spoi("a", tier=3, dwell_seconds=2000)
     report = score_tour(
@@ -791,12 +789,12 @@ def test_c7_skips_when_the_route_carries_no_budget() -> None:
 
 
 # ---------------------------------------------------------------------------
-# C9 — sentence length for the ear (WARN). standard §4/§5, CITED (Nubart).
+# C9 — sentence length for the ear (WARN). CITED (Nubart).
 # ---------------------------------------------------------------------------
 
 
 def test_c9_long_mean_sentence_length_is_a_warn() -> None:
-    """GUARDS: sentences too long to follow by ear (standard §4 C9, §5). REUSES
+    """GUARDS: sentences too long to follow by ear (C9). REUSES
     narration_quality.score_narration — does not recompute mean sentence length itself.
 
     A single 25-word sentence has mean_sentence_words=25, over the 20-word cap.
@@ -828,8 +826,8 @@ def test_c9_long_mean_sentence_length_is_a_warn() -> None:
 def test_c9_cap_admits_the_owners_own_gold_text() -> None:
     """THE CALIBRATION, made executable: the north star must pass its own bar.
 
-    ``specs/2026-07-19-tour-quality-standard/01-standard.md`` §1 is the passage the owner
-    hand-wrote and from which S1-S10 were derived. At the old cap of 15 it FAILED C9 —
+    The gold text is the passage the owner hand-wrote and from which the standard's
+    rules were derived. At the old cap of 15 it FAILED C9 —
     the standard's own gold text could not pass the standard's own check, and neither
     could any of 191 real tours.
 
@@ -849,7 +847,7 @@ def test_c9_cap_admits_the_owners_own_gold_text() -> None:
     failure                              what catches it
     ==================================== ==========================================
     cap lowered below the gold           THIS test's C9 assertion (verified at 15.0)
-    §1 replaced with short text          THIS test's band, lower bound (a 3.5-word
+    gold replaced with short text        THIS test's band, lower bound (a 3.5-word
                                          mean fails 18.0)
     cap widened until C9 cannot fire     the companion test (verified at 999.0)
     C9 deleted from the rubric           the companion test
@@ -1090,7 +1088,7 @@ def test_c8_cannot_fire_on_engine_output_and_the_unit_ruling_is_recorded() -> No
 #
 # This is a SEPARATE predicate from severity/``passed``: it answers whether a
 # targeted recompose of ONE stop could plausibly fix a given BLOCKER finding, not
-# whether the tour may be served. See the standard's §7 amendment.
+# whether the tour may be served.
 # ---------------------------------------------------------------------------
 
 
@@ -1455,9 +1453,9 @@ _CERTIFIED_BATCH = (
     Path(__file__).resolve().parents[1] / "data" / "certification" / "tour-batch-v1"
 )
 
-#: MEASURED 2026-08-29 off the tracked artifacts at SPOKEN_WPM=150 — the Phase 8
-#: S8.9 re-seal: the control arm is now the batch authored by the redesigned
-#: engine (honest visit pricing, 180 s per-stop audio cap, the S8.3 placement
+#: MEASURED 2026-08-29 off the tracked artifacts at SPOKEN_WPM=150 — the re-seal:
+#: the control arm is now the batch authored by the redesigned
+#: engine (honest visit pricing, 180 s per-stop audio cap, the placement
 #: floors and NEVER-STRENGTHEN in the writer's policy), so every day is SHORT
 #: against the v1 corpus's 5-31 minutes. Pinned as EVIDENCE, independent of any
 #: threshold: if a loader change moves these numbers, every calibration below is
@@ -1473,14 +1471,14 @@ _EXPECTED_AUDIO_MIN: dict[str, float] = {
     "paris-west-axis-90": 3.0,
 }
 
-#: The corpus's own negative poles, and they are the SAME two days the W8.8 blind
-#: enjoyment judging scored below the old batch (phase8-ledger, both iterations):
+#: The corpus's own negative poles, and they are the SAME two days a blind
+#: enjoyment judging scored below the old batch (both iterations):
 #: west-axis at audio/walking 0.057 and grand-central at 0.081, against C3's 0.12
 #: floor — thin starts whose corpus holds one or two content stops, so most of the
 #: day is silent pavement. The rubric and the blind judge agree about which days
 #: are thin, which is the calibration working. A thinness floor that passes these
 #: is broken in the other direction. (The batch lane never runs score_tour — the
-#: serving gate would refuse these two days live, the Marcus persona-trace class.)
+#: serving gate would refuse these two days live.)
 _STARVED_CASES = frozenset({"paris-west-axis-90", "nyc-grand-central-times-square-60"})
 
 
@@ -1572,7 +1570,7 @@ def test_certification_corpus_reconstructs_as_scoreable_tours() -> None:
     }
     assert measured == _EXPECTED_AUDIO_MIN
 
-    # AC-9: anchors must live in a git-tracked location, never machine-local output.
+    # Anchors must live in a git-tracked location, never machine-local output.
     assert _CERTIFIED_BATCH.is_dir()
     for tour_path in _CERTIFIED_BATCH.glob("*/*/tour.json"):
         assert "tours" not in tour_path.parts, f"{tour_path} is machine-local output"
@@ -1586,7 +1584,7 @@ def test_certification_corpus_reconstructs_as_scoreable_tours() -> None:
 def test_c8_clears_the_widest_stop_in_the_certification_corpus() -> None:
     """GUARDS: the gorge cap must not brand real accepted anchors as bloated.
 
-    RE-MEASURED 2026-08-29 on the re-sealed (Phase 8) corpus: widest-stop
+    RE-MEASURED 2026-08-29 on the re-sealed corpus: widest-stop
     population 297-511 words — every stop sits under the cap with real margin,
     because the redesigned engine's 180 s per-stop audio ceiling bounds a stop
     near ~525 words with glue. The corpus therefore no longer discriminates 850
@@ -1677,7 +1675,7 @@ def test_c3_clears_the_certification_corpus_and_still_blocks_the_starved_tour() 
 def test_c3_floor_never_demands_more_words_than_c8_allows_at_any_offered_duration() -> None:
     """GUARDS satisfiability: C3 and C8 must never contradict each other.
 
-    REDERIVED 2026-08-04, when the planner's stop ceiling was deleted (OWNER RULING 5).
+    REDERIVED 2026-08-04, when the planner's stop ceiling was deleted.
     The old proof compared the floor against a CONSTANT capacity — what an eight-stop
     tour could hold — and the C3 floor had to be capped to stay under it. There is no
     constant any more: duration is the only bound on stop count, so a longer tour holds
@@ -1715,7 +1713,7 @@ def test_c3_floor_never_demands_more_words_than_c8_allows_at_any_offered_duratio
 
 
 def test_the_saved_tour_scorer_reconstructs_the_current_planning_ceiling() -> None:
-    """AC-14 on the SCORER — the offline scorer must not keep a ceiling the engine dropped.
+    """On the SCORER — the offline scorer must not keep a ceiling the engine dropped.
 
     ``scripts/score_saved_tours.py`` rebuilds a ``Route`` from a persisted Script so the
     rubric can score tours that were saved months ago. The only value it has to
@@ -1728,8 +1726,8 @@ def test_the_saved_tour_scorer_reconstructs_the_current_planning_ceiling() -> No
     1.00 when the legacy planning policy was deleted on 2026-08-04. Left alone the
     scorer would have judged every historical tour against a ceiling 20 percent tighter
     than the one those tours are now planned to, and the docstring would have been a
-    lie. ``scripts/`` is outside the src-tree scan that guards the rest of AC-14, which
-    is exactly why this needs its own node id.
+    lie. ``scripts/`` is outside the src-tree scan that guards the engine against a
+    dropped ceiling, which is exactly why this needs its own node id.
 
     UNDO: point the scorer back at a 0.83 reconstruction and the equality below goes RED
     (2988 != 3600).
@@ -2023,19 +2021,18 @@ def test_c9_fires_on_most_stops_of_the_human_authored_reference_tours() -> None:
 
 
 # ---------------------------------------------------------------------------
-# C13 — POINT FIRST (WARN; Phase 6 S6.3). Design §5.2: "Every piece is written with its
-# point in the FIRST minute. Fiona and Dev walk off at minute eight of nine, routinely."
-# The W6.2 panel (11/11, R1): the point is the turn with its stakes, inside the stop's
-# first ~100 words, counted from the stop's OWN first sentence about the place — never
-# from the nav line or the recap ("the first 29 seconds are a recap of Henri IV's
-# mistresses I heard five minutes earlier" — Marcus; "count it in words, not seconds,
-# and count from the first sentence about the place I am standing in" — Paulo). What a
+# C13 — POINT FIRST (WARN). Every piece is written with its point in the FIRST minute:
+# a visitor may walk off at minute eight of nine, routinely. The point is the turn with
+# its stakes, inside the stop's first ~100 words, counted from the stop's OWN first
+# sentence about the place — never from the nav line or the recap (a listener should
+# not sit through a recap of what they heard five minutes earlier; count in words, not
+# seconds, from the first sentence about the place they stand in). What a
 # $0 check can see of that: (i) the STORY starts early — the words of glue before the
 # stop's first beat sentence (the recap, the walking line) stay under
 # POINT_FIRST_PREAMBLE_MAX_WORDS; (ii) the stop's PRIMARY beat — the first of its capped
 # plan, `ScriptPOI.beat_ids[0]` — is cited inside the first POINT_FIRST_STORY_WORDS of
-# the story. Whether that sentence IS the point is a reading, measured at W6.10 by the
-# personas, never gated here.
+# the story. Whether that sentence IS the point is a reading, judged by people, never
+# gated here.
 # ---------------------------------------------------------------------------
 
 
@@ -2094,8 +2091,8 @@ def _c13_stop(
 
 
 def test_c13_point_first_warns_when_the_story_starts_late_or_the_primary_beat_lands_late():
-    """Design §5.2 / W6.2 R1. A stop that opens with a 60-word recap (the measured FD
-    stop 4: 44 s of "think back over where we've walked") WARNs on its preamble; a stop
+    """A stop that opens with a 60-word recap (a measured family day's stop 4: 44 s
+    of "think back over where we've walked") WARNs on its preamble; a stop
     whose primary beat is first cited 150 words into the story WARNs on its point; a
     stop that places the listener in one sentence and lands its primary beat inside the
     first hundred words is silent. UNDO: drop C13 from score_tour -> RED."""

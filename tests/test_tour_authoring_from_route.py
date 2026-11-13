@@ -1,4 +1,4 @@
-"""AC-4 / AC-9 / AC-22 — the AUTHOR block (Block 2) never re-plans a route.
+"""The AUTHOR block (Block 2) never re-plans a route.
 
 A persisted trip already HAS its route: /trips/{id}/compose must author that exact
 route, never re-plan one. There is now exactly ONE seam that does this —
@@ -6,7 +6,7 @@ route, never re-plan one. There is now exactly ONE seam that does this —
 in ``src/tour/premium_tour.py``. The second implementation that used to live in
 ``src/tour/authoring.py`` was deleted on 2026-08-04; these guards moved with the claim.
 
-The four properties the AUTHOR block is defined by (ledger decision D5):
+The four properties the AUTHOR block is defined by:
 
 * it never reaches the planner — proven STRUCTURALLY as well as at runtime, because a
   module-level ``from .selection import select_route`` binds at import time and a
@@ -22,9 +22,9 @@ The four properties the AUTHOR block is defined by (ledger decision D5):
 * it tolerates what real persisted trips actually contain — a round-trip transit
   shape (``len(transits) == len(pois) + 1``), 1..15 stops, and receiptless
   haversine-degraded legs, all of which ``plan_premium_tour``'s PLANNING bars refuse
-  outright. Those bars live in Block 1 and are not part of Block 2 (AC-22).
+  outright. Those bars live in Block 1 and are not part of Block 2.
 
-``test_the_author_block_never_replans`` is the ledger's pinned gate for this step, so it
+``test_the_author_block_never_replans`` is the pinned gate for this step, so it
 carries every one of those clauses itself: reverting ANY of them must turn that one node
 id red.
 """
@@ -92,7 +92,7 @@ _PLANNING_MODULES = frozenset(
 )
 
 #: Planning entry points, by the name they are CALLED under (bare or attribute).
-#: (select_k_routes left the set at Phase 4 — design §8.1 deleted it outright.)
+#: (select_k_routes left the set when the product stopped offering three routes.)
 _PLANNING_CALLS = frozenset(
     {
         "choose_discrete_route",
@@ -333,7 +333,7 @@ def _forbid_planning(monkeypatch: pytest.MonkeyPatch) -> None:
     def _explode(*args: object, **kwargs: object) -> None:
         raise AssertionError("the prebuilt-route seam must never re-plan a route")
 
-    # select_k_routes died at Phase 4 (design §8.1); select_route is the planner.
+    # select_k_routes is gone; select_route is the planner.
     monkeypatch.setattr(selection, "select_route", _explode)
     monkeypatch.setattr(selection, "choose_discrete_route", _explode)
 
@@ -341,7 +341,7 @@ def _forbid_planning(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_the_author_block_never_replans(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """AC-4 end to end — the pinned gate for this step.
+    """End to end — the pinned gate for this step.
 
     Every clause lives here on purpose: reverting the no-replanning boundary, the
     one-unit-per-dwell-stop rule, the round-trip tolerance, the 15-stop cap or the
@@ -462,7 +462,7 @@ def test_prebuilt_route_refuses_a_gap_in_the_middle_of_the_stitch() -> None:
 
 
 def test_the_author_block_authors_past_the_deleted_fifteen_stop_ceiling() -> None:
-    """INVERTED 2026-08-04 (OWNER RULING 5, "no stop limits, period").
+    """INVERTED 2026-08-04 ("no stop limits, period").
 
     This test used to assert that a 16-stop route was REFUSED with "one to fifteen
     stops". That ceiling sat behind the planner and rejected routes the same engine

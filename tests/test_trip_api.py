@@ -1,6 +1,6 @@
 """Integration tests for POST /api/v1/trips/generate — real engine, live corpus.
 
-Since M0b the endpoint runs the real tour engine (src/tour), whose density
+The endpoint runs the real tour engine (src/tour), whose density
 gate refuses sparse areas (needs >=4 anchor candidates). The conftest test
 instance (port 7688) only carries toy seed data (3 POIs / 5 beats), so these
 tests run against the LIVE local Paris dev graph (port 7687) the way
@@ -212,20 +212,19 @@ def ile_response(client):
 
 @needs_neo4j
 def test_generate_plans_through_the_shared_block_one(ile_response, snapshot):
-    """AC-4/AC-7 (re-derived at Phase 4 S4.4, design §8.1): the phone's day IS
-    Block 1's plan, not a second planner's.
+    """The phone's day IS Block 1's plan, not a second planner's.
 
-    §8.1 deleted pick-one-of-three, so Block 1 is ``plan_premium_tour`` and the
+    Pick-one-of-three is gone, so Block 1 is ``plan_premium_tour`` and the
     endpoint publishes exactly ONE option. The invariant this test has always
     carried is unchanged: the endpoint plans through the one shared planner, and
     what it publishes is byte-identical to what that planner produced for the
-    identical input. The K-diversity clause died with the flavours (a written
-    §0.1.2 decision — it pinned the deleted Jaccard machinery).
+    identical input. The K-diversity clause died with the flavours (it pinned the
+    deleted Jaccard machinery).
 
     * STRUCTURAL — the handler calls the shared planner and no longer contains a
       second route-selection or script-generation pass of its own.
     * BEHAVIOURAL — the published option is byte-identical to the shared
-      planner's plan (AC-7).
+      planner's plan.
     """
     planner_source = inspect.getsource(trips.generate_trip)
     assert "plan_premium_tour(" in planner_source, (
@@ -306,16 +305,16 @@ class TestTripGenerateEngine:
         assert any(s["script_body"] for s in data["stops"])
 
     def test_options_surface_the_one_day(self, ile_response):
-        """Phase 4 S4.4 (design §8.1): the response carries exactly ONE RouteOption
+        """The response carries exactly ONE RouteOption
         — THE day — and its DWELL stops mirror the persisted trip.
 
-        Re-derived from the old K-flavours pin (a written §0.1.2 decision): the
+        Re-derived from the old K-flavours pin: the
         1-to-3 count and the pairwise-Jaccard diversity clause pinned the deleted
         flavour machinery; the surviving invariants — the option mirrors the trip,
         carries a positive arrival time, and every card is one of the three known
         kinds — are unchanged.
 
-        Track B (B.3) interleaves band="vignette" walk-past stops into
+        band="vignette" walk-past stops are interleaved into
         RouteOption.stops — additive annotations, not itinerary stops — so the
         mirror assertion is dwell-scoped.
         """
@@ -382,7 +381,7 @@ class TestTripGenerateErrors:
 # Versailles palace — a real Paris-region coordinate ~14km SW of the Île start.
 # The routed A→B leg (or its haversine fallback) is hours long, dwarfing any
 # tour walk budget, so a fixed-end A→B request from the Île GREEN start lands in
-# the Step-2.2 fixed-destination feasibility refusal — never density-RED (the
+# the fixed-destination feasibility refusal — never density-RED (the
 # Île start stays GREEN at 90 min). Far enough that no selected POI snaps within
 # B_SNAP_PROXIMITY_M, so the engine synthesizes a sentinel at B's exact coord.
 VERSAILLES_END = (48.8049, 2.1204)
@@ -390,8 +389,8 @@ VERSAILLES_END = (48.8049, 2.1204)
 
 @needs_neo4j
 class TestTripGenerateFixedDestination:
-    """Step 2.6: end_lat/end_lng thread into TourInput.end; the route ends at B,
-    and an unreachable B yields a structured 422 mirroring the Step-2.2 error."""
+    """end_lat/end_lng thread into TourInput.end; the route ends at B, and an
+    unreachable B yields a structured 422 mirroring the fixed-destination error."""
     def test_ab_request_route_ends_at_b(self, client, snapshot, ile_engine_route):
         """An in-budget A→B request returns a route ending at B. B is the coord
         of a real POI the open Île route selected, so B-materialization snaps B
@@ -429,7 +428,7 @@ class TestTripGenerateFixedDestination:
 
     def test_over_budget_ab_returns_structured_422(self, client, snapshot):
         """An A→B request whose routed A→B leg exceeds the walk budget returns a
-        422 whose JSON body matches the live Step-2.2 TourabilityRefusedError:
+        422 whose JSON body matches the live fixed-destination TourabilityRefusedError:
         {reason, gap_minutes, alternatives:[{kind,...}]} with the kind enum
         (loop/extend, plus closer_b when an anchor fits the budget)."""
         # Reproduce the endpoint's own engine call to derive the truth live —
@@ -483,12 +482,12 @@ class TestTripGenerateFixedDestination:
 
 # ---------------------------------------------------------------------------
 # The authoring-seam doubles. The frozen-trip tests that used them (the one-compose
-# 409, the -optN selector, composed_route_id) were DELETED at Phase 5 D5.0 — design
-# §8.2, audit C §1's eleven DELETE-AT-PHASE-5 rows. The doubles stay: the invariants
+# 409, the -optN selector, composed_route_id) were DELETED with the frozen trip. The
+# doubles stay: the invariants
 # that survive the frozen trip (a verification failure is a 422 that persists nothing;
 # one authoring call per stop through the one seam, fact-gate consulted; the outage
 # row travels; authored text is what is persisted) are re-derived against the living
-# session's endpoints at S5.8, and these are the physical-boundary doubles they need.
+# session's endpoints, and these are the physical-boundary doubles they need.
 # ---------------------------------------------------------------------------
 
 COMPOSE_MARKER = "COMPOSED-MARKER: the story, retold for you."
@@ -666,7 +665,7 @@ class _ColdStartingRoutingClient:
         return self.route(from_lat, from_lng, to_lat, to_lng)[0]
 
     def isochrone(self, lat: float, lng: float, minutes: int, **_kw) -> None:
-        # (`**_kw`: the pace-aware reach passes `walking_speed_kmh` since Phase 2 —
+        # (`**_kw`: the pace-aware reach passes `walking_speed_kmh` —
         # a cold engine answers no isochrone whatever it is asked.)
         return None
 
@@ -674,7 +673,7 @@ class _ColdStartingRoutingClient:
         return None
 
 
-#: Phase 8 S8.4 — the C5 payload: one ≥5-word sentence injected verbatim at TWO
+#: The C5 payload: one ≥5-word sentence injected verbatim at TWO
 #: stops. Floor-neutral on purpose (no motion verb, no leg deixis, no compass):
 #: the ONLY defect it carries is the cross-stop repeat the rubric's C5 names.
 _C5_DUP_TEXT = "The very same words end this story once more."
@@ -706,7 +705,7 @@ class _OneBadRollExecutor:
     """A stateful roll-dependent author: the DAY compose of each `bad_stops` stop
     gets `defect` applied on its first roll (every roll when `always`), and every
     later roll echoes the stitch clean — the measured live shape of the writer's
-    stochastic collisions (Camille run 1 vs runs 2-3, 2026-08-23). Full-telling
+    stochastic collisions (one live run vs the two after it, 2026-08-23). Full-telling
     calls (already_told set) are never defected and are excluded from
     `day_calls_by_stop`, so assertions about the bounded targeted re-roll count
     only the day's own composes."""
@@ -804,14 +803,14 @@ def test_a_dirty_local_tree_is_stamped_and_warned_never_refused(monkeypatch, cap
 
 
 def _orangerie_pin(live_neo4j) -> list[str]:
-    """Rosemary's doc names the Orangerie, so her day carries it as her own pin.
+    """The take-it-easy art day carries the Orangerie as the visitor's own pin.
 
-    The S3 subject gate reads the dwell pool by beat family, and the Orangerie's
+    The subject gate reads the dwell pool by beat family, and the Orangerie's
     one active beat is tagged war_conflict — a miss for visual_art at any hop —
-    so her art-lensed day honestly sheds it (fewer honest stops beat a padded
-    day; the Phase 9 decisions doc §4). Her doc's three-stop shape (Orangerie,
-    bench, Orsay) survives as HER hand on the day: a pin outranks the gate by
-    design, and everything downstream (the seated rest, the promise-tier
+    so an art-lensed day honestly sheds it (fewer honest stops beat a padded
+    day). The day's three-stop shape (Orangerie, bench, Orsay) survives as the
+    visitor's own hand on the day: a pin outranks the gate by design, and
+    everything downstream (the seated rest, the promise-tier
     timings) keeps the geometry it was measured on."""
     with live_neo4j.session() as s:
         row = s.run(
@@ -825,13 +824,13 @@ def _orangerie_pin(live_neo4j) -> list[str]:
 
 @needs_neo4j
 def test_a_day_with_a_rest_generates_on_the_app_path(client, live_neo4j) -> None:
-    """Rosemary's day at her own doc's leg length (Orsay round trip, take-it-easy,
-    art lens, the Orangerie pinned — `_orangerie_pin` — and a 13-minute cap) seats
+    """A take-it-easy art day (Orsay round trip, take-it-easy, art lens, the
+    Orangerie pinned — `_orangerie_pin` — and a 13-minute leg cap) seats
     a BENCH — a rest with no story beat. The app
     path (`/trips/generate`, the model the phone reads) must carry it: until
     2026-08-18 it 500'd on the rest's missing beat, and every family / take-it-easy
     day that seated a rest was unreachable from the phone while the preview path
-    (another model) showed it fine. Found by W5.13's demo setup. UNDO: require
+    (another model) showed it fine. Found by a demo setup. UNDO: require
     `GeneratedStop.beat_id` -> RED (500)."""
     resp = client.post(
         "/api/v1/trips/generate",
@@ -858,9 +857,9 @@ def test_a_day_with_a_rest_generates_on_the_app_path(client, live_neo4j) -> None
 
 
 def test_generate_and_compose_report_what_degraded(client, live_neo4j, cutover_trip) -> None:
-    """AC-18 — the phone's two endpoints say what quietly went wrong, like the web does.
+    """The phone's two endpoints say what quietly went wrong, like the web does.
 
-    OWNER RULING 2026-07-31: "Don't just log errors. Actually show them in the workbench
+    The owner, 2026-07-31: "Don't just log errors. Actually show them in the workbench
     UI. Otherwise, they're invisible." The workbench preview has carried that list since
     then. The phone's own two calls collected the same facts and threw them away, so a
     tour planned on estimated walking times looked, on a phone, exactly like one planned
@@ -893,11 +892,9 @@ def test_generate_and_compose_report_what_degraded(client, live_neo4j, cutover_t
     test_trip_preview_contract.py::test_estimated_legs_are_labelled_not_silently_shipped.
 
     THE COMPOSE HALF (the real outage on ``/compose``: 200 with the routing rows, never
-    a refusal, ``component == "trips.compose_trip"``) was REMOVED at Phase 5 D5.0 with
-    the frozen trip it drove (design §8.2; audit C §1: "its compose half must be
-    re-pointed at the session endpoints at Phase 5; the generate half survives as is").
-    It returns at S5.8 against the living session's endpoints, assertions re-derived
-    there with their citation. The generate half above is unchanged.
+    a refusal, ``component == "trips.compose_trip"``) was REMOVED with the frozen
+    trip it drove. It returns against the living session's endpoints, assertions
+    re-derived there. The generate half above is unchanged.
     """
     # 1. A CLEAN RUN SAYS SO. An empty list is a real statement — "nothing degraded" —
     #    and it is not the same as a missing key, which a client cannot distinguish
@@ -942,7 +939,7 @@ def test_generate_and_compose_report_what_degraded(client, live_neo4j, cutover_t
 
 
 # ---------------------------------------------------------------------------
-# Phase 5 S5.8 — THE LIVING SESSION on the wire; the frozen trip is deleted (§8.2)
+# THE LIVING SESSION on the wire; the frozen trip is deleted
 # ---------------------------------------------------------------------------
 
 
@@ -956,22 +953,20 @@ def _compose(client, trip_id, executor):
 
 @needs_neo4j
 class TestLivingSession:
-    """Design §8.2 deletes the frozen trip — "a stop list written once, narrated once,
-    refusing a second compose (`mark_trip_composed`, the 409)" — for "a living session
-    with versions, promises, alternates, history". Design §4.6: the server is the only
-    place a plan decision is made; it emits the contingency set beside the plan and
-    the phone SELECTS from it. Audit C's rulings on the deleted rows are adopted
-    verbatim: the refusal CONTRACT survives (quality standard §6b, design §7.2), the
-    one-compose lock dies."""
+    """The frozen trip — a stop list written once, narrated once, refusing a second
+    compose (`mark_trip_composed`, the 409) — is gone; a living session with versions,
+    promises, alternates and history replaces it. The server is the only place a plan
+    decision is made; it emits the contingency set beside the plan and the phone
+    SELECTS from it. The refusal CONTRACT survives; the one-compose lock dies."""
 
     def test_a_second_compose_is_the_next_version_not_a_conflict(
         self, client, live_neo4j, cutover_trip
     ):
-        """Design §8.2 verbatim. Before: the second compose was a 409 `already_composed`
-        (audit C: "the purest single row in the set"). Now every write mints a version;
+        """Before: the second compose was a 409 `already_composed`. Now every write
+        mints a version;
         the trip's stops are re-persisted through the same `replace_trip_stops`. The
         writer and the lock are gone from the source — an absence-of-code invariant,
-        so the tombstone is a source read (plan §0.4 / the 2026-08-18 amendment)."""
+        so the tombstone is a source read."""
         import inspect
 
         from src.api import crud
@@ -1002,9 +997,9 @@ class TestLivingSession:
     def test_a_verification_failure_is_a_422_that_persists_nothing(
         self, client, live_neo4j, cutover_trip
     ):
-        """Audit C's ruled successor to `test_refused_flavour_is_422_and_leaves_trip_untouched`
-        (quality standard §6b: "What changed is the ENGINE underneath, not the refusal
-        contract"; design §7.2: "A day failing the floor is not served"). A refusal is a
+        """The successor to `test_refused_flavour_is_422_and_leaves_trip_untouched`:
+        what changed is the ENGINE underneath, not the refusal contract, and a day
+        failing the floor is not served. A refusal is a
         422 carrying reason + attempts + untraceable, and NOTHING degraded is persisted:
         the items are untouched, no session version is written, and GET /session says
         there is no session yet — the frozen-trip halves ("another flavour can be
@@ -1024,9 +1019,9 @@ class TestLivingSession:
         assert refused.status_code == 422, refused.text
         detail = refused.json()["detail"]
         assert detail["reason"] == "compose_verification_failed"
-        # Phase 8 S8.4: a VERIFY refusal now spends ONE bounded targeted re-roll
-        # of the failing stops before refusing (Camille run 1, 2026-08-23: one
-        # bad roll killed a day two clean rolls served). This executor fails
+        # A VERIFY refusal spends ONE bounded targeted re-roll of the failing
+        # stops before refusing (a live run, 2026-08-23: one bad roll killed a
+        # day two clean rolls served). This executor fails
         # EVERY roll, so the refusal stands — at attempts=2, honestly counted.
         assert detail["attempts"] == 2
         assert detail["untraceable"] > 0
@@ -1044,10 +1039,9 @@ class TestLivingSession:
     def test_the_session_is_on_the_wire_with_its_contingency_set(
         self, client, live_neo4j, cutover_trip
     ):
-        """Design §4.6 — the plan and its contingency set, on the wire, versioned; the
-        phone selects. W5.2 R1.1: wrap-up from EVERY stop; R1.2: no entry adds a
-        building; §4.4.2: a question never travels without screen text; R1.5: the
-        promises carry who is protected."""
+        """The plan and its contingency set, on the wire, versioned; the phone
+        selects. Wrap-up from EVERY stop; no entry adds a building; a question never
+        travels without screen text; the promises carry who is protected."""
         trip_id = cutover_trip["trip_id"]
         composed = _compose(client, trip_id, _MarkerAuthoringExecutor())
         assert composed.status_code == 200, composed.text
@@ -1080,11 +1074,11 @@ class TestLivingSession:
     def test_a_replan_is_the_next_version_over_the_same_items(
         self, client, live_neo4j, cutover_trip
     ):
-        """Design §4.6 — the ONE replan brain: the phone reports its position, clocks
+        """The ONE replan brain: the phone reports its position, clocks
         and learned rates; the server replans the remainder through THE planner and
         mints version N+1 over the SAME items (no re-authoring, no new place, the
-        audio already made is kept). AC-18's compose half, re-pointed here (audit C,
-        LOAD-BEARING): the walking outage travels on the reply as the traveller's
+        audio already made is kept). The compose half of the degradation report
+        lives here: the walking outage travels on the reply as the traveller's
         sentence, never a refusal."""
         trip_id = cutover_trip["trip_id"]
         composed = _compose(client, trip_id, _MarkerAuthoringExecutor())
@@ -1117,7 +1111,7 @@ class TestLivingSession:
         assert all(e["plan_version"] == 2 for e in plan["contingencies"])
         assert client.get(f"/api/v1/trips/{trip_id}/session").json()["plan_version"] == 2
 
-        # THE OUTAGE TRAVELS (AC-18, re-pointed): a cold walking engine degrades, never refuses.
+        # THE OUTAGE TRAVELS: a cold walking engine degrades, never refuses.
         with pytest.MonkeyPatch.context() as mp:
             mp.setattr(trips, "RoutingClient", _ColdStartingRoutingClient)
             degraded = client.post(f"/api/v1/trips/{trip_id}/session/replan", json=body)
@@ -1133,7 +1127,7 @@ class TestLivingSession:
     def test_a_walker_reports_a_shut_door_and_the_day_replans_without_it(
         self, client, live_neo4j, cutover_trip
     ):
-        """Docs/adr/0006 rule 5 — the phone reports the stop whose door the walker
+        """The phone reports the stop whose door the walker
         found shut; the day replans WITHOUT that stop through the one replan brain;
         the place's `hours_closed_reports` rises by one per report so the next
         walker with a guess there hears it; the hours themselves never change. A
@@ -1236,14 +1230,14 @@ class TestLivingSession:
     def test_a_live_replan_answers_with_the_day_and_the_full_set_follows(
         self, client, live_neo4j, cutover_trip
     ):
-        """W5.12 — the LIVE REPLAN bar's remedy, the design's own ("narrow the live path
-        to re-timing; widen the precomputed set"): measured on the FD trace the set was
+        """The LIVE REPLAN remedy: narrow the live path to re-timing, widen the
+        precomputed set. Measured on a recorded trace the set was
         ~0.4 s per entry against ~1 s for the one planner call, so the reply carries the
         replanned DAY (stops re-timed, promises, the day's planned end) plus the previous
         version's answers that still hold for it, and the FULL set is computed right after
         the reply and persisted as the same version — the next fetch has it. Every carried
         entry names only stops still ahead; the persisted set has a wrap-up from every
-        stop of the new day (R1.1)."""
+        stop of the new day."""
         trip_id = cutover_trip["trip_id"]
         composed = _compose(client, trip_id, _MarkerAuthoringExecutor())
         assert composed.status_code == 200, composed.text
@@ -1283,28 +1277,27 @@ class TestLivingSession:
     def test_a_day_built_around_one_place_asks_rather_than_dropping_it(
         self, client, live_neo4j
     ):
-        """W5.14 / S5.16 — THE PROMISE TIER ON THE LIVE PATH, on Rosemary's own day
-        (Orsay round trip, take-it-easy, art lens, her doc's 13-minute legs: the
-        Orangerie — carried as her own pin, `_orangerie_pin` — her bench, the
-        Orsay). Forty-six minutes late out of the Orangerie —
-        beyond every precomputed band (the last late band ends at 40) — the live replan
-        used to hand back "Bench" alone,
-        the Orsay dropped as fabric to keep an 8-minute rest, in silence (the D6
-        transcript, W5.13). Now: the place she named as where the day begins and ends
-        is a promise (`own_place_ids`), the replanned remainder KEEPS it, and because
-        keeping everything overruns her clock the reply carries the ONE question of
-        R2 — keep the full rest and be back later, or sit fewer minutes and be back by
-        the clock — as an entry of kind "live" the phone applies at once. UNDO: drop the
+        """THE PROMISE TIER ON THE LIVE PATH, on a take-it-easy art day (Orsay round
+        trip, take-it-easy, art lens, 13-minute legs: the Orangerie — carried as the
+        visitor's own pin, `_orangerie_pin` — a bench, the Orsay). Forty-six minutes
+        late out of the Orangerie — beyond every precomputed band (the last late band
+        ends at 40) — the live replan used to hand back "Bench" alone, the Orsay
+        dropped as fabric to keep an 8-minute rest, in silence. Now: the place the
+        visitor named as where the day begins and ends is a promise (`own_place_ids`),
+        the replanned remainder KEEPS it, and because keeping everything overruns the
+        visitor's clock the reply carries ONE question — keep the full rest and be
+        back later, or sit fewer minutes and be back by the clock — as an entry of
+        kind "live" the phone applies at once. UNDO: drop the
         own place from `_person_protected` -> the Orsay is gone from the reply -> RED.
 
-        RE-DERIVED 2026-08-19 (Phase 6 S6.1a, a written decision, not a quiet edit): the
-        lateness was FIFTY minutes, tuned while compose rebuilt her day on the default
-        routing surface (stairs allowed) and the session's clocks came from those legs.
-        On the step-free legs she was actually planned with, 50 minutes late leaves the
-        remainder 340 s over her 17:00 with everything kept — more than her 8-minute
-        bench can give up above the 3-minute shortest rest (R2.3: shortened, never
+        RE-DERIVED 2026-08-19 (a written decision, not a quiet edit): the lateness was
+        FIFTY minutes, tuned while compose rebuilt the day on the default routing
+        surface (stairs allowed) and the session's clocks came from those legs. On the
+        step-free legs the day was actually planned with, 50 minutes late leaves the
+        remainder 340 s over its 17:00 with everything kept — more than its 8-minute
+        bench can give up above the 3-minute shortest rest (a rest is shortened, never
         removed), so the product correctly asks NOTHING and lets the finish move with
-        one screen line (R2.4/R2.5, S5.18). Forty-six minutes is the same scenario on
+        one screen line. Forty-six minutes is the same scenario on
         the right clocks: 100 s over, a 6-minute sit absorbs it, the question fires."""
         gen = client.post(
             "/api/v1/trips/generate",
@@ -1321,12 +1314,12 @@ class TestLivingSession:
                 lenses=["visual_art"],
                 max_leg_minutes=13,
                 pinned_poi_ids=_orangerie_pin(live_neo4j),
-                # Phase 8 S8.4: the serving gate (§7.2) measures this day's echo at
-                # ~0.117 audio-per-walking — a coin-flip under C3's 0.12 floor,
-                # whose calibration corpus held no take-it-easy day (the W8.6
-                # disposition row in phase8-ledger.md). Her "More talking" dial
-                # keeps the day HER day (bench, 13-minute legs, step-free) and
-                # feeds it the narration her own carried ask wants at the bench —
+                # The serving gate measures this day's echo at ~0.117
+                # audio-per-walking — a coin-flip under C3's 0.12 floor, whose
+                # calibration corpus held no take-it-easy day. The "More talking"
+                # dial keeps the day the visitor's own (bench, 13-minute legs,
+                # step-free) and feeds it the narration the carried ask wants at
+                # the bench —
                 # a day the product serves, which is this test's premise.
                 narration_density="more",
             ),
@@ -1375,8 +1368,8 @@ class TestLivingSession:
     def test_a_phone_clock_that_diverges_is_reported_never_corrected(
         self, client, live_neo4j, cutover_trip
     ):
-        """THE SESSION CLOCK SEAM, on the wire (plan S5.10; design §4.6 — the
-        silent-divergence bug the one-brain rule exists to prevent). The phone sends
+        """THE SESSION CLOCK SEAM, on the wire (the silent-divergence bug the
+        one-brain rule exists to prevent). The phone sends
         its OWN re-timed clock for the stop it is heading to; the server compares it
         with what ITS one expression says for the same stop in the version it just
         minted (`stop_clocks`, the wire's `start_time`) and a gap beyond the session's
@@ -1447,16 +1440,15 @@ class TestLivingSession:
     def test_a_day_failing_the_rubric_floor_is_refused_and_the_trip_untouched(
         self, client, live_neo4j, cutover_trip
     ):
-        """Phase 8 S8.4 (design §7.2; quality standard §7): `score_tour`'s `passed`
-        finally GATES SERVING on the persisted path. W8.1(b) proved the gap live:
-        Greta's served day carried `BLOCKER C3-thin` and was composed, persisted,
+        """`score_tour`'s `passed` GATES SERVING on the persisted path. A live run
+        proved the gap: a served day carried `BLOCKER C3-thin` and was composed, persisted,
         voiced and served, because nothing on this path ran the rubric. Here a
         C5 cross-stop verbatim repeat — a blocker `_dedup_composed` cannot remove
         (glue is never deduped) — survives one bounded targeted recompose (the
-        executor keeps injecting it), so the day is REFUSED by name (R8: the named
+        executor keeps injecting it), so the day is REFUSED by name (the named
         gate, the stop, our own message — never provider prose) and the trip is
-        byte-untouched with no session written. This is audit F's ordered
-        caller-side test, beside `test_passed_is_false…`, never an edit of it.
+        byte-untouched with no session written. This is the caller-side test,
+        beside `test_passed_is_false…`, never an edit of it.
         UNDO: drop the `score_tour` call from `compose_trip` -> the repeat is
         served 200 -> RED."""
         trip_id = cutover_trip["trip_id"]
@@ -1487,7 +1479,7 @@ class TestLivingSession:
     def test_a_fixable_rubric_blocker_gets_one_targeted_recompose(
         self, client, live_neo4j, cutover_trip
     ):
-        """Phase 8 S8.4: `compose_fixable` + `StopMaterial` authorize AT MOST ONE
+        """`compose_fixable` + `StopMaterial` authorize AT MOST ONE
         targeted per-stop recompose before the refusal — same request, fresh roll,
         ONLY the failing stop (a whole-day re-roll would burn every stop's spend
         on one stop's defect). The C5 injector is transient (first roll only), so
@@ -1516,10 +1508,9 @@ class TestLivingSession:
     def test_a_verify_refusal_gets_one_targeted_reroll_before_the_422(
         self, client, live_neo4j, cutover_trip
     ):
-        """Phase 8 S8.3's bounded retry (the step's own words: untraceable writer
-        output "refuses at AUTHORING time with the bounded retry, so her day
-        composes deterministically") — measured live 2026-08-23: Camille's run-1
-        compose died 422 on ONE bad roll (`fused_across_playback_contexts`,
+        """The bounded retry: untraceable writer output refuses at AUTHORING time
+        with the bounded retry, so a day composes deterministically. Measured live
+        2026-08-23: one run's compose died 422 on ONE bad roll (`fused_across_playback_contexts`,
         stop 3) while the identical request rolled clean twice after. One
         targeted same-request re-roll of ONLY the stops the VERIFY report names
         turns a one-bad-roll day into a served day; a stop that fails twice
@@ -1539,13 +1530,13 @@ class TestLivingSession:
     def test_a_reordering_replan_rewrites_the_item_so_no_fetch_can_resurrect_the_stale_line(
         self, client, live_neo4j, cutover_trip, monkeypatch, tmp_path
     ):
-        """S1.M6 — the replanned line reaches the ITEM, where audio truth lives.
+        """The replanned line reaches the ITEM, where audio truth lives.
 
         The session GET overlays the items' current audio onto the stops
         (`_with_live_audio`), because audio facts live on the items. A replan that
         rewrites a leg line only in the session json therefore un-drops itself on the
         phone's very next fetch: the item still carries the OLD text's file, and the
-        overlay serves it over the cleared field. Sofia hears the stale walk again.
+        overlay serves it over the cleared field. The walker hears the stale walk again.
 
         So a re-legged stop's new text and cleared audio are written to its item in the
         same request, and the voicing pass is scheduled for exactly those items — the
@@ -1562,7 +1553,7 @@ class TestLivingSession:
         """
         monkeypatch.setenv("AUDIO_STORAGE", "local")
         monkeypatch.setenv("AUDIO_STORAGE_PATH", str(tmp_path))
-        # The fixture day's own two stops, PINNED (Theo's gesture), at the exact
+        # The fixture day's own two stops, PINNED by the visitor, at the exact
         # duration the planner names for the pinned pair: the same clean-composing
         # beats with no room for a third stop. A pinned stop is a protected
         # promise, so the replan must KEEP both and can only re-order them.
@@ -1655,13 +1646,13 @@ class TestLivingSession:
     def test_compose_rebuilds_the_day_under_the_surface_it_was_planned_with(
         self, client, live_neo4j, monkeypatch
     ):
-        """Phase 6 S6.1a — the route surface rides through compose. A take-it-easy
-        day is planned step-free (design §2.4; plan S2.7: "never a route selected
-        under one costing and reported under another"), and compose REBUILDS the
-        persisted pick through `summarise_route` — which, measured 2026-08-19 (Phase
-        6 W6.1), was handed no costing override: every leg of Rosemary's composed
-        day was re-routed on the default surface (stairs allowed), and the composed
-        clocks, legs and polylines the phone plays were not the day she was shown.
+        """The route surface rides through compose. A take-it-easy day is planned
+        step-free, and a route is never selected under one costing and reported
+        under another. Compose REBUILDS the persisted pick through `summarise_route`
+        — which, measured 2026-08-19, was handed no costing override: every leg of a
+        take-it-easy composed day was re-routed on the default surface (stairs
+        allowed), and the composed clocks, legs and polylines the phone plays were
+        not the day the visitor was shown.
         (It composed at all only because `finalize_premium_tour` stamped the
         default hash — the sibling test in tests/test_tour_party.py.) Here: the
         router is asked, on EVERY leg compose routes, for the step-free costing, and
@@ -1685,10 +1676,10 @@ class TestLivingSession:
                 party="take_it_easy",
                 lenses=["visual_art"],
                 max_leg_minutes=13,
-                # Phase 8 S8.4: same re-derivation as the promise-tier test above —
-                # this test's concern is the ROUTE SURFACE through compose, so its
-                # day must be one the serving gate serves (the thin echo variant is
-                # the W8.6 disposition row, not this fixture's job).
+                # Same re-derivation as the promise-tier test above — this test's
+                # concern is the ROUTE SURFACE through compose, so its day must be
+                # one the serving gate serves (the thin echo variant is not this
+                # fixture's job).
                 narration_density="more",
             ),
         )
@@ -1713,7 +1704,7 @@ class TestLivingSession:
 
 
 # ---------------------------------------------------------------------------
-# S1.M4 — no leg line survives a walk it was not written for.
+# No leg line survives a walk it was not written for.
 # ---------------------------------------------------------------------------
 
 
@@ -1762,9 +1753,9 @@ def _replan_route(pois: list[tuple[str, str]]):
 
 
 def test_a_replan_drops_and_rewrites_a_leg_line_whose_walk_no_longer_happens():
-    """Sofia's day re-cuts around the dark and the Bourse now comes before the Tour
+    """A day re-cuts around the dark and the Bourse now comes before the Tour
     Saint-Jacques. The line written for the walk from Saint-Eustache described nine
-    minutes from a place she is no longer coming from, and the phone plays a leg file
+    minutes from a place the walker is no longer coming from, and the phone plays a leg file
     against whichever stop is currently before it — so the old words must not survive.
 
     The replacement names the new pair and the new routed length, and its audio fields

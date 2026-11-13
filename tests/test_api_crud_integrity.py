@@ -50,7 +50,7 @@ def _create_lens(client, name: str, display_label: str) -> dict:
     return resp.json()
 
 
-# ── DEFECT 1: update_node / update_edge overwrite identity/merge-key props ──
+# ── update_node / update_edge never overwrite identity/merge-key props ──
 
 
 @needs_neo4j
@@ -104,8 +104,8 @@ class TestDefect1ProtectedKeys:
         assert fetched["properties"]["city_name"] == "paris"
 
     def test_update_poi_rejects_name_key_change(self, client):
-        """The derived canonical key (Defect 3) is protected too — editing it
-        directly would fork just as rewriting `name` would."""
+        """The derived canonical key (the name canonicalization below) is protected
+        too — editing it directly would fork just as rewriting `name` would."""
         poi = _create_poi(client, "Protected Key POI")
         resp = client.put(
             f"/api/v1/nodes/POI/{poi['id']}",
@@ -192,7 +192,7 @@ class TestDefect1ProtectedKeys:
         assert resp.json()["properties"]["weight"] == 0.9
 
 
-# ── DEFECT 3: POI forks under name casing / whitespace ──
+# ── A POI never forks under name casing / whitespace ──
 
 
 @needs_neo4j
@@ -231,7 +231,7 @@ class TestDefect3NameCanonicalization:
         assert a["id"] != b["id"]
 
 
-# ── DEFECT 4: Beat MERGE key is a GLOBAL script_body ──
+# ── The Beat MERGE key is never a GLOBAL script_body ──
 
 
 @needs_neo4j
@@ -286,7 +286,7 @@ class TestDefect4BeatMergeScope:
         assert len(beat["id"]) > 10  # UUID-shaped
 
 
-# ── DEFECT 9: partial coordinate update → empty SET → 500 ──
+# ── A partial coordinate update is a 422, never an empty SET → 500 ──
 
 
 @needs_neo4j

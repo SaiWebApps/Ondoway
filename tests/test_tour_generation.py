@@ -1,4 +1,4 @@
-"""Phase 3 — generation.py: deterministic structural assembly + glue routing.
+"""generation.py: deterministic structural assembly + glue routing.
 
 Tests use a MockGlueClient — the LLM is never invoked. The point of
 generation is the deterministic shape of the Script; the only LLM-driven
@@ -160,7 +160,7 @@ def test_split_sentences_handles_quoted_material():
 def test_split_sentences_keeps_name_initials():
     """Personal-name initials (J.-B., J. M. W.) are not sentence boundaries — the
     splitter must not read "…a portrait by J.-B." as a stuttered sentence (TTS
-    artifact, User-agent finding)."""
+    artifact)."""
     assert split_sentences("A portrait by J.-B. Vanloo hangs here.") == [
         "A portrait by J.-B. Vanloo hangs here."
     ]
@@ -350,9 +350,9 @@ def test_split_sentences_empty():
 
 
 def test_c9g_overflow_surfaces_on_scriptpoi():
-    """C9g: BeatSequence.overflow_by_poi flows onto ScriptPOI.overflow_beat_ids so
+    """BeatSequence.overflow_by_poi flows onto ScriptPOI.overflow_beat_ids so
     the governor's trimmed beats are SURFACED (keep-exploring extras), never
-    silently dropped — the panel's blocking bug 3."""
+    silently dropped."""
     poi = _poi("p1", "Place des Vosges")
     kept = _beat("kept-1", poi.id, body="Henri IV built the square.", nf="establishing")
     seq = BeatSequence(
@@ -422,7 +422,7 @@ def test_cold_open_synthesizes_when_no_orientation():
     )
     sources = [s.source_id for s in script.script]
     assert SYNTHESIZED_OPENER in sources
-    # Phase 7.5 (Fix 2): synthesized opener anchors on the spine Area name
+    # The synthesized opener anchors on the spine Area name
     # when present (corpus-honest "you're starting in the Marais"), and
     # falls back to the POI name only when no spine_area exists. Either
     # way the opener fires and writes traceable glue tokens.
@@ -467,7 +467,7 @@ def test_transit_uses_corpus_beat_when_present():
     p2 = _poi("p2", "Conciergerie")
     orient = _beat("orient-1", p1.id, body="Stand on the bridge.", nf="stop_orientation")
     p1_body = _beat("p1-body", p1.id, body="The Pont Neuf is the oldest stone bridge.")
-    # Phase 7: transit beat must reference the previous stop (Pont Neuf)
+    # The transit beat must reference the previous stop (Pont Neuf)
     # so the direction-awareness check accepts it.
     p2_transit = _beat(
         "p2-transit",
@@ -506,10 +506,10 @@ def test_transit_uses_corpus_beat_when_present():
 def test_phase7_transit_rejects_wrong_direction_beat():
     """Transit beat at `current` whose origin doesn't match `previous` must be rejected.
 
-    Mirrors the phase-6-rerun Tour 4 stop 3 failure: the corpus transit
+    Mirrors a measured failure: the corpus transit
     beat at Pont Alexandre III says "Starting at Invalides Metro
     station…" but the user is arriving from Pont de la Concorde. The
-    Phase 7 direction check must reject it and fall through to GLUE_NAV
+    direction check must reject it and fall through to GLUE_NAV
     with explicit ``from previous, walk to current`` context.
     """
     p1 = _poi("p1", "Pont de la Concorde")
@@ -558,7 +558,7 @@ def test_phase7_transit_accepts_directionally_consistent_beat():
     """Transit beat whose origin substring matches `previous` is accepted.
 
     The body names its endpoints and no bearing: a name match says the beat describes
-    THIS segment, and a compass word would be refused on its own terms (S1.M3) whatever
+    THIS segment, and a compass word would be refused on its own terms whatever
     the names say, so a fixture carrying both could not tell the two rules apart.
     """
     p1 = _poi("p1", "Place du Tertre")
@@ -665,13 +665,12 @@ def test_transit_falls_back_to_glue_when_no_corpus_beat():
 
 
 # ---------------------------------------------------------------------------
-# Phase 8 S8.3a (W8.2 R1, 11/11): the nav glue knows its leg — the request
+# The nav glue knows its leg — the request
 # hands Haiku the routed minutes and the leg-voice rules (never compass;
 # left/right/straight-ahead or a visible landmark), and the coercion guard
 # refuses an output that breaks them, falling back to the deterministic
 # template (which is compass-free and speaks the routed number by
-# construction). Carried instances: Camille/Théo/Aiko x2/Paulo/Greta/Sofia x3
-# wrong-compass/wrong-minutes lines (phase7-ledger carry 1).
+# construction). It guards against wrong-compass and wrong-minutes nav lines.
 # ---------------------------------------------------------------------------
 
 
@@ -761,8 +760,7 @@ def test_transit_glue_falls_back_to_default_on_no_glue_sentinel():
 
 
 def test_glue_label_set_matches_design_doc():
-    # GLUE_REFLECTION joined the whitelist in Phase 4 Step 4.1 (canonical
-    # spec §6: "a new whitelisted glue token GLUE_REFLECTION").
+    # GLUE_REFLECTION is a whitelisted glue token.
     expected = {
         "GLUE_NAV",
         "GLUE_STAGING",
@@ -924,7 +922,7 @@ def test_empty_beat_sequence_produces_empty_script():
 
 
 # ---------------------------------------------------------------------------
-# Phase 7.5 Fix 2 — improved SYNTHESIZED_OPENER
+# The improved SYNTHESIZED_OPENER
 # ---------------------------------------------------------------------------
 
 
@@ -1032,7 +1030,7 @@ def test_synthesized_opener_falls_back_gracefully_with_no_cues():
     # Minimal but readable: pacing + location anchor + first-stop walk grounding.
     assert any("Settle in" in t for t in texts)
     assert any("Marais" in t for t in texts)  # spine_area anchor
-    # #20: the first stop is named and framed as a walk ahead (honest — en route),
+    # The first stop is named and framed as a walk ahead (honest — en route),
     # replacing the old generic "we're going to walk for N minutes" primer.
     assert any("head for Some New Anchor" in t for t in texts)
 
@@ -1122,8 +1120,7 @@ def test_synthesized_opener_lowercases_raw_leading_the_in_cue():
 # below is the per-stop emitted-beat floor for healthy pools; the two
 # "current_contract_pin" tests make BOTH known zero-emission holes executable
 # and version-controlled. The per-stop floor/disclosure for those holes is
-# deferred design owned by specs/2026-07-02-dwell-audio-reconciliation/ —
-# when it lands, flip the pinned assertions DELIBERATELY, don't delete them.
+# deferred design — when it lands, flip the pinned assertions DELIBERATELY, don't delete them.
 # ---------------------------------------------------------------------------
 
 
@@ -1205,11 +1202,11 @@ def test_every_stop_with_dwellworthy_pool_emits_own_beat_sentence(n_stops: int):
 
 
 def test_transit_only_stop_dropped_beat_is_not_reported_as_voiced():
-    """#8 fix (was a CURRENT-CONTRACT PIN): a stop whose only beat is
+    """Formerly a CURRENT-CONTRACT PIN: a stop whose only beat is
     transit-class AND directionally rejected emits zero beat sentences — and
     that dropped beat must NOT be reported as voiced.
 
-    Before the #8 fix, ``_flatten_pois`` derived ``beat_ids`` from the raw plan,
+    Before the fix, ``_flatten_pois`` derived ``beat_ids`` from the raw plan,
     so a directionally-rejected transit beat that ``_build_transit`` never
     consumed AND the anchor block filters out still appeared in the stop's
     ``beat_ids``. That double-lied: it over-reported dwell by the beat's spoken
@@ -1223,7 +1220,7 @@ def test_transit_only_stop_dropped_beat_is_not_reported_as_voiced():
     This also guards the inverse regression: if the anchor block's transit-class
     filter is ever DROPPED, assertion (2) fails, preventing out-of-place
     navigation sentences from leaking back into anchor blocks (the original
-    Phase 7 bug the filter exists for).
+    bug the filter exists for).
     """
     from src.tour.beat_select import extra_beat_ids
 
@@ -1232,7 +1229,7 @@ def test_transit_only_stop_dropped_beat_is_not_reported_as_voiced():
     p1_orient = _beat("p1-orient", "p1", body="Find the corner bench.", nf="stop_orientation")
     p1_body = _beat("p1-body", "p1", body="Henri IV built the square in 1612.", nf="establishing")
     # Transit-class AND directionally rejected: neither the trigger_address
-    # nor the body mentions p1's name, so _build_transit's Phase-7 direction
+    # nor the body mentions p1's name, so _build_transit's direction
     # check refuses it and falls through to GLUE_NAV without consuming it;
     # the anchor block then filters it as transit-class -> zero emission.
     p2_transit = _beat(
@@ -1271,7 +1268,7 @@ def test_transit_only_stop_dropped_beat_is_not_reported_as_voiced():
     # until 2026-08-06; the number is the same, the reason is not, and the
     # property under test is unchanged: never ABOVE the floor on unvoiced audio.
     assert sp2.dwell_seconds == 300
-    # (1c) P9R-S1.M6 (Paulo's acceptance finding): a rejected transit beat is
+    # (1c) A rejected transit beat is
     # NOT an extra either. Extras play STANDING at the stop, and this beat's
     # words are a walk's narration for a walk this route does not take —
     # re-classifying it as reachable was how "Walk up boulevard de Sébastopol"
@@ -1302,8 +1299,7 @@ def test_cold_open_area_hoist_strips_donor_stop_current_contract_pin():
     consumed_beat_ids so it never fires at its own stop; when it was the
     donor's ONLY beat, the donor emits zero beat sentences while its
     ScriptPOI.beat_ids stays non-empty — the second known glue-only-stop
-    path. The per-stop floor is owned by
-    specs/2026-07-02-dwell-audio-reconciliation/; flip assertion (2)
+    path. The per-stop floor is deferred design; flip assertion (2)
     DELIBERATELY when it lands. Assertion (3) simultaneously guards the
     CROSS-stop double-fire regression (the same-stop case is covered by
     test_orientation_beat_not_emitted_twice above).
@@ -1346,10 +1342,10 @@ def test_cold_open_area_hoist_strips_donor_stop_current_contract_pin():
 
 
 # ---------------------------------------------------------------------------
-# C8 — honest REPORTED per-stop minutes (dwell_seconds = max(tier floor,
+# Honest REPORTED per-stop minutes (dwell_seconds = max(tier floor,
 # planned voiced audio)). Reporting surface only; routes are unchanged.
 # The hermetic fixtures elsewhere carry no word_count, so max() == the tier
-# floor there; these two tests exercise the honest path that C8 changes.
+# floor there; these two tests exercise the honest path.
 # ---------------------------------------------------------------------------
 
 
@@ -1407,7 +1403,7 @@ def test_reported_dwell_floors_at_its_visit_time_when_a_stop_is_beat_thin():
 
 
 # ---------------------------------------------------------------------------
-# #20 — grounded, honest cold-open (area article + first-stop walk framing)
+# Grounded, honest cold-open (area article + first-stop walk framing)
 # ---------------------------------------------------------------------------
 
 def test_area_article_covers_english_descriptive_areas():
@@ -1475,8 +1471,7 @@ def test_first_leg_text_none_without_stop_name():
 
 
 # ---------------------------------------------------------------------------
-# Phase 8 S8.3c (W8.2 R2; phase7-ledger carry 1, Paulo's Finding 14): the
-# opener's WALKING line rides the first LEG, not the standing cold-open — a
+# The opener's WALKING line rides the first LEG, not the standing cold-open — a
 # queued first stop must not auto-play "head for X" to someone standing in
 # its queue. The one leg-vs-stop rule (``is_walk_concurrent``) is untouched;
 # the line's LABEL moves to GLUE_NAV, whose placement is already the leg's.
@@ -1565,10 +1560,10 @@ def test_nav_template_final_destination_is_a_graceful_arrival():
 
 
 # ---------------------------------------------------------------------------
-# D6-ETA: nav glue minutes must derive from the engine's own leg-seconds
+# Nav glue minutes must derive from the engine's own leg-seconds
 # budget (routed leg_seconds, else walk_seconds) — NOT a separate
 # round(distance_m / 80) display-pace estimate that can silently diverge
-# from the displayed tour total (specs/2026-07-18-tour-qa-campaign/REPORT.md).
+# from the displayed tour total.
 # ---------------------------------------------------------------------------
 
 
@@ -1690,7 +1685,7 @@ def test_generate_nav_glue_names_destinations_not_flat_walk_to_next_stop():
 
 
 def test_sum_audio_drops_when_dedup_suppresses_sentences():
-    """#8's GUARANTEE, preserved across the 2026-07-19 audio-clock rewrite: a
+    """The GUARANTEE, preserved across the 2026-07-19 audio-clock rewrite: a
     claim-dedup-trimmed beat reports only its SURVIVING audio, never the whole
     beat — so tour minutes stay honest when content is suppressed.
 
@@ -1722,7 +1717,7 @@ def test_sum_audio_drops_when_dedup_suppresses_sentences():
 
 
 def test_sum_audio_gives_full_credit_when_compose_merges_sentences():
-    """#8 (compose refinement)'s GUARANTEE, preserved across the 2026-07-19 rewrite:
+    """The compose refinement's GUARANTEE, preserved across the 2026-07-19 rewrite:
     a composer that MERGES a beat's sentences while voicing every word keeps FULL
     audio credit. Re-merging text must never look like losing content.
 
@@ -1909,9 +1904,10 @@ def _closed_route(pois, closed_ids, *, all_day=False):
 
 def test_a_closed_stop_says_so_before_any_of_its_story():
     """Owner ruling: interior description at a closed stop is fine — a gift to
-    Camille — as long as the closure is acknowledged ONCE, and first, so Aiko
-    is never invited into a shut rotunda and Paulo hears orientation before
-    description. The acknowledgment is the stop's FIRST stationary sentence.
+    a visitor who came for the story — as long as the closure is acknowledged
+    ONCE, and first, so no visitor is invited into a shut rotunda and every
+    visitor hears orientation before description. The acknowledgment is the
+    stop's FIRST stationary sentence.
     UNDO: drop the closure-line emission -> the stop opens on room-13-style
     content with the word never spoken -> RED."""
     p1 = _poi("p1", "Pantheon")
@@ -1937,7 +1933,7 @@ def test_a_closed_stop_says_so_before_any_of_its_story():
         "Musee de Cluny is closed at the moment, so we'll take it in from out here."
     ), [s.text for s in stop2_stationary][:3]
     assert first.source_id == GLUE_STAGING and first.source_type == "glue"
-    # Said ONCE — and Camille keeps her tapestries.
+    # Said ONCE — and the visitor keeps the tapestries.
     said = [s for s in script.script if "closed at the moment" in s.text]
     assert len(said) == 1
     assert any("room 13" in s.text for s in script.script)
@@ -1962,7 +1958,7 @@ def test_a_closed_first_stop_says_so_right_after_settle_in():
 
 
 def test_an_all_day_closure_says_closed_today_not_at_the_moment():
-    """Aiko's wasted return trip (07, step 6): "closed at the moment" reads as
+    """A visitor's wasted return trip: "closed at the moment" reads as
     "opens later today", which is a lie at a museum shut ALL day. The all_day
     flag — set by selection from the day's own empty window list, never from
     words — picks the honest branch. A partial closure keeps "at the moment"
@@ -1989,9 +1985,9 @@ def test_an_all_day_closure_says_closed_today_not_at_the_moment():
 
 
 def test_no_staging_cue_points_behind_a_shut_door():
-    """Acceptance's Aiko finding: three sentences after "we'll take it in from
+    """Three sentences after "we'll take it in from
     out here", the synthesized opener said "Look up at crypt with tombs of…" —
-    the guide's own voice directing her at something behind the shut door. At
+    the guide's own voice directing the visitor at something behind the shut door. At
     a clock-closed stop the cue staging line is suppressed; the closure line
     already stages the stop. An open stop keeps its cue (the existing
     view-cue tests are the pin)."""
@@ -2045,7 +2041,7 @@ def test_an_open_day_and_screen_only_notes_speak_no_closure_line():
 
 def test_a_closed_start_not_in_the_day_is_named_first():
     """The walker STANDS at the start beside a shut door the plan removed
-    (Docs/adr/0004's honest removal, or a pool-rule ejection). Walking away
+    (an honest removal, or a pool-rule ejection). Walking away
     from it wordlessly is the checkable lie by omission: the person can SEE
     the place. An exclusion flagged ``at_start`` — set by selection from
     coordinates, never recovered from words — whose place is NOT on the route
@@ -2100,7 +2096,7 @@ def test_a_closed_start_speaks_before_the_first_stops_own_closure_line():
     """When stop 0 is ALSO clock-closed, two shut doors are two facts, each
     said once: the walker is standing at the start's door, so its line comes
     first; the closed stop 0 is "just ahead" and its own line follows.
-    Suppressing either is the lie by omission M18 exists to forbid."""
+    Suppressing either is the lie by omission this rule exists to forbid."""
     from src.tour.contract import ClockExclusion
 
     poi = _poi("p1", "Pantheon")
@@ -2134,16 +2130,16 @@ def test_a_closed_start_speaks_before_the_first_stops_own_closure_line():
 
 
 def test_a_kept_closed_start_is_named_where_the_walker_stands():
-    """Marcus starts AT the closed Bourse at 13:30; the walk seats it 80
-    minutes later. Until now the voice was silent at the door he is looking
-    at — the same lie of omission M18 forbids off-route. A kept at_start
+    """A visitor starts AT the closed Bourse at 13:30; the walk seats it 80
+    minutes later. Until now the voice was silent at the door they are looking
+    at — the same lie of omission forbidden off-route. A kept at_start
     exclusion seated past stop 0 is named at the open as a bare FACT (no
-    "we'll come back": the session may trade the stop away, W6.2 R4); its
+    "we'll come back": the session may trade the stop away); its
     own stop still speaks the take-it-in-from-out-here line on arrival. An
     at_start exclusion that IS stop 0 emits no extra line — its own
     acknowledgment already holds the slot.
     UNDO: keep the off-route-only guard in _closed_start_line -> the open is
-    silent at the door Marcus stands beside -> RED."""
+    silent at the door the visitor stands beside -> RED."""
     from src.tour.contract import ClockExclusion
 
     p1 = _poi("p1", "Pantheon")
@@ -2254,7 +2250,7 @@ def test_a_dropped_only_invitation_beat_is_not_reported_as_voiced():
 
 
 def test_a_transit_beat_that_speaks_a_bearing_is_never_picked_for_the_leg():
-    """S1.M3: the refusal happens at the PICK, not at the report. A beat whose encoded
+    """The refusal happens at the PICK, not at the report. A beat whose encoded
     bearing cannot be verified against this route's own direction is not used, and the
     leg falls through to the deterministic template — which names both ends, speaks the
     routed minutes and cannot say a compass point."""
@@ -2274,8 +2270,8 @@ def test_a_transit_beat_is_only_reusable_when_a_name_can_vouch_for_its_direction
     """Called with no names there is nothing to check the beat's direction against, so
     it cannot be shown to describe this segment. The old fail-open returned it anyway.
 
-    P9R-S1.M1 amendment (decisions doc §2: "the corpus transit-beat substring
-    gate ... under-covers", wrong directions on ANY day): the second assertion
+    The corpus transit-beat substring gate under-covered, giving wrong
+    directions on ANY day: the second assertion
     used to accept "the square" as origin evidence when the body merely walks
     INTO the square — the destination-mention fault. A previous stop now
     vouches as ORIGIN only (trigger_address, or the opening origin clause), so
@@ -2289,12 +2285,12 @@ def test_a_transit_beat_is_only_reusable_when_a_name_can_vouch_for_its_direction
 
 
 def test_a_destination_street_mention_never_vouches_for_an_origin():
-    """P9R-S1.M1 — Paulo's fatal pick, as measured. Frommer's Châtelet approach
+    """A fatal pick, as measured. Frommer's Châtelet approach
     ("Walk up boulevard de Sébastopol and turn right into rue de Rivoli into
     square de la Tour St-Jacques") was picked for a walker arriving ALONG rue
     de Rivoli from the east, because the previous stop is a street the beat
     merely turns into. The line is true of the guidebook's own approach and
-    false of his; the pick must refuse it and fall to the template that names
+    false of the walker's; the pick must refuse it and fall to the template that names
     both real ends. UNDO: restore the substring haystack match for prev_name
     -> the Frommer's beat is picked again -> RED."""
     frommers = _beat(
@@ -2345,7 +2341,7 @@ def test_a_verified_origin_still_vouches_two_ways():
 
 
 def test_the_walks_own_narration_is_walk_concurrent():
-    """P9R-S1.M2 — a corpus transit beat is picked FOR the leg (`_build_transit`)
+    """A corpus transit beat is picked FOR the leg (`_build_transit`)
     but its sentences used to classify as stationary: `is_walk_concurrent` knew
     only glue labels and vignette ids, so the playback freeze booked the walk's
     own narration onto the STOP, and the placement floor then refused the day
@@ -2372,7 +2368,7 @@ def test_transit_class_beat_ids_reads_the_one_function_set():
 
 
 def test_a_destination_mentioned_in_passing_never_vouches_either():
-    """P9R exit-panel finding: the departure lane kept a whole-body substring,
+    """The departure lane kept a whole-body substring,
     so a beat at the departure stop walking to Les Halles — which merely says
     "you will pass the Tour Saint-Jacques on your right" — was pickable for
     the leg TO the tower. A departure beat names its destination up front

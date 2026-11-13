@@ -72,7 +72,7 @@ def _create_poi(client, name: str, lat: float, lng: float) -> dict:
     return resp.json()
 
 
-# ── Create Area (AC-1) ──
+# ── Create Area ──
 
 
 @needs_neo4j
@@ -123,7 +123,7 @@ class TestCreateArea:
         assert "created_at" in area["properties"]
 
 
-# ── MERGE idempotency (AC-2) ──
+# ── MERGE idempotency ──
 
 
 @needs_neo4j
@@ -160,7 +160,7 @@ class TestAreaMerge:
         assert len(matches) == 2
 
 
-# ── Validation (D1-D4) ──
+# ── Validation ──
 
 
 @needs_neo4j
@@ -216,7 +216,7 @@ class TestAreaValidation:
         assert resp.status_code == 422
 
 
-# ── WITHIN edge (AC-3, D5, D6) ──
+# ── WITHIN edge ──
 
 
 @needs_neo4j
@@ -292,7 +292,7 @@ class TestWithinEdge:
         assert "WITHIN target must be Area" in resp.json()["detail"]
 
 
-# ── Spatial query (AC-8) ──
+# ── Spatial query ──
 
 
 @needs_neo4j

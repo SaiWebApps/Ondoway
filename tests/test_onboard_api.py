@@ -1,4 +1,4 @@
-"""Step-5 onboarding API router (src/api/routes/onboard.py) — TestClient bar.
+"""Onboarding API router (src/api/routes/onboard.py) — TestClient bar.
 
 Hermetic: ``ONBOARD_PROVIDER=mock`` (conftest) + fixture-mode HTTP + a patched
 deploy seam, so nothing here spends an Anthropic credit or touches the network /
@@ -65,7 +65,7 @@ def _create_job(client, modes=("license_clean",)):
             "slug": "london",
             "display_name": "London",
             "bbox": LONDON_BBOX,
-            # M10 (Docs/adr/0006): a new city records the country its opening
+            # A new city records the country its opening
             # hours are read against, or the upload refuses to register it.
             "country": "GB",
             "modes": list(modes),
@@ -295,7 +295,7 @@ def test_upload_writes_city_and_pins_neo4j_env(client, monkeypatch, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# 6. upload rejects a cloud target (cloud is deferred to Step 8).
+# 6. upload rejects a cloud target (cloud upload is deferred).
 # ---------------------------------------------------------------------------
 def test_upload_rejects_cloud_target(client):
     job_id, _ = _run_to_assembled(client)
@@ -508,7 +508,7 @@ def test_upload_before_beats_drafted_is_409(client):
 def test_a_city_onboarded_with_no_country_is_refused_at_upload(
     client, monkeypatch, tmp_path
 ):
-    """M10 (Docs/adr/0006): opening hours are read against a country's public
+    """Opening hours are read against a country's public
     holidays, so a city registered without one cannot plan a dated day. Onboarding
     that omits it does not fail silently and surface months later at the first
     walker's first dated request — the upload refuses, by name, before the city is

@@ -1,4 +1,4 @@
-"""Step 1.5b — automated narration-coherence gate (web-first verification).
+"""Automated narration-coherence gate (web-first verification).
 
 Generates a real Paris tour against the live dev graph (port 7687) and asserts
 the stitched per-stop narration is COHERENT — every stop non-empty, opens with a

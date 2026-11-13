@@ -35,7 +35,7 @@ pytestmark = pytest.mark.invariants
 # are routing-independent. The enriched NYC corpus LANDED on the dev graph
 # (2026-08-25): all 402 POIs now carry `typical_duration_min`, `visit_basis`,
 # `place_category` and `queue_class`, and 214 carry `visit_seconds_inside`, where
-# the corpus W8.6 measured carried NONE of them (0 of 402 on every one of those
+# the corpus measured before it carried NONE of them (0 of 402 on every one of those
 # properties). NYC legs are still haversine — Valhalla carries only Île-de-France
 # tiles — so this is narrative-defect coverage for NYC, NOT a claim of routing
 # parity. Coords were dry-run to confirm they yield feasible, invariant-clean
@@ -73,11 +73,11 @@ _PATHS = [
     # defect cannot reproduce. 300 is the owner's actual request.
     ("rue-royale-notredame-p2p", "paris", (48.867905, 2.323215), 300, None,
      (48.852966, 2.349902)),
-    # THE TWO NEW YORK ROWS, BACK FROM THE TOMBSTONE (2026-08-25). W8.6 moved them
+    # THE TWO NEW YORK ROWS, BACK FROM THE TOMBSTONE (2026-08-25). They were moved
     # out of this list because their "a feasible fixture must not refuse" premise
     # was measurably FALSE on the un-enriched corpus (74 of 150 minutes buildable
-    # for lower-manhattan, 64 of 150 for greenwich — both under the half line the
-    # panel re-affirmed 11/11), and put an ALARM on the tombstone that fires the
+    # for lower-manhattan, 64 of 150 for greenwich — both under the half line), and
+    # an ALARM was put on the tombstone that fires the
     # moment the corpus upload makes either day buildable. The corpus landed and
     # the alarm fired on both rows, exactly as designed, so both return here to be
     # judged on their full narrative invariants (INV1-INV8) again.
@@ -86,18 +86,18 @@ _PATHS = [
      ["hidden_history", "social_change"], None),
 ]
 
-# THE W8.6 TOMBSTONE (`_THIN_CORPUS_PATHS`) AND ITS ALARM TEST
+# THE TOMBSTONE (`_THIN_CORPUS_PATHS`) AND ITS ALARM TEST
 # (`test_a_corpus_too_thin_for_the_day_refuses_honestly`) ARE GONE — the alarm
 # fired and was serviced, which is the terminal state its own design named.
 #
-# W8.6 (2026-08-24) moved both NYC rows out of `_PATHS` because their premise ("a
+# On 2026-08-24 both NYC rows moved out of `_PATHS` because their premise ("a
 # feasible fixture must not refuse") was measurably false on the un-enriched
 # corpus: lower-manhattan 26 min buildable of a 60 ask (43.3%) and 74 of 150
 # (49.3%), greenwich 64 of 150 (42.7%), the generality sweep 122 of 250 (48.8%) —
-# every one under the half line the W8.6 panel re-affirmed 11/11 (Q5). It parked
-# them under a test asserting the true thing (an honest refusal that names the
-# buildable day and carries a way out) and wrote the exit condition into that
-# test: "it fails the moment the corpus upload makes either day buildable, sending
+# every one under the half line. They were parked under a test asserting the true
+# thing (an honest refusal that names the buildable day and carries a way out),
+# with the exit condition written into that test: "it fails the moment the
+# corpus upload makes either day buildable, sending
 # both rows back to `_PATHS`."
 #
 # 2026-08-25: the enriched corpus landed, both days build (4 stops and 2 stops for
@@ -188,29 +188,28 @@ _MIN_DWELL_NARRATION_CHARS = 80
 # defect costs roughly 130 minutes of extra walking at the engine's pace for
 # its ~5 km round trip — a full order of magnitude past Luxembourg Gardens.
 # 1800s (30 min) draws the line between them; it is an empirical line fit to
-# this file's fixtures, not a principled worthiness threshold, and Task 4 may
-# need to move it once more real routes exercise this check.
+# this file's fixtures, not a principled worthiness threshold, and it may need
+# to move once more real routes exercise this check.
 _MAX_STOP_DETOUR_RATIO = 2.0  # via-this-window cost vs. the direct walk around it
 _MIN_DETOUR_EXTRA_SECONDS = 1800  # ...and at least 30 real minutes of pure detour
 _MAX_DETOUR_WINDOW = 3  # check runs of 1, 2, and 3 consecutive stops as one unit
 
-# ...AND THE DETOUR IS NOT EARNED BY WHAT IS IN IT (Phase 8 W8.6, 2026-08-24).
+# ...AND THE DETOUR IS NOT EARNED BY WHAT IS IN IT (2026-08-24).
 #
 # THE LIMITATION THIS CLOSES IS THE ONE THE COMMENT ABOVE ALREADY NAMED: "a run of
 # many consecutive stops is what an ordinary multi-stop tour looks like (it is
 # EXPECTED to cost much more than a straight line across itself, because visiting
 # things is the point)", and "1800s draws the line ... it is an empirical line fit
-# to this file's fixtures, not a principled worthiness threshold, and Task 4 may
-# need to move it once more real routes exercise this check."
+# to this file's fixtures, not a principled worthiness threshold, and it may need
+# to move once more real routes exercise this check."
 #
 # More real routes have now exercised it, and they show the two-part test firing on
 # a GOOD tour. A LOOP's flanking points sit near each other by construction, so its
 # windows are compared against a very short direct line and the ratio explodes
-# however sensible the day is. Measured on the live concorde-250-loop
-# (evidence/phase8-gates/w86-inv8-probe.log): 69 minutes of walking against 130
-# minutes of standing — the shape every persona day has (Camille 0.40, Rosemary
-# 0.43, Greta 0.55) — and EVERY stop earns its own walk with room to spare, priced
-# in the currency the W8.6 panel ruled in (Q2, 11/11):
+# however sensible the day is. Measured on the live concorde-250-loop: 69 minutes
+# of walking against 130 minutes of standing — the shape a full visitor day has
+# (measured at 0.40 to 0.55) — and EVERY stop earns its own
+# walk with room to spare, priced in visitor-time:
 #
 #     Hotel Le Meurice       46s walking / 912s standing   ratio 0.05
 #     Palais-Royal          887s walking / 1800s standing  ratio 0.49
@@ -218,11 +217,11 @@ _MAX_DETOUR_WINDOW = 3  # check runs of 1, 2, and 3 consecutive stops as one uni
 #     Jardin des Tuileries    0s walking / 2400s standing  ratio 0.00
 #     Place de la Concorde 1303s walking / 2100s standing  ratio 0.62
 #
-# against the panel's cap of 2.0. So the third clause asks what the first two
+# against the cap of 2.0. So the third clause asks what the first two
 # cannot: is this extra walking EARNED by the time the window gives the visitor?
 # It is the same rule `selection.stop_earns_its_walk` applies when ADMITTING a stop
-# (design §4.5.1 — price trades in visitor-time), now applied to judging a finished
-# route, so the planner and the gate that judges it speak one currency (§10.8.2).
+# (price trades in visitor-time), now applied to judging a finished route, so the
+# planner and the gate that judges it speak one currency.
 #
 # THIS DOES NOT SOFTEN THE DEFECT THE CHECK EXISTS FOR. The reported Villette shape
 # spends ~130 minutes of walking to reach places the visitor barely stands at, so
@@ -418,11 +417,10 @@ def _check_invariants(route, script) -> list[str]:
                     f"{_MAX_DETOUR_WALK_PER_DWELL_SECOND:.1f}x dwell)"
                 )
 
-    # INV3 (a literal "thank you" sign-off on the LAST stop) was DELETED at Phase 6 D6.0
-    # of the tour-algorithm redesign (audit F: PINS-THE-OLD-ALGORITHM). Design §5.3 gives
-    # every named stretch a written one-line close that plays wherever the stretch ends,
-    # and §7.4.5 requires every PREFIX of a day to end with a close — the every-prefix
-    # close assertion in the Phase 6 suite replaces it.
+    # INV3 (a literal "thank you" sign-off on the LAST stop) is DELETED: it pinned the
+    # old algorithm. Every named stretch carries a written one-line close that plays
+    # wherever the stretch ends, so every PREFIX of a day ends with a close — the
+    # every-prefix close assertion in test_tour_narration_rules.py replaces it.
 
     return v
 
@@ -566,8 +564,8 @@ def test_no_silent_empty_tour_in_any_city(city):
     non-empty tour OR refuses cleanly — never a silent 0-stop Route. This is the
     contract a new city must also satisfy (add its starts to _GENERALITY_STARTS).
 
-    **BOTH HONEST REFUSAL CLASSES COUNT, re-derived at Phase 8 W8.6 (2026-08-24)
-    as a written decision under §0.1.3 — not a catch widened to get green.** The
+    **BOTH HONEST REFUSAL CLASSES COUNT, decided on 2026-08-24 — not a catch
+    widened to get green.** The
     invariant this test names is "never a SILENT 0-stop route", and the engine
     has TWO loud refusals, not one: `TourabilityRefusedError` (there is nothing
     to tour here) and `CertificationPlanningInfeasibleError` (the day that can be
@@ -579,8 +577,8 @@ def test_no_silent_empty_tour_in_any_city(city):
     the first does. This test caught only the first, so an honest refusal naming
     the buildable day ("the longest day that can be built here is about 122
     minutes, far short of the 250 minutes asked for") was scored as a defect.
-    The W8.6 panel ruled 11/11 that exactly this refusal is the CORRECT answer
-    below half the ask (Q5) and that its sentence should stay as written. What
+    This refusal is the CORRECT answer below half the ask, and its sentence stays
+    as written. What
     the test forbids is unchanged: a Route with no stops, returned in silence.
     """
     from src.tour.contract import TourInput

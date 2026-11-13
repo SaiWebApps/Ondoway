@@ -1,16 +1,14 @@
 """THE ONE INTERLEAVE — ``build_route_option`` assembles the day's cards. Hermetic.
 
-Moved intact from ``tests/test_tour_flavours.py`` at Phase 4's D4.0 (redesign plan,
-2026-08-07 folder): that file was the k-flavours suite and died with ``select_k_routes``
-and the diversity machinery (design §8.1 — "no persona ever wanted to compare routes"),
-but ``build_route_option`` is count-agnostic and SURVIVES as the one place a Route
+Moved intact from ``tests/test_tour_flavours.py``: that file was the k-flavours suite
+and died with ``select_k_routes`` and the diversity machinery (a visitor never wants to
+compare routes), but ``build_route_option`` is count-agnostic and SURVIVES as the one place a Route
 becomes user-facing cards (``test_tour_one_engine.py`` pins it as THE ONE INTERLEAVE).
 These are its tests: dwell/leg/vignette card assembly, spotlight and band scoring,
 lens coverage notes, and the contract round-trip.
 
-Deleting the flavour suite wholesale would have deleted this coverage with it — logged
-as a plan defect (§0.2) in phase4-ledger.md; the plan said "delete wholesale" before
-the file had been read end to end.
+Deleting the flavour suite wholesale would have deleted this coverage with it; the plan
+said "delete wholesale" before the file had been read end to end.
 """
 
 from __future__ import annotations
@@ -71,7 +69,7 @@ def _hand_built_route_and_script():
         "b2": BeatRef(id="b2", poi_id="p1", lenses=("hidden_history",)),
         "b3": BeatRef(id="b3", poi_id="p2", lenses=()),
     }
-    # Step 3.4: build_route_option now scores spotlight/band, so it needs the
+    # build_route_option scores spotlight/band, so it needs the
     # snapshot (POI tiers for gravity, beat lenses for lens_relevance). Mirror
     # the route's POIs and their beats exactly.
     snapshot = _snap(
@@ -105,7 +103,7 @@ def test_build_route_option_maps_engine_outputs():
     assert opt.eta_seconds == 600 + 486 + 300 + 60
     assert opt.lens_summary == {"hidden_history": 2, "historic_arch": 1}
     assert opt.degraded is False  # no reach verdict on the hand-built route
-    assert opt.stop_audio == {} and opt.why_this_works is None  # M7 slots
+    assert opt.stop_audio == {} and opt.why_this_works is None  # unfilled slots
 
 
 def test_route_option_contract_round_trips():
@@ -122,7 +120,7 @@ def test_route_option_contract_round_trips():
 
 
 def test_build_route_option_populates_spotlight_and_band_per_stop():
-    """Step 3.4 (spec s3.1/s7): every selected stop carries a strictly positive
+    """Every selected stop carries a strictly positive
     spotlight score and a band. The fixture requests no lens, so lens_relevance
     is uniform 1.0 and on-corridor proximity is 1.0, giving spotlight == gravity
     == tier: p1 (tier 5) = 5.0 -> headline -> dwell; p2 (tier 3) = 3.0 -> full ->
@@ -150,7 +148,7 @@ def test_build_route_option_populates_spotlight_and_band_per_stop():
 
 
 def test_build_route_option_lens_dims_off_genre_stop_to_vignette():
-    """Step 3.4: a requested lens DIMS an off-genre stop via lens_relevance.
+    """A requested lens DIMS an off-genre stop via lens_relevance.
     A tier-3 stop whose beats miss the lens scores 3 x LENS_FLOOR (0.25) = 0.75,
     below the short/full cuts -> vignette band; the on-genre tier-5 anchor stays
     a headline dwell. Proves the spotlight (not a fixed default) drives the band."""
@@ -180,7 +178,7 @@ def test_build_route_option_lens_dims_off_genre_stop_to_vignette():
 
 
 def test_route_option_lens_coverage_note_none_without_lens():
-    """Step 3.4 (s3.1): no lens requested -> nothing to surface -> note is None."""
+    """No lens requested -> nothing to surface -> note is None."""
     route, script, beats_by_id, snapshot = _hand_built_route_and_script()
     opt = build_route_option(
         route,
@@ -194,7 +192,7 @@ def test_route_option_lens_coverage_note_none_without_lens():
 
 
 def test_route_option_lens_coverage_note_reflects_corridor_density():
-    """Step 3.4 (s3.1): with a lens requested, the note reports how many route
+    """With a lens requested, the note reports how many route
     POIs speak to it. p1's beats hit hidden_history; p2's beat is unlensed (a
     miss). So 1 of 2 places speak to the lens."""
     route, script, beats_by_id, snapshot = _hand_built_route_and_script()
@@ -218,7 +216,7 @@ def test_route_option_lens_coverage_note_reflects_corridor_density():
 
 
 # ---------------------------------------------------------------------------
-# Track B Step B.3 — vignettes interleaved into RouteOption.stops
+# Vignettes interleaved into RouteOption.stops
 # ---------------------------------------------------------------------------
 
 
@@ -405,7 +403,7 @@ def test_build_route_option_carries_the_leg_and_vignette_narration_cards():
 
 
 def test_the_option_card_label_answers_the_request_like_the_session_does():
-    """Phase 9 S3.M6 — the S3.M3 label rule reaches the option cards too.
+    """The session's label rule reaches the option cards too.
 
     The session stops label through ``dominant_lens(prefer=family)`` in the API
     adapter, but the SAME stop's option card is built here, and a card labelled
@@ -499,9 +497,9 @@ def test_route_option_round_trips_with_explicit_spotlight_fields():
 
 
 def test_the_fixed_end_waypoint_is_flagged_and_named_as_a_finish_point_not_a_place():
-    """W4.12 closing panel: an A→B day whose last real stop was dropped ended with
-    "- Destination: 0 min · outside" counted as stop 5 of 5 (Sofia: "a winter tour
-    must never end at a nameless place in the dark"). The sentinel is a WAYPOINT
+    """An A→B day whose last real stop was dropped ended with
+    "- Destination: 0 min · outside" counted as stop 5 of 5, and a visitor
+    finishing after dark must never end at a nameless place. The sentinel is a WAYPOINT
     (contract.END_B_SENTINEL_PREFIX): the card carries `is_finish_point=True` and
     the honest name, so a screen ends the day there instead of counting it. A
     real place keeps False. The prefix is the ONE definition every surface reads.

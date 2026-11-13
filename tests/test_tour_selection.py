@@ -1,4 +1,4 @@
-"""Phase 2 — selection.py: envelope, spine, greedy. Pure-function tests."""
+"""selection.py: envelope, spine, greedy. Pure-function tests."""
 
 from __future__ import annotations
 
@@ -86,7 +86,7 @@ def _snap(
 ) -> CorpusSnapshot:
     types = {**{"Paris": "city"}, **(area_types or {})}
     adj = {k: frozenset(v) for k, v in (adjacent or {}).items()}
-    # Phase 6 density gate runs at the top of select_route(), so test
+    # The density gate runs at the top of select_route(), so test
     # fixtures need at least one beat per POI to clear it. Auto-inject
     # synthetic beats based on poi.beat_count when no explicit beats are
     # provided — keeps the existing selection-logic tests focused on
@@ -174,7 +174,7 @@ def _anchors_for_duration(duration_min: int) -> int:
     ``MAX_DWELL_AUDIO_SECONDS``, so it seats about ``target / ceiling`` of them —
     DERIVED from the planner's own constants, because the first version baked
     the arithmetic in as ``duration_min / 7.5`` (0.60 x 60 / 270) and went stale
-    the day Phase 6 S6.6 moved the ceiling to the panel's three minutes (R3):
+    the day the ceiling moved to three minutes:
     the 120-minute sweep cells starved and flagged tourability on a fixture
     that claims to be rich by construction. A proportional third on top,
     floored at six, keeps the pool non-empty for the endpoint pull, the fill
@@ -213,7 +213,7 @@ def _density_fillers(
 
     Two gates have to clear, and they pull in opposite directions.
 
-    The Phase 6 DENSITY gate wants a rich, tight pool: >= 4 anchor candidates
+    The DENSITY gate wants a rich, tight pool: >= 4 anchor candidates
     with fill >= 1.0 and compactness <= 0.6, or the rich-pool escape of fill
     >= 1.5 with >= 6 anchors. The certification TIME band (0.90-1.10 of the
     request since 2026-08-04, two-sided) wants a pool the planner can spend a
@@ -342,11 +342,10 @@ def test_envelope_excludes_walk_by_only():
 
 
 def test_low_tier_no_lens_eligible_as_vignette_not_dwell():
-    """Phase 3 re-baseline (Step 3.5, calibrated): the hard tier gate is GONE,
-    but spotlight ALLOCATES scarce dwell-minutes (s3), it does not stop
-    everywhere.
+    """The hard tier gate is GONE, but spotlight ALLOCATES scarce
+    dwell-minutes, it does not stop everywhere.
 
-    Pre-3.5 a tier-1 POI was hard-EXCLUDED from the anchor pool
+    Before the model switch a tier-1 POI was hard-EXCLUDED from the anchor pool
     (ANCHOR_TIERS = {3,4,5}). After the model switch it is ELIGIBLE -- its
     on-path spotlight gravity(1) x 1.0 x 1.0 = 1.0 is a VIGNETTE (a brief
     mention), not silent. But 1.0 is below the calibrated dwell floor
@@ -382,7 +381,7 @@ def test_low_tier_no_lens_eligible_as_vignette_not_dwell():
 
 
 def test_low_tier_off_genre_goes_silent_only_when_both():
-    """s3 silence invariant: silent ONLY when low-gravity AND off-genre.
+    """Silence invariant: silent ONLY when low-gravity AND off-genre.
 
     With a lens requested, a tier-1 POI whose beats MISS the lens scores
     gravity(1) x LENS_FLOOR(0.25) x proximity(1.0) = 0.25 -> below the vignette
@@ -572,7 +571,7 @@ _HOP_MAP = {
 
 
 def test_lens_adjacency_direct_hit_is_full_weight():
-    """§3 (M3): a direct beat-lens hit scores 1.0 — identical to the no-lens run."""
+    """A direct beat-lens hit scores 1.0 — identical to the no-lens run."""
     p = _poi("p", lat=48.85, lng=2.35)
     snap = _snap([p], beats_by_poi={"p": _lensed_beats("p", ("hidden_history",))})
     s_direct = poi_score(p, None, frozenset({"hidden_history"}), snap)
@@ -582,7 +581,7 @@ def test_lens_adjacency_direct_hit_is_full_weight():
 
 
 def test_lens_adjacency_one_hop_is_point_six_both_directions():
-    """§3 (M3): one IS_PARENT_OF hop scores 0.6 — parent requested reaching a
+    """One IS_PARENT_OF hop scores 0.6 — parent requested reaching a
     child-lensed beat, and child requested reaching a parent-lensed beat."""
     p = _poi("p", lat=48.85, lng=2.35)
     child_beats = _snap(
@@ -618,14 +617,14 @@ def test_lens_adjacency_ranks_direct_above_one_hop():
 
 
 def test_lens_miss_dims_but_does_not_zero_poi_score():
-    """Phase 3 re-baseline (Step 3.5): the model switch made poi_score's lens
+    """The model switch made poi_score's lens
     factor the POSITIVE-floored lens_relevance (miss -> LENS_FLOOR = 0.25), NOT
     the legacy hard-filter _lens_adjacency (miss -> 0.0).
 
     A high-gravity (tier-5) POI that MISSES the requested lens must score a
     strictly positive, DIMMED value -- exactly LENS_FLOOR of its no-lens score,
     not zero. This is what lets a lens-miss landmark still earn a dwell stop
-    ("lens promotes, never silences a landmark", s3) rather than vanishing.
+    ("lens promotes, never silences a landmark") rather than vanishing.
     """
     from src.tour.selection import LENS_FLOOR
 
@@ -646,12 +645,12 @@ def test_lens_miss_dims_but_does_not_zero_poi_score():
 
 
 def test_lens_miss_high_gravity_poi_survives_as_vignette():
-    """Step 3.5 (calibrated): the lens-miss HARD exclusion is GONE -- a tier-5
+    """The lens-miss HARD exclusion is GONE -- a tier-5
     off-genre POI is no longer dropped; it is DIMMED to a vignette (5 x
     LENS_FLOOR = 1.25, below the 3.0 dwell floor; landmark-floored, never
     silent) -- a brief mention. Dimmed is NOT a dwell stop: the lens-hit
     anchors take the dwell slots; the off-genre landmark is an eligible
-    vignette. (s3: lens alone never silences a landmark; off-genre dims it.)
+    vignette. (Lens alone never silences a landmark; off-genre dims it.)
     """
     from src.tour.selection import BAND_VIGNETTE, band_for_spotlight, spotlight
 
@@ -759,7 +758,7 @@ def test_select_route_respects_walk_budget():
 
 
 def test_select_route_seats_each_candidate_at_most_once():
-    """The stop CEILING was deleted 2026-08-04 (OWNER RULING 5); what must still
+    """The stop CEILING was deleted 2026-08-04; what must still
     hold is that a long duration in a tight cluster seats each candidate once.
 
     The cluster used to be 25 POIs ~5 m apart. A 400-minute request now has to
@@ -892,7 +891,7 @@ def test_select_route_prefers_spine_area():
 
 
 def test_yellow_density_attaches_assessment_to_route():
-    """Phase 6: a YELLOW assessment must surface as route.tourability.
+    """A YELLOW assessment must surface as route.tourability.
 
     YELLOW means "there is less to say here than an hour wants, but a tour is
     still worth building", so this fixture has to be thin in EXACTLY one way and
@@ -940,7 +939,7 @@ def test_yellow_density_attaches_assessment_to_route():
 
 
 def test_zero_beat_poi_excluded_from_anchor_pool():
-    """Phase 6 selection guard: tier-3+ POIs with 0 active beats are dropped."""
+    """Selection guard: tier-3+ POIs with 0 active beats are dropped."""
     # Both carry the fillers' area so the control POI ("rich" must be selected)
     # is not quietly outscored on spine alignment instead of on beats.
     # Both carry the fillers' area so the control POI ("rich" must be selected)
@@ -981,9 +980,9 @@ def test_zero_beat_poi_excluded_from_anchor_pool():
 
 
 def test_select_route_empty_when_no_candidates_in_envelope():
-    """Phase 6: an empty reachable envelope now raises TourabilityRefusedError.
+    """An empty reachable envelope now raises TourabilityRefusedError.
 
-    Pre-Phase-6 this returned an empty Route. The density gate runs
+    Before the density gate this returned an empty Route. The density gate runs
     before the envelope filter and refuses (RED) when there's no corpus
     to support a tour at all.
     """
@@ -1034,16 +1033,15 @@ def test_fixed_end_red_start_circle_defers_to_routed_fixed_end_checks():
     )
     assert assess_snapshot(viable, snap).status == "RED"
 
-    # Deferred: the density gate did NOT raise. Since step 3B.9 the floor had
-    # been soft and this corpus SHIPPED a six-minute day for a sixty-minute
-    # ask, disclosed — which is exactly the cliff the W4.2 panel ruled out
-    # unanimously (Phase 4 S4.5, D-i: "a dial turn may refuse with a reason,
-    # or re-plan a full day; it may NEVER quietly hand back a sixth of what
-    # was asked for" — UNDERFILL_REFUSAL_FRACTION). So deferral is proved the
+    # Deferred: the density gate did NOT raise. While the floor was soft this
+    # corpus SHIPPED a six-minute day for a sixty-minute ask, disclosed. That
+    # cliff is ruled out: a dial turn may refuse with a reason, or re-plan a
+    # full day; it may NEVER quietly hand back a sixth of what was asked for
+    # (UNDERFILL_REFUSAL_FRACTION). So deferral is proved the
     # way this test's own docstring first proved it: by WHICH refusal arrives.
     # A RED start circle with a reachable end is refused by CERTIFICATION,
     # naming the shortfall in minutes and what binds — never by the density
-    # gate. Written decision at the Phase 4 close (2026-08-18).
+    # gate.
     from src.tour.selection import CertificationPlanningInfeasibleError
 
     with pytest.raises(CertificationPlanningInfeasibleError) as caught:
@@ -1058,7 +1056,7 @@ def test_fixed_end_red_start_circle_defers_to_routed_fixed_end_checks():
 
 
 # ---------------------------------------------------------------------------
-# Phase 2 calibration (Q1) — endpoint-pull for one-way routes
+# Endpoint-pull for one-way routes
 # ---------------------------------------------------------------------------
 
 
@@ -1207,7 +1205,7 @@ def test_endpoint_pull_never_evicts_entire_route():
 def test_isolated_single_anchor_is_refused_with_the_duration_it_could_support():
     """One anchor in reach: the tour is refused, and the refusal says what fits.
 
-    This is the Père Lachaise pattern (hostile-panel finding 2026-07-02): a start
+    This is the Père Lachaise pattern (found 2026-07-02): a start
     point with exactly one dwellable anchor anywhere near it. It used to be
     answered by building the one-stop tour anyway and hanging a YELLOW "this area
     is thin" assessment on it, so the surfaces could explain the single stop
@@ -1260,7 +1258,7 @@ def test_isolated_single_anchor_is_refused_with_the_duration_it_could_support():
 
 
 # ---------------------------------------------------------------------------
-# Phase 2 calibration (Q3) — spine tie-break
+# Spine tie-break
 # ---------------------------------------------------------------------------
 
 
@@ -1295,7 +1293,7 @@ def test_spine_tiebreak_prefers_neighborhood_over_tied_district():
     assert spine == "Le Marais"
 
 
-# Phase 2.6 calibration — 2x district dominance rule (Note 1).
+# 2x district dominance rule.
 
 
 def test_spine_prefers_island_over_district_below_2x():
@@ -1365,7 +1363,7 @@ def test_spine_district_dominance_picks_strongest_specific_when_multiple():
     assert spine == "Island strong"
 
 
-# Phase 2.6 — Latin Quarter polygon regression (Note 2).
+# Latin Quarter polygon regression.
 
 
 def test_notre_dame_in_ile_not_latin_quarter():
@@ -1398,7 +1396,7 @@ def test_notre_dame_in_ile_not_latin_quarter():
 
 
 # ---------------------------------------------------------------------------
-# Phase 7 — fill pass (Fix 3): target_audio is a floor, not a soft stop
+# Fill pass: target_audio is a floor, not a soft stop
 # ---------------------------------------------------------------------------
 
 
@@ -1776,28 +1774,26 @@ def test_phase7_fill_pass_respects_walk_budget_cap():
 
 
 def test_phase7_fill_pass_under_floor_rescue_adds_nearby_stop():
-    """#21: a 2nd nearby stop that busts walk_budget but fits total planned time
+    """A 2nd nearby stop that busts walk_budget but fits total planned time
     is added while the tour is below the stop floor and the audio floor.
 
     Mirrors the live Latin Quarter 60-min loop: greedy seats one stop (Pantheon),
     the second (Sorbonne) round-trip detour busts walk_budget, yet audio is far
     under target and total time has ample slack. The under-fill rescue admits it.
 
-    **THE SECOND STOP'S WORTH WAS RE-DERIVED AT W8.6 (2026-08-24), a written
-    decision under §0.1.3, not a nursed number.** This fixture used to seat B on a
+    **THE SECOND STOP'S WORTH WAS RE-DERIVED ON 2026-08-24, not a nursed
+    number.** This fixture used to seat B on a
     370-second dwell against 1420 seconds of marginal walking — a ratio of 3.84,
-    i.e. TWENTY-FOUR MINUTES OF WALKING FOR A SIX-MINUTE LOOK. The eleven-persona
-    panel ruled exactly that shape out, and Rosemary named this fixture's own
-    arithmetic without having seen it: 4.5 "would march me twenty-two minutes for
-    a five-minute look. That is not a tour; that is how you put me in a taxi
-    home." What the test EXISTS for — a one-stop tour is lifted to two by the
-    rescue, and the ordinary pass alone would not do it — is unchanged and still
-    proven by both arms below. What changed is that the stop it reaches for now
-    EARNS its walk: B is a fifteen-minute stop (900 s), so the trade is 1420:900
-    = 1.58 — inside Théo's own dearest trade (1.8, sixteen minutes' walk for nine
-    silent minutes at the deportation memorial) and under the locked 2.0 cap.
-    The geometry is untouched; only the claim about what is worth walking to
-    moved, which is the half the panel actually ruled on.
+    i.e. TWENTY-FOUR MINUTES OF WALKING FOR A SIX-MINUTE LOOK. That shape is
+    ruled out: at the old 4.5 ratio a visitor walks twenty-two minutes for a
+    five-minute look, which is not a tour. What the test EXISTS for — a
+    one-stop tour is lifted to two by the rescue, and the ordinary pass alone
+    would not do it — is unchanged and still proven by both arms below. What
+    changed is that the stop it reaches for now EARNS its walk: B is a
+    fifteen-minute stop (900 s), so the trade is 1420:900 = 1.58 — inside the
+    dearest trade a visitor defends (1.8, sixteen minutes' walk for nine silent
+    minutes at the deportation memorial) and under the locked 2.0 cap. The
+    geometry is untouched; only the claim about what is worth walking to moved.
     """
     from src.tour.routing import walk_budget_seconds
     from src.tour.selection import _apply_fill_pass, target_dwell_seconds
@@ -1832,7 +1828,7 @@ def test_phase7_fill_pass_under_floor_rescue_adds_nearby_stop():
 
 
 def test_phase7_fill_pass_rescue_rejects_far_walk_slog():
-    """#21 guard (skeptic finding): the rescue must NOT trek to a FAR thin stop.
+    """Guard: the rescue must NOT trek to a FAR thin stop.
 
     A distant candidate whose round-trip detour exceeds RESCUE_WALK_MULTIPLE x
     walk_budget is a walk-slog (huge walk for tiny audio) — it stays OUT even
@@ -1861,7 +1857,7 @@ def test_phase7_fill_pass_rescue_rejects_far_walk_slog():
 
 
 # ---------------------------------------------------------------------------
-# Phase 7.5 Fix 3 — co-located POI demotion
+# Co-located POI demotion
 # ---------------------------------------------------------------------------
 
 
@@ -2009,7 +2005,7 @@ def test_no_demotion_when_smaller_is_pause_tier():
 
     Mirrors the Île case: Square du Vert-Galant (tier 3) sits ~80m from
     Pont Neuf (tier 5) and Pont Neuf carries beats referencing
-    'vert-galant'. The Phase 7.5 guard skips this pair because Vert-
+    'vert-galant'. The pause-tier guard skips this pair because Vert-
     Galant is an empirical Pariswalks pause stop, not a sub-feature
     of Pont Neuf.
     """
@@ -2080,10 +2076,10 @@ def test_no_demotion_when_no_address_overlap_signal():
 
 
 # ---------------------------------------------------------------------------
-# Step 2.0d — FROZEN end=None ordered-POI-id identity baseline.
+# FROZEN end=None ordered-POI-id identity baseline.
 #
-# This is a byte-for-byte guard for Steps 2.3/2.4 (B-materialization /
-# endpoint handling). It pins the exact ordered POI ids select_route emits
+# This is a byte-for-byte guard for B-materialization /
+# endpoint handling. It pins the exact ordered POI ids select_route emits
 # for a FIXED synthetic snapshot on BOTH cost paths:
 #   (a) no routing client  → leg_fn=None, pace-corrected haversine divisor;
 #   (b) a deterministic fake RoutingClient → routed divisor that returns
@@ -2092,7 +2088,7 @@ def test_no_demotion_when_no_address_overlap_signal():
 #
 # Any future change to the selection pipeline that perturbs the end=None
 # ordering for this snapshot must fail here, loudly, before it can reach the
-# Step 2.3/2.4 B-materialization work that depends on this invariance.
+# B-materialization work that depends on this invariance.
 # ---------------------------------------------------------------------------
 
 
@@ -2113,21 +2109,21 @@ _FROZEN_BACKGROUND_RADIUS_M: float = 90.0
 # FROZEN literals — captured from a green run; see the docstring above.
 # These are the byte-for-byte expected ordered POI ids for end=None.
 #
-# Phase 3 re-baseline (Step 3.5): gate removal WIDENS the eligible pool (the
+# Model-switch re-baseline: gate removal WIDENS the eligible pool (the
 # hard tier gate, the walk_by_only exclusion, and the lens-miss exclusion are
 # gone). This snapshot was DELIBERATELY re-verified under the model switch and
 # the ordered ids are UNCHANGED -- by construction: every POI here is a tier-5
 # 'stop' with active beats and NO lens is requested, so (a) the removed tier
 # gate excluded nothing (all tier 5), (b) there are no walk_by_only POIs, and
 # (c) with no lenses, lens_relevance == _lens_adjacency == 1.0, so poi_score is
-# byte-identical to its pre-3.5 value. The widened eligibility therefore admits
+# byte-identical to its pre-switch value. The widened eligibility therefore admits
 # the same six POIs in the same order; the ends are still correct (open walk
 # closes on the far 'baseline-medium' via endpoint-pull) and no crash. The new
 # eligibility is exercised separately by the tier-1 / lens-miss tests above.
-# C9 governor (end=None, budget/3 floor): the Step-2.0d Phase-2 byte-identity is
-# DELIBERATELY superseded (DESIGN-AND-CRITIQUE ADDENDUM — the goldens are the new
-# gate). Re-captured 2026-07-03 from the green C9 run: this beat-rich synthetic
-# corpus caps at the ~3-stop floor (the exempt anchor's audio clears the fill
+# C9 governor (end=None, budget/3 floor): the earlier byte-identity is
+# DELIBERATELY superseded (the goldens are the new gate). Re-captured
+# 2026-07-03 from the green C9 run: this beat-rich synthetic corpus caps at
+# the ~3-stop floor (the exempt anchor's audio clears the fill
 # floor, so no fill-added 4th-6th stop). The real end=None gate (Ile golden) is
 # BYTE-IDENTICAL to pre-C9 (16/47), so this re-baseline moves only the fixture.
 # 2026-08-05 re-baseline: the FIXTURE changed, so the captured ids had to be
@@ -2138,7 +2134,7 @@ _FROZEN_BACKGROUND_RADIUS_M: float = 90.0
 # medium anchor sits far enough out for the endpoint pull to see it. What the
 # baseline GUARDS is unchanged: both cost paths must agree, and the open walk
 # must still close on the medium anchor.
-# 2026-08-06 re-baseline: step 3B.9 made the requested duration a hard CEILING
+# 2026-08-06 re-baseline: the requested duration became a hard CEILING
 # rather than the middle of a two-sided band. An open walk that used to be allowed
 # to run 10% long now gets repaired back under the request, so it can afford
 # different places — this fixture picks up filler-6 and filler-13 and no longer
@@ -2160,8 +2156,8 @@ _FROZEN_BACKGROUND_RADIUS_M: float = 90.0
 
 def test_domination_caps():
     """Governor v4 core: caps a DOMINATING OUTLIER to ~1/3 of delivered, but leaves
-    a BALANCED tour untouched (the v3 always-on cap over-trimmed balanced tours —
-    the panel's bug 4)."""
+    a BALANCED tour untouched (the v3 always-on cap over-trimmed balanced
+    tours)."""
     from src.tour.selection import _domination_caps
 
     # UC5 (exempt marquee 396; Ile 363 dominates its 74/56/42 peers).
@@ -2179,8 +2175,8 @@ def test_domination_caps():
     assert _domination_caps([True, False], [400, 900]) == [None, 900]
 
     # CO-DOMINATORS: two near-equal huge stops drowning three small peers must
-    # BOTH cap. Comparing to the next-largest would let them shield each other
-    # (the panel gap) — comparing to the MEAN of the others catches both.
+    # BOTH cap. Comparing to the next-largest would let them shield each other;
+    # comparing to the MEAN of the others catches both.
     co = _domination_caps([False, False, False, False, False], [1000, 950, 100, 80, 60])
     t = sum(co)
     assert co[0] <= t // 3 + 1 and co[1] <= t // 3 + 1, "both co-dominators capped, not shielded"
@@ -2214,7 +2210,7 @@ def test_governor_v4_marquee_exempt_domination_gated():
     # Beat audio DERIVED from the ceiling so every stop stays UNDER it whatever its
     # value — this test isolates the DOMINATION governor (the absolute ceiling is
     # tested separately). The first version hardcoded 40/33/40-second beats sized to
-    # the 270 era; Phase 6 S6.6's three-minute tight (R3) put the 198-second dump
+    # the 270 era; the three-minute ceiling put the 198-second dump
     # OVER the new ceiling and the A->B "byte-identical" premise silently changed.
     from src.tour.selection import MAX_DWELL_AUDIO_SECONDS as _MAX
 
@@ -2382,7 +2378,7 @@ def test_keep_final_closing_beat_is_a_noop_when_nothing_was_trimmed():
 
 
 # ---------------------------------------------------------------------------
-# Step 2.5 — open-walk B* == existing endpoint-pull far anchor.
+# Open-walk B* == existing endpoint-pull far anchor.
 #
 # Assertion-only (no production change). On the open-walk path
 # (end=None, round_trip=False) the route's closing stop is the same
@@ -2467,8 +2463,8 @@ def test_open_walk_bstar_equals_endpoint_pull():
     snap = _snap([*near, far_anchor, *background], area_types={"Île de la Cité": "island"})
 
     inp = TourInput(start=start, duration_min=duration_min, city_slug="paris", round_trip=False)
-    # Open walk: no fixed destination, so the §2.3 corridor gate never arms
-    # and the §2.4 B-materialization branch is never taken — the only force
+    # Open walk: no fixed destination, so the corridor gate never arms
+    # and the B-materialization branch is never taken — the only force
     # acting on the final stop is the endpoint-pull contract under test.
     assert inp.end is None
     route = select_route(inp, snap)
@@ -2546,8 +2542,8 @@ def test_open_walk_bstar_equals_endpoint_pull():
 # above is unchanged for every route that IS delivered.
 #
 # These pin CURRENT contracts (tier-dwell audio proxy, YELLOW-only
-# tourability attach). The delivered-audio invariant is deferred design —
-# specs/2026-07-02-dwell-audio-reconciliation/ owns it; do not import it here.
+# tourability attach). The delivered-audio invariant is deferred design;
+# do not import it here.
 # ---------------------------------------------------------------------------
 
 
@@ -2708,13 +2704,12 @@ def test_tier_dwell_audio_break_cannot_fire_after_single_anchor():
     no longer the deleted per-tier dwell proxy (removed 2026-08-06 with
     DWELL_SECONDS_BY_TIER; a stop's length now comes from
     src/tour/visit_time.py and rides on Route.planned_visit_seconds).
-    The delivered-audio reconciliation is deferred design owned by
-    specs/2026-07-02-dwell-audio-reconciliation/ — when it lands, the
+    The delivered-audio reconciliation is deferred design — when it lands, the
     plausible bad implementation is ``consumed_audio += sum(beat seconds)``,
     under which one anchor's 1200s of real beat audio exceeds the 896s target
     at 30 min and the greedy breaks after ONE pick, emitting a GREEN 1-stop
     tour (tourability None -> silent). Rewrite this test consciously with
-    that spec; do not delete it.
+    that change; do not delete it.
     """
     from src.tour.routing import target_dwell_seconds
     from src.tour.selection import MAX_DWELL_AUDIO_SECONDS
@@ -2729,7 +2724,7 @@ def test_tier_dwell_audio_break_cannot_fire_after_single_anchor():
 
     # Part 2 — behavioral: the tightest supported duration (30 min) on a GREEN
     # cluster. The sharp pin used to be "exactly 3 stops", which was
-    # max_anchors = 30 // 10 — a stop CEILING that OWNER RULING 5 deleted on
+    # max_anchors = 30 // 10 — a stop CEILING that was deleted on
     # 2026-08-04. Pinning it now would re-assert a rule the product does not
     # have. The stop count is instead DERIVED from the rule that actually stops
     # the greedy: it seats stops until their capped audio reaches the audio
@@ -2853,7 +2848,7 @@ def test_three_way_name_twins_lose_no_beats():
 # both; 86m (Conciergerie / Sainte-Chapelle, a MEASURED legitimate pair) must
 # seat both. Fillers are spaced >50m apart from each other and from the pair
 # so this test isolates the guard itself, not the fill-pass/density-gate
-# interaction (see the SELF-ACCOUNT for that separate, larger finding).
+# interaction (a separate, larger finding).
 # ---------------------------------------------------------------------------
 
 _SEP_START = (48.8555, 2.3656)
@@ -2863,7 +2858,7 @@ _SEP_86M_OFFSET = 0.00077341658108665  # haversine-calibrated: exactly 86.0m
 
 
 def _sep_fillers() -> list[POI]:
-    """Low-score anchor candidates spread around the start, to clear the Phase 6
+    """Low-score anchor candidates spread around the start, to clear the
     density gate AND the two-sided time band without competing with the near/far
     pair (tier 3, minimal 3 beats — well below the pair's tier 5 / 20 beats).
 
@@ -2899,9 +2894,9 @@ def test_selection_does_not_filter_close_but_distinct_pois():
     (14.9 m), Concorde/Jeu de Paume (14.3 m), and -- decisively -- Hotel Le Meurice /
     Angelina (8.4 m) and Galignani / Angelina (11.8 m).
 
-    Le Meurice and Galignani are the POIs in the product owner's OWN gold text
-    (specs/2026-07-19-tour-quality-standard/01-standard.md section 1, which narrates
-    "At number 224, the English bookshop Galignani..." with Le Meurice at 228). A 50 m
+    Le Meurice and Galignani are the POIs in the product owner's OWN gold text,
+    which narrates "At number 224, the English bookshop Galignani..." with Le Meurice
+    at 228. A 50 m
     filter makes the gold-standard stop structurally unbuildable.
 
     Two further defects were proven when the guard was live: it is first-come-wins, so it
@@ -2912,7 +2907,7 @@ def test_selection_does_not_filter_close_but_distinct_pois():
     The real defect it was written for -- Conciergerie narration describing the Palais de
     Justice the listener just left -- is SEMANTIC REPETITION (check G4), not proximity.
     Distance cannot distinguish "one building told twice" from "two institutions on one
-    street"; see [[stop-separation-guard-refuted]].
+    street".
     """
     near_a, near_b = _sep_pair(_SEP_17M_OFFSET)
     assert haversine_m(near_a.lat, near_a.lng, near_b.lat, near_b.lng) == pytest.approx(
@@ -2955,19 +2950,18 @@ def test_min_stop_separation_guard_seats_both_of_an_86m_pair():
 
 
 # ---------------------------------------------------------------------------
-# Phase 8 W8.6 — walking is the PRICE of a day, never its value.
+# Walking is the PRICE of a day, never its value.
 #
-# The W8.6 eleven-persona panel (2026-08-24, verdicts/w86-*.md) ruled 11/11 on
-# the measured Place des Vosges / Panthéon day shapes: (Q1) when the asked-for
-# length cannot be filled honestly, the day handed over is the most STORIED one,
-# honestly short — "padding the length with pavement is a walk filed as dwell"
-# (Théo); (Q2) a stop is never admitted past the product's own 2.0x detour gate
-# — the 4.5 walk-per-dwell allowance "would march me twenty-two minutes for a
-# five-minute look" (Rosemary); (Q4) a route within one displayed minute of its
-# ceiling is the same customer timebox (routing.py's own materiality rule) and
-# serves. Design §8.3 (fill-the-requested-time is deleted; "the only way a
-# planner can guarantee filling one is by walking you somewhere pointless") and
-# §4.5.1 (price in visitor-time) are the underlying citations.
+# Three rules, measured on the Place des Vosges / Panthéon day shapes: (1) when
+# the asked-for length cannot be filled honestly, the day handed over is the
+# most STORIED one, honestly short — padding the length with pavement is a walk
+# filed as dwell; (2) a stop is never admitted past the product's own 2.0x
+# detour gate — the old 4.5 walk-per-dwell allowance would march a visitor
+# twenty-two minutes for a five-minute look; (3) a route within one displayed
+# minute of its ceiling is the same customer timebox (routing.py's own
+# materiality rule) and serves. The planner never fills the requested time for
+# its own sake, because the only way to guarantee filling it is to walk the
+# visitor somewhere pointless; a day is priced in visitor-time.
 # ---------------------------------------------------------------------------
 
 
@@ -2982,12 +2976,12 @@ def _priced_poi(pid: str, *, tier: int, lng_offset_deg: float, visit_min: int,
 
 
 def test_an_under_filled_day_is_the_most_storied_one_never_the_longest_walk():
-    """W8.6 panel Q1, 11/11 (a): the measured Shape A — a 60-minute round trip
+    """The measured case: a 60-minute round trip
     standing IN a tier-5 square with the most to tell served ONE stop: a lesser
     square 12 minutes' walk away, because 'longest day under the ceiling'
     counted the walking as day-length (2636s of walk-padded 'day' beat 1800s of
-    standing at the best place). Rosemary: "the square I am standing in, told
-    honestly short, beats any day padded longer with my steps."
+    standing at the best place). The square the visitor stands in, told
+    honestly short, beats any day padded longer with their steps.
 
     Unit seam: the timebox repair's under-fill choice, with the live PdV
     geometry in miniature — the rich square AT the start (visit 30 min, zero
@@ -3030,14 +3024,13 @@ def test_an_under_filled_day_is_the_most_storied_one_never_the_longest_walk():
         f"walker stands in), never the longest walk; got {[p.id for p in out]}"
     )
 
-    # ...AND STORIED IS NOT THE SAME AS LONG (the panel's Q1 again: every one of
-    # the eleven chose (a) "the most storied day" over (b) "the longest standing
-    # time"; Camille: "maximised standing time still picks quantity over the best
-    # places"). A quiet place with a LONGER visit must not beat the storied square
-    # — the live Place des Vosges golden picked Musee Victor Hugo, tier 4 with TWO
-    # beats and a 35-minute visit, over the 64-story square, when this key read
-    # dwell. Both candidates sit AT the start here, so walking cannot decide it and
-    # only the currency can.
+    # ...AND STORIED IS NOT THE SAME AS LONG: the most storied day beats the
+    # longest standing time, because maximised standing time still picks
+    # quantity over the best places. A quiet place with a LONGER visit must not
+    # beat the storied square — the live Place des Vosges golden picked Musee
+    # Victor Hugo, tier 4 with TWO beats and a 35-minute visit, over the
+    # 64-story square, when this key read dwell. Both candidates sit AT the
+    # start here, so walking cannot decide it and only the currency can.
     quiet_but_long = _priced_poi("quiet-but-long", tier=4, lng_offset_deg=0.00002,
                                  visit_min=35, beat_count=2)
     snap2 = _snap([rich, quiet_but_long], area_types={"Le Marais": "neighborhood"})
@@ -3060,10 +3053,10 @@ def test_an_under_filled_day_is_the_most_storied_one_never_the_longest_walk():
 
     # ...AND THE MEASURE IS MONOTONE: a day that keeps everything another day has
     # PLUS one more real place is never the poorer day. Two stops of the SAME
-    # category are the case that breaks a naive answer — Greta's diversity dimmer
+    # category are the case that breaks a naive answer — the diversity dimmer
     # fires when a category covers half a set, so ranking by the dimmed score made
     # a two-museum day score BELOW a one-museum day and the planner dropped a
-    # stop to "improve" the day. Measured live on Rosemary's own request: her day
+    # stop to "improve" the day. Measured live on a visitor's own request: her day
     # collapsed from [Musee de l'Orangerie, Musee d'Orsay] to [Musee d'Orsay], and
     # with the walking went the cadence crossing that seats her BENCH.
     #
@@ -3072,7 +3065,7 @@ def test_an_under_filled_day_is_the_most_storied_one_never_the_longest_walk():
     # Sized so the PAIR fits under the 3600 s ceiling (1200 + 900 of standing plus
     # 713 s of walking = 2813 s) and both days sit under the 3240 s floor, so the
     # under-fill branch is what decides — and so the two keys genuinely disagree:
-    # the plain sum prefers the pair (16.09 + 3.30), while Greta's dimmer fires on
+    # the plain sum prefers the pair (16.09 + 3.30), while the dimmer fires on
     # a set that is two-thirds one category and scores it 0.8 x 19.39 = 15.51,
     # UNDER the 16.09 of the single stop. Without that gap the test would pass
     # under either key and prove nothing.
@@ -3103,16 +3096,16 @@ def test_an_under_filled_day_is_the_most_storied_one_never_the_longest_walk():
 
 
 def test_a_stop_is_never_admitted_past_the_walking_worth_line():
-    """W8.6 panel Q2, 11/11: never past the product's own detour gate. The
+    """A stop is never admitted past the product's own detour gate. The
     admission line is TWO bounds on an added stop's marginal walking — at most
     ``STOP_WALK_WORTH_MAX`` (2.0) seconds of walking per second it earns the
     visitor standing there, AND at most ``MAX_STOP_PURE_DETOUR_SECONDS``
     (1800 s — the same 30-minute line the illogical-detour invariant enforces,
-    tests/test_tour_invariants_live.py). The measured Shape A cousin: the
+    tests/test_tour_invariants_live.py). The measured case: the
     Panthéon 120 loop walked 43 minutes to a bookshop because 4.5:1 admitted it.
-    Théo's own dearest trade — 16 minutes' walk for a 9-minute stand at the
-    memorial, 1.8:1 — stays admissible: the panel's cap is the loosest line no
-    panelist's chosen trade breaks.
+    The dearest trade a visitor defends — 16 minutes' walk for a 9-minute stand
+    at the memorial, 1.8:1 — stays admissible: the cap is the loosest line no
+    defended trade breaks.
 
     EACH BOUND IS ISOLATED BY ITS OWN CANDIDATE, so each mutation has something
     to break — the first version of this test used one candidate that tripped
@@ -3128,7 +3121,7 @@ def test_a_stop_is_never_admitted_past_the_walking_worth_line():
     a = _priced_poi("a-anchor", tier=4, lng_offset_deg=0.0, visit_min=15, beat_count=5)
     # 462 m out: marginal loop walk 1498 s. UNDER the 1800 s absolute ceiling, so
     # only the RATIO can refuse it — 1498 vs 2.0 x 400 s of standing (3.7:1, the
-    # "twenty-two minutes for a five-minute look" Rosemary named). At 4.5 it
+    # "twenty-two minutes for a five-minute look" shape). At 4.5 it
     # seats (1498 <= 1800).
     ratio_slog = _priced_poi("ratio-slog", tier=5, lng_offset_deg=0.006318,
                              visit_min=7, beat_count=8)
@@ -3137,8 +3130,8 @@ def test_a_stop_is_never_admitted_past_the_walking_worth_line():
     # hour of pure detour is the line the product's own INV8 gate draws.
     detour_slog = _priced_poi("detour-slog", tier=5, lng_offset_deg=0.008420,
                               visit_min=20, beat_count=8)
-    # 500 m out: marginal 1618 s for a 15-minute stop — 1.8:1, exactly Théo's
-    # dearest trade (sixteen minutes' walk for nine silent minutes at the
+    # 500 m out: marginal 1618 s for a 15-minute stop — 1.8:1, exactly the
+    # dearest trade a visitor defends (sixteen minutes' walk for nine silent minutes at the
     # deportation memorial), and inside both bounds. It must still seat, or the
     # line has stopped being a worth test and become a distance cap.
     worth_it = _priced_poi("worth-it", tier=4, lng_offset_deg=-0.006828,
@@ -3182,12 +3175,13 @@ def test_a_stop_is_never_admitted_past_the_walking_worth_line():
 
 
 def test_a_route_within_one_displayed_minute_of_its_ceiling_serves(monkeypatch):
-    """W8.6 panel Q4, 11/11 serve: the measured Shape D — a 250-minute request
+    """A route within one displayed minute of its ceiling serves. The measured
+    case: a 250-minute request
     refused at 250 minutes and 22 SECONDS, while routing.py's own
     TIMEBOX_MATERIALITY_TOLERANCE_SECONDS declares a route within one displayed
-    minute "materially in the same customer timebox". Rosemary: "an engine that
-    declares that and then refuses over twenty-two seconds does not have a
-    rule; it has a mood." §10.8.2: one definition of material.
+    minute "materially in the same customer timebox". Refusing over twenty-two
+    seconds after declaring that is not a rule. There is one definition of
+    material.
 
     Same drift mechanism as the exact-elapsed guard test above, sized to 22
     seconds instead of a preposterous number. UNDO: drop the tolerance from the
@@ -3226,7 +3220,7 @@ def test_a_route_within_one_displayed_minute_of_its_ceiling_serves(monkeypatch):
     assert served.pois, "a day 22 seconds over its ceiling is the same customer timebox"
 
 
-# --- the loop's direction is a choice (S3.8a; deviation vi; Nadia's rule) ----
+# --- the loop's direction is a choice ------------------------------------------
 
 
 def _line_loop(marquee_first: bool) -> list:
@@ -3242,9 +3236,8 @@ def _line_loop(marquee_first: bool) -> list:
 
 def test_a_round_trips_direction_lands_the_marquee_late():
     """A closed loop's two directions cost the same walk, so the direction is
-    a CHOICE, and the marquee lands late deliberately — Nadia: "Tuesday's
-    back-loaded anchor was right by luck; make it deliberate" (plan S3.8a,
-    deviation vi; W1.9 concentration rule). Held-Karp's tie-break had made it
+    a CHOICE, and the marquee lands late deliberately: a back-loaded anchor
+    must be right by design, not by luck. Held-Karp's tie-break had made it
     an accident of ids."""
     from src.tour.selection import _orient_loop
 
@@ -3279,7 +3272,7 @@ def test_an_already_late_marquee_keeps_its_order():
 
 
 def test_direction_choice_never_buys_walking():
-    """The reversal is COST-FREE or it does not happen (deviation vi: routed
+    """The reversal is COST-FREE or it does not happen (routed
     legs are near- but not exactly symmetric): under a leg fn that prices
     westward walking +500 s, reversing the eastbound loop would add real
     walking, so the forward order stands even with the marquee early."""
@@ -3424,7 +3417,7 @@ def test_a_destination_too_big_for_the_hour_is_served_from_the_outside():
     assert route.planned_queue_seconds[cathedral.id] == 0
     assert route.planned_visit_seconds[cathedral.id] == 25 * 60
 
-    # NEVER SILENTLY (W8.2 R8). The day carries the fact on the same notes
+    # NEVER SILENTLY. The day carries the fact on the same notes
     # channel a locked door and an unlit finish use, in one self-contained
     # sentence a stranger can judge — and NOT flagged `kept_outside`, which is
     # where every reader gets the word "closed" (the harness's own column reads
@@ -3487,13 +3480,13 @@ def test_a_replanned_remainder_reports_its_overrun_instead_of_stepping_outside()
     """A TAIL never buys its clock with an interior — it hands the overrun back.
 
     The fourth move exists to save a day whose only alternative is a REFUSAL.
-    A replanned remainder is never refused (W5.2 R1.1): the best over-ceiling
+    A replanned remainder is never refused: the best over-ceiling
     day comes back with `overrun_seconds` on it, and that number is the raw
     material of the ONE question the person answers ("keep your full rest and
     be at the Orsay about 17:02, or sit six minutes and be back by 17:00" —
-    W5.2 R2, `contingency.question_text`). A repair that steps a stop outside
+    `contingency.question_text`). A repair that steps a stop outside
     on this path answers the question FOR her and hands back a quietly thinner
-    day instead. Measured 2026-08-25 on Rosemary's own day, forty-six minutes
+    day instead. Measured 2026-08-25 on a visitor's own day, forty-six minutes
     late out of the Orangerie: the remainder priced 100 s over her clock, the
     move shed an interior to absorb them, the overrun came back 0, and the live
     reply carried NO question at all.
@@ -3503,8 +3496,8 @@ def test_a_replanned_remainder_reports_its_overrun_instead_of_stepping_outside()
     is the deliberate contrast: a FRESH plan of this hour steps the cathedral
     outside, because there the alternative really is a refusal. Both stops are
     the person's own here — the bridge held, the cathedral her declared finish —
-    so no drop or exchange can shorten the day either, exactly as Rosemary's
-    Orsay and her bench cannot.
+    so no drop or exchange can shorten the day either, exactly as that
+    visitor's Orsay and her bench cannot.
 
     UNDO: try the fourth move before the `report_overrun` return -> the
     cathedral's interior is traded away and the overrun comes back 0 -> RED.
@@ -3806,14 +3799,14 @@ def test_the_refusal_tells_one_true_story_whether_or_not_a_route_was_priced():
 
 
 # ---------------------------------------------------------------------------
-# S3.M1 — the parent lens counts for its children at the beat matcher.
+# The parent lens counts for its children at the beat matcher.
 # ---------------------------------------------------------------------------
 
 
 def test_a_parent_lens_counts_for_its_children_at_the_beat_matcher():
     """Beats carry leaf lenses only, so a request for a parent ('history') matched
-    nothing at the beat level and the ordering went lens-blind — three of the eleven
-    people ask exactly that way. The expansion is the SAME one-hop family the POI
+    nothing at the beat level and the ordering went lens-blind — and visitors
+    ask exactly that way. The expansion is the SAME one-hop family the POI
     classifier (`_lens_relation`) already reads off `snapshot.lens_neighbors`,
     spelled once and handed to the beat matcher: the parent stands for its children.
     """
@@ -3853,7 +3846,7 @@ def test_a_parent_lens_counts_for_its_children_at_the_beat_matcher():
 
 
 # ---------------------------------------------------------------------------
-# S3.M2 — a lensed day never seats a lens-miss story stop; the valve discloses.
+# A lensed day never seats a lens-miss story stop; the valve discloses.
 # ---------------------------------------------------------------------------
 
 
@@ -3884,8 +3877,8 @@ def _lens_snap(miss_ids: set[str], pois: list[POI]) -> CorpusSnapshot:
 
 
 def test_a_lensed_day_never_seats_a_lens_miss_story_stop():
-    """The measured fault: Camille's architecture day seated the Orangerie, whose
-    only beats answer a subject she never asked for. On a lensed request, a story
+    """The measured fault: an architecture day seated the Orangerie, whose
+    only beats answer a subject the visitor never asked for. On a lensed request, a story
     candidate with NOTHING in the asked family (the same direct/one-hop/miss the
     POI spotlight classifies by) leaves the dwell pool, and the planner replaces
     it — fewer honest stops beat a padded day. No request: untouched."""
@@ -3912,7 +3905,7 @@ def test_a_lensed_day_never_seats_a_lens_miss_story_stop():
 
 
 def test_a_pinned_place_outranks_the_subject_gate():
-    """Theo pins the thing he came for; a pin is the person's own hand on the day
+    """A visitor pins the thing they came for; a pin is the person's own hand on the day
     and no subject gate second-guesses it.
 
     The mechanism is the FORCE-SEAT pass, not a carve-out in the gate itself:

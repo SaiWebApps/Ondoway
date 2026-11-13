@@ -1,4 +1,4 @@
-"""Integration tests for the core traversal patterns from Schema_v3 §5."""
+"""Integration tests for the core traversal patterns that src/verify/traversals.py runs."""
 
 import pytest
 

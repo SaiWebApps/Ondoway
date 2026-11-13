@@ -1,4 +1,4 @@
-"""M8 audit gate—Seine geometry plus the flagship routed regression.
+"""Audit gate—Seine geometry plus the flagship routed regression.
 
 The grade shard owns this entire file so its pure geometry checks and its
 live-Valhalla flagship check stay together without marker deselections.

@@ -1,8 +1,8 @@
-"""Step 1.4a — POST /audio/generate-trip-stops/{trip_id}: per-stop narration audio.
+"""POST /audio/generate-trip-stops/{trip_id}: per-stop narration audio.
 
 Integration tests through the real endpoint + real LocalStorageProvider (tmp dir).
 A recording provider captures the text actually sent to TTS, proving each stop is
-voiced from its stitched `narration` (Step 1.2) and the artifact is persisted on
+voiced from its stitched `narration` and the artifact is persisted on
 the ItineraryItem, keyed by the stop id (not the beat).
 """
 
@@ -39,19 +39,19 @@ def _bearer() -> dict[str, str]:
 
 N1 = "Settle in. Welcome to the Eiffel Tower."
 N2 = "Now walk on to the Arc de Triomphe."
-# KE3: item1 also carries a "keep exploring here" extra narration; item2 does not.
+# item1 also carries a "keep exploring here" extra narration; item2 does not.
 KE_EXTRA = "The tower has three visitor levels. The top is 276 metres up."
-# Phase 6 S6.8: the authored session lines the owner ruled PRE-VOICED in the
+# The authored session lines the owner ruled PRE-VOICED in the
 # narrator's own voice — each stop's close, its thread lines, the full telling's
 # close. The set's fixed lines stay screen-only and are never voiced.
 CLOSE1 = "And that's the tower — iron meant to stand twenty years."
 THREAD1 = "The same iron age built the next hall."
 FULL_CLOSE1 = "And that's the tower's second story."
 CLOSE2 = "That's the arch — an emperor's promise kept late."
-# Phase 7 S7.7 (design §5.6 C7; plan defect 7): the stop's LEG piece — the walking line
+# The stop's LEG piece — the walking line
 # into it — voiced as its own file through the same narrator voice, played on the leg.
 LEG2 = "Walk north up the avenue for about twelve minutes."
-# Phase 7 S7.7 (B) (design §5.6 segments; W7.2 R4): a marquee's CHAPTER — the story cut at
+# A marquee's CHAPTER — the story cut at
 # a reviewed anchor — voiced as its own file, its url and length written back into the
 # item's chapter list.
 SEG1 = "The iron lattice was meant to come down after twenty years."
@@ -177,12 +177,12 @@ class TestGenerateTripStopAudio:
         assert data["failed"] == 0
 
         # The exact stitched narration is voiced — not a lone beat.
-        # RE-DERIVED at Phase 6 S6.8: the voicing pass now ALSO records each
+        # RE-DERIVED: the voicing pass now ALSO records each
         # stop's authored session lines (close, threads, the full telling's
         # close) in the same narrator voice — the owner's ruling. The narration
-        # is still voiced exactly once per stop. RE-DERIVED at Phase 7 S7.7: the
+        # is still voiced exactly once per stop. RE-DERIVED again: the
         # stop's LEG piece (item2's walking line) is voiced as its own file too.
-        # RE-DERIVED at Phase 7 S7.7 (B): item1's chapter is voiced as its own file too.
+        # RE-DERIVED again: item1's chapter is voiced as its own file too.
         assert set(recorder.texts) == {N1, N2, CLOSE1, THREAD1, FULL_CLOSE1, CLOSE2, LEG2, SEG1}
 
         # Audio persisted on each item, keyed by the stop id (not the beat).
@@ -190,7 +190,7 @@ class TestGenerateTripStopAudio:
         assert urls[f"{TRIP_ID}-item1"] and f"{TRIP_ID}-item1" in urls[f"{TRIP_ID}-item1"]
         assert urls[f"{TRIP_ID}-item2"] and f"{TRIP_ID}-item2" in urls[f"{TRIP_ID}-item2"]
         assert urls[f"{TRIP_ID}-item3"] is None
-        # S7.7: the leg piece's file and its measured length live on the item.
+        # The leg piece's file and its measured length live on the item.
         with clean_driver.session(database=get_database()) as s:
             leg = s.run(
                 "MATCH (i:ItineraryItem {id: $iid}) "
@@ -199,7 +199,7 @@ class TestGenerateTripStopAudio:
             ).single()
         assert leg["u"] and f"{TRIP_ID}-item2-leg" in leg["u"], leg
         assert leg["d"] and leg["d"] > 0
-        # S7.7 (B): the chapter's file and length are written back INTO the item's
+        # The chapter's file and length are written back INTO the item's
         # chapter list (the thread-urls precedent), never beside it.
         with clean_driver.session(database=get_database()) as s:
             raw = s.run(
@@ -214,9 +214,9 @@ class TestGenerateTripStopAudio:
 
         # One artifact per generated stop on disk.
         files = list(_temp_audio_storage.rglob("*.mp3"))
-        # RE-DERIVED at Phase 6 S6.8: two narration pieces PLUS the authored
+        # RE-DERIVED: two narration pieces PLUS the authored
         # session lines (item1's close, thread and full-close; item2's close).
-        # RE-DERIVED at Phase 7 S7.7: plus item2's leg piece; (B): plus item1's chapter.
+        # RE-DERIVED again: plus item2's leg piece, plus item1's chapter.
         assert len(files) == 8
 
     def test_second_call_skips_existing(self, client, clean_driver, _temp_audio_storage):
@@ -279,7 +279,7 @@ class TestGenerateTripStopAudio:
             "an edited narration can never be detected as stale"
         )
 
-        # ── Phase 2 — rewrite item1's narration only (AC-25, AC-26).
+        # ── Phase 2 — rewrite item1's narration only.
         with clean_driver.session(database=get_database()) as s:
             s.run(
                 "MATCH (i:ItineraryItem {id: $sid}) SET i.narration = $n",
@@ -371,7 +371,7 @@ class TestStopAudioStatus:
 
 @needs_neo4j
 class TestKeepExploringStopAudio:
-    """KE3: POST /audio/stops/{stop_id}/keep-exploring — on-demand extra audio."""
+    """POST /audio/stops/{stop_id}/keep-exploring — on-demand extra audio."""
 
     def test_voices_extra_narration_off_budget(
         self, client, clean_driver, _temp_audio_storage
@@ -437,7 +437,7 @@ class TestKeepExploringStopAudio:
     def test_second_call_returns_cached_url_no_retts(
         self, client, clean_driver, _temp_audio_storage
     ):
-        """Defect 11: a repeat keep-exploring for the same stop must return the
+        """A repeat keep-exploring for the same stop must return the
         cached url WITHOUT re-invoking paid TTS (cost / DoS guard). The mock
         provider's call count proves the second call never voices again."""
         _seed(clean_driver)
@@ -465,11 +465,12 @@ class TestKeepExploringStopAudio:
     def test_different_voice_invalidates_cache(
         self, client, clean_driver, _temp_audio_storage
     ):
-        """Defect 1: the keep-exploring TTS cache is keyed on the narration hash
-        ONLY. A second call for the SAME narration but a DIFFERENT voice_id must
-        NOT hit the cache — otherwise the client silently receives audio voiced
-        with the ORIGINAL voice. The mock provider's call count proves the second
-        (different-voice) call re-runs TTS instead of serving the cached url."""
+        """A keep-exploring TTS cache keyed on the narration hash ONLY would
+        serve the wrong voice. A second call for the SAME narration but a
+        DIFFERENT voice_id must NOT hit the cache — otherwise the client
+        silently receives audio voiced with the ORIGINAL voice. The mock
+        provider's call count proves the second (different-voice) call re-runs
+        TTS instead of serving the cached url."""
         _seed(clean_driver)
         item1 = f"{TRIP_ID}-item1"
         recorder = _Recorder()
@@ -494,7 +495,7 @@ class TestKeepExploringStopAudio:
     def test_force_regenerates_even_when_cached(
         self, client, clean_driver, _temp_audio_storage
     ):
-        """Defect 11: force=True bypasses the cache and re-voices."""
+        """force=True bypasses the cache and re-voices."""
         _seed(clean_driver)
         item1 = f"{TRIP_ID}-item1"
         recorder = _Recorder()
@@ -516,7 +517,7 @@ class TestKeepExploringStopAudio:
     def test_changed_extra_narration_invalidates_cache(
         self, client, clean_driver, _temp_audio_storage
     ):
-        """Defect 11: if extra_narration changes, the cached url is stale and
+        """If extra_narration changes, the cached url is stale and
         must be regenerated (hash-based invalidation), not served."""
         _seed(clean_driver)
         item1 = f"{TRIP_ID}-item1"
@@ -545,7 +546,7 @@ class TestKeepExploringStopAudio:
     def test_over_cap_extra_narration_is_bounded(
         self, client, clean_driver, _temp_audio_storage
     ):
-        """Defect 17: an over-cap extra_narration must not fan out into unbounded
+        """An over-cap extra_narration must not fan out into unbounded
         TTS. The input handed to TTS is capped at the same 20000-char limit the
         other audio endpoints enforce (AudioPreviewRequest)."""
         _seed(clean_driver)
@@ -575,15 +576,15 @@ class TestKeepExploringStopAudio:
 
 @needs_neo4j
 class TestUnknownProviderNever500:
-    """Defects 7/8/10/14: an unknown provider name must be a soft per-stop
+    """An unknown provider name must be a soft per-stop
     failure, never an uncaught ValueError → 500. Each per-stop route that
     catches only PipelineError is exercised with {"provider": "evil"} against the
     REAL get_provider (no patch) so the unknown-provider ValueError actually
     fires at its true source (pipeline.get_provider_with_fallback).
 
-    PHASE 7 D7.0 TOMBSTONE: the two per-BEAT rows — ``/audio/generate-trip`` and
+    TOMBSTONE: the two per-BEAT rows — ``/audio/generate-trip`` and
     ``/audio/generate-batch`` (with ``_seed_beats``) — were DELETED, not adapted:
-    those routes are the per-beat audio library design §8.5 deletes (plan S7.10).
+    those routes belong to the per-beat audio library, which is deleted.
     """
 
     def test_keep_exploring_unknown_provider_soft_fails(
@@ -620,8 +621,8 @@ class TestUnknownProviderNever500:
 
 @needs_neo4j
 class TestPreVoicedSessionLines:
-    """Phase 6 S6.8 (design §4.4; W6.2 R6a, 11/0; OWNER RULING 2026-08-19: the
-    tour's own voice, never the robot). The per-stop voicing pass ALSO records
+    """Owner decision, 2026-08-19: the tour's own voice, never the robot.
+    The per-stop voicing pass ALSO records
     each stop's authored session lines — the close, the thread lines, the full
     telling's close — as their own small artifacts on the item, in the same
     narrator voice, hash-guarded like the narration. The contingency set's fixed
@@ -671,7 +672,7 @@ class TestPreVoicedSessionLines:
 
 @needs_neo4j
 class TestSessionCarriesLiveAudio:
-    """Phase 6 S6.8: audio facts live on the ITEMS; the saved session snapshots its
+    """Audio facts live on the ITEMS; the saved session snapshots its
     stops at compose time, BEFORE voicing — so the session GET overlays the items'
     current audio fields at read time. Measured 2026-08-19: five voiced closes in
     the graph, none on the wire, until this overlay. UNDO: return the saved payload
@@ -722,10 +723,10 @@ class TestSessionCarriesLiveAudio:
         assert stop.close_audio_url == "file:///close.mp3"
         assert stop.thread_audio_urls == {"Eiffel Tower": "file:///thread.mp3"}
         assert stop.full_close_audio_url == "file:///full-close.mp3"
-        # S7.7: the leg piece's file rides the same overlay.
+        # The leg piece's file rides the same overlay.
         assert stop.leg_audio_url == "file:///leg.mp3"
         assert stop.leg_audio_duration_sec == 9
-        # S7.7 (B): the chapters — with their files — ride the same overlay.
+        # The chapters — with their files — ride the same overlay.
         assert [seg.label for seg in stop.segments] == ["The lattice"]
         assert stop.segments[0].audio_url == "file:///seg.mp3"
         assert stop.segments[0].audio_duration_sec == 7.5
@@ -733,9 +734,9 @@ class TestSessionCarriesLiveAudio:
 
 @needs_neo4j
 class TestTheFinishSentinelIsARealStop:
-    """W7.13 (Sofia): her A→B day's finish stop — "the place where I stand still in the
-    dark at 16:56" — carried its goodbye as TEXT ONLY: no file could ever exist for it.
-    Mechanism, measured on her trip: `_create_itinerary_items`'s Cypher opens with
+    """An A→B day's finish stop carried its goodbye as TEXT ONLY: no file could ever
+    exist for it.
+    Mechanism, as measured: `_create_itinerary_items`'s Cypher opens with
     `MATCH (poi:POI {id: $poi_id})`, the finish sentinel's id names no POI node, so the
     whole CREATE silently matched nothing — no item, no HAS_STOP — while the minted item
     id was returned and embedded in the saved session as a phantom. The voicing pass

@@ -178,7 +178,7 @@ def _wide_plan(stop_count: int) -> AuthoringCandidatePlan:
 
 
 def test_no_authoring_surface_imposes_a_stop_ceiling() -> None:
-    """OWNER RULING 5 — "no stop limits, period" — on the AUTHORING side.
+    """"No stop limits, period" — on the AUTHORING side.
 
     Three ceilings used to sit behind the planner and reject a route it had
     already built: the identity layer's ``MAX_CANDIDATE_STOPS`` (15), the compose

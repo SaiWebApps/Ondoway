@@ -3,7 +3,7 @@
 1. Pydantic NarrativeBeatCreate hash auto-compute and reject-mismatch.
 2. CLI scripts/validate_beats.py hash + identity-tuple checks, including
    the legacy_unknown wildcard semantics.
-3. BP-9 — validator is single-file-path scoped (city isolation).
+3. The validator is single-file-path scoped (city isolation).
 """
 
 from __future__ import annotations
@@ -40,13 +40,13 @@ def run_validator(path: Path) -> subprocess.CompletedProcess[str]:
 
 
 def test_hash_auto_computed():
-    """AC-4 — empty hash gets filled with SHA-256 of normalized body."""
+    """An empty hash gets filled with SHA-256 of normalized body."""
     beat = NarrativeBeatCreate(script_body="Hello world")
     assert beat.script_body_hash == hashlib.sha256(b"hello world").hexdigest()
 
 
 def test_hash_present_correct_accepted():
-    """AC-4 — caller-provided hash that matches normalized body is accepted."""
+    """A caller-provided hash that matches normalized body is accepted."""
     body = "Some Body Here"
     correct = _normalized_script_body_hash(body)
     beat = NarrativeBeatCreate(script_body=body, script_body_hash=correct)
@@ -54,7 +54,7 @@ def test_hash_present_correct_accepted():
 
 
 def test_hash_present_wrong_rejected():
-    """AC-4 — caller-provided hash that doesn't match body raises."""
+    """A caller-provided hash that doesn't match body raises."""
     with pytest.raises(ValidationError):
         NarrativeBeatCreate(script_body="Foo", script_body_hash="bogus")
 
@@ -76,7 +76,7 @@ def test_baseline_fixture_passes():
 
 
 def test_validator_legacy_unknown_wildcard():
-    """AC-12 — two beats with `legacy_unknown` book_slug at the same
+    """Two beats with `legacy_unknown` book_slug at the same
     POI/lens do NOT trigger an identity collision (wildcard semantics)."""
     # The baseline fixture already has two `Pont Neuf / hidden_history /
     # legacy_unknown / legacy_unknown` beats with different bodies. They
@@ -89,7 +89,7 @@ def test_validator_legacy_unknown_wildcard():
 
 
 def test_validator_hash_collision(tmp_path):
-    """AC-5 — two beats sharing script_body_hash → exit 1."""
+    """Two beats sharing script_body_hash → exit 1."""
     beats = json.loads(FIXTURE_PARIS.read_text())
     # Make beat 4 carry beat 1's body + hash but a distinct identity
     # tuple (different lens) so we trigger ONLY hash collision.
@@ -104,7 +104,7 @@ def test_validator_hash_collision(tmp_path):
 
 
 def test_validator_identity_collision(tmp_path):
-    """AC-3 — two beats sharing the full identity tuple → exit 1."""
+    """Two beats sharing the full identity tuple → exit 1."""
     beats = json.loads(FIXTURE_PARIS.read_text())
     # Clone beat 1 with a different body (and recomputed hash) but same
     # identity tuple. Only identity should trip.
@@ -191,11 +191,11 @@ def test_validator_not_a_list_returns_2(tmp_path):
     assert result.returncode == 2
 
 
-# ── BP-9: city isolation ──
+# ── City isolation ──
 
 
 def test_validator_city_isolated(tmp_path):
-    """BP-9 — sequentially validating Paris and London fixtures must leave
+    """Sequentially validating Paris and London fixtures must leave
     each independent. Neither sees the other's data even though both files
     sit in the same fixtures directory."""
     # Run both back-to-back from a fresh subprocess so any module-level

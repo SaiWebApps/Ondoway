@@ -1,6 +1,6 @@
-"""Phase 6 — density.py: tourability assessment. Pure-function tests.
+"""density.py: tourability assessment. Pure-function tests.
 
-The §3.7 formula is canonical; these tests pin the math, the status
+These tests pin the density formula's math, the status
 table, and the round-trip-vs-one-way differential against
 hand-computed expected values.
 """
@@ -368,7 +368,7 @@ def test_compactness_close_to_one_when_anchors_at_envelope_edge():
 def test_le_marais_dense_centroid_green():
     """Le Marais centroid 60-min round-trip should be GREEN (synthetic stand-in).
 
-    The real Phase 5 finding said Le Marais is dense; this synthetic
+    An earlier finding said Le Marais is dense; this synthetic
     fixture pins that property in unit tests so a regression in the
     formula (e.g., a misplaced 0.83 factor) is caught.
     """
@@ -400,10 +400,10 @@ def test_le_marais_dense_centroid_green():
 
 
 def test_low_fill_with_tight_anchors_is_red_not_yellow():
-    """Phase 6 floor: fill < 0.5 AND tight anchor cluster must still be RED.
+    """Fill floor: fill < 0.5 AND tight anchor cluster must still be RED.
 
-    The literal §3.7 spec allowed the anchor-disjunct to fire alone,
-    which let the Phase 5 Sacré-Cœur 90min RT (fill 0.17, 4 colocated
+    The anchor-disjunct used to fire alone,
+    which let a Sacré-Cœur 90min RT (fill 0.17, 4 colocated
     Montmartre anchors) slip through as YELLOW. Adding a fill ≥ 0.5
     floor on the anchor-disjunct closes the loophole.
     """
@@ -548,8 +548,8 @@ def test_the_gate_prices_both_halves_of_its_ratio_in_standing_still_seconds():
     This module's own history is the argument. Its ``_target_dwell_seconds``
     docstring records the last time the two halves drifted: the gate judged a
     pool against 1793 s while the planner aimed at 2160 s, and served a thin
-    tour as healthy. Phase 3B moves the target from narration seconds to
-    standing-still seconds, so the capacity has to move in the same step.
+    tour as healthy. The target is in standing-still seconds, not narration
+    seconds, so the capacity has to be in the same currency.
 
     THE MUTATION THIS CATCHES. Leave the numerator summing beat seconds and the
     ratio silently becomes narration-over-visits. A place with a big interior

@@ -1,4 +1,4 @@
-"""The family day is one day — the shared-session trace (Phase 10 S2, M2.4).
+"""The family day is one day — the shared-session trace.
 
 A scripted server-side trace at $0, in the persona traces' own discipline
 (live dev corpus, TestClient, OfflinePremiumExecutor): Fiona invites, Dev
@@ -7,7 +7,7 @@ stop. Writes keep one captain: Dev's replan is the typed 403. When the trip is
 gone, Dev's read is a plain 404.
 
 Its own file, deliberately: `tests/test_persona_traces.py`'s DAYS table is the
-panel-judged set and warns against a twelfth spelling — so this trace IMPORTS
+judged set and warns against a twelfth spelling — so this trace IMPORTS
 the runner (`build_trace`, Camille's own request) rather than respelling a day.
 Camille is used because her day is one of the measured served floor.
 """

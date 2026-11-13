@@ -1,28 +1,23 @@
 """Structural guard on the per-POI place judgements in `data/{city}/poi-raw.json`.
 
-Three booleans and one sentence say what a place AFFORDS a party — redesign data
-row 6.4 (specs/2026-08-07-tour-algorithm-redesign/01-design.md:368):
+Three booleans and one sentence say what a place AFFORDS a party:
 
-  `children_can_run`  bool  Children can be loud, fast and free-range here. Nadia:
-                            38 of her 55 place-minutes were valuable BECAUSE the
-                            kids could run, and the corpus had no channel for it
-                            (specs/2026-08-07-tour-algorithm-redesign/
-                            03-panel-findings.md:160).
+  `children_can_run`  bool  Children can be loud, fast and free-range here. A
+                            family's place-minutes are most valuable where the
+                            kids can run, and the corpus had no channel for it.
   `sit_and_talk`      bool  Two people can sit somewhere quiet enough to hear each
-                            other — Fiona & Dev's two green chairs; the Palais-Royal
-                            garden wins their afternoon on seating, enclosure and
-                            quiet, "three properties no POI in the corpus carries"
-                            (docs/personas/09-couple-who-would-rather-talk.md:34-37,
-                            75-78).
-  `good_after_dark`   bool  Good to be LEFT STANDING there in the dark — the design
-                            §3.1 finish rule. Consumed only in Phase 3; priced now
-                            so the data exists.
+                            other — a couple who would rather talk picks the
+                            Palais-Royal garden on seating, enclosure and quiet,
+                            three properties no POI in the corpus carried.
+  `good_after_dark`   bool  Good to be LEFT STANDING there in the dark. On a walk
+                            that finishes after dusk, the planner prefers a
+                            finishing place marked true here.
   `judgement_basis`   str   One sentence arguing all three, judgeable by someone
                             who has never been to the city.
 
-Row 6.4 is the ONLY data row with no external source (01-design.md:375-377) — the
+These are the ONLY data fields with no external source — the
 model's verdict is the whole provenance — so review samples these rows at twice the
-normal rate (W2.9). This file checks STRUCTURE only: presence, real booleans, a
+normal rate. This file checks STRUCTURE only: presence, real booleans, a
 non-empty basis. None of it is knowledge-based, for the reason its two siblings
 (`tests/test_poi_visit_duration.py`, `tests/test_poi_opening_hours.py`) record:
 nobody in this repo can adjudicate whether children really run in a particular
@@ -32,8 +27,7 @@ judgement.
 
 ALLOW-LIST MECHANICS: per-city checks loop IN-BODY over the tuple rather than
 `@pytest.mark.parametrize`, because parametrizing over an EMPTY tuple produces a
-skip and the suite hard-errors on skips (Phase 1 measured it;
-04-implementation-plan.md's S2.5/S2.6 sabotage notes both record it).
+skip and the suite hard-errors on skips.
 
 Runs in milliseconds with no database.
 """
@@ -55,7 +49,7 @@ JUDGEMENT_FIELDS = (*JUDGEMENT_BOOLS, "judgement_basis")
 # satisfy every data check below. Explicit allow-list, exactly like
 # CITIES_WITH_OPENING_HOURS in the sibling file: listing a city that has not run
 # the pass would make this file permanently red and train readers to ignore it.
-# EMPTY until the first pass runs (Phase 2's W2.9 adds "paris" as the declaring act).
+# EMPTY until the first pass runs (adding "paris" is the declaring act).
 #
 # ADDING a slug here is the deliberate act of declaring "this city's judgements are
 # in". REMOVING one to reach green is forbidden — it deletes the guard instead of
@@ -89,8 +83,7 @@ def test_every_poi_carries_all_three_judgements() -> None:
     """Presence check — the pass ran, and every verdict is a REAL boolean.
 
     A missing key means the pass never reached this POI; a string "true" is a
-    verdict nothing downstream can read (design row 6.4,
-    specs/2026-08-07-tour-algorithm-redesign/01-design.md:368). On an unjudged
+    verdict nothing downstream can read. On an unjudged
     corpus this is the check that goes red, which is what stops the basis check
     below reading vacuously green.
     """
@@ -107,7 +100,7 @@ def test_every_poi_carries_all_three_judgements() -> None:
 def test_every_poi_argues_its_judgements() -> None:
     """Every trio of verdicts ships with the sentence that argues it.
 
-    Row 6.4 has NO external source (01-design.md:375-377): the basis sentence is
+    These fields have NO external source: the basis sentence is
     the only audit trail a reviewer gets, so a POI without one is unauditable by
     construction — the whole reason review samples these rows at twice the rate.
     """
@@ -127,8 +120,8 @@ def test_every_export_chunk_carries_the_judgements() -> None:
 
     `data/{slug}/export/*.json` is what the deploy uploads, so a field written
     only to poi-raw.json never reaches the graph — the exact gap the pass's
-    "NEXT, AND MANDATORY" trailer warns about and W2.9's sync step closes
-    (04-implementation-plan.md S2.9/W2.9). Presence and shape only; value
+    "NEXT, AND MANDATORY" trailer warns about and the sync step closes.
+    Presence and shape only; value
     agreement with poi-raw.json is `tests/test_export_consistency.py`'s job.
     """
     for city in CITIES_WITH_PLACE_JUDGEMENTS:
@@ -160,24 +153,19 @@ def test_every_export_chunk_carries_the_judgements() -> None:
 # ---------------------------------------------------------------------------
 # The plumbing: the same three hops the visit-capacity and clock fields travel
 # (`tests/test_poi_visit_duration.py`, `tests/test_poi_opening_hours.py` are the
-# pattern). All three are EXPECTED RED until S2.6's contract/loader/upload half
-# lands — they exist first precisely so that landing turns them green
-# (04-implementation-plan.md S2.6: "structural file RED→GREEN at its loader
-# hop, S1.4b-shape").
+# pattern). All three are EXPECTED RED until the contract/loader/upload half
+# lands — they exist first precisely so that landing turns them green.
 # ---------------------------------------------------------------------------
 
 
 def test_the_contract_declares_the_judgement_fields() -> None:
-    """RED until S2.6's contract/loader/upload half lands.
+    """RED until the contract/loader/upload half lands.
 
     `POI` must declare the three booleans (defaulting False — an unjudged corpus
     affords nothing rather than everything) and `judgement_basis` (default "").
     `POI` is `extra="ignore"` (src/tour/contract.py), so constructing with
     unknown fields SILENTLY DROPS them — construction succeeding proves nothing,
     which is why this reads every value back off the built object.
-
-    Cites: design row 6.4 (01-design.md:368); Nadia (03-panel-findings.md:160);
-    Fiona & Dev (docs/personas/09-couple-who-would-rather-talk.md:75-78).
     """
     from src.tour.contract import POI
 
@@ -212,14 +200,14 @@ def test_the_contract_declares_the_judgement_fields() -> None:
 
 
 def test_the_corpus_loader_returns_and_constructs_the_judgement_fields() -> None:
-    """RED until S2.6's contract/loader/upload half lands.
+    """RED until the contract/loader/upload half lands.
 
     Source-scan over the two silent hops in `src/tour/selection.py` (the
     `test_golden_diff_cli` genre): HOP 1 — `LOAD_PARIS_POIS_CYPHER` returns
     ONLY what its RETURN list names, so an unnamed property reaches nothing
     downstream with no error; HOP 2 — `_snapshot_from_records` sets constructor
     keywords one by one, so a name absent there is simply unused. Both halves
-    must carry all four fields (design row 6.4, 01-design.md:368).
+    must carry all four fields.
     """
     from src.tour.selection import LOAD_PARIS_POIS_CYPHER
 
@@ -237,7 +225,7 @@ def test_the_corpus_loader_returns_and_constructs_the_judgement_fields() -> None
 
 
 def test_the_upload_carries_the_judgement_fields_in_both_property_lists() -> None:
-    """RED until S2.6's contract/loader/upload half lands.
+    """RED until the contract/loader/upload half lands.
 
     `scripts/upload_paris.py` keeps TWO hardcoded property lists — the param
     dict and the Cypher SET list of `_upload_pois` — whose own comment warns

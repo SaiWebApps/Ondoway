@@ -1,8 +1,8 @@
-"""Step 1.3 — generate_stop_audio: TTS a stop's stitched narration.
+"""generate_stop_audio: TTS a stop's stitched narration.
 
 Unit tests patch provider/storage (no I/O); the integration test uses the real
 LocalStorageProvider (in a tmp dir) + the real MockTTSProvider to prove the
-provider→storage wiring end to end. No Neo4j (persistence is Step 1.4).
+provider→storage wiring end to end. No Neo4j (nothing here persists).
 """
 
 from __future__ import annotations

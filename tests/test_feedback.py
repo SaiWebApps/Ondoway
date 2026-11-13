@@ -160,7 +160,7 @@ class TestFeedbackEndpoint:
 
 
 class TestTourContext:
-    """Track B Step B.7: the optional tour_context renders a '## Tour Context' section
+    """The optional tour_context renders a '## Tour Context' section
     into the GitHub issue body (human-mediated eval loop — never auto-tuning)."""
 
     _GITHUB_RESULT: ClassVar[dict] = {

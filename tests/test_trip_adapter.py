@@ -1,7 +1,7 @@
-"""Hermetic unit tests for route_script_to_stops (M0b adapter).
+"""Hermetic unit tests for route_script_to_stops (the trip adapter).
 
 Pure-function tests: hand-built engine contract objects, NO database, NO engine
-run, NO corpus. See specs/2026-06-12-tour-algorithm-decision/M0b-DESIGN.md.
+run, NO corpus.
 """
 
 from __future__ import annotations
@@ -73,7 +73,7 @@ def test_no_lensed_beat_gives_none_lens():
 
 
 def test_the_adapter_never_spells_a_clock_it_writes_the_one_it_is_handed():
-    """Phase 5 S5.10 (design §4.6, the session clock seam): the server has ONE
+    """The session clock seam: the server has ONE
     re-timing expression — `src.tour.contingency.stop_clocks`, walks and priced
     visits — and the wire's per-stop `start_time` is a view of it. This adapter
     used to run a second, walk-less clock (dwell only) that the phone showed as
@@ -137,7 +137,7 @@ def test_narration_attached_per_stop_when_script_passed():
 
 
 def test_the_leg_line_rides_the_stop_as_its_own_leg_narration():
-    """Phase 7 S7.7 (design §5.6 C7; plan defect 7): the stop's walk-concurrent sentences
+    """The stop's walk-concurrent sentences
     (the nav line into it) are its LEG piece — `leg_narration`, voiced as its own file and
     played on the leg — and `narration` is the STORY alone, opening on the stop's own first
     story sentence. Split by THE one rule (`generation.is_walk_concurrent`); a stop whose leg
@@ -191,7 +191,7 @@ def test_stops_extra_beat_ids_default_empty_without_map():
 
 
 def test_a_leg_line_records_the_stop_it_was_written_from():
-    """S1.M4: a leg line names both its ends — "From X, make your way on to Y" — so it is
+    """A leg line names both its ends — "From X, make your way on to Y" — so it is
     true of ONE pair and no other. A replan keeps the day's stops and re-orders them, and
     without knowing which stop a line was written from there is no way to tell a line that
     still fits from one now describing a walk nobody is taking.
@@ -224,11 +224,11 @@ def test_a_leg_line_records_the_stop_it_was_written_from():
 
 
 def test_the_label_answers_the_request_when_any_voiced_beat_does():
-    """S3.M3 — the measured fault: Camille's Notre-Dame voiced two architecture
+    """The measured fault: an architecture day's Notre-Dame voiced two architecture
     beats yet wore `hidden_history`, because the label was the plain majority of
     whatever else rode along. When the person asked for subjects, the label is the
-    most common ASKED-family lens among the voiced beats — the stop's role in HER
-    day — and only a stop with nothing on the request keeps the plain majority.
+    most common ASKED-family lens among the voiced beats — the stop's role in the
+    person's day — and only a stop with nothing on the request keeps the plain majority.
     No request: unchanged, ties alphabetical as ever."""
     beats = {
         "a1": BeatRef(id="a1", poi_id="p1", lenses=("historic_arch",)),

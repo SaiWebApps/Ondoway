@@ -1,10 +1,10 @@
-"""Tests for the /beat-dedup pipeline (Scope 3 of beat-dedup spec).
+"""Tests for the /beat-dedup pipeline.
 
 Covers:
-- AC-6: MinHash surfaces known near-duplicates; ignores distant beats.
-- BP-5 + R-4: Haiku judge happy path, retry, and fallback on parse failure.
-- AC-7: apply semantics (SKIP / COMBINE / KEEP_BOTH) + 1:1 audit log.
-- BP-3: API key never appears in the rendered report or the jsonl log.
+- MinHash surfaces known near-duplicates; ignores distant beats.
+- Haiku judge happy path, retry, and fallback on parse failure.
+- Apply semantics (SKIP / COMBINE / KEEP_BOTH) + 1:1 audit log.
+- API key never appears in the rendered report or the jsonl log.
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ def _log_skeleton() -> dict:
     }
 
 
-# ------------------------- AC-6: MinHash behavior -------------------------
+# ---------------------------- MinHash behavior ----------------------------
 
 
 def test_minhash_surfaces_known_pair():
@@ -91,7 +91,7 @@ def test_minhash_ignores_distant_beats():
     assert pairs == []
 
 
-# --------------------- BP-5 + R-4: Haiku judge behavior ---------------------
+# --------------------------- Haiku judge behavior ---------------------------
 
 
 def _fake_tool_block(classification: str, reasoning: str):
@@ -162,7 +162,7 @@ def test_haiku_parse_fail_falls_back():
     assert "parse failed" in out["reasoning"]
 
 
-# --------------------- AC-7: apply semantics + audit log ---------------------
+# ------------------------ apply semantics + audit log ------------------------
 
 
 def _seed_files(tmp_path: Path, beats: list[dict]) -> tuple[Path, Path]:
@@ -336,7 +336,7 @@ def test_audit_log_matches_mutation(tmp_path):
 
 
 def test_report_contains_no_api_key(tmp_path, monkeypatch):
-    """BP-3: a rendered report + audit log must not contain any ANTHROPIC_API_KEY value."""
+    """A rendered report + audit log must not contain any ANTHROPIC_API_KEY value."""
     leak = "sk-ant-TEST-KEY-DO-NOT-LEAK"
     monkeypatch.setenv("ANTHROPIC_API_KEY", leak)
 

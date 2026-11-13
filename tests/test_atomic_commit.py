@@ -1,7 +1,7 @@
 """Tests for scripts/beats_io.py — the atomic commit helper.
 
-Covers AC-11 (atomic end-of-extraction validation) and BP-7 (rollback
-leaves both files byte-identical when validation fails).
+Covers atomic end-of-extraction validation and rollback that leaves both
+files byte-identical when validation fails.
 """
 
 from __future__ import annotations
@@ -73,11 +73,11 @@ def _seed(tmp_path: Path) -> tuple[Path, Path]:
     return beats_path, log_path
 
 
-# ── BP-7 rollback proof ──
+# ── Rollback proof ──
 
 
 def test_rollback_byte_identical_on_hash_collision(tmp_path):
-    """BP-7 + AC-11 — validator fail leaves both files byte-identical."""
+    """A validator failure leaves both files byte-identical."""
     beats_path, log_path = _seed(tmp_path)
     pre_beats = _sha_file(beats_path)
     pre_log = _sha_file(log_path)
@@ -114,7 +114,7 @@ def test_rollback_byte_identical_on_hash_collision(tmp_path):
 
 
 def test_rollback_byte_identical_on_identity_collision(tmp_path):
-    """BP-7 — identity-tuple collision also rolls back cleanly."""
+    """An identity-tuple collision also rolls back cleanly."""
     beats_path, log_path = _seed(tmp_path)
     pre_beats = _sha_file(beats_path)
     pre_log = _sha_file(log_path)

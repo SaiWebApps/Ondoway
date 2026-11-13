@@ -1,7 +1,7 @@
-"""Step 2.4 — fixed-destination B-materialization (HYBRID) fed to ORDER.
+"""Fixed-destination B-materialization (HYBRID) fed to ORDER.
 
 When a tour carries a fixed end B and the routed A→B leg fits the walk budget
-(so Step 2.2a does NOT refuse), ``select_route`` must pin a concrete POI as the
+(so the feasibility refusal does NOT fire), ``select_route`` must pin a concrete POI as the
 LAST ordered stop:
 
   - SNAP: if a selected (already in-corridor) POI sits within ~150m of B, the
@@ -10,7 +10,7 @@ LAST ordered stop:
     the selected set and pinned last.
 
 The ``end=None`` paths (open walk + round trip) must be LITERALLY unchanged —
-the Step-2.0d ordered-id identity baseline (in test_tour_selection.py) still
+the ordered-id identity baseline (in test_tour_selection.py) still
 guards that, and this module re-asserts the open-walk end and round-trip end
 behaviour directly.
 
@@ -125,7 +125,7 @@ def _snap(pois: list[POI]) -> CorpusSnapshot:
 class _DeterministicRoutingClient:
     """Hermetic fake: routed leg times equal int(pace-corrected haversine).
 
-    Mirrors the Step-2.0d baseline client. isochrone() returns None so REACH
+    Mirrors the identity-baseline client. isochrone() returns None so REACH
     falls back to the analytic envelope; route() returns a None polyline.
     """
 
@@ -146,12 +146,12 @@ class _DeterministicRoutingClient:
 
 
 # A duration whose walk budget comfortably covers a short east A→B leg, so the
-# Step 2.2a feasibility refusal does NOT fire and the route reaches ORDER.
+# feasibility refusal does NOT fire and the route reaches ORDER.
 DURATION = 90
 
 
 def _ab_in_budget(end: tuple[float, float], duration_min: int = DURATION) -> bool:
-    """Live: does the routed A→B leg fit inside the walk budget (no 2.2a refusal)?"""
+    """Live: does the routed A→B leg fit inside the walk budget (no feasibility refusal)?"""
     return default_leg_seconds(PDV[0], PDV[1], end[0], end[1]) <= walk_budget_seconds(duration_min)
 
 
@@ -179,7 +179,7 @@ def test_fixed_end_snaps_to_nearby_selected_poi():
     assert 0.0 < snap_dist <= B_SNAP_PROXIMITY_M  # precondition, live distance
 
     inp = TourInput(start=PDV, end=end, duration_min=DURATION, city_slug="paris")
-    assert _ab_in_budget(end)  # 2.2a does not refuse
+    assert _ab_in_budget(end)  # the feasibility check does not refuse
     _assert_not_red(inp, snap)
 
     route = select_route(inp, snap)
@@ -192,7 +192,7 @@ def test_fixed_end_snaps_to_nearby_selected_poi():
 
 
 def test_fixed_end_records_exempt_identity_and_no_start_anchor():
-    """C9f-i: an A→B route records fixed_end_poi_id (the snapped B, exempt) and
+    """An A→B route records fixed_end_poi_id (the snapped B, exempt) and
     leaves start_anchor_poi_id None — A→B seats no positional start-anchor
     (exempt_anchor_id is guarded by ``input.end is None``), so nothing on the
     corridor is start-anchor-exempt. Additive metadata; ordering is unchanged."""
@@ -352,7 +352,7 @@ def test_fixed_end_corridor_rich_route_keeps_multiple_beat_bearing_stops():
     inp = TourInput(start=PDV, end=end, duration_min=DURATION, city_slug="paris")
 
     # Preconditions, derived live (module house style).
-    assert _ab_in_budget(end)  # no Step-2.2a refusal
+    assert _ab_in_budget(end)  # no feasibility refusal
     assert haversine_m(*end, east3.lat, east3.lng) <= B_SNAP_PROXIMITY_M  # SNAP branch
     budget = walk_budget_seconds(DURATION)
     for poi in (east1, east2, east3, *_background(DURATION)):
@@ -380,7 +380,7 @@ def test_fixed_end_corridor_rich_route_keeps_multiple_beat_bearing_stops():
 
 def test_fixed_end_uses_a_nearby_poi_without_collapsing_the_greedy_cluster():
     """A fixed destination may snap to a nearby POI but keeps a rich route."""
-    # RE-DERIVED for the three-minute tight (Phase 6 S6.6, W6.2 R3): at 75
+    # RE-DERIVED for the three-minute tight: at 75
     # minutes the six-background fixture went density-YELLOW (each stop supplies
     # less capped audio), and backgrounds enough for GREEN out-competed the
     # north cluster. Swept duration x background against every assertion:
@@ -413,15 +413,15 @@ def test_fixed_end_uses_a_nearby_poi_without_collapsing_the_greedy_cluster():
     route = select_route(inp, snap)
     ids = [p.id for p in route.pois]
 
-    # RE-DERIVED AT PHASE 8 (2026-08-25) — a written decision under plan §0.1.2/§0.1.3,
-    # not a nursed number. This assertion used to be `"n-1" in ids and "n-2" in ids`.
+    # RE-DERIVED (2026-08-25) — a written decision, not a nursed number. This
+    # assertion used to be `"n-1" in ids and "n-2" in ids`.
     #
-    # WHY IT MOVED. W8.6 tightened the walking-worth line from 4.5 to 2.0 walk-seconds
-    # per standing-second and added the 1800 s pure-detour ceiling, both INHERITED from
-    # the product's own illogical-detour invariant so the planner and the gate that
-    # judges it speak one rule (eleven-persona panel, R2, 11/11). The north cluster sits
-    # 200 m and 300 m off a corridor that runs EAST, so reaching it is pure detour. Under
-    # the new line the FARTHER of the two no longer earns its walk.
+    # WHY IT MOVED. A planner change tightened the walking-worth line from 4.5 to 2.0
+    # walk-seconds per standing-second and added the 1800 s pure-detour ceiling, both
+    # INHERITED from the product's own illogical-detour invariant so the planner and the
+    # gate that judges it speak one rule. The north cluster sits 200 m and 300 m off a
+    # corridor that runs EAST, so reaching it is pure detour. Under the new line the
+    # FARTHER of the two no longer earns its walk.
     #
     # MEASURED, not assumed, before this was touched: bypassing `stop_earns_its_walk`
     # alone restores n-2 exactly (7 stops, both cluster anchors) — so the line is the
@@ -485,7 +485,7 @@ def test_one_story_fixed_end_corpus_is_refused_not_padded_with_a_sentinel():
     # what stops this tour. The destination is reachable, it is far enough from
     # the lone anchor that B-materialization would have had to synthesize a
     # sentinel, and the lone anchor clears the corridor gate.
-    assert _ab_in_budget(end, duration)  # no 2.2a refusal
+    assert _ab_in_budget(end, duration)  # no feasibility refusal
     assert haversine_m(*end, lone.lat, lone.lng) > B_SNAP_PROXIMITY_M  # SYNTHESIZE branch
     corridor = default_leg_seconds(PDV[0], PDV[1], lone.lat, lone.lng) + default_leg_seconds(
         lone.lat, lone.lng, *end
@@ -502,9 +502,9 @@ def test_one_story_fixed_end_corpus_is_refused_not_padded_with_a_sentinel():
 
     # No route comes back at all, so there is nothing for a beatless sentinel to
     # pad. The refusal says, in a traveller's words, how much day this corpus can
-    # honestly build and what was asked (the sentence itself was re-derived at
-    # the Phase 4 close, W4.12 fix 10 — it used to name a "TIME band", which was
-    # engineer-speak, and this pin was the last reader of that wording).
+    # honestly build and what was asked (the sentence itself used to name a
+    # "TIME band", which was engineer-speak, and this pin was the last reader of
+    # that wording).
     with pytest.raises(CertificationPlanningInfeasibleError) as excinfo:
         select_route(inp, snap)
     reason = excinfo.value.reason
@@ -515,11 +515,11 @@ def test_one_story_fixed_end_corpus_is_refused_not_padded_with_a_sentinel():
 
 
 def test_the_end_sentinel_rebuilds_from_its_own_id():
-    """Phase 6 W6.12 (measured: Sofia's Châtelet day 409'd "corpus_changed" on
-    every compose — permanently uncomposable): the A→B end sentinel's id encodes
-    its coordinate, so a persisted route re-materializes it instead of mistaking
-    the engine's own marker for corpus drift. Malformed and non-sentinel ids
-    return None (the caller treats them as real POIs). The compose-side guard —
+    """The A→B end sentinel's id encodes its coordinate, so a persisted route
+    re-materializes it instead of mistaking the engine's own marker for corpus
+    drift (measured: a Châtelet day 409'd "corpus_changed" on every compose,
+    permanently uncomposable). Malformed and non-sentinel ids return None (the
+    caller treats them as real POIs). The compose-side guard —
     the one that goes RED when the rebuild is dropped from the corpus check —
     is test_compose_corpus_check_rebuilds_the_end_sentinel below."""
     from src.tour.selection import end_b_sentinel_from_id, end_b_sentinel_poi
@@ -533,12 +533,11 @@ def test_the_end_sentinel_rebuilds_from_its_own_id():
 
 
 def test_compose_corpus_check_rebuilds_the_end_sentinel():
-    """Phase 6 W6.12 finding 1, the compose-side guard (design §8.2: a persisted
-    day must stay composable). Sofia's Châtelet day persisted the engine's own
-    `__end_b__<lat>_<lng>` stop; the compose rebuild looked it up in the corpus,
-    found nothing, and refused 409 corpus_changed on every attempt. The corpus
-    check must re-materialize the sentinel from its id and still refuse a
-    genuinely missing corpus id. UNDO: delete the sentinel loop in
+    """The compose-side guard: a persisted day must stay composable. A Châtelet
+    day persisted the engine's own `__end_b__<lat>_<lng>` stop; the compose rebuild
+    looked it up in the corpus, found nothing, and refused 409 corpus_changed on every
+    attempt. The corpus check must re-materialize the sentinel from its id and still
+    refuse a genuinely missing corpus id. UNDO: delete the sentinel loop in
     _resolve_persisted_pick -> the first call raises 409 corpus_changed."""
     from fastapi import HTTPException
 

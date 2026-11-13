@@ -1,6 +1,6 @@
-"""Phase 2 — beat_select.py: ordering + length-class fallback.
+"""beat_select.py: ordering + length-class fallback.
 
-Phase 3.5 (2026-04-29) added B8-lite claim-dedup tests at the end.
+B8-lite claim-dedup tests sit at the end.
 """
 
 from __future__ import annotations
@@ -90,7 +90,7 @@ def test_strategy_narrative_when_neither_dense():
 
 
 def test_strategy_dominant_primitive_wins():
-    """Phase 4 calibration: when both primitives meet threshold, the one
+    """Calibration: when both primitives meet threshold, the one
     with more distinct values wins. With 3 sub_locs vs 5 trigger_addrs,
     triggers dominate so trigger_address strategy fires (matches the
     empirical PdV walk where 23 trigger_addresses outweigh 6 sub_locs).
@@ -262,7 +262,7 @@ def test_narrative_function_ordering_when_no_spatial_primitive():
 
 
 def test_narrative_function_caps_at_default_flat_max_for_anchor():
-    """Calibration: DEFAULT_FLAT_MAX bumped 8→12 (2026-07-09, golden-gap R4) so a
+    """Calibration: DEFAULT_FLAT_MAX bumped 8→12 (2026-07-09) so a
     dense marquee voices more of its deepens (Île 42.6%→55.3%, PdV 55.6%→66.7%);
     the C9 governor still bounds per-stop audio downstream.
     """
@@ -273,7 +273,7 @@ def test_narrative_function_caps_at_default_flat_max_for_anchor():
 
 
 def test_narrative_function_pause_tier3_caps_at_pause_max():
-    """Calibration: PAUSE_BEATS_MAX bumped 3→4 (2026-07-09, golden-gap R5) so a
+    """Calibration: PAUSE_BEATS_MAX bumped 3→4 (2026-07-09) so a
     tier-3 pause stop can carry its 4th deepen (the empirical Vert-Galant miss
     ranked exactly 4th).
     """
@@ -405,7 +405,7 @@ def test_tone_variety_breaks_run_with_two_reliefs_no_pingpong():
 
 
 # ---------------------------------------------------------------------------
-# B8-lite claim dedup (Phase 3.5)
+# B8-lite claim dedup
 # ---------------------------------------------------------------------------
 
 
@@ -565,17 +565,17 @@ def test_b8_lite_subject_tag_overlap_triggers_dedup():
 
 
 def test_b8_lite_threshold_constant_matches_design_doc():
-    # Phase-1-design.md §3.3 specifies 0.8 — guard against silent drift.
+    # The duplicate rule's threshold is 0.8 — guard against silent drift.
     assert B8_JACCARD_THRESHOLD == 0.8
 
 
 # ---------------------------------------------------------------------------
-# Phase 7 — B8-lite recalibration: catch the 3 known phase-6-rerun dups
+# B8-lite recalibration: catch the 3 known duplicate pairs from a real run
 # ---------------------------------------------------------------------------
 
 
 # Real script bodies pulled from the live Paris corpus 2026-04-29 — these
-# are the exact pairs the phase-6-rerun outputs failed to dedup.
+# are the exact pairs an earlier tour run failed to dedup.
 
 _MESME_DE = (
     "The Hotel de Sully was built in 1624 for Mesme Gallet, a notorious "
@@ -626,7 +626,7 @@ _PANTHEON_142 = (
 
 
 def test_phase7_b8_lite_catches_mesme_gallet_paraphrase():
-    """phase-6-rerun Tour 1 Stop 1 emitted both beats; Phase 7 must collapse."""
+    """An earlier run's Tour 1 Stop 1 emitted both beats; dedup must collapse them."""
     poi = _poi("Hotel de Sully")
     de = _beat(
         "de1377b4",
@@ -652,7 +652,7 @@ def test_phase7_b8_lite_catches_mesme_gallet_paraphrase():
 
 
 def test_phase7_b8_lite_catches_hugo_affair_paraphrase():
-    """phase-6-rerun Tour 1 Stop 4 emitted both beats; Phase 7 must collapse."""
+    """An earlier run's Tour 1 Stop 4 emitted both beats; dedup must collapse them."""
     poi = _poi("Musee Victor Hugo", tier=4)
     b41 = _beat(
         "b41d4c77",
@@ -676,11 +676,11 @@ def test_phase7_b8_lite_catches_hugo_affair_paraphrase():
 
 
 def test_phase7_b8_lite_catches_pantheon_geneviève_pair():
-    """phase-6-rerun Tour 5 Stop 3 emitted both Pantheon-vow beats.
+    """An earlier run's Tour 5 Stop 3 emitted both Pantheon-vow beats.
 
     Entities-Jaccard = 0.125 because supporting cast diverges
     (Soufflot/Chateauroux vs Voltaire/Rousseau) and "Saint Genevieve" /
-    "St. Geneviève" don't string-match. Phase 7 catches via
+    "St. Geneviève" don't string-match. The dedup catches it via
     canonical-entity-overlap ≥ 2 + shared 1744 year token.
     """
     poi = _poi("Pantheon")
@@ -713,7 +713,7 @@ def test_phase7_b8_lite_catches_pantheon_geneviève_pair():
 
 
 # ---------------------------------------------------------------------------
-# Phase 7 — Area-level orientation hoist (Fix 2)
+# Area-level orientation hoist
 # ---------------------------------------------------------------------------
 
 
@@ -873,7 +873,7 @@ def test_area_level_orientation_returns_none_when_no_orientation_beat_exists():
 
 
 # ---------------------------------------------------------------------------
-# Phase 7 — closing-friendly beat reservation (Fix 5)
+# Closing-friendly beat reservation
 # ---------------------------------------------------------------------------
 
 
@@ -891,7 +891,7 @@ def _seq_with_final_beats(beats: tuple[BeatRef, ...]) -> BeatSequence:
 
 
 def test_phase7_closing_reorder_promotes_callback_to_last():
-    """Callback beat at any position → moves to last; spec preference order top tier."""
+    """Callback beat at any position → moves to last; the top tier of the closing order."""
     beats = (
         _beat("c", narrative_function="callback", script_body="A wrap-up sentence."),
         _beat("a", narrative_function="establishing", script_body="A factoid."),
@@ -956,7 +956,7 @@ def test_phase7_closing_reorder_skips_beatless_ab_destination_sentinel():
     """A→B routes append a beatless synthesized-destination sentinel as the LAST
     plan. Reordering must target the last stop WITH beats (the real terminal),
     and must preserve the sentinel — otherwise the tour ends mid-fact, the exact
-    Phase-7 defect this function exists to prevent."""
+    defect this function exists to prevent."""
     real_stop = POIBeats(
         poi_id="final",
         poi_name="Final",
@@ -1025,7 +1025,7 @@ def test_phase7_b8_lite_does_not_overcollapse_complementary_pdv_addresses():
 
 
 # ---------------------------------------------------------------------------
-# Phase 3.5 — stop_orientation hoist (so cold-open can find it)
+# stop_orientation hoist (so cold-open can find it)
 # ---------------------------------------------------------------------------
 
 
@@ -1126,7 +1126,7 @@ def test_no_orientation_beat_means_no_change():
 
 
 # ---------------------------------------------------------------------------
-# Phase 7.5 Fix 1 — geographically-honest cold-open hoist
+# Geographically-honest cold-open hoist
 # ---------------------------------------------------------------------------
 
 
@@ -1177,7 +1177,7 @@ def _hoist_seq(
 
 
 def test_hoist_rejected_when_beat_describes_distant_features():
-    """Phase 7.5 Fix 1 — Tour 1 PdV scenario.
+    """The Tour 1 PdV scenario.
 
     Hotel de Sully (start, tier 4) shares Le Marais with Place des Vosges
     (sibling, tier 5). PdV's orientation beat carries physical_cues
@@ -1401,7 +1401,7 @@ def test_c9c_additive_contract_field_defaults():
 
 
 # ---------------------------------------------------------------------------
-# KE0 — uncapped beat plan (keep-exploring foundation)
+# Uncapped beat plan (keep-exploring foundation)
 # ---------------------------------------------------------------------------
 
 
@@ -1463,11 +1463,11 @@ def test_extra_beat_ids_are_full_minus_voiced_in_order():
 
 
 def test_a_refused_walk_line_never_falls_through_to_keep_exploring():
-    """P9R-S1.M6 — Paulo's re-judge: the origin-verified pick rightly refuses a
-    transit beat for a walker arriving another way, and the extras pool then
-    swept the UNVOICED beat into "keep exploring here" — where it plays
-    ungated, standing in the square, telling him to walk up a boulevard he is
-    not on. Extras play STANDING at the stop, so the walk's own narration
+    """The origin-verified pick rightly refuses a transit beat for a walker
+    arriving another way, and the extras pool then swept the UNVOICED beat into
+    "keep exploring here" — where it plays ungated, standing in the square,
+    telling the walker to walk up a boulevard they are not on. Extras play
+    STANDING at the stop, so the walk's own narration
     (TRANSIT_NARRATIVE_FUNCTIONS — one definition with the pick and the
     anchor-block filter) never enters the pool. UNDO: drop the transit filter
     from extra_beat_ids -> the Frommer's line is an extra again -> RED."""
@@ -1493,7 +1493,7 @@ def test_extra_beat_ids_empty_when_all_voiced():
 
 
 def test_spatial_cap_keeps_best_by_score_not_first_in_walk_order():
-    """R1: a dense square is sequenced address-by-address, but the per-tier ceiling
+    """A dense square is sequenced address-by-address, but the per-tier ceiling
     keeps the BEST DEFAULT_FLAT_MAX beats by score — NOT the first ones in walk
     order. An anchor beat at the LAST address must survive the cap; the old prefix
     truncation seated the low-value early addresses and dropped it (measured: that
@@ -1530,8 +1530,8 @@ def test_spatial_cap_keeps_best_by_score_not_first_in_walk_order():
 
 
 def test_spatial_capped_is_subset_of_full_even_with_dedup_cluster():
-    """R1 KE-invariant (skeptic-refuted, now fixed): the capped plan must be a
-    SUBSET of the uncapped (KE0) plan even when a paraphrase cluster straddles the
+    """Keep-exploring invariant: the capped plan must be a
+    SUBSET of the uncapped plan even when a paraphrase cluster straddles the
     cap. The cap runs LAST, over the SAME dedup'd ordering the full plan returns —
     so keep-exploring extras (full minus voiced) can never omit a voiced beat or
     surface a paraphrase of one. (The old cap-before-dedup ran two independent
@@ -1578,7 +1578,7 @@ def test_spatial_capped_is_subset_of_full_even_with_dedup_cluster():
 
 
 def test_full_keeps_every_active_beat_for_sub_location_multi_beat_bucket():
-    """R1 KE-invariant (regression): select_poi_beats_full's 'every active beat'
+    """Keep-exploring invariant (regression): select_poi_beats_full's 'every active beat'
     contract must hold for the sub_location strategy too — NOT just the flat
     strategy (test_full_uncaps_beyond_flat_max). A multi-beat sub_location bucket
     used to drop its non-best members from the UNCAPPED plan (only _pick_best was
@@ -1601,7 +1601,7 @@ def test_full_keeps_every_active_beat_for_sub_location_multi_beat_bucket():
         f"full plan must keep every active beat; lost {active_ids - full_ids}"
     )
     # extra_beat_ids = full minus voiced; before the fix the bucket-loser was
-    # missing from `full` entirely, so it could be neither voiced nor a KE extra.
+    # missing from `full` entirely, so it could be neither voiced nor an extra.
     voiced = [b.id for b in select_poi_beats(poi, beats).beats]
     assert set(voiced) | set(extra_beat_ids(poi, beats, voiced)) == active_ids, (
         "every active beat is either voiced or a keep-exploring extra — none silently lost"
@@ -1609,7 +1609,7 @@ def test_full_keeps_every_active_beat_for_sub_location_multi_beat_bucket():
 
 
 def test_full_keeps_every_active_beat_for_trigger_address_multi_beat_bucket():
-    """R1 KE-invariant (regression): the trigger_address strategy had the same
+    """Keep-exploring invariant (regression): the trigger_address strategy had the same
     bucket-loser loss as sub_location — a second beat sharing a trigger_address
     was dropped from the UNCAPPED full plan. Every active beat must reach `full`."""
     poi = _poi("Place des Vosges")  # tier 5, trigger_address strategy
@@ -1635,7 +1635,7 @@ def test_full_keeps_every_active_beat_for_trigger_address_multi_beat_bucket():
 
 
 def test_spatial_cap_never_drops_the_cold_open_orientation():
-    """R1 skeptic finding (fixed): _enforce_tone_variety runs after the hoist and can
+    """A fixed defect: _enforce_tone_variety runs after the hoist and can
     swap the orientation beat off index 0 (it's the only non-somber donor). If the
     per-tier cap then protected index 0 by POSITION and scored the displaced
     orientation against high-value fillers, the cold-open could be dropped entirely —
@@ -1912,7 +1912,7 @@ def test_governor_seam_preserves_every_beat_and_voiced_contiguity():
 
 
 # ---------------------------------------------------------------------------
-# S3.M4 — the asked subject survives the cap.
+# The asked subject survives the cap.
 # ---------------------------------------------------------------------------
 
 
@@ -1948,7 +1948,7 @@ def test_the_asked_subject_survives_the_cap_on_both_strategies():
 
 
 def test_the_governor_never_cuts_the_day_down_to_none_of_the_asked_subject():
-    """S3, measured through the API: Camille's Tuileries voiced dark_history and
+    """Measured through the API: one visitor's Tuileries voiced dark_history and
     parks while its architecture beat sat in the overflow — the narrative arc
     orders the buckets, so an off-family hook outranks an on-family deepen, and
     the allowance prefix cut everything after it. When the person asked for

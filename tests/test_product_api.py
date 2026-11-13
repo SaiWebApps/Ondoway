@@ -2,8 +2,7 @@
 GET /api/v1/profile.
 
 Both are the mobile client's read surface: unlike the workbench CRUD routers,
-they are mounted unconditionally (outside `_workbench_api_enabled()`). See
-specs/2026-08-10-profile-endpoint/design.md for the /profile contract.
+they are mounted unconditionally (outside `_workbench_api_enabled()`).
 """
 
 from __future__ import annotations
@@ -27,7 +26,7 @@ def seeded_client(client, clean_driver):
 
 class TestLensesEndpoint:
     def test_returns_200_non_empty_without_auth(self, seeded_client):
-        """AC-1: no Authorization header -> 200, non-empty body (a [] fails)."""
+        """No Authorization header -> 200, non-empty body (a [] fails)."""
         response = seeded_client.get("/api/v1/lenses")
         assert response.status_code == 200
         body = response.json()
@@ -35,7 +34,7 @@ class TestLensesEndpoint:
         assert len(body) > 0
 
     def test_all_eight_parents_with_fields(self, seeded_client):
-        """AC-2: all 8 parent lenses by name (== MVP_LENSES), each carrying
+        """All 8 parent lenses by name (== MVP_LENSES), each carrying
         id, name, display_label, is_parent:true.
         """
         response = seeded_client.get("/api/v1/lenses")
@@ -57,11 +56,11 @@ class TestLensesEndpoint:
             assert parent["is_parent"] is True
 
     def test_nested_children_all_21_under_correct_parent(self, seeded_client):
-        """AC-3/AC-4: all 21 universal child lenses (id, name, display_label,
+        """All 21 universal child lenses (id, name, display_label,
         is_parent:false) nested under their correct parent's `children` key,
         per DAG_CHILD_LENSES.parent_name.
 
-        AC-4 (pinned contract): the parent and child key sets are asserted as
+        Pinned contract: the parent and child key sets are asserted as
         an EXACT snapshot (``==``), not a floor (``>=``). An undocumented extra
         key on any parent or child object fails this test, so the client
         repoint slice has a fixed target. Superset of canonical children is
@@ -76,7 +75,7 @@ class TestLensesEndpoint:
         expected_by_child_name = {child["name"]: child for child in DAG_CHILD_LENSES}
         assert len(expected_by_child_name) == 21
 
-        # AC-4 pinned key snapshot — EXACT, not a floor.
+        # Pinned key snapshot — EXACT, not a floor.
         expected_parent_keys = {"id", "name", "display_label", "is_parent", "children"}
         expected_child_keys = {"id", "name", "display_label", "is_parent"}
 
@@ -99,7 +98,7 @@ class TestLensesEndpoint:
             assert actual["_under_parent"] == expected["parent_name"]
 
     def test_superset_extra_city_child_tolerated(self, seeded_client, clean_driver):
-        """AC-3 tail clause: a non-canonical (city-specific) child lens under a
+        """A non-canonical (city-specific) child lens under a
         real parent must NOT break the endpoint. Exercises the superset path
         directly — seed_lenses forbids non-canonical nodes, so this test injects
         one after seeding. Expect: 200, all 21 canonical children still present
@@ -151,7 +150,7 @@ class TestLensesEndpoint:
                 )
 
     def test_degraded_data_returns_200_and_honest(self, seeded_client, clean_driver):
-        """AC-5 (negative): degraded graph -> 200, no 500, honest representation.
+        """Negative: degraded graph -> 200, no 500, honest representation.
 
         Two degraded conditions injected directly (bypassing seed_lenses, which
         forbids non-canonical nodes):
@@ -214,20 +213,19 @@ class TestLensesEndpoint:
 
 
 # ---------------------------------------------------------------------------
-# GET /api/v1/cities/{slug}/hours — Docs/adr/0006. The map's hours are
+# GET /api/v1/cities/{slug}/hours. The map's hours are
 # share-alike, so what we hold goes back out where anyone can check it.
 # ---------------------------------------------------------------------------
 
 
 class TestCityHoursFile:
-    """M8: the hours we read, mix and speak are published back with their credit.
+    """The hours we read, mix and speak are published back with their credit.
 
-    Docs/adr/0006: "Because map hours mix with guesses, the OpenStreetMap
-    share-alike licence applies: each city's hours file is published openly and
-    the app carries a credit line." Two things a reader must be able to do: get
-    the file without an account, and tell a MAP hour from a GUESS — the
-    distinction the whole phase turns on, and the one a flattened file would
-    republish as if the map had said it.
+    Map hours mix with guesses, so the OpenStreetMap share-alike licence
+    applies: each city's hours file is published openly and the app carries a
+    credit line. Two things a reader must be able to do: get the file without
+    an account, and tell a MAP hour from a GUESS — the distinction a flattened
+    file would lose, republishing a guess as if the map had said it.
 
     UNDO: drop `source` from the row -> a guess reads as the map's -> RED.
     """
@@ -285,7 +283,7 @@ class TestCityHoursFile:
 
 
 # ---------------------------------------------------------------------------
-# GET /api/v1/profile (bearer) — specs/2026-08-10-profile-endpoint/design.md.
+# GET /api/v1/profile (bearer).
 # The module DB is not wiped between tests, so each test uses distinct user ids.
 # ---------------------------------------------------------------------------
 
@@ -338,7 +336,7 @@ def _auth(user_id, email):
 
 class TestProfileEndpoint:
     def test_missing_or_invalid_bearer_returns_401(self, profile_client):
-        """AC-10: no header, and a malformed/expired token, all 401 with no leak."""
+        """No header, and a malformed/expired token, all 401 with no leak."""
         no_header = profile_client.get("/api/v1/profile")
         assert no_header.status_code == 401
         assert "display_name" not in no_header.text
@@ -359,7 +357,7 @@ class TestProfileEndpoint:
         assert "selected_lens_ids" not in expired_resp.text
 
     def test_no_profile_returns_404_not_empty(self, profile_client, clean_driver):
-        """AC-8: authenticated user with zero HAS_PROFILE -> 404 (not {}, not 500)."""
+        """An authenticated user with zero HAS_PROFILE -> 404 (not {}, not 500)."""
         uid, email = "user-noprofile", "noprofile@ondoway.app"
         _seed_user(clean_driver, uid, email)
         resp = profile_client.get("/api/v1/profile", headers=_auth(uid, email))
@@ -368,7 +366,7 @@ class TestProfileEndpoint:
         assert resp.json().get("detail")
 
     def test_returns_profile_with_display_name_and_lens_set(self, profile_client, clean_driver):
-        """AC-6: one profile + child lenses -> 200 with display_name, profile_id,
+        """One profile + child lenses -> 200 with display_name, profile_id,
         and selected_lens_ids == exactly the profile's child-lens id set."""
         uid, email = "user-ac6", "ac6@ondoway.app"
         _seed_user(clean_driver, uid, email)
@@ -383,7 +381,7 @@ class TestProfileEndpoint:
         assert set(body["selected_lens_ids"]) == _lens_ids(clean_driver, lenses)
 
     def test_theme_preference_verbatim_or_null(self, profile_client, clean_driver):
-        """AC-7: theme_preference verbatim when set, JSON null (key present) when absent."""
+        """theme_preference verbatim when set, JSON null (key present) when absent."""
         uid_s, email_s = "user-theme-set", "themeset@ondoway.app"
         _seed_user(clean_driver, uid_s, email_s)
         _seed_profile(clean_driver, uid_s, profile_id="prof-theme-set", display_name="t",
@@ -400,7 +398,7 @@ class TestProfileEndpoint:
         assert absent["theme_preference"] is None
 
     def test_multi_profile_returns_latest_created_at(self, profile_client, clean_driver):
-        """AC-9: two profiles of distinct created_at -> return the later one and
+        """Two profiles of distinct created_at -> return the later one and
         ITS lens set; the older's lens set must not appear."""
         uid, email = "user-ac9", "ac9@ondoway.app"
         _seed_user(clean_driver, uid, email)

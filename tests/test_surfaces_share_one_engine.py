@@ -33,8 +33,8 @@ Two blunter drafts were written first and both were unusable. Comparing every
 reachable function flagged fifty legitimate differences (the phone composes
 trips; the workbench lists providers). Hunting wrapper/inner pairs flagged
 fifteen, thirteen of them false — `provider.generate(...)` read as a call to a
-module function named `generate`. A guard nobody can read gets deleted, and the
-owner's ledger records that deleting a noisy guard costs the classes that work.
+module function named `generate`. A guard nobody can read gets deleted, and
+deleting a noisy guard also loses the real problems it catches.
 
 Counting only ENTRIES INTO A SHARED MODULE FROM OUTSIDE IT is the precise
 question: internal plumbing is the module's own business, but the door a surface

@@ -1,4 +1,4 @@
-"""M5 REACH — isochrone membership + ReachVerdict mode mapping. Hermetic.
+"""REACH — isochrone membership + ReachVerdict mode mapping. Hermetic.
 
 Extends the density-gate coverage (tests/test_tour_density.py): the gate's
 GREEN/YELLOW/RED statuses map to ReachVerdict.mode standard/ambient|redirect/
@@ -112,7 +112,7 @@ def _box_isochrone_handler(request: httpx.Request) -> httpx.Response:
             },
         )
     if request.url.path == "/route":
-        # Plausible routed legs so M3's divisor works during these tests.
+        # Plausible routed legs so the routed divisor works during these tests.
         body = json.loads(request.content)
         a, b = body["locations"]
         from src.tour.routing import haversine_m
@@ -339,11 +339,10 @@ def test_the_contour_asked_for_never_exceeds_what_the_engine_will_answer():
 def test_every_golden_fixture_sits_below_the_contour_clamp():
     """PROVEN, not assumed: the clamp cannot move a golden tour.
 
-    The plan's step 1.7 says the clamp is inert at or under a 300-minute request
-    and instructs that this be proven for the fixtures rather than assumed, because
-    ``_isochrone_walk_minutes`` is SHARED with the open arm — it is the one Phase 1
-    change that could move an open tour, and a golden that moved would be absorbed
-    by the later re-baseline as expected drift.
+    The clamp is inert at or under a 300-minute request, and this test proves it
+    for the fixtures rather than assuming it, because ``_isochrone_walk_minutes``
+    is SHARED with the open arm — the clamp could move an open tour, and a golden
+    that moved would be absorbed by a re-baseline as expected drift.
 
     Reads the committed fixture files rather than restating their durations here,
     so adding a longer golden fails this test instead of silently escaping it.

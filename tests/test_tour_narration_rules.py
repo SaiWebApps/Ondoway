@@ -1,18 +1,13 @@
-"""Phase 6 narration tests — point first, closes, plants and threads, two lengths, register.
+"""Narration tests — point first, closes, plants and threads, two lengths, register.
 
-One narration-hand per file, on the `tests/test_tour_visit_time.py` model: every gating test
-cites the design section, the quality-standard rule, the persona line or the panel ruling it
-enforces (plan §0.1.1; design §7.5). The W6.2 panel's LOCKED rulings are in
-specs/2026-08-07-tour-algorithm-redesign/phase6-ledger.md under "W6.2 … LOCKED RULINGS"
-(R1 the point, R2 the close, R3 two lengths, R4 plants, R5 threads, R6 the voice, R7 register,
-R8 D7's moment); the before-picture the rulings were made on is
-evidence/phase6-narration/w61-before-picture.md.
+One narration-hand per file, on the `tests/test_tour_visit_time.py` model: each gating test
+states in plain words the rule it enforces.
 
 THE ONE WRITER. Every rule below lives in ``src/tour/authoring.py``'s ``_COMPOSE_SYSTEM`` — the
 locked voice — and ships to the provider through ``candidate_compose_request_envelope``; the
 tests read the envelope (what the writer is actually told), not a second copy. Every edit to
 that prompt changes ``premium_authoring_policy_sha256()`` and is a DECLARED BREAKAGE of the
-sealed certification data (plan D6.0; Phase 8 re-seals).
+sealed certification data.
 """
 
 from __future__ import annotations
@@ -100,20 +95,20 @@ def _system_text(envelope: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# S6.3 — POINT FIRST: ONE rule in the locked voice (the floor check is C13, in
+# POINT FIRST: ONE rule in the locked voice (the floor check is C13, in
 # tests/test_tour_quality_rubric.py).
 # ---------------------------------------------------------------------------
 
 
 def test_the_locked_voice_puts_the_point_first_and_saves_no_twist_for_the_end():
-    """Design §5.2: "Every piece is written with its point in the FIRST minute. Fiona and
-    Dev walk off at minute eight of nine, routinely, not accidentally." W6.2 R1 (11/11):
-    the point is the turn with its stakes, through the one named person, fused with where
-    to look, inside the stop's first ~100 words counted from the stop's OWN first
+    """Every piece is written with its point in the FIRST minute: a visitor may walk
+    off at minute eight of nine, routinely, not accidentally. The point is the turn
+    with its stakes, through the one named person, fused with where to look, inside
+    the stop's first ~100 words counted from the stop's OWN first
     sentence — never from a recap of an earlier stop or the walking line; the kicker may
     stay last as colour but the piece may never depend on it; the recaps go.
 
-    MEASURED 2026-08-19 (W6.1 (a)): the locked voice instructed the opposite — "BUILD,
+    MEASURED 2026-08-19: the locked voice instructed the opposite — "BUILD,
     DON'T FLATTEN … keep raising the stakes … toward a payoff near the end … the twist
     comes LATE" — and every composed stop ended on a kicker, with 150-185 words in its
     last minute and 24-44 s of recap before the place was named. This test reads the
@@ -131,7 +126,7 @@ def test_the_locked_voice_puts_the_point_first_and_saves_no_twist_for_the_end():
 
 
 # ---------------------------------------------------------------------------
-# S6.4 — CLOSES THAT LAND ANYWHERE (design §5.3; §7.4.5 "every prefix is decent").
+# CLOSES THAT LAND ANYWHERE ("every prefix is decent").
 # ---------------------------------------------------------------------------
 
 
@@ -180,18 +175,17 @@ def _stitch_day(n_stops: int, *, round_trip: bool) -> tuple:
 
 
 def test_the_stitch_supplies_one_close_per_stop_and_the_last_is_the_days():
-    """Design §5.3: "Every named stretch carries a written one-line close that can play
-    wherever the stretch actually ends." W6.2 R2 (11/11): a stretch is each stop's story
-    AND the day; the close is the LAST sentence of the telling; at the last stop ONE close
-    — the day's — never the stop's and the day's in a row (Rosemary, Marcus, Nadia,
-    Camille: "I do not want 'that's the walk' twice"); "keep exploring on your own" is
-    gone (Greta, Sofia: "to someone alone, 'on your own' is a remark").
+    """Every named stretch carries a written one-line close that can play wherever the
+    stretch actually ends. A stretch is each stop's story AND the day; the close is the
+    LAST sentence of the telling; at the last stop ONE close — the day's — never the
+    stop's and the day's in a row (a listener does not want "that's the walk" twice);
+    "keep exploring on your own" is gone (to someone alone, "on your own" is a remark).
 
     The STITCH is the stitched-corpus lane AND the one writer's source: it must supply a
     GLUE_CLOSING at EVERY stop — the fallback that ships when the writer leaves it
     unrewritten (reported as close_not_authored), and the sentence the
     composer is licensed to rewrite (authoring.py's grounding rule: glue keeps a source_id
-    supplied in this stop's stitched script). MEASURED 2026-08-19 (W6.1 (b)): only the last
+    supplied in this stop's stitched script). MEASURED 2026-08-19: only the last
     stop carried closing lines — two of them, the second the thank-you-and-keep-exploring
     sign-off. UNDO: close only the last stop again -> RED."""
     from src.tour.generation import GLUE_CLOSING
@@ -213,11 +207,10 @@ def test_the_stitch_supplies_one_close_per_stop_and_the_last_is_the_days():
 
 
 def test_every_prefix_of_a_stitched_day_ends_on_that_stops_close():
-    """Design §7.4.5, made executable: "Every prefix is decent — wrap-up at any minute of
-    any simulated day ends with a close." For every k, the day cut after stop k ends on
-    stop k's close and its sentences still pass the floor's structural blockers (C5 no
-    verbatim repeat, C6 no empty stop) — Nadia's 12:05 exit (03:step 10) at 78 % of her
-    day "ends on a close, not mid-kicker"."""
+    """Every prefix is decent — wrap-up at any minute of any simulated day ends with a
+    close. For every k, the day cut after stop k ends on stop k's close and its sentences
+    still pass the floor's structural blockers (C5 no verbatim repeat, C6 no empty stop)
+    — a visitor who leaves at 78 % of the day hears a close, not a mid-kicker."""
     from src.tour.generation import GLUE_CLOSING
     from src.tour.quality_rubric import score_tour
 
@@ -237,10 +230,10 @@ def test_every_prefix_of_a_stitched_day_ends_on_that_stops_close():
 
 
 def test_the_locked_voice_has_the_close_rule():
-    """Design §5.3; W6.2 R2 (11/11): one close per stretch, the LAST sentence of the
-    telling; names the place; a landing, not a summary (S5/P3) or a lesson (S10/P5);
-    only facts the stop already voiced; no clock, no direction, never what was skipped,
-    no thank-you, no "keep exploring". The rule ships in the one writer's system prompt."""
+    """One close per stretch, the LAST sentence of the telling; names the place; a
+    landing, not a summary or a lesson; only facts the stop already voiced; no clock, no
+    direction, never what was skipped, no thank-you, no "keep exploring". The rule ships
+    in the one writer's system prompt."""
     system = _system_text(_envelope(_one_stop_request()))
     assert "THE CLOSE" in system
     assert "GLUE_CLOSING" in system
@@ -284,10 +277,9 @@ def _plan_with_closes(*, drop_close_at: int | None = None, template_at: int | No
 
 
 def test_a_composed_stop_without_a_close_refuses_at_finalize_and_a_template_is_not_authored():
-    """Design §5.3 + §7.4.5: the close is what "wrap it up" plays, so a composed stop
-    that has NO close cannot ship — the live finalizer refuses it (plan S6.4 "a composed
-    stop without a close refuses at finalize"). A close left as the stitch's TEMPLATE is
-    not authored (the owner's rule: "no template close counted as authored") — it ships,
+    """The close is what "wrap it up" plays, so a composed stop that has NO close
+    cannot ship — the live finalizer refuses it. A close left as the stitch's TEMPLATE
+    is not authored (the owner's rule: "no template close counted as authored") — it ships,
     because the fallback is better than silence, but it is REPORTED on the degradations
     channel the phone and the workbench read, never counted as the writer's. UNDO: drop
     the close requirement from finalize_premium_tour -> the missing-close day finalizes
@@ -333,12 +325,12 @@ def test_a_composed_stop_without_a_close_refuses_at_finalize_and_a_template_is_n
 
 
 def test_an_authored_close_is_entailed_against_its_own_stops_claims_and_a_template_is_exempt():
-    """Design §5.3 + §5.1 (the fact-gates stay): the close may only land facts THIS stop
-    voiced — it is entailed against the claims and bodies of the beats cited at its own
-    stop, the way a reflection is entailed against the visited claims (verify.py, Step
-    4.2); a close that imports a fact from nowhere is reported unfaithful. The stitch's
-    template ("And that's Stop 1.") carries no fact and is exempt. W6.2 R2: "no new fact
-    needing a source — the gates bind it" (Camille, Sofia)."""
+    """The fact-gates stay: the close may only land facts THIS stop voiced — it is
+    entailed against the claims and bodies of the beats cited at its own stop, the way
+    a reflection is entailed against the visited claims (verify.py); a close that
+    imports a fact from nowhere is reported unfaithful. The stitch's template ("And
+    that's Stop 1.") carries no fact and is exempt: no new fact needing a source — the
+    gates bind it."""
     from src.tour.generation import GLUE_CLOSING
     from src.tour.verify import verify_faithfulness
 
@@ -385,10 +377,10 @@ def test_an_authored_close_is_entailed_against_its_own_stops_claims_and_a_templa
 
 
 def test_the_close_rides_the_wire_as_close_text():
-    """Design §5.3 + §5.7 ("every word ever spoken exists as on-screen text"): each stop's
+    """Every word ever spoken exists as on-screen text: each stop's
     close travels to the phone as its own field — `close_text` on the stop — beside the
     narration it ends, so [Head back now] can show and play THIS stop's close without
-    parsing the narration (W6.2 R8: the tap plays the current stretch's close, one line).
+    parsing the narration (the tap plays the current stretch's close, one line).
     The CRUD adapter reads it off the script's GLUE_CLOSING sentence at that stop."""
     from src.api.crud.trips import route_script_to_stops
     from src.api.models.trips import GeneratedStop
@@ -412,20 +404,20 @@ def test_the_close_rides_the_wire_as_close_text():
 
 
 # ---------------------------------------------------------------------------
-# S6.5 — PLANTS stay inside the stretch; THREADS survive adaptation (design §5.4).
+# PLANTS stay inside the stretch; THREADS survive adaptation.
 # ---------------------------------------------------------------------------
 
 
 def test_the_locked_voice_forbids_forward_promises_and_recaps_and_asks_for_threads():
-    """Design §5.4: "A plant may only promise a payoff INSIDE its own stretch"; "the
-    sentence binding [an alternate] to the day's theme … is pre-authored as a pair at
-    authoring time". W6.2 R4 (8/11): a stop may NAME its neighbour as a fact but never
-    PROMISE it — "next", "in a minute", "you'll see", "we'll go inside", "later" go; the
-    payoff re-names its subject; the recap (the backward plant) goes. R5 (11/11): the
-    thread is ONE sentence, ≤ 15 words, one name, no idiom, a fact of THIS stop that binds
-    it to the walk's theme — never a recap of the last stop; none rather than glue.
+    """A plant may only promise a payoff INSIDE its own stretch; the sentence binding an
+    alternate to the day's theme is pre-authored as a pair at authoring time. A stop may
+    NAME its neighbour as a fact but never PROMISE it — "next", "in a minute", "you'll
+    see", "we'll go inside", "later" go; the payoff re-names its subject; the recap (the
+    backward plant) goes. The thread is ONE sentence, ≤ 15 words, one name, no idiom, a
+    fact of THIS stop that binds it to the walk's theme — never a recap of the last
+    stop; none rather than glue.
 
-    MEASURED (W6.1 (d)): the prompt said "BUILD MOMENTUM … plant a question at one stop
+    MEASURED: the prompt said "BUILD MOMENTUM … plant a question at one stop
     and pay it off at the NEXT one", 33 of 43 kept predecessors carried a forward
     reference, and the reflection recap re-told Henri IV's mistresses three times in one
     afternoon. UNDO: restore "pay it off at the NEXT one" -> RED."""
@@ -441,13 +433,12 @@ def test_the_locked_voice_forbids_forward_promises_and_recaps_and_asks_for_threa
 
 
 def test_a_skip_adjacency_gets_a_thread_slot_in_the_one_seam_and_threads_ride_the_output():
-    """Design §5.4 ("pre-authored as a pair at authoring time"); W6.2 R5 ("authored at
-    writing time for every adjacency the set can make"). The set produces a skip for
-    EVERY stop (W5.2 R1.2), so the pair (k-2 -> k) exists for every k >= 2 by
-    construction: stop k's compose request names the stop two back as a THREAD
-    predecessor, the schema lets the writer answer with `threads`, and the finalizer
-    keeps what came back, one sentence each, entailed like a reflection. Spend: zero
-    extra calls — the thread rides inside the stop's own authoring unit (W6.1 (f))."""
+    """A thread is pre-authored as a pair at authoring time, for every adjacency the set
+    can make. The set produces a skip for EVERY stop, so the pair (k-2 -> k) exists for
+    every k >= 2 by construction: stop k's compose request names the stop two back as a
+    THREAD predecessor, the schema lets the writer answer with `threads`, and the
+    finalizer keeps what came back, one sentence each, entailed like a reflection.
+    Spend: zero extra calls — the thread rides inside the stop's own authoring unit."""
     from src.tour.authoring import _COMPOSE_OUTPUT_SCHEMA, _certification_compose_requests
 
     script, seq, route = _stitch_day(4, round_trip=False)
@@ -466,14 +457,14 @@ def test_a_skip_adjacency_gets_a_thread_slot_in_the_one_seam_and_threads_ride_th
 
 
 def test_threads_are_kept_one_sentence_short_and_entailed_and_ride_the_composition():
-    """W6.2 R5: a thread is ONE sentence, under fifteen words; it is content, fact-gated
-    (P4); it is never a recap. The finalizer keeps the writer's threads by stop and
-    predecessor. RE-DERIVED 2026-08-19 (measured, s65-proof in the ledger's S6.5): a
-    quality miss — two sentences, over-long, unentailed — is DROPPED AND REPORTED
-    (``thread_dropped``), never a refusal: with ValueError here, two of three real F&D
-    composes died whole over an optional line (R5's own remedy is "none rather than
-    glue"; the S6.4 precedent: refusal is for missing MANDATORY content). Answering a
-    name never asked for is a protocol violation and still refuses."""
+    """A thread is ONE sentence, under fifteen words; it is content, fact-gated; it is
+    never a recap. The finalizer keeps the writer's threads by stop and predecessor.
+    RE-DERIVED 2026-08-19 (measured): a quality miss — two sentences, over-long,
+    unentailed — is DROPPED AND REPORTED (``thread_dropped``), never a refusal: with
+    ValueError here, two of three real composes of one test day died whole over an
+    optional line (the remedy is "none rather than glue"; refusal is for missing
+    MANDATORY content). Answering a name never asked for is a protocol violation and
+    still refuses."""
     import pytest
 
     from src.tour.degradations import degradation_scope, summarize
@@ -530,7 +521,7 @@ def test_threads_are_kept_one_sentence_short_and_entailed_and_ride_the_compositi
         dropped = [r for r in summarize(rows) if r["kind"] == "thread_dropped"]
         assert len(dropped) == 1 and why in str(dropped[0]), (why, dropped)
 
-    # FACT-GATED (R5 "content, fact-gated"; the same union as the in-script thread):
+    # FACT-GATED (a thread is content; the same union as the in-script thread):
     # with the real checker on, a thread it cannot entail is dropped and reported —
     # never shipped, never silently absorbed, and never the whole day's death.
     class _RefusesThreads:
@@ -575,7 +566,7 @@ def test_threads_are_kept_one_sentence_short_and_entailed_and_ride_the_compositi
 
 
 def test_threads_ride_the_wire_as_thread_lines_keyed_by_the_predecessors_name():
-    """Design §5.4 + §5.7: the pair's line is authored at compose time and must reach
+    """The pair's line is authored at compose time and must reach
     the phone — as `thread_lines` on the stop, keyed by the name of the stop that may
     come right before it, decoded from the one JSON string the graph stores (Neo4j
     properties cannot hold maps). The stitched-corpus lane carries none: a thread is
@@ -599,14 +590,14 @@ def test_threads_ride_the_wire_as_thread_lines_keyed_by_the_predecessors_name():
 
 
 # ---------------------------------------------------------------------------
-# S6.6 — two lengths per major stop (design §5.5; W6.2 R3, 11/11).
+# Two lengths per major stop.
 # ---------------------------------------------------------------------------
 
 
 def test_the_tight_telling_is_about_three_minutes_at_the_one_emission_choke_point():
-    """W6.2 R3 (LOCKED): "TIGHT = point-first, about three minutes (~450 words)" — the
-    measured F&D big stops ran 4.5 and 4.9 minutes, past their own four. The ceiling is
-    the ONE emission choke point (C9 governor v4), so the value moves THERE and pricing
+    """TIGHT = point-first, about three minutes (~450 words). The measured big stops of
+    a family's day ran 4.5 and 4.9 minutes, past their own four. The ceiling is the ONE
+    emission choke point (C9 governor v4), so the value moves THERE and pricing
     moves with it (a stop is priced at what it will voice — two truths would drift).
     The density dial keeps its shape: "less" halves (90 s = the never-demote floor),
     "more" gives half again (270 s — exactly the old default). UNDO: restore 270 → RED."""
@@ -623,7 +614,7 @@ def test_the_tight_telling_is_about_three_minutes_at_the_one_emission_choke_poin
 
 def _day_with_a_major(*, priced: dict[str, int] | None = None):
     """The 3-stop stitched day, stop 1 given a SECOND STORY (overflow beats) and a
-    priced visit — the two halves of R3's MAJOR definition."""
+    priced visit — the two halves of the MAJOR definition."""
     from src.tour.contract import BeatSequence, POIBeats
 
     script, seq, route = _stitch_day(3, round_trip=False)
@@ -667,13 +658,12 @@ def _day_with_a_major(*, priced: dict[str, int] | None = None):
 
 
 def test_a_major_stop_is_a_priced_budget_and_a_second_story_never_a_tier():
-    """W6.2 R3 (11/11 "major is not a tier"): MAJOR = the priced visit can hold the
-    full telling after the tight one (Marcus: "a budget, not a badge" — read as
-    priced >= 2x the tight, the floor at which a continuation as long as the telling
-    itself fits) AND the corpus holds a second story (overflow). Where the corpus is
-    thin there is no full telling and that beats water (Aiko, F&D, Paulo: "don't
-    author them"). UNDO: return every overflow stop regardless of the priced visit
-    -> RED."""
+    """Major is not a tier: MAJOR = the priced visit can hold the full telling after the
+    tight one (a budget, not a badge — read as priced >= 2x the tight, the floor at
+    which a continuation as long as the telling itself fits) AND the corpus holds a
+    second story (overflow). Where the corpus is thin there is no full telling, which
+    beats a watered-down one. UNDO: return every overflow stop regardless of the priced
+    visit -> RED."""
     from src.tour.premium_tour import full_telling_majors
 
     script, seq, _full_seq, route = _day_with_a_major()
@@ -697,8 +687,8 @@ def test_a_major_stop_is_a_priced_budget_and_a_second_story_never_a_tier():
 
 
 def test_the_full_telling_is_authored_through_the_one_seam_from_the_second_story():
-    """Design §5.5 + W6.2 R3 (LOCKED): FULL = a second COMPOSED piece from the same
-    material — never the leftover corpus served raw (11/11: "a dump, not a telling") —
+    """FULL = a second COMPOSED piece from the same
+    material — never the leftover corpus served raw ("a dump, not a telling") —
     written point-first with its own close, repeating nothing of the tight. The seam is
     THE seam: a one-stop plan over the overflow beats through plan_premium_authoring,
     whose request carries the tight telling as ALREADY TOLD. UNDO: drop the
@@ -728,8 +718,8 @@ def test_the_full_telling_is_authored_through_the_one_seam_from_the_second_story
 
 
 def test_a_full_telling_is_kept_gated_and_never_kills_the_day():
-    """R3's gates on the OPTIONAL second piece, S6.5's precedent (drop and report,
-    never a dead day): over the word budget -> dropped (`full_telling_dropped`); a
+    """The gates on the OPTIONAL second piece follow the threads' rule (drop and
+    report, never a dead day): over the word budget -> dropped (`full_telling_dropped`); a
     sentence echoing the tight telling verbatim -> dropped; clean -> the full
     narration and its close ride the result. UNDO: ship the over-budget full ->
     RED."""
@@ -808,10 +798,10 @@ def test_a_full_telling_is_kept_gated_and_never_kills_the_day():
 
 
 def test_the_full_telling_rides_the_wire_and_the_more_tap_never_serves_the_dump():
-    """Design §5.5 + §5.7: the full telling reaches the phone as its own fields
+    """The full telling reaches the phone as its own fields
     (`full_narration`, `full_close_text`) beside the tight ones, and the on-demand
     audio door serves IT — never the raw keep-exploring stitch — wherever it exists
-    (W6.2 R3, 11/11: the uncomposed dump is "a dump, not a telling"). Minor stops
+    (the uncomposed dump is "a dump, not a telling"). Minor stops
     keep the extras route unchanged. UNDO: serve extra_narration first -> RED."""
     import inspect
 
@@ -919,12 +909,12 @@ def test_a_route_with_no_door_map_renders_every_prompt_exactly_as_before():
 
 
 # ---------------------------------------------------------------------------
-# S6.7 — narration_register consumed (design §2.4; W6.2 R7, 11/11).
+# narration_register consumed.
 # ---------------------------------------------------------------------------
 
 
 def test_solo_is_byte_identical_and_warm_and_family_are_deltas_in_the_one_voice():
-    """W6.2 R7 (11/11): SOLO = the locked voice as written, byte-identical — the
+    """SOLO = the locked voice as written, byte-identical — the
     baseline the other two are deltas from. WARM: "you" plural where English allows;
     never "you two"/"both of you"/"your partner"; never address the relationship; a
     register may take a clause away, never add a sentence. FAMILY: aloud, short
@@ -966,9 +956,9 @@ def test_solo_is_byte_identical_and_warm_and_family_are_deltas_in_the_one_voice(
 
 
 def test_paulos_density_rules_bind_every_register_in_the_locked_voice():
-    """W6.2 R7: Paulo's density rules bind EVERY register — one name a sentence,
-    short words, gloss hard English as well as French ("Jesuit"), no idiom. He
-    counted PDV-base at 1.3-9 names a sentence and ten idioms in 4.5 minutes. These
+    """The density rules bind EVERY register — one name a sentence,
+    short words, gloss hard English as well as French ("Jesuit"), no idiom. A
+    reviewer counted PDV-base at 1.3-9 names a sentence and ten idioms in 4.5 minutes. These
     live in the LOCKED VOICE (the system prompt), not in a register delta — the
     sealed policy hash moves and is declared. UNDO: drop the DENSITY rule -> RED."""
     system = _system_text(_envelope(_one_stop_request()))

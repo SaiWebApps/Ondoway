@@ -1,11 +1,9 @@
 """Structural guard on the per-POI queue pricing in `data/{city}/poi-raw.json`.
 
-Five fields price the LINE in front of a place — redesign data row 6.5
-(specs/2026-08-07-tour-algorithm-redesign/01-design.md:369) and §3.3
-(01-design.md:178-184): the queue is a FOURTH kind of time, "priced separately,
-by hour and season", belonging to the day rather than to the building, and
-"excluded entirely under `wall`" — Camille's 28-minute line is priced, Marcus's
-hard-wall day is never promised an unboundable one (§2.3, 01-design.md:106).
+Five fields price the LINE in front of a place: the queue is a FOURTH kind of
+time, "priced separately, by hour and season", belonging to the day rather than
+to the building, and "excluded entirely under `wall`" — a visitor's 28-minute
+line is priced, and a hard-wall day is never promised an unboundable one.
 
   `queue_class`           str   none | short | long | unpredictable (closed).
                                 `unpredictable` is the catacombs class: a wait
@@ -31,8 +29,7 @@ real wait.
 
 ALLOW-LIST MECHANICS: per-city checks loop IN-BODY over the tuple rather than
 `@pytest.mark.parametrize`, because parametrizing over an EMPTY tuple produces a
-skip and the suite hard-errors on skips (Phase 1 measured it; the S2.5/S2.6
-sabotage notes both record it).
+skip and the suite hard-errors on skips.
 
 Runs in milliseconds with no database.
 """
@@ -61,7 +58,7 @@ QUEUE_FIELDS = (
 # every data check below. Explicit allow-list, exactly like
 # CITIES_WITH_OPENING_HOURS in the sibling file: listing a city that has not run
 # the pass would make this file permanently red and train readers to ignore it.
-# EMPTY until the first pass runs (Phase 3's queue run adds "paris" as the
+# EMPTY until the first pass runs (the queue run adds "paris" as the
 # declaring act).
 #
 # ADDING a slug here is the deliberate act of declaring "this city's queues are
@@ -100,7 +97,7 @@ REMEDY = "Run the queue pass: `make poi-queues SLUG=<city>`."
 
 
 def test_the_vocabulary_is_closed_and_exactly_the_design_s_four() -> None:
-    """Design row 6.5 (01-design.md:369) fixes four classes; a silently widened
+    """The vocabulary is four classes; a silently widened
     vocabulary would change what a `wall` day may be offered without review.
     Order-insensitive on purpose: the tuple's ORDER is presentation, its SET is
     the contract."""
@@ -162,7 +159,7 @@ def test_validate_accepts_the_calibration_shapes(record: dict) -> None:
         ({"queue_peak_hours": [["9:00", "16:00"]]}, "HH:MM"),
         ({"queue_peak_hours": [["16:00", "10:00"]]}, "backwards"),
         # A peak higher than off-peak with no band claims a peak exists but
-        # refuses to say when — unusable by an hour-priced planner (§3.3).
+        # refuses to say when — unusable by an hour-priced planner.
         ({"queue_peak_hours": []}, "WHEN"),
         ({"queue_basis": "  "}, "unauditable"),
     ],
@@ -347,14 +344,14 @@ def test_every_export_chunk_carries_the_queue_fields() -> None:
 # The plumbing: the same hops every enriched field travels
 # (`tests/test_poi_opening_hours.py` and `tests/test_poi_place_judgements.py`
 # are the pattern). The contract, loader and upload tests are EXPECTED RED
-# until S3.4's selection/upload half lands — they exist first precisely so that
+# until the selection/upload half lands — they exist first precisely so that
 # landing turns them green. The export-sync test is green from birth: the sync
 # registration ships with the pass script itself.
 # ---------------------------------------------------------------------------
 
 
 def test_the_contract_declares_the_queue_fields() -> None:
-    """RED until S3.4's selection/upload half lands.
+    """RED until the selection/upload half lands.
 
     `POI` must declare all five queue fields. `POI` is `extra="ignore"`
     (src/tour/contract.py), so constructing with unknown fields SILENTLY DROPS
@@ -390,10 +387,9 @@ def test_the_contract_declares_the_queue_fields() -> None:
     assert poi.queue_basis.startswith("Airport"), "POI dropped queue_basis"
 
     # The defaults are load-bearing: a corpus the pass has not reached must
-    # price NOTHING. The contract's shape (plan S3.2, implemented before this
-    # file's hops went green): `queue_class = None` is THE never-priced switch
-    # — None means "nobody judged this", distinct from "none" ("judged: no
-    # line") — and while it is None the int/str fields are INERT (nothing may
+    # price NOTHING. The contract's shape: `queue_class = None` is THE
+    # never-priced switch — None means "nobody judged this", distinct from
+    # "none" ("judged: no line") — and while it is None the int/str fields are INERT (nothing may
     # read them), so their 0/"" defaults claim nothing. The pricing seam
     # (src/tour/visit_time.py) prices a queue only off a set class.
     bare = POI(id="x", name="X", tier=3, poi_role="stop", lat=48.85, lng=2.35)
@@ -405,14 +401,14 @@ def test_the_contract_declares_the_queue_fields() -> None:
 
 
 def test_the_corpus_loader_returns_and_constructs_the_queue_fields() -> None:
-    """RED until S3.4's selection/upload half lands.
+    """RED until the selection/upload half lands.
 
     Source-scan over the two silent hops in `src/tour/selection.py` (the
     `test_golden_diff_cli` genre): HOP 1 — `LOAD_PARIS_POIS_CYPHER` returns
     ONLY what its RETURN list names, so an unnamed property reaches nothing
     downstream with no error; HOP 2 — `_snapshot_from_records` sets constructor
     keywords one by one, so a name absent there is simply unused. Both halves
-    must carry all five fields (design row 6.5, 01-design.md:369).
+    must carry all five fields.
     """
     from src.tour.selection import LOAD_PARIS_POIS_CYPHER
 
@@ -430,7 +426,7 @@ def test_the_corpus_loader_returns_and_constructs_the_queue_fields() -> None:
 
 
 def test_hop_round_trip_a_graph_record_lands_on_the_poi() -> None:
-    """RED until S3.4's selection/upload half lands. Cypher → snapshot, run for
+    """RED until the selection/upload half lands. Cypher → snapshot, run for
     real: a record shaped like the graph's answer must surface every queue
     value on the built POI, and an unpriced record must land on the safe
     defaults (the `tests/test_poi_opening_hours.py` functional-hop genre).
@@ -489,7 +485,7 @@ def test_hop_round_trip_a_graph_record_lands_on_the_poi() -> None:
 
 
 def test_the_upload_carries_the_queue_fields_in_both_property_lists() -> None:
-    """RED until S3.4's selection/upload half lands. Upload → cypher:
+    """RED until the selection/upload half lands. Upload → cypher:
     `scripts/upload_paris.py` keeps TWO hardcoded property lists — the param
     dict and the Cypher SET list of `_upload_pois` — whose own comment warns
     they must agree or a field silently never reaches the graph. Both must
@@ -511,7 +507,7 @@ def test_the_export_sync_carries_the_queue_fields() -> None:
     """Exports-sync coverage, green from birth: `SYNCED_FIELDS` in
     `scripts/sync_poi_exports.py` — THE one list of fields that flow
     poi-raw → export chunks — must carry all five queue fields, registered
-    with the pass so the sync never lags it (the S2.9 precedent). Without
+    with the pass so the sync never lags it. Without
     this, the pass writes poi-raw.json and the deploy uploads chunks that
     never heard of it — the Notre-Dame tier-1 incident shape.
     """

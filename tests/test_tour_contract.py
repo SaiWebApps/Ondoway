@@ -1,4 +1,4 @@
-"""Phase 2 — contract.py: input validation + dataclass roundtrip."""
+"""contract.py: input validation + dataclass roundtrip."""
 
 from __future__ import annotations
 
@@ -200,7 +200,7 @@ def test_beat_sequence_rejects_invalid_strategy():
 def test_a_poi_without_visit_capacity_still_constructs_and_defaults_safely():
     """The three visit-capacity fields must be additive, or every corpus breaks.
 
-    Step 2.7's whole safety argument rests on this: the fields land on the
+    The whole safety argument rests on this: the fields land on the
     contract BEFORE the capacity pass has run over any city, so a POI that knows
     nothing about them has to construct and report values that reproduce today's
     behaviour exactly.
@@ -258,9 +258,9 @@ def test_every_transit_segment_declares_its_mode():
 def test_tour_input_pins_and_weather_default_to_todays_behaviour():
     """An input that pins nothing and carries no sky signal plans exactly as before.
 
-    design §3.2 makes pinning the visitor's move, so the empty tuple is Julien's
-    open walk — today's behaviour, byte-identical. `weather=None` means no signal
-    was fetched (design §2.5: weather is fetched, never asked), and an
+    Pinning is the visitor's move, so the empty tuple is an open walk with no
+    pins — today's behaviour, byte-identical. `weather=None` means no signal
+    was fetched (weather is fetched, never asked), and an
     unsignalled request must plan byte-identically to a pre-weather request —
     the `start_datetime` None-means-no-clock precedent.
     """
@@ -270,11 +270,11 @@ def test_tour_input_pins_and_weather_default_to_todays_behaviour():
 
 
 def test_tour_input_carries_pins_and_weather_and_round_trips():
-    """design §3.2: "the visitor may pin any offered stop into a promise".
+    """The visitor may pin any offered stop into a promise.
 
     Pins and the weather signal must survive TourInput(**inp.model_dump()) —
     the `end` round-trip precedent — because persisted tour_input_json is how
-    a session replans the same day (D4, "pin it": the day rebuilds around the
+    a session replans the same day (a pin rebuilds the day around the
     pinned chapel from the same stored request).
     """
     inp = TourInput(
@@ -303,11 +303,11 @@ def test_tour_input_rejects_an_unknown_weather_signal():
 
 
 def test_a_poi_the_queue_pass_has_not_reached_is_never_priced():
-    """queue_class=None is the never-priced switch (data row 6.5).
+    """queue_class=None is the never-priced switch.
 
     A queue is a fourth kind of time — not walking, not being-at-a-place, not
-    narration — priced separately and excluded entirely under a "wall" end
-    (design §3.3). So the safe default for a corpus the audited queue pass has
+    narration — priced separately and excluded entirely under a "wall" end.
+    So the safe default for a corpus the audited queue pass has
     not reached is NO CLAIM AT ALL: None means unpassed, and an unpassed queue
     is NEVER priced. The int and string defaults are inert until `queue_class`
     is set, so no default can imply a real queue — "none" is the audited claim
@@ -350,7 +350,7 @@ def test_a_poi_the_queue_pass_has_not_reached_is_never_priced():
 
 
 def test_poi_rejects_an_unknown_queue_class():
-    """none / short / long / unpredictable is row 6.5's whole vocabulary.
+    """none / short / long / unpredictable is the whole vocabulary.
 
     POI ignores unknown keys (extra="ignore"), so before the field exists this
     constructs silently and the test stays red on DID NOT RAISE — it cannot
@@ -371,7 +371,7 @@ def test_poi_rejects_an_unknown_queue_class():
 def test_promise_shape_and_promise_carry_the_visit_shape_and_nothing_else():
     """A promise is OUTPUT — the planner's obligation — never a scoring knob.
 
-    design §3.1: a promise includes "the shape of the visit" — 65 minutes
+    A promise includes "the shape of the visit" — 65 minutes
     inside is a different promise from 15 minutes outside, and the queue is a
     third number again. Those three numbers, which side of the door the visit
     lives on, and whether the clock has already voided the door are the ENTIRE
@@ -386,11 +386,11 @@ def test_promise_shape_and_promise_carry_the_visit_shape_and_nothing_else():
         "goes_inside",
         "closed_today",
     }
-    # Phase 4 S4.6 (W4.2 deviation v): a promise also carries its clock WINDOW
-    # — arrival and departure, "" on a dateless day — read off THE one arrival
-    # accumulation. A window is an obligation ("Place des Vosges, around 11:30
-    # to noon"), not a knob; it is the third thing a promise IS (design §3.1:
-    # "each promise carries a clock window"). Still exhaustive: anything else
+    # A promise also carries its clock WINDOW — arrival and departure, "" on a
+    # dateless day — read off THE one arrival accumulation. A window is an
+    # obligation ("Place des Vosges, around 11:30 to noon"), not a knob; it is
+    # the third thing a promise IS: each promise carries a clock window.
+    # Still exhaustive: anything else
     # landing here is a knob and this goes red.
     assert set(Promise.model_fields) == {
         "kind",
@@ -402,8 +402,8 @@ def test_promise_shape_and_promise_carry_the_visit_shape_and_nothing_else():
 
 
 def test_promise_kinds_are_the_four_species_of_the_day():
-    """design §3.1's promise list, as a vocabulary: the interest anchor, the
-    visitor's pin (§3.2), a body stop, the finish. A detour is fabric, and
+    """The promise list, as a vocabulary: the interest anchor, the
+    visitor's pin, a body stop, the finish. A detour is fabric, and
     fabric is never promised — "fabric may change silently; promises may not".
     """
     shape = PromiseShape(
@@ -423,7 +423,7 @@ def test_promise_is_frozen_and_forbids_scoring_state():
     """extra="forbid" is what makes the no-knobs rule mechanical at runtime:
     a caller smuggling score= or priority= onto a promise is refused at
     construction, and a frozen promise cannot be edited after the planner
-    swears it (§3.2: a pin is the visitor's decision, not a preference).
+    swears it (a pin is the visitor's decision, not a preference).
     """
     shape = PromiseShape(
         outside_seconds=0,
@@ -462,7 +462,7 @@ def test_promise_shape_rejects_negative_seconds():
 
 
 def test_route_promises_default_empty_and_carry_through():
-    """Route.promises is additive in the `vignettes` mould (design §3.1).
+    """Route.promises is additive in the `vignettes` mould.
 
     An unpromised Route — every Route today — must stay byte-identical, and a
     promise-native Route carries the planner's obligations so downstream

@@ -227,10 +227,10 @@ def test_edge_cases_and_contract_errors():
 
 
 # ---------------------------------------------------------------------------
-# Phase 6 S6.6 — the heuristic is never worse than a feasible given order.
+# The heuristic is never worse than a feasible given order.
 # ---------------------------------------------------------------------------
 
-#: MEASURED 2026-08-19 (Phase 6 S6.6): the repair's 20-stop pinned incumbent on the
+#: MEASURED 2026-08-19: the repair's 20-stop pinned incumbent on the
 #: 120-minute one-way sweep. In its OWN order this chain walks 2734 s; the pin-blind
 #: cheapest-insertion reorder walked 3358 s (+624). The repair priced its incumbent
 #: off that inflated number, admitted a worse trial against it, and the shipped day
@@ -251,12 +251,12 @@ _MEASURED_CHAIN = [
 
 
 def test_a_heuristic_order_is_never_worse_than_the_feasible_order_given():
-    """An optimizer may trade away optimality, never feasibility (Phase 6 S6.6).
+    """An optimizer may trade away optimality, never feasibility.
 
     Above ORDERING_EXACT_MAX the dispatcher falls back to cheapest-insertion, which
     builds its open chain BLIND to the pin and appends ``fixed_end`` afterwards — a
     chain whose tail wandered from the pin buys a huge closing leg. The three-minute
-    tight (W6.2 R3) made >16-stop days routine, so this regime is newly hot: on the
+    tight made >16-stop days routine, so this regime is newly hot: on the
     measured chain below the reorder walked 624 s more than the caller's own order.
     ``order_stops`` must return whichever of (heuristic, given-as-is) walks less when
     the given order already satisfies the same pin. UNDO: return the heuristic

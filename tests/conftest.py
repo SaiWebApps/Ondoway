@@ -7,9 +7,9 @@ Tests connect to a dedicated test Neo4j instance (bolt://localhost:7688)
 so that production data in the dev instance is never touched.
 Start it with: make db-up DB=test
 
-Phase 4.5 hardening (2026-04-29): _wipe() hard-asserts the connected URI's
+Hardening (2026-04-29): _wipe() hard-asserts the connected URI's
 port belongs to _TEST_PORT_ALLOWLIST before running DETACH DELETE. Stops a
-recurrence of the Phase 4 incident where load_dotenv(override=True) inside
+recurrence of the incident where load_dotenv(override=True) inside
 a test mutated NEO4J_URI to the dev port and the conftest fixture wiped
 the production corpus. See data/paris/.pipeline-state.json →
 backlog.conftest_test_isolation for context.
@@ -55,7 +55,7 @@ from fastapi.testclient import TestClient
 from src.api.app import create_app
 from src.audio.provider import MockTTSProvider, register_provider
 
-# ── The $0 audio seam (OWNER RULING 2026-07-31: no fake provider is ever served)
+# ── The $0 audio seam (no fake provider is ever served)
 #
 # src/audio/provider.py deliberately does NOT register MockTTSProvider, because
 # that registry IS the workbench's provider dropdown and the set of values
@@ -330,7 +330,7 @@ def _wipe(driver) -> None:
     """DETACH DELETE every node, but ONLY against an allowlisted test port.
 
     The port assertion runs every call so env mutation between fixture
-    creation and wipe (the Phase 4 incident vector) cannot bypass it.
+    creation and wipe cannot bypass it.
     """
     _assert_test_port()
     with driver.session(database=get_database()) as session:
@@ -359,7 +359,7 @@ def client(clean_driver):
 
 
 def load_onboard_fixture(city: str, name: str) -> dict:
-    """Load a Step-3 connector JSON fixture from tests/fixtures/onboard/{city}/{name}.
+    """Load a connector JSON fixture from tests/fixtures/onboard/{city}/{name}.
 
     Connectors are PURE — their ``parse`` maps a raw provider JSON payload to a
     typed ``ConnectorResult`` — so the bar drives them from these committed

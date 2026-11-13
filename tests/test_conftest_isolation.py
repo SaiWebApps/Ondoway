@@ -1,6 +1,6 @@
-"""Regression test for the Phase 4.5 conftest test-isolation guard.
+"""Regression test for the conftest test-isolation guard.
 
-The Phase 4 incident: a golden test called load_dotenv(override=True) which
+The incident: a golden test called load_dotenv(override=True) which
 mutated NEO4J_URI from the test port (7688) to the dev port (7687). The
 conftest's session-scoped driver fixture later instantiated a driver
 against the mutated env and ran _wipe() — destroying the dev corpus.
@@ -33,7 +33,7 @@ def test_test_port_allowlist_includes_7688():
 
 
 def test_assert_test_port_blocks_dev_port(monkeypatch):
-    """Pointing at the dev port must raise — this is the Phase 4 vector."""
+    """Pointing at the dev port must raise — this is the incident's vector."""
     monkeypatch.setenv("NEO4J_URI", "bolt://localhost:7687")
     with pytest.raises(RuntimeError) as exc_info:
         _assert_test_port()
@@ -86,7 +86,7 @@ def test_wipe_proceeds_against_test_port(monkeypatch):
 
 
 def test_wipe_blocks_against_dev_port(monkeypatch):
-    """The Phase 4 incident scenario: env was mutated to dev port between
+    """The incident scenario: env was mutated to dev port between
     driver creation and _wipe call. The guard must block before any Cypher
     reaches the driver.
     """
@@ -101,7 +101,7 @@ def test_wipe_blocks_against_dev_port(monkeypatch):
 
 
 def test_wipe_re_evaluates_env_at_call_time(monkeypatch):
-    """The Phase 4 incident vector specifically: env mutated AFTER the
+    """The incident vector specifically: env mutated AFTER the
     driver fixture was created but BEFORE _wipe() was called. The guard
     reads NEO4J_URI inside _assert_test_port() each call, not once at
     fixture instantiation.

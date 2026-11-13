@@ -1,12 +1,10 @@
-"""Phase 8 S8.5 — §7.4: the eleven days are replayable traces.
+"""The eleven days are replayable traces.
 
-Design §7.4 makes the persona files executable: "Each persona file is a
-minute-by-minute script, so each becomes a replayable GPS-and-behaviour trace
-through the session loop", asserting five invariants. Design §11 puts them
-off-device. This file is those five, one test each, driven through the LIVE
-session endpoints by `tests/persona_traces.py` (the runner, which names what it
-extends). Every test cites its source: a persona file and step, a section of
-01-design.md, or a locked W8.2 ruling (§0.1.1, design §7.5).
+Each sample visitor day is a minute-by-minute script, so each becomes a
+replayable GPS-and-behaviour trace through the session loop, asserting five
+invariants off-device. This file is those five, one test each, driven through
+the LIVE session endpoints by `tests/persona_traces.py` (the runner, which names
+what it extends).
 
 Live corpus, $0: the days are planned on the local dev graph (port 7687, the
 tests/test_trip_api.py precedent) and composed through the product's own
@@ -53,14 +51,13 @@ from tests.persona_traces import (
 pytestmark = pytest.mark.timeout(900)
 
 #: How many of the eleven days the product SERVES at $0 today. MEASURED on this
-#: tree, 2026-08-24 (phase8-ledger.md §S8.5, the before-picture): camille (5
-#: stops), greta (3) and rosemary (1); re-measured after P9R-S1, when paulo's
-#: day began serving through the origin-verified transit pick, the drop valve
-#: and the two reworded beats; re-measured again at Phase 10, when aiko's day
-#: began serving — her compose was refused over one forbidden corpus walking
-#: line, reworded at its source, and the hours work made her Tuesday real
-#: (`test_aikos_rainy_tuesday_serves` is her own pin). The rest are refused by
-#: S8.3's placement floors or the C3 audio floor — each named, each pinned by
+#: tree, 2026-08-24: camille (5 stops), greta (3) and rosemary (1);
+#: re-measured when paulo's day began serving through the origin-verified
+#: transit pick, the drop valve and the two reworded beats; re-measured again
+#: when aiko's day began serving — her compose was refused over one forbidden
+#: corpus walking line, reworded at its source, and the hours work made her
+#: Tuesday real (`test_aikos_rainy_tuesday_serves` is her own pin). The rest are
+#: refused by the placement floors or the C3 audio floor — each named, each pinned by
 #: `test_every_persona_day_either_serves_or_refuses_by_name`. A FLOOR, not an
 #: equality: a day that starts serving is never a failure; a day that stops
 #: serving is.
@@ -69,8 +66,8 @@ SERVED_FLOOR = 5
 #: The wire speaks in whole minutes (`start_time` is HH:MM and `dwell_seconds`
 #: is floored to minutes when a leg is read back), so a leg read off two clocks
 #: can sit one minute above the leg the planner certified. One minute, stated
-#: once, and never more: a cap breach the design cares about is Rosemary's
-#: 12-and-9 fusing into 21.
+#: once, and never more: a cap breach that matters is a 12-minute and a
+#: 9-minute leg fusing into 21.
 CLOCK_ROUNDING_MINUTES = 1
 
 
@@ -180,8 +177,8 @@ def _stop_ids(day: dict) -> list[str]:
 def _spoken_about(reply: dict) -> set[str]:
     """Every stop the reply SAYS something about: the question's at-risk thing,
     and any stop an entry names as its trigger. A promise named on the wire was
-    not dropped in silence (§4.3 — "fabric may change silently; promises may
-    not"; §4.2's second tier is the question)."""
+    not dropped in silence (the day's fabric may change silently; promises may
+    not, and a promise at risk becomes the question)."""
     out: set[str] = set()
     for entry in reply.get("contingencies", []):
         if entry.get("at_risk_stop_id"):
@@ -193,14 +190,11 @@ def _spoken_about(reply: dict) -> set[str]:
 
 @needs_neo4j
 def test_every_persona_day_either_serves_or_refuses_by_name(traces):
-    """docs/personas/00-what-these-are-for.md, the rule this whole set exists
-    for: "A design is not finished because it is elegant. It is finished when it
-    can represent all eleven of these days. When a proposal cannot hold one of
-    them, say which one and what it costs — do not quietly redefine the persona
-    to fit the algorithm."
+    """A day the product cannot hold is named with what it costs, never quietly
+    redefined to fit the algorithm.
 
     So: every one of the eleven either SERVES — a day, its promises and its
-    contingency set on the wire — or is REFUSED BY NAME (W8.2 R8: plain words, a
+    contingency set on the wire — or is REFUSED BY NAME (plain words, a
     named gate, nothing consumed, never a silently thinner day). What is
     forbidden is the third thing: a day that half-arrives. The count that serves
     is a measured FLOOR, not an equality, so a day that starts serving is never
@@ -230,31 +224,30 @@ def test_every_persona_day_either_serves_or_refuses_by_name(traces):
 
 @needs_neo4j
 def test_no_promise_is_ever_silently_dropped(served):
-    """§7.4.1, fuzzed across replans. Design §4.3: "fabric may change silently;
-    promises may not"; §4.2: a promise event produces "exactly one behaviour: the
-    question". W5.14 is the measured failure this pins — on Rosemary's own day
-    (05-step-free-visitor.md: "Start Musée d'Orsay, end Musée d'Orsay") the live
-    replan handed back the bench alone and dropped the Orsay in silence.
+    """Fuzzed across replans: the day's fabric may change silently, promises may
+    not, and a promise event produces exactly one behaviour: the question. The
+    measured failure this pins: on Rosemary's day, which starts and ends at the
+    Musée d'Orsay, the live replan handed back the bench alone and dropped the
+    Orsay in silence.
 
     At every step of every walked day: a promise the wire marked `protected` and
     still ahead is either still on the day the server hands back, or the reply
     SAYS something about it. Never absent and unmentioned.
 
     **THIS TEST'S UNDO IS NOT PROVEN, and that is a written decision, not a quiet
-    pass (§0.1.3).** Three mutations were tried at the real sites and all three
+    pass.** Three mutations were tried at the real sites and all three
     left it GREEN: emptying `_person_protected`; taking the finish off the
-    replan's tail; and both together. The dump that explains it
-    (`evidence/phase8-gates/s85-before-picture.md`): on Camille the only protected
-    promise is her DECLARED END, so the tail materialises it at every step —
-    `kept=1, dropped=[]` even with twenty minutes left on a five-hour day; on
-    Greta a stop IS dropped in silence at the linger, but her day is an open walk
-    with no named end, so by W5.2 R1.5 the planner's own anchor is not a promise
-    and nothing was owed. **On the days that currently serve, a protected item
-    can never be at risk.** What would prove it is a served day carrying a
+    replan's tail; and both together. The dump that explains it: on Camille the
+    only protected promise is her DECLARED END, so the tail materialises it at
+    every step — `kept=1, dropped=[]` even with twenty minutes left on a
+    five-hour day; on Greta a stop IS dropped in silence at the linger, but her
+    day is an open walk with no named end, so the planner's own anchor is not a
+    promise (a promise is what the PERSON asked for) and nothing was owed. **On
+    the days that currently serve, a protected item can never be at risk.** What
+    would prove it is a served day carrying a
     protected item that is NOT the finish — a rest or a pin. Rosemary's bench day
-    is exactly that day, and it cannot serve today (the C3 audio floor). Carried
-    to W8.6 with the other two rows; the test stays because it asserts the right
-    rule and bites the moment such a day serves.
+    is exactly that day, and it cannot serve today (the C3 audio floor). The test
+    stays because it asserts the right rule and bites the moment such a day serves.
     """
     checked = 0
     for name, trace in served.items():
@@ -281,25 +274,24 @@ def test_no_promise_is_ever_silently_dropped(served):
 
 @needs_neo4j
 def test_every_drop_rechecks_the_longest_leg_cap(served):
-    """§7.4.2 and design §4.5.3, in Rosemary's own words
-    (05-step-free-visitor.md, step 2: "Twelve minutes of walking, and that is her
-    limit in one go"; the breaks bullet: "A walking budget is not one number").
-    §4.5.3 spells the trap: "Dropping a stop MERGES its two legs — drop
-    Rosemary's bench and a 12-minute and a 9-minute leg fuse into 21 continuous
-    minutes, double her limit. Without this rule every drop is a trap."
+    """Every drop re-checks the longest-leg cap. A walking budget is not one
+    number: a visitor may manage twelve minutes of walking in one go and no more.
+    Dropping a stop MERGES its two legs — drop a bench and a 12-minute and a
+    9-minute leg fuse into 21 continuous minutes, double that limit. Without this
+    rule every drop is a trap.
 
     THE CEILING IS THE CONTRACT'S OWN: `ReplanContext.longest_leg_ceiling_seconds`
-    names it — "§4.5.3: the base day's longest street leg; a replan may not mint
-    a longer one (Rosemary's 12 + 9 fusing into 21)" — and where the party also
+    names it — the base day's longest street leg; a replan may not mint a longer
+    one — and where the party also
     carries a per-leg cap (`contract._PARTY_AXES`, take-it-easy's 13), the
     tighter of the two binds. So: any replan that DROPS a stop must hand back a
     day whose every leg still sits under that ceiling, measured off the wire's
     own clocks, never a second walking model.
 
     **THIS TEST'S UNDO IS NOT PROVEN EITHER, and the attempt is the finding**
-    (§0.1.3, a written decision). Removing the party's `max_leg_minutes` from the
+    (a written decision). Removing the party's `max_leg_minutes` from the
     replan's tail left it GREEN: no day that currently SERVES carries a cap —
-    take-it-easy is the only §2.4 row with a number and Rosemary's day collapses
+    take-it-easy is the only party preset with a number and Rosemary's day collapses
     to one stop. Passing the base day's longest leg to the live replan as
     `ReplanContext.longest_leg_ceiling_seconds` (as `build_contingency_set` does)
     was then tried as a FIX and REVERTED on measurement, one variable moved:
@@ -309,7 +301,7 @@ def test_every_drop_rechecks_the_longest_leg_cap(served):
     anything it rejected. The ceiling bounds what may be INSERTED; it cannot bound
     the walk that is left when nothing is.
 
-    THE RULE NOW EXISTS (P9R-S4.M1): `_prefer_keeping_over_a_longer_leg` on
+    THE RULE NOW EXISTS: `_prefer_keeping_over_a_longer_leg` on
     the live replan detects a breach after a drop and retries ONCE with the
     dropped stops PROTECTED (force-seat is the compel lever the ceiling never
     had) plus the base ceiling, then serves whichever day has the shorter
@@ -361,10 +353,10 @@ def test_every_drop_rechecks_the_longest_leg_cap(served):
 
 @needs_neo4j
 def test_protected_items_are_never_auto_cut(served):
-    """§7.4.3 and design §4.5.2: "Rests, meals, toilets and the finish are never
-    auto-cut; they trigger the question instead." W5.2 R1.5 fixes whose promises
-    those are — what the PERSON asked for. Read here over the PRECOMPUTED set
-    (design §4.6: the phone selects from it and decides nothing), so an answer
+    """Rests, meals, toilets and the finish are never auto-cut; they trigger the
+    question instead. Those promises are what the PERSON asked for. Read here
+    over the PRECOMPUTED set (the phone selects from it and decides nothing), so
+    an answer
     the phone might apply cannot quietly be the one that cuts the bench.
 
     A wrap-up entry is exempt: the person chose to end the day. An entry that
@@ -405,21 +397,19 @@ def test_protected_items_are_never_auto_cut(served):
 
 @needs_neo4j
 def test_announcements_carry_screen_text_and_never_land_on_a_walking_leg(served):
-    """§7.4.4 and design §4.4: "Speech queues to a natural moment — never into a
-    conversation, never onto a walking leg (a sentence missed on the move is gone
-    forever for a second-language listener)" (§4.4.1, Paulo —
-    08-second-language-listener.md step 2: "rewinding on a narrow pavement means
-    stopping and being walked into. That content is simply gone"), "Everything
-    spoken ALSO appears on screen" (§4.4.2), "One sentence, maximum" (§4.4.4).
+    """Speech queues to a natural moment — never into a conversation, never onto
+    a walking leg: a sentence missed on the move is gone forever for a
+    second-language listener, who cannot stop on a narrow pavement to rewind.
+    Everything spoken ALSO appears on screen. One sentence, maximum.
 
     Three clauses, each measured on the wire:
     (a) every announcement of every version carries its screen line, and a
-        question is one sentence naming its default arm (W5.2 R2.4);
+        question is one sentence naming its default arm;
     (b) fired from a position genuinely ON A LEG — outside every footprint the
         day placed — the reply still obeys (a), so a walker who can hear nothing
         can read it and owes no answer;
     (c) nothing auto-plays on a leg by construction: every stop whose piece has
-        words carries the FOOTPRINT it plays inside (Phase 7 S7.3), and the only
+        words carries the FOOTPRINT it plays inside, and the only
         leg-bound text on the wire is `leg_narration`.
 
     UNDO: drop `screen_text=q` from `routes/trips.py::_live_question` -> (a)/(b)
@@ -472,19 +462,16 @@ def test_announcements_carry_screen_text_and_never_land_on_a_walking_leg(served)
 
 @needs_neo4j
 def test_every_prefix_is_decent_and_wrap_up_ends_with_a_close(served):
-    """§7.4.5: "Every prefix is decent — wrap-up at any minute of any simulated
-    day ends with a close." Nadia's day is the source
-    (03-family-with-children.md, step 10 and its breaks bullet: "The tour will
-    not be finished. It ends at 78% by design ... EVERY PREFIX OF THE ROUTE MUST
-    BE A DECENT TOUR"), and design §5.3 is the mechanism: "Every named stretch
-    carries a written one-line close that can play wherever the stretch actually
-    ends. This is what 'wrap it up' plays, and it is why quitting early feels
-    like finishing."
+    """Every prefix is decent: wrap-up at any minute of any simulated day ends
+    with a close. A family's tour may end early by design, so every prefix of the
+    route must be a decent tour. Every named stretch carries a written one-line
+    close that can play wherever the stretch actually ends; that is what "wrap it
+    up" plays, and it is why quitting early feels like finishing.
 
     So, on every version of every walked day: a wrap-up exists FROM every stop
-    the person can be standing at — rests included (W6.2, Rosemary: "the one
-    place I am most likely to decide to go home is where the button does
-    nothing") — and the day it would end has a written close to play.
+    the person can be standing at — rests included (a rest is where a visitor is
+    most likely to decide to go home) — and the day it would end has a written
+    close to play.
 
     UNDO: build wrap-ups from story stops only in
     `contingency.py::build_contingency_set` -> a rest has none -> RED; drop the
@@ -553,7 +540,7 @@ def _anchor_subs_and_beat_subs(driver) -> tuple[dict[str, set[str]], dict[str, s
 def test_no_leg_line_outlives_its_pair_and_every_reviewed_anchor_gets_its_chapter(
     served, live_neo4j
 ):
-    """S1 across the eleven: two things a walker cannot check for themselves.
+    """Across the eleven: two things a walker cannot check for themselves.
 
     A leg line names both its ends, so it is true of ONE pair. On every version of every
     served day, a stop carrying leg words records the stop it is actually walked to from.
@@ -611,7 +598,7 @@ def test_no_leg_line_outlives_its_pair_and_every_reviewed_anchor_gets_its_chapte
     # voices only sub-less beats at an anchored place owes no chapter (Camille's
     # architecture day at the pool-anchored Tuileries names no spot); a day that
     # VOICES a named spot must tell it standing there — an unclaimed voiced sub
-    # is the S1 disease (Sofia's galleries), and the ratchet holds: anchoring a
+    # is told from the footprint's edge, and the ratchet holds: anchoring a
     # place obliges its voiced named spots, every one.
     for name, trace in served.items():
         for stop in (trace.session or {}).get("stops", []):
@@ -647,7 +634,7 @@ def test_no_leg_line_outlives_its_pair_and_every_reviewed_anchor_gets_its_chapte
 
 @needs_neo4j
 def test_a_lensed_day_serves_the_subject_it_was_asked_for(served, live_neo4j):
-    """S3 across the eleven: the walker cannot check the label against the corpus,
+    """Across the eleven: the walker cannot check the label against the corpus,
     so the wire must never dress a stop in a subject nobody asked for.
 
     On every served day whose request named subjects, every story stop's label sits
@@ -655,9 +642,9 @@ def test_a_lensed_day_serves_the_subject_it_was_asked_for(served, live_neo4j):
     children, the same expansion the matcher, the gate and the label all read. A
     rest (no beat) and an unlensed stop (nothing claimed) assert nothing.
 
-    And the floor the design session fixed: the three days that served before the
-    subject work — camille, greta, rosemary — still serve after it; paulo joins
-    them at P9R-S1, his compose no longer refused over the walk's own narration.
+    And the floor: the three days that served before the subject work — camille,
+    greta, rosemary — still serve after it; paulo joins them, his compose no
+    longer refused over the walk's own narration.
 
     UNDO: blank the adapter's `prefer` threading -> Camille's Notre-Dame wears
     `hidden_history` again -> RED. Drop the pool gate -> a lens-miss stop returns
@@ -692,17 +679,14 @@ def test_a_lensed_day_serves_the_subject_it_was_asked_for(served, live_neo4j):
 
 @needs_neo4j
 def test_a_door_reported_shut_never_returns_to_the_day(served):
-    """M7, Docs/adr/0006 rule 5 — Aiko's own step 6 (07-rainy-tuesday.md: "Walks
-    to a museum she wanted to see and finds it shut. It is Tuesday.").
-
-    A walker standing at a locked door says so, and the day answers. The stop
+    """A walker standing at a locked door says so, and the day answers. The stop
     leaves the remainder the planner keeps to, and it never comes back — not in
     the reply, not in any later version of the walk, not in the stored session
     the phone fetches next. A door that returns sends the walker back to the door
     they have just reported, which is the one thing the report exists to prevent.
 
     The count on the place is the same report's other half and is pinned where it
-    is written (`tests/test_trip_api.py`, the M5 closed-report test); this reads
+    is written (`tests/test_trip_api.py`, the closed-report test); this reads
     only what a walker can see: the day they are handed.
 
     UNDO: drop the `_without_the_shut_door` split from `replan_trip_session` ->
@@ -742,13 +726,12 @@ def test_a_door_reported_shut_never_returns_to_the_day(served):
 
 @needs_neo4j
 def test_aikos_rainy_tuesday_serves(client):
-    """Phase 10's gate, red-first: 07-rainy-tuesday.md step 6 is the failure this
-    phase exists to close ("Walks to a museum she wanted to see and finds it
-    shut. It is Tuesday."). Aiko's day must SERVE — and while it is refused, the
-    assertion message below is the diagnosis: the named gate and the wire's own
-    refusal detail, read off one trace instead of eleven.
+    """Red-first: on a Tuesday the walker reaches a museum she wanted to see and
+    finds it shut, and the day must answer. Aiko's day must SERVE — and while it
+    is refused, the assertion message below is the diagnosis: the named gate and
+    the wire's own refusal detail, read off one trace instead of eleven.
 
-    UNDO: revert the Phase 10 hours work -> her day refuses again -> RED.
+    UNDO: revert the opening-hours work -> her day refuses again -> RED.
     """
     trace = build_trace(client, "aiko")
     assert trace.served, f"aiko refused at {trace.refused_at}: {trace.refusal}"

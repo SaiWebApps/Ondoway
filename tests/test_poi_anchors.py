@@ -1,10 +1,9 @@
-"""Phase 7 S7.7 (B) — THE REVIEWED ANCHORS of the marquee (design §5.6 "segments"; W7.2
-R4, all eleven: segments ONLY where a person placed the coordinates, marquee anchors only,
-Notre-Dame first — D8). The data guard: Notre-Dame's anchors in ``data/paris/poi-raw.json``
-are inside the place's own footprint, each names the sub-locations it stands for and carries
-its argument, the labels on its beats are all claimed, the interior is marked as such, and
-the export chunks (what the workbench upload reads) carry the same anchors — the
-``trigger_radius`` precedent (S7.4). Free tier: files only.
+"""THE REVIEWED ANCHORS of the marquee: segments ONLY where a person placed the
+coordinates, marquee anchors only, Notre-Dame first. The data guard: Notre-Dame's anchors
+in ``data/paris/poi-raw.json`` are inside the place's own footprint, each names the
+sub-locations it stands for and carries its argument, the labels on its beats are all
+claimed, the interior is marked as such, and the export chunks (what the workbench upload
+reads) carry the same anchors — the ``trigger_radius`` precedent. Free tier: files only.
 """
 
 from __future__ import annotations
@@ -40,8 +39,8 @@ def _record(name: str) -> dict:
 def _anchored_records() -> list[dict]:
     """Every Paris POI carrying reviewed anchors — not just the marquee.
 
-    Phase 8 S8.7 gave Pere Lachaise Cemetery three (Julien's ask: the Mur des Federes
-    before Piaf and Wilde). This file used to be hardcoded to Notre-Dame, so those three
+    Pere Lachaise Cemetery has three, for a visitor who wants the Mur des Federes
+    before Piaf and Wilde. This file used to be hardcoded to Notre-Dame, so those three
     shipped unguarded. The rules below split into the ones that bind EVERY anchored place
     and the ones that are the marquee's own.
     """
@@ -166,7 +165,7 @@ def test_the_anchors_reach_the_export_chunks_and_the_loader_reads_them():
 def test_every_reviewed_anchor_is_placed_argued_and_backed_by_real_beats(poi: dict) -> None:
     """The rules that bind EVERY anchored place, marquee or not.
 
-    Added at Phase 8 S8.7, when Pere Lachaise gained three anchors and nothing in the
+    Added when Pere Lachaise gained three anchors and nothing in the
     tree checked them: this file asserted only ``MARQUEE``. An anchor that claims a
     sub-location no beat carries is dead weight — it can never play — so that is checked
     here rather than left to a reader.
@@ -201,22 +200,19 @@ def test_every_reviewed_anchor_is_placed_argued_and_backed_by_real_beats(poi: di
     "poi", _anchored_records(), ids=lambda p: p["name"]
 )
 def test_an_outdoor_anchor_is_sized_to_where_people_stand(poi: dict) -> None:
-    """W7.11 defect 16 — the blind listening panel, 11/11 `circle_45m: too_tight`.
+    """An outdoor anchor's circle is sized to where people stand to look, not to the doorstep.
 
-    The anchors were first placed at arm's length from the thing they name. Every one of
-    the eleven said that is the wrong distance, because you do not look at a cathedral
-    front from under it — you walk backwards until it fits. Greta: "To look at that front
-    you walk backwards… I was most of the way back across the paving, near the little
-    bronze star. Forty-five metres wide puts me almost under the doors, craning at
-    stonework two feet from my nose." Sofia: "Size the circle to where people stand to
-    look, not to the doorstep."
+    The anchors were first placed at arm's length from the thing they name. That is the
+    wrong distance, because you do not look at a cathedral front from under it — you walk
+    backwards until it fits. A 45 m circle puts the visitor almost under the doors,
+    craning at stonework two feet away.
 
-    THE RULE IS KIND-AWARE, and Phase 8 S8.7 is why. Stated as one sentence: **you stand
+    THE RULE IS KIND-AWARE. Stated as one sentence: **you stand
     BACK from a place you look at, and you walk INTO a place you move around in.**
 
     - A place you LOOK AT (`poi_role != "setting"` — a facade, a monument, one face you
       take in from a distance): an outdoor anchor's circle covers at least HALF the
-      place's own footprint. This is W7.11's original rule, unchanged, and Notre-Dame's
+      place's own footprint. This is the original rule, unchanged, and Notre-Dame's
       45 m circles still fail it.
     - A place you WALK IN (`poi_role == "setting"` — a cemetery, a park, a district):
       an anchor is a DESTINATION inside the place, not a viewpoint of the whole of it.
@@ -226,7 +222,7 @@ def test_an_outdoor_anchor_is_sized_to_where_people_stand(poi: dict) -> None:
       anchor is a DISTINCT standing position: the circles may not overlap, and none may
       be so small that GPS cannot find it.
     - An INDOOR anchor is exempt from both: it is offered on the screen and tapped,
-      because GPS is useless under a roof (W7.2 R4), so its radius decides nothing.
+      because GPS is useless under a roof, so its radius decides nothing.
     """
     name = poi["name"]
     footprint = float(poi["trigger_radius"])

@@ -38,7 +38,7 @@ def _poi(
     visit_min: int = 0,
 ) -> POI:
     # ``visit_min`` defaults to the contract default, so a POI built without it
-    # prices at zero visit seconds and every fixture below keeps its pre-3B
+    # prices at zero visit seconds and every fixture below keeps its earlier
     # numbers. Only a test that explicitly asks for a place worth standing in
     # sees the new currency.
     return POI(
@@ -113,7 +113,7 @@ def test_certification_fixed_end_rescue_reaches_exact_repair_once(monkeypatch):
     captured: dict[str, object] = {}
 
     # Signature mirrors the private `_reach_predicate` it replaces, keyword
-    # surface included (`**_kwargs` absorbs S2.4's pace_multiplier and any
+    # surface included (`**_kwargs` absorbs pace_multiplier and any
     # later additions) — scaffolding maintenance, no assertion touched.
     def capture_reach(_start, radius_m, iso_minutes, _routing_client, **_kwargs):
         captured["radius_m"] = radius_m
@@ -170,7 +170,7 @@ def test_timebox_drop_never_removes_the_materialized_fixed_destination():
     # NEAREST the request — it wins the repair's ranking outright, and only the
     # guard keeps it out.
     #
-    # RE-BASELINED 2026-08-06 for the hard ceiling (step 3B.9), and the two numbers
+    # RE-BASELINED 2026-08-06 for the hard ceiling, and the two numbers
     # that moved both had to. "Nearest the request" used to mean nearest a nominal
     # sitting in the MIDDLE of a two-sided band, so a SHORTER route could win it;
     # now the request is the ceiling, so nearest means longest-without-crossing.
@@ -179,7 +179,7 @@ def test_timebox_drop_never_removes_the_materialized_fixed_destination():
     # the ranking prefers keeping it anyway, and the guard this test exists for is
     # never asked to do anything. 22 minutes, because that is where both drops are
     # admissible and keeping both still overshoots.
-    # RE-DERIVED for the three-minute tight (Phase 6 S6.6, W6.2 R3): the old pair
+    # RE-DERIVED when the per-stop audio cap tightened to three minutes: the old pair
     # (destination 180, filler 270) relied on audio ABOVE the new ceiling — the cap
     # flattened both to 180 and "dropping the destination lands nearest" stopped
     # being true. The differentiation now lives BELOW the ceiling (120 vs 180) and
@@ -258,7 +258,7 @@ def test_repair_never_trades_an_in_band_route_for_a_materially_longer_walk():
     walking, no more narration.
     """
 
-    # RE-DERIVED for the three-minute tight (Phase 6 S6.6, W6.2 R3): each stop's
+    # RE-DERIVED when the per-stop audio cap tightened to three minutes: each stop's
     # dwell fell 270 -> 180 s, so the walk grew (x scaled ~1.3) to keep the
     # incumbent in the same 30-minute band. The point — an in-band incumbent is
     # never traded for a materially longer walk — is ceiling-independent.
@@ -342,7 +342,7 @@ def test_repair_prices_the_route_with_the_pulled_endpoint_actually_pinned():
 
     # Colinear and east of the start, except the endpoint, which sits nearest the
     # start — so pinning it last forces a full backtrack down the whole route.
-    # RE-DERIVED for the three-minute tight (Phase 6 S6.6, W6.2 R3): dwell fell
+    # RE-DERIVED when the per-stop audio cap tightened to three minutes: dwell fell
     # 270 -> 180 s per stop, so the geometry scaled (x1.30) to keep the free
     # order in the 30-minute band, the pinned order over it, and the drop-far
     # rescue under the repair's own ceiling (the nominal request, 1800 s).
@@ -518,8 +518,8 @@ def test_final_certification_guard_rechecks_every_route_shape_after_transforms(
 ):
     """The last-line guard still re-prices a route the transforms moved.
 
-    RE-BASELINED 2026-08-06 for step 3B.9, and the two directions no longer have
-    the same right answer — which is the whole content of that step.
+    RE-BASELINED 2026-08-06 when the request became a hard ceiling, and the two
+    directions no longer have the same right answer.
 
     OVER the request: refuse. A traveller who asked for thirty minutes and is
     handed fifty has been given something worse than a refusal, because they find
@@ -536,7 +536,7 @@ def test_final_certification_guard_rechecks_every_route_shape_after_transforms(
     """
     from src.tour import selection as selection_module
 
-    # RE-DERIVED for the three-minute tight (Phase 6 S6.6, W6.2 R3): the drift
+    # RE-DERIVED when the per-stop audio cap tightened to three minutes: the drift
     # mock zeroes walking, so the underfill day is seated dwell ALONE — at 270
     # four seats made 1080 s (above half, ships with the disclosure); at 180
     # they made 720 s, under half of the ask, and the refusal arm swallowed the
@@ -796,7 +796,7 @@ def test_a_place_worth_standing_in_is_a_preferred_add_not_a_walk_slog():
     2026-08-06 it answered in narration alone, so a place worth twenty minutes
     of anyone's afternoon but carrying one short beat was filed as a walk-slog
     and demoted. That is precisely the shape of stop this release exists to
-    seat: Theo's Conciergerie is sixty-five minutes inside and the audio is a
+    seat: the Conciergerie is sixty-five minutes inside and the audio is a
     fraction of it.
 
     THE OBSERVABLE. ``eligible_trials = preferred_trials or last_resort_trials``,
@@ -817,7 +817,7 @@ def test_a_place_worth_standing_in_is_a_preferred_add_not_a_walk_slog():
     museum = _poi("museum", x=5.0, y=20.0, audio=30, visit_min=2)
     pois = [destination, thin, museum]
     snap = _snapshot(pois, {destination.id: 160, thin.id: 30, museum.id: 30})
-    # 12 minutes, not 8. Step 3B.9 made the ceiling the REQUEST itself rather than
+    # 12 minutes, not 8. The ceiling became the REQUEST itself rather than
     # 1.10 of it, and at 8 minutes the museum trial landed just above the new
     # ceiling — so it was refused before the preferred/last-resort split it exists
     # to exercise ever ran. The fixture moved; the point did not.
@@ -855,10 +855,9 @@ def test_a_request_is_a_ceiling_and_the_planner_never_returns_more_than_it():
 
     The band was two-sided with a nominal of exactly 1.00, so a 300-minute
     request certified anywhere from 270 to 330 and the greedy filled TOWARD
-    300 — meaning a request could come back 10% long. Marcus has to be standing
-    on a platform at 16:40; twelve minutes early costs him nothing and four
-    minutes late costs him the train (docs/personas/04-layover-sprinter.md).
-    The cost of the error is asymmetric and the band treated it as symmetric.
+    300 — meaning a request could come back 10% long. For a visitor with a train
+    to catch, twelve minutes early costs nothing and four minutes late costs the
+    train. The cost of the error is asymmetric and the band treated it as symmetric.
 
     The lever is `nominal_elapsed_seconds`, deliberately NOT
     `MAX_REQUESTED_FRACTION = 1.0`: that would drag the nominal down to 0.95
@@ -892,9 +891,8 @@ def test_an_area_that_cannot_fill_the_request_returns_a_short_tour_not_a_refusal
     a Rue Royale walk ended up at Parc de la Villette. Making the floor a
     disclosure instead of a refusal removes the pressure entirely.
 
-    RE-DERIVED at Phase 4 S4.5 (a written decision, not an edit-to-pass): the
-    W4.2 panel — all eleven, unanimous on their worst finding — drew a line
-    UNDER the soft floor: a best-possible day under HALF the ask is "no day,
+    RE-DERIVED (a written decision, not an edit-to-pass): a line sits UNDER the
+    soft floor: a best-possible day under HALF the ask is "no day,
     mislabelled" (the measured a-leg6 cell: one stop, 30 minutes, sold as
     planned-180, GREEN) and REFUSES with the binding constraint named. This
     fixture used to deliver ~22% of a 90-minute ask and pin that it shipped;
@@ -999,8 +997,8 @@ def test_a_rich_stop_cannot_push_a_tour_past_the_duration_that_was_asked_for():
     # Both carry enough narration to clear the filler-stub floor, so the point
     # under test is the CEILING and not whether the stop was admitted at all.
     # The destination's own visit is sized so the day WITHOUT the big stop is a
-    # healthy ~60% of the ask (re-derived at Phase 4 S4.5: the old 5-minute
-    # remainder tripped the panel-ordered extreme-underfill refusal, which is
+    # healthy ~60% of the ask (re-derived: the old 5-minute
+    # remainder tripped the extreme-underfill refusal, which is
     # not what this test is about — the ceiling is).
     big = _poi("big", x=2.3235, y=48.8691, audio=120, visit_min=27)
     destination = _poi("destination", x=2.3229, y=48.8697, audio=120, visit_min=16)
@@ -1025,7 +1023,7 @@ def test_a_rich_stop_cannot_push_a_tour_past_the_duration_that_was_asked_for():
     )
 
 
-# --- the trades obey the panel's rules (S3.8b/c; §4.5.3/§4.5.5) --------------
+# --- the trades prefer variety and respect the leg cap ------------------------
 
 
 def _categorised(poi: POI, category: str) -> POI:
@@ -1033,10 +1031,9 @@ def _categorised(poi: POI, category: str) -> POI:
 
 
 def test_the_repair_prefers_a_different_kind_of_place_on_a_near_tie():
-    """Greta's rule (plan S3.8b; design §4.5.5; row 6.7's consumer): when the
-    repair fills a short route and two candidates are otherwise equal, "another
-    one of those" loses — a candidate whose place_category already dominates
-    the seated set is dimmed by a bounded factor, so the different-kind place
+    """When the repair fills a short route and two candidates are otherwise
+    equal, "another one of those" loses — a candidate whose place_category
+    already dominates the seated set is dimmed by a bounded factor, so the different-kind place
     is chosen. The ids are rigged so today's tie-break would pick the museum;
     only the diversity rule flips it.
     """
@@ -1077,8 +1074,7 @@ def test_the_repair_prefers_a_different_kind_of_place_on_a_near_tie():
 
 
 def test_variety_never_beats_a_landmark():
-    """The diversity factor is BOUNDED (§2.4:130's principle, the S3.8
-    sabotage line): it re-orders near-ties and can never make a minor
+    """The diversity factor is BOUNDED: it re-orders near-ties and can never make a minor
     different-kind place beat a landmark. Same shape as the near-tie test,
     but the church is tier 3 — the tier-5 museum must still win."""
     m1 = _categorised(_poi("m1", x=30.0, audio=270), "museum")
@@ -1119,20 +1115,18 @@ def test_variety_never_beats_a_landmark():
 
 
 def test_a_drop_that_merges_two_legs_past_the_cap_is_refused():
-    """§4.5.3, written fresh as the deleted drop test's one surviving
-    invariant (05-audit-F; plan S3.8c): a drop whose removal MERGES two legs
-    into one longer than the per-leg cap is not a legal repair, because under
-    the axis a route with one over-cap leg "has the same total and is
-    unusable" (docs/personas/05-step-free-visitor.md). Here every
+    """Written fresh as the deleted drop test's one surviving invariant: a drop
+    whose removal MERGES two legs into one longer than the per-leg cap is not a
+    legal repair, because a route with one over-cap leg has the same total and
+    is unusable for a visitor with a walking limit. Here every
     ceiling-fitting drop mints a 160 s merged leg against a 120 s cap, so the
     honest answer is a refusal — not a served route with an unwalkable leg.
 
-    Born green against the mechanism S2.3 built (the repair's `record` gate);
-    its RED is proven by the undo test (removing the max-leg check in
-    `record` lets the in-band cap-busting drop win and this test fail), as
-    the plan states.
+    Born green against the repair's `record` gate; its RED is proven by the
+    undo test (removing the max-leg check in `record` lets the in-band
+    cap-busting drop win and this test fail).
     """
-    # RE-DERIVED for the three-minute tight (Phase 6 S6.6, W6.2 R3): the old
+    # RE-DERIVED when the per-stop audio cap tightened to three minutes: the old
     # shape needed per-stop dwell ABOVE 180 s — with the cap at three minutes,
     # "[a, b] overshoots while [a, c] and [b, c] both fit" is arithmetically
     # impossible on a 10-minute ask with a 3-minute leg cap (2L + 360 > 600 and
@@ -1194,16 +1188,14 @@ def test_a_drop_that_merges_two_legs_past_the_cap_is_refused():
 
 
 def test_a_queue_never_earns_the_rank():
-    """The Phase 3 panel's convergent ruling (Camille: "the fit metric cannot
-    tell a minute under Sainte-Chapelle's glass from a minute in a queue";
-    seconded as a dealbreaker by the day-two planner): queue seconds SPEND the
-    elapsed budget — the ceiling counts them in full — but they never EARN the
-    nearest-the-request rank. Two otherwise-equal repairs: the queued anchor
+    """A minute in a queue is not a minute under Sainte-Chapelle's glass: queue
+    seconds SPEND the elapsed budget — the ceiling counts them in full — but
+    they never EARN the nearest-the-request rank. Two otherwise-equal repairs: the queued anchor
     lands nearer the raw nominal precisely because of its 10-minute line; the
     quiet anchor delivers more actual experience. The quiet one must win.
 
     RED before the rule: raw-elapsed fit preferred the queued day (174 s off
-    nominal vs 294), which is how the first live W3.2 runs promoted a
+    nominal vs 294), which is how the first live runs promoted a
     40-minute Louvre line to "best fit" over queue-free multi-stop days.
     """
     m1 = _poi("m1", x=30.0, audio=120, visit_min=10)

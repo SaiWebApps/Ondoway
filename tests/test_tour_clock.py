@@ -1,14 +1,12 @@
-"""Phase 1 clock tests — does the planner know what time it is?
+"""Clock tests — does the planner know what time it is?
 
-One clock-hand per file, on the `tests/test_tour_visit_time.py` model: every
-gating test cites the design section or persona line it enforces
-(specs/2026-08-07-tour-algorithm-redesign/04-implementation-plan.md §0.1.1).
+One clock-hand per file, on the `tests/test_tour_visit_time.py` model.
 
-All Phase 1 clock tests live here (plan step S1.2): the contract fields, the
+All clock tests live here: the contract fields, the
 API-model carry, the persisted-inputs round trip, the harness flags, and the
 clock filter.
 
-The RED that proved S1.2 was real: `TourInput` is `extra="forbid"`
+The RED that proved the clock fields were real: `TourInput` is `extra="forbid"`
 (src/tour/contract.py), so constructing it with `start_datetime` /
 `end_hardness` raised before the fields existed. That forbid is load-bearing
 for this file and its only guard is
@@ -35,13 +33,10 @@ def _base_input(**overrides) -> TourInput:
 def test_tour_input_carries_the_clock_and_end_hardness():
     """The request carries a real clock and says how hard its end is.
 
-    Cites design §2.2 — the start is soft: "Fiona & Dev stood reading a menu
-    for twelve minutes" (docs/personas/09-couple-who-would-rather-talk.md,
-    step 1) — and §2.3: Marcus's 16:40 wall
-    (docs/personas/04-layover-sprinter.md), Camille's "is 15:00 a wall or a
-    wish?" (03-panel-findings.md), and Julien's leavable-blank clock
-    (03-panel-findings.md). A planner that cannot be told the date and the
-    hardness of its end cannot serve any of the four.
+    The start is soft: a couple may stand reading a menu for twelve minutes.
+    The end may be a wall (a train to catch), a wish, or left blank. A planner
+    that cannot be told the date and the hardness of its end cannot serve any
+    of these visitors.
     """
     inp = _base_input(start_datetime="2026-08-11T10:00:00", end_hardness="wall")
     assert inp.start_datetime == "2026-08-11T10:00:00"
@@ -50,23 +45,22 @@ def test_tour_input_carries_the_clock_and_end_hardness():
 
 def test_tour_input_clock_defaults_keep_todays_behaviour():
     """No datetime and `firm` are the defaults, so every existing caller and
-    golden stays byte-identical (plan S1.2: "None = today's dateless
-    behaviour"; design §2.3: `firm` is byte-identical to today)."""
+    golden stays byte-identical: None is today's dateless behaviour, and
+    `firm` is byte-identical to today."""
     inp = _base_input()
     assert inp.start_datetime is None
     assert inp.end_hardness == "firm"
 
 
 def test_tour_input_rejects_a_malformed_datetime_with_a_plain_message():
-    """A malformed datetime is refused in plain words (plan S1.2: "A validator
-    rejects a malformed datetime with a plain message"), not with a parser
+    """A malformed datetime is refused in plain words, not with a parser
     traceback — the API surfaces this text to the person who typed it."""
     with pytest.raises(ValidationError, match="not a valid date and time"):
         _base_input(start_datetime="next tuesday-ish")
 
 
 def test_tour_input_rejects_an_unknown_end_hardness():
-    """`end_hardness` is exactly wall | firm | open (design §2.3) — a typo'd
+    """`end_hardness` is exactly wall | firm | open — a typo'd
     hardness must not silently plan as `firm`."""
     with pytest.raises(ValidationError):
         _base_input(end_hardness="soft")
@@ -80,7 +74,6 @@ def test_api_request_models_carry_the_clock_and_end_hardness():
     undeclared field is SILENTLY DROPPED and the layer above still looks fine
     (the `max_stop_minutes` comment in src/api/models/trips.py records the
     same trap verbatim). This test is what proves the declaration exists.
-    Cites design §2.2/§2.3 via plan step S1.3a.
     """
     from src.api.models.trips import TripGenerateRequest, TripPreviewRequest
 
@@ -107,8 +100,7 @@ def test_api_request_models_carry_the_clock_and_end_hardness():
 
 
 def test_api_request_models_reject_a_bad_end_hardness():
-    """A typo'd hardness is a 422 at the edge (plan S1.3a: "a bad
-    `end_hardness` is a 422"), never a silently-firm plan. ValidationError
+    """A typo'd hardness is a 422 at the edge, never a silently-firm plan. ValidationError
     here is exactly what FastAPI surfaces as the 422."""
     from src.api.models.trips import TripGenerateRequest, TripPreviewRequest
 
@@ -136,15 +128,14 @@ def _trips_route_source() -> str:
 def test_the_request_sites_thread_the_clock_and_the_restorer_forwards_every_persisted_key():
     """All construction sites pass the clock through — never one or two.
 
-    RE-DERIVED at Phase 5 S5.8 (a written decision, phase5-ledger.md): the former
-    scan counted FOUR explicit `_build_tour_input(...)` sites and required
+    The former scan counted FOUR explicit `_build_tour_input(...)` sites and required
     `start_datetime=` / `end_hardness=` at each. Compose (and both session
     endpoints) now restore the persisted request through ONE door,
     `_restore_tour_input`, which forwards EVERY persisted key by construction — so
     the request-driven sites (generate, preview) still carry the clock
-    explicitly (the AST half below, plan S1.3b's sabotage), and the restorer is
+    explicitly (the AST half below), and the restorer is
     proven BEHAVIOURALLY: a stored record with a clock restores that clock and its
-    hardness, together with the axes Phase 5 began persisting (pins, party, pace).
+    hardness, together with the later persisted axes (pins, party, pace).
     """
     import ast
 
@@ -198,11 +189,11 @@ def test_generate_persists_the_clock_and_the_restorer_reads_it_fail_open():
 
     Persist: the `tour_input_json` dict in `generate_trip` carries both keys (a
     source read — the record's spelling IS the contract older trips were written
-    in). Restore: RE-DERIVED at Phase 5 S5.8 — the former `.get(...)` literal scan
+    in). Restore: the former `.get(...)` literal scan
     is replaced by the behaviour it guarded: a record saved before the clock
     existed lands on the identity defaults, dateless and `firm`, so it composes
-    exactly as it always did (plan S1.3b's sabotage list: a direct key access
-    would 500 every legacy trip).
+    exactly as it always did (a direct key access would 500 every legacy
+    trip).
     """
     from src.api.routes.trips import _restore_tour_input
 
@@ -231,7 +222,7 @@ def test_generate_persists_the_clock_and_the_restorer_reads_it_fail_open():
 def test_a_trip_saved_before_the_clock_existed_composes_exactly_as_it_always_did():
     """The fail-open restore, exercised: a legacy stored dict (no clock keys)
     lands on the identity defaults — dateless, `firm` — so a trip saved before
-    this key existed composes exactly as it always did (plan S1.3b)."""
+    this key existed composes exactly as it always did."""
     legacy_stored = {
         "start": [48.8568, 2.3414],
         "end": None,
@@ -255,9 +246,9 @@ def test_a_trip_saved_before_the_clock_existed_composes_exactly_as_it_always_did
 
 def test_harness_flags_parse_and_a_dateless_run_stays_dateless():
     """`scripts/tour_build.py` accepts --date/--time/--end-hardness, and
-    omitting them leaves the run exactly as today (plan S1.3c: "a dateless run
-    is byte-identical to today's" — the flags default to no clock and `firm`,
-    so the TourInput built is byte-identical to the pre-clock one)."""
+    omitting them leaves the run exactly as today: the flags default to no
+    clock and `firm`, so the TourInput built is byte-identical to the
+    pre-clock one."""
     import importlib
 
     tour_build = importlib.import_module("scripts.tour_build")
@@ -279,11 +270,10 @@ def test_harness_flags_parse_and_a_dateless_run_stays_dateless():
 def test_breakdown_prints_clock_exclusions_only_on_a_dated_run(capsys):
     """The clock-exclusions section appears iff the run has a clock.
 
-    Dateless → NO section, so today's output (and W1.1's before-picture) stays
-    byte-identical. Dated with no exclusions → the section prints "none", so a
-    Monday and a Tuesday run keep the same shape and read side by side (plan
-    S1.3c sabotage list: omitting the empty section makes the D1 pair
-    incomparable)."""
+    Dateless → NO section, so today's output stays byte-identical. Dated with
+    no exclusions → the section prints "none", so a Monday and a Tuesday run
+    keep the same shape and read side by side (omitting the empty section
+    makes such a pair incomparable)."""
     import importlib
 
     tour_build = importlib.import_module("scripts.tour_build")
@@ -303,8 +293,8 @@ def test_breakdown_prints_clock_exclusions_only_on_a_dated_run(capsys):
 def test_route_records_clock_exclusions_additively():
     """The Route carries WHO the clock excluded and WHY, on the Route itself.
 
-    Cites plan S1.6a and the `elapsed_shortfall_seconds` lesson recorded in
-    src/tour/contract.py: a disclosure that rides a channel which is null in
+    The `elapsed_shortfall_seconds` lesson recorded in src/tour/contract.py
+    applies: a disclosure that rides a channel which is null in
     its own case discloses nothing — `tourability` is None on a GREEN route,
     which is exactly the route that must still say "the museum is closed
     today". Additive metadata in the `vignettes` mould: default empty, so
@@ -324,13 +314,13 @@ def test_route_records_clock_exclusions_additively():
     assert "Tuesday" in carrying.clock_exclusions[0].reason
 
 
-# --- the clock filter (S1.6b), on a hermetic constructed snapshot -----------
+# --- the clock filter, on a hermetic constructed snapshot -------------------
 
 #: 2026-08-11 is a Tuesday; 2026-08-10 the Monday before it.
 _TUESDAY_10AM = "2026-08-11T10:00:00"
 _MONDAY_10AM = "2026-08-10T10:00:00"
 
-#: Map hours (Docs/adr/0006): the OpenStreetMap text as the map carries it.
+#: Map hours: the OpenStreetMap text as the map carries it.
 _CLOSED_TUESDAY_HOURS = "Mo,We-Su 09:00-18:00; Tu off"
 
 
@@ -373,7 +363,7 @@ def _clock_request(start_datetime):
 
 def test_the_same_poi_is_seated_on_a_day_it_is_open():
     """The identical request on Monday seats the museum — the exclusion is the
-    clock's, not the place's (design 6.1; 07-rainy-tuesday.md step 6)."""
+    clock's, not the place's."""
     from src.tour.selection import select_route
 
     museum = _tuesday_closed_museum()
@@ -386,7 +376,7 @@ def test_the_same_poi_is_seated_on_a_day_it_is_open():
 def test_no_datetime_means_no_filtering_and_a_byte_identical_pool():
     """No clock → no filtering: the dateless pool is byte-identical to today's,
     which is the identity default that keeps every existing test and golden
-    green (plan S1.6b: "No datetime → no filtering, byte-identical pool")."""
+    green."""
     from src.tour.selection import select_route
 
     museum = _tuesday_closed_museum()
@@ -398,12 +388,12 @@ def test_no_datetime_means_no_filtering_and_a_byte_identical_pool():
     assert [p.id for p in dateless.pois] == [p.id for p in monday.pois]
 
 
-# --- closed means outside-only, not gone (S3.5; W1.9 dissent 1) ---------------
+# --- closed means outside-only, not gone --------------------------------------
 
 
 def _tuesday_closed_museum_with_an_exterior():
-    """The closed museum, but with a facade worth twenty minutes — the shape
-    the Phase 1 panel ruled on. Interior 45 min when open."""
+    """The closed museum, but with a facade worth twenty minutes. Interior 45
+    min when open."""
     museum = _tuesday_closed_museum()
     return museum.model_copy(
         update={"typical_duration_min": 20, "visit_seconds_inside": 2700}
@@ -414,12 +404,10 @@ def test_a_closed_museum_with_an_exterior_becomes_an_outside_only_stop():
     """Closed for the whole window ≠ gone: the stop survives at its EXTERIOR
     price, and the day says so.
 
-    BY PANEL ORDER, not audit order (W1.9 dissent 1 — Camille, Théo, Greta,
-    and Fiona & Dev all ruled a clock-closed building should become an
-    OUTSIDE-ONLY stop rather than leave the pool; "the strongest recurring
-    finding", re-confirmed by the D2 panel). The D1 demo itself made the
-    point: its Monday run STARTS at a Monday-closed Orsay, and deleting the
-    closed anchor deletes the walk's reason to exist.
+    A clock-closed building becomes an OUTSIDE-ONLY stop rather than leave
+    the pool: visitors still want to see it from the street. A Monday run
+    that STARTS at a Monday-closed Orsay shows why: deleting the closed
+    anchor deletes the walk's reason to exist.
 
     On Tuesday the museum is seated, priced at its outside minutes only
     (20 min, never the 45-min interior or the open-day blend), and the
@@ -438,8 +426,8 @@ def test_a_closed_museum_with_an_exterior_becomes_an_outside_only_stop():
     )
     demoted = [e for e in tuesday.clock_exclusions if e.poi_id == museum.id]
     assert len(demoted) == 1, "the outside-only demotion must be disclosed"
-    # Re-derived at W4.12: the DECISION is a flag, not words in the sentence. The
-    # panel ruled "seated outside only" out; the harness then string-matched the
+    # The DECISION is a flag, not words in the sentence. The words "seated
+    # outside only" are ruled out; the harness once string-matched the
     # reason and went blank; and the traveller's sentence ("we will see it from
     # the outside" vs "not in your day") depends on route membership only the
     # wire knows. The DISCLOSURE this test defends is unchanged.
@@ -457,11 +445,10 @@ def test_a_closed_museum_with_an_exterior_becomes_an_outside_only_stop():
 
 
 def test_a_closed_poi_with_nothing_to_stand_and_see_is_still_excluded():
-    """The ONE honest removal the panel's demotion keeps: a closed place with
+    """The ONE honest removal the demotion rule keeps: a closed place with
     no outside value (typical_duration_min == 0) leaves the pool and is
-    recorded — there is nothing to stand and see (plan S3.5). This is the
-    only closure keying allowed: never tier, never score (the sabotage
-    list)."""
+    recorded — there is nothing to stand and see. This is the only closure
+    keying allowed: never tier, never score."""
     from src.tour.selection import select_route
 
     museum = _tuesday_closed_museum()  # typical_duration_min = 0
@@ -475,10 +462,9 @@ def test_a_closed_poi_with_nothing_to_stand_and_see_is_still_excluded():
 
 
 def test_a_closure_is_disclosed_in_plain_words_and_spoken_by_its_source():
-    """The closure sentence goes on screen to a traveller (design deviation v;
-    Paulo's wording rulings), so it carries no provenance tag and none of the
-    engine's own words. What it DOES carry is the hours source (Docs/adr/0006):
-    map hours state the closure plainly; a guess, or hours with no source at
+    """The closure sentence goes on screen to a traveller, so it carries no
+    provenance tag and none of the engine's own words. What it DOES carry is
+    the hours source: map hours state the closure plainly; a guess, or hours with no source at
     all, say in words that we could not confirm them.
     """
     import datetime as dt
@@ -505,7 +491,7 @@ def test_a_closure_is_disclosed_in_plain_words_and_spoken_by_its_source():
     assert sourceless == guessed
 
 
-# --- a guess may say closed, but never removes a place (Docs/adr/0006 rule 4) --
+# --- a guess may say closed, but never removes a place -------------------------
 
 
 def _guessed_closed_museum(**updates):
@@ -634,7 +620,7 @@ def test_the_writer_is_told_a_guessed_shut_door_is_a_guess():
 
 
 def test_a_walkers_closed_report_strengthens_the_guess_and_never_rewrites_hours():
-    """Docs/adr/0006 rule 5: a walker found a guessed door shut. The NEXT
+    """A walker found a guessed door shut. The NEXT
     walker hears the guess with the report in it — on the closure line, in
     the day's note, in the voice at the door and in the writer's brief — and
     the hours themselves are untouched: a door on map hours with reports
@@ -719,7 +705,7 @@ def _paris_run(text: str, start_datetime: str, *, source: str = "map"):
 
 def test_a_public_holiday_closes_a_door_in_the_citys_own_country():
     """``PH off`` means the country's public holidays, and the country is the
-    city's (Docs/adr/0006; the registry's country per city). 14 July is a
+    city's (the registry's country per city). 14 July is a
     holiday in France and not elsewhere: a Paris museum marked ``PH off`` is
     closed that day and open the next. Read without a country the library
     treats every ``PH`` as open, which is the silent wrong answer this pins."""
@@ -755,7 +741,7 @@ def test_a_seasonal_rule_is_read_for_the_walks_own_month():
     ],
 )
 def test_hours_the_library_cannot_settle_never_close_a_door(text):
-    """Docs/adr/0006: text the library cannot read, a quoted comment, or an
+    """Text the library cannot read, a quoted comment, or an
     unknown state are all UNKNOWN hours — the door is never closed on them.
     The rule fails open, exactly as it does for a place with no hours at all."""
     import datetime as dt
@@ -898,7 +884,7 @@ def test_a_door_open_at_arrival_keeps_the_interior_untouched():
 
 def test_a_dateless_day_never_consults_the_arrival_clock():
     """No clock = no arrival check = today's behaviour, byte-identical — the
-    same identity default every other clock rule keeps (plan S1.6b)."""
+    same identity default every other clock rule keeps."""
     _bridge, cathedral, route = _dated_pont_neuf_run("06:00-09:45", start_datetime=None)
 
     assert route.visit_goes_inside[cathedral.id] is True
@@ -906,7 +892,7 @@ def test_a_dateless_day_never_consults_the_arrival_clock():
     assert route.clock_exclusions == ()
 
 
-# --- a dead door leaves the day (Docs/adr/0004) -------------------------------
+# --- a dead door leaves the day -----------------------------------------------
 #
 # The arrival check above demotes a shut door to its exterior. A shut door with
 # NOTHING outside (typical_duration_min == 0) used to stay anyway — a zero-value
@@ -914,7 +900,7 @@ def test_a_dateless_day_never_consults_the_arrival_clock():
 # disclosed as not-in-your-day, with four carve-outs: pinned stops, replan-
 # protected stops and the fixed end are never dropped, and a drop that would
 # push the day under the underfill refusal keeps the demotion instead — a
-# padded day beats no day (refill is Phase 11's).
+# padded day beats no day (refilling the day is a separate job).
 
 
 def _seam_poi(pid: str, typical: int, source: str = "map"):
@@ -1011,7 +997,7 @@ def test_a_dead_door_at_arrival_leaves_the_day_and_says_so():
 
 
 def test_a_dead_door_on_guessed_hours_is_never_dropped():
-    """Docs/adr/0006 rule 4 at the drop seam: a shut door with nothing outside
+    """At the drop seam, a shut door with nothing outside
     leaves the day only when the MAP says it is shut. On a guess the place
     stays — demoted upstream — because the guess may be wrong."""
     a, guessed = _seam_poi("a", 12), _seam_poi("guessed-door", 0, source="guess")
@@ -1045,7 +1031,8 @@ def test_an_undroppable_dead_door_stays():
 def test_a_drop_that_would_underfill_keeps_the_demotion():
     """A padded day beats no day: when removing the dead stops would push the
     day's experience under the underfill refusal, the drop stands down and
-    the demotion (upstream) serves the day instead — refill is Phase 11's."""
+    the demotion (upstream) serves the day instead — refilling the day is a
+    separate job."""
     a, dead = _seam_poi("a", 12), _seam_poi("dead-door", 0)
     # Remaining after a drop: 2 legs x 300 + 1 visit x 600 = 1200 s, under a
     # 3000 s floor (0.5 x 6000) -> the guard refuses the drop.
@@ -1189,8 +1176,8 @@ def test_a_dateless_day_never_drops_a_door():
 def test_the_planner_flags_an_all_day_closure_and_an_arrival_window_one_apart():
     """The voice's "closed today" vs "closed at the moment" branch is picked by
     `ClockExclusion.all_day` — set by the planner from the day's own empty
-    window list, never by string-matching the reason sentence (the W4.12
-    lesson: a decision belongs in a field). The whole-window Tuesday museum is
+    window list, never by string-matching the reason sentence (a decision
+    belongs in a field). The whole-window Tuesday museum is
     all-day; the arrival-window cathedral (open 06:00-09:45, reached ~10:00)
     is not."""
     from src.tour.selection import select_route
@@ -1239,7 +1226,7 @@ def test_a_dropped_door_at_the_walks_own_start_is_flagged_at_start():
     assert flags == {"near-dead": True, "far-dead": False}
 
 
-# --- dusk, and the after-dark finish (S3.7; design §4.3; Sofia's swap rule) ---
+# --- dusk, and the after-dark finish ------------------------------------------
 
 # December early evening: a 17:00 + 60-min one-way plans to finish ~18:00,
 # past Paris civil dusk (~17:31 CET on the 15th); the 09:00 sibling finishes
@@ -1274,9 +1261,9 @@ def _dusk_corpus(*, with_lit_finisher: bool):
     # affordable and rank alone — score undated, dusk-then-score after dusk —
     # decides the finish. The COUNT is the helper's own (derived from the
     # planner's dwell target and stop ceiling): it was hand-pinned at five for
-    # the 270 s ceiling, and Phase 6 S6.6's three-minute tellings (ceiling 180 s)
+    # the 270 s ceiling, and three-minute tellings (ceiling 180 s)
     # left that pool at fill 0.50 — density RED, the dusk rule never reached.
-    # Re-derived at the Phase 6 close; the three dusk assertions measured
+    # The three dusk assertions measured
     # identical at the derived count (dark-only evening ends at the dark
     # finisher with one dusk note; lit evening ends lit; undated ends dark).
     fillers = _density_fillers(PDV, duration_min=60, radius_m=80)
@@ -1297,13 +1284,12 @@ def _dusk_request(start_datetime):
 
 
 def test_an_after_dusk_day_finishes_at_a_lit_place_instead_of_the_richer_dark_one():
-    """Sofia's swap rule, scoped to what plan-time knows (plan S3.7; design
-    §4.3's dusk trigger; docs/personas/11-solo-after-dark; row 6.4 consumed):
-    a dated December day that runs past civil dusk must not END at the
+    """The after-dark swap, scoped to what plan-time knows: a dated December
+    day that runs past civil dusk must not END at the
     highest-scoring finisher when that place is bad after dark — the pull
-    prefers the lit alternative, WITHOUT asking the user anything (Sofia's
-    never-ask rule). The morning sibling proves the preference is
-    dusk-gated: same corpus, 09:00 start, and the richer finisher is back.
+    prefers the lit alternative, WITHOUT asking the user anything. The
+    morning sibling proves the preference is dusk-gated: same corpus, 09:00
+    start, and the richer finisher is back.
     """
     from src.tour.selection import select_route
 
@@ -1322,8 +1308,7 @@ def test_an_after_dusk_day_finishes_at_a_lit_place_instead_of_the_richer_dark_on
 
 def test_a_dark_finish_nothing_could_fix_is_disclosed():
     """When NO lit finisher exists, the dark one still serves — a rank
-    preference is not a gate — and the day SAYS SO (plan S3.7: "DISCLOSED
-    when no passing finisher exists"). Four confident stops beside an
+    preference is not a gate — and the day SAYS SO. Four confident stops beside an
     unflagged dark ending would imply the ending was judged fine."""
     from src.tour.selection import select_route
 
@@ -1337,8 +1322,8 @@ def test_a_dark_finish_nothing_could_fix_is_disclosed():
 
 
 def test_an_undated_run_never_consults_dusk():
-    """No clock = no dusk = today's behaviour, byte-identical (the S3.7
-    sabotage line: consuming dark-finish on UNDATED runs is forbidden)."""
+    """No clock = no dusk = today's behaviour, byte-identical (consuming
+    dark-finish on UNDATED runs is forbidden)."""
     from src.tour.selection import select_route
 
     undated = select_route(_dusk_request(None), _dusk_corpus(with_lit_finisher=True))
@@ -1346,13 +1331,12 @@ def test_an_undated_run_never_consults_dusk():
     assert undated.clock_exclusions == ()
 
 
-# --- end hardness reaches the budget (S1.6c) ---------------------------------
+# --- end hardness reaches the budget -----------------------------------------
 
 
 def test_firm_hardness_is_byte_identical_to_today():
-    """`firm` is the default and must change NOTHING (design §2.3: "the
-    default. Honest planning to the clock; the ceiling behaviour the in-flight
-    work already built")."""
+    """`firm` is the default and must change NOTHING: honest planning to the
+    clock, with the ceiling behaviour already built."""
     from src.tour.routing import route_planning_budget
 
     assert route_planning_budget(60, end_hardness="firm") == route_planning_budget(60)
@@ -1361,9 +1345,8 @@ def test_firm_hardness_is_byte_identical_to_today():
 def test_open_hardness_drops_the_minimum_elapsed_floor_to_zero():
     """Under `open`, a two-ish-hours request is never padded toward a number
     nobody defended: the minimum-elapsed floor goes to zero and nothing else
-    moves. Cites design §2.3 (Julien's two-ish hours; Camille's "is 15:00 a
-    wall or a wish?" — "a hard end time is a preference enforced as a fact")
-    and design 8.3 (this finishes the fill-the-requested-time deletion)."""
+    moves. A visitor who asks for two-ish hours does not want a preference
+    enforced as a hard end time."""
     from src.tour.routing import route_planning_budget
 
     firm = route_planning_budget(120)
@@ -1379,10 +1362,8 @@ def test_open_hardness_drops_the_minimum_elapsed_floor_to_zero():
 def test_wall_hardness_plans_to_a_095_ceiling_with_visible_slack():
     """Under `wall` the plan aims at 95% of the asked time and may not exceed
     it, so the plan carries VISIBLE spare minutes — never a hard truncation at
-    the asked number. Cites docs/personas/04-layover-sprinter.md bullet 2
-    (Marcus: "2h40 of tour with 20 minutes of slack" beats "3h00 exactly") and
-    design §2.3 (his 16:40 train; he currently lies about his end time to
-    manufacture margin)."""
+    the asked number. A visitor with a train to catch prefers a shorter tour
+    with spare minutes to one that ends exactly at the asked time."""
     from src.tour.routing import (
         DWELL_FRACTION,
         WALK_FRACTION,
@@ -1403,8 +1384,8 @@ def test_wall_hardness_plans_to_a_095_ceiling_with_visible_slack():
 
 def test_select_route_threads_the_hardness_into_its_budget():
     """The one budget `select_route` derives for the request carries the
-    request's own hardness (plan S1.6c: "Threading from `TourInput` via
-    `select_route`'s existing `planning_policy` derivation"). Source-scanning,
+    request's own hardness (threaded from `TourInput` through
+    `select_route`'s existing `planning_policy` derivation). Source-scanning,
     because every helper call site legitimately keeps the firm default and a
     behaviour test cannot tell which call built the budget the repair used."""
     import ast
@@ -1431,8 +1412,7 @@ def test_select_route_threads_the_hardness_into_its_budget():
 def test_tour_input_clock_round_trips_through_model_dump():
     """`start_datetime` is an ISO STRING, not a datetime object:
     `tests/test_tour_contract.py::test_tour_input_end_round_trips_through_model_dump`
-    does `TourInput(**inp.model_dump())`, and only a string round-trips
-    (plan S1.2 sabotage list)."""
+    does `TourInput(**inp.model_dump())`, and only a string round-trips."""
     inp = _base_input(start_datetime="2026-08-11T10:00:00", end_hardness="open")
     again = TourInput(**inp.model_dump())
     assert again == inp

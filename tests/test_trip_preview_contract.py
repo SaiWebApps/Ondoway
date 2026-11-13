@@ -8,7 +8,7 @@ test_trip_api.py needs the live 7687 graph and skips silently without it.
 Someone dropping the ``tourability=...`` kwarg from TripPreviewResponse,
 reordering ``route.model_copy`` calls so ``route.tourability`` is lost, or
 renaming a TripPreviewTourability field makes 1-stop tours silently look
-like bugs again — the exact 2026-07-02 hostile-panel finding. These tests
+like bugs again — the exact 2026-07-02 finding. These tests
 fail on the wire, where the workbench reads it.
 
 Plumbing (all in-process):
@@ -191,7 +191,7 @@ class _FakeRoutingClient:
 class _ColdStartingRoutingClient(_FakeRoutingClient):
     """The walking service answering nothing — a cold start or a tile rebuild.
 
-    EVERY request to it fails, which is what AC-20 asks for and what an outage
+    EVERY request to it fails, which is what an outage
     actually looks like:
 
     - ``route_with_receipt`` returns no polyline and no receipt, which is exactly
@@ -386,7 +386,7 @@ def test_preview_green_multi_stop_has_null_tourability_and_multiple_stops(make_c
 
     Pins the RICH contract: a GREEN pool that also DELIVERS richly (multi-stop,
     audio at/over target) ships tourability == null — no spurious banner on a
-    healthy tour. This is the control arm for the C11a GREEN-thin test below:
+    healthy tour. This is the control arm for the GREEN-thin test below:
     the engine attaches tourability on YELLOW OR ``delivered_thin``, so both
     "always attach" (banner on every tour) and "never attach on GREEN" (the
     2026-07-02 silent pool-vs-delivered collapse) are pinned out. Also gives the
@@ -458,7 +458,7 @@ def test_preview_green_multi_stop_has_null_tourability_and_multiple_stops(make_c
         f"GREEN preview must ship tourability null; got {body['tourability']}"
     )
     # Every stop is a real, named place with a position — that is what a person
-    # chooses between. The words are not written yet (OWNER RULING 1).
+    # chooses between. The words are not written yet.
     for stop in dwell:
         assert stop["name"], "a stop with no name is not a place anyone can choose"
         assert stop["lat"] and stop["lng"]
@@ -510,7 +510,7 @@ class _ExplodingExecutor:
 
 
 def test_preview_returns_the_plan_and_spends_nothing(make_client, monkeypatch):
-    """AC-13/AC-24: the preview PLANS. It shows the day and pays nobody.
+    """The preview PLANS. It shows the day and pays nobody.
 
     The route is anonymous, so it returns the planned day and stops there; the words
     are written only after the day is saved as a trip, by POST /trips/{id}/compose.
@@ -545,7 +545,7 @@ def test_preview_returns_the_plan_and_spends_nothing(make_client, monkeypatch):
         assert option["stops"], "an option without stops is not an option"
         assert option["eta_seconds"] > 0
 
-    # AC-3: any options are genuinely different walks (vacuous at one — kept so a
+    # Any options are genuinely different walks (vacuous at one — kept so a
     # future second option cannot arrive as a duplicate).
     dwell_sets = [
         {s["poi_id"] for s in o["stops"] if s["band"] == "dwell"} for o in body["options"]
@@ -555,7 +555,7 @@ def test_preview_returns_the_plan_and_spends_nothing(make_client, monkeypatch):
             overlap = len(dwell_sets[i] & dwell_sets[j]) / len(dwell_sets[i] | dwell_sets[j])
             assert overlap < 0.60, f"options {i + 1},{j + 1} share {overlap:.0%} of their stops"
 
-    # OWNER RULING 1 — choosing a route shows PLACES, never prose. No written line
+    # Choosing a route shows PLACES, never prose. No written line
     # anywhere, and no walking-narration cards at all, because there is no narration
     # to hear on the walk yet.
     for option in body["options"]:
@@ -569,7 +569,7 @@ def test_preview_returns_the_plan_and_spends_nothing(make_client, monkeypatch):
             assert stop["has_deeper_dive"] is False
             assert "script" not in stop and "script_body" not in stop
 
-    # AC-13: no field that describes written text rides the plan. The set is
+    # No field that describes written text rides the plan. The set is
     # EXHAUSTIVE: anything else appearing here is an unreviewed leak.
     assert set(body) == {
         "spine_area",
@@ -579,13 +579,12 @@ def test_preview_returns_the_plan_and_spends_nothing(make_client, monkeypatch):
         "promises",
         "day_notes",
         "slack_minutes",
-        "longest_walk_minutes",  # W4.12: the number the shorter-walks dial is named after
+        "longest_walk_minutes",  # the number the shorter-walks dial is named after
     }
     assert body["degradations"] == [], "an empty list is a statement; a missing key is not"
 
-    # THE UNPLANNED MINUTES ARE NAMED AGAINST THE ASK (W4.12 closing panel —
-    # Marcus, Sofia, Aiko, Julien; W4.2's ruling was "the unaccounted minutes are
-    # NAMED"). The number is `asked - taken`, on the same clock the day is priced
+    # THE UNPLANNED MINUTES ARE NAMED AGAINST THE ASK: the unaccounted minutes
+    # are NAMED. The number is `asked - taken`, on the same clock the day is priced
     # on, and it is an INTEGER on every 200 — zero included. It used to ride the
     # planner's `elapsed_shortfall_seconds`, which is set only under the internal
     # band FLOOR, so a 170-of-180 day sent null and a 270-of-300 day hid thirty
@@ -598,14 +597,15 @@ def test_preview_returns_the_plan_and_spends_nothing(make_client, monkeypatch):
     assert body["slack_minutes"] == max(0, 30 * 60 - taken) // 60, (
         "slack is asked-minus-taken, not the planner's under-floor shortfall"
     )
-    # THE LONGEST SINGLE WALK is on the wire as a number (W4.12 — Rosemary: "a
-    # walking budget is not one number"; the surface printed only the total, so
+    # THE LONGEST SINGLE WALK is on the wire as a number (a visitor who must
+    # limit each walk needs the longest leg, not only the total; the surface
+    # printed only the total, so
     # the dial named after this number could not be checked). Pinned against
     # the day's own legs, computed by hand from the option's leg cards.
     assert isinstance(body["longest_walk_minutes"], int)
     assert body["longest_walk_minutes"] >= 0
 
-    # AC-24: a duration too short to seat a single stop is a structured refusal that
+    # A duration too short to seat a single stop is a structured refusal that
     # names the time budget — never a 200 with nothing in it, never a bare string.
     lone = make_client(_lone_anchor_records())
     short = lone.post(
@@ -621,14 +621,14 @@ def test_preview_returns_the_plan_and_spends_nothing(make_client, monkeypatch):
     detail = short.json()["detail"]
     assert set(detail) >= {"cause", "reason", "gap_minutes", "alternatives"}
     assert detail["cause"] == "time_budget"
-    # WRITTEN DECISION (Phase 4 S4.5): the pinned range was "3240-3960s" — the
+    # The pinned range was "3240-3960s" — the
     # old 1.10 band ceiling. The repair's ceiling is THE REQUEST ITSELF (60 min
     # = 3600 s; "ask for five hours and the tour is at most five hours"), so
     # the refusal now names the range it actually enforces. The invariant is
     # unchanged: the refusal names the budget it could not fill.
-    # W4.12 (Paulo): the traveller's `reason` is the planner's plain clause and
+    # The traveller's `reason` is the planner's plain clause and
     # never the exception wrapper; the budget in seconds moved to `technical`,
-    # where the AC-24 invariant still holds — the refusal names the budget it
+    # where the invariant still holds — the refusal names the budget it
     # could not fill, on the field an operator reads.
     assert "required 3240-3600s" in detail["technical"], (
         "the refusal must name the time budget it could not fill"
@@ -648,7 +648,7 @@ def test_preview_returns_the_plan_and_spends_nothing(make_client, monkeypatch):
 
 
 def test_estimated_legs_are_labelled_not_silently_shipped(make_client):
-    """AC-18/AC-20 — a tour built on estimated walking times ships, and SAYS SO.
+    """A tour built on estimated walking times ships, and SAYS SO.
 
     The walking service is a real production dependency that can cold-start or rebuild
     its map (render.yaml:98-124). Refusing would take tour generation down for every
@@ -665,8 +665,8 @@ def test_estimated_legs_are_labelled_not_silently_shipped(make_client):
     internal thing; the operator's diagnosis must survive in the structured half where
     a person debugging a bad tour can find it.
 
-    ON AC-20'S "3 OPTIONS", read this before weakening anything. The criterion means
-    the outage must not cost the traveller any of the choice a working service would
+    ON THE OLD "3 OPTIONS" WORDING, read this before weakening anything. The rule is
+    that the outage must not cost the traveller any of the choice a working service would
     have given them, and that is asserted here EXACTLY, against a control run of the
     same request through a measured client: same number of options, same places, same
     order, same arrival times. It is deliberately not spelled ``== 3``, because this
@@ -696,7 +696,7 @@ def test_estimated_legs_are_labelled_not_silently_shipped(make_client):
     assert r.status_code == 200, r.text
     body = r.json()
 
-    # AC-20: the outage costs the traveller NO choice. Same walks, same places, same
+    # The outage costs the traveller NO choice. Same walks, same places, same
     # order, same arrival times as a fully measured run of the identical request — the
     # legs are estimated, the ROUTE is not reduced.
     def _shape(payload):
@@ -788,7 +788,7 @@ def test_a_route_with_no_stops_is_still_a_hard_refusal(make_client):
 
 
 # ---------------------------------------------------------------------------
-# A band refusal reaches BOTH surfaces as a 422 with alternatives (q3)
+# A band refusal reaches BOTH surfaces as a 422 with alternatives
 # ---------------------------------------------------------------------------
 # Rehomed 2026-08-18 from tests/test_tour_one_engine.py when that file's
 # deleted-stack tombstones were retired (owner ruling: keep the invariants,

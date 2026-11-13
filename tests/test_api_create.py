@@ -1,4 +1,4 @@
-"""Integration tests for Step 3: node CREATE endpoint.
+"""Integration tests for the node CREATE endpoint.
 
 Tests POST /api/v1/nodes/{label} for creating nodes.
 Requires a running Neo4j instance.

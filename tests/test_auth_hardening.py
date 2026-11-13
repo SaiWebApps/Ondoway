@@ -43,13 +43,13 @@ def nodb_client():
             yield c
 
 
-# --- Defect 1: spoofable X-Forwarded-For -------------------------------------
+# --- spoofable X-Forwarded-For -----------------------------------------------
 
 
-# --- Defect 2: unbounded limiter state ---------------------------------------
+# --- unbounded limiter state -------------------------------------------------
 
 
-# --- Defect 3: refresh tokens are not rotated or revocable -------------------
+# --- refresh tokens are not rotated or revocable -----------------------------
 
 
 def _login(client, email: str) -> dict:

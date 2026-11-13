@@ -167,7 +167,7 @@ def test_craft_score_ranks_wellwritten_above_flat_and_repetitive():
 
 
 def test_craft_score_rewards_motivated_transition_over_bare_adjacency():
-    """G2 proxy (motivated transitions, standard S2): a transition that STATES why the
+    """G2 proxy (motivated transitions): a transition that STATES why the
     next idea follows ("To understand why...") must outrank the same facts joined by
     bare-adjacency filler ("Also,"). The two fixtures are IDENTICAL except for that one
     connective — isolating the G2 signal from confounds (second-person, percussion,
@@ -189,7 +189,7 @@ def test_craft_score_rewards_motivated_transition_over_bare_adjacency():
 
 
 def test_craft_score_rewards_causal_chain_over_flat_list():
-    """G3 proxy (causal chain not list, standard S3): facts that EARN each other
+    """G3 proxy (causal chain not list): facts that EARN each other
     ("in turn brought...") must outrank the same facts as a flat list. The two
     fixtures are IDENTICAL except for the connective — isolating the G3 signal from
     confounds rather than relying on an oversized weight (see the G2 test above for
@@ -239,7 +239,7 @@ def test_cleft_causal_matches_the_gold_sentence():
     """DEFECT (hostile review, 2026-07-19): the cleft-causal branch of
     _MOTIVATED_TRANSITION was documented as 'modelled on the standard's own gold
     example' but capped the gap between 'here' and 'that' at 60 chars, while the gold
-    sentence (specs/2026-07-19-tour-quality-standard/01-standard.md §1) needs 74:
+    sentence needs 74:
     'It was here, supplying Empress Eugenie and the other ladies of the Napoleonic
     court, that French haute couture was born...'. Widened to 90. UNDO: shrink the cap
     back to 60 -> this assertion goes RED."""

@@ -78,8 +78,8 @@ from src.tour.quality_certification import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-# The calibration inputs are FIXTURES (moved out of specs/ 2026-08-18: specs/ is
-# planning prose, fixtures/ is what tests read — the reference-tours precedent).
+# The calibration inputs are FIXTURES (moved 2026-08-18): planning prose is not
+# test input, and fixtures/ is what tests read — the reference-tours precedent.
 CALIBRATION = ROOT / "fixtures/tour-certification/calibration-manifest.json"
 REFERENCES = ROOT / "fixtures/tour-certification/investigation-reference-manifest.json"
 PROMPT_SHA = "9" * 64
@@ -1646,8 +1646,8 @@ def test_every_derived_sentence_reaches_semantic_fact_review() -> None:
 
 
 def test_fixed_real_tour_closing_can_finish_as_nonpropositional() -> None:
-    """RE-DERIVED at Phase 6 S6.4 (audit F: "D§5.3 replaces the generic sign-off with
-    authored per-stretch closes; extend this test to them rather than deleting it").
+    """RE-DERIVED when authored per-stretch closes replaced the generic sign-off: the
+    test extends to them rather than being deleted.
     The stitch's FALLBACK closes — the day's physical closure, the loop line, the last
     rest's line — are nonpropositional fixed text and certify PASS; an AUTHORED close (the
     one writer's, a GLUE_CLOSING line that lands the stop's point) is narrator content and

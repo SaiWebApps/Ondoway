@@ -1,10 +1,10 @@
-"""Track B Step B.1 — select_vignettes: pure walk-past vignette selection.
+"""select_vignettes: pure walk-past vignette selection.
 
-Locked rules under test (IMPLEMENTATION-PLAN Track B deferred clarifications):
+Locked rules under test:
 eligible iff on-path band == "vignette"; perpendicular distance to the leg
 segment <= VIGNETTE_MAX_DETOUR_M (50 m); never a dwell stop of the route;
 dedup across legs (first emitting leg wins); cap VIGNETTE_MAX_PER_LEG (2)
-per leg; deterministic order (spotlight desc, then id). Plus the Phase 6
+per leg; deterministic order (spotlight desc, then id). Plus the
 engine invariant: a POI with no active beats is never a vignette.
 
 Pure — no Neo4j. Geometry uses a local flat-earth scale around Paris:
@@ -315,7 +315,7 @@ def test_max_detour_constant_locked():
 
 
 # ---------------------------------------------------------------------------
-# Step B.2 — Route carries vignettes (additive contract field)
+# Route carries vignettes (additive contract field)
 # ---------------------------------------------------------------------------
 
 
@@ -367,7 +367,7 @@ _DISTINCT_BEAT_BODIES: tuple[str, ...] = (
 
 def _corpus_snap(pois: list[POI]) -> CorpusSnapshot:
     """Auto-inject active beats per POI (test_tour_selection pattern) so the
-    Phase 6 density gate clears and every POI has something to say.
+    density gate clears and every POI has something to say.
 
     Two things about the beats matter, and both used to be wrong here.
 

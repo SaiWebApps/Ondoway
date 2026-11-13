@@ -1,7 +1,7 @@
-"""Phase 3 promise tests — the harness speaks promises (plan S3.1).
+"""Promise tests — the harness speaks promises.
 
-One hand per file: S3.6 (the planner's promise assembly) appends its planner
-tests here; this file is created by S3.1 with the parser/printer nodes.
+Two halves in one file: the harness's parser and printer tests, then the
+planner's promise-assembly tests.
 
 Everything here is HERMETIC: TourInput / Route / Promise / PromiseShape are
 constructed by hand, the printer is read through capsys, and pin resolution is
@@ -9,7 +9,7 @@ exercised against a stubbed lookup — no graph, no network. The live lookup
 ladder itself (`_lookup_place`) is `_resolve_start`'s own machinery, already
 exercised by every live harness run.
 
-The RED that proved S3.1 was real: `--pin` and `--weather` were unrecognized
+The RED that proved these tests real: `--pin` and `--weather` were unrecognized
 arguments (argparse exited 2 before any assertion ran), and the breakdown
 table had no shape column, no queue column, no promises line and no
 hours-unverified line.
@@ -103,7 +103,7 @@ def _stop_line(out: str, name: str) -> str:
     return lines[0]
 
 
-#: Map hours (Docs/adr/0006): a door's OpenStreetMap text, as the map carries it.
+#: Map hours: a door's OpenStreetMap text, as the map carries it.
 _DOOR_HOURS = "Mo 09:00-18:00"
 
 
@@ -112,7 +112,7 @@ _DOOR_HOURS = "Mo 09:00-18:00"
 
 def test_one_pin_lands_in_pinned_poi_ids(monkeypatch):
     """One `--pin` resolves through the shared lookup ladder to a corpus POI id
-    and lands in TourInput.pinned_poi_ids (design §3.2 — the visitor's pin is
+    and lands in TourInput.pinned_poi_ids (the visitor's pin is
     a decision, and the planner receives it as an id, not a string)."""
     tour_build = _tour_build()
     parser = tour_build._build_arg_parser()
@@ -262,7 +262,7 @@ def test_promises_line_prints_kind_stop_and_window(capsys):
 
 
 def test_empty_promises_route_prints_no_promises_line(capsys):
-    """A pre-S3.6 Route (empty promises tuple) prints NO promises line — the
+    """A Route with an empty promises tuple prints NO promises line — the
     identity default that keeps today's output shape for unpromised routes."""
     tour_build = _tour_build()
     route = _route([_poi("poi-a", "Conciergerie")], planned_visit_seconds={"poi-a": 600})
@@ -283,11 +283,11 @@ def test_empty_promises_route_prints_no_promises_line(capsys):
 def test_shape_column_renders_in_out_and_closed_out(capsys):
     """Every stop's row fills the shape column (the sabotage list forbids a
     column that only fills on promise stops): a goes-inside promise renders
-    `44m in` (240s outside + 2400s inside; the queue is NOT folded in —
-    design §3.3, 'folding them into one 66 makes the wait permanent'), an
+    `44m in` (240s outside + 2400s inside; the queue is NOT folded in, because
+    'folding them into one 66 makes the wait permanent'), an
     outside promise renders `15 min out`, an outside-only clock exclusion
     renders `closed — outside only` (units spelled out and the phrasal-verb
-    collision removed by the second-language panelist's ruling, W3.4), and
+    collision removed, so a second-language listener reads it plainly), and
     promise-less stops fall back to the route's priced minutes with in/out
     read off the POI's own capacity numbers."""
     tour_build = _tour_build()
@@ -330,10 +330,10 @@ def test_shape_column_renders_in_out_and_closed_out(capsys):
             ),
         ),
         clock_exclusions=(
-            # W4.12: the DECISION is the `kept_outside` flag, not words in the
+            # The DECISION is the `kept_outside` flag, not words in the
             # reason — the harness had string-matched "outside only" and went
-            # silently blank the day the sentence was made plain (Paulo's ruling
-            # against "seated outside only" / "(hours: OSM)").
+            # silently blank the day the sentence was made plain (it had read
+            # "seated outside only" / "(hours: OSM)", which a visitor cannot parse).
             ClockExclusion(
                 poi_id="poi-c",
                 name="Musee de Cluny",
@@ -397,11 +397,11 @@ def test_queue_column_prints_minutes_and_dash(capsys):
     )
 
 
-# --- printer: Aiko's honesty line --------------------------------------------
+# --- printer: the hours honesty line -----------------------------------------
 
 
 def _hours_route() -> Route:
-    """Five stops (Docs/adr/0006): map hours, a guess, hours with no source, a
+    """Five stops: map hours, a guess, hours with no source, a
     DOOR with no hours at all (gated=True, opening_hours=None — the least-known
     door must still count), and not gated at all -> M=4 doors, N=3 not from
     the map."""
@@ -423,11 +423,11 @@ def _hours_route() -> Route:
 
 
 def test_dated_run_prints_the_hours_by_source_line(capsys):
-    """A dated run says where its doors' hours come from (Docs/adr/0006):
+    """A dated run says where its doors' hours come from:
     doors = `gated=True`, or hours on record (hours imply a door on a legacy
     row); from the map = source "map"; guessed = hours with any other source,
-    or none; unknown = a door with no hours at all. Aiko's finding (design
-    §6): clock-native planning is a promise without hours under it, so the
+    or none; unknown = a door with no hours at all. Clock-native
+    planning is a promise without hours under it, so the
     harness must SAY what the hours under it are.
     UNDO: key the door count on the hours text -> Notre-Dame leaves the numbers -> RED.
     """
@@ -464,8 +464,7 @@ def test_undated_run_prints_no_hours_line(capsys):
 
 
 # =============================================================================
-# S3.6 — the planner's promise assembly, the protected set, and pins
-# (appended per this file's one-hand-per-file header)
+# The planner's promise assembly, the protected set, and pins
 # =============================================================================
 
 
@@ -477,9 +476,9 @@ def _pin_corpus(*, with_pin_seated_naturally: bool = False):
 
     chapel = _poi("chapelle-obscure", tier=2, lat=48.8555, lng=2.3697, beat_count=2)
     # Filler COUNT derived by the helper from the planner's dwell target and stop
-    # ceiling (re-derived at the Phase 6 close: hand-pinned at five for the 270 s
-    # ceiling, the pool could build 25 of the asked 60 minutes once S6.6 made
-    # tellings three minutes; the pin and promise claims measured identical at
+    # ceiling (re-derived: hand-pinned at five for the 270 s
+    # ceiling, the pool could build 25 of the asked 60 minutes once
+    # tellings became three minutes; the pin and promise claims measured identical at
     # the derived count — the chapel is never chosen on merit, always seated
     # when pinned, an unknown pin still refuses by name).
     fillers = _density_fillers(PDV, duration_min=60, radius_m=80)
@@ -499,9 +498,9 @@ def _pin_request(pins: tuple[str, ...] = ()):
 
 
 def test_a_pinned_stop_is_seated_and_survives_every_repair():
-    """Théo pins one thing absolutely; Julien pins nothing (design §3.2; plan
-    S3.6). A pin is a CERTAINTY: force-seated before the greedy, in the
-    repair's protected set (no drop, no exchange may remove it — §4.5.2/4),
+    """A visitor may pin one thing absolutely, or pin nothing. A pin is a
+    CERTAINTY: force-seated before the greedy, in the
+    repair's protected set (no drop, no exchange may remove it),
     never traded by the pull, never folded into a co-located host. The
     precondition run proves the greedy would NOT have chosen this place on
     its own — the pin, not the score, is why it is in the day."""
@@ -520,7 +519,7 @@ def test_a_pinned_stop_is_seated_and_survives_every_repair():
 
 
 def test_an_unknown_pin_is_an_honest_refusal_naming_it():
-    """An unseatable pin is an honest refusal naming the pin (plan S3.6) —
+    """An unseatable pin is an honest refusal naming the pin —
     never a day quietly served without it."""
     from src.tour.density import TourabilityRefusedError
     from src.tour.selection import select_route
@@ -531,7 +530,7 @@ def test_an_unknown_pin_is_an_honest_refusal_naming_it():
 
 
 def test_rests_and_the_finish_are_never_auto_cut():
-    """§4.5.2/§4.5.4: rests and the finish are promise-grade. Structurally a
+    """Rests and the finish are promise-grade. Structurally a
     rest CANNOT be auto-cut — body stops seat AFTER the repair, on the final
     walking order — and the finish survives the repair through the protected
     set (the dusk swap tests prove that behaviourally: the lit endpoint out-
@@ -590,7 +589,7 @@ def test_rests_and_the_finish_are_never_auto_cut():
 
 
 def test_the_day_names_its_promises_with_priced_shapes():
-    """Design §3.1: the plan becomes 2-5 promises. Every promise's kind is
+    """The plan becomes 2-5 promises. Every promise's kind is
     from the closed vocabulary, the list caps at five, and each shape is a
     real priced PromiseShape (outside/inside split from THE one pricer)."""
     from src.tour.selection import select_route
@@ -605,8 +604,8 @@ def test_the_day_names_its_promises_with_priced_shapes():
 
 
 def test_a_day_with_rests_still_fits_its_own_ceiling():
-    """A rest is part of the day, not an overdraft (plan S3.6; §4.5.2 rests
-    are promise-grade; design §2.3 the ceiling is hard).
+    """A rest is part of the day, not an overdraft: rests
+    are promise-grade and the ceiling is hard.
 
     Body stops seat AFTER the repair, so before the rest reserve existed the
     repair filled the day to the nominal and the bench's minutes burst the

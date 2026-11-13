@@ -591,7 +591,7 @@ REQUIRED_IN_SETS = {
 def test_lane4_is_a_complete_lane():
     """A lane is complete when preflight, compose and the committed profiles all
     carry its three graphs — dev, test and workbench. Lane 4 is the sandbox lane
-    multi-track runs hand to a second worktree (docs/adr/0002), so a missing
+    multi-track runs hand to a second worktree, so a missing
     half here is a sandbox that silently reads someone else's data.
     The spec/profile/compose agreement itself is guarded by the drift tests
     above; this pins the lane's existence and its pytest port's place in the

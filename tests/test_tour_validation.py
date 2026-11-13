@@ -1,4 +1,4 @@
-"""Phase 3 — validation.py: source-traceability + forbidden-phrase scan."""
+"""validation.py: source-traceability + forbidden-phrase scan."""
 
 from __future__ import annotations
 
@@ -197,8 +197,8 @@ def test_imagine_inside_beat_body_is_not_flagged():
 
 
 def test_glue_introducing_proper_noun_not_in_beats_is_flagged():
-    # Beats don't mention "Napoleon" — glue tries to. RE-DERIVED at Phase 6
-    # W6.12: the fixture used the NAV label as a convenient carrier; GLUE_NAV is
+    # Beats don't mention "Napoleon" — glue tries to. RE-DERIVED: the fixture
+    # used the NAV label as a convenient carrier; GLUE_NAV is
     # now exempt from the proper-noun half (the map names places by nature), so
     # the smuggler is a STORY line — the check's teeth are about story glue.
     beat = _beat("b1", body="Henri IV built it.")
@@ -296,7 +296,7 @@ def test_synthesized_opener_pointing_at_poi_name_is_traceable():
 
 
 # ---------------------------------------------------------------------------
-# Phase 4 Step 4.2 — cited beats' key_claims join the canonical context
+# Cited beats' key_claims join the canonical context
 # ---------------------------------------------------------------------------
 
 
@@ -354,10 +354,9 @@ def test_a_possessive_of_a_licensed_name_is_not_an_invention():
     a licensed name — "Ravaillac's knife" for a beat that says "Francis Ravaillac" — is
     the same name, not a new one.
 
-    Cites design §5.1 (the fact-gates stay: "traceability, entailment, claim-coverage,
-    provenance") and quality standard P2 ("Name what the listener would be told" — the
-    gate must not punish naming). MEASURED 2026-08-19 (Phase 6 W6.1, Fiona & Dev's day
-    composed over the wire): the reflection "…died under Francis Ravaillac's knife" was
+    The fact-gates stay (traceability, entailment, claim-coverage, provenance), and the
+    gate must not punish naming what the listener would be told. MEASURED 2026-08-19 (a
+    day composed over the wire): the reflection "…died under Francis Ravaillac's knife" was
     refused with `new_proper_noun:Ravaillac's` although "Francis Ravaillac assassinated
     Henri IV" is a key claim of a voiced beat at the stop before — a deterministic 422 on
     the phone's compose whenever the composer writes the possessive. The tokenizer keeps
@@ -375,7 +374,7 @@ def test_a_possessive_of_a_licensed_name_is_not_an_invention():
         source_type="beat",
         stop_idx=0,
     )
-    # (Carriers RE-DERIVED from GLUE_NAV to a story label at Phase 6 W6.12 —
+    # (Carriers RE-DERIVED from GLUE_NAV to a story label —
     # NAV is now exempt from the proper-noun scan; these lines are story glue.)
     possessive = Sentence(
         text="He gave Paris its oldest bridge and then died under Ravaillac's knife.",
@@ -397,7 +396,7 @@ def test_a_possessive_of_a_licensed_name_is_not_an_invention():
         assert not any("new_proper_noun" in c for c in codes), (text, codes)
 
     # A re-accented form is the same name: the corpus spells "Andre Maurois", the
-    # composer writes "André" (measured, the same FD day: `new_proper_noun:André`).
+    # composer writes "André" (measured, the same day: `new_proper_noun:André`).
     andre = _beat("b2", body="Andre Maurois places Henri IV among France's heroes.")
     seq2 = _seq([beat, andre])
     cited2 = Sentence(
@@ -428,8 +427,8 @@ def test_a_possessive_of_a_licensed_name_is_not_an_invention():
 
 
 # ---------------------------------------------------------------------------
-# Phase 6 S6.5 — the forward-promise check (design §5.4; W6.2 R4, 8/11 LOCKED;
-# plan "a check refuses a forward-promise phrase pointing past the stop")
+# The forward-promise check: a check refuses a forward-promise phrase pointing
+# past the stop.
 # ---------------------------------------------------------------------------
 
 
@@ -449,9 +448,9 @@ def _two_stop_script(sentences: list[Sentence]) -> Script:
 
 
 def test_a_forward_promise_in_story_glue_is_refused_and_navigation_is_not():
-    """W6.2 R4 (LOCKED 8/11): a stop's text may NAME its neighbour as a fact but never
+    """A stop's text may NAME its neighbour as a fact but never
     PROMISE it — the session may trade the next stop away, and a promise to a place the
-    walker never reaches is a small shut door (Fiona & Dev; measured W6.1: 'That's a
+    walker never reaches is a small shut door (measured: 'That's a
     question for our next stop'). The check refuses the inherently forward phrases in
     story glue, and 'you'll see' only when it points PAST the stop (names a later
     stop) — 'you'll see' at the thing in front of you is direction-giving, and a
@@ -501,7 +500,7 @@ def test_a_forward_promise_in_story_glue_is_refused_and_navigation_is_not():
 
 
 def test_the_citys_own_vocabulary_and_the_maps_voice_are_not_inventions():
-    """Phase 6 W6.12 (measured on Greta's day, three 422s, the day DEAD): the
+    """Measured on one test day (three 422s, the day DEAD): the
     invention scan refused "the height of Parisian luxury" in an authored close
     (new_proper_noun:Parisian — the tour's own CITY as an invention) and the nav
     line's "Seine" (new_proper_noun:Seine — the MAP naming the river it routes
@@ -510,7 +509,7 @@ def test_the_citys_own_vocabulary_and_the_maps_voice_are_not_inventions():
     proper nouns are places by nature. STORY glue naming an unlicensed place is
     still refused: the teeth stay. UNDO: drop either exemption -> RED.
 
-    RE-DERIVED at Phase 8 S8.3 (W8.2 R1, 11/11): the ORIGINAL Greta nav line
+    RE-DERIVED: the ORIGINAL nav line
     ("Walk northwest along the Seine") is itself no longer legal — a leg line
     never speaks compass — so the licensed-proper-noun clause now rides a
     compass-free wording of the same sentence."""
@@ -540,7 +539,7 @@ def test_the_citys_own_vocabulary_and_the_maps_voice_are_not_inventions():
     assert any(code.startswith("new_proper_noun") for _s, code in report.forbidden_phrase_hits)
 
     # A hyphenated compound whose head the corpus carries is the same name in
-    # adjectival dress (measured on Camille's day: "Roman-style" refused against
+    # adjectival dress (measured: "Roman-style" refused against
     # a corpus saying "Roman" freely); an unlicensed head still flags.
     roman = _beat("b2", body="A Roman triumphal arch honoured the emperor.")
     seq2 = _seq([roman])
@@ -556,8 +555,7 @@ def test_the_citys_own_vocabulary_and_the_maps_voice_are_not_inventions():
 
 
 # ---------------------------------------------------------------------------
-# Phase 8 S8.3 — the writer's words match the geometry they play in
-# (W8.2 LOCKED RULINGS R1/R2/R5; phase7-ledger.md carry 1; design §5.6/§8.2).
+# The writer's words match the geometry they play in.
 # The nav-voice compass ban is part of the always-on scan (source-derivable);
 # the placement floors need route/placement context and ride
 # ``placement_floor_hits``, wired by the authoring finalizer's closure.
@@ -569,9 +567,9 @@ def _nav(text: str, stop: int = 1) -> Sentence:
 
 
 def test_a_nav_line_never_speaks_compass():
-    """W8.2 R1 (11/11): a leg line names direction ONLY as left/right/straight-ahead
-    or a visible landmark — NEVER compass. Measured instances: Greta's "Walk
-    northwest along the Seine"; Théo's "written northwest, five minutes; measured
+    """A leg line names direction ONLY as left/right/straight-ahead
+    or a visible landmark — NEVER compass. Measured instances: "Walk
+    northwest along the Seine"; "written northwest, five minutes; measured
     south-south-east, nine". UNDO: drop the compass scan from
     ``_forbidden_phrase_hits`` -> RED."""
     beat = _beat("b1", body="A history beat.")
@@ -614,8 +612,8 @@ def _floor_script(sentences: list[Sentence]) -> Script:
 
 
 def test_placement_floor_flags_wrong_minutes_in_the_nav_line():
-    """W8.2 R1: a leg line speaks minutes ONLY as the routed leg's own priced
-    number (Théo's model line: "written northwest, five minutes; measured
+    """A leg line speaks minutes ONLY as the routed leg's own priced
+    number (the measured fault: "written northwest, five minutes; measured
     south-south-east, nine"). A nav line naming any other minute count is a hit;
     the routed number itself, or no number at all, is clean; a leg with no
     routed minutes known is skipped, never guessed."""
@@ -643,10 +641,10 @@ def test_placement_floor_flags_wrong_minutes_in_the_nav_line():
 
 
 def test_placement_floor_flags_arrived_words_on_leg_pieces():
-    """W8.2 R2 (11/11): no standing verb or arrived deictic — here, this, you're
-    standing, look up — in ANY leg piece, checked sentence by sentence (Marcus:
-    never the opening alone). The measured class: 4 of 27 leg sentences were
-    standing lines (Aiko's Louvre, F&D's Rivoli, Sofia's quai, +1). Applies to
+    """No standing verb or arrived deictic — here, this, you're
+    standing, look up — in ANY leg piece, checked sentence by sentence, never
+    the opening alone. The measured class: 4 of 27 leg sentences were
+    standing lines (at the Louvre, on the Rivoli, on a quai, +1). Applies to
     every sentence that PLAYS on a leg: nav glue, the thread, and a walk-past
     vignette one-liner (beat-sourced, identified by id)."""
     from src.tour.validation import placement_floor_hits
@@ -687,11 +685,10 @@ def test_placement_floor_flags_arrived_words_on_leg_pieces():
 
 
 def test_placement_floor_flags_moving_lines_in_auto_played_stop_pieces():
-    """W8.2 R2 + R5 (11/11): no imperative of motion in any AUTO-PLAYED stop
+    """No imperative of motion in any AUTO-PLAYED stop
     piece — moving sentences are tap-only or leg-only. The measured instances:
-    Rosemary's story sentence "Step around the corner to 31 rue de Bellechasse"
-    (the exact address she forbade at W7.2), route directions inside story
-    fields (Julien). A tap-only stop (the full telling) is exempt; the nav line
+    a story sentence "Step around the corner to 31 rue de Bellechasse",
+    route directions inside story fields. A tap-only stop (the full telling) is exempt; the nav line
     is exempt (navigation is its job)."""
     from src.tour.validation import placement_floor_hits
 
@@ -730,7 +727,7 @@ def test_placement_floor_flags_moving_lines_in_auto_played_stop_pieces():
 
 
 def test_the_walks_own_transit_beat_plays_on_the_leg_not_the_stop():
-    """P9R-S1.M2 — Paulo's Sébastopol line was refused `moving_line_auto_played`
+    """A Sébastopol transit line was refused `moving_line_auto_played`
     because the floor read the walk's own corpus narration as stationary stop
     content: `_build_transit` picks a transit beat FOR the leg, but the
     placement rule knew only glue labels and vignette ids. With the transit ids
@@ -769,10 +766,10 @@ def test_the_walks_own_transit_beat_plays_on_the_leg_not_the_stop():
 
 
 def test_placement_floor_allows_a_door_line_only_where_the_wire_says_door():
-    """W8.2 R2, Aiko's door rule: a through-the-door sentence plays only where
+    """The door rule: a through-the-door sentence plays only where
     the wire says door=true. At a stop the plan prices INSIDE, "step inside" is
     staging; anywhere else it is an invitation through a door that does not
-    exist (Aiko's Bourse: the words invited her into a closed rotunda)."""
+    exist (measured at the Bourse: the words invited a visitor into a closed rotunda)."""
     from src.tour.validation import placement_floor_hits
 
     door_line = Sentence(
@@ -793,11 +790,11 @@ def test_placement_floor_allows_a_door_line_only_where_the_wire_says_door():
 
 
 def test_placement_floor_flags_a_fusion_that_crosses_playback_contexts():
-    """Phase 8 W8.1(f), mechanism (c) of the Camille class: the writer's
+    """One measured mechanism of wrong placement: the writer's
     FUSE-REPEATS rule merged a stop STORY sentence with a walk-past VIGNETTE
     beat's fact, producing a citation that cannot be placed —
     ``partition_final_script`` then exploded with a bare ValueError and the
-    phone saw an unnamed refusal (R8 forbids exactly that). The floor NAMES it
+    phone saw an unnamed refusal, which is never allowed. The floor NAMES it
     at verification time, so the bounded retry tells the writer which sentence
     to unfuse."""
     from src.tour.validation import placement_floor_hits
@@ -832,7 +829,7 @@ def test_placement_floor_flags_a_fusion_that_crosses_playback_contexts():
 
 
 # ---------------------------------------------------------------------------
-# S1.M3 — a transit beat's bearing is checked where it plays. The corpus is
+# A transit beat's bearing is checked where it plays. The corpus is
 # canonical about what a place IS; it is not canonical about which way THIS
 # route runs. A guidebook's walking directions encode the walk the guidebook
 # took, and reused on a different segment they point the other way.

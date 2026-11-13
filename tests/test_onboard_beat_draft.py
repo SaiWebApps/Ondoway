@@ -1,4 +1,4 @@
-"""Unit tests for src/onboard/beat_draft.py (Step 4 of new-city onboarding).
+"""Unit tests for src/onboard/beat_draft.py (the beat-drafting step of new-city onboarding).
 
 Pure — no Neo4j, no network, $0. Run with:
     make test-file FILE=tests/test_onboard_beat_draft.py

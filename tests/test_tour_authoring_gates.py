@@ -1,10 +1,10 @@
-"""AC-5 — the anti-hallucination gates on the PERSISTED path (`POST /trips/{id}/compose`).
+"""The anti-hallucination gates on the PERSISTED path (`POST /trips/{id}/compose`).
 
-The cutover (step A3) swapped that endpoint's engine to the per-stop authoring seam.
+The cutover swapped that endpoint's engine to the per-stop authoring seam.
 The seam's finalizer was built for the CERTIFICATION replay, which deliberately runs a
 structural-only validator, the trusting offline entailment stub, and no coverage
 baseline at all.  Moving the persisted endpoint onto it therefore silently dropped
-three gates the whole-tour composer had wired for it (ledger decision D3):
+three gates the whole-tour composer had wired for it:
 
 * the REAL faithfulness checker (``get_faithfulness_checker`` -> Haiku entailment),
 * the coverage baseline (``claims_realized_by`` on the pre-compose stitch), so a bold
@@ -16,8 +16,8 @@ Parity with the pre-cutover endpoint ONLY: no new checks, and the certification 
 keeps its own (unchanged) defaults, which is why the three arrive as injectable
 parameters rather than as a new default.
 
-``test_unfaithful_output_is_refused_and_trip_untouched`` is the ledger's pinned gate for
-this step, so every clause lives inside that one node id: unwiring ANY of the three in
+``test_unfaithful_output_is_refused_and_trip_untouched`` is the pinned gate for
+this path, so every clause lives inside that one node id: unwiring ANY of the three in
 ``src/tour/authoring.py`` or ``src/api/routes/trips.py`` must turn it red.
 
 The endpoint is driven for real (live Paris dev graph, a disposable profile and trip)
@@ -183,7 +183,7 @@ def fresh_trip(client):
 def _offline_response(
     unit, sentences: list[dict], *, extra: dict | None = None
 ) -> PhysicalProviderResponse:
-    """``extra`` (Phase 6 S6.5): the whole payload when a test needs more than
+    """``extra``: the whole payload when a test needs more than
     ``sentences`` — e.g. the writer's ``threads``; default byte-identical to before."""
     body = json.dumps(
         extra if extra is not None else {"sentences": sentences},
@@ -225,7 +225,7 @@ class _RewritingExecutor:
         for sentence in _stitched(unit):
             if sentence["source_type"] == "beat":
                 # "As it happens" and not "Here is the thing": a floor-neutral
-                # prefix, because a vignette one-liner is LEG-placed and the S8.3
+                # prefix, because a vignette one-liner is LEG-placed and the
                 # deixis floor rightly refuses "Here …" on a leg — this double's
                 # job is to trip ONLY the entailment checker.
                 sentence = {**sentence, "text": f"As it happens, {sentence['text']}"}
@@ -362,7 +362,7 @@ def _refusal_detail(resp, caplog) -> dict:
     at zero" would be satisfied by a crash that never ran a gate at all.
     """
     assert resp.status_code == 422, resp.text
-    # RE-DERIVED 2026-08-19 (Phase 6 W6.1): the VERIFY branch now NAMES itself in the
+    # RE-DERIVED 2026-08-19: the VERIFY branch now NAMES itself in the
     # log ("Compose refused by VERIFY …" plus one line per blocking sentence — the
     # author path's precedent), so the two branches are told apart POSITIVELY rather
     # than by the absence of any error record, which was the only signal before.
@@ -376,7 +376,7 @@ def _refusal_detail(resp, caplog) -> dict:
     )
     detail = resp.json()["detail"]
     assert detail["reason"] == "compose_verification_failed"
-    # Phase 8 S8.4: one bounded targeted re-roll of the failing stops precedes a
+    # One bounded targeted re-roll of the failing stops precedes a
     # VERIFY refusal; these doubles fail every roll, so the refusal stands at an
     # honestly-counted attempts=2 (the phone reads detail['attempts']).
     assert detail["attempts"] == 2, "the phone reads detail['attempts']"
@@ -385,7 +385,7 @@ def _refusal_detail(resp, caplog) -> dict:
 
 @needs_neo4j
 def test_invented_glue_is_refused_and_the_trip_is_untouched(client, live_neo4j, fresh_trip, caplog):
-    """AC-5 end to end — INVENTION still BLOCKS, and blocks before any write.
+    """End to end — INVENTION still BLOCKS, and blocks before any write.
 
     Glue carrying a proper noun and a year that no cited beat has is runtime invention
     that structural traceability cannot see, and this is the check that catches it. It
@@ -394,7 +394,7 @@ def test_invented_glue_is_refused_and_the_trip_is_untouched(client, live_neo4j, 
     a check may block only when it can name the specific thing that is wrong.
 
     Afterwards the trip's stops in Neo4j are byte-unchanged and the trip is still
-    uncomposed, so the client can offer another flavour (decision D2). A gate that ran
+    uncomposed, so the client can offer another flavour. A gate that ran
     after the write would look identical at the seam and lose the trip.
 
     This was one clause of ``test_unfaithful_output_is_refused_and_trip_untouched``. It
@@ -481,9 +481,9 @@ def test_a_tour_with_deleted_facts_composes_because_coverage_only_advises(
 
     It is replaced, not abandoned: the scored fact-check runs the same judge in reverse
     ("is this source claim still present?"), which distinguishes a reworded fact from a
-    missing one. See the run-context addendum.
+    missing one.
 
-    RE-DERIVED at Phase 8 S8.4 (design §7.2): a claim-blurred day now DOES refuse —
+    RE-DERIVED: a claim-blurred day now DOES refuse —
     but on the QUALITY FLOOR, never on coverage. Every beat sentence collapsed to
     "That much is written down." is a rich corpus STARVED to a line (C1) and a
     silent walk (C3) — the exact defects the rubric names — so the refusal must be
@@ -536,16 +536,16 @@ def test_a_faithful_tour_still_composes(client, live_neo4j, fresh_trip):
     finally:
         _clear_dep(client, target)
     assert resp.status_code == 200, resp.text
-    # The frozen trip is deleted (design §8.2, Phase 5 S5.8): nothing writes
+    # The frozen trip is deleted: nothing writes
     # `composed_route_id` any more — a compose is version 1 of the living session.
-    # (This line pinned the deleted writer and was red from S5.8 until Phase 6 D6.0
-    # re-derived it; audit C had not classified this file.)
+    # (This line pinned the deleted writer and was red until it was re-derived; an
+    # audit had not classified this file.)
     assert resp.json()["plan_version"] == 1
     assert _persisted(live_neo4j, trip_id)["composed_route_id"] is None
 
 
 def test_the_certification_replay_keeps_its_own_gate_defaults() -> None:
-    """Parity is opt-IN: the certification replay's defaults are untouched (D3).
+    """Parity is opt-IN: the certification replay's defaults are untouched.
 
     The certification path judges prose by MEANING (its structural-only validator is
     deliberate, not an oversight), so the three gates arrive as parameters that default
@@ -567,7 +567,7 @@ def test_the_certification_replay_keeps_its_own_gate_defaults() -> None:
     for name in ("faithfulness_checker", "enforce_claim_coverage", "scan_glue_for_invention"):
         assert name in seam, f"the Block-2 finalizer cannot pass {name} through"
 
-    # Phase 8 S8.3: the placement floors are the FOURTH knob, same contract —
+    # The placement floors are the FOURTH knob, same contract —
     # OFF for the sealed certification replay, hard-coded ON for the live door.
     assert finalize["enforce_placement_floors"].default is False
     assert "enforce_placement_floors" in seam
@@ -583,9 +583,8 @@ def test_the_certification_replay_keeps_its_own_gate_defaults() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Phase 8 S8.3 — the writer's words match the geometry they play in
-# (W8.2 R1/R2/R4/R5; phase7-ledger carry 1 + carry 8; W8.1(f) mechanisms
-# (a) mangled beat id, (c) fusion crossing playback contexts).
+# The writer's words match the geometry they play in
+# (a mangled beat id, a fusion crossing playback contexts).
 # ---------------------------------------------------------------------------
 
 
@@ -733,10 +732,10 @@ def _finalized_with(mutate, *, extra_by_stop=None, **gates):
 
 
 def test_a_beat_id_the_writer_mangled_by_one_character_is_corrected_not_refused():
-    """W8.2 R4 (Camille): a cited id at edit distance 1 from exactly ONE id the
+    """A cited id at edit distance 1 from exactly ONE id the
     request supplied is a copy error, corrected deterministically — the day
     composes and the citation is the TRUE id (so entailment still gates it).
-    W7.14's live instance: the writer cited `1311cfd-…` for `1311cf7d-…` and the
+    A live instance: the writer cited `1311cfd-…` for `1311cf7d-…` and the
     day died 422, three attempts. UNDO: drop the correction in
     ``_sentences_from_json`` -> the refusal returns -> RED."""
 
@@ -789,7 +788,7 @@ def test_the_correction_never_guesses_between_two_close_ids():
 
 
 def test_a_glue_sentence_the_writer_mistyped_as_beat_is_coerced_not_refused():
-    """The R4 copy-error doctrine, extended to the TYPE field (live 2026-08-29,
+    """The copy-error correction, extended to the TYPE field (live 2026-08-29,
     v3 batch, nyc-lower-manhattan-90): the writer emitted its requested
     reflection with ``source_id: GLUE_REFLECTION`` but ``source_type: "beat"``
     — the id is authoritative (ids are copied from the prompt; no beat carries
@@ -823,11 +822,11 @@ def test_a_glue_sentence_the_writer_mistyped_as_beat_is_coerced_not_refused():
 
 
 def test_a_fusion_across_playback_contexts_is_refused_by_name():
-    """W8.1(f) mechanism (c), live on 2026-08-23 (trip 45819603, twice): the
+    """Live on 2026-08-23 (trip 45819603, twice): the
     writer fused a stop STORY sentence with a walk-past VIGNETTE beat and the
     day died on a bare ValueError from ``partition_final_script`` — surfaced as
-    `compose_verification_failed` with every count 0, the unnamed refusal R8
-    forbids. With the floors ON, the SAME defect is a NAMED verification
+    `compose_verification_failed` with every count 0, an unnamed refusal.
+    With the floors ON, the SAME defect is a NAMED verification
     finding, so the bounded retry can tell the writer which sentence to unfuse.
     UNDO: drop the fused-context floor -> the bare ValueError returns -> RED."""
     from src.tour.compose_gate import ComposeVerificationError
@@ -856,9 +855,9 @@ def test_floors_on_the_clean_echo_still_compose():
 
 
 def test_a_thread_that_repeats_its_stops_own_telling_is_dropped():
-    """W8.2 R3 (11/11): one fact, one voice, per day — a thread that repeats the
-    stop's own narration is dropped (Greta's coronation story+thread, Sofia's
-    Templar bridge leg+thread). The drop rides the existing R5 channel: the day
+    """One fact, one voice, per day — a thread that repeats the stop's own
+    narration is dropped (a coronation story plus its thread, a Templar bridge leg
+    plus its thread). The drop rides the existing degradations channel: the day
     ships without the line, reported, never refused. UNDO: drop the
     near-verbatim check in ``_keep_threads`` -> the repeat ships -> RED."""
     echo = lambda sentence, stop_index: sentence  # noqa: E731
@@ -878,7 +877,7 @@ def test_a_thread_that_repeats_its_stops_own_telling_is_dropped():
 
 
 # ---------------------------------------------------------------------------
-# AC-6/AC-8 — the cross-stop echo dedup port
+# The cross-stop echo dedup port
 # ---------------------------------------------------------------------------
 
 #: A fact voiced verbatim at stop 0, then echoed again at stop 1 — the
@@ -981,7 +980,7 @@ def _cross_stop_echo_fixture() -> tuple[Script, BeatSequence, Route]:
         lens_coverage={},
         script=(
             Sentence(text=_DUP_TEXT, source_id="b0", source_type="beat", stop_idx=0),
-            # Phase 6 S6.4: the stitch closes EVERY stop (the fallback the one writer
+            # The stitch closes EVERY stop (the fallback the one writer
             # rewrites); a persisted-trip-shaped fixture carries the same shape.
             Sentence(
                 text="And that's Stop 0.", source_id="GLUE_CLOSING", source_type="glue", stop_idx=0
@@ -1076,7 +1075,7 @@ def test_a_sentence_outside_the_authored_stops_is_refused_not_shipped_unattested
 
 
 def test_cross_stop_echo_is_suppressed() -> None:
-    """AC-6/AC-8 — the pinned gate for this step.
+    """The pinned gate for the cross-stop echo dedup.
 
     ``compose.py``'s whole-tour composer ran ``_dedup_composed`` (claim-repeat +
     exact-repeat + same-beat near-dup suppression) over the ASSEMBLED sentence
@@ -1086,7 +1085,7 @@ def test_cross_stop_echo_is_suppressed() -> None:
     into that identical stream but never called the pass — so the same cross-stop
     echo would ship on every authoring surface that finalizer serves.
 
-    AC-6 requires the pass to sit on the SHARED finalizer. Two live surfaces end
+    The pass must sit on the SHARED finalizer. Two live surfaces end
     there, both through ``finalize_live_composition``: the persisted
     ``POST /trips/{id}/compose`` (through ``finalize_premium_tour``) and the
     place-recipe build (through ``finalize_place_recipe``). So the finalizer is
@@ -1099,7 +1098,7 @@ def test_cross_stop_echo_is_suppressed() -> None:
 
     Driving only the first would leave a port that moved the pass UP, out of the
     finalizer and into the fan-out or a route, fully green — which is exactly the
-    fix AC-6 forbids. The direct clause is what pins the pass to the SHARED
+    fix this test forbids. The direct clause is what pins the pass to the SHARED
     finalizer.
 
     The last block pins the composition trace, because suppression and
@@ -1148,7 +1147,7 @@ def test_cross_stop_echo_is_suppressed() -> None:
         "the dedup pass dropped stop 1's ONLY novel sentence, not just its echo "
         "of stop 0 — this would silently delete a fact, not suppress a repeat"
     )
-    # The stop's BEAT sentences (Phase 6 S6.4: every stop also ends on its close, which
+    # The stop's BEAT sentences (every stop also ends on its close, which
     # is glue and not part of the telling the dedup pass judges).
     stop0_texts = [s.text for s in script.script if s.stop_idx == 0 and s.source_type == "beat"]
     assert stop0_texts == [_DUP_TEXT], "stop 0's own (first) telling must survive untouched"
@@ -1217,7 +1216,7 @@ def test_cross_stop_echo_is_suppressed() -> None:
 
 
 def test_every_live_surface_runs_the_same_three_gates() -> None:
-    """AC-20 — every surface a listener hears runs the same three anti-hallucination gates.
+    """Every surface a listener hears runs the same three anti-hallucination gates.
 
     The shared finalizer runs the three gates (entailment, invented proper nouns and
     years in glue, facts deleted by a bold fusion) only when its caller passes them in;
@@ -1306,7 +1305,7 @@ def test_every_live_surface_runs_the_same_three_gates() -> None:
 
 
 def test_faithfulness_and_dropped_facts_are_advisory_not_blocking() -> None:
-    """OWNER RULING 2026-08-03: the entailment and dropped-fact checks RECORD, they do
+    """The owner ruled on 2026-08-03: the entailment and dropped-fact checks RECORD, they do
     not BLOCK. Structural checks still block.
 
     MEASURED that day on a real Paris tour, with the gates newly wired to the workbench:
@@ -1324,8 +1323,8 @@ def test_faithfulness_and_dropped_facts_are_advisory_not_blocking() -> None:
     A check that fires on ~a fifth of a good tour cannot decide whether to ship it. The
     rule the owner set: a check may BLOCK only when it can NAME the specific thing that
     is wrong; a check that can only say "I don't know" RECORDS. Both of these are in the
-    second category until the scored replacement lands (see the run-context addendum:
-    per-claim scores with an unsupported SPAN, bands not averages, repair before cut).
+    second category until the scored replacement lands (per-claim scores with an
+    unsupported SPAN, bands not averages, repair before cut).
 
     They stay ON, stay on the report, and stay in the logs — this is a demotion from
     blocking to advisory, NOT a removal. ``faithfulness_checked`` still records whether

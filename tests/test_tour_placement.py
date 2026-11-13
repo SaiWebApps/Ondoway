@@ -1,4 +1,4 @@
-"""Phase 7 S7.3 — THE audio placement rule (design §5.6 C7, §4.6; W7.2 R1).
+"""THE audio placement rule.
 
 ONE definition of "at the stop", on the server, carried on the wire: each stop's piece
 plays inside the place's OWN footprint (the corpus radius), the A→B finish takes the
@@ -8,7 +8,7 @@ and who (the family) at the first standstill inside it. Free tier — no provide
 The seam that proves no SECOND definition exists anywhere (server or phone) is
 tests/test_session_seams.py::test_the_audio_placement_rule_has_one_definition; the phone's
 behavioural half is mobile/test/services/tour_playback_service_test.dart, group "the
-footprint is the place (S7.3)". RED by mutation: return a constant from `place_stop` ->
+footprint is the place". RED by mutation: return a constant from `place_stop` ->
 the courtyard/door test goes RED; make `place_day` ignore the party -> the family test
 goes RED; drop `triggers` from the adapter -> the wire test goes RED.
 """
@@ -49,7 +49,7 @@ def _input(party: str | None) -> TourInput:
 
 def test_a_place_is_at_its_own_footprint_never_a_one_size_circle():
     """The courtyard is 140 m across and the doorway is 10: two places, two radii, read
-    off the corpus — the one circle the phone drew for both is the defect (R1 a)."""
+    off the corpus — the one circle the phone drew for both is the defect."""
     courtyard = place_stop(_poi("courtyard", 140.0))
     door = place_stop(_poi("door", 10.0))
     unmeasured = place_stop(_poi("plaque"))
@@ -62,8 +62,8 @@ def test_a_place_is_at_its_own_footprint_never_a_one_size_circle():
 
 def test_the_finish_sentinel_takes_the_own_place_radius_and_it_is_defined_once():
     """An A→B day's finish is a waypoint at the person's named end, not a place: it
-    takes the own-place radius (R1 — Marcus "the finish says the time", Sofia "within
-    sight, never a dot by the water"), and that radius has ONE definition, which the
+    takes the own-place radius (the finish is within sight of the named end, never a
+    dot near it), and that radius has ONE definition, which the
     contingency set reads rather than restates."""
     sentinel = _poi(f"{END_B_SENTINEL_PREFIX}48.85_2.35")
     assert place_stop(sentinel).radius_m == OWN_PLACE_RADIUS_M == 60.0
@@ -79,9 +79,9 @@ def test_place_stops_places_every_stop_of_the_route_once():
 
 
 def test_the_family_day_starts_at_the_first_standstill_everyone_else_at_the_edge():
-    """R1 (b): the piece ARMS at the footprint's edge for everyone; it STARTS at arrival
+    """The piece ARMS at the footprint's edge for everyone; it STARTS at arrival
     for every party but the family, whose piece waits for the first standstill inside
-    the footprint (Nadia, design §4.4.4 — Paulo and Rosemary dissent by name)."""
+    the footprint."""
     assert place_day(_input("family")).start_at == "standstill"
     for party in (None, "solo", "couple", "take_it_easy", "with_luggage"):
         assert place_day(_input(party)).start_at == "arrival", party
@@ -121,8 +121,8 @@ def test_the_trigger_rides_the_stop_record_and_the_wire():
         placement=place_day(_input("family")),
     )
     dumped = plan.model_dump()
-    # RE-DERIVED at W7.13 (F&D): the policy grew the sentence cap and the resume rule
-    # the panel found still living as phone branches — the wire now carries them.
+    # RE-DERIVED: the policy grew the sentence cap and the resume rule that were
+    # still living as phone branches — the wire now carries them.
     assert dumped["placement"] == {
         "start_at": "standstill", "own_place_m": 60.0, "queue_piece": "tap",
         "sentence_cap_s": 0.0, "interruption_resume": "auto",
@@ -133,7 +133,7 @@ def test_the_trigger_rides_the_stop_record_and_the_wire():
 
 
 def test_a_priced_queue_rides_the_stop_s_trigger():
-    """S7.5 (design §5.6; W7.2 R2): the seconds of line the planner priced at this stop's
+    """The seconds of line the planner priced at this stop's
     arrival hour ride its trigger, read off THE one map (`Route.planned_queue_seconds`,
     priced at selection's one site) — never a second reading of the queue fields. A stop
     the map does not price carries 0: no line, no queue piece."""
@@ -147,10 +147,9 @@ def test_a_priced_queue_rides_the_stop_s_trigger():
 
 
 def test_the_queue_piece_policy_follows_the_party_and_the_wall():
-    """R2: auto at the first standstill inside the footprint for a solo walker (Théo,
-    Rosemary, Aiko, Paulo, Greta, Sofia, Camille); a screen offer and a TAP for the couple
-    and the family (Fiona & Dev, Nadia); under `wall` no line is priced, so no piece —
-    `none` by construction (Marcus)."""
+    """Auto at the first standstill inside the footprint for a solo walker; a screen
+    offer and a TAP for the couple and the family, whose still phone is a conversation or
+    a sandpit; under `wall` no line is priced, so no piece — `none` by construction."""
     for party in (None, "solo", "take_it_easy", "with_luggage"):
         assert place_day(_input(party)).queue_piece == "auto", party
     for party in ("couple", "family"):
@@ -161,14 +160,13 @@ def test_the_queue_piece_policy_follows_the_party_and_the_wall():
 
 
 def test_the_day_s_policy_carries_the_cap_and_the_resume_rule_not_the_phone():
-    """W7.13 (Fiona & Dev): S7.3's own consequence text promised "per-day policy fields
-    ride the session … decided on the server from the party and the hardness, never a
-    branch the phone invents" — and the built PlacementPolicy carried only start_at /
-    own_place_m / queue_piece, so the R6 sentence cap and the R5 resume rule stayed
-    phone branches on `party`. The policy block now carries both: the cap (8 s; family 0
-    — Nadia cuts at once; a `wall` day 5 — Marcus) and how an interrupted piece resumes
-    (by itself; the COUPLE by their tap — F&D: "we restart when the conversation
-    pauses")."""
+    """Per-day policy fields ride the session, decided on the server from the party and
+    the hardness, never a branch the phone invents. The built PlacementPolicy once carried
+    only start_at / own_place_m / queue_piece, so the sentence cap and the resume rule
+    stayed phone branches on `party`. The policy block now carries both: the cap (8 s;
+    family 0, cut at once; a `wall` day 5) and how an interrupted piece resumes (by
+    itself; the COUPLE by their tap, since a couple restarts when the conversation
+    pauses)."""
     solo = place_day(_input(None))
     assert (solo.sentence_cap_s, solo.interruption_resume) == (8.0, "auto")
     family = place_day(_input("family"))
@@ -179,11 +177,11 @@ def test_the_day_s_policy_carries_the_cap_and_the_resume_rule_not_the_phone():
 
 
 def test_a_door_is_the_plan_s_own_goes_inside_and_an_arcade_is_a_roof():
-    """S7.6 (design §5.6 threshold silence; W7.2 R3, 11/11): a stop is a DOOR when the
+    """Threshold silence: a stop is a DOOR when the
     plan's own visit goes inside (`Route.visit_goes_inside`, the promise shape) and the
     place is not a kind you are IN rather than ENTER — an arcade, a passage, a courtyard
     gate, a garden, a park, a square, a bridge, a street, a market are OUTSIDE, by
-    category never by GPS loss (Aiko). The placed OUTSIDE seconds ride beside it: the
+    category never by GPS loss. The placed OUTSIDE seconds ride beside it: the
     only threshold the phone can see under a roof."""
     chapelle = _poi("chapelle", 30.0).model_copy(update={"place_category": "church"})
     arcade = _poi("arcade", 60.0).model_copy(update={"place_category": "arcade"})
@@ -211,7 +209,7 @@ def test_a_door_is_the_plan_s_own_goes_inside_and_an_arcade_is_a_roof():
 
 
 def test_a_trigger_is_a_closed_shape_this_phase():
-    """`kind` is reserved for the CARRIED line/polygon row (R1 d): a circle needs a
+    """`kind` is reserved for the CARRIED line/polygon row: a circle needs a
     positive radius, nothing else rides on it, and no other kind exists yet."""
     with pytest.raises(ValidationError):
         StopTrigger(radius_m=0)
@@ -224,14 +222,14 @@ def test_a_trigger_is_a_closed_shape_this_phase():
 
 
 # ---------------------------------------------------------------------------
-# Phase 7 S7.7 (B) — THE CHAPTERS of a marquee stop (design §5.6 "segments";
-# W7.2 R4: segments only where a person placed the coordinates, marquee anchors
-# only — Notre-Dame first (D8) — outdoor auto at a standstill, interior by tap,
-# couple/family all taps, never re-triggered). The corpus carries each anchor on
-# the POI (`POI.anchors`, reviewed by hand, with its argument); a stop's STORY is
-# cut at those anchors by THE one rule: a beat whose `sub_location` an anchor
-# names is told AT that anchor, as the anchor's own piece; everything else stays
-# the arrival story. Glue stays with the story. A stop with no anchors is uncut.
+# THE CHAPTERS of a marquee stop (segments only where a person placed the
+# coordinates, marquee anchors only — Notre-Dame first — outdoor auto at a
+# standstill, interior by tap, couple/family all taps, never re-triggered). The
+# corpus carries each anchor on the POI (`POI.anchors`, reviewed by hand, with its
+# argument); a stop's STORY is cut at those anchors by THE one rule: a beat whose
+# `sub_location` an anchor names is told AT that anchor, as the anchor's own piece;
+# everything else stays the arrival story. Glue stays with the story. A stop with no
+# anchors is uncut.
 # ---------------------------------------------------------------------------
 
 from src.tour.contract import Anchor, Script, Sentence, ValidationReport
@@ -270,7 +268,7 @@ def _nd_script(sentences, *, seated):
 
 
 def test_an_anchor_is_a_reviewed_place_on_the_poi_with_its_argument():
-    """R4: only human-placed coordinates; each anchor names the sub-locations it
+    """Only human-placed coordinates; each anchor names the sub-locations it
     stands for, its own radius, whether it is under a roof, and the sentence that
     argues it. A POI without the data has no anchors — the safe default."""
     assert _WEST.radius_m == 45.0 and _WEST.indoor is False and _WEST.basis
@@ -289,15 +287,14 @@ def test_the_story_is_cut_at_the_reviewed_anchors_and_only_there():
     chapter per anchor, sentences in script order; a stop whose POI carries no anchors is
     uncut (its narration is the whole stationary text).
 
-    RE-DERIVED at W7.11 (defect 15), reason written: this test used to assert that the
-    close ALSO stayed in the arrival story of a chaptered stop — `"… The crypt keeps a
-    Roman pillar. And that's Notre-Dame."`. The blind panel found that shape to be the
-    defect, all eleven of them: the goodbye was then said on arrival and the chapter spoke
-    after it. Théo would "take the earbud out and put the phone away"; Marcus: "the goodbye
-    is the last thing said at the last place, or it is not said". The invariant this test
-    exists for — the story loses exactly the chapters' sentences and keeps the rest IN
-    ORDER — is unchanged and still asserted; the close clause is re-derived to the new rule
-    and the uncut case below still pins the Phase 6 shape."""
+    RE-DERIVED, reason written: this test used to assert that the close ALSO stayed in
+    the arrival story of a chaptered stop — `"… The crypt keeps a Roman pillar. And
+    that's Notre-Dame."`. That shape is the defect: the goodbye was then said on arrival
+    and the chapter spoke after it, so a listener stopped listening too early. The
+    goodbye is the last thing said at the last place. The invariant this test exists
+    for — the story loses exactly the chapters' sentences and keeps the rest IN ORDER —
+    is unchanged and still asserted; the close clause is re-derived to the new rule and
+    the uncut case below still pins the uncut shape."""
     beats = {
         "b-open": BeatRef(id="b-open", poi_id="nd"),
         "b-facade": BeatRef(id="b-facade", poi_id="nd", sub_location="facade"),
@@ -344,7 +341,7 @@ def test_the_story_is_cut_at_the_reviewed_anchors_and_only_there():
         "The crypt keeps a Roman pillar."
     ), "a chaptered stop's story ends on its last story sentence, never on its goodbye"
     # The goodbye is not lost — it travels as the stop's own line, and the phone plays it
-    # when the last chapter has been told (S6.4/S6.8's artifact, W7.11 defect 15).
+    # when the last chapter has been told.
     assert stops[0]["close_text"] == "And that's Notre-Dame."
     assert [s["label"] for s in stops[0]["segments"]] == ["The west front", "Inside"]
     assert stops[0]["segments"][0]["narration"] == west.narration

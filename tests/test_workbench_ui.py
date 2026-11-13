@@ -35,7 +35,7 @@ from playwright.sync_api import Page, expect, sync_playwright
 from tests.browser_launch import chromium_launch_options
 
 # ---------------------------------------------------------------------------
-# DOM Selectors — single source of truth (Risk R1 mitigation)
+# DOM Selectors — single source of truth
 # ---------------------------------------------------------------------------
 
 # IDs
@@ -132,7 +132,7 @@ WORKBENCH_URL = (
     f"{(Path(__file__).parent.parent / 'frontend' / 'review.html').resolve().as_uri()}"
     f"?apiPort={WORKBENCH_API_PORT}"
 )
-# New-city onboarding panel (Step 7). Same file:// + ?apiPort= pattern as review.html.
+# New-city onboarding panel. Same file:// + ?apiPort= pattern as review.html.
 ONBOARD_URL = (
     f"{(Path(__file__).parent.parent / 'frontend' / 'onboard.html').resolve().as_uri()}"
     f"?apiPort={WORKBENCH_API_PORT}"
@@ -383,7 +383,7 @@ def _api_delete(path: str) -> dict | list | None:
 def _stubbed_audio_preview(page: Page):
     """Answer ``POST /audio/preview`` inside the BROWSER, and record every ask.
 
-    OWNER RULING 2026-07-31 — no fake audio provider is ever offered to a human.
+    No fake audio provider is ever offered to a human.
     These tests used to press ``page.select_option("#ttsProviderSelect", "mock")``
     to stay $0, which required the API to keep serving a silent-WAV provider that
     the editor's dropdown then listed too. ``src/audio/provider.py`` no longer
@@ -452,8 +452,8 @@ def _stubbed_audio_preview(page: Page):
 # The tour view plans ONE day with a free POST /trips/preview, and its one action,
 # "Run it like the phone", walks the tourist's own endpoints (stubbed in
 # TestWorkbenchRunsThePhonePath). The plan response carries ``options`` as a LIST —
-# of exactly one — because trips persisted before Phase 4 store multi-option lists
-# and the compose reader keeps serving them (deviation i), but no card is picked;
+# of exactly one — because older persisted trips store multi-option lists
+# and the compose reader keeps serving them, but no card is picked;
 # the one day renders. Every stub below answers in the shape the endpoint really
 # returns — a stub that fulfils a shape no endpoint can produce is the same lie as
 # a mock narrator.
@@ -461,7 +461,7 @@ def _stubbed_audio_preview(page: Page):
 # PLAN   POST /trips/preview -> {spine_area, options[1], tourability,
 #                                promises, day_notes, slack_minutes, degradations}
 #
-# The plan reply carries the W4.2 honesty surface (promises / day_notes /
+# The plan reply carries the honesty surface (promises / day_notes /
 # slack_minutes, empty by default), and each stop carries its queue price and
 # door side.
 # ---------------------------------------------------------------------------
@@ -485,7 +485,7 @@ def _option_stop(stop: dict, *, index: int) -> dict:
         "lng": stop.get("lng", 2.3522),
         "lens": None,
         # An explicit visit_or_walk_past wins (a SEATED stop can carry the "vignette"
-        # NARRATION band — Phase 5 W5.1); the old band-derived default stays for
+        # NARRATION band); the old band-derived default stays for
         # every stub that never said.
         "visit_or_walk_past": stop.get(
             "visit_or_walk_past", "walk_past" if band in ("vignette", "leg") else "visit"
@@ -495,7 +495,7 @@ def _option_stop(stop: dict, *, index: int) -> dict:
         "spotlight": stop.get("spotlight", 0.0),
         "narration": stop.get("narration", ""),
         "has_deeper_dive": bool(stop.get("has_deeper_dive", False)),
-        # W4.2 honesty surface: the wire defaults are 0 / null (an unpriced,
+        # Honesty surface: the wire defaults are 0 / null (an unpriced,
         # dateless plan), exactly what RouteOptionStop serializes.
         "queue_minutes": int(stop.get("queue_minutes", 0)),
         "goes_inside": stop.get("goes_inside"),
@@ -512,7 +512,7 @@ def _route_option(stops, *, route_id, eta_seconds=None):
     """
     places = [s for s in stops if s.get("band") != "leg"]
     # Standing-still minutes are every SEATED place's minutes; a walk-past has none.
-    # (A stop's `visit_or_walk_past`, when it says so, beats its band — W5.1.)
+    # (A stop's `visit_or_walk_past`, when it says so, beats its band.)
     dwell_minutes = sum(
         int(s.get("minutes", 0))
         for s in places
@@ -542,10 +542,10 @@ def _route_option(stops, *, route_id, eta_seconds=None):
 def _plan_payload(stops, *, spine_area="Île de la Cité", degradations=None, options=None,
                   tourability=None, promises=None, day_notes=None, slack_minutes=None):
     """The PLAN response: ONE day. ``options`` stays a list — of exactly one —
-    because that is the wire shape (deviation i: stored pre-Phase-4 trips keep
+    because that is the wire shape (stored older trips keep
     the multi-option compose contract, so the field stays a list forever).
 
-    ``promises``/``day_notes``/``slack_minutes`` are the W4.2 honesty surface,
+    ``promises``/``day_notes``/``slack_minutes`` are the honesty surface,
     in the server's own shapes (TripPreviewPromise dicts, PLAIN STRINGS, int):
     empty/null by default exactly as ``TripPreviewResponse`` defaults them."""
     if options is None:
@@ -579,7 +579,7 @@ def _unroute_plan(page):
 def _set_tour_inputs(page, *, start=None, end=None, duration=None):
     """Set the tour form's coordinate/duration inputs WITHOUT firing a replan.
 
-    Since Phase 4 (W4.2 panel) EVERY control change inside ``.tour-preview``
+    EVERY control change inside ``.tour-preview``
     auto-replans the day through a 400ms debounce. ``locator.fill`` marks the
     input dirty, so the change event fires on the next focus move — usually the
     Generate click itself — and a second, debounced POST lands ~400ms after the
@@ -599,7 +599,7 @@ def _set_tour_inputs(page, *, start=None, end=None, duration=None):
 
 
 def _plan_the_day(page, *, timeout=30000):
-    """Click "Plan the day" and wait for THE day to render (design §8.1).
+    """Click "Plan the day" and wait for THE day to render.
 
     One free POST /trips/preview; the reply's ``options[0]`` IS the day and it
     renders immediately — no cards, no pick. Returns the plan response.
@@ -992,7 +992,7 @@ def api_server():
             # double in a test's own subprocess env is the sanctioned opt-in; what
             # was forbidden was getting it without asking.
             "ONBOARD_PROVIDER": "mock",
-            # Step-7 onboarding: point the panel's write + deploy at a module-scoped
+            # Onboarding: point the panel's write + deploy at a module-scoped
             # tmp dir so the London upload->deploy round-trip is HERMETIC — it writes
             # data/london/ + cities.json under the tmp root and NEVER touches the
             # committed data/ or src/cities.json. Harmless to the review.html tests,
@@ -1112,7 +1112,7 @@ def seed_data(api_server):
     def _get_id(data: dict) -> str:
         return data.get("id", data.get("_id", ""))
 
-    # --- Check/Seed Lenses (Risk R4) ---
+    # --- Check/Seed Lenses ---
     resp = _api_get("/nodes/Lens?limit=50")
     # API returns {"items": [...], "total": N} — extract the items list
     if _is_ok(resp) and isinstance(resp, dict) and "items" in resp:
@@ -1219,7 +1219,7 @@ def seed_data(api_server):
         "lens_id_map": lens_id_map,
     }
 
-    # --- Teardown: Clean ALL test data (Risk R3) ---
+    # --- Teardown: Clean ALL test data ---
     # Delete all POIs with "UI Test" prefix
     try:
         resp = _api_get("/nodes/POI?limit=200")
@@ -2302,7 +2302,7 @@ class TestDetailViewAndEditing:
         _take_screenshot(page, "ac11-beat-edit")
 
     def test_the_audio_dropdown_a_human_sees_offers_no_fake_provider(self, browser_page):
-        """OWNER RULING 2026-07-31: the workbench cannot offer a fake voice.
+        """The workbench cannot offer a fake voice.
 
         This is the owner's original complaint, checked where they saw it: in a
         real browser, against a real server. The static ``<select>`` markup is
@@ -2421,8 +2421,8 @@ class TestDetailViewAndEditing:
         must bite); real browser, real click, real fetch, real decode.
 
         The paid synthesis is answered in the browser (``_stubbed_audio_preview``)
-        rather than by selecting a fake provider — the API no longer serves one
-        (OWNER RULING 2026-07-31). The request the page sent is asserted instead,
+        rather than by selecting a fake provider — the API no longer serves one.
+        The request the page sent is asserted instead,
         which is strictly more than the old version proved."""
         page, _seed_data, _reporter = browser_page
 
@@ -2471,7 +2471,7 @@ class TestDetailViewAndEditing:
 
     def test_tour_preview_plans_the_day_with_its_honesty_surface(self, browser_page):
         """Plan the day POSTs /trips/preview, and THE day (options[0]) renders
-        immediately with its honesty surface (W4.2 deviation v — promise names and
+        immediately with its honesty surface (promise names and
         windows, day notes, per-stop "N min wait" queue price and door side, named
         slack) and its one action, "Run it like the phone". The endpoint is stubbed
         in the server's own shape (its API tests cover it; the fixture corpus can't
@@ -2509,7 +2509,7 @@ class TestDetailViewAndEditing:
             )
             assert "2 stops" in panel_text, f"day head missing the place count: {panel_text!r}"
             assert "Nothing has been written or recorded yet" in panel_text
-            # The honesty surface (W4.2 deviation v), from the server's own fields:
+            # The honesty surface, from the server's own fields:
             # the WINDOW and the NOTE are pinned, not just the name.
             assert "Promises: Notre-Dame 10:20-10:25" in panel_text, (
                 f"the promise line must carry its window: {panel_text!r}"
@@ -2621,7 +2621,7 @@ class TestDetailViewAndEditing:
             _unroute_plan(page)
 
     def test_tour_preview_untourable_shows_error(self, browser_page):
-        """Step 4: a 422 from /trips/preview surfaces an error toast (no silent failure)."""
+        """A 422 from /trips/preview surfaces an error toast (no silent failure)."""
         page, _seed_data, _reporter = browser_page
         page.route(
             "**/trips/preview",
@@ -2634,7 +2634,7 @@ class TestDetailViewAndEditing:
         try:
             page.locator("#tourPreviewBtn").click()
             page.wait_for_timeout(300)
-            # .value write, not fill(): a dirty input fires the W4.2 auto-replan
+            # .value write, not fill(): a dirty input fires the auto-replan
             # on blur, and a second debounced request would bleed past unroute().
             _set_tour_inputs(page, start="48.8566,2.3522")
             with page.expect_response(lambda r: r.url.endswith("/trips/preview")) as ri:
@@ -2646,9 +2646,8 @@ class TestDetailViewAndEditing:
             page.unroute("**/trips/preview")
 
     def test_plan_screen_counts_places_not_walks(self, browser_page):
-        """INVARIANT (audit E :2562): a leg is never counted as a stop and never
-        pinned — design §3.1 (promises connected by fabric) + §5.6 ("Legs carry
-        only losable content").
+        """INVARIANT: a leg is never counted as a stop and never pinned. The
+        day is promises connected by fabric, and legs carry only losable content.
 
         A band='leg' card is narration heard while walking, so the plan screen
         shows PLACES ONLY: no walk card, a head that counts the places, and no map
@@ -2705,7 +2704,7 @@ class TestDetailViewAndEditing:
         field.dispatch_event("input")
 
     def test_beat_audio_caches_on_replay(self, browser_page):
-        """INVARIANT (audit E :2631): one press = one paid request. Replaying a
+        """INVARIANT: one press = one paid request. Replaying a
         beat reuses the cached blob (no second /audio/preview), and re-rendering
         the detail view does NOT stack the delegated listener (a stacked one fires
         two fetches per click). One delegated listener + the shared ttsAudioCache
@@ -2757,7 +2756,7 @@ class TestDetailViewAndEditing:
             self._set_beat_script(page, 1, original)
 
     def test_beat_long_narration_plays_untruncated(self, browser_page):
-        """INVARIANT (audit E :2685): the workbench never truncates narration
+        """INVARIANT: the workbench never truncates narration
         client-side. A long script (> the 4096 TTS cap) plays through the chunked
         /audio/preview path and decodes — the page passes the full text.
 
@@ -2792,7 +2791,7 @@ class TestDetailViewAndEditing:
             self._set_beat_script(page, 2, original)
 
     def test_tour_view_then_back_to_poi_restores_workbench(self, browser_page):
-        """Step 6 (seamless): the tour view lives IN the existing detail pane — switching to it and
+        """Seamless: the tour view lives IN the existing detail pane — switching to it and
         back to a normal POI restores the standard workbench detail with no state leak (the tour
         form + tour stops are gone; the POI's beat cards return). Proves it's built as part of the
         workbench, not a bolted-on panel."""
@@ -2819,10 +2818,9 @@ class TestDetailViewAndEditing:
         _take_screenshot(page, "step6-tour-back-to-poi")
 
     def test_tour_preview_ab_destination_sends_end_and_renders(self, browser_page):
-        """INVARIANT (audit E :2753): an optional End pin is sent to the planner and
-        the route ends there — design §2.1 ("End point | Optional pin | Exists in
-        the API (TourInput.end)") + §2.3. Rewritten for the one-day surface (S4.8,
-        design §8.1): the plan reply's ONE day renders immediately, so the
+        """INVARIANT: an optional End pin (TourInput.end) is sent to the planner
+        and the route ends there. Rewritten for the one-day surface: the plan
+        reply's ONE day renders immediately, so the
         destination is asserted on the plan screen — nothing needs to be written
         to see where the day ends. /trips/preview mocked (the engine path is unit-
         + API-tested; the test DB can't produce a real tour) — the
@@ -2877,7 +2875,7 @@ class TestDetailViewAndEditing:
             page.unroute("**/trips/preview")
 
     def test_tour_preview_ab_infeasible_shows_alternatives(self, browser_page):
-        """A→B over budget: the Step-2.6 structured 422 renders readable loop/extend/closer_b
+        """A→B over budget: the structured 422 renders readable loop/extend/closer_b
         alternatives in the stops area — never a raw JSON dump."""
         page, _seed_data, _reporter = browser_page
         page.route(
@@ -2904,7 +2902,7 @@ class TestDetailViewAndEditing:
         try:
             page.locator("#tourPreviewBtn").click()
             page.wait_for_timeout(300)
-            # .value writes, not fill(): a dirty input fires the W4.2 auto-replan
+            # .value writes, not fill(): a dirty input fires the auto-replan
             # on blur, and a second debounced request would bleed past unroute().
             _set_tour_inputs(page, start="48.8566,2.3522", end="48.8606,2.3376")
             with page.expect_response(lambda r: r.url.endswith("/trips/preview")) as ri:
@@ -2927,9 +2925,8 @@ class TestDetailViewAndEditing:
             page.unroute("**/trips/preview")
 
     def test_tour_preview_vignette_renders_tag_and_hollow_pin(self, browser_page):
-        """INVARIANT (audit E :2907): a walk-past sight renders as a walk-past —
-        tag, 0 min, distinct hollow pin — never as a stop — design §5.6 ("colour,
-        walk-past one-liners"). The plan screen tags the card "walk past", counts
+        """INVARIANT: a walk-past sight renders as a walk-past —
+        tag, 0 min, distinct hollow pin — never as a stop. The plan screen tags the card "walk past", counts
         it separately in the day head ("1 walk-past sight") and pins it hollow.
         Dwell stops are unchanged."""
         page, _seed_data, _reporter = browser_page
@@ -2979,14 +2976,13 @@ class TestDetailViewAndEditing:
         """A stop the planner SEATED — with real minutes — is a stop on the screen,
         whatever narration band its spotlight earned.
 
-        Phase 5 W5.1 (phase5-ledger.md, measured on the live wire): the wire's ``band``
-        is the NARRATION tier ``band_for_spotlight`` assigns ("vignette" = one line as
-        you pass), and a seated stop with a low spotlight carries it WITH minutes —
-        Rosemary's 8-minute Bench (05-step-free-visitor.md:25-27, "The bench is a
-        stop. It has a location, a duration, and content — it simply is not a sight")
-        and a 5-minute stand outside the Orangerie. Walked past vs stopped at is
-        ``visit_or_walk_past``, the field that says so (design §3.1: a rest is a stop;
-        §1.1 truth 1: standing still is most of the day).
+        Measured on the live wire: the wire's ``band`` is the NARRATION tier
+        ``band_for_spotlight`` assigns ("vignette" = one line as you pass), and a
+        seated stop with a low spotlight carries it WITH minutes — an 8-minute
+        Bench for a visitor who needs to sit (a bench has a location, a duration
+        and content; it simply is not a sight) and a 5-minute stand outside the
+        Orangerie. Walked past vs stopped at is ``visit_or_walk_past``, the field
+        that says so (a rest is a stop; standing still is most of the day).
 
         UNDO: make ``isWalkPast`` in review.html read ``s.band === 'vignette'`` again
         → the head says "2 stops · 1 walk-past sight" for a 3-stop day and the Bench
@@ -3058,7 +3054,7 @@ class TestDetailViewAndEditing:
         assert page.locator(".tour-route-pin").count() == 0, "route pins should be cleared"
 
     def test_tour_map_click_sets_start_end_and_clear_resets(self, browser_page):
-        """Track B Step B.6: with the Tour Preview view open, the 1st persistent-map click
+        """With the Tour Preview view open, the 1st persistent-map click
         fills #tourStart (5-decimal lat,lng) + drops a start pin, the 2nd fills #tourEnd +
         a destination pin; 'Clear points' resets both inputs and pins (open walk). Clicks
         outside the tour view never drop tour pins (guard on the active view)."""
@@ -3110,7 +3106,7 @@ class TestDetailViewAndEditing:
         _take_screenshot(page, "b6-map-click-cleared")
 
     def test_tour_generate_sends_clicked_coords(self, browser_page):
-        """Track B Step B.6: after click-setting start + destination, Generate POSTs exactly
+        """After click-setting start + destination, Generate POSTs exactly
         the clicked coordinates (center_lat/lng from the 1st click, end_lat/lng from the 2nd)."""
         page, _seed_data, _reporter = browser_page
         self._clear_tour_route_pins(page)
@@ -3160,7 +3156,7 @@ class TestDetailViewAndEditing:
         _take_screenshot(page, "b6-generate-uses-clicked-coords")
 
     def test_four_dial_turns_each_replan_the_day(self, browser_page):
-        """W4.2 panel; design §9 Phase 4 demo D5: turn a dial and the day re-plans
+        """Turn a dial and the day re-plans
         itself — no Generate press, no pick, no second surface.
 
         Four dial turns, driven through REAL change events (this is the one test
@@ -3170,7 +3166,7 @@ class TestDetailViewAndEditing:
         stored plan body — and the day must re-render from the reply. Dials
         accumulate (one body), so each turn's body also still carries every
         earlier turn's field. The identical stubbed day coming back also proves
-        the dead-notch honesty line ("already true of this day", W4.2 D-v) renders
+        the dead-notch honesty line ("already true of this day") renders
         on a turn that changed nothing about the day itself."""
         page, _seed_data, _reporter = browser_page
         bodies: list[dict] = []
@@ -3214,7 +3210,7 @@ class TestDetailViewAndEditing:
                 with page.expect_response(lambda r: r.url.endswith("/trips/preview")):
                     page.select_option(selector, value)
                 page.wait_for_timeout(200)
-                # Dead-notch honesty (W4.2 D-v), read FIRST because the note
+                # Dead-notch honesty, read FIRST because the note
                 # self-removes after ~2.5s: the stub returns the identical day, so
                 # a turn that changed nothing about the day must say so instead of
                 # pretending it did something.
@@ -4884,7 +4880,7 @@ class TestDefectRegressions:
 
 
 # ---------------------------------------------------------------------------
-# Test: New-city onboarding panel (Step 7) — real-browser end-to-end proof
+# Test: New-city onboarding panel — real-browser end-to-end proof
 # ---------------------------------------------------------------------------
 
 
@@ -5173,7 +5169,7 @@ class TestRealTourGeneration:
     """The one test in this file that lets the real engine plan the workbench's day."""
 
     def test_workbench_plans_a_real_day_unstubbed(self, browser_page, tourable_corpus):
-        """INVARIANT (audit E :5234): the workbench really plans a day from the
+        """INVARIANT: the workbench really plans a day from the
         seeded corpus, unstubbed, and the seeded names appear on screen. Press
         "Plan the day" and let the real endpoint answer — no route interception —
         then read THE day off the wire and off the screen (the plan reply carries
@@ -5219,7 +5215,7 @@ class TestRealTourGeneration:
         page.locator("#citySubmitBtn").click()
         page.locator("#tourPreviewBtn").click()
 
-        # Direct .value writes (no change events): a dirty input fires the W4.2
+        # Direct .value writes (no change events): a dirty input fires the
         # auto-replan on blur, and a second in-flight plan request against the
         # REAL engine would race every assertion below.
         _set_tour_inputs(page, start="48.852966,2.349902", duration=60)

@@ -1,11 +1,11 @@
-"""Phase 3 Step 3.1 — pure spotlight() scoring (gravity x lens_relevance x proximity).
+"""Pure spotlight() scoring (gravity x lens_relevance x proximity).
 
 These test the ADDITIVE pure functions only. They must NOT depend on (and must
-not change) select_route's selection: Step 3.1 leaves the tier/lens gates in
-place (re-frozen at Step 3.5). The end=None identity baseline lives in
+not change) select_route's selection: the tier/lens gates stay in
+place. The end=None identity baseline lives in
 tests/test_tour_selection.py and is untouched here.
 
-The spec contract (ALGORITHM-SPEC.md §3):
+The scoring contract:
   spotlight(poi) = gravity(tier) x lens_relevance(poi, lenses) x proximity(detour)
   - gravity ∝ importance_tier (monotonic in 1..5)
   - lens_relevance = 1.0 direct | 0.6 parent/child 1-hop | LENS_FLOOR(0.25) miss
@@ -149,7 +149,7 @@ def test_lens_relevance_one_hop_is_point_six_both_directions():
 
 
 def test_lens_relevance_miss_is_floor_not_zero():
-    """A thematic miss DIMS to LENS_FLOOR (0.25) — it never zeroes (§3)."""
+    """A thematic miss DIMS to LENS_FLOOR (0.25) — it never zeroes."""
     p = _poi("p")
     snap = _snap(
         [p],
@@ -226,7 +226,7 @@ def test_proximity_strictly_decreasing_in_detour():
 
 def test_proximity_never_zeroes():
     # Even a huge detour keeps a positive (if tiny) factor — proximity alone
-    # never silences a POI (the §3 silence invariant).
+    # never silences a POI (the silence invariant).
     assert proximity(36_000.0) > 0.0
 
 
@@ -242,7 +242,7 @@ def test_proximity_clamps_negative_detour_to_one():
 
 
 # ---------------------------------------------------------------------------
-# spotlight — the product, and the §3 invariants
+# spotlight — the product, and the silence invariants
 # ---------------------------------------------------------------------------
 
 
@@ -262,7 +262,7 @@ def test_spotlight_is_product_of_the_three_factors():
 
 def test_spotlight_lens_miss_dims_but_never_zeroes():
     """A lens miss multiplies in LENS_FLOOR, dimming the score — but a real POI
-    on the path still has a STRICTLY POSITIVE spotlight (§3: lens alone never
+    on the path still has a STRICTLY POSITIVE spotlight (lens alone never
     silences). Compared to a direct hit, the miss is exactly LENS_FLOORx lower."""
     miss_poi = _poi("miss", tier=5)
     hit_poi = _poi("hit", tier=5)
@@ -282,7 +282,7 @@ def test_spotlight_lens_miss_dims_but_never_zeroes():
 
 
 def test_spotlight_high_gravity_miss_beats_low_gravity_hit():
-    """§3: a tier-5 off-genre landmark still out-spotlights a tier-1 on-genre
+    """A tier-5 off-genre landmark still out-spotlights a tier-1 on-genre
     footnote at the same proximity (5 x 0.25 = 1.25 > 1 x 1.0). Gravity can
     rescue an off-genre landmark from silence — the only silence is low-gravity
     AND off-genre."""
@@ -337,12 +337,12 @@ def test_spotlight_no_lens_uses_uniform_relevance():
 
 
 # ---------------------------------------------------------------------------
-# Step 3.2 — band_for_spotlight: spotlight -> headline/full/short/vignette/silent
+# band_for_spotlight: spotlight -> headline/full/short/vignette/silent
 # ---------------------------------------------------------------------------
 #
 # The thresholds are lower-inclusive cut points on the spotlight score
 # (BAND_THRESHOLD_*). For a high-tier POI (tier >= BAND_LANDMARK_TIER) the
-# §3 silence invariant floors the band at vignette regardless of score.
+# silence invariant floors the band at vignette regardless of score.
 
 
 def test_band_thresholds_are_ordered_and_positive():
@@ -396,7 +396,7 @@ def test_band_full_ladder_via_real_spotlight_scores():
         score = spotlight(p, lenses=frozenset({"history"}), snapshot=s)
         return band_for_spotlight(score, tier=tier)
 
-    # Step-3.5 calibrated cuts: headline >=5, full >=4, short >=3 (dwell floor),
+    # Calibrated cuts: headline >=5, full >=4, short >=3 (dwell floor),
     # vignette >=0.5, else silent (tier>=4 landmark floored at vignette).
     # tier-5 direct (5.0) -> headline.
     assert band(5, "history") == BAND_HEADLINE
@@ -418,7 +418,7 @@ def test_band_full_ladder_via_real_spotlight_scores():
 
 
 def test_silence_invariant_high_gravity_off_genre_is_not_silent():
-    """§3 invariant: a high-gravity off-genre landmark clears to at least
+    """Silence invariant: a high-gravity off-genre landmark clears to at least
     vignette -- lens alone never silences it, and even a huge proximity detour
     that drives its score below the silent cut must NOT make it silent."""
     # tier-5 off-genre on-path (score 1.25) is a vignette (a brief mention) --
@@ -433,7 +433,7 @@ def test_silence_invariant_high_gravity_off_genre_is_not_silent():
 
 
 def test_silence_invariant_low_gravity_off_genre_is_silent():
-    """§3 invariant, other half: a genuinely low-gravity off-genre POI (its
+    """Silence invariant, other half: a genuinely low-gravity off-genre POI (its
     score fell below the vignette cut) IS silent -- that is the ONLY silence."""
     # tier-1 off-genre miss = 0.25 < BAND_THRESHOLD_VIGNETTE -> silent.
     miss_score = 1.0 * LENS_FLOOR

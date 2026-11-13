@@ -29,13 +29,13 @@ DATA_ROOT = REPO_ROOT / "data"
 # framing); lat/lng (compared with tolerance further down).
 STRICT_FIELDS = ("importance_tier",)
 
-# `trigger_radius` joined the strict set at Phase 7 S7.4 (design §5.6 C7) for every
+# `trigger_radius` joined the strict set for every
 # city whose footprint pass has run: poi-raw.json is the canonical record, the pass
 # (scripts/poi_trigger_radius.py) writes it there and the export sync carries it
 # (SYNCED_FIELDS), so the 19 Paris entries that had drifted (Notre-Dame export 100 /
 # raw 10; Luxembourg 100 / 390) can never come back. A city not yet through the pass
 # keeps the looser check — the allow-list says which. New York's own
-# normalise-then-sync job HAS now run (Phase 8 S8.7): 15 of its 34 chunks had been
+# normalise-then-sync job HAS now run: 15 of its 34 chunks had been
 # committed at 1-space indent, which the one serialiser refuses to rewrite, and all
 # 34 are byte-faithful and fully synced since — see
 # test_export_chunks_are_byte_faithful_to_the_serialiser below. What still holds New
@@ -196,8 +196,8 @@ def test_export_sync_carries_every_field_the_passes_write() -> None:
     (`SYNCED_FIELDS`; the passes' trailer messages deliberately do not restate
     it). This test derives, from each pass script's own source, the set of
     fields it writes (`poi["<field>"] = ...`) and fails the moment a pass
-    starts writing a field the sync would not carry — the exact gap that made
-    W1.8 need a scratch sync script in the first place.
+    starts writing a field the sync would not carry — the exact gap that once
+    needed a scratch sync script.
 
     Hop-style source scan (the `test_golden_diff_cli_reads_the_durable_key`
     genre): import the module for real first, so a script that raises on
@@ -214,7 +214,7 @@ def test_export_sync_carries_every_field_the_passes_write() -> None:
         "poi_visit_duration.py",  # visit-capacity trio
         "poi_opening_hours.py",  # opening-hours trio
         "poi_place_category.py",  # place_category
-        "poi_queues.py",  # queue quintet (row 6.5)
+        "poi_queues.py",  # queue quintet
     )
     assignment = re.compile(r'\bpoi\["([a-z_]+)"\]\s*=')
     written: set[str] = set()

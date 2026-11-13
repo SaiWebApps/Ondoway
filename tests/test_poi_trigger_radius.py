@@ -1,21 +1,21 @@
 """Structural guard on the per-POI FOOTPRINT — `trigger_radius` — in `data/{city}/poi-raw.json`
-and on the three closed hops that carry it to the planner (Phase 7 S7.4; design §5.6 C7;
-W7.2 R1).
+and on the three closed hops that carry it to the planner.
 
 `trigger_radius` (int, metres) is how far from the pin a walker is AT the place: the
-audio placement rule (src/tour/placement.py, S7.3) puts it on the wire and the phone's one
+audio placement rule (src/tour/placement.py) puts it on the wire and the phone's one
 predicate reads it. The corpus has carried it on every Paris record since the first
-upload and NOTHING read it (plan defect 1): the phone drew one 10 m circle for a 140 m
-square and a doorway alike. S7.4 carries the field through the loader's two silent hops
-and sizes the 177 records still at the uploader's default by PLACE KIND (one table,
-`scripts/geocode_pois.py::FOOTPRINT_BY_KIND`), with the marquees and the eleven personas'
-stops reviewed by name (`scripts/poi_trigger_radius.py::REVIEWED`, a basis sentence each).
+upload and NOTHING read it: the phone drew one 10 m circle for a 140 m square and a
+doorway alike. The field now travels through the loader's two silent hops, and the 177
+records still at the uploader's default are sized by PLACE KIND (one table,
+`scripts/geocode_pois.py::FOOTPRINT_BY_KIND`), with the marquees and every stop of the
+eleven sample visitor days reviewed by name (`scripts/poi_trigger_radius.py::REVIEWED`,
+a basis sentence each).
 
 This file checks STRUCTURE and the reviewed precedents, for the reason every sibling
 guard records (`tests/test_poi_queues.py`, `tests/test_poi_visit_duration.py`): nobody
 in this repo can pace out every square; the kind table plus the named review is the
 mechanism for wrong-but-well-formed numbers. The precedents pinned below are the places
-the W7.2 panel named in their own words, so a silent re-default of one of them is caught.
+a review named in its own words, so a silent re-default of one of them is caught.
 
 ALLOW-LIST MECHANICS: per-city checks loop IN-BODY over the tuple (parametrizing over an
 empty tuple skips, and the suite hard-errors on skips). Runs in milliseconds, no database.
@@ -47,25 +47,23 @@ FLOOR_BY_KIND: dict[str, int] = {
 FOOTPRINT_MIN_M = 8
 FOOTPRINT_MAX_M = 500
 
-#: The W7.2 panel's own places, in their own numbers (phase7-ledger.md R1/R4 and the
-#: reviewed table's basis sentences). Pinned so a re-run of any pass cannot silently hand
+#: The places a review named, in its own numbers (the reviewed table's basis
+#: sentences). Pinned so a re-run of any pass cannot silently hand
 #: them back to the uploader's default.
 PANEL_PRECEDENTS: dict[str, int] = {
-    "Place des Vosges": 70,  # Nadia: 140 m across, the arcade seventy from the statue
-    "Notre-Dame Cathedral": 100,  # the parvis west of the façade; Camille's pin check
-    "Louvre Museum": 120,  # Greta/Aiko: the Cour Napoléon and the Cour Carrée
-    "Musee d'Orsay": 60,  # Rosemary: the forecourt and her bench
-    # Greta: the garden, the columns, no. 177 — the W7.2 row said 100, but the pin
-    # sits at the palace forecourt and the garden the panel itself named runs 275 m
-    # behind it, so 100 never actually reached her garden. Re-ruled 300 with the
-    # reviewed anchors carrying "right here" (Phase 9 decisions: "'right here' is
-    # earned by standing near the thing, never by crossing the edge of a
-    # five-hundred-metre disc" — the footprint places arrival, the anchors place
-    # the words; the Père-Lachaise 500 is the precedent).
+    "Place des Vosges": 70,  # 140 m across, the arcade seventy from the statue
+    "Notre-Dame Cathedral": 100,  # the parvis west of the façade; a pin check
+    "Louvre Museum": 120,  # the Cour Napoléon and the Cour Carrée
+    "Musee d'Orsay": 60,  # the forecourt and a bench
+    # The garden, the columns, no. 177. The pin sits at the palace forecourt and the
+    # garden runs 275 m behind it, so a 100 m footprint never reached the garden; it
+    # is 300. The footprint places arrival; the reviewed anchors carry "right here",
+    # which is earned by standing near the thing, never by crossing the edge of a
+    # five-hundred-metre disc. The Père-Lachaise 500 is the precedent.
     "Palais-Royal": 300,
-    "Place de la Concorde": 120,  # Théo: three positions on a 360 m square
-    "Pont Neuf": 120,  # Théo/F&D/Sofia: the bridge's half-length from the Vert-Galant
-    "Pere Lachaise Cemetery": 500,  # Julien: the walls, kept
+    "Place de la Concorde": 120,  # three positions on a 360 m square
+    "Pont Neuf": 120,  # the bridge's half-length from the Vert-Galant
+    "Pere Lachaise Cemetery": 500,  # the walls, kept
 }
 
 
@@ -97,7 +95,7 @@ REMEDY = "Run the footprint pass: `make poi-trigger-radius SLUG=<city>`, then th
 
 
 def test_the_kind_table_covers_the_closed_vocabulary_with_honest_footprints() -> None:
-    """ONE table, keyed by the closed place-category vocabulary (redesign 6.7), every
+    """ONE table, keyed by the closed place-category vocabulary, every
     value inside the absurdity bounds and at or above its kind's floor."""
     from scripts.geocode_pois import FOOTPRINT_BY_KIND
     from scripts.poi_place_category import PLACE_CATEGORIES
@@ -110,7 +108,7 @@ def test_the_kind_table_covers_the_closed_vocabulary_with_honest_footprints() ->
 
 
 def test_trigger_radius_for_reads_the_kind_first_and_the_name_only_without_one() -> None:
-    """The one footprint function EXTENDED (plan S7.4): with a place kind it answers from
+    """The one footprint function EXTENDED: with a place kind it answers from
     the kind table; without one it keeps its name-token answer (the New York corpus has no
     kinds yet). RED by mutation: ignore `place_category` -> the garden answers 15."""
     from scripts.geocode_pois import FOOTPRINT_BY_KIND, trigger_radius_for
@@ -127,7 +125,7 @@ def test_trigger_radius_for_reads_the_kind_first_and_the_name_only_without_one()
 
 def test_the_reviewed_table_argues_every_row_and_holds_the_panel_s_places() -> None:
     """Every reviewed footprint ships with the sentence that argues it (the `*_basis`
-    precedent), sits inside the bounds, and the panel's named places are in it."""
+    precedent), sits inside the bounds, and the places a review named are in it."""
     from scripts.poi_trigger_radius import REVIEWED
 
     for name, (metres, basis) in REVIEWED.items():
@@ -158,7 +156,7 @@ def test_every_poi_carries_an_integer_footprint_inside_the_bounds() -> None:
 
 def test_no_poi_sits_at_the_uploader_s_default_after_the_pass() -> None:
     """Presence check — the pass ran: the uploader's 10 m default marks an unreviewed
-    record, and 177 of 370 Paris records sat at it before S7.4 (the Louvre among them)."""
+    record, and 177 of 370 Paris records sat at it before the pass (the Louvre among them)."""
     for city in CITIES_WITH_FOOTPRINTS:
         offenders = [
             f"{_name(p)} ({p.get('place_category') or 'uncategorised'})"
@@ -172,7 +170,7 @@ def test_no_poi_sits_at_the_uploader_s_default_after_the_pass() -> None:
 def test_a_place_you_are_in_is_never_a_doorway() -> None:
     """A garden, a park, a bridge, an arcade, a market, a square or a street has a
     footprint at or above its kind's floor — the Place des Vosges at 10 m is the defect
-    the W7.2 panel ruled on (R1, 11/11)."""
+    this guards against."""
     for city in CITIES_WITH_FOOTPRINTS:
         offenders = []
         for poi in _pois(city):

@@ -69,7 +69,7 @@ def _fake_registry() -> dict[str, dict]:
 def test_every_launch_city_carries_its_country_and_the_accessor_refuses_a_city_without_one(
     monkeypatch,
 ) -> None:
-    """Opening hours are read in the city's own country (Docs/adr/0006): ``PH``
+    """Opening hours are read in the city's own country: ``PH``
     in a place's hours means THAT country's public holidays. The committed
     registry carries a two-letter country for every city, the accessor hands it
     back, and a city with none is refused in plain words — never defaulted,

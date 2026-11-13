@@ -189,20 +189,20 @@ def test_launchers_kill_only_listening_sockets(tmp_path) -> None:
         )
         output = result.stdout + result.stderr
 
-        # AC-1: the listener PID is in the selected set and gets terminated.
+        # The listener PID is in the selected set and gets terminated.
         deadline = time.time() + 5
         while time.time() < deadline and _alive(listener):
             time.sleep(0.1)
         assert not _alive(listener), "the LISTEN-state process must be killed"
 
-        # AC-2 / AC-3: a process whose only socket on the port is client-side
+        # A process whose only socket on the port is client-side
         # (ESTABLISHED here — the same defect class as the CLOSED sockets a real
         # Claude-desktop client left behind) is never signalled.
         assert _alive(client), (
             "a client/ESTABLISHED socket on the port must never be signalled"
         )
 
-        # AC-5: the PID and command name are printed before signalling — not a
+        # The PID and command name are printed before signalling — not a
         # silent kill. The script's own `ps` may fail (macOS Developer Tool TCC)
         # and fall back to "(unknown)", which is acceptable — the kill still works.
         assert str(listener.pid) in output, "must print the killed PID"
@@ -247,7 +247,7 @@ def test_launchers_kill_only_listening_sockets(tmp_path) -> None:
 # --- A persisted-trip-shaped fixture, deliberately local to this file. -------------
 # It is NOT imported from tests/test_tour_authoring_from_route.py even though that
 # module has an equivalent one today: that module exists to exercise
-# ``author_prebuilt_route``/``plan_prebuilt_route_authoring``, which AC-11 deletes, so
+# ``author_prebuilt_route``/``plan_prebuilt_route_authoring``, which are due for deletion, so
 # importing across would tie this pin's life to a module scheduled for removal.
 
 
@@ -394,7 +394,7 @@ def _plan_kwargs() -> dict[str, object]:
 
 
 # --------------------------------------------------------------------------
-# Phase 4 S4.3 — BLOCK 1 plans ONE day, and planning is genuinely free
+# BLOCK 1 plans ONE day, and planning is genuinely free
 # --------------------------------------------------------------------------
 
 _BLOCK_ONE_BASE = (48.8568, 2.3414)
@@ -490,11 +490,10 @@ def _snapshot_for(routes):
 
 
 def test_block_one_plans_one_priced_free_day(monkeypatch) -> None:
-    """Phase 4 S4.3 (design §8.1) — ONE day, no provider, no prose.
+    """ONE day, no provider, no prose.
 
-    §8.1: "the product stops offering three routes" — no persona ever wanted to
-    compare routes, and the W4.2 panel (2026-08-11, all eleven) ruled the same
-    way from the real tables: the product plans THE day, and the dials on the
+    The product stops offering three routes: no visitor wants to compare
+    routes. The product plans THE day, and the dials on the
     request are how a person changes it. Block 1 is therefore ``plan_premium_tour``
     itself: ONE ``select_route`` call, the container-identity refusal kept, and
     no K-flavour machinery anywhere in the module.
@@ -515,8 +514,8 @@ def test_block_one_plans_one_priced_free_day(monkeypatch) -> None:
     from tests.test_trip_preview_contract import _FakeRoutingClient
 
     # 1. STRUCTURAL: the one-day entry plans via select_route, and the K-flavour
-    #    selector is gone from the module entirely (S4.5 deletes its definition;
-    #    this module may not even name it).
+    #    selector is gone from the module entirely (this module may not even
+    #    name it).
     module_source = inspect.getsource(premium_tour)
     entry = inspect.getsource(premium_tour.plan_premium_tour)
     assert "select_route(" in entry, "plan_premium_tour is not the one-day planner"
@@ -578,7 +577,7 @@ def test_block_one_plans_one_priced_free_day(monkeypatch) -> None:
     # 5. A start with no end plans through without a 4xx-shaped failure.
     assert tour_input.end is None
 
-    # 6. A ROUND TRIP plans through the premium gate (W4.10's live finding:
+    # 6. A ROUND TRIP plans through the premium gate (a live finding:
     #    the leg-per-stop sanity check refused every round trip, because the
     #    loop-home leg makes legs == stops + 1 — the shape _prebuilt in this
     #    very file has always declared).

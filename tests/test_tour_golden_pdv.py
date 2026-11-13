@@ -36,13 +36,12 @@ FIXTURE_PATH = (
 OVERLAP_TARGET = 0.90
 # AN ABSOLUTE HIT COUNT, NOT A RATIO — see the longer note in test_tour_golden_ile.py.
 #
-# THIS FLOOR WENT DOWN, from 5 required hits to 3. It is the weakest number in this
-# ledger and the one to argue with.
+# THIS FLOOR WENT DOWN, from 5 required hits to 3. It is the weakest golden floor and
+# the one to argue with.
 #
 # A PREVIOUS VERSION OF THIS COMMENT DEFENDED IT WITH A FALSEHOOD — that 27.8% "was never
 # met and never could be". A hostile review refuted that from the repo's own records: this
-# gate was live and PASSING at PdV 12/18 = 66.7% (2026-06-13,
-# specs/2026-06-13-tour-planner-canonical/GOLDEN-GAP-DIAGNOSTIC.md) and 10/18 = 55.6%
+# gate was live and PASSING at PdV 12/18 = 66.7% (2026-06-13) and 10/18 = 55.6%
 # after the pace pin (tests/test_tour_beat_select.py). The bar was earned, twice. Anyone
 # reading this must not repeat the retracted claim.
 #
@@ -55,7 +54,7 @@ OVERLAP_TARGET = 0.90
 # against the corpus. The measurements are not comparable, and the honest move is to say
 # so rather than to claim the gate never worked.
 #
-# THE NUMBER IS 4, NOT 85% OF 4. Decision D6 says 'floor = 85% of the measurement', which
+# THE NUMBER IS 4, NOT 85% OF 4. The rule 'floor = 85% of the measurement'
 # is right for Ile (85% of 18 = 15, tolerating a 3-hit regression) but DEGENERATES at n=4:
 # 85% of 4 rounds to 3, i.e. a floor that shrugs at a 25% regression on a 4-hit
 # measurement. A judge consult flagged it as near-vacuous, and there is no headroom to
@@ -71,15 +70,14 @@ OVERLAP_TARGET = 0.90
 # Musee Carnavalet and Hotel de Sully; all 17 misses are arcade addresses at that one
 # square. MAX_DWELL_AUDIO_SECONDS=270 caps one stop near 675 words, so a 21-beat
 # single-square walk is not a tour this engine can build. Closing the gap means teaching
-# it sub-location stops — the same standing-position-vs-POI question decision D4 rules on
-# for C8 — NOT moving this number.
+# it sub-location stops (a standing position inside one POI), NOT moving this number.
 #
-# RE-DERIVED AT W8.6 (2026-08-24), 4 -> 3, and the PINNED SET IS UNCHANGED AT 21.
+# RE-DERIVED (2026-08-24), 4 -> 3, and the PINNED SET IS UNCHANGED AT 21.
 # Every one of the 18 misses sits at Place des Vosges ITSELF — the square the day
 # does seat — so none is structurally unreachable and none is removed: they are the
 # per-stop audio ceiling (MAX_DWELL_AUDIO_SECONDS = 180 s, ~450 beat words) meeting a
 # 21-address single-square document, exactly the gap the paragraph above describes.
-# What changed is the DAY: before W8.6 this request served Place de la Bastille, 12
+# What changed is the DAY: before 2026-08-24 this request served Place de la Bastille, 12
 # minutes' walk away, and said nothing about the square underfoot (overlap 0/21). The
 # planner fix (the under-fill choice ranks by story value, not by walking) put the
 # square back, and the fresh measurement of OUTPUT is 3. The floor IS the measurement
@@ -131,8 +129,8 @@ def _generated_beat_ids(snapshot, fixture):
     with RoutingClient() as routing_client:
         route = select_route(tour_input, snapshot, routing_client=routing_client)
     assert_walk_was_routed(route, golden="PdV")
-    # C9b golden-harness fidelity: route through the shipped build path so the
-    # goldens merge co-located demoted_beats like production (diagnostic R2).
+    # Golden-harness fidelity: route through the shipped build path so the
+    # goldens merge co-located demoted_beats like production.
     seq = BeatSequence(
         poi_beats=tuple(
             pb

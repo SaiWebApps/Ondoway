@@ -4,12 +4,10 @@ Every other routing double in this repo — ``_DeterministicRoutingClient``
 (tests/test_tour_b_materialization.py) and ``_FakeRoutingClient``
 (tests/test_trip_preview_contract.py) — is DEFINED to make the street-routed
 number equal the pace-corrected haversine, so the planner's estimate and its exact
-legs agree by construction and no test can tell them apart (plan
-04-implementation-plan.md, Phase-5 read evidence; measured live at W5.1 (b)1: the
+legs agree by construction and no test can tell them apart (measured live, the
 gap runs -187 s to +285 s per leg on real Paris streets and flips sign by
 neighbourhood). Editing those doubles in place would silently re-point every suite
-that imports them, so this file is the home for a double that diverges on purpose
-(Phase 5 S5.4, Extends field).
+that imports them, so this file is the home for a double that diverges on purpose.
 
 ``DivergentRoutingClient`` answers the planner's TWO questions differently, the way
 a stale or differently-costed leg pricing would: ``leg_seconds`` (what selection

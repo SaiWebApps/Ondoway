@@ -1,4 +1,4 @@
-"""M7 VERIFY — rapidfuzz provenance + faithfulness entailment. Hermetic.
+"""VERIFY — rapidfuzz provenance + faithfulness entailment. Hermetic.
 
 PROVE: a beat whose source_passage is verbatim in its chunk passes; a
 fabricated/wrong-chunk passage fails with its score; beats without
@@ -174,7 +174,7 @@ def test_keyless_beat_with_body_is_gated_against_its_script_body():
 
 
 # ---------------------------------------------------------------------------
-# Reflections (Phase 4 Step 4.2) — fail-closed against VISITED key_claims
+# Reflections — fail-closed against VISITED key_claims
 # ---------------------------------------------------------------------------
 
 
@@ -187,12 +187,11 @@ def _beat_sentence(bid: str, stop_idx: int, text: str = "A beat sentence.") -> S
 
 
 def test_the_thread_entails_against_visited_claims_plus_its_own_stops_beats():
-    """RE-DERIVED for Phase 6 S6.5 (design §5.4; W6.2 R5): the GLUE_REFLECTION slot
-    holds THE THREAD — one sentence binding THIS stop to the walk through ONE fact of
-    this stop, never a recap. Its support is therefore what the walker has heard PLUS
-    the arriving stop's own beats; under Phase 4's visited-only window the thread's
-    defining fact was inadmissible by construction. UNDO: drop the own-stop half of
-    the support -> RED (the union below loses b3's claim and body)."""
+    """The GLUE_REFLECTION slot holds THE THREAD — one sentence binding THIS stop to
+    the walk through ONE fact of this stop, never a recap. Its support is therefore
+    what the walker has heard PLUS the arriving stop's own beats; under a visited-only
+    window the thread's defining fact would be inadmissible by construction. UNDO: drop
+    the own-stop half of the support -> RED (the union below loses b3's claim and body)."""
     b1 = _beat("b1", key_claims=("Henri IV built it", "completed 1612"))
     b2 = _beat("b2", key_claims=("Hugo lived at number 6",))
     b3 = _beat("b3", key_claims=("the same tribunal sat here",), script_body="Body three.")
@@ -226,9 +225,9 @@ def test_unfaithful_reflection_is_flagged():
 
 
 def test_a_threads_own_stops_facts_are_admissible_support():
-    """RE-DERIVED for Phase 6 S6.5: Phase 4 pinned the OPPOSITE here ("claims at the
-    reflection's own stop are not yet heard" — the recap's window). The thread binds
-    the ARRIVING stop through one of ITS facts (W6.2 R5), so a slot whose only claims
+    """An earlier version pinned the OPPOSITE here ("claims at the reflection's own
+    stop are not yet heard" — the recap's window). The thread binds the ARRIVING stop
+    through one of ITS facts, so a slot whose only claims
     live at its own stop is now verifiable, entailed against them."""
     b1 = _beat("b1", key_claims=("only claim, at the same stop",))
     checker = MockFaithfulnessChecker()
@@ -243,8 +242,8 @@ def test_a_threads_own_stops_facts_are_admissible_support():
 
 def test_a_thread_with_no_support_anywhere_fails_closed():
     """A claimless, bodiless walk gives the thread nothing to entail from — it fails
-    BEFORE the checker (an unverifiable line never ships; unchanged from Phase 4,
-    re-labelled for the union window of S6.5)."""
+    BEFORE the checker (an unverifiable line never ships, under the union window
+    as under the old visited-only one)."""
     b1 = _beat("b1")  # visited, but claimless and bodiless
     checker = MockFaithfulnessChecker()
     thread = _reflection("A synthesis of nothing.", 1)

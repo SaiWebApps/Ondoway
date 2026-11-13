@@ -1,4 +1,4 @@
-"""Hermetic tests for the M1 RoutingClient (Valhalla pedestrian + haversine fallback).
+"""Hermetic tests for the RoutingClient (Valhalla pedestrian + haversine fallback).
 
 No Docker, no network, no skips: the Valhalla side is an httpx.MockTransport
 speaking the documented /route and /isochrone JSON shapes; the outage side is
@@ -70,7 +70,7 @@ def _valhalla_handler(request: httpx.Request) -> httpx.Response:
             },
         )
     if request.url.path == "/isochrone":
-        # Generous box over all Paris test geographies: since M5 the REACH
+        # Generous box over all Paris test geographies: the REACH
         # filter genuinely applies this polygon, so it must cover every
         # fixture coordinate (the parsing tests only assert its shape).
         ring = [[2.20, 48.80], [2.45, 48.80], [2.45, 48.92], [2.20, 48.92], [2.20, 48.80]]
@@ -106,7 +106,7 @@ def _client(handler) -> RoutingClient:
 
 def test_matrix_diagonal_zero_and_routed_differs_from_haversine():
     """5x5 Paris matrix: diagonal is 0; every off-diagonal routed time/distance
-    differs from the pure haversine fallback (the M1 PROVE asks for >=1)."""
+    differs from the pure haversine fallback."""
     with _client(_valhalla_handler) as rc:
         differing = 0
         for i, (lat1, lng1) in enumerate(POINTS):
@@ -152,10 +152,8 @@ def test_requests_use_documented_wire_format():
     """Pin the outgoing JSON: pedestrian costing, lat/lon keys, km units,
     minute contours with polygons=true.
 
-    EXTENDED for plan S2.7 (route surface, redesign §2.4), per the audit's own
-    ruling for this exact test (05-audit-B: LOAD-BEARING — "Extend this row
-    with the surface options rather than writing a second wire-format test"):
-    an unset override leaves the request byte-identical to the default
+    Also pins the route-surface options here rather than in a second
+    wire-format test: an unset override leaves the request byte-identical to the default
     ``_ROUTING_CONFIG``; a set override merges into ``costing_options.pedestrian``
     alongside the pace pin, and rides the SAME wire format the plain request
     uses — never a second shape.
@@ -197,7 +195,7 @@ def test_requests_use_documented_wire_format():
 
 
 def test_connect_error_falls_back_to_exact_haversine():
-    """The M1 PROVE: ConnectionError -> exactly
+    """ConnectionError -> exactly
     pace_corrected_walk_seconds(haversine_m(...)), polyline None."""
     with _client(_refusing_handler) as rc:
         for lat1, lng1 in POINTS:
@@ -242,7 +240,7 @@ def test_default_construction_owns_a_client():
 
 
 # ---------------------------------------------------------------------------
-# M2 — routed leg_seconds/polyline on the contract; summarise_route/select_route
+# Routed leg_seconds/polyline on the contract; summarise_route/select_route
 # ---------------------------------------------------------------------------
 
 from src.tour.contract import Route, TourInput, TransitSegment
@@ -262,7 +260,7 @@ def test_transit_segment_m2_fields_round_trip_and_default():
         source="valhalla",
     )
     assert TransitSegment.model_validate(routed.model_dump()) == routed
-    # Pre-M2 construction still works; new fields default to the haversine era.
+    # Construction without the routed fields still works; they default to haversine.
     legacy = TransitSegment(from_poi_id=None, to_poi_id="p1", distance_m=500.0, walk_seconds=810)
     assert (legacy.leg_seconds, legacy.polyline, legacy.source) == (None, None, "haversine")
     assert TransitSegment.model_validate(legacy.model_dump()) == legacy
@@ -350,7 +348,7 @@ def test_summarise_route_client_down_marks_haversine_source():
 
 
 # ---------------------------------------------------------------------------
-# M3 — routed insertion cost (the §3 divisor) + sticky degradation
+# Routed insertion cost (the divisor) + sticky degradation
 # ---------------------------------------------------------------------------
 
 
@@ -477,8 +475,8 @@ def _divisor_handler(request: httpx.Request) -> httpx.Response:
 
 
 def test_routed_divisor_inverts_greedy_choice():
-    """The M3 PROVE with teeth: when routed times contradict straight-line
-    distance, the greedy follows the ROUTED times — selection changes.
+    """When routed times contradict straight-line distance, the greedy follows
+    the ROUTED times — selection changes.
 
     The three POIs the mock road network walls off stand 20 m from the start and
     are the richest thing on offer, so straight-line pricing seats all of them
@@ -494,8 +492,8 @@ def test_routed_divisor_inverts_greedy_choice():
         ),
         _poi("far", lat=_FAR_ANCHOR[0], lng=_FAR_ANCHOR[1], areas=("Le Marais",)),
         # Twelve background stops, pinned (the helper's ``n`` exists for exactly
-        # this). Re-derived at the Phase 6 close: the helper's duration-derived
-        # count grew from 14 to 18 when S6.6 made tellings three minutes, and at
+        # this). Re-derived: the helper's duration-derived count grew from 14
+        # to 18 when tellings became three minutes, and at
         # eighteen the straight-line run trades the THIRD colocated walled stop
         # for fillers (measured: bare seated c2 and near, not c1) — a pool-size
         # effect, not the pricing contrast this test is about. At twelve the
@@ -519,8 +517,8 @@ def test_routed_divisor_inverts_greedy_choice():
 
 
 def test_routed_divisor_lets_cheaper_network_fit_more():
-    """M3 superseded the M2 'client changes no selection decision' invariant:
-    insertion costs now COME from the client. The mock's road network
+    """The client changes selection decisions: insertion costs COME from the
+    client. The mock's road network
     (1.2x detour at 4 km/h ≈ 1.08 s/m) is cheaper than the haversine
     fallback's 1.62 s/m, so the same budget fits MORE of the fixture —
     and every transit leg arrives enriched."""
@@ -554,9 +552,8 @@ def test_routed_divisor_lets_cheaper_network_fit_more():
 
 
 def test_requests_pin_pedestrian_walking_speed_to_pace_kmh():
-    """Pace pin (hostile-panel finding 2026-07-02): Valhalla defaults pedestrians
-    to ~5.1 km/h while the entire budget model is spec'd at PACE_KMH = 3.0
-    (routing.py, phase-1-design §3.2). Without costing_options every routed
+    """Pace pin: Valhalla defaults pedestrians to ~5.1 km/h while the entire
+    budget model is spec'd at PACE_KMH = 3.0 (routing.py). Without costing_options every routed
     leg time assumes a walker ~70% faster than the product designs for, and the
     20-min isochrone reaches ~1.7km where the analytic envelope says 738m —
     the divergence behind the density-gate/REACH mismatch. Both request bodies
@@ -585,7 +582,7 @@ def test_requests_pin_pedestrian_walking_speed_to_pace_kmh():
 
 
 def test_reach_predicate_falls_back_on_shapely_geos_errors(monkeypatch):
-    """Fallback-totality hole (density-critic finding, 2026-07-02): Valhalla's
+    """Fallback-totality hole: Valhalla's
     isochrone generalization can emit degenerate/self-intersecting rings, and
     shapely then raises GEOSException — which derives ShapelyError, NOT any of
     the (KeyError, TypeError, ValueError) the predicate caught. Pre-fix that

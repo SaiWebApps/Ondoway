@@ -1,10 +1,10 @@
 """Tests for scripts/migrate_beats_dedup_fields.py.
 
 Covers:
-- AC-12 — branched parser (unified_v1 vs legacy)
-- AC-12 — idempotency
-- AC-12 — source_chunk_slug ambiguity sentinel
-- BP-6  — git-clean pre-flight; snapshot before mutation
+- branched parser (unified_v1 vs legacy)
+- idempotency
+- source_chunk_slug ambiguity sentinel
+- git-clean pre-flight; snapshot before mutation
 """
 
 from __future__ import annotations
@@ -119,7 +119,7 @@ def test_derive_source_chunk_slug_disambiguation():
 
 
 def test_migration_branches_on_prompt_version(tmp_path):
-    """AC-12 — unified_v1 preserves topic_slug; legacy parses both fields."""
+    """unified_v1 preserves topic_slug; legacy parses both fields."""
     _fresh_repo(tmp_path)
     beats = [
         # legacy
@@ -194,7 +194,7 @@ def test_migration_branches_on_prompt_version(tmp_path):
 
 
 def test_migration_requires_clean_git(tmp_path):
-    """BP-6 — non-empty `git status --porcelain` aborts before any mutation."""
+    """A non-empty `git status --porcelain` aborts before any mutation."""
     _fresh_repo(tmp_path)
     beats = [{"beat_id": "x", "poi_name": "X", "lens": "l", "script_body": "y"}]
     beats_path = tmp_path / "beats.json"
@@ -219,7 +219,7 @@ def test_migration_requires_clean_git(tmp_path):
 
 
 def test_migration_idempotent(tmp_path):
-    """AC-12 — second run leaves file byte-identical."""
+    """A second run leaves file byte-identical."""
     _fresh_repo(tmp_path)
     beats = [
         {
@@ -250,7 +250,7 @@ def test_migration_idempotent(tmp_path):
 
 
 def test_migration_source_chunk_ambiguous(tmp_path):
-    """AC-12 — POI in ≥2 distinct chunks → source_chunk_slug = legacy_ambiguous."""
+    """A POI in ≥2 distinct chunks → source_chunk_slug = legacy_ambiguous."""
     _fresh_repo(tmp_path)
     beats = [
         {
@@ -273,7 +273,7 @@ def test_migration_source_chunk_ambiguous(tmp_path):
 
 
 def test_migration_writes_snapshot_before_mutation(tmp_path):
-    """BP-6 — `{beats.json}.pre-migration` snapshot exists after a successful run."""
+    """A `{beats.json}.pre-migration` snapshot exists after a successful run."""
     _fresh_repo(tmp_path)
     beats = [
         {

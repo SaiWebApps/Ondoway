@@ -2,8 +2,7 @@
 
 Uses mocked Neo4j sessions — does NOT require a running database.
 
-PHASE 7 D7.0 TOMBSTONE (tour-algorithm redesign, design §8.5 — "per-beat audio
-library … deleted"; plan S7.10 deletes the code; phase7-ledger.md §D7.0). The
+TOMBSTONE: the per-beat audio library is deleted. The
 per-beat library's tests were DELETED here, not adapted: ``TestBuildStorageKey``,
 ``TestGenerateBeatAudio``, ``TestGenerateBatch``,
 ``TestGetDuration::test_result_includes_duration``, ``TestScriptChangeDetection``,
@@ -11,11 +10,11 @@ per-beat library's tests were DELETED here, not adapted: ``TestBuildStorageKey``
 ``TestScriptHashDeterminism``, ``TestStaleInvariant`` and the beat half of
 ``TestStorageConstructionSoftFails`` all pinned ``generate_beat_audio`` /
 ``generate_batch`` / ``check_audio_status`` / ``_build_storage_key`` /
-``_script_hash`` / ``_is_stale`` — the NarrativeBeat audio path the design replaces
-with the per-stop path (``generate_stop_audio``: tests/test_audio_stop.py and
+``_script_hash`` / ``_is_stale`` — the NarrativeBeat audio path replaced
+by the per-stop path (``generate_stop_audio``: tests/test_audio_stop.py and
 tests/test_audio_stop_trip_api.py). What survives below is the format-level
-duration reader (S7.8 re-derives its MP3 half from the design: the duration is
-MEASURED, and the clocks trust it) and the per-stop storage soft-failure.
+duration reader (its MP3 half MEASURES the duration, and the clocks trust it) and
+the per-stop storage soft-failure.
 """
 
 from __future__ import annotations
@@ -135,7 +134,7 @@ class TestStopAudioFallsOverToTheUnderstudy:
             generate_stop_audio("Some narration.", stop_key="stop-1", provider_name="down")
 
 
-# ── Phase 7 S7.8 — the MP3 duration is MEASURED from the frame table ──────────────
+# ── The MP3 duration is MEASURED from the frame table ─────────────────────────────
 
 
 def _mp3_frame(*, version: str, bitrate_kbps: int, sample_rate: int, padding: int = 0) -> bytes:
@@ -168,10 +167,10 @@ def _samples(version: str) -> int:
 
 
 class TestMeasuredMp3Duration:
-    """S7.8 (design: "the duration is MEASURED, and the clocks trust it"; W7.2 R6): the
+    """The duration is MEASURED, and the clocks trust it: the
     reader walks EVERY frame and sums samples / sample rate — exact for constant- and
     variable-bitrate files and for MPEG-1, MPEG-2 and MPEG-2.5 alike, skipping an ID3v2
-    tag. Before S7.8 it read one header and divided the file size by that bitrate: a VBR
+    tag. It used to read one header and divide the file size by that bitrate: a VBR
     file was off by the bitrate ratio and an MPEG-2 file measured 0.0 (the phone then cut
     its sentences at the wrong place, or at once)."""
 

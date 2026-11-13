@@ -247,11 +247,11 @@ def _leg_line_source(
 
 
 def test_a_corpus_leg_line_untrue_where_it_plays_is_dropped_not_the_day() -> None:
-    """P9R-S1.M3 — ADR 0001's rule ("drop a failing line immediately — silence
-    over wrongness, never refuse the day") reaches FIRST compose, for the one
+    """The rule "drop a failing line immediately — silence over wrongness,
+    never refuse the day" reaches FIRST compose, for the one
     class where a drop is safe: a walk-concurrent CORPUS unit (a vignette
     one-liner, a transit-beat line — self-contained, LEARNINGS 23's safe
-    class). Paulo's measured shape: the Verrerie hook's "lived on this street"
+    class). The measured shape: the Verrerie hook's "lived on this street"
     played on a leg, the floor flagged `arrived_word_on_leg:this`, and the
     whole five-stop day refused with a retry that reproduces identically. Now
     the line is left unsaid, the day serves, and the degradations channel says

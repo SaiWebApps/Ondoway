@@ -2,7 +2,7 @@
 
 Trips are seeded directly through create_trip_with_stops (adapter-shaped stop
 dicts built from the toy-seeded graph) — NOT through POST /trips/generate,
-which since M0b runs the real tour engine whose density gate refuses the toy
+which runs the real tour engine whose density gate refuses the toy
 corpus. The list read path is what's under test here, including its fallback
 for legacy single-beat items (the seeded "Paris Spring 2026" trip).
 """
@@ -202,7 +202,7 @@ class TestListTripsEndpoint:
                 assert field in stop
 
     def test_list_trips_reads_legacy_single_beat_items(self, client, mom_profile_id):
-        """The seeded 'Paris Spring 2026' trip predates M0b: items carry one
+        """The seeded 'Paris Spring 2026' trip is a legacy trip: items carry one
         PLAYS_BEAT edge and no beat_ids/primary_beat_id/lens_name properties.
         The read path must fall back to edge-derived values."""
         resp = client.get(f"/api/v1/trips?profile_id={mom_profile_id}")
@@ -291,7 +291,7 @@ class TestListTripsEndpoint:
         assert resp.status_code == 404
 
     def test_create_trip_persists_per_stop_narration(self, seeded_driver, mom_profile_id):
-        """Step 1.2: create_trip_with_stops writes each stop's `narration` onto the
+        """create_trip_with_stops writes each stop's `narration` onto the
         ItineraryItem; reading the property back equals the input string."""
         stops = _engine_shaped_stops(seeded_driver)[:1]
         assert stops, "toy seed must provide a POI with beats"
@@ -321,7 +321,7 @@ class TestListTripsEndpoint:
     def test_list_trips_surfaces_stop_id_and_per_stop_audio(
         self, client, seeded_driver, mom_profile_id, monkeypatch, tmp_path
     ):
-        """Step 1.4c: GET /trips exposes each stop's ItineraryItem id (stop_id) and,
+        """GET /trips exposes each stop's ItineraryItem id (stop_id) and,
         once per-stop audio is generated, prefers item.audio_url over the beat's —
         so mobile can address + play per-stop narration."""
         monkeypatch.setenv("AUDIO_STORAGE_PATH", str(tmp_path))
@@ -359,7 +359,7 @@ class TestListTripsEndpoint:
             )
 
     def test_list_trips_surfaces_narration_text(self, client, seeded_driver, mom_profile_id):
-        """Step 1.5a: GET /trips exposes each stop's stitched narration TEXT so it can be
+        """GET /trips exposes each stop's stitched narration TEXT so it can be
         read/verified on web (curl / preview page), not just played."""
         stops = _engine_shaped_stops(seeded_driver)
         assert stops

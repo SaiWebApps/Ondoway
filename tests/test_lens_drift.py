@@ -138,7 +138,7 @@ def test_no_parent_lens_in_city_beats(city: str) -> None:
     and enforces the stronger invariant that the API enforces at write
     time: only child/leaf lenses are taggable on beats.
 
-    Catches the failure mode that bit Phase 6 of the Paris closeout: 5
+    Catches the failure mode that bit the Paris closeout: 5
     beats slipped through with parent slug 'commerce_innovation', causing
     silent TAGGED_WITH 422s at /upload time. Adding this test as a
     pre-upload gate ensures the same regression can't recur on Paris or

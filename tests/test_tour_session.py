@@ -1,10 +1,7 @@
-"""Phase 5 session tests — the living session's PLANNER half. Hermetic.
+"""Session tests — the living session's PLANNER half. Hermetic.
 
 One hand per file (the test_tour_clock.py model): this file is the SESSION hand on
-the planner side — the replan context (S5.6) and the contingency set (S5.7). Every
-gating test cites its source: design §4 (01-design.md:205-293), the W5.2 panel's
-locked rulings (phase5-ledger.md, "LOCKED RULINGS", all eleven personas,
-2026-08-18), the Phase-4 carried findings, and the persona lines they enforce.
+the planner side — the replan context and the contingency set.
 """
 
 from __future__ import annotations
@@ -47,13 +44,13 @@ def _bench(poi: POI, minutes: int = 8) -> POI:
 
 
 # ---------------------------------------------------------------------------
-# S5.6 — ReplanContext in THE one planner; "more breaks" as its first customer
+# ReplanContext in THE one planner; "more breaks" as its first customer
 # ---------------------------------------------------------------------------
 
 
 def _carried_three_corpus():
     """A base day of one big interior anchor and two small stands, with two
-    benches beside the path — the shape of Phase-4 CARRIED 3 (Place des Vosges:
+    benches beside the path — the shape of a measured day (Place des Vosges:
     Carnavalet 47-inside dropped for Rue des Rosiers 25-outside to fund the rests,
     walking 23 -> 39, no rest promise)."""
     anchor = _interior(
@@ -67,15 +64,15 @@ def _carried_three_corpus():
 
 
 def test_replan_context_is_an_input_to_the_one_planner_and_holds_what_it_protects():
-    """Design §4.5.2/§4.5.3/§4.5.4 and §4.6 ("the server is the only place a plan
-    decision is made ... one replan brain"): a replan is THE planner called with a
+    """The server is the only place a plan decision is made, with one replan
+    brain: a replan is THE planner called with a
     `ReplanContext` — the base day's protected stops, the base day's longest leg
     as a ceiling, a zero floor for a tail, the learned rates — never a second
-    planner. W5.2 R1.5 (Fiona & Dev, Julien): what is protected is what the PERSON
+    planner. What is protected is what the PERSON
     asked for; the caller decides membership, the planner honours it.
 
     The behavioural half: a protected stop the fresh planner would DROP under a
-    rest cadence (CARRIED 3's shape) is held under the context, a rest is seated,
+    rest cadence (the measured day's shape) is held under the context, a rest is seated,
     and no leg is longer than the base day's longest. UNDO: make the planner ignore
     `replan.protected_poi_ids` -> the anchor is dropped again -> RED.
     """
@@ -115,10 +112,10 @@ def test_replan_context_is_an_input_to_the_one_planner_and_holds_what_it_protect
 
 
 def test_more_breaks_on_the_wire_is_a_replan_of_the_base_day_not_a_fresh_plan():
-    """Phase-4 CARRIED 3, the first customer: turning "More breaks" plans the SAME
+    """The first customer: turning "More breaks" plans the SAME
     day again with the cadence added — the base day's anchor and longest leg held —
     rather than a fresh day that funds its rests by deleting the anchor and walking
-    further (W5.1 (b)3: PdV walking 23 -> 39, longest 10 -> 18, Carnavalet 47-inside
+    further (measured: PdV walking 23 -> 39, longest 10 -> 18, Carnavalet 47-inside
     -> Rue des Rosiers 25-outside, no rest promise). The public planner door does
     the two calls itself, so every surface (workbench dial, phone, harness) gets the
     relative semantics without knowing about the context. UNDO: make `select_route`
@@ -143,14 +140,12 @@ def test_more_breaks_on_the_wire_is_a_replan_of_the_base_day_not_a_fresh_plan():
 
 
 def test_a_tail_replans_with_a_zero_floor_and_one_leg_home_is_a_legal_answer():
-    """W5.1 defect 6 (5 of 6 "from here with the minutes left" cells refused, three
-    ways) and W5.2 R1.1 (11/11): wrap-up-from-here has a floor of ZERO — it may be
-    one leg home with no stop (Nadia: "one tap, no server, no speech"; Marcus;
-    Sofia: "my tail is one lit leg plus 8 minutes on a corner, which has to be a
-    legal answer"). Under a `ReplanContext` the density gate does not refuse a thin
+    """Wrap-up-from-here has a floor of ZERO — it may be one leg home with no
+    stop (a tail of one lit leg plus 8 minutes on a corner has to be a legal
+    answer). Under a `ReplanContext` the density gate does not refuse a thin
     remainder, the underfill line does not bind, and a remainder with a fixed end
     and no stop that fits comes back as the walk to the finish — with the overrun
-    REPORTED on the route, never a refusal (Fiona & Dev: no entry may be a 422).
+    REPORTED on the route, never a refusal (no entry may be a 422).
     """
     from src.tour.contract import ReplanContext
     from src.tour.selection import select_route
@@ -166,7 +161,7 @@ def test_a_tail_replans_with_a_zero_floor_and_one_leg_home_is_a_legal_answer():
     from src.tour.density import TourabilityRefusedError
     from src.tour.selection import CertificationPlanningInfeasibleError
 
-    # The fresh planner refuses this tail today (W5.1 defect 6).
+    # The fresh planner refuses this tail today.
     with pytest.raises((TourabilityRefusedError, CertificationPlanningInfeasibleError)):
         select_route(tail, snap)
     day = select_route(tail, snap, replan=ReplanContext())
@@ -176,16 +171,16 @@ def test_a_tail_replans_with_a_zero_floor_and_one_leg_home_is_a_legal_answer():
 
 
 # ---------------------------------------------------------------------------
-# S5.7 — the contingency set, computed once, on the server
+# The contingency set, computed once, on the server
 # ---------------------------------------------------------------------------
 
 
 def _wall_day_corpus():
-    """A WALL day (Marcus's shape, 04-layover-sprinter.md) with a protected rest: three
+    """A WALL day (a traveller with a hard deadline) with a protected rest: three
     story stands, a bench the party asked for, and a finish 1.5 km on that the clock
-    defends. Late out of the first stand, the fabric stands go SILENTLY first (R1.3);
+    defends. Late out of the first stand, the fabric stands go SILENTLY first;
     when only the bench and the walk home are left and they still do not fit, the ONE
-    question asks about the rest — shorten it or keep it — never drops it (R2.3)."""
+    question asks about the rest — shorten it or keep it — never drops it."""
     stand_a = _stand(_at(PDV, 150.0, 20.0, "stand-a", tier=5, beat_count=5), 14)
     stand_b = _stand(_at(PDV, 320.0, 60.0, "stand-b", tier=4, beat_count=4), 12)
     bench = _bench(_at(PDV, 460.0, 80.0, "bench"), 10)
@@ -195,22 +190,21 @@ def _wall_day_corpus():
 
 
 def test_the_contingency_set_is_replans_of_the_planned_day_with_the_one_question():
-    """Design §4.6 — "at plan time and after every replan [the server] emits a
-    CONTINGENCY SET alongside the plan: precomputed answers to the divergences that
-    matter — running late or early by bands, a stop skipped, a promise at risk,
-    wrap-up from here — each with its alternates". W5.2 R1 (coverage): wrap-up from
-    EVERY stop with a zero floor (11/11); a skip for every stop whose answer never
-    adds a building (R1.2); late bands at 10/20/30-40 (R1.3); early bands that only
-    lengthen what is there (R1.4); promise-at-risk only for what the PERSON asked for
-    (R1.5). W5.2 R2 (the one question): one sentence, TWO arms, EACH with the place
-    kept and a CLOCK TIME; the safe arm first under a wall (Marcus); none of the
-    banned words; a protected rest is shortened or kept, never an arm to be dropped
-    (Rosemary, R2.3); everything spoken is on screen (§4.4.2). W5.1 (d): the spend is
+    """At plan time and after every replan the server emits a CONTINGENCY SET
+    alongside the plan: precomputed answers to the divergences that matter —
+    running late or early by bands, a stop skipped, a promise at risk, wrap-up from
+    here — each with its alternates. Coverage: wrap-up from EVERY stop with a zero
+    floor; a skip for every stop whose answer never adds a building; late bands at
+    10/20/30-40; early bands that only lengthen what is there; promise-at-risk only
+    for what the PERSON asked for. The one question: one sentence, TWO arms, EACH
+    with the place kept and a CLOCK TIME; the safe arm first under a wall; none of
+    the banned words; a protected rest is shortened or kept, never an arm to be
+    dropped; everything spoken is on screen. The spend is
     the union of NEW stops across entries, printed before it is billed — and with
     every entry drawn from the planned day it is ZERO.
 
     Every entry is THE planner (`plan_premium_tour`) called with a `ReplanContext` —
-    a contingency IS a replan taken early (Extends). UNDO: make an entry reuse another
+    a contingency IS a replan taken early. UNDO: make an entry reuse another
     band's answer, or drop the question's screen text -> RED.
     """
     from src.tour.contingency import BANNED_WORDS, build_contingency_set
@@ -233,7 +227,7 @@ def test_the_contingency_set_is_replans_of_the_planned_day_with_the_one_question
     ids = [p.id for p in base.pois]
     assert bench.id in ids and stand_c.id in ids and stand_a.id in ids, f"premise: {ids}"
 
-    # THE PERSON'S PROTECTED SET (R1.5): the rest they asked for and the finish.
+    # THE PERSON'S PROTECTED SET: the rest they asked for and the finish.
     protected = ReplanContext(protected_poi_ids=(bench.id,))
     cset = build_contingency_set(base, request, snap, routing_client=None, person=protected)
 
@@ -242,7 +236,7 @@ def test_the_contingency_set_is_replans_of_the_planned_day_with_the_one_question
         kinds.setdefault(entry.trigger["kind"], []).append(entry)
     story_stops = [p for p in base.pois if p.poi_role != "body" and not p.id.startswith("__")]
 
-    # COVERAGE — R1.1 wrap-up and R1.2 skip from every stop; late/early bands present.
+    # COVERAGE — wrap-up and skip from every stop; late/early bands present.
     assert len(kinds.get("wrap_up_from", [])) >= len(story_stops), kinds.keys()
     assert len(kinds.get("stop_skipped", [])) >= len(story_stops), kinds.keys()
     assert {tuple(e.trigger["band_minutes"]) for e in kinds.get("running_late", [])} >= {
@@ -263,9 +257,9 @@ def test_the_contingency_set_is_replans_of_the_planned_day_with_the_one_question
             assert entry.screen_text.strip(), entry.trigger
 
     # THE ONE QUESTION — running late out of the first stand on a WALL day. Fabric goes
-    # SILENTLY first (R1.3): the earliest band's answer differs from the base day and
+    # SILENTLY first: the earliest band's answer differs from the base day and
     # keeps the rest. Deeper in the bands only the rest and the walk home remain and
-    # they no longer fit: the question names the rest in the panel's words — two arms,
+    # they no longer fit: the question names the rest — two arms,
     # two clocks, safe arm first, one sentence, no banned word.
     from_first = [e for e in kinds["running_late"] if e.from_stop_index == 0]
     earliest = next(e for e in from_first if tuple(e.trigger["band_minutes"]) == (10, 20))
@@ -292,23 +286,23 @@ def test_the_contingency_set_is_replans_of_the_planned_day_with_the_one_question
     lowered = late.question.lower()
     for word in BANNED_WORDS:
         assert word not in lowered, f"banned word {word!r} in {late.question!r}"
-    # A wall day puts the SAFE arm first (Marcus) and defaults to it.
+    # A wall day puts the SAFE arm first and defaults to it.
     assert late.default_arm == "shorten", late.default_arm
     assert late.question.lower().startswith(("sit ", "go ")), late.question
 
 
 # ---------------------------------------------------------------------------
-# S5.10 — the server half of the SESSION CLOCK seam: ONE re-timing expression,
+# The server half of the SESSION CLOCK seam: ONE re-timing expression,
 # priced at the person's learned listening rate; the finish is a VIEW of it
 # ---------------------------------------------------------------------------
 
 
 def test_the_servers_one_clock_prices_narration_at_the_learned_rate_and_the_finish_is_its_view():
-    """Design §4.1 (Paulo: "consumes narration at ~1.5x its stated length ... the
-    remaining day's estimates scale to the observed rate"); §4.6 (the seam: ONE
-    re-timing expression on the server, `stop_clocks`, and nothing else may spell
-    its clock); plan S5.10 ("two re-timing expressions that agree today by
-    coincidence" is sabotage). A stop costs the LONGER of its priced visit and what
+    """A visitor may consume narration at ~1.5x its stated length, and the
+    remaining day's estimates scale to the observed rate. The seam: ONE re-timing
+    expression on the server, `stop_clocks`, and nothing else may spell its clock;
+    two re-timing expressions that agree today by coincidence are a defect. A stop
+    costs the LONGER of its priced visit and what
     it says at the learned rate — the final gate's own rule (`stop_seconds`), so
     the certified day and the wire clock are one quantity — and `finish_clock` is
     the last departure plus the closing leg read off the SAME walk, never a second
@@ -345,7 +339,7 @@ def test_the_servers_one_clock_prices_narration_at_the_learned_rate_and_the_fini
     paulo = by(stop_clocks(route, request, audio_seconds_by_id=audio, listening_rate=1.5))
     # rate 1.0: max(840, 900) - 840 = 60 s later at every later stop.
     assert (heard[stand_b.id][0] - plain[stand_b.id][0]).total_seconds() == 60
-    # rate 1.5: max(840, 1350) - 900 = 450 s later still — Paulo's overrun is
+    # rate 1.5: max(840, 1350) - 900 = 450 s later still — a slow listener's overrun is
     # priced once, here, not rediscovered stop by stop.
     assert (paulo[stand_b.id][0] - heard[stand_b.id][0]).total_seconds() == 450
     assert paulo[stand_a.id][0] == plain[stand_a.id][0]  # the arrival AT the stop is unchanged
@@ -369,12 +363,12 @@ def test_the_servers_one_clock_prices_narration_at_the_learned_rate_and_the_fini
 
 
 def test_a_replan_prices_the_day_at_the_persons_listening_rate():
-    """Design §4.1 (the learned listening rate scales the remaining day's estimates)
-    through THE planner (§4.6): the ReplanContext S5.6 threaded carried
-    `listening_rate` and nothing consumed it. A tail whose three protected stands
+    """The learned listening rate scales the remaining day's estimates through THE
+    planner: the ReplanContext once carried `listening_rate` and nothing consumed
+    it. A tail whose three protected stands
     say more than they stand (270 s of narration at two-minute stands) FITS its
     minutes at rate 1.0 and OVERRUNS them at rate 2.0 — reported on the route
-    (floor zero, S5.6), never refused — because every trial and the final gate
+    (floor zero), never refused — because every trial and the final gate
     price `max(visit, audio x rate)`. UNDO: drop `listening_rate=` at the final
     gate -> the second half goes RED (overrun 0 at rate 2.0)."""
     from src.tour.contract import ReplanContext
@@ -407,7 +401,7 @@ def test_a_replan_prices_the_day_at_the_persons_listening_rate():
     assert [p.id for p in normal.pois] == list(keep), [p.id for p in normal.pois]
     assert [p.id for p in paulo.pois] == list(keep), [p.id for p in paulo.pois]
     assert normal.overrun_seconds == 0, normal.overrun_seconds
-    # RE-DERIVED at Phase 6 S6.6 (the three-minute tight): the old band (700-900)
+    # RE-DERIVED when tellings became three minutes: the old band (700-900)
     # hardcoded the 270-era fixture arithmetic (its beats derive their length from
     # MAX_DWELL_AUDIO_SECONDS, so the ceiling move changed what the day voices).
     # The MECHANISM is what this test pins, not the pricing formula: a doubled
@@ -422,18 +416,18 @@ def test_a_replan_prices_the_day_at_the_persons_listening_rate():
 
 
 # ---------------------------------------------------------------------------
-# S5.11 — announcement etiquette: what the SERVER and the WIRE can enforce
+# Announcement etiquette: what the SERVER and the WIRE can enforce
 # ---------------------------------------------------------------------------
 
 
 def test_the_set_and_the_wire_enforce_the_etiquette_they_can():
-    """Design §4.4 (the four hard rules): 2 — everything spoken also appears on
-    screen; 4 — ONE sentence, maximum ("over a screaming five-year-old, mute beats
-    graceful"). W5.2 R2.1 — the question is ONE sentence with TWO arms, each naming
-    the place kept and a clock time; R2.4/R2.5 — asked once, on screen as two big
-    buttons with the DEFAULT named. Plan S5.11: "the wire enforces what it can:
-    `screen_text` non-empty whenever `question` is, and a sentence-count validator
-    on the question"; sabotage: "a two-sentence question that explains itself".
+    """Two of the hard announcement rules: everything spoken also appears on
+    screen; ONE sentence, maximum ("over a screaming five-year-old, mute beats
+    graceful"). The question is ONE sentence with TWO arms, each naming the place
+    kept and a clock time; asked once, on screen as two big buttons with the
+    DEFAULT named. The wire enforces what it can: `screen_text` non-empty whenever
+    `question` is, and a sentence-count validator on the question; the failure it
+    catches is a two-sentence question that explains itself.
     UNDO: drop `one_sentence` from the set's `add` -> the built-set half goes RED
     on a two-sentence screen line; drop the model validator -> the wire half RED.
     """
@@ -527,23 +521,23 @@ def test_the_set_and_the_wire_enforce_the_etiquette_they_can():
             one_sentence(e.question)
             assert e.question.endswith("?") and ", or " in e.question
             assert e.default_arm in ("keep", "shorten")
-            # every arm names a clock time (R2.1)
+            # every arm names a clock time
             assert all(":" in arm for arm in e.question.split(", or ")), e.question
 
 
 # ---------------------------------------------------------------------------
-# W5.14 / S5.16 — the place the person named is a promise; the live path ASKS
+# The place the person named is a promise; the live path ASKS
 # ---------------------------------------------------------------------------
 
 
 def test_the_place_the_person_named_as_start_or_finish_is_a_promise():
-    """W5.14, all eleven: on an art-lens day AT the Orsay, the live replan dropped the
-    Orsay to keep an 8-minute bench — R1.5 as locked ("never the planner's anchor on
-    an open unpinned walk") applied to a place the PERSON named. Rosemary: "The Orsay
-    is where I said I begin and end". So: a story stop within 60 m of where the person
-    said the day begins or ends is a promise (`own_place_ids`); the planner's own
-    anchor elsewhere is not. The set treats it as protected: every entry keeps it,
-    and the question is about the REST first (R2.3 — the thing that can be shortened).
+    """On an art-lens day AT the Orsay, the live replan dropped the Orsay to keep an
+    8-minute bench — the rule "never the planner's anchor on an open unpinned walk"
+    applied to a place the PERSON named as where the day begins and ends. So: a
+    story stop within 60 m of where the person said the day begins or ends is a
+    promise (`own_place_ids`); the planner's own anchor elsewhere is not. The set
+    treats it as protected: every entry keeps it, and the question is about the
+    REST first (the thing that can be shortened).
     UNDO: return () from own_place_ids -> the first assertion goes RED."""
     from src.tour.contingency import at_risk_choice, build_contingency_set, own_place_ids
     from src.tour.contract import ReplanContext
@@ -587,11 +581,11 @@ def test_the_place_the_person_named_as_start_or_finish_is_a_promise():
 
 
 def test_the_finish_is_named_as_the_place_when_the_person_named_one():
-    """W5.14 / S5.19 (Camille, Aiko, Rosemary, Greta, Paulo): "'your finish' is plan
-    vocabulary — say 'the Orsay'". The finish's name in every line and arm is the PLACE
-    when the day ends at a stop the person named (a round trip from a story POI, or a
-    declared end that is a stop of the day); "your finish" / "your start" only when the
-    day ends somewhere unnamed. The route's own places decide, not the request's words.
+    """'Your finish' is plan vocabulary — say 'the Orsay'. The finish's name in
+    every line and arm is the PLACE when the day ends at a stop the person named
+    (a round trip from a story POI, or a declared end that is a stop of the day);
+    "your finish" / "your start" only when the day ends somewhere unnamed. The
+    route's own places decide, not the request's words.
     UNDO: return the generic words regardless of the route -> RED."""
     from src.api.routes.trips import _finish_name
     from src.tour.selection import select_route
@@ -623,18 +617,17 @@ def test_the_finish_is_named_as_the_place_when_the_person_named_one():
 
 
 # ---------------------------------------------------------------------------
-# Phase 6 S6.4 — the wrap-up entry: what the screen says, and from where
+# The wrap-up entry: what the screen says, and from where
 # ---------------------------------------------------------------------------
 
 
 def test_a_wrap_up_on_an_open_walk_never_says_straight_to_your_start():
-    """W6.2 R2/R8 (11/11): "'Straight to your start' is a direction to nowhere" (Nadia,
-    Marcus, Julien, F&D — 09:10 they restart where the conversation pauses and end at
-    dinner, wherever that is). On an OPEN one-way walk a wrap-up has no finish to head
-    for: the screen line says what the day was and that the rest of it is theirs from
-    here; it never names a start or a finish. On a day WITH a finish the line still
-    heads for the place (Place des Vosges, Notre-Dame — S5.19). UNDO: fall back to
-    `_finish_name`'s "your start" -> RED."""
+    """'Straight to your start' is a direction to nowhere: a visitor may end where
+    the conversation pauses, or at dinner, wherever that is. On an OPEN one-way
+    walk a wrap-up has no finish to head for: the screen line says what the day
+    was and that the rest of it is theirs from here; it never names a start or a
+    finish. On a day WITH a finish the line still heads for the place (Place des
+    Vosges, Notre-Dame). UNDO: fall back to `_finish_name`'s "your start" -> RED."""
     from src.tour.contingency import build_contingency_set
     from src.tour.contract import ReplanContext
     from src.tour.selection import select_route
@@ -661,9 +654,9 @@ def test_a_wrap_up_on_an_open_walk_never_says_straight_to_your_start():
 
 
 def test_a_rest_has_its_own_wrap_up_entry():
-    """Rosemary (05, step 3: "The bench is a stop") and W6.2 R2: "RO13 has a [Head back
-    now] entry at the Orangerie and the Orsay and none at the bench — the one place I
-    am most likely to decide to go home is where the button does nothing." A wrap-up
+    """The bench is a stop. A day with a [Head back now] entry at the Orangerie and
+    the Orsay and none at the bench fails the one place a tired visitor is most
+    likely to decide to go home. A wrap-up
     entry exists FROM every stop the person can be at — rests included. UNDO: build
     wrap-ups from story stops only -> RED."""
     from src.tour.contingency import build_contingency_set
@@ -687,10 +680,10 @@ def test_a_rest_has_its_own_wrap_up_entry():
 
 
 def test_the_banned_list_binds_words_not_fragments():
-    """W5.2 R2.2's list binds plan-words on screen and aloud; the W6.2 panel found the
-    check reads LETTERS: "wallpaper" carries "wall", "husband" "band", "compromise"
-    "promise", "later" "late", "darkness" "dark" (Théo, Camille: "bind the planner's
-    meanings, not the letters, or my closes can't say true things"). A close is narrator
+    """The banned list binds plan-words on screen and aloud, and the check must read
+    words, not LETTERS: "wallpaper" carries "wall", "husband" "band", "compromise"
+    "promise", "later" "late", "darkness" "dark". Binding letters stops a close from
+    saying true things. A close is narrator
     content and goes through the same door. UNDO: substring matching -> RED."""
     import pytest
 
@@ -714,8 +707,8 @@ def test_the_banned_list_binds_words_not_fragments():
 
 
 def test_a_wrap_up_from_the_place_the_day_ends_at_does_not_send_you_there():
-    """W6.2 R2 (Rosemary): "my wrap-up at the Orsay shows 'Straight to Musée d'Orsay' to
-    a woman standing in the Orsay — the day's close is what belongs there." When the
+    """A wrap-up at the Orsay must not show 'Straight to Musée d'Orsay' to a visitor
+    standing in the Orsay — the day's close is what belongs there. When the
     wrap-up is from the stop the day ends at (the start of a round trip that is a stop,
     a declared end that is a stop), the screen says the walk is done — never a direction
     to where they stand. UNDO: "Straight to <finish>" regardless -> RED."""
@@ -751,11 +744,11 @@ def test_a_wrap_up_from_the_place_the_day_ends_at_does_not_send_you_there():
 
 
 def test_skipping_an_uncategorised_stop_spends_no_category():
-    """Phase 6 W6.11's demo found the class: a skip marks the skipped stop's
-    place_category SPENT (Greta's satiation — "galleries spent, churches down"),
+    """A demo found the class: a skip marks the skipped stop's
+    place_category SPENT (a visitor who has had enough of one kind of place),
     but most of the corpus carries the default category 'other', so skipping ONE
     uncategorised stop marked 'other' spent and the tail replan seated NOTHING —
-    measured on the F&D day: every skip entry after the first shipped stop_ids []
+    measured on a family day: every skip entry after the first shipped stop_ids []
     while its own screen text promised "Next: Conciergerie". The absence of a
     category is not a category: 'other' (and None) is never spent. A REAL
     category still spends. UNDO: spend 'other' again -> RED."""
@@ -801,11 +794,11 @@ def test_skipping_an_uncategorised_stop_spends_no_category():
 
 
 def test_a_keep_constrained_tail_spends_its_whole_walking_budget():
-    """Phase 6 W6.11's demo found the second half of the empty-tail class: on an
+    """A demo found the second half of the empty-tail class: on an
     open one-way day the greedy RESERVES a quarter of the walking budget for the
     endpoint pull — but a replan tail with `keep_to_poi_ids` set can never pull
     (every non-keep candidate is filtered before the pull ranks them), so the
-    reserve starved tails for nothing. Measured on the F&D day: the skip-of-BHV
+    reserve starved tails for nothing. Measured on a family day: the skip-of-BHV
     tail (one keep, Place des Vosges, a 1291 s walk) seated NOTHING below a
     72-minute remainder because 0.75 x its walking budget fell 157 s short —
     while the entry's own screen text promised "Next: Place des Vosges". A
@@ -850,12 +843,12 @@ def test_a_keep_constrained_tail_spends_its_whole_walking_budget():
 
 
 # ---------------------------------------------------------------------------
-# M6 — a guessed stop yields a door_closed entry naming an open map place
+# A guessed stop yields a door_closed entry naming an open map place
 # ---------------------------------------------------------------------------
 
 
 def test_a_guessed_stop_yields_a_door_closed_entry_naming_an_open_map_place():
-    """Docs/adr/0006 rule 4, M6: every story stop whose hours are a GUESS
+    """Every story stop whose hours are a GUESS
     carries a ``door_closed`` entry in the contingency set. The entry names a
     STANDBY — a map-sourced place open at arrival — as the alternate the walker
     can carry to if the door turns out to be shut. The question is one sentence
@@ -977,7 +970,7 @@ def test_a_guessed_stop_yields_a_door_closed_entry_naming_an_open_map_place():
 
 
 def test_a_nearer_shut_standby_is_skipped_for_the_farther_open_one():
-    """M6 openness pre-filter: a map-sourced candidate NEARER to the guessed stop
+    """Openness pre-filter: a map-sourced candidate NEARER to the guessed stop
     but CLOSED at arrival is never offered — the chooser picks the farther open one.
     UNDO: remove the _clock_exclusion_reason filter from the min() generator -> RED
     (the nearer shut candidate wins by distance).
@@ -1062,7 +1055,7 @@ def test_a_nearer_shut_standby_is_skipped_for_the_farther_open_one():
 
 
 def _m6_day():
-    """The M6 corpus: one guessed interior stop on the day and one open map-sourced
+    """The guessed-door corpus: one guessed interior stop on the day and one open map-sourced
     place off it. Returns (base route, request, snapshot, the standby's id)."""
     from src.tour.selection import select_route
 
@@ -1099,7 +1092,7 @@ def _m6_day():
 
 
 def test_the_standby_leaves_the_set_as_a_held_stop_beside_the_day():
-    """M6b: the phone drops any id it does not already hold, so a standby named by
+    """The phone drops any id it does not already hold, so a standby named by
     an entry must ARRIVE as a stop. It rides its OWN list, never inside the day's
     stops — the replan splits the day by the phone's index and a standby sitting in
     that list would shift every index past it.
@@ -1141,7 +1134,7 @@ def test_the_standby_leaves_the_set_as_a_held_stop_beside_the_day():
 
 
 def test_a_carried_forward_door_entry_counts_its_standby_as_still_ahead():
-    """M6b: a replan carries forward the answers that still hold. A door_closed
+    """A replan carries forward the answers that still hold. A door_closed
     entry names a standby that is deliberately NOT one of the new day's stops, so
     the ahead-set has to include the standbys or every door entry is dropped the
     moment the day replans.
@@ -1330,7 +1323,7 @@ def _standby_day(closes_minutes_after_door: int):
 
 
 def test_a_standby_is_open_when_the_walker_reaches_it_not_when_the_door_was_found_shut():
-    """Docs/adr/0006 rule 4: "a map-sourced place open at arrival" — arrival at the
+    """A standby is a map-sourced place open at arrival — arrival at the
     STANDBY. Checked at the shut door's own clock, a place that closes during the
     walk over is offered and the walker is sent to a second locked door.
 
@@ -1400,7 +1393,7 @@ def _door_entry(cid: str, door: str, standby: str, *, version: int = 2):
 
 
 def test_a_replan_holds_only_the_standbys_that_already_have_a_voice():
-    """P10H-S2: "every guessed stop carries a standby ... composed and voiced". The
+    """Every guessed stop carries a standby, composed and voiced. The
     full set computed after a live replan rebuilds its standbys as fresh stops with
     no item and no audio; a walker offered one of those is sent to a place that
     plays nothing. The rebuilt set keeps the standbys the previous version had
@@ -1445,7 +1438,7 @@ def test_a_replan_holds_only_the_standbys_that_already_have_a_voice():
 
 
 def test_the_live_replan_reply_carries_the_standbys_the_walker_still_holds():
-    """P10H-S2: the reply to a live replan is built with the set deferred, and a
+    """The reply to a live replan is built with the set deferred, and a
     reply with no standbys makes every carried door entry fail its "all stops
     ahead" test — the standbys vanish from the phone the moment the day replans.
     The reply carries the previous version's standbys, minus any the new day walks.
@@ -1468,7 +1461,7 @@ def test_the_live_replan_reply_carries_the_standbys_the_walker_still_holds():
 
 
 def test_the_walkers_answer_at_a_shut_door_is_the_remainder_the_server_replans():
-    """P10H-S2: the phone answers a held door question offline, then REPORTS the
+    """The phone answers a held door question offline, then REPORTS the
     answer it applied. The server takes that answer as the remainder to keep to —
     resolved against the day AND the held standbys, in the order given — and seats
     the standby among them as protected, so the stored day matches what the walker

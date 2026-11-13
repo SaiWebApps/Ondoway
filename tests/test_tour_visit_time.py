@@ -3,11 +3,11 @@
 Time at a stop is `min(what the place absorbs, what this visitor's interest
 justifies, the party's ceiling)`, floored at the stop's own narration.
 
-WHY ALL THREE ARGUMENTS ARE NEEDED, from `docs/personas/`. The first two are both
-MAXIMISING, so neither can express Nadia's *"six minutes is the ceiling here, not
-the floor"* (`03-family-with-children.md` step 3) — hence the party ceiling. And a
-single per-place number cannot express Camille and Theo giving the same Cour Carree
-33 minutes and 8 (`02-dark-history-walker.md`) — hence the interest term.
+WHY ALL THREE ARGUMENTS ARE NEEDED. The first two are both MAXIMISING, so neither
+can express a family for whom six minutes is the ceiling here, not the floor —
+hence the party ceiling. And a single per-place number cannot express an
+architecture lover and a dark-history walker giving the same Cour Carree 33 minutes
+and 8 — hence the interest term.
 
 These tests are hermetic: constructed POIs, a constructed lens graph, no database.
 """
@@ -56,7 +56,7 @@ def _beat(poi_id: str, lens: str) -> BeatRef:
 
 #: A lens graph where `historic_arch` and `dark_history` are unrelated — neither is
 #: a parent or child of the other — so a POI whose beats are tagged `historic_arch`
-#: is a DIRECT hit for Camille and a MISS for Theo.
+#: is a DIRECT hit for an architecture lover and a MISS for a dark-history walker.
 LENS_NEIGHBOURS = {
     "historic_arch": frozenset({"architecture"}),
     "dark_history": frozenset({"history"}),
@@ -72,12 +72,12 @@ def _corpus(poi: POI, *, beat_lens: str):
 
 
 def test_the_same_place_costs_two_visitors_different_amounts_of_time():
-    """The Camille / Theo experiment, on one interior-capable place.
+    """The two-visitor experiment, on one interior-capable place.
 
-    This is the hardest requirement in the persona set and the one nothing in the
-    current model can express: *"An interest must change how long you stay, not
-    only where you go."* (`docs/personas/02-dark-history-walker.md`). The Cour
-    Carree is 33 minutes for Camille and 8 for Theo; Sainte-Chapelle is 66 and 15.
+    This is the hardest requirement and the one nothing in the current model can
+    express: an interest must change how long you stay, not only where you go. The
+    Cour Carree is 33 minutes for an architecture lover and 8 for a dark-history
+    walker; Sainte-Chapelle is 66 and 15.
 
     A single per-place number cannot produce both, so a visit time that ignores the
     visitor is a visit time that has failed.
@@ -94,7 +94,7 @@ def test_the_same_place_costs_two_visitors_different_amounts_of_time():
         f"the same place cost both visitors the same time ({camille}s): the "
         f"declared interest is not reaching the clock, so the lens is decoration."
     )
-    # Not merely different — MATERIALLY different. Camille goes in; Theo does not.
+    # Not merely different — MATERIALLY different. One goes in; the other does not.
     assert camille == 2400
     assert theo == 8 * 60
 
@@ -102,8 +102,7 @@ def test_the_same_place_costs_two_visitors_different_amounts_of_time():
 def test_a_place_with_no_interior_never_exceeds_its_outside_capacity():
     """A street, a bridge or a square has nothing to enter, whatever the interest.
 
-    Pont Neuf is a destination rather than a connection
-    (`docs/personas/01-architecture-pilgrim.md` step 13) — but it is still 12
+    Pont Neuf is a destination rather than a connection — but it is still 12
     minutes standing on a bridge, not an interior visit. `visit_seconds_inside`
     is None for these, and no amount of matching interest may invent time inside a
     place that has no inside.
@@ -122,12 +121,12 @@ def test_a_place_with_no_interior_never_exceeds_its_outside_capacity():
 
 
 def test_the_party_ceiling_clamps_even_a_perfect_interest_match():
-    """Nadia's rule: six minutes is the CEILING here, not the floor.
+    """A family's rule: six minutes is the CEILING here, not the floor.
 
-    `docs/personas/03-family-with-children.md` step 3 — *"A 38-minute stop would be
-    a disaster."* The other two terms are both maximising, so without an explicit
-    ceiling nothing in the model can shorten a stop for a family with a
-    five-year-old. The flat tier cap was protecting her by accident.
+    For a family with a five-year-old, a 38-minute stop is a disaster. The other
+    two terms are both maximising, so without an explicit ceiling nothing in the
+    model can shorten a stop for that family. The flat tier cap was protecting them
+    by accident.
     """
     from src.tour.visit_time import visit_seconds
 
@@ -158,8 +157,8 @@ def test_declaring_no_interest_does_not_hand_over_the_maximum_interior():
     That is right for SELECTION and wrong for DWELL: handing a visitor who declared
     nothing the maximum interior at every place is what puts a family with a
     five-year-old inside a 45-minute cathedral. Same classifier, two questions,
-    two answers — and Nadia's stated interest is "stories", which may not resolve
-    to a lens at all.
+    two answers — and a family's stated interest may be "stories", which may not
+    resolve to a lens at all.
     """
     from src.tour.visit_time import visit_seconds
 
@@ -349,12 +348,12 @@ def test_a_stop_is_never_shorter_than_what_it_says_or_what_it_is_worth():
     """`stop_seconds` is the longer of the two, in both directions.
 
     The floor at narration is why a tour never cuts itself off mid-sentence. The
-    floor at the visit is why Camille's twenty minutes at Concorde survive her
-    four minutes of audio. Neither is a tie-break; both are the rule.
+    floor at the visit is why an architecture lover's twenty minutes at Concorde
+    survive four minutes of audio. Neither is a tie-break; both are the rule.
     """
     from src.tour.visit_time import stop_seconds
 
-    assert stop_seconds(1200, 240) == 1200  # Camille at Concorde: silence is fine
+    assert stop_seconds(1200, 240) == 1200  # twenty minutes at Concorde: silence is fine
     assert stop_seconds(0, 270) == 270  # an unpriced stop still says its piece
     assert stop_seconds(2700, 0) == 2700  # a silent interior is still 45 minutes
     assert stop_seconds(0, 0) == 0

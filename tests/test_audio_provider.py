@@ -41,7 +41,7 @@ class TestProviderRegistry:
         """The real providers ship registered; the silent double is registered
         by tests/conftest.py and by nothing else.
 
-        OWNER RULING 2026-07-31: ``_PROVIDERS`` is the workbench's dropdown and
+        Owner decision, 2026-07-31: ``_PROVIDERS`` is the workbench's dropdown and
         the set of values POST /audio/preview honours, so ``MockTTSProvider`` is
         no longer in it. conftest calls ``register_provider`` at import, which is
         why "mock" resolves in a pytest interpreter — and does not in any uvicorn
@@ -179,7 +179,7 @@ class TestElevenLabsProvider:
 
 
 class TestTTSRetry:
-    """Transient timeouts are retried with backoff (Fix A — offline, mocked)."""
+    """Transient timeouts are retried with backoff (offline, mocked)."""
 
     def test_openai_retries_then_succeeds(self, monkeypatch):
         monkeypatch.setenv("OPENAI_API_KEY", "fake-key")
@@ -477,8 +477,8 @@ def test_audio_preview_request_accepts_long_narration():
 
 
 class TestTTSNormalizationWiring:
-    """The real providers must normalize pronunciation BEFORE calling the API
-    (backlog #23): the bytes the listener hears come from the normalized text.
+    """The real providers must normalize pronunciation BEFORE calling the API:
+    the bytes the listener hears come from the normalized text.
     """
 
     def _capture_input(self, monkeypatch) -> list[str]:

@@ -1,17 +1,15 @@
-"""AC-2 / AC-3 — both premium fan-out sites, pinned under FORCED concurrency.
+"""Both premium fan-out sites, pinned under FORCED concurrency.
 
-Ledger: specs/2026-08-03-premium-tour-crash-never-silent/run-context.md (D1-D5).
-
-D1 traced the outage to TWO call sites that shared the exact same shape — a
+The outage was traced to TWO call sites that shared the exact same shape — a
 callable wrapped ONCE by ``in_current_context`` and handed to a thread pool.
 There is now only ONE: ``src/tour/premium_tour.py execute_premium_plan``, which
 BOTH the workbench's ``/trips/preview`` and the phone's ``/trips/{id}/compose``
 reach, because the second implementation in ``src/tour/authoring.py`` was
-deleted on 2026-08-04 (unify-tour-algorithm step 4). The second-site assertions
+deleted on 2026-08-04. The second-site assertions
 went with it rather than being pointed at the surviving site twice: a duplicated
 assertion is a fake guard, and there is genuinely nothing left to prove about a
-function that no longer exists. D5 named the exact trap a first attempt at this
-test fell into: a fan-out whose workers do not provably overlap passes for the
+function that no longer exists. A first attempt at this test fell into a
+trap: a fan-out whose workers do not provably overlap passes for the
 wrong reason, exactly the way ``tests/test_degradations.py``'s original thread
 test did for three days while every real 2+-stop premium tour crashed 100% of
 the time.
@@ -41,11 +39,11 @@ applied to the real source, run, and reverted:
     premium propagation assertion, naming ``execute_premium_plan``;
   * ``degradations.py``: ``snapshot.run`` in place of ``snapshot.copy().run`` (the
     production bug restored) → RED with ``RuntimeError: cannot enter context``;
-  * ``degradations.py``: ``contextvars.copy_context().run`` inside ``_run`` (the
-    D4-REJECTED shape) → RED on both propagation assertions, because that copies
+  * ``degradations.py``: ``contextvars.copy_context().run`` inside ``_run`` (a
+    rejected shape) → RED on both propagation assertions, because that copies
     the WORKER's empty context and silently drops the caller's collector.
 
-What this file does NOT claim: the AC-3 empty-list assertion is a canary, not a
+What this file does NOT claim: the single-unit empty-list assertion is a canary, not a
 guard. Nothing on the premium path calls ``record`` today, so no
 mutation of the current tree turns it red; it exists so that a future degradation
 recorded on a healthy single-stop tour — crying wolf — is caught the day it is
@@ -185,7 +183,7 @@ class _OverlapForcingExecutor:
 
     Every worker parks — INSIDE the call the fan-out wraps — until every other
     unit's worker has also arrived, then all are released at once. That is what
-    makes the overlap provable rather than hoped for: under the D1 bug, a second
+    makes the overlap provable rather than hoped for: under the original bug, a second
     worker trying to enter the same already-entered ``Context`` raises
     immediately, so genuine N-way arrival can only complete if the fix (a fresh
     context per call) is in place.
@@ -290,13 +288,13 @@ def _assert_every_worker_reached_the_caller(
 
 
 def test_both_fan_outs_run_units_concurrently_without_context_error() -> None:
-    """AC-2 (positive, 3+ units, forced overlap) and AC-3 (negative, 1 unit).
+    """Positive (3+ units, forced overlap) and negative (1 unit).
 
     Both fan-outs must survive N-way worker overlap AND still deliver what their
     workers recorded to the caller. See the module docstring for the four source
     mutations that were applied, run and reverted to prove each half red.
     """
-    # --- AC-2: three units, both fan-outs, forced N-way overlap -----------
+    # --- Positive: three units, both fan-outs, forced N-way overlap -----------
     stitched, sequence, route = _prebuilt_route(3)
     premium_plan = plan_premium_authoring(
         stitched,
@@ -333,7 +331,7 @@ def test_both_fan_outs_run_units_concurrently_without_context_error() -> None:
         premium_collected, premium_executor, unit_count=3, site="execute_premium_plan"
     )
 
-    # --- AC-3 (negative): a single-unit plan never overlapped and must keep
+    # --- Negative: a single-unit plan never overlapped and must keep
     # working, and must not start crying wolf. These executors record NOTHING,
     # so the collector stays EMPTY unless the tour path itself starts reporting
     # a degradation on a perfectly healthy single-stop run.
@@ -372,7 +370,7 @@ class _MarkerFailureError(RuntimeError):
 class _FailingUnitExecutor:
     """Every unit succeeds except one, which raises INSIDE the fan-out.
 
-    AC-4's claim is narrower than the overlap tests above: it is not about
+    This executor's claim is narrower than the overlap tests above: it is not about
     concurrency, it is about what happens to what a worker throws. A caller
     must both learn what broke (a degradation naming the exception type,
     message and stop index, in ITS OWN scope) and have the tour actually stop
@@ -413,7 +411,7 @@ class _FailingUnitExecutor:
 
 
 def test_a_unit_failure_inside_a_fan_out_reaches_the_caller() -> None:
-    """AC-4: a unit failing inside either fan-out must be RECORDED (exception
+    """A unit failing inside either fan-out must be RECORDED (exception
     type, message, stop index — in the caller's own degradation scope) AND the
     exception must still be RE-RAISED, so a partial premium tour aborts rather
     than shipping half-narrated.

@@ -1,6 +1,6 @@
 """The visible-failure machinery, measured.
 
-OWNER RULING 2026-07-31: *"Don't just log errors. Actually show them in the
+The owner asked on 2026-07-31: *"Don't just log errors. Actually show them in the
 workbench UI. Otherwise, they're invisible."* This file is the executable half of
 that. It shipped once with NO tests at all, which a judge caught — a feature
 whose entire purpose is "stop trusting that a problem was noticed" cannot itself

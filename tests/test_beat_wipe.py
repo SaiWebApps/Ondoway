@@ -1,7 +1,7 @@
 """Tests for scripts/wipe_beats.py + .claude/commands/beat-wipe.md.
 
-Covers AC-2 (chunk-level wipe, idempotent, byte-identical on no-op)
-and BP-8 (never deletes legacy_ambiguous beats).
+Covers the chunk-level wipe (idempotent, byte-identical on no-op)
+and the guard that never deletes legacy_ambiguous beats.
 """
 
 from __future__ import annotations
@@ -128,7 +128,7 @@ def _run_cli(env: dict[str, Path], *args: str) -> int:
 
 
 def test_wipe_removes_exact_chunk(env, capsys):
-    """AC-2 — `--apply` removes the two VdG beats + the VdG log entry;
+    """`--apply` removes the two VdG beats + the VdG log entry;
     the Louvre beat and the legacy_ambiguous Les Halles beat survive."""
     rc = _run_cli(env, "chunk-15-5th-arr-val-de-grace", "--apply")
     assert rc == 0, capsys.readouterr().err
@@ -146,7 +146,7 @@ def test_wipe_removes_exact_chunk(env, capsys):
 
 
 def test_wipe_ignores_legacy_ambiguous(env, capsys):
-    """BP-8 — a wipe whose chunk arg is `legacy_ambiguous` is refused
+    """A wipe whose chunk arg is `legacy_ambiguous` is refused
     up front: no beats removed, no log entry removed, both files
     byte-identical. The sentinel is not a valid wipe target regardless
     of whether a beat or log entry happens to carry it."""
@@ -169,7 +169,7 @@ def test_wipe_ignores_legacy_ambiguous(env, capsys):
 
 
 def test_wipe_refuses_legacy_ambiguous_log_entry(tmp_path):
-    """BP-8 symmetry — even if a (hypothetically corrupt) book-log
+    """Symmetry — even if a (hypothetically corrupt) book-log
     carried a chunks_processed entry named `legacy_ambiguous`, the wipe
     must refuse to remove it. The sentinel guard is symmetric on both
     sides of the wipe."""
@@ -211,7 +211,7 @@ def test_wipe_refuses_legacy_ambiguous_log_entry(tmp_path):
 
 
 def test_wipe_idempotent_byte_identical(env, capsys):
-    """AC-2 — second wipe on already-wiped chunk leaves both files
+    """A second wipe on already-wiped chunk leaves both files
     byte-identical to their post-first-wipe state."""
     assert _run_cli(env, "chunk-15-5th-arr-val-de-grace", "--apply") == 0
 
@@ -227,7 +227,7 @@ def test_wipe_idempotent_byte_identical(env, capsys):
 
 
 def test_wipe_dry_run_no_mutation(env, capsys):
-    """AC-2 — without --apply, no disk writes even when matches exist."""
+    """Without --apply, no disk writes even when matches exist."""
     pre_beats = _sha_file(env["beats"])
     pre_log = _sha_file(env["log"])
 
@@ -241,8 +241,7 @@ def test_wipe_dry_run_no_mutation(env, capsys):
 
 
 def test_wipe_cli_invocation(env):
-    """End-to-end subprocess run — matches the verification command
-    form that lives in 05-plan.md Scope 2 Part C."""
+    """End-to-end subprocess run of the script's dry-run command."""
     result = subprocess.run(
         [
             sys.executable,

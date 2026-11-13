@@ -1,8 +1,8 @@
-"""Step 1.1 — stop_narration_text: group a Script's sentences into per-stop text.
+"""stop_narration_text: group a Script's sentences into per-stop text.
 
 Pure-function unit tests (no DB, no audio). Verifies that the narration the
 engine already produces (cold-open + transit glue + beats + closing) can be
-grouped per stop and joined in order — the text Phase 1 will hand to TTS.
+grouped per stop and joined in order — the text handed to TTS.
 """
 
 from __future__ import annotations
@@ -34,13 +34,12 @@ def _script(sentences: list[Sentence], *, seated: tuple[str, ...] = ("b1", "b2")
 
 
 def test_groups_by_stop_and_the_leg_line_is_the_leg_piece_not_the_stop_s() -> None:
-    """RE-DERIVED at Phase 7 S7.7 (design §5.6 C7 "audio overlaps the walking"; W7.2 plan
-    defect 7 — Théo, Greta, Aiko, Marcus: the stop's piece opened with the walking line the
-    person had already walked). A stop's sentences split by THE one leg-vs-stop rule
+    """The stop's piece must not open with the walking line the visitor has already walked.
+    A stop's sentences split by THE one leg-vs-stop rule
     (`generation.is_walk_concurrent`, the rule the workbench's leg cards and the blueprint's
     playback assignments already use): the walk-concurrent sentences are the stop's LEG
     piece, spoken on the leg; the rest are its STORY, the file placed at the footprint.
-    Before S7.7 this test pinned `{0: "s0a s0b"}` — the nav line folded into the stop."""
+    This test used to pin `{0: "s0a s0b"}` — the nav line folded into the stop."""
     script = _script(
         [
             Sentence(text="s0a", source_id="b1", source_type="beat", stop_idx=0),
@@ -140,7 +139,7 @@ def _surplus_fill_assessment(anchor_candidate_count: int = 2, cluster_compactnes
 
 
 def test_yellow_banner_near_green_fill_does_not_claim_below_70_80_bar():
-    """D9 follow-up: fill between the empirical 70-80% bar and GREEN (e.g. 99%)
+    """Fill between the empirical 70-80% bar and GREEN (e.g. 99%)
     must not claim "ran below the empirical 70-80% bar" (still false at 99%),
     but should disclose the near-miss honestly. Live repro: the same Louvre
     45-min tour at fill_ratio=0.99 post-corpus-edit."""
@@ -157,10 +156,9 @@ def test_yellow_banner_near_green_fill_does_not_claim_below_70_80_bar():
 
 
 def test_yellow_banner_surplus_fill_does_not_claim_below_bar():
-    """D9: fill=100% YELLOW-for-anchor-scarcity must not claim below-bar fill.
+    """Fill=100% YELLOW-for-anchor-scarcity must not claim below-bar fill.
 
-    Live repro (specs/2026-07-18-tour-qa-campaign/REPORT.md, artifact
-    48-8606-2-3376-45min-b8ed0a.md): a Louvre 45-min round-trip rendered
+    Live repro: a Louvre 45-min round-trip rendered
     "100% audio fill" alongside "ran below the empirical 70-80% audio-fill
     bar" — self-contradictory. The banner must state the TRUE limiting
     factor (thin anchor pool) instead.
@@ -174,7 +172,7 @@ def test_yellow_banner_surplus_fill_does_not_claim_below_bar():
 
 
 def test_yellow_banner_spread_out_cluster_states_layout_reason():
-    """D9: surplus fill + spread-out (not thin-anchor) cluster also gets an honest reason."""
+    """Surplus fill + spread-out (not thin-anchor) cluster also gets an honest reason."""
     from src.tour.render_md import _yellow_banner
 
     banner = _yellow_banner(
@@ -185,14 +183,14 @@ def test_yellow_banner_spread_out_cluster_states_layout_reason():
 
 
 def test_yellow_banner_genuine_low_fill_keeps_below_bar_message():
-    """D9 regression: genuinely low fill (0.5 <= fill < 1.0) must keep the below-bar line."""
+    """Regression: genuinely low fill (0.5 <= fill < 1.0) must keep the below-bar line."""
     from src.tour.render_md import _yellow_banner
 
     banner = _yellow_banner(_yellow_assessment(None), None)
     assert "ran below the empirical" in banner
 
 
-# ── Phase 7 W7.11 — the two defects the blind panel found in S7.7's own cut ──
+# ── The anchor cut: the goodbye and the leg ──
 
 
 def _west_front():
@@ -233,18 +231,15 @@ def _resolve_facade():
 
 
 def test_a_chaptered_stop_does_not_say_goodbye_before_its_chapters() -> None:
-    """W7.11 defect 15 — ALL ELEVEN personas, on the blind review of the real Notre-Dame
-    telling: the story piece ended with the stop's GOODBYE, so the farewell was said on
-    arrival and the chapter played after it. Théo: "That is a goodbye, and in Two it lands
-    while I am still round the side of the building with the entire facade half owed to me.
-    I would take the earbud out and put the phone away." Marcus: "the goodbye is the last
-    thing said at the last place, or it is not said." Rosemary heard it "in the wind, and
-    gone, and never learned there were twenty-seven kings."
+    """When the story piece ended with the stop's GOODBYE, the farewell was said on
+    arrival and the chapter played after it. A visitor who hears a goodbye stops
+    listening, and never hears the chapter still owed. The goodbye is the last thing said
+    at the last place.
 
     So: a stop CUT INTO CHAPTERS does not carry its close in the story piece. The close is
-    already its own hash-guarded artifact (`stop_close_text` → `close_audio_url`, S6.4/S6.8)
+    already its own hash-guarded artifact (`stop_close_text` → `close_audio_url`)
     and the phone plays it when the LAST chapter has been told. A stop with no chapters is
-    untouched — its story still ends on its close, exactly as Phase 6 left it.
+    untouched — its story still ends on its close.
     """
     script = _chaptered_script()
     story = stop_narration_text(script, anchor_of=_resolve_facade())
@@ -258,16 +253,16 @@ def test_a_chaptered_stop_does_not_say_goodbye_before_its_chapters() -> None:
     chapters = stop_segment_text(script, _resolve_facade())[1]
     assert [a.label for a, _ in chapters] == ["The west front"]
 
-    # A stop with NO anchors keeps the Phase 6 shape: the close ends the story.
+    # A stop with NO anchors keeps its plain shape: the close ends the story.
     assert stop_narration_text(script)[1].endswith("the symbolic heart of France.")
 
 
 def test_an_anchored_sentence_never_rides_the_leg() -> None:
-    """W7.11 defect 17 — S7.7 B applied the anchor cut to the STORY but not to the LEG, so
-    a sentence belonging to a reviewed anchor could be spoken while walking toward it. Aiko,
-    on the real leg piece: "'These facade kings' is wrong twice. *These* points at a facade I
-    cannot see for another ten minutes, and it spends the reveal early." An anchored sentence
-    belongs AT its anchor, wherever the leg-vs-stop rule would otherwise put it."""
+    """The anchor cut applies to the LEG as well as the STORY, so a sentence belonging to a
+    reviewed anchor is never spoken while walking toward it. On the leg, "these facade
+    kings" points at a facade the visitor cannot see yet, and it spends the reveal early.
+    An anchored sentence belongs AT its anchor, wherever the leg-vs-stop rule would
+    otherwise put it."""
     script = _chaptered_script()
     assert stop_leg_text(script, anchor_of=_resolve_facade()) == {
         1: "Walk north for five minutes."

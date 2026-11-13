@@ -1,13 +1,11 @@
 """Structural guard on a city's body places in `data/{city}/body-places.json`.
 
-Body places are the toilets and benches a day is physically built around
-(redesign §3.1, specs/2026-08-07-tour-algorithm-redesign/01-design.md:158-161:
-body stops are promises — "a rest window with no bench under it is thirteen
-minutes standing on a stick"). Nadia's toilet stop is "Ten minutes, zero
-cultural content, entirely non-negotiable"
-(docs/personas/03-family-with-children.md step 5, lines 22-23); Rosemary's bench
-IS a stop with a location and a duration, and she chose her tour partly for a
-toilet she knew about (docs/personas/05-step-free-visitor.md steps 3 and 7).
+Body places are the toilets and benches a day is physically built around.
+Body stops are promises: a rest window with no bench under it is just standing.
+A family with small children needs a toilet stop with no story in it, and that
+stop cannot be skipped. A visitor who cannot manage steps needs a bench that IS
+a stop, with a location and a duration, and may choose a tour for a toilet
+they know about.
 
 `scripts/poi_body_places.py` collects them from OSM at $0 into a file that is
 deliberately SEPARATE from `poi-raw.json`: a body place is not a narrated place
@@ -23,7 +21,7 @@ vocabulary, bbox, uniqueness — over an allow-list of cities whose pass has run
 (the `tests/test_poi_opening_hours.py` pattern, including its in-body loop: the
 suite hard-errors on skips, so nothing here parametrizes over a possibly-empty
 tuple). The three HOP tests at the bottom guard the road a record travels to the
-planner; the ones marked RED stay red until S2.5's planner/upload half lands.
+planner; the ones marked RED stay red until the planner/upload half lands.
 Runs in milliseconds with no database.
 """
 
@@ -44,7 +42,7 @@ BODY_KINDS = ("toilet", "bench")
 # check below. Explicit allow-list, exactly like CITIES_WITH_OPENING_HOURS in
 # the sibling file: listing a city that has not run the pass would make this
 # file permanently red and train readers to ignore it. EMPTY until the first
-# pass runs (S2.5's W2.9 adds "paris" as the declaring act).
+# pass runs (adding "paris" is the declaring act).
 #
 # ADDING a slug here is the deliberate act of declaring "this city's body
 # places are in". REMOVING one to reach green is forbidden — it deletes the
@@ -73,8 +71,8 @@ REMEDY = "Run the body-places pass: `uv run python -m scripts.poi_body_places --
 def test_body_places_file_exists_and_is_a_list() -> None:
     """The pass ran: the file exists and parses as a JSON list. On a city whose
     pass never ran this is the check that goes red, which is what stops every
-    other bar below reading vacuously green (design §3.1: body stops are
-    promises, so the data behind them is load-bearing)."""
+    other bar below reading vacuously green (body stops are promises, so the
+    data behind them is load-bearing)."""
     for city in CITIES_WITH_BODY_PLACES:
         path = DATA_ROOT / city / "body-places.json"
         assert path.exists(), f"{city}: no body-places.json — {REMEDY}"
@@ -86,9 +84,8 @@ def test_body_places_file_exists_and_is_a_list() -> None:
 def test_every_body_place_carries_the_full_record() -> None:
     """Every record carries id, kind, numeric lat/lng, and poi_role "body" —
     the shape the upload maps onto the graph. A half-formed record would
-    surface far downstream as a bench with no location, which for Rosemary is
-    exactly no bench (docs/personas/05-step-free-visitor.md step 3: "The bench
-    is a stop. It has a location, a duration")."""
+    surface far downstream as a bench with no location, which for a visitor
+    who needs to sit is exactly no bench."""
     for city in CITIES_WITH_BODY_PLACES:
         offenders = []
         for i, rec in enumerate(_records(city)):
@@ -108,10 +105,8 @@ def test_every_body_place_carries_the_full_record() -> None:
 
 def test_kind_is_only_toilet_or_bench() -> None:
     """The kind vocabulary is closed: "toilet" | "bench", nothing else. The two
-    kinds are the two body needs the personas name — Nadia's non-negotiable
-    toilet (03-family-with-children.md step 5) and Rosemary's bench
-    (05-step-free-visitor.md step 3) — and a third value would reach the
-    cadence axis untyped."""
+    kinds are the two body needs visitors have — a toilet and a bench to rest
+    on — and a third value would reach the cadence axis untyped."""
     for city in CITIES_WITH_BODY_PLACES:
         offenders = [
             f"{rec.get('id', i)}: kind={rec.get('kind')!r}"
@@ -170,15 +165,14 @@ def test_ids_are_unique() -> None:
 
 
 def test_hop_upload_carries_body_places_with_the_body_role() -> None:
-    """HOP (upload) — RED until S2.5's planner/upload half lands.
+    """HOP (upload) — RED until the planner/upload half lands.
 
     `scripts/upload_paris.py` must read `body-places.json` and bind poi_role
     "body" in its body-places section, or no record in the file ever reaches
     the graph and the planner's "body" pricing guards nothing. Source-scanning
     (the `test_the_upload_carries_the_clock_fields_in_both_property_lists`
-    genre) because an upload gap is silent by construction. Cites design §3.1
-    (01-design.md:158-161: body stops are promises) — a promise the graph
-    cannot see cannot be kept."""
+    genre) because an upload gap is silent by construction. Body stops are
+    promises, and a promise the graph cannot see cannot be kept."""
     source = (REPO_ROOT / "scripts" / "upload_paris.py").read_text()
     assert "body-places.json" in source, (
         "upload never reads body-places.json — no body place can reach the graph"
@@ -190,16 +184,15 @@ def test_hop_upload_carries_body_places_with_the_body_role() -> None:
 
 
 def test_hop_planner_a_body_place_never_seats_as_a_narrated_stop() -> None:
-    """HOP (planner) — part of S2.5's hop set; may already hold via the
-    zero-beat gate, in which case it stands as the invariant's guard.
+    """HOP (planner) — may already hold via the zero-beat gate, in which case
+    it stands as the invariant's guard.
 
     A hermetic POI with `poi_role="body"` and no beats seats NOWHERE without
     the cadence axis: today's planner must never spend a dwell slot on a
     toilet, even a tier-5 one beside the start. The whole point of the body
     role is that these places are scheduled by the body clock, not the story
-    ranking — Nadia's toilet stop carries "zero cultural content"
-    (docs/personas/03-family-with-children.md step 5, lines 22-23), so as a
-    narrated stop it would be a contentless hole in the tour."""
+    ranking — a toilet stop has no story in it, so as a narrated stop it would
+    be a contentless hole in the tour."""
     from src.tour.contract import POI, TourInput
     from src.tour.selection import select_route
     from tests.test_tour_selection import PDV, _density_fillers, _snap
@@ -227,22 +220,19 @@ def test_hop_planner_a_body_place_never_seats_as_a_narrated_stop() -> None:
 
 def test_rest_cadence_seats_the_nearest_bench_on_a_long_stretch() -> None:
     """With `rest_cadence_minutes` set, a stretch of walking longer than the
-    cadence gets the nearest body place seated as a stop — plan S2.5's
-    seating rule (`src.tour.selection._seat_body_stops`).
+    cadence gets the nearest body place seated as a stop — the seating rule
+    (`src.tour.selection._seat_body_stops`).
 
     Fixture: a tight cluster near the start plus one PINNED far anchor forces a
     single ~15-minute leg (over an 8-minute cadence); a bench sits at that
-    leg's midpoint. Cites Nadia step 5 ("Ten minutes, zero cultural content,
-    entirely non-negotiable" — docs/personas/03-family-with-children.md) and
-    Rosemary steps 3 and 7 (the bench IS a stop —
-    docs/personas/05-step-free-visitor.md) and design §3.1 ("a rest window
-    with no bench under it is thirteen minutes standing on a stick").
+    leg's midpoint. The bench IS a stop: a rest window with no bench under it
+    is just standing.
 
-    Re-derived at the Phase 6 close: the far anchor used to be taken on merit
+    The far anchor used to be taken on merit
     because eight 270 s fillers could not fill ninety minutes without it; since
-    S6.6 made tellings three minutes the cluster either cannot build the day
+    tellings became three minutes the cluster either cannot build the day
     (≤16 fillers) or fills it alone (≥17) and the far leg never happens. A pin
-    is a certainty (design §3.2) — it is the honest way to GUARANTEE the long
+    is a certainty — it is the honest way to GUARANTEE the long
     stretch at any ceiling — and the filler count is the helper's own, derived
     from the planner's dwell target and stop ceiling.
     """
@@ -288,15 +278,13 @@ def test_rest_cadence_seats_the_nearest_bench_on_a_long_stretch() -> None:
 
 
 def test_hop_score_poi_role_multiplier_prices_body_at_zero() -> None:
-    """HOP (score) — RED until S2.5's planner/upload half lands.
+    """HOP (score) — RED until the planner/upload half lands.
 
     `POI_ROLE_MULTIPLIER` must map "body" to exactly 0.0. The zero is the
-    contract the whole S2.5 slice hangs on: once the upload puts body places in
+    contract body places hang on: once the upload puts body places in
     the graph, this one number is what keeps the story ranking from ever
     scoring them, while the cadence axis (a later step) seats them by need.
-    Cites design §3.1 (01-design.md:158-161: a bench is a scheduled item, not a
-    scored sight) and docs/personas/05-step-free-visitor.md step 3 (the bench
-    is a stop that "simply is not a sight")."""
+    A bench is a scheduled item, not a scored sight."""
     from src.tour.selection import POI_ROLE_MULTIPLIER
 
     assert POI_ROLE_MULTIPLIER.get("body") == 0.0, (

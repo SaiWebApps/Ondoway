@@ -42,25 +42,24 @@ OVERLAP_TARGET = 0.90
 # line now uses, the requirement dropped by five hits. A hostile review caught it.
 #
 # WHY IT IS STILL DEFENSIBLE: 15 = 85% of the FIRST HONEST MEASUREMENT of this gate
-# (2026-07-30: 18 of 31 pinned beats, 58.1%, on the 7-POI routed walk), per decision D6.
+# (2026-07-30: 18 of 31 pinned beats, 58.1%, on the 7-POI routed walk).
 # The old 20 was 42.6% of a 47-id set whose ids were per-database UUIDs; those rotate on
 # any re-seed, which is what took this gate red and kept it red. The two numbers count
 # different things, so neither is a continuation of the other.
 #
 # THE HISTORY, because a previous version of this comment got it wrong: this gate was NOT
 # "always red". It was live and passing — Île 25/47 = 53.2% (2026-06-13) and 16/47 = 34.0%
-# after the pace pin, recorded in specs/2026-06-13-tour-planner-canonical/
-# GOLDEN-GAP-DIAGNOSTIC.md and tests/test_tour_beat_select.py. Do not repeat the claim
+# after the pace pin, recorded in tests/test_tour_beat_select.py. Do not repeat the claim
 # that it could never pass.
 #
 # OVERLAP_TARGET (90%) stays as the unmet aspiration.
 #
-# RE-DERIVED AT W8.6 (2026-08-24), 15 -> 5, AND THE DENOMINATOR MOVED WITH IT.
+# RE-DERIVED (2026-08-24), 15 -> 5, AND THE DENOMINATOR MOVED WITH IT.
 # The pinned set went 31 -> 17: fifteen beats sit at POIs this 90-minute corridor
 # no longer seats under visit-time pricing and are now recorded in
 # structurally_unreachable with that reason; one (the Pont Neuf vert-galant climax)
 # became reachable and moved back in. Against the NEW 17-id set the fresh
-# `make golden-probe` measurement of OUTPUT is 6 hits (35.3%), so decision D6's
+# `make golden-probe` measurement of OUTPUT is 6 hits (35.3%), so the rule
 # 'floor = 85% of the measurement' gives 0.85 x 6 = 5.1 -> 5.
 #
 # STATE IT PLAINLY: as an absolute count this floor DROPPED from 15 to 5. As a
@@ -68,10 +67,8 @@ OVERLAP_TARGET = 0.90
 # that no longer contains places the day does not visit. Both readings are true and
 # the first is the one to argue with.
 #
-# The eleven-persona panel ruled the day shape 10/11 at W8.6 Q6(i) (Camille: 'eight
-# exteriors in ninety minutes is a checklist'); Nadia dissented for her family's
-# six-minute per-stop ceiling and Théo for deriving the golden from the lens. Both
-# dissents are recorded in evidence/phase8-gates/verdicts/w86-*.md.
+# The day shape stays. Two objections remain open: a family visitor wants a
+# six-minute per-stop ceiling, and the golden could be derived from the lens instead.
 OVERLAP_MIN_HITS = 5
 
 
@@ -118,8 +115,8 @@ def _generated_beat_ids(snapshot, fixture):
     with RoutingClient() as routing_client:
         route = select_route(tour_input, snapshot, routing_client=routing_client)
     assert_walk_was_routed(route, golden="Île")
-    # C9b golden-harness fidelity: route through the shipped build path so the
-    # goldens merge co-located demoted_beats like production (diagnostic R2).
+    # Golden-harness fidelity: route through the shipped build path so the
+    # goldens merge co-located demoted_beats like production.
     seq = BeatSequence(
         poi_beats=tuple(
             pb
@@ -167,7 +164,7 @@ def test_ile_golden_overlap(snapshot, fixture):
 
 
 def test_ile_golden_spine(snapshot, fixture):
-    """Spine area should be Île de la Cité (Phase 2.6 district-dominance rule)."""
+    """Spine area should be Île de la Cité (the district-dominance rule)."""
     _, route, _ = _generated_beat_ids(snapshot, fixture)
     expected_spine = fixture["expected_spine_area"]
     assert route.spine_area == expected_spine, (

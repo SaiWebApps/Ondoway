@@ -1,7 +1,6 @@
 """Structural guard on per-door opening hours in `data/{city}/poi-raw.json`.
 
-Four fields say whether a place has a door and when it can be entered
-(Docs/adr/0006; CONTEXT.md "Doors and hours"):
+Four fields say whether a place has a door and when it can be entered:
 
   `gated`                 bool         The door verdict.
   `opening_hours`         str | None   OpenStreetMap `opening_hours` text, read
@@ -46,7 +45,7 @@ DATA_ROOT = REPO_ROOT / "data"
 # of fixing the data.
 CITIES_WITH_OPENING_HOURS: tuple[str, ...] = ("paris",)
 
-#: The only vocabulary a door's hours may carry (CONTEXT.md "Hours source").
+#: The only vocabulary a door's hours may carry.
 HOURS_SOURCES = ("map", "guess")
 
 
@@ -104,16 +103,15 @@ def test_every_poi_explains_its_opening_hours() -> None:
 
 
 # ---------------------------------------------------------------------------
-# THE PHASE GATE (Docs/adr/0006): a door carries ONE hours source — map, guess,
+# THE PHASE GATE: a door carries ONE hours source — map, guess,
 # or unknown — as OpenStreetMap text the library can read; no verified badge,
 # no ladder, no review command exists anywhere; parity compares hours on every
 # target and never merely warns. These are the sentences the phase is judged
-# by, written before anything was built; the milestone row that carries them
-# cannot flip until every one is green.
+# by, written before anything was built.
 # ---------------------------------------------------------------------------
 
-#: The heatwave shelter file's own words — the source the decision record
-#: forbids. Never a bare "heat": eight théâtres carry it.
+#: The heatwave shelter file's own words — a source no hours basis may cite.
+#: Never a bare "heat": eight théâtres carry it.
 HEATWAVE_WORDS_RE = re.compile(r"heatwave|îlot|fraîcheur|canicule", re.IGNORECASE)
 
 #: Names the ladder left behind. Their absence from the product, the scripts,
@@ -326,7 +324,7 @@ def test_a_model_record_is_validated_through_the_library() -> None:
 # The plumbing: the same three hops the visit-capacity fields travel, tested
 # ONE AT A TIME so a failure names the hop that ate the field
 # (`tests/test_poi_visit_duration.py` is the pattern). `place_category`
-# (data row 6.7) rides the identical plumbing and is asserted alongside.
+# rides the identical plumbing and is asserted alongside.
 # ---------------------------------------------------------------------------
 
 CLOCK_FIELDS = (
@@ -395,7 +393,7 @@ def test_hop_2_the_snapshot_builder_carries_the_clock_fields_onto_the_poi() -> N
 
 
 def test_hop_the_closed_report_count_rides_the_corpus_query_and_the_loader() -> None:
-    """Docs/adr/0006: a walker's closed report on a guessed door is counted on
+    """A walker's closed report on a guessed door is counted on
     the place (``hours_closed_reports``) so the next walker hears a stronger
     warning. The count is written at run time, never by the upload — so it is
     NOT one of ``CLOCK_FIELDS`` (that tuple drives the upload's SET list, and an
@@ -451,7 +449,7 @@ def test_hop_2_an_unpriced_record_lands_on_the_safe_defaults() -> None:
 
 
 def test_the_upload_carries_the_clock_fields_in_both_property_lists() -> None:
-    """S1.4d's hop — `scripts/upload_paris.py` keeps TWO hardcoded property
+    """The upload hop — `scripts/upload_paris.py` keeps TWO hardcoded property
     lists (the param dict and the Cypher SET list) whose own comment warns they
     must agree or a field silently never reaches the graph. Both must carry all
     the clock fields (the `test_golden_diff_cli_reads_the_durable_key` genre:

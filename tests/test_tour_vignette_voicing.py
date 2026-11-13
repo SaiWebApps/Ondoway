@@ -1,6 +1,6 @@
-"""Track B Step B.4 — the stitcher VOICES walk-past vignettes inside the leg.
+"""The stitcher VOICES walk-past vignettes inside the leg.
 
-Seam locked by the plan (adversarial review m-11): BeatSequence gains the
+The seam: BeatSequence gains the
 ADDITIVE ``vignette_beats`` field (leg_idx -> chosen beats); ``generate()``
 emits, in the transit stage of a leg with vignettes, one beat-cited sentence
 per vignette (the FIRST sentence of its beat — corpus text). validate_script
@@ -155,10 +155,9 @@ def test_two_vignettes_on_one_leg_voiced_in_order():
 
 
 def test_stop_narration_text_places_one_liner_in_the_legs_piece_not_the_stops():
-    """RE-DERIVED at Phase 7 S7.7 (design §5.6 C7; plan defect 7): the walk-past
-    one-liner is heard ON THE LEG into stop 1, so it rides stop 1's LEG piece
-    (`stop_leg_text`), never either stop's STORY piece. Before S7.7 it was folded into
-    stop 1's narration and played at arrival."""
+    """The walk-past one-liner is heard ON THE LEG into stop 1, so it rides stop 1's
+    LEG piece (`stop_leg_text`), never either stop's STORY piece. It was once folded
+    into stop 1's narration and played at arrival."""
     from src.tour.render_md import stop_leg_text
 
     script = _generate(_seq({1: (_vignette_beat(),)}))
@@ -170,7 +169,7 @@ def test_stop_narration_text_places_one_liner_in_the_legs_piece_not_the_stops():
 
 def test_empty_vignette_beats_is_todays_script():
     """Additive seam: the default ({}) and an explicit empty mapping produce a
-    Script byte-identical to the pre-B.4 stitcher output shape."""
+    Script byte-identical to the stitcher output shape without vignettes."""
     plain = _generate(_seq())
     explicit_empty = _generate(_seq({}))
     assert plain == explicit_empty
@@ -243,7 +242,7 @@ def test_cited_vignette_body_joins_canonical_context_for_glue_scan():
     assert report.forbidden_phrase_hits == ()
 
     # Without the vignette beat on the sequence, the noun is runtime invention —
-    # in STORY glue. Re-derived at Phase 6 W6.12: a navigation line is the map
+    # in STORY glue. A navigation line is the map
     # speaking and its nouns are places by nature, so GLUE_NAV is exempt from the
     # proper-noun half of the scan (measured: "Walk northwest along the Seine"
     # was refused as new_proper_noun:Seine and a real day 422'd three times);
@@ -332,7 +331,7 @@ def test_select_vignette_beats_prefers_self_naming_beat():
 
 
 def test_select_vignette_beats_prefers_shortest_self_naming_beat():
-    """A1: among ≥2 SELF-NAMING beats, the one with the shortest first sentence wins —
+    """Among ≥2 SELF-NAMING beats, the one with the shortest first sentence wins —
     a tighter walk-past line — with a requested lens still primary. UNDO: drop the
     length sort of the naming pool -> the corpus-order (longer) beat is chosen -> RED."""
     poi = _v_poi("Nelson's Column")

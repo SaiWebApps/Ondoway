@@ -1,4 +1,4 @@
-"""Step 1.5c — automated "audio says the story" gate (live OpenAI; functional).
+"""Automated "audio says the story" gate (live OpenAI; functional).
 
 Generates a real Paris tour against the live dev graph (port 7687), voices a
 BOUNDED sample of its stops' STITCHED per-stop narration (cold-open + transit glue

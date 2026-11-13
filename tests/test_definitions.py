@@ -12,7 +12,7 @@ from src.schema.definitions import (
 
 class TestUniqueConstraints:
     def test_count_matches_schema_v3(self):
-        """Schema_v3 §3 plus the family group: 11 unique constraints."""
+        """Every unique constraint the schema applies: 11 in all."""
         assert len(UNIQUE_CONSTRAINTS) == 11
 
     def test_constraint_names_are_unique(self):
@@ -53,8 +53,8 @@ class TestIndexes:
 
 class TestRelationships:
     def test_fourteen_relationship_types(self):
-        """Schema_v3 §4 plus the family group (MEMBER_OF, DAY_OF): 14
-        relationships."""
+        """Every relationship type the schema declares, the family group
+        (MEMBER_OF, DAY_OF) included: 14 relationships."""
         assert len(RELATIONSHIP_TYPES) == 14
 
     def test_all_expected_types_present(self):

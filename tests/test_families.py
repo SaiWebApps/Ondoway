@@ -1,6 +1,6 @@
 """Families — a persistent group of profiles, joined by one shareable invite.
 
-docs/adr/0005: a Family is its own node, joined by profiles
+A Family is its own node, joined by profiles
 (`Profile -[:MEMBER_OF]-> Family`); one member invites the others with a
 shareable link minted from the same token machinery as the magic-link sign-in.
 
@@ -321,9 +321,9 @@ class TestFamilyFlow:
                 s.run("MATCH (u:User {id: $uid}) DETACH DELETE u", uid=uid)
 
 
-# ── M2.2: a crewed trip is readable by its crew; writes keep one captain ─────
+# ── A crewed trip is readable by its crew; writes keep one captain ───────────
 #
-# The matrix the plan names: crew-read 200, crew-replan (and crew-compose) a
+# The matrix: crew-read 200, crew-replan (and crew-compose) a
 # typed 403 "captain_only", stranger 404 (never 403 — the no-confirmation rule
 # at src/api/routes/trips.py holds for crew exactly as it does for owners).
 
@@ -1072,7 +1072,7 @@ class TestForeignProfileIsNeverConfirmed:
         assert joined == 0
 
 
-# ── M2.2: the profile stops collapsing ───────────────────────────────────────
+# ── The profile stops collapsing ─────────────────────────────────────────────
 
 
 @needs_neo4j

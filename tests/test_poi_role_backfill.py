@@ -1,4 +1,4 @@
-"""Pure (no-DB) regression test for the poi_role backfill (M0a).
+"""Pure (no-DB) regression test for the poi_role backfill.
 
 Asserts the canonical poi-raw.json has no null poi_role after the backfill, that
 the reviewed artifact was applied faithfully, that the over-weighting bug is

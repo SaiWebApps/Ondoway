@@ -1,4 +1,4 @@
-"""Integration tests for Step 4: node UPDATE + DELETE endpoints.
+"""Integration tests for the node UPDATE + DELETE endpoints.
 
 Also includes full lifecycle tests exercising all node CRUD
 operations (create → read → update → read → delete → read).
@@ -165,7 +165,7 @@ class TestFullNodeLifecycle:
         assert created["properties"]["name"] == "Lifecycle POI"
         assert abs(created["properties"]["location"]["lat"] - 48.8584) < 0.001
 
-        # `name` is a protected merge-key property (defect 1) — updating it is
+        # `name` is a protected merge-key property — updating it is
         # rejected (422), keeping the node's identity/merge key stable.
         rejected = client.put(
             f"/api/v1/nodes/POI/{poi_id}",

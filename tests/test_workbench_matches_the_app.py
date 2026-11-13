@@ -1,6 +1,6 @@
 """THE WORKBENCH MUST BEHAVE LIKE THE REAL APP — NO MOCKS, EVER.
 
-OWNER RULING, 2026-07-31: "We need stronger guards or tests to prevent Claude or
+The owner, 2026-07-31: "We need stronger guards or tests to prevent Claude or
 ChatGPT from ever trying to spoof anything in the workbench. No mocks ever."
 
 The editorial workbench exists for one reason: so the owner can judge the product
@@ -85,8 +85,8 @@ WHAT THIS FILE CANNOT CATCH (human must watch — do not delete this list):
 * **THE PREVIEW STOP CAP — CLOSED 2026-08-04, and test 14 now guards the
   closure.** Until that date ``certification_planning_policy`` capped the preview
   at 8 stops while the persisted path allowed 15, so the workbench structurally
-  could not show a tour as long as one a tourist could be given. OWNER RULING 5
-  ("no stop limits, period") removed BOTH, and every other ceiling with them.
+  could not show a tour as long as one a tourist could be given. "No stop limits,
+  period" removed BOTH, and every other ceiling with them.
   Duration is now the only bound on tour length on every surface, including the
   quality scorer. Test 14 measures that a long request really does seat more than
   15 stops, and pins the tractability fallback that replaced the ceilings' one
@@ -913,7 +913,7 @@ def _call_arguments(html: str, call_offset: int, callee: str) -> list[str]:
 
 
 def test_every_provider_the_workbench_can_select_really_calls_out() -> None:
-    """OWNER RULING (2026-07-31): no mocks in the workbench, ever.
+    """No mocks in the workbench, ever.
 
     The check is behavioural, so it does not care what a spoof calls itself. For
     each implementation a registry can return, this parses the defining module
@@ -1388,7 +1388,7 @@ def test_no_response_cache_is_pre_seeded_before_the_first_request() -> None:
 
 
 def test_the_served_app_has_no_dependency_overrides(monkeypatch) -> None:
-    """OWNER RULING (2026-07-31): the workbench serves the real engine.
+    """The workbench serves the real engine.
 
     ``app.dependency_overrides`` is the exact mechanism the test suite uses to
     swap real providers for fakes. It is a dict on the live app object, so
@@ -1426,7 +1426,7 @@ def test_the_served_app_has_no_dependency_overrides(monkeypatch) -> None:
 
 
 def test_the_workbench_resolves_the_implementations_production_pins() -> None:
-    """OWNER RULING (2026-07-31): workbench and production must agree.
+    """Workbench and production must agree.
 
     IMPLEMENTATION-SELECTING is now derived from the code's SHAPE rather than
     from a value happening to be a registry key: a module-level function that
@@ -1857,7 +1857,7 @@ def _dedent_source(obj: object) -> str:
 
 
 def test_no_consent_gate_between_the_click_and_the_tourist_facing_call() -> None:
-    """OWNER RULING (2026-07-31): the spend-confirmation dialog is gone for good.
+    """The spend-confirmation dialog is gone for good.
 
     ``generateTourPreview`` used to ``window.confirm`` that generating a preview
     "spends real money on your API key" and return early on Cancel. The tourist
@@ -1964,7 +1964,7 @@ def test_no_consent_gate_between_the_click_and_the_tourist_facing_call() -> None
                     f"to say the word confirm."
                 )
 
-    # THE DIAL PATH (Phase 4, W4.2 panel): a dial turn re-plans the day through
+    # THE DIAL PATH: a dial turn re-plans the day through
     # one change listener -> scheduleTourReplan -> the debounced
     # generateTourPreview(). The debounce is not a gate — nobody is asked
     # anything; it folds a burst of turns into one request — so the scheduler
@@ -2148,7 +2148,7 @@ _PDV = (48.85675, 2.341033)
 
 
 def test_duration_is_the_only_stop_bound_on_the_planning_path(monkeypatch) -> None:
-    """OWNER RULING 5 — "no stop limits, period" — measured, not asserted.
+    """"No stop limits, period" — measured, not asserted.
 
     Until 2026-08-04 the planner clamped every tour to at most 15 seated anchors
     (``selection.HARD_ANCHOR_CAP``) and the certification policy clamped the
@@ -2178,10 +2178,10 @@ def test_duration_is_the_only_stop_bound_on_the_planning_path(monkeypatch) -> No
     from tests.test_tour_selection import _poi, _snap
 
     # 1. A dense start area and a duration long enough to seat well past the old
-    #    ceiling. Each place takes eight minutes to SEE (re-derived at the Phase 6
-    #    close): a stop's length is max(visit, audio), and since S6.6 capped
-    #    tellings at three minutes a lattice of talk-only places could not build
-    #    half of 400 minutes — the one underfill line (Phase 5 S5.3) refused it
+    #    ceiling. Each place takes eight minutes to SEE: a stop's length is
+    #    max(visit, audio), and since tellings were capped at three minutes a
+    #    lattice of talk-only places could not build
+    #    half of 400 minutes — the one underfill line refused it
     #    at 156 of the 200 minutes required. A dense area of real places is
     #    places you go inside; with the visit priced, the fixture seats 31 (measured)
     #    in about three seconds. Two beats per POI keeps the greedy visit-bound
@@ -2219,8 +2219,8 @@ def test_duration_is_the_only_stop_bound_on_the_planning_path(monkeypatch) -> No
     assert no_cap_policy.nominal_requested_fraction > 0
     route = select_route(inp, snap, planning_policy=no_cap_policy)
 
-    # 3. THE AC-16 BEHAVIOUR: far more dwell stops than any deleted ceiling could
-    #    produce. MEASURED on this fixture: 31 uncapped (32 before the Phase 6
+    # 3. THE BEHAVIOUR: far more dwell stops than any deleted ceiling could
+    #    produce. MEASURED on this fixture: 31 uncapped (32 before the telling
     #    ceiling move), against exactly 16 with the old ceilings restored (15
     #    greedy anchors plus the one stop the certification repair's add-pass can
     #    contribute — a COUNT cap, which the visit re-derivation does not move).
@@ -2484,7 +2484,7 @@ def test_a_flag_allowed_to_differ_never_steers_the_request_path() -> None:
 #: modules bind them, which handlers reach them, and whether each is one object or
 #: several, are all derived below rather than stated.
 #:
-#: Re-derived at S4.8 (Phase 4, design §8.1): ``plan_premium_options`` — the
+#: ``plan_premium_options`` — the
 #: K-option entry point ``plan_premium_tour`` used to delegate to — is deleted,
 #: so Block 1 is now literally ONE name. The invariant is unchanged: one planner,
 #: one authoring seam, on both surfaces.
@@ -2617,15 +2617,15 @@ class _StubGraph:
             "ti": None,
             "oj": None,
             "composed": None,
-            # Phase 5 (design §4) gave the trip a plan_version (``pv``, 0 on a
-            # fresh graph) and a session blob (``sj``, none until the day starts)
-            # that the compose-inputs read returns. Re-derived at the Phase 6
-            # close: this STORE must answer every record-shaped read the routes
-            # make, and the Phase 5 commit grew the read without growing it.
+            # The trip has a plan_version (``pv``, 0 on a fresh graph) and a
+            # session blob (``sj``, none until the day starts) that the
+            # compose-inputs read returns. This STORE must answer every
+            # record-shaped read the routes make, and a commit once grew the
+            # read without growing it.
             "pv": 0,
             "sj": None,
             "edges": 0,
-            # W7.13 (Sofia's finish): the item CREATE now reports whether the stop's
+            # The item CREATE reports whether the stop's
             # POI exists (`poi_found`) so a wrong id fails loudly and the A→B finish
             # sentinel is stored. On this stand-in every non-sentinel POI "exists".
             "poi_found": True,
@@ -2655,11 +2655,11 @@ class _StubGraph:
 
 # ---------------------------------------------------------------------------
 # The dense GREEN corpus + mock-transport routing client. MOVED HERE from
-# tests/test_tour_flavours.py at Phase 4's D4.0: that file was the k-flavours
-# suite and died with select_k_routes (design §8.1), and this file was the only
+# tests/test_tour_flavours.py: that file was the k-flavours
+# suite and died with select_k_routes, and this file was the only
 # other importer of these two fixtures — an import that cannot resolve does not
 # fail loudly at collection, it fails at run time, so the fixtures move INTO
-# their importer before the file dies (audit E §5.3).
+# their importer before the file dies.
 #
 # 4 directional clusters x 5 rich POIs (20 tier-5 anchors, 300s dwell each),
 # reaching ~533m from the start — inside the 60-min one-way envelope (738m).
@@ -2842,7 +2842,7 @@ def _dwell_poi_ids(option: dict[str, Any]) -> list[str]:
 
 
 def test_the_phone_and_the_workbench_name_one_planner_and_one_author() -> None:
-    """AC-1 — object identity, which is stricter than any source comparison.
+    """Object identity, which is stricter than any source comparison.
 
     The check is ``is``, not ``==``. Two byte-identical copies of the planner living
     in two modules would diff clean, pass every text search, satisfy any "same
@@ -2886,7 +2886,7 @@ def test_the_phone_and_the_workbench_name_one_planner_and_one_author() -> None:
             f"produce."
         )
 
-    # Re-derived at S4.8 (Phase 4, design §8.1): plan_premium_tour IS Block 1 —
+    # plan_premium_tour IS Block 1 —
     # the K-option entry point it used to delegate to was deleted with the
     # flavours, so "ONE planner" is now literally one name. A returning
     # plan_premium_options would hand the two surfaces a second planning name to
@@ -2910,7 +2910,7 @@ def test_the_phone_and_the_workbench_name_one_planner_and_one_author() -> None:
 
 
 def test_breaking_the_one_planner_breaks_both_surfaces(monkeypatch) -> None:
-    """AC-1 / AC-4 — the load-bearing proof, and the only one a duplicate cannot dodge.
+    """The load-bearing proof, and the only one a duplicate cannot dodge.
 
     Every binding through which the planner can be reached is replaced with a
     stand-in that records who called it and then refuses. Then the phone's planning
@@ -2926,7 +2926,7 @@ def test_breaking_the_one_planner_breaks_both_surfaces(monkeypatch) -> None:
     Either assertion alone is weak. Together they are the whole claim: this surface
     went through that object, and it cannot produce a tour without it.
 
-    Re-derived at S4.8 (Phase 4, design §8.1): the one planner is
+    The one planner is
     ``plan_premium_tour`` alone — ``select_k_routes`` and the K-option entry
     point are deleted, so the stand-in now replaces exactly one name's bindings
     and "fired exactly once" reads directly as "this surface planned its ONE day
@@ -2990,7 +2990,7 @@ def test_breaking_the_one_planner_breaks_both_surfaces(monkeypatch) -> None:
 
 
 def test_breaking_the_one_author_seam_breaks_compose(monkeypatch) -> None:
-    """AC-1 / AC-8 — the same proof for the half that writes the words.
+    """The same proof for the half that writes the words.
 
     Planning and authoring are two separate convergence points, and proving one says
     nothing about the other. Both surfaces write a day through ONE route: the phone's
@@ -3060,7 +3060,7 @@ def test_breaking_the_one_author_seam_breaks_compose(monkeypatch) -> None:
 
 
 def test_both_surfaces_plan_the_identical_tour(monkeypatch) -> None:
-    """AC-7 — the outcome the object identity above is supposed to buy.
+    """The outcome the object identity above is supposed to buy.
 
     Tests 16-18 prove the two surfaces run one implementation. This proves the thing
     the owner actually cares about downstream of that: the same request produces the
@@ -3084,7 +3084,7 @@ def test_both_surfaces_plan_the_identical_tour(monkeypatch) -> None:
     are minted from different things — and demanding those match would be demanding
     the two surfaces stop having different jobs.
 
-    Re-derived at S4.8 (Phase 4, design §8.1): there is ONE day now, not a set of
+    There is ONE day now, not a set of
     flavours to agree on. Both surfaces must return ``options`` as a one-element
     list, and that one day must match stop for stop — ``zip(..., strict=True)``
     over one element is exactly the claim.
@@ -3111,9 +3111,8 @@ def test_both_surfaces_plan_the_identical_tour(monkeypatch) -> None:
         "distinguish agreement from coincidence — the fixture has drifted"
     )
 
-    # THE day, on both surfaces: a one-element list (design §8.1; the field stays
-    # a list because stored pre-Phase-4 payloads and the opt-N route ids are
-    # list-shaped — deviation i).
+    # THE day, on both surfaces: a one-element list (the field stays a list
+    # because stored older payloads and the opt-N route ids are list-shaped).
     assert len(workbench_options) == 1, (
         f"the workbench planned {len(workbench_options)} options; since design "
         f"§8.1 the plan reply carries exactly ONE day"

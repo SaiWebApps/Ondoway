@@ -1,8 +1,8 @@
-"""Phase 7 S7.10 (design §8.5 "the per-beat audio library … deleted"; plan S7.10): the per-beat
+"""The per-beat audio library is deleted: the per-beat
 audio routes, pipeline and models are GONE, and the phone no longer polls per beat. The only
 voicing doors are the per-stop path and the keep-exploring door.
 
-The admin gate is ON here so a 404 proves ABSENCE, not the gate (the D7.0 lesson in
+The admin gate is ON here so a 404 proves ABSENCE, not the gate (the lesson in
 tests/test_audio_route_hardening.py). Free tier: the app is built with the driver patched out;
 no graph, no provider.
 """

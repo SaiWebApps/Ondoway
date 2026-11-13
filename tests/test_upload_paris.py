@@ -1,5 +1,5 @@
 """Tests for upload_paris hardening: city geofence, disputed-exclusion, the
-pre-upload validate_beats gate, and (Step 4.0) the provenance fields —
+pre-upload validate_beats gate, and the provenance fields —
 source_passage / source_chunk_slug / key_claims — on both the upload path and
 the targeted backfill (which must never run the audio_url-wiping full upload)."""
 
@@ -106,7 +106,7 @@ def test_assert_beats_valid_raises_on_invalid(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Step 4.0 — provenance fields (source_passage / source_chunk_slug / key_claims)
+# Provenance fields (source_passage / source_chunk_slug / key_claims)
 # ---------------------------------------------------------------------------
 
 

@@ -17,7 +17,7 @@ to a human pressing the button:
 3. The lens input offered its vocabulary only as a ``placeholder`` — which is not
    a value — so the default request sent NO lenses.
 
-TWO OWNER RULINGS (2026-07-31), both the same principle — the workbench must
+TWO DECISIONS (2026-07-31), both the same principle — the workbench must
 replicate the tourist's app experience as closely as possible:
 
 4. ``generateTourPreview`` opened a ``window.confirm`` spend warning before every
@@ -105,7 +105,7 @@ def test_blank_and_none_lenses_remain_permissive() -> None:
 
 
 # --------------------------------------------------------------------------
-# 4 & 5. the workbench behaves like the app (owner rulings, 2026-07-31)
+# 4 & 5. the workbench behaves like the app
 # --------------------------------------------------------------------------
 
 
@@ -165,12 +165,12 @@ def test_the_plan_screen_shows_what_degraded_before_anything_can_be_written() ->
 
 
 # --------------------------------------------------------------------------
-# 6. the dials (W4.2 panel) — every control writes into the ONE plan body,
+# 6. the dials — every control writes into the ONE plan body,
 #    every change replans automatically, and the day is honest about itself
 # --------------------------------------------------------------------------
 
 
-# (control id, locked wire field) — the dial vocabulary the W4.2 panel ruled.
+# (control id, locked wire field) — the dial vocabulary.
 TOUR_DIALS = [
     ("tourDate", "start_datetime"),
     ("tourTime", "start_datetime"),

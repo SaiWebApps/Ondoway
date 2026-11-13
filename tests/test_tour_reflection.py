@@ -1,7 +1,7 @@
-"""Phase 4 Step 4.1 — GLUE_REFLECTION whitelist + pure audio-deficit placement.
+"""GLUE_REFLECTION whitelist + pure audio-deficit placement.
 
 Pure placement only: which legs get a reflection. The reflection TEXT is
-COMPOSE's job (Step 4.3+); the stitcher never writes one.
+COMPOSE's job; the stitcher never writes one.
 """
 
 from __future__ import annotations

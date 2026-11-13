@@ -1,23 +1,22 @@
 """ONE definition of what standing at a place costs — the promise pricing seam.
 
-Phase 3 prices a stop as a ``PromiseShape``: outside seconds, inside seconds and
-queue seconds, three numbers because they behave nothing alike. Camille's
-Sainte-Chapelle is 38 minutes of chapel and 28 minutes of line, and *"price the
-building at a single 66 and the line becomes permanent"*
-(``docs/personas/01-architecture-pilgrim.md:77-84``): it cannot shrink at opening
-time, and Marcus cannot decline the wait without also declining the interior.
+A stop is priced as a ``PromiseShape``: outside seconds, inside seconds and
+queue seconds, three numbers because they behave nothing alike. Sainte-Chapelle
+can be 38 minutes of chapel and 28 minutes of line. Priced as a single 66, the
+line becomes permanent: it cannot shrink at opening time, and a visitor in a hurry
+cannot decline the wait without also declining the interior.
 
 ``visit_shape`` in ``src/tour/visit_time.py`` is the ONE pricer of that shape.
-This file is half behaviour tests — each pinned to the persona or ruling that
-demands it — and half source scans in the ``test_one_time_currency.py`` genre,
-because the defect this phase removes is a SECOND EXPRESSION of one quantity, and
+This file is half behaviour tests and half source scans in the
+``test_one_time_currency.py`` genre, because the defect the scans prevent is a
+SECOND EXPRESSION of one quantity, and
 behaviour tests cannot see a duplicate: two expressions agree on every case you
 thought to write and diverge on the one you did not.
 
 The scans cover ``src`` and ``scripts`` — the engine and its plumbing — and
 deliberately NOT ``tests``: a test must NAME the queue fields to build a POI
 fixture, and a fixture is not a second pricer. A test that recomputes an expected
-price is an independent guard, which §1.7 explicitly permits when said out loud.
+price is an independent guard, which is allowed when it says so.
 
 These tests are hermetic: constructed POIs, a constructed lens graph, no database.
 """
@@ -84,7 +83,7 @@ def _beat(poi_id: str, lens: str) -> BeatRef:
 
 #: A lens graph where `historic_arch` and `dark_history` are unrelated — neither is
 #: a parent or child of the other — so a POI whose beats are tagged `historic_arch`
-#: is a DIRECT hit for Camille and a MISS for Theo.
+#: is a DIRECT hit for an architecture interest and a MISS for a dark-history one.
 LENS_NEIGHBOURS = {
     "historic_arch": frozenset({"architecture"}),
     "dark_history": frozenset({"history"}),
@@ -105,10 +104,9 @@ def _corpus(poi: POI, *, beat_lens: str = "historic_arch"):
 def _chapelle(**overrides) -> POI:
     """Sainte-Chapelle as the queue pass would price it.
 
-    Outside 15 min (Theo's exterior-only number, `02-dark-history-walker.md`),
-    inside 38 min (Camille under the glass, `01-architecture-pilgrim.md` step 17),
-    a 28-minute security line on a bright early afternoon and a 10-minute one at
-    opening time (steps 16 and the "different number at opening time" clause).
+    Outside 15 min (the exterior-only number), inside 38 min (a visit under the
+    glass), a 28-minute security line on a bright early afternoon and a 10-minute
+    one at opening time.
     """
     fields = dict(
         outside_min=15,
@@ -124,15 +122,15 @@ def _chapelle(**overrides) -> POI:
 
 
 # ---------------------------------------------------------------------------
-# The shape itself — Camille's split (rule 1 + rule 2)
+# The shape itself — outside, inside and line as separate numbers (rule 1 + rule 2)
 # ---------------------------------------------------------------------------
 
 
 def test_camille_pays_the_chapel_and_the_line_as_two_separate_numbers():
-    """The 28 + 38 split (`docs/personas/01-architecture-pilgrim.md:77-84`).
+    """The 28 + 38 split.
 
-    *"Three numbers, not one: outside, inside, and a wait that belongs to the
-    hour and the season."* At 13:22 on a bright Wednesday the line is 28
+    Three numbers, not one: outside, inside, and a wait that belongs to the
+    hour and the season. At 13:22 on a bright Wednesday the line is 28
     minutes and the chapel is 38 — outside then inside at one place, both
     real. Fold them into one 66 and the wait becomes permanent.
     """
@@ -153,7 +151,7 @@ def test_camille_pays_the_chapel_and_the_line_as_two_separate_numbers():
 
 
 def test_the_line_shrinks_at_opening_time_because_it_belongs_to_the_hour():
-    """Step 16: *"a different number at opening time"* — the whole point of
+    """The line is a different number at opening time — the whole point of
     pricing the queue by arrival hour rather than folding it into capacity.
     09:00 sits before the 10:30-16:00 peak band, so the price is off-peak.
     """
@@ -167,9 +165,9 @@ def test_the_line_shrinks_at_opening_time_because_it_belongs_to_the_hour():
 
 
 def test_someone_who_stays_outside_never_pays_the_line():
-    """`01-architecture-pilgrim.md:77-84`: pricing the building at a single 66
-    makes the wait *"unskippable by someone who only wants the outside"*. Theo's
-    interest misses this place, so he views it from the parvis — and a visitor
+    """Pricing the building at a single 66 makes the wait unskippable by
+    someone who only wants the outside. A dark-history interest misses this
+    place, so that visitor views it from the parvis — and a visitor
     who never reaches the door never stands in the line.
     """
     from src.tour.visit_time import visit_shape
@@ -197,9 +195,9 @@ def test_an_undated_request_prices_the_line_at_off_peak():
 
 
 def test_an_unpredictable_queue_is_priced_at_its_worst_known_bound():
-    """`queue_class="unpredictable"` is Marcus's museum: *"a twenty-minute
-    posted wait is an unbounded risk to him — it could be forty"*
-    (`docs/personas/04-layover-sprinter.md` step 7). A wait with no reliable
+    """`queue_class="unpredictable"` is a museum whose twenty-minute posted
+    wait could be forty — an unbounded risk to a visitor on a deadline. A wait
+    with no reliable
     band is priced at `queue_minutes_peak` whatever the hour, because the only
     honest single number for an unboundable wait is its worst known bound.
     """
@@ -228,7 +226,7 @@ def test_a_malformed_peak_band_fails_open_to_off_peak():
 
 def test_an_unpassed_or_audited_free_door_prices_no_queue():
     """None is no claim at all; "none" is the audited claim that there IS no
-    line (src/tour/contract.py row 6.5). Both price zero seconds of queue —
+    line (src/tour/contract.py). Both price zero seconds of queue —
     an unpassed corpus must reproduce today's behaviour exactly.
     """
     from src.tour.visit_time import visit_shape
@@ -285,12 +283,11 @@ def test_a_queue_the_ceiling_cannot_cover_collapses_the_stop_to_outside_only():
 
 @pytest.mark.parametrize("queue", ["short", "long", "unpredictable"])
 def test_marcus_refuses_any_line_under_a_wall_but_keeps_the_building(queue: str):
-    """*"Unpredictable stops must be refusable. A queue is not a duration, it
-    is a distribution."* (`docs/personas/04-layover-sprinter.md:45-47`.) Under
-    a `wall` end no stop whose duration is unboundable is ever offered (design
-    §2.3), and a queue is excluded entirely (design §3.3) — ANY audited line,
-    not only the unpredictable class, because being twelve minutes early costs
-    Marcus nothing and being four minutes late costs him £180.
+    """Unpredictable stops must be refusable: a queue is not a duration, it is
+    a distribution. Under a `wall` end no stop whose duration is unboundable is
+    ever offered, and a queue is excluded entirely — ANY audited line, not only
+    the unpredictable class, because for a visitor with a hard deadline being
+    twelve minutes early costs nothing and being four minutes late costs £180.
 
     The STOP is not deleted: the outside view survives. Wall refuses lines,
     never places — deleting the building would be the sabotage this test pins.
@@ -307,8 +304,8 @@ def test_marcus_refuses_any_line_under_a_wall_but_keeps_the_building(queue: str)
 
 
 def test_a_wall_does_not_refuse_a_door_with_no_line():
-    """Marcus DOES go inside Saint-Vincent-de-Paul for four minutes
-    (`04-layover-sprinter.md` step 3): the wall refuses queues, not doors. A
+    """A visitor on a deadline DOES go inside Saint-Vincent-de-Paul for four
+    minutes: the wall refuses queues, not doors. A
     place with no audited line — or none audited at all — keeps its interior.
     """
     from src.tour.visit_time import visit_shape
@@ -321,7 +318,7 @@ def test_a_wall_does_not_refuse_a_door_with_no_line():
 
 
 def test_a_closed_door_keeps_the_exterior_minutes():
-    """Delete-vs-demote (panel W1.9, dissent 1): a closed museum is still a
+    """Delete-vs-demote: a closed museum is still a
     building worth standing in front of. `closed_today` voids the door — the
     interior and its line are zeroed — but the outside minutes survive and the
     shape records WHY, so the promise is honest about which visit it is.
@@ -346,8 +343,8 @@ def test_a_closed_door_keeps_the_exterior_minutes():
 def test_rain_halves_an_uncovered_place_and_leaves_a_covered_one_alone():
     """Rain halves what standing in an UNCOVERED place is worth
     (`RAIN_DWELL_FRACTION`); an arcade, museum, church or gallery shelters the
-    visit and keeps its full price. `07-rainy-tuesday.md` is the persona; the
-    covered/open map lives in `visit_time.py` and nowhere else.
+    visit and keeps its full price. The covered/open map lives in
+    `visit_time.py` and nowhere else.
     """
     from src.tour.visit_time import RAIN_DWELL_FRACTION, visit_shape
 
@@ -397,9 +394,9 @@ def test_a_voided_door_shelters_nobody_in_rain():
 
 
 def test_an_uncategorised_place_counts_as_uncovered_in_rain():
-    """"" means the categoriser has not run (src/tour/contract.py row 6.7), and
-    the safe direction is OPEN: never promise shelter the data cannot back
-    (plan S3.3, deviation i). A wrong "covered" strands a visitor in the rain;
+    """"" means the categoriser has not run (src/tour/contract.py), and
+    the safe direction is OPEN: never promise shelter the data cannot back.
+    A wrong "covered" strands a visitor in the rain;
     a wrong "open" merely under-prices a dry arcade.
     """
     from src.tour.visit_time import visit_shape
@@ -435,7 +432,7 @@ def test_rain_never_shortens_the_queue():
 
 
 # ---------------------------------------------------------------------------
-# One definition, never two (rules 7 and 8)
+# One definition, never two
 # ---------------------------------------------------------------------------
 
 
@@ -484,12 +481,12 @@ def test_the_queue_price_is_read_in_one_place():
     the loader and the upload carry them between the graph and the model, the
     data pass writes them and the export sync registers them. None of those
     decides what a line COSTS — the moment a second file turns these numbers
-    into seconds, Camille's wait exists twice and shrinks in only one of them.
+    into seconds, a visitor's wait exists twice and shrinks in only one of them.
     """
     pattern = re.compile(r"\b(queue_minutes_peak|queue_minutes_offpeak|queue_peak_hours)\b")
     allowed = {
         "src/tour/visit_time.py",  # THE pricer
-        "src/tour/contract.py",  # the field declaration (row 6.5)
+        "src/tour/contract.py",  # the field declaration
         "src/tour/selection.py",  # loader plumbing: Cypher + POI construction
         "scripts/poi_queues.py",  # the data pass that writes the numbers
         "scripts/sync_poi_exports.py",  # export-sync registration
@@ -505,8 +502,8 @@ def test_the_queue_price_is_read_in_one_place():
 def test_coveredness_is_decided_in_one_place():
     """No second `place_category` -> covered map anywhere in the engine.
 
-    The plan names the sabotage exactly: *"a second coveredness map in
-    selection.py"*. A file that speaks of cover AND names `place_category` is
+    The sabotage to catch is a second coveredness map in selection.py. A file
+    that speaks of cover AND names `place_category` is
     making the rain decision; only `visit_time.py` may. The two categoriser
     scripts legitimately SAY "covered" — a covered arcade is what an arcade is
     — but they write the category, they do not price the weather.
@@ -541,7 +538,7 @@ def test_the_outside_inside_blend_is_computed_in_one_place():
     `visit_seconds_inside`: that arithmetic IS the visit price, and a second
     copy is the two-tour-algorithms defect in miniature. The capacity pass may
     restate the relationship — it is the independent guard on the DATA, which
-    is the one restatement §1.7 permits.
+    is the one restatement allowed.
     """
     multiply = re.compile(r"typical_duration_min\s*\*\s*60")
     allowed = {

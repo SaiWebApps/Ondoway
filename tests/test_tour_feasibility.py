@@ -1,4 +1,4 @@
-"""Step 2.2a — fixed-destination feasibility refusal.
+"""Fixed-destination feasibility refusal.
 
 When a tour carries a fixed end B, the routed A→B leg alone must fit inside the
 reachability ceiling — since 2026-08-04 the certification band's maximum elapsed
@@ -13,8 +13,8 @@ time plus the materiality tolerance, not the bare walk budget. If it does not,
   smallest duration whose ceiling covers the routed A→B leg).
 
 These are REAL ``select_route`` runs over synthetic corpora — the cost
-function is never mocked. ``end=None`` never enters the branch, so the
-Step-2.0d ordered-POI identity baseline is untouched.
+function is never mocked. ``end=None`` never enters the branch, so an
+open walk's ordered POIs are untouched.
 """
 
 from __future__ import annotations
@@ -144,7 +144,7 @@ def test_far_end_short_budget_raises_with_gap_and_alternatives():
     assert exc.gap_minutes >= 1
     assert exc.gap_minutes == math.ceil((t_ab - ceiling) / 60)
 
-    # At least a loop and an extend alternative, both structured. (Step 2.2b
+    # At least a loop and an extend alternative, both structured. (Selection
     # may also add a 'closer_b' when an in-budget anchor exists — the fillers
     # here are in budget — so this is a subset check, not exact equality. The
     # closer_b path has its own dedicated tests below.)
@@ -207,9 +207,9 @@ def test_near_end_within_budget_does_not_raise():
 
 
 # ---------------------------------------------------------------------------
-# An over-budget A→B raises, never returns an empty plan. (Re-derived at Phase 4
-# S4.5, design §8.1: the invariant lived in select_k_routes' first-flavour rule;
-# the flavours died, the invariant is select_route's own.)
+# An over-budget A→B raises, never returns an empty plan. (The invariant lived in
+# select_k_routes' first-flavour rule; the flavours died, the invariant is
+# select_route's own.)
 # ---------------------------------------------------------------------------
 
 
@@ -222,7 +222,7 @@ def test_select_route_raises_for_over_budget_end():
 
 
 # ---------------------------------------------------------------------------
-# end=None NEVER enters the branch (Step-2.0d invariance baseline holds).
+# end=None NEVER enters the branch (the open-walk baseline holds).
 # ---------------------------------------------------------------------------
 
 
@@ -249,7 +249,7 @@ def test_end_none_never_raises_even_when_corpus_spans_far():
 
 def test_end_none_and_within_budget_end_produce_routes_no_refusal():
     """Both end=None and an in-budget end return Routes; neither refuses. The
-    end=None path must be untouched by the Step 2.2a branch."""
+    end=None path must be untouched by the fixed-end refusal branch."""
     snap = _green_snapshot(60)
     open_route = select_route(
         TourInput(start=PDV, duration_min=60, city_slug="paris"), snap
@@ -262,7 +262,7 @@ def test_end_none_and_within_budget_end_produce_routes_no_refusal():
 
 
 # ---------------------------------------------------------------------------
-# Step 2.2b — closer_b: bearing/±45° wedge helper + empty-wedge fallback.
+# closer_b: bearing/±45° wedge helper + empty-wedge fallback.
 #
 # All synthetic. Every expectation is DERIVED from the live functions
 # (bearing, in_wedge, poi_score, walk_budget_seconds, default_leg_seconds) so
@@ -305,7 +305,7 @@ def _closer_b(exc: TourabilityRefusedError) -> FeasibilityAlternative | None:
 
 
 def _assert_not_red(inp: TourInput, snap: CorpusSnapshot) -> None:
-    """The 2.2a/2.2b branch only runs when density is not RED (RED raises
+    """The fixed-end refusal branch only runs when density is not RED (RED raises
     earlier at the gate). Assert that via the live assessor so each closer_b
     test provably exercises the branch."""
     from src.tour.density import assess as assess_tourability
@@ -317,7 +317,7 @@ def test_closer_b_wedge_hit_picks_highest_score_inside_wedge():
     """With in-budget anchors inside the ±45° wedge toward B, closer_b targets
     the highest-poi_score one inside the wedge — not the higher-scoring anchor
     that sits OUTSIDE the wedge."""
-    # B is far east (over budget → triggers the 2.2a refusal).
+    # B is far east (over budget → triggers the fixed-end refusal).
     end = FAR_EAST_END
     # in-wedge anchors: strongly EAST (large dlng, tiny dlat) → bearing ≈ 90°,
     # inside the east-pointing ±45° wedge. Both in budget. wedge_high has more
@@ -416,7 +416,7 @@ def test_closer_b_omitted_when_no_anchor_within_budget():
     # each POI's whole beat set is worth one stop's audio ceiling (270 s) against
     # a 30-minute audio target of 1080 s, so three of them land fill at 0.75 —
     # density YELLOW (0.5 <= fill < 1.0 with zero tier-≥3 anchor candidates),
-    # which still reaches the 2.2a branch because only RED raises early.
+    # which still reaches the refusal branch because only RED raises early.
     fill_pois = [
         _anchor(f"t2-fill-{i}", 0.0003 + 0.0001 * i, 0.0, tier=2, beats=2) for i in range(3)
     ]
@@ -425,7 +425,7 @@ def test_closer_b_omitted_when_no_anchor_within_budget():
     snap = _snap([*fill_pois, far_anchor])
 
     inp = TourInput(start=PDV, end=end, duration_min=CLOSER_DURATION, city_slug="paris")
-    # Preconditions (live): density is not RED (so the 2.2a branch is reached),
+    # Preconditions (live): density is not RED (so the refusal branch is reached),
     # and NO tier-≥3 anchor is within the walk budget.
     _assert_not_red(inp, snap)
     tier3plus = [p for p in snap.pois if p.tier >= 3]
@@ -499,7 +499,7 @@ def test_bearing_and_wedge_helpers_are_self_consistent():
 
 
 def test_end_none_unchanged_by_closer_b_logic():
-    """Step-2.0d invariance: an open walk (end=None) never enters the 2.2a/2.2b
+    """Invariance: an open walk (end=None) never enters the fixed-end refusal
     branch, so no closer_b is computed and a Route is returned."""
     snap = _snap(
         [
@@ -514,10 +514,10 @@ def test_end_none_unchanged_by_closer_b_logic():
 
 
 # ---------------------------------------------------------------------------
-# Step 2.3 — corridor (time-ellipse) reach filter when end is set.
+# Corridor (time-ellipse) reach filter when end is set.
 #
 # When a fixed end B exists AND the routed A→B leg fits the walk budget (so the
-# 2.2a refusal does NOT fire), only anchors whose routed detour A→poi→B still
+# fixed-end refusal does NOT fire), only anchors whose routed detour A→poi→B still
 # fits the budget — t(A,poi)+t(poi,B) ≤ walk_budget_seconds — earn candidacy.
 # A POI on the A-B axis is admitted; a far off-axis POI (in REACH, but whose
 # two-focus detour overruns the budget) is rejected from the candidate pool,
@@ -529,9 +529,9 @@ def test_end_none_unchanged_by_closer_b_logic():
 # ---------------------------------------------------------------------------
 
 # A fixed end due east of PdV whose routed A→B leg fits the walk budget, so
-# Step 2.2a does NOT refuse and selection proceeds to the candidate loop.
+# the fixed-end check does NOT refuse and selection proceeds to the candidate loop.
 CORRIDOR_END = (PDV[0], PDV[1] + 0.0064)
-# Duration chosen so (a) the walk budget covers the direct A→B leg (2.2a is
+# Duration chosen so (a) the walk budget covers the direct A→B leg (the refusal is
 # silent), (b) a near-REACH-edge off-axis detour still overruns it, and (c) the
 # anchor cap (duration // 10, here 6) exceeds the 4 density fillers + on-axis
 # anchor, so every corridor-admitted candidate is actually selected — letting
@@ -606,7 +606,7 @@ def test_corridor_admits_on_axis_poi_for_fixed_end():
 
     inp = TourInput(start=PDV, end=end, duration_min=duration, city_slug="paris")
     _assert_not_red(inp, snap)
-    # Preconditions (live): the A→B leg fits the budget (no 2.2a refusal) and the
+    # Preconditions (live): the A→B leg fits the budget (no fixed-end refusal) and the
     # on-axis anchor clears the corridor predicate.
     assert default_leg_seconds(PDV[0], PDV[1], end[0], end[1]) <= walk_budget_seconds(duration)
     assert _corridor_admits(on_axis, end, duration)
@@ -635,7 +635,7 @@ def test_corridor_rejects_far_off_axis_poi_for_fixed_end():
     _assert_not_red(inp, snap)
 
     # Preconditions, all live-derived:
-    # 1. No 2.2a refusal (A→B fits budget).
+    # 1. No fixed-end refusal (A→B fits budget).
     assert default_leg_seconds(PDV[0], PDV[1], end[0], end[1]) <= walk_budget_seconds(duration)
     # 2. off_axis is genuinely INSIDE REACH (so REACH is not what excludes it)…
     assert _in_reach(off_axis, duration)
@@ -655,7 +655,7 @@ def test_corridor_rejects_far_off_axis_poi_for_fixed_end():
 
 
 def test_corridor_filter_does_not_touch_end_none_pool():
-    """Step-2.0d invariance: with end=None the corridor gate is skipped, so a
+    """Invariance: with end=None the corridor gate is skipped, so a
     far off-axis anchor that the fixed-end corridor would reject is STILL a
     candidate and gets selected. Same corpus, same duration — only end differs."""
     duration = CORRIDOR_DURATION

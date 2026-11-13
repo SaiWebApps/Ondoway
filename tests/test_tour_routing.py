@@ -1,4 +1,4 @@
-"""Phase 2 — routing.py: pace + haversine + dwell math."""
+"""routing.py: pace + haversine + dwell math."""
 
 from __future__ import annotations
 
@@ -97,7 +97,7 @@ def test_the_reach_radius_does_not_follow_the_walking_pace(monkeypatch):
     3.0 km/h is a stroll, not a walk — would otherwise widen the search region
     by half without meaning to. At a 300-minute request that takes the radius
     from 4,444 m to 6,667 m, and Parc de la Villette sits 5,614 m from Rue
-    Royale, so it re-enters the circle Phase 1 shrank to exclude it. Phase 1
+    Royale, so it re-enters the circle that was shrunk to exclude it — a shrink
     undone through a constant with nothing to do with it.
 
     This raises the WALKING pace and asserts the reach is untouched.
@@ -167,7 +167,7 @@ def test_a_stops_length_is_no_longer_a_property_of_its_tier():
     table was the problem. It said a stop's length is a property of how FAMOUS a
     place is, so every tier-5 anchor got the same five minutes — simultaneously far
     too little for the Louvre and far too much for a bridge — and nothing in it
-    could express Camille and Theo spending 33 and 8 minutes at the same courtyard.
+    could express two visitors spending 33 and 8 minutes at the same courtyard.
 
     A stop's length is now min(what the place absorbs, what this visitor's interest
     justifies, the party's ceiling), floored at its own narration. It is priced once
@@ -236,8 +236,8 @@ def test_summarise_route_round_trip_appends_return_segment():
 
 
 def test_summarise_route_carries_the_queue_map_a_rebuild_hands_back():
-    """Phase 7 S7.5 (design §5.6; W7.2 R2): the seconds of line the planner priced at
-    each stop's arrival hour are priced at selection's one site against the corpus
+    """The seconds of line the planner priced at each stop's arrival hour are
+    priced at selection's one site against the corpus
     snapshot — compose's rebuild has no such site, so the map is the seventh keyword
     extra, handed back exactly as `planned_visit_seconds` is. Omitted, it is the empty
     map every caller got before: no stop is queued, byte-identical."""
@@ -256,7 +256,7 @@ def test_summarise_route_carries_the_queue_map_a_rebuild_hands_back():
         start_lat=48.85, start_lng=2.35, round_trip=False, duration_min=60, spine_area=None,
     )
     assert bare.planned_queue_seconds == {}
-    # S7.6: the door (which side of the door the visit lives on) and the placed OUTSIDE
+    # The door (which side of the door the visit lives on) and the placed OUTSIDE
     # seconds ride the same way — the eighth and ninth extras, empty by default.
     doors = summarise_route(
         [_poi("a", 48.86, 2.35)],
@@ -383,7 +383,7 @@ def test_insertion_extra_local_delta_equals_the_whole_path_splice_difference():
 
 
 # ---------------------------------------------------------------------------
-# beat_spoken_seconds / planned_audio_seconds — the shared audio clock (C7)
+# beat_spoken_seconds / planned_audio_seconds — the shared audio clock
 # The single source of truth generation, reflection, and density now defer to.
 # ---------------------------------------------------------------------------
 
@@ -434,7 +434,7 @@ def test_planned_audio_seconds_sums_the_plan():
 
 
 # ---------------------------------------------------------------------------
-# governor_allowance_seconds — the C9 per-stop share-governor allowance
+# governor_allowance_seconds — the per-stop share-governor allowance
 # (ratified 2026-07-03: budget / min(3, d//10) = budget/3 for d>=30).
 # ---------------------------------------------------------------------------
 
@@ -462,7 +462,7 @@ def test_governor_allowance_divisor_floors_for_short_durations():
 
 
 # ---------------------------------------------------------------------------
-# Civil dusk (plan S3.7 — the after-dark finish's clock; design §4.3, row 6.4)
+# Civil dusk (the after-dark finish's clock)
 # ---------------------------------------------------------------------------
 
 # Notre-Dame forecourt — the routing-engine test convention's Paris point.
@@ -475,8 +475,8 @@ def test_civil_dusk_paris_summer_evening():
     Reference: civil dusk in Paris on 2026-08-15 is ~21:35 CEST. The NOAA
     approximation is good to a few minutes; the band below is wide enough to
     hold it and narrow enough that a UTC-vs-local or solar-vs-civil confusion
-    (a 1-2 h error) cannot pass. Cites design §4.3 (the dusk trigger) and row
-    6.4 (good_after_dark, consumed at the finish).
+    (a 1-2 h error) cannot pass. Dusk is the trigger for the after-dark finish,
+    which reads good_after_dark.
     """
     dusk = civil_dusk_local(date(2026, 8, 15), _DUSK_LAT, _DUSK_LNG)
     assert dusk is not None
@@ -488,8 +488,7 @@ def test_civil_dusk_paris_summer_evening():
 
 def test_civil_dusk_paris_winter_evening():
     """A Paris December day goes dark before 18:00 (~17:30 CET on the 15th) —
-    the season the after-dark finish rule exists for (11-solo-after-dark;
-    Sofia's swap rule)."""
+    the season the after-dark finish rule exists for."""
     dusk = civil_dusk_local(date(2026, 12, 15), _DUSK_LAT, _DUSK_LNG)
     assert dusk is not None
     minutes = dusk.hour * 60 + dusk.minute

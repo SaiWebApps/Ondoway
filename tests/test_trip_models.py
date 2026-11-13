@@ -1,7 +1,4 @@
-"""Unit tests for trip generation Pydantic models — no Neo4j required.
-
-Tests: T1 (9 unit tests)
-"""
+"""Unit tests for trip generation Pydantic models — no Neo4j required."""
 
 from __future__ import annotations
 
@@ -21,9 +18,9 @@ from src.tour.contract import RouteOption, RouteOptionStop
 class TestTripGenerateRequest:
     """Validate TripGenerateRequest model constraints."""
 
-    # Acceptance Criterion: AC1 — POST /api/v1/trips/generate returns 201
+    # POST /api/v1/trips/generate returns 201
     def test_trip_generate_request_valid_minimal(self):
-        """T1: Minimal valid request with only required fields."""
+        """Minimal valid request with only required fields."""
         req = TripGenerateRequest(
             profile_id="prof-123",
             center_lat=48.858,
@@ -36,9 +33,9 @@ class TestTripGenerateRequest:
         assert req.center_lng == 2.294
         assert req.start_date == "2026-05-01"
 
-    # Acceptance Criterion: AC1 — POST /api/v1/trips/generate returns 201
+    # POST /api/v1/trips/generate returns 201
     def test_trip_generate_request_valid_all_fields(self):
-        """T1: Request with all optional fields explicitly set."""
+        """Request with all optional fields explicitly set."""
         req = TripGenerateRequest(
             profile_id="prof-456",
             center_lat=48.854,
@@ -59,9 +56,9 @@ class TestTripGenerateRequest:
         assert req.kid_friendly_only is True
         assert req.trip_name == "My Paris Trip"
 
-    # Acceptance Criterion: AC1 — POST /api/v1/trips/generate returns 201
+    # POST /api/v1/trips/generate returns 201
     def test_trip_generate_request_lat_out_of_range(self):
-        """T1: Latitude > 90 must be rejected."""
+        """Latitude > 90 must be rejected."""
         with pytest.raises(ValidationError) as exc_info:
             TripGenerateRequest(
                 profile_id="p",
@@ -72,9 +69,9 @@ class TestTripGenerateRequest:
             )
         assert "center_lat" in str(exc_info.value)
 
-    # Acceptance Criterion: AC1 — POST /api/v1/trips/generate returns 201
+    # POST /api/v1/trips/generate returns 201
     def test_trip_generate_request_lng_out_of_range(self):
-        """T1: Longitude > 180 must be rejected."""
+        """Longitude > 180 must be rejected."""
         with pytest.raises(ValidationError) as exc_info:
             TripGenerateRequest(
                 profile_id="p",
@@ -85,9 +82,9 @@ class TestTripGenerateRequest:
             )
         assert "center_lng" in str(exc_info.value)
 
-    # Acceptance Criterion: AC1 — POST /api/v1/trips/generate returns 201
+    # POST /api/v1/trips/generate returns 201
     def test_trip_generate_request_radius_too_large(self):
-        """T1: radius_m > 10000 must be rejected."""
+        """radius_m > 10000 must be rejected."""
         with pytest.raises(ValidationError) as exc_info:
             TripGenerateRequest(
                 profile_id="p",
@@ -114,9 +111,9 @@ class TestTripGenerateRequest:
                 )
             assert "duration_min" in str(exc_info.value)
 
-    # Acceptance Criterion: AC1 — POST /api/v1/trips/generate returns 201
+    # POST /api/v1/trips/generate returns 201
     def test_trip_generate_request_max_stops_capped(self):
-        """T1: max_stops > 30 must be rejected."""
+        """max_stops > 30 must be rejected."""
         with pytest.raises(ValidationError) as exc_info:
             TripGenerateRequest(
                 profile_id="p",
@@ -128,9 +125,9 @@ class TestTripGenerateRequest:
             )
         assert "max_stops" in str(exc_info.value)
 
-    # Acceptance Criterion: AC1 — POST /api/v1/trips/generate returns 201
+    # POST /api/v1/trips/generate returns 201
     def test_trip_generate_request_defaults(self):
-        """T1: Defaults are applied correctly when optional fields omitted."""
+        """Defaults are applied correctly when optional fields omitted."""
         req = TripGenerateRequest(
             profile_id="p",
             center_lat=0.0,
@@ -146,7 +143,7 @@ class TestTripGenerateRequest:
         assert req.round_trip is False
 
     def test_trip_generate_request_lenses_and_round_trip(self):
-        """T1: lenses normalize (blanks dropped) and round_trip is accepted."""
+        """lenses normalize (blanks dropped) and round_trip is accepted."""
         req = TripGenerateRequest(
             profile_id="p",
             center_lat=48.0,
@@ -160,7 +157,7 @@ class TestTripGenerateRequest:
         assert req.round_trip is True
 
     def test_trip_generate_request_empty_lenses_become_none(self):
-        """T1: an all-blank lens list normalizes to None (falls back to profile/default)."""
+        """An all-blank lens list normalizes to None (falls back to profile/default)."""
         req = TripGenerateRequest(
             profile_id="p",
             center_lat=48.0,
@@ -177,7 +174,7 @@ class TestTripGenerateRequest:
 class TestGeneratedStop:
     def test_a_rest_stop_has_no_beat_and_still_rides_the_wire(self):
         """A rest — a bench the party or the "more breaks" dial seated — has no story
-        beat, so ``beat_id`` is None (design §4.5.2: rests are promise-grade stops of
+        beat, so ``beat_id`` is None (rests are promise-grade stops of
         the day, not narration). Until 2026-08-18 the field was required and every
         day that seated a rest 500'd at generate on the app path; the class of that
         error is a contract written for story stops applied to a rest. UNDO: make
@@ -199,9 +196,9 @@ class TestGeneratedStop:
 
     """Validate GeneratedStop model."""
 
-    # Acceptance Criterion: AC2 — Each stop has required fields
+    # Each stop has required fields
     def test_generated_stop_model(self):
-        """T1: GeneratedStop can be constructed with all required fields."""
+        """GeneratedStop can be constructed with all required fields."""
         stop = GeneratedStop(
             sort_order=1,
             poi_id="poi-abc",
@@ -230,12 +227,12 @@ class TestGeneratedStop:
         assert stop.script_body is None
         assert stop.audio_url is None
         assert stop.audio_duration_sec is None
-        # M0b additive fields default empty
+        # Additive fields default empty
         assert stop.beat_ids == []
         assert stop.dwell_seconds == 0
 
     def test_generated_stop_lens_fields_optional(self):
-        """T1(M0b): lens_name/lens_display default None — a stop may have no lensed beat."""
+        """lens_name/lens_display default None — a stop may have no lensed beat."""
         stop = GeneratedStop(
             sort_order=1,
             poi_id="poi-abc",
@@ -251,7 +248,7 @@ class TestGeneratedStop:
         assert stop.lens_display is None
 
     def test_generated_stop_transit_polyline_optional(self):
-        """T1(M2): transit_polyline defaults None; carries the routed leg shape."""
+        """transit_polyline defaults None; carries the routed leg shape."""
         base = dict(
             sort_order=1,
             poi_id="poi-abc",
@@ -268,7 +265,7 @@ class TestGeneratedStop:
         assert stop.transit_polyline == "encoded6_abc"
 
     def test_generated_stop_multi_beat_fields(self):
-        """T1(M0b): GeneratedStop carries all beat_ids + dwell_seconds from the engine."""
+        """GeneratedStop carries all beat_ids + dwell_seconds from the engine."""
         stop = GeneratedStop(
             sort_order=1,
             poi_id="poi-abc",
@@ -288,7 +285,7 @@ class TestGeneratedStop:
         assert stop.dwell_seconds == 600
 
     def test_generated_stop_with_audio_fields(self):
-        """T1: GeneratedStop accepts optional script_body, audio_url, audio_duration_sec."""
+        """GeneratedStop accepts optional script_body, audio_url, audio_duration_sec."""
         stop = GeneratedStop(
             sort_order=2,
             poi_id="poi-def",
@@ -310,7 +307,7 @@ class TestGeneratedStop:
         assert stop.audio_duration_sec == 185.5
 
     def test_generated_stop_serializes_null_audio_fields(self):
-        """T1: JSON serialization includes null audio fields when not provided."""
+        """JSON serialization includes null audio fields when not provided."""
         stop = GeneratedStop(
             sort_order=1,
             poi_id="poi-1",
@@ -336,9 +333,9 @@ class TestGeneratedStop:
 class TestTripGenerateResponse:
     """Validate TripGenerateResponse model."""
 
-    # Acceptance Criterion: AC1 — Response has trip_id, trip_name, profile_id, etc.
+    # Response has trip_id, trip_name, profile_id, etc.
     def test_trip_generate_response_model(self):
-        """T1: TripGenerateResponse can be constructed with all required fields."""
+        """TripGenerateResponse can be constructed with all required fields."""
         stop = GeneratedStop(
             sort_order=1,
             poi_id="poi-1",
@@ -371,11 +368,11 @@ class TestTripGenerateResponse:
         assert resp.flavour_count == 0
         assert len(resp.stops) == 1
         assert resp.stops[0].poi_id == "poi-1"
-        # M0b additive field defaults empty when omitted
+        # Additive field defaults empty when omitted
         assert resp.lens_coverage == {}
 
     def test_trip_generate_response_lens_coverage(self):
-        """T1(M0b): response carries the engine's lens_coverage map."""
+        """The response carries the engine's lens_coverage map."""
         resp = TripGenerateResponse(
             trip_id="trip-002",
             trip_name="Lens Trip",
@@ -391,7 +388,7 @@ class TestTripGenerateResponse:
 
 
 class TestTripPreviewSpotlightFields:
-    """Step 3.3 (spec s7): the /trips/preview serializer types carry the spotlight
+    """The /trips/preview serializer types carry the spotlight
     fields — band and spotlight per stop, and the per-corridor lens note — with
     behavior-preserving defaults.
 
@@ -425,7 +422,7 @@ class TestTripPreviewSpotlightFields:
         no quality verdict — rides this reply: planning writes nothing, so such a
         field would advertise something planning cannot produce.
 
-        Phase 4 (W4.2 deviation v, S4.6 + the W4.12 close) added the pre-commit
+        The reply also carries the pre-commit
         HONESTY SURFACE, all of it known at plan time and none of it authored
         text: the day's promises with their coarse windows, the plain-language
         day notes (closed doors, dial exclusions, unverified hours), the
@@ -504,8 +501,7 @@ class TestTripPreviewSpotlightFields:
         """The route handler glue (_tourability_payload) maps the engine's
         TourabilityAssessment onto the wire model — and passes None (GREEN)
         through untouched. This is the exact line that was missing when
-        thin-area single-stop tours shipped with no warning (hostile-panel
-        finding, 2026-07-02)."""
+        thin-area single-stop tours shipped with no warning."""
         from src.api.routes.trips import _tourability_payload
         from src.tour.contract import TourabilityAssessment
 

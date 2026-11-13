@@ -9,10 +9,10 @@ Three fields describe how long a visitor usefully spends at a place:
                                        so someone who has never been to the city can
                                        judge them ("interior, ~30 rooms, 45-60 min").
 
-Two numbers exist because one cannot serve two visitors. Camille gives
-Sainte-Chapelle 66 minutes including the queue; Theo gives the same building 15
-minutes from the outside and never goes in (`docs/personas/01-architecture-pilgrim.md`
-steps 16-17, `docs/personas/02-dark-history-walker.md:77`).
+Two numbers exist because one cannot serve two visitors. A visitor who loves
+architecture gives Sainte-Chapelle 66 minutes including the queue; a visitor
+following dark history gives the same building 15 minutes from the outside and
+never goes in.
 
 WHAT THIS FILE CHECKS, AND WHAT IT DELIBERATELY DOES NOT. Every assertion here is
 STRUCTURAL — shape, sign, ordering, presence. None is knowledge-based, because the
@@ -62,7 +62,7 @@ CITIES_WITH_VISIT_CAPACITY: tuple[str, ...] = ("paris",)
 # tour contract accepts any request from 1 to 600 minutes (`src/tour/contract.py:49`,
 # `duration_min: int = Field(..., gt=0, le=600)`), so there is no "shortest supported
 # tour" to size a cap against. 90 minutes is therefore CHOSEN, and chosen from
-# evidence: the longest real single-place visit in the persona set is Camille's
+# evidence: the longest real single-place visit measured is
 # Sainte-Chapelle at 66 minutes (28 queueing + 38 inside), so any cap at or below 66
 # would reject a visit that actually happens. 90 leaves headroom over the largest
 # observed case while still refusing the AI-invented half-day that no walking tour
@@ -189,7 +189,7 @@ def test_inside_capacity_never_exceeds_ninety_minutes(city: str) -> None:
     derive one from. `src/tour/contract.py:49` accepts any requested duration in
     `0 < duration_min <= 600`, so there is no shortest supported tour to measure a
     single stop against. 90 is a chosen concrete cap, anchored on the largest real
-    visit in the persona set — Camille's 66 minutes at Sainte-Chapelle, queue
+    visit measured — 66 minutes at Sainte-Chapelle, queue
     included — so that a cap set any lower would reject something that genuinely
     happens. Above that, a single stop eating an hour and a half of a walking tour
     is an AI-invented number, not a visit.

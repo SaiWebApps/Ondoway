@@ -127,12 +127,12 @@ def auth_client():
 
 
 def test_product_authoring_factory_is_offline_in_the_non_live_suite():
-    """AC-7, third clause: the conftest money-guard actually arms this boundary.
+    """The conftest money-guard actually arms this boundary.
 
     Every paid call either surface can make now goes through ONE product factory,
     ``get_premium_compose_executor()``. Nothing else in the non-live suite asserts
     that the factory is neutered, and the only executable money-guard pin that used
-    to cover the old whole-tour compose client is deleted later in this ledger — so
+    to cover the old whole-tour compose client is gone — so
     without this test the hermetic suite could start billing real Opus and every
     other test would stay green, because they all inject their own doubles and never
     touch the product path.

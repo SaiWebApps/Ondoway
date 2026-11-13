@@ -19,8 +19,8 @@ Each test here is red-first against a specific defect:
 5. /audio/compare's on-disk cache was bounded only by AGE, so a caller could
    fill the container's ephemeral disk within the retention window.
 
-PHASE 7 D7.0 TOMBSTONE (design §8.5; plan S7.10 deletes the per-beat audio
-library; phase7-ledger.md §D7.0): the rows that pinned the per-beat routes —
+TOMBSTONE (the per-beat audio library is deleted): the rows that pinned the
+per-beat routes —
 ``test_generate_batch_is_not_reachable_on_prod_profile``, the ``generate-batch``
 and ``generate/{beat_id}`` rows of ``test_spend_routes_404_on_prod_profile``, and
 the whole "silently-dropped stop" section (``TestGenerateTripReportsOrphanPrimary``
@@ -75,7 +75,7 @@ def admin_client(monkeypatch):
 
 
 class TestAdminGate:
-    """Defects 1/4/7: unauthenticated paid-TTS (+ graph-write, until S7.10) routes on prod."""
+    """Unauthenticated paid-TTS routes must not be reachable on prod."""
 
     @pytest.mark.parametrize(
         ("method", "path", "payload"),
@@ -96,9 +96,8 @@ class TestAdminGate:
         """An unset or typo'd flag must keep the surface CLOSED, matching
         app._workbench_api_enabled's fail-closed contract.
 
-        RE-DERIVED at Phase 7 D7.0 (written decision, plan §0.1.3): the probe used
-        to be ``POST /audio/generate-batch``, a route S7.10 deletes — against a
-        deleted route a 404 proves nothing about the gate, so the probe is now
+        The probe used to be ``POST /audio/generate-batch``, a route that is now
+        deleted — against a deleted route a 404 proves nothing about the gate, so the probe is now
         ``/audio/compare``, a paid route that stays admin-gated. The invariant
         is unchanged; with the gate ON the same request answers 200
         (``test_compare_is_reachable_when_admin_gate_is_on``).
@@ -323,9 +322,8 @@ class TestCompareDiskBounds:
 
 
 class TestArtifactMissing:
-    """Defect 9 (the part that lives in this module): a persisted audio_url whose
-    bytes are gone must be treated as no-audio so a non-force regeneration
-    self-heals, instead of skipping forever after a redeploy."""
+    """A persisted audio_url whose bytes are gone must be treated as no-audio so a
+    non-force regeneration self-heals, instead of skipping forever after a redeploy."""
 
     def test_missing_local_artifact_is_detected(self, tmp_path):
         assert audio_routes._artifact_missing("/api/v1/audio/files/gone.mp3") is True
@@ -344,9 +342,9 @@ class TestArtifactMissing:
         assert audio_routes._artifact_missing(url) is False
 
 
-# ── The silently-dropped stop — TOMBSTONE (Phase 7 D7.0) ─────────────────
+# ── The silently-dropped stop — TOMBSTONE ────────────────────────────────
 # ``TestGenerateTripReportsOrphanPrimary`` (+ ``_seed_orphan_trip`` and the
 # ORPHAN_* ids) pinned ``POST /audio/generate-trip``'s per-beat orphan report.
-# That route is the per-beat audio library design §8.5 deletes (plan S7.10); the
+# That route belonged to the per-beat audio library, which is deleted; the
 # per-stop path it is replaced by voices an item's own ``narration`` and has no
-# primary-beat edge to orphan. Deleted, not adapted (plan §0.1.2).
+# primary-beat edge to orphan. Deleted, not adapted.
