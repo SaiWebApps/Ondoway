@@ -1,9 +1,8 @@
-// Phase 6 W6.12 — the closing panel's replays: EACH PERSONA ON THEIR OWN DAY
-// (the W5.14 carry: "my day was never fetched"). Eleven days generated and
-// composed on the app path by w612_days.py; this test opens each over the wire
-// on the simulator, walks its opening stretch, and fires the one divergence the
-// persona's doc trace names — printing a "W612 [name]" transcript line per
-// moment for the panel to judge beside the composed text itself.
+// Replays EACH PERSONA DAY ON ITS OWN. The days are generated and composed on
+// the app path by w612_days.py and passed in at build time; this test opens
+// each over the wire on the simulator, walks its opening stretch, then taps
+// [Head back now] — the same one divergence for every day — printing a
+// "W612 [name]" transcript line per moment to judge beside the composed text.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -135,7 +134,7 @@ void main() {
             'played=${voice.playedKeys.join(",")}');
       }
 
-      // The persona's one divergence: the tap two thirds through the day.
+      // The one divergence: the wrap-up tap, 12 minutes per stop into the day.
       final twoThirds = Duration(minutes: (session.stops.length * 12));
       clock.now = clock.now.add(twoThirds);
       s.requestWrapUp();

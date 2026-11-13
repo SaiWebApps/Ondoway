@@ -15,10 +15,9 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('AudioService', () {
-    // PHASE 7 D7.0 TOMBSTONE (design §8.5; plan S7.10; phase7-ledger.md §D7.0):
-    // the three `checkAudioStatus` tests pinned the phone's PER-BEAT status
-    // poll (GET /audio/status/{beatId}) — the per-beat audio library the
-    // design deletes. Deleted, not adapted; the per-STOP poll below survives.
+    // TOMBSTONE: the three `checkAudioStatus` tests pinned the phone's PER-BEAT
+    // status poll (GET /audio/status/{beatId}) — the per-beat audio library,
+    // which is gone. Deleted, not adapted; the per-STOP poll below survives.
 
     test(
       'checkStopAudioStatus hits the per-STOP endpoint and parses on 200',

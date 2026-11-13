@@ -1,37 +1,36 @@
-// Phase 7 W7.12 — DEMO D8, "stand here" (plan W7.12; design §5.6, §4.4; the
-// W7.2 rulings R1–R6), on the iOS Simulator, on a day this phase planned,
+// DEMO "stand here", on the iOS Simulator, on a day planned,
 // composed and VOICED on the app path (w711_days.py).
 //
-// The moments, each one a thing that could not happen before Phase 7:
-//  1. THE WALKING LINE PLAYS ON THE WALK (plan defect 7; R4's last clause):
+// The moments:
+//  1. THE WALKING LINE PLAYS ON THE WALK:
 //     the stop's piece used to OPEN with "walk east toward the cathedral" —
 //     said on arrival, to someone who had just walked it. The line is now its
 //     own voiced piece and it plays on the leg; the story waits at the place.
-//  2. THE PLACE IS THE PLACE, NOT A DOT (R1, 11/11): the piece arms and starts
+//  2. THE PLACE IS THE PLACE, NOT A DOT: the piece arms and starts
 //     where the walker first TOUCHES the place's own footprint — a hundred
 //     metres out at a big place — where a 10 m circle round the pin used to
 //     mean nothing played until you stood on the pin itself.
-//  3. STAND HERE (R4): the marquee's story is cut at HUMAN-PLACED anchors. The
+//  3. STAND HERE: the marquee's story is cut at HUMAN-PLACED anchors. The
 //     west-front chapter plays itself, once, when the walker stands on the
 //     parvis inside that anchor's own circle — and walking away and coming
-//     back does NOT replay it (Nadia's test).
-//  4. THE DOOR (R3, 11/11): when the placed OUTSIDE minutes run out at a place
+//     back does NOT replay it.
+//  4. THE DOOR: when the placed OUTSIDE minutes run out at a place
 //     the visit goes into, the piece ends at the end of its SENTENCE, the
 //     stop's close plays at the door, and the whole transcript goes on the
 //     screen with a keep-listening tap. Nothing auto-plays inside.
-//  5. THE CALL (R5, 11/11): an interruption pauses the piece; when it ends and
+//  5. THE CALL: an interruption pauses the piece; when it ends and
 //     the walker is still inside the footprint, the piece resumes from the
 //     START of the cut sentence, saying nothing.
-//  6. THE LINE (R2): at a stop whose arrival hour prices a queue, the telling
+//  6. THE LINE: at a stop whose arrival hour prices a queue, the telling
 //     starts at the first standstill inside the footprint — the best listening
 //     slot of the day, silent until now.
 //
-// Same harness discipline as W6.11/W5.13: scripted GPS and clock through the
+// Same harness discipline as the earlier simulator demos: scripted GPS and clock through the
 // app's own doors, the real TripService over the wire, the session screen
 // pumped so the host's 2-second screenshot loop lands a frame per moment,
 // "W712 " transcript lines. The PLAYER is the test double here, as in every
 // prior demo — the real just_audio player was driven separately, on real files,
-// in W7.11's interruption run (w711-interruptions.md).
+// in its own interruption run.
 
 import 'dart:math';
 
@@ -52,7 +51,7 @@ const _token = String.fromEnvironment('W712_TOKEN');
 const _trip = String.fromEnvironment('W712_TRIP');
 
 /// The player double, with the two things the placement rule reads off a real
-/// player: where the piece is, and how long it really is (S7.8).
+/// player: where the piece is, and how long it really is.
 class _Voice extends MockAudioService {
   final List<String> said = [];
   final List<String> playedKeys = [];
@@ -287,7 +286,7 @@ void main() {
       lines.add('W712 [ACT3] chapter played: '
           '${t.voice.playedKeys.contains(segKey) ? "YES" : "NO"} '
           '| it says: "${chapter.narration.split(RegExp(r"(?<=[.!?])\s+")).first}"');
-      // Nadia's test: walk off, come back — no restart, no comment.
+      // Walk off, come back — no restart, no comment.
       t.voice.simulateComplete();
       final off = _offset(chapter.lat, chapter.lng, 300, 180);
       t.gps.simulatePosition(off.lat, off.lng);

@@ -475,7 +475,7 @@ void main() {
       );
     });
 
-    // Phase 4 (design §8.1): the server plans ONE day per trip and its route
+    // The server plans ONE day per trip and its route
     // id is always {trip_id}-opt1 — compose is the phone's confirm, not a
     // choice among flavours.
     test('composeTrip POSTs route_id to the compose endpoint and parses stops',
@@ -559,7 +559,7 @@ void main() {
           isA<ComposeVerificationException>()
               .having((e) => e.reason, 'reason', 'compose_verification_failed')
               .having((e) => e.attempts, 'attempts', 2)
-              // design §8.1: one day per trip means no second option to
+              // One day per trip means no second option to
               // offer, so the message the UI shows says the honest way out.
               .having(
                 (e) => e.message,
@@ -729,7 +729,7 @@ void main() {
       );
     });
 
-    // Phase 5 (design §4.6/§8.2): the living session on the wire.
+    // The living session on the wire.
     test('fetchSession GETs the session and parses the plan, its promises and '
         'its contingency set', () async {
       final client = MockClient((request) async {
@@ -871,7 +871,7 @@ void main() {
         'observed_pace': 1.1,
         'listening_rate': 1.5,
         'next_stop_index': 2,
-        // S5.10's seam: the phone's OWN clock for its next stop — an observation
+        // The session clock seam: the phone's OWN clock for its next stop — an observation
         // the server compares with, reports on, never adopts.
         'phone_next_stop_hhmm': '09:28',
       });
@@ -900,7 +900,7 @@ void main() {
   });
 }
 
-// Phase 6 S6.9 (design W5.14 — "is 18:00 a table or a guess?"; owner ruling
+// The end-hardness question ("is 18:00 a table or a guess?"; owner ruling
 // 2026-08-19: skipping the question means a HARD DEADLINE): the answer rides
 // the generate request as `end_hardness`, and an unanswered planner sends
 // "firm" explicitly — the server's own default, stated rather than implied.

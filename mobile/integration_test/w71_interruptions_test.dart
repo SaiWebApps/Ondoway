@@ -1,7 +1,7 @@
-// Phase 7 W7.1 (e) + (b) — AUDIO's before-picture on the iOS Simulator, with
+// (e) + (b) — AUDIO's before-picture on the iOS Simulator, with
 // the REAL player (just_audio through the app's own AudioService), no doubles:
 //
-//  (b) the player's OWN duration for every real MP3 the Phase 6 demo rendered
+//  (b) the player's OWN duration for every real MP3 an earlier demo rendered
 //      (W71 DUR <path> <ms>) — the third oracle beside afinfo/ffprobe for the
 //      header estimate `pipeline._get_duration` writes onto the wire;
 //  (e) what an interruption does today: the test plays a real stop's narration
@@ -13,8 +13,8 @@
 //
 // The host signals "go" by creating a file in the app's Documents directory
 // (`xcrun simctl get_app_container <udid> com.ondoway.app data`/Documents/w71-go)
-// so the button presses land at KNOWN offsets from the logged GO time. Same
-// transcript discipline as W6.11: every line starts with "W71 ".
+// so the button presses land at KNOWN offsets from the logged GO time. Every
+// transcript line starts with "W71 ".
 
 import 'dart:async';
 import 'dart:io';

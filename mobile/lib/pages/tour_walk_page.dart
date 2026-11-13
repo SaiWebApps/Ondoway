@@ -19,8 +19,7 @@ import 'package:provider/provider.dart';
 /// panel. It is also the SESSION screen: the day's next line and finish clock,
 /// the close and the thread, every offer the walk can make, and — the reason
 /// this screen exists at all — the ONE question, as two big buttons with the
-/// default named in words (W5.2 R2.5, Rosemary: "two large buttons under a
-/// thumb"), plus [Head back now] on every screen (Nadia, R1.1).
+/// default named in words, plus [Head back now] on every screen.
 ///
 /// THOSE TWO SCREENS USED TO BE TWO SCREENS. `SessionPage` rendered the whole
 /// live surface and **nothing navigated to it** — the itinerary pushed here, and
@@ -31,8 +30,8 @@ import 'package:provider/provider.dart';
 /// the other screen deleted; the plan's own instruction was to rebuild remote's
 /// screen against local's playback service, and this finishes it.
 ///
-/// A thin VIEW over [TourPlaybackService], which decides everything (design
-/// §4.6): geofence, auto-play, advance, the clock, which question is due. This
+/// A thin VIEW over [TourPlaybackService], which decides everything:
+/// geofence, auto-play, advance, the clock, which question is due. This
 /// file renders what the service holds and never decides anything itself.
 class TourWalkPage extends StatefulWidget {
   final GeneratedTrip trip;
@@ -56,8 +55,8 @@ class TourWalkPage extends StatefulWidget {
         : 'Next: ${next.stop.poiName} · ${_minutes(next.secondsToArrival)} min';
   }
 
-  /// The finish clock: the phone's OWN re-timing while the walk runs (W5.13 —
-  /// a precomputed line's clock is stale by the time it fires; the phone's is
+  /// The finish clock: the phone's OWN re-timing while the walk runs (a
+  /// precomputed line's clock is stale by the time it fires; the phone's is
   /// not), else the day's finish promise as planned.
   static String? finishLineFor(TourPlaybackService service) {
     final session = service.session;
@@ -111,9 +110,9 @@ class _TourWalkPageState extends State<TourWalkPage> {
   bool _audioCatchUpInFlight = false;
 
   /// A text-only leg is under way: the re-voiced file may have landed since the
-  /// session was fetched (the ADR's background voicing, the walker's arrival as
-  /// its deadline). Refetch and adopt AUDIO ONLY — a plan change still arrives
-  /// through the replan path, never through this door.
+  /// session was fetched (the server voices it in the background, with the
+  /// walker's arrival as its deadline). Refetch and adopt AUDIO ONLY — a plan
+  /// change still arrives through the replan path, never through this door.
   Future<void> _maybeCatchUpAudio() async {
     final engine = _engine;
     if (engine == null || !engine.audioCatchUpDue || _audioCatchUpInFlight) {
@@ -131,7 +130,7 @@ class _TourWalkPageState extends State<TourWalkPage> {
           .fetchSession(widget.trip.tripId, token);
       engine.adoptSessionAudio(session.stops);
     } catch (_) {
-      // Offline: the words stay on the screen — the ADR's floor holds.
+      // Offline: the words stay on the screen, so the leg still has its line.
     } finally {
       _audioCatchUpInFlight = false;
     }
@@ -375,7 +374,7 @@ class _SessionLines extends StatelessWidget {
               key: const Key('session-finish-line'),
               style: TextStyle(color: c.inkSoft, fontSize: 14)),
         ),
-      // S6.4: the close the wrap-up put on screen — the one sentence the tap
+      // The close the wrap-up put on screen — the one sentence the tap
       // buys, shown before the way home.
       if (engine.closeLine != null)
         Padding(
@@ -384,7 +383,7 @@ class _SessionLines extends StatelessWidget {
               key: const Key('session-close-line'),
               style: TextStyle(color: c.ink, fontSize: 15)),
         ),
-      // S1.M7: a leg whose words have no file yet — a replan rewrote the line
+      // A leg whose words have no file yet — a replan rewrote the line
       // and the audio is catching up — shows its walking line here instead of
       // playing anything. The direction is never lost to the gap.
       if (engine.legTextLine != null)
@@ -394,7 +393,7 @@ class _SessionLines extends StatelessWidget {
               key: const Key('session-leg-text-line'),
               style: TextStyle(color: c.ink, fontSize: 15)),
         ),
-      // S6.5: the thread of the pair the session just made — on screen for the
+      // The thread of the pair the session just made — on screen for the
       // whole leg, so the one lost on the move is waiting at the standstill.
       if (engine.threadLine != null)
         Padding(
@@ -618,7 +617,7 @@ class _Offers extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final offers = <Widget>[
-      // S7.5: a queued stop under the day's `tap` policy — the offer names the
+      // A queued stop under the day's `tap` policy — the offer names the
       // stop, the tap plays it.
       if (engine.armedOffer != null)
         FilledButton.tonalIcon(
@@ -627,7 +626,7 @@ class _Offers extends StatelessWidget {
           icon: const Icon(Icons.play_arrow),
           label: Text('Hear the story · ${engine.armedOffer}'),
         ),
-      // S7.6: a piece cut at its door resumes from the cut sentence's start.
+      // A piece cut at its door resumes from the cut sentence's start.
       // Nothing resumes by itself.
       if (engine.keepListeningOffer != null) ...[
         FilledButton.tonalIcon(
@@ -650,7 +649,7 @@ class _Offers extends StatelessWidget {
             ),
           ),
       ],
-      // S7.9: after a call, the couple's piece waits for THEIR tap.
+      // After a call, the couple's piece waits for THEIR tap.
       if (engine.resumeOffer != null)
         FilledButton.tonalIcon(
           key: const Key('session-resume-offer'),
@@ -658,7 +657,7 @@ class _Offers extends StatelessWidget {
           icon: const Icon(Icons.play_arrow),
           label: Text('Carry on · ${engine.resumeOffer}'),
         ),
-      // S7.7(B): a chapter due at the walker's spot.
+      // A chapter due at the walker's spot.
       if (engine.segmentOffer != null)
         FilledButton.tonalIcon(
           key: const Key('session-chapter-offer'),
@@ -666,7 +665,7 @@ class _Offers extends StatelessWidget {
           icon: const Icon(Icons.place_outlined),
           label: Text('Hear about ${engine.segmentOffer}'),
         ),
-      // S6.6: the linger offer, with its cost. "Again" is a separate control —
+      // The linger offer, with its cost. "Again" is a separate control —
       // a re-listen is not the fuller telling.
       if (engine.fullTellingOffer != null)
         Row(children: [
@@ -707,7 +706,7 @@ class _Offers extends StatelessWidget {
 }
 
 /// Pause and the way home — the two controls that are on every screen of the
-/// walk (Nadia, R1.1).
+/// walk.
 class _WalkControls extends StatelessWidget {
   final OndowayColors c;
   final TourPlaybackService engine;
@@ -890,7 +889,7 @@ class _MapBackdrop extends StatelessWidget {
         for (final s in stops)
           Annotation(
             // Local's ItineraryStop.beatId is nullable — a rest (a bench) has
-            // no story and so no beat (S5.13) — where the fork's was not, so
+            // no story and so no beat — where the fork's was not, so
             // this needs a third fallback the fork did not. poiId is always
             // present and unique within a trip, which is all a pin id needs.
             annotationId: AnnotationId(s.stopId ?? s.beatId ?? s.poiId),
@@ -930,7 +929,7 @@ class _NowPlayingPlayer extends StatelessWidget {
   Widget build(BuildContext context) {
     final n = index < 0 ? 1 : index + 1;
     // The player's OWN decoded length wins over the wire's stored one once a
-    // file is loaded (S7.8): the wire's is an estimate, this is the file.
+    // file is loaded: the wire's is an estimate, this is the file.
     final totalSec = duration > Duration.zero
         ? duration.inMilliseconds / 1000.0
         : stop.audioDurationSec;

@@ -49,7 +49,7 @@ Widget _harness({
 // The fourth is a rewrite, deliberately. SessionPage answered an unstarted walk
 // with 'No walk is running.' and no controls; this screen answers with
 // 'Preparing your walk…' and STILL carries the way home, because [Head back now]
-// belongs on every screen of the walk (W6.2 R8 / Nadia, R1.1). The old
+// belongs on every screen of the walk. The old
 // assertion contradicts the new design, so it is not ported — the test derives
 // from the design that shipped.
 
@@ -86,7 +86,7 @@ ItineraryStop _sessionStop(int n, {required double lat}) => ItineraryStop(
       audioUrl: 'https://cdn.example.com/$n.mp3',
       audioDurationSec: 100,
       dwellSeconds: 300,
-      // S7.3: the footprint is STATED on each stop, as the wire carries it.
+      // The footprint is STATED on each stop, as the wire carries it.
       trigger: const StopTrigger(radiusM: 40),
     );
 
@@ -363,8 +363,8 @@ void main() {
     expect(find.byKey(const Key('tour-nudge-accept')), findsNothing);
   });
 
-  // W5.2 R2.5: the question on screen ALWAYS as two big buttons with the default
-  // marked. R4 "what the screen shows": one or two lines — next stop and minutes,
+  // The question on screen ALWAYS as two big buttons with the default
+  // marked. What the screen shows: one or two lines — next stop and minutes,
   // the finish clock — and the way home; NEVER a pause length, a count, "you
   // paused", "behind by N", a stopwatch.
   testWidgets(
@@ -436,7 +436,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
 
     expect(find.byKey(const Key('session-next-line')), findsOneWidget);
-    // The finish clock is the PHONE's re-timing (W5.13), not a stale server line.
+    // The finish clock is the PHONE's re-timing, not a stale server line.
     final finishLine =
         tester.widget<Text>(find.byKey(const Key('session-finish-line')));
     expect(finishLine.data, startsWith('Gare du Nord by '));
@@ -450,7 +450,7 @@ void main() {
       reason: 'the default is named in words (R2.5)',
     );
     expect(find.byKey(const Key('session-head-back')), findsOneWidget);
-    // Nothing on the screen names the pause, a count or a stopwatch (R4). The
+    // Nothing on the screen names the pause, a count or a stopwatch. The
     // player's own clock is m:ss, so it cannot trip the hh:mm:ss check.
     for (final t in find.byType(Text).evaluate()) {
       final data = (t.widget as Text).data ?? '';
@@ -480,7 +480,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  // Phase 7 S7.5 (design §5.6; W7.2 R2 — Fiona & Dev, Nadia): at a stop whose
+  // At a stop whose
   // arrival hour prices a line, a couple's piece waits for a TAP; the screen
   // carries the offer and the tap plays it. The screen decides nothing.
   testWidgets('at a queued stop a couple sees the offer and the tap plays the piece',
@@ -541,7 +541,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  // Phase 7 S7.7 (B) (design §5.6 "segments"; W7.2 R4): under a roof a chapter is
+  // Under a roof a chapter is
   // offered on the screen — the tap plays it; the screen renders the offer the
   // service holds and decides nothing.
   testWidgets('an indoor chapter is offered on the screen and the tap plays it',
@@ -612,7 +612,7 @@ void main() {
 
   // NOT a port. SessionPage said 'No walk is running.' and offered nothing; this
   // screen says it is getting ready AND still carries the way home, because that
-  // control belongs on every screen of the walk (Nadia, R1.1).
+  // control belongs on every screen of the walk.
   testWidgets('with no walk running the screen says so and still offers the way home',
       (tester) async {
     final gps = MockLocationService();
@@ -803,7 +803,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  // M6d (Docs/adr/0006 rule 4): the server has already worked out what to offer
+  // The server has already worked out what to offer
   // at a guessed door, so the tap SELECTS the answer the phone is holding — two
   // arms, at once, offline — instead of making the walker wait on a round trip
   // while they stand at a locked door.

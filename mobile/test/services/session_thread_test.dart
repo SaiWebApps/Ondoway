@@ -1,10 +1,10 @@
-// Phase 6 S6.5 — THE THREAD (design §5.4 "adaptation-proof narration"; §5.7).
+// THE THREAD: narration that survives the session's changes to the day.
 //
-// W6.2 R5 (11/11, phase6-ledger.md): one sentence under fifteen words, authored
+// One sentence under fifteen words, authored
 // at compose time for every adjacency the contingency set can make, riding the
 // arriving stop keyed by the predecessor's name. WHERE: a standing seam — never
 // mid-leg; on screen for the whole leg so the one lost on the move is waiting
-// at the standstill (Paulo). None rather than glue where the pair shares no
+// at the standstill. None rather than glue where the pair shares no
 // theme. The pair the plan already had keeps its thread inside the arriving
 // stop's own narration — the phone speaks a thread only for a pair the session
 // MADE.
@@ -52,7 +52,7 @@ ItineraryStop _stop(int n, {required double lat, Map<String, String>? threads}) 
       dwellSeconds: 300,
       closeText: "And that's Stop $n.",
       threadLines: threads,
-      // S7.3: the footprint these fixtures assumed (the phone's old 40 m
+      // The footprint these fixtures assumed (the phone's old 40 m
       // circle) is now STATED on each stop, as the wire carries it.
       trigger: const StopTrigger(radiusM: 40),
     );

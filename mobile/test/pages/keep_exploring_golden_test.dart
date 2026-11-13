@@ -12,7 +12,7 @@ import 'package:ondoway/models/trip.dart';
 import 'package:ondoway/pages/trip_itinerary_page.dart';
 import 'package:ondoway/theme/theme.dart';
 
-// KE8: visual proof of the "keep exploring here" button.
+// Visual proof of the "keep exploring here" button.
 //
 // PLATFORM: pixel goldens are captured on the flutter-tester (VM) engine, so
 // this file cannot run under chrome. `make flutter-test` is TWO passes — chrome

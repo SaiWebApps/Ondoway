@@ -165,10 +165,10 @@ Widget _buildTestWidget({
   );
 }
 
-/// The server's answer to "GET /trips/{id}/session" BEFORE the day is composed
-/// (Phase 5, design §4.6/§8.2): 404 with the reason the phone reads as "compose
-/// first". Every confirm-flow double below answers the session probe with this so
-/// the flow reaches compose the way it does against the real server.
+/// The server's answer to "GET /trips/{id}/session" BEFORE the day is composed:
+/// 404 with the reason the phone reads as "compose first". Every confirm-flow
+/// double below answers the session probe with this so the flow reaches compose
+/// the way it does against the real server.
 http.Response noSessionYet() => http.Response(
       jsonEncode({
         'detail': {
@@ -249,12 +249,12 @@ void main() {
 
     testWidgets('confirm and prepare FAB saves trip and triggers PER-STOP audio',
         (tester) async {
-      // Step 1.4d: the page must trigger + poll the PER-STOP endpoints
+      // The page must trigger + poll the PER-STOP endpoints
       // (generate-trip-stops + stop-status), not the per-beat ones.
       var perStopTriggered = false;
       var perStopStatusPolled = false;
       // Mock the backend: generate-trip for setup, compose (the confirm tap
-      // writes the one day first — design §8.1), then per-stop audio.
+      // writes the one day first), then per-stop audio.
       final mockClient = MockClient((request) async {
         if (request.url.path.contains('/trips/generate')) {
           return http.Response(
@@ -420,7 +420,7 @@ void main() {
       // Tap the "Confirm & Prepare" FAB
       expect(find.text('Confirm & Prepare'), findsOneWidget);
       await tester.tap(find.text('Confirm & Prepare'));
-      await tester.pump(); // compose request/response (design §8.1)
+      await tester.pump(); // compose request/response
       await tester.pump(); // post-compose setState + prepare flow start
 
       // saveTrip should have been called
@@ -580,9 +580,9 @@ void main() {
     });
 
     group('one-day confirm (Phase 4, design §8.1)', () {
-      // Generate response as the post-Phase-4 wire sends it: `options` is a
-      // list of EXACTLY ONE (the field stays a list because stored
-      // pre-Phase-4 trips carry multi-option lists). The phone ignores it —
+      // Generate response as the wire sends it now: `options` is a
+      // list of EXACTLY ONE (the field stays a list because older stored
+      // trips carry multi-option lists). The phone ignores it —
       // the one day's route id is always {trip_id}-opt1. Stops carry the
       // ORIGINAL stop_id.
       Map<String, dynamic> generateResponse() => {
@@ -1149,7 +1149,7 @@ void main() {
 
         expect(hitPath, isNotNull);
         expect(hitPath, contains('/audio/stops/stop-ke-1/keep-exploring'));
-        // Played as a DEEPER-DIVE source (KE6), so tour auto-advance won't fire.
+        // Played as a DEEPER-DIVE source, so tour auto-advance won't fire.
         expect(audio.lastPlayedDeeperDive, isTrue);
         expect(audio.lastPlayedBeatId, 'stop-ke-1-keep-exploring');
       });
@@ -1241,7 +1241,7 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      // Tap confirm button — the compose call (design §8.1) fails first on
+      // Tap confirm button — the compose call fails first on
       // the null accessToken, is caught, and lands on the error card.
       await tester.tap(find.text('Confirm & Prepare'));
       await tester.pump();

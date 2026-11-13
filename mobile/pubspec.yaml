@@ -21,16 +21,16 @@ dependencies:
   sign_in_with_apple: ^6.1.0
   apple_maps_flutter: ^1.4.0
   just_audio: ^0.9.40
-  # Phase 7 S7.9 (W7.2 R5): the audio session — background spoken playback and
+  # The audio session — background spoken playback and
   # the interruption events; just_audio's own session library, now used directly.
   audio_session: ^0.1.25
-  # Phase 8 S8.7 (persona 09, Fiona & Dev step 4): the LOCK SCREEN's transport —
+  # The LOCK SCREEN's transport —
   # what is playing, and a pause button that reaches a pocketed phone. Without it
   # the phone must be unlocked and the app opened to stop a voice in your ear.
   just_audio_background: ^0.0.1-beta.17
   path_provider: ^2.1.0
-  # The family invite renders as a QR beside the shareable link (docs/adr/0005:
-  # "the QR serves the family standing in the same room"). Pure-Dart renderer —
+  # The family invite renders as a QR beside the shareable link, for family
+  # standing in the same room. Pure-Dart renderer —
   # no platform channel, no new .swift file.
   qr_flutter: ^4.1.0
   # The invite link rides the platform share sheet — a ~250-char URL is for
@@ -40,7 +40,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  # Phase 5 W5.12: the kill criterion is measured ON the iOS Simulator.
+  # The kill criterion is measured ON the iOS Simulator.
   integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0

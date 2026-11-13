@@ -1,9 +1,9 @@
-// Phase 5 W5.13 — DEMO D6, "the walk that noticed" (plan W5.13), on the iOS
+// The demo "the walk that noticed", on the iOS
 // Simulator. Both persona traces replayed as scripted position streams and a
 // scripted clock through the app's own doors (LocationProvider / AudioProvider
 // test doubles; the real TripService over the wire for the live replan), the
 // walk screen rendering every moment, and a verbatim transcript printed as
-// "W513 " lines (the host writes it under evidence/phase5-session/demo/).
+// "W513 " lines (the host writes it to a file).
 // Screenshots: the host captures the simulator every 2 s; each moment pauses
 // six seconds after printing its marker so a frame lands on it.
 //
@@ -11,7 +11,7 @@
 // composed on the app path by w512_setup.py): FD — Fiona & Dev, Place Dauphine,
 // couple, 180 min from 15:00; RO — Rosemary, Orsay round trip, take-it-easy,
 // art lens (ONE stop under her preset's 12-minute cap); RO13 — the same request
-// at her own doc's leg length (13 min: Orangerie, her bench, the Orsay). The
+// at a 13-minute leg length (Orangerie, her bench, the Orsay). The
 // audio URLs are stand-ins so the doubles can "play" a piece; narration is not
 // the subject.
 
@@ -238,7 +238,7 @@ void main() {
         }
         await moment(t, 'leave ${st[i].poiName} at its planned departure', pause: false);
       }
-      // Her doc's trace: at 16:32 she sits, and by 16:45 she has lingered
+      // Her trace: at 16:32 she sits, and by 16:45 she has lingered
       // thirteen minutes. Wherever the day has left her.
       t.clock.setHhmm(16, 32);
       s.pauseTour();

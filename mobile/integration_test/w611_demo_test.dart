@@ -1,21 +1,22 @@
-// Phase 6 W6.11 — DEMO D7, "wrap it up at minute 14" (plan W6.11; design §4.4,
-// §5.3-§5.5), on the iOS Simulator, on the days the planner gives Fiona & Dev
-// TODAY (generated and composed on the app path by w61_trips.py under the
-// three-minute tight, closes, threads, registers and full tellings).
+// A DEMO, "wrap it up at minute 14", on the iOS Simulator, on the days the
+// planner gives Fiona & Dev TODAY (generated and composed on the app path by
+// w61_trips.py under the three-minute tight, closes, threads, registers and
+// full tellings).
 //
 // The moments, per the rulings that re-planned this demo:
-//  1. THE TAP IS THE SEAM (W6.2 R8, 11/11): mid-piece at minute 14 they tap
+//  1. THE TAP IS THE SEAM: mid-piece at minute 14 they tap
 //     [Head back now] — the close and the way home go ON SCREEN at once, the
 //     sentence finishes, the stretch's AUTHORED close is heard, then nothing.
-//  2. THE THREAD (R5; replaces the dead plant-fallback act — R4 killed
-//     fallbacks): a skip makes a new pair — the pair's authored bridge line
+//  2. THE THREAD (replaces the dead plant-fallback act — fallbacks were
+//     removed): a skip makes a new pair — the pair's authored bridge line
 //     goes on screen for the leg and is heard once at a standing seam.
-//  3. THE LINGER OFFER (R3): past the tight telling's end the screen OFFERS
+//  3. THE LINGER OFFER: past the tight telling's end the screen OFFERS
 //     the full telling with its cost; nothing auto-plays.
 //
-// Same harness as W5.13: scripted GPS and clock through the app's own doors,
-// the real TripService over the wire, "W611 " transcript lines, 6-second
-// pauses so the host's 2-second screenshot loop lands a frame per moment.
+// Same harness as the other demo tests: scripted GPS and clock through the
+// app's own doors, the real TripService over the wire, tagged transcript
+// lines, 6-second pauses so the host's 2-second screenshot loop lands a frame
+// per moment.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

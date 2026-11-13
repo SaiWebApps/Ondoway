@@ -1,10 +1,10 @@
-// Phase 6 S6.4 — [Head back now] plays the CLOSE (design §5.3 "closes that land
-// anywhere"; §7.4.5 "every prefix is decent"; §4.4 the etiquette).
+// [Head back now] plays the CLOSE. A close lands anywhere, every prefix of the
+// day is decent, and the announcement etiquette holds.
 //
-// W6.2 R8 (11/11, phase6-ledger.md): "the TAP IS THE SEAM — the person made it.
+// The TAP IS THE SEAM — the person made it.
 // The current SENTENCE finishes (never a cut word); the PIECE does NOT finish.
 // Then the current stretch's close — one line, the narrator. Then the way home
-// ON SCREEN. Then nothing." With no piece playing (the piece long over, or a
+// ON SCREEN. Then nothing. With no piece playing (the piece long over, or a
 // leg) the DAY's close is what the tap plays, on screen at once and said at the
 // next natural moment. The close is the one sentence the tap buys; the way-home
 // line and the day's line are never spoken on top of it.
@@ -50,7 +50,7 @@ class _Clock {
 
 // A 40-second piece of four sentences of 10 words each: boundaries at 10, 20,
 // 30 and 40 s (a tap at 13 s waits 7 s — inside the 8-second cap a tapped piece
-// may keep playing; W7.2 R6 lowered the cap from 12).
+// may keep playing; the cap was lowered from 12).
 const _narration =
     'One two three four five six seven eight nine ten. '
     'Eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty. '
@@ -75,7 +75,7 @@ ItineraryStop _stop(int n, {required double lat, String? close}) => ItinerarySto
   audioDurationSec: 40,
   dwellSeconds: 300,
   closeText: close ?? "That's Stop $n, the close that ends it all here.",
-  // S7.3: the footprint these fixtures assumed (the phone's old 40 m circle) is
+  // The footprint these fixtures assumed (the phone's old 40 m circle) is
   // now STATED on each stop, as the wire carries it.
   trigger: const StopTrigger(radiusM: 40),
 );
@@ -137,13 +137,13 @@ void main() {
       final entry = t.service.matchContingency(t.service.measure());
       expect(entry, isNotNull);
       t.service.applyContingency(entry!.contingencyId);
-      // The screen flips at once: the close AND the way home are on it (§4.4.2).
+      // The screen flips at once: the close AND the way home are on it.
       expect(t.service.closeLine, stops[0].closeText);
       expect(t.service.screenText, 'Straight to Stop 2');
       // The piece is still playing its sentence out …
       expect(t.player.stops, 0);
       // … and at the sentence end it is cut and the CLOSE plays — through the
-      // narrator's door when it has a file (S6.8), else said through the one
+      // narrator's door when it has a file, else said through the one
       // silent door, on screen either way.
       t.service.finishSentenceNow();
       expect(t.player.stops, 1, reason: 'the piece is stopped at the sentence end');
@@ -195,8 +195,8 @@ void main() {
     test('a piece of four equal sentences has its ends at quarter marks; past the '
         'last boundary the wait is zero; no text or length means no wait', () {
       final stop = stops[0];
-      // RE-DERIVED at S7.8 (W7.2 R6): the first sentence ends at 10 s, past the
-      // 8 s cap — a tap at 0 s waits the cap, not the sentence.
+      // The first sentence ends at 10 s, past the 8 s cap — a tap at 0 s waits
+      // the cap, not the sentence.
       expect(TourPlaybackService.secondsToSentenceEnd(stop, Duration.zero),
           TourPlaybackService.kSentenceEndCapSeconds);
       expect(TourPlaybackService.secondsToSentenceEnd(stop, const Duration(seconds: 3)),
@@ -225,9 +225,8 @@ void main() {
     });
   });
 
-  // Phase 7 S7.8 (design: "the duration is MEASURED, and the clocks trust it";
-  // W7.2 R6): the seam is reckoned from the PLAYER's real length when the file is
-  // loaded — the wire's length is the estimate, the player's is the fact — and
+  // The duration is MEASURED, and the clocks trust it: the seam is reckoned
+  // from the PLAYER's real length when the file is loaded — the wire's length is the estimate, the player's is the fact — and
   // the cap is the party's: 8 s, the family 0 (cut at once), a `wall` day 5 s.
   // An unknown length cuts at once and the close plays.
   group('S7.8 the seam trusts the player\'s length and the party\'s cap (W7.2 R6)', () {

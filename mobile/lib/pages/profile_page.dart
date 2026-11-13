@@ -68,8 +68,8 @@ class ProfilePage extends StatelessWidget {
               builder: (_) => const FeedbackSheet(),
             ),
           ),
-          // The opening times this app speaks are the map's, and its licence is
-          // share-alike: the credit travels with the words (Docs/adr/0006).
+          // The opening times this app speaks are the map's. Its share-alike
+          // licence requires this credit wherever its hours are shown.
           const ListTile(
             key: Key('profile-hours-credit'),
             leading: Icon(Icons.schedule_outlined),

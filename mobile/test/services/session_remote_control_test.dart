@@ -1,16 +1,17 @@
-// Phase 8 S8.7 — the LOCK SCREEN's pause (docs/personas/09-couple-who-would-rather-talk.md,
-// step 4: "Dev pauses the tour without mentioning it, mid-sentence, because a voice in his
-// ear is now in the way. The pause is not an interruption of the product. It is the product
-// being used correctly"). They do it five times in three hours and the phone stays pocketed.
+// The LOCK SCREEN's pause. A couple who would rather talk pause the tour without a word,
+// mid-sentence, because the voice in the ear is in the way: that pause is the product being
+// used correctly, not an interruption of it. They do it five times in three hours and the
+// phone stays pocketed.
 //
 // THE INVARIANT: the platform's pause button reaches the SAME door the in-app pause uses.
-// F&D's pause suspends the TOUR — its clock stops, the pause is counted as theirs, the wall
+// Their pause suspends the TOUR — its clock stops, the pause is counted as theirs, the wall
 // clock keeps spending — not merely the AudioPlayer. A lock-screen press that only paused
-// the player would leave the session clock running and the plan drifting, which is F&D's
-// step-4 complaint ("from here the app's finish time is fiction") made worse, not fixed.
+// the player would leave the session clock running and the plan drifting, so the app's
+// finish time would turn to fiction.
 //
-// This is NOT S7.9. An interruption (a call, Siri) is the platform taking the audio away and
-// is never counted against the person; a transport button is the person asking, and it is.
+// This is NOT an interruption. An interruption (a call, Siri) is the platform taking the
+// audio away and is never counted against the person; a transport button is the person
+// asking, and it is.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ondoway/models/trip.dart';

@@ -36,7 +36,7 @@ class _TripDurationPageState extends State<TripDurationPage>
   late TimeOfDay _startTime;
   late DateTime _endDate;
   late TimeOfDay _endTime;
-  // Phase 6 S6.9 (W5.14 F&D/Camille: "is 18:00 a table or a guess?"): the one
+  // Is the end time a booking or a guess? The one
   // question, asked at planning. Defaults to 'firm' — the owner's ruling: a
   // person who types an end time and skips the question gets a day that
   // finishes by it.
@@ -403,7 +403,7 @@ class _TripDurationPageState extends State<TripDurationPage>
           ),
           const SizedBox(height: 12),
 
-          // Phase 6 S6.9: the ONE question, in plain words. Skipping it keeps
+          // The ONE question, in plain words. Skipping it keeps
           // "Should end then" — a hard deadline (the owner's ruling).
           Text('Is the end time fixed?', style: tt.labelLarge),
           const SizedBox(height: 6),

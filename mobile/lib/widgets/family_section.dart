@@ -4,7 +4,7 @@ import 'package:ondoway/services/family_service.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
-/// The profile page's "Your family" block (docs/adr/0005): the members of the
+/// The profile page's "Your family" block: the members of the
 /// caller's family, a create button while there is none, and an invite that
 /// renders as a shareable link AND a QR — the QR serves the family standing in
 /// the same room, the link travels over any channel.

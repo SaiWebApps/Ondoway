@@ -17,10 +17,9 @@ import 'package:ondoway/theme/theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Phase 8 S8.7 (persona 09, Fiona & Dev step 4): the lock screen's transport,
-  // wired before anything can play. Dev's phone stays in his pocket, so the
-  // pause he reaches is this one — and it arrives at the tour's own pause door
-  // (TourPlaybackService), never at the player alone.
+  // The lock screen's transport, wired before anything can play. A visitor
+  // whose phone stays in a pocket reaches this pause, and it arrives at the
+  // tour's own pause door (TourPlaybackService), never at the player alone.
   await JustAudioBackground.init(
     androidNotificationChannelId: 'com.ondoway.app.channel.audio',
     androidNotificationChannelName: 'Tour audio',

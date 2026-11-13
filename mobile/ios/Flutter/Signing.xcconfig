@@ -11,8 +11,7 @@
 //
 // Do NOT set a team/bundle in the Xcode "Signing & Capabilities" tab — that
 // rewrites the pbxproj to a literal and reintroduces the churn this file removes.
-// Edit `DevSigning.xcconfig` instead. See specs/2026-08-04-mobile-roadmap/roadmap.md
-// §7.3 and memory `project_ios_per_dev_signing`.
+// Edit `DevSigning.xcconfig` instead.
 
 ONDOWAY_DEV_TEAM = BC7F6Q48GB
 ONDOWAY_BUNDLE_ID = com.ondoway.app

@@ -37,7 +37,7 @@ class TripService extends ChangeNotifier {
     String startTime = '09:00',
     bool kidFriendlyOnly = false,
     String? tripName,
-    // Phase 6 S6.9: "is 6pm a hard deadline or a rough idea?" — the planner's one
+    // "Is 6pm a hard deadline or a rough idea?" — the planner's one
     // question. 'firm' (the default, per the owner's ruling: skipping the question
     // means a hard deadline), 'open' (a rough idea), or 'wall' (booked — a train,
     // a table; the day must end early enough to make it).
@@ -142,8 +142,8 @@ class TripService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// POST /audio/generate-trip-stops/{tripId} — trigger PER-STOP narration audio
-  /// (Phase 1, Step 1.4d). Voices each stop's stitched narration (cold-open →
+  /// POST /audio/generate-trip-stops/{tripId} — trigger PER-STOP narration audio.
+  /// Voices each stop's stitched narration (cold-open →
   /// beats → transit → closing), keyed by ItineraryItem id — the per-stop
   /// replacement for the retired per-primary-beat generation.
   ///
@@ -171,15 +171,15 @@ class TripService extends ChangeNotifier {
     }
   }
 
-  /// POST /trips/{tripId}/compose — write the trip's ONE day (Phase 4,
-  /// design §8.1). The server plans a single day per trip, addressed by the
+  /// POST /trips/{tripId}/compose — write the trip's ONE day.
+  /// The server plans a single day per trip, addressed by the
   /// fixed route id `{tripId}-opt1`; the phone confirms the day by composing
   /// it — there is no route choice. Body: {"route_id": routeId}. Returns the
   /// re-persisted stops with FRESH stop_ids (narration is the composed text,
   /// audio_url is null — audio is generated afterwards by the existing
   /// per-stop flow).
   ///
-  /// Phase 5 (design §8.2): the frozen trip is deleted — a second compose is
+  /// The frozen trip is deleted — a second compose is
   /// version N+1 of the living session, never a 409, so there is no
   /// "already composed" exception any more; a day already written is found
   /// through [fetchSession] (200) rather than by composing into a lock.
@@ -225,8 +225,8 @@ class TripService extends ChangeNotifier {
     }
   }
 
-  /// GET /trips/{tripId}/session — the current version of the living session
-  /// (Phase 5, design §4.6/§8.2): the day the person is standing in and the
+  /// GET /trips/{tripId}/session — the current version of the living session:
+  /// the day the person is standing in and the
   /// contingency set the phone SELECTS from. Throws [NoSessionYetException]
   /// on 404 `no_session_yet` (generated, never composed) and a plain
   /// [TripServiceException] on any other 404.
@@ -253,8 +253,8 @@ class TripService extends ChangeNotifier {
 
   /// POST /trips/{tripId}/session/replan — REPORT the phone's observations
   /// (where it is, its two clocks, its learned rates, the next planned stop)
-  /// and receive version N+1 of the session, replanned on the server (design
-  /// §4.6: the server is the only place a plan decision is made). The body
+  /// and receive version N+1 of the session, replanned on the server (the
+  /// server is the only place a plan decision is made). The body
   /// carries facts, never a decision.
   Future<SessionPlan> replanSession(
     String tripId,
@@ -304,7 +304,7 @@ class TripService extends ChangeNotifier {
   }
 
   /// The write endpoints' 403 as the screen should say it. The typed
-  /// {"reason": "captain_only"} (writes keep one captain — ADR 0005) becomes
+  /// {"reason": "captain_only"} (writes keep one captain) becomes
   /// [CaptainOnlyException], whose message is the plain sentence the
   /// itinerary page renders verbatim; any other 403 still reads as a
   /// sentence, never the response body's raw JSON.
@@ -316,11 +316,11 @@ class TripService extends ChangeNotifier {
   }
 
   /// POST /audio/stops/{stopId}/keep-exploring — voice a stop's persisted
-  /// "keep exploring here" extra narration on demand (KE5).
+  /// "keep exploring here" extra narration on demand.
   ///
   /// Served OFF the tour's time budget: a deep dive, not a scheduled stop, so
   /// the caller must play the result as a DEEPER-DIVE source (never auto-advance
-  /// — see [AudioService.play]'s isDeeperDive flag / KE6).
+  /// — see [AudioService.play]'s isDeeperDive flag).
   ///
   /// Optional [provider] / [voiceId] mirror the per-beat GenerateRequest and are
   /// usually omitted (server default provider). TTS failure comes back as HTTP
@@ -407,7 +407,7 @@ class TripServiceException implements Exception {
   String toString() => message;
 }
 
-/// Parsed result of POST /audio/stops/{id}/keep-exploring (KE5): the on-demand
+/// Parsed result of POST /audio/stops/{id}/keep-exploring: the on-demand
 /// "keep exploring here" deep-dive audio for a stop. A 200 with status=='failed'
 /// never reaches here — it is thrown as a [KeepExploringException] instead.
 class DeeperDiveAudio {
@@ -432,7 +432,7 @@ class KeepExploringException extends TripServiceException {
 }
 
 /// The trip's write endpoints refused a non-captain: 403 with
-/// detail.reason == "captain_only" (writes keep one captain — ADR 0005).
+/// detail.reason == "captain_only" (writes keep one captain).
 /// [message] is the sentence the phone shows verbatim.
 class CaptainOnlyException extends TripServiceException {
   CaptainOnlyException() : super("Only the trip's captain can change the day");
@@ -440,7 +440,7 @@ class CaptainOnlyException extends TripServiceException {
 
 /// The backend REFUSED to write the trip's day: /compose returned 422 with
 /// detail.reason == "compose_verification_failed" (VERIFY failed after the
-/// recompose attempt). One day per trip (Phase 4, design §8.1) means there is
+/// recompose attempt). One day per trip means there is
 /// no alternative route to offer, so [message] says the honest way out —
 /// generating again — in plain language the UI shows verbatim.
 class ComposeVerificationException extends TripServiceException {
@@ -453,8 +453,8 @@ class ComposeVerificationException extends TripServiceException {
 }
 
 /// GET /trips/{id}/session answered 404 `no_session_yet`: the trip has been
-/// generated but its day has not been written yet — compose it first (Phase 5,
-/// design §8.2). Not a failure; the caller's cue to compose.
+/// generated but its day has not been written yet — compose it first.
+/// Not a failure; the caller's cue to compose.
 class NoSessionYetException extends TripServiceException {
   NoSessionYetException() : super('No session yet — compose the trip first');
 }

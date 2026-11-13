@@ -1,11 +1,11 @@
-// Phase 7 S7.9 — interruptions: a call, a photo, another app (design §5.6 C7
-// "audio overlaps the walking" holds only while the piece plays; W7.2 R5, 11/11).
+// Interruptions: a call, a photo, another app ("audio overlaps the walking"
+// holds only while the piece plays).
 //
-// R5: a call, another app's voice, Siri → PAUSE. Resume at the START of the cut
-// sentence ("where it was" hands Paulo half a sentence; the piece start is a
-// punishment), saying NOTHING. By itself when the interruption ends IF the
-// walker is still inside the stop's footprint — the COUPLE by their tap (F&D:
-// "we restart when the conversation pauses"). Off the footprint when it ends:
+// A call, another app's voice, Siri → PAUSE. Resume at the START of the cut
+// sentence ("where it was" hands the listener half a sentence; the piece start
+// is a punishment), saying NOTHING. By itself when the interruption ends IF the
+// walker is still inside the stop's footprint — the COUPLE by their tap (they
+// restart when their conversation pauses). Off the footprint when it ends:
 // nothing resumes; the missed CLOSE goes on the screen and is said once at the
 // next standing seam — the queue door, never on a leg. A navigation prompt DUCKS
 // the piece and it carries on; a photo changes nothing.
@@ -136,7 +136,7 @@ void main() {
       expect(t.service.closeLine, stops[0].closeText, reason: 'the missed close, on screen');
       expect(t.service.resumeOffer, isNull);
       expect(t.service.currentStop?.poiId, 'poi-1', reason: 'Stop 0 is over; Stop 1 is next');
-      // On the leg: standing still says nothing (§4.4.1).
+      // On the leg: standing still says nothing.
       t.clock.tick(40);
       t.service.tick();
       expect(t.player.said, isEmpty);

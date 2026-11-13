@@ -1,12 +1,10 @@
-// Phase 6 S6.6 — THE LINGER RULE (design §5.5; W6.2 R3, phase6-ledger.md).
+// THE LINGER RULE.
 //
-// R3 LOCKED (9/11 by name): "a linger OFFERS the full telling on the screen,
-// silently; a TAP plays it, at a seam — auto-play on stillness is NOT the
-// default" (Nadia, Rosemary, Paulo, F&D, Camille, Greta, Sofia, Marcus,
-// Julien — "lingering is looking", "stillness is the day"). Never while
-// paused, never mid-piece. The offer names its cost (Marcus: "Full telling ·
-// 7 min"). "Again" is a separate control from "more" — the re-listen is not
-// the full telling.
+// A linger OFFERS the full telling on the screen, silently; a TAP plays it, at
+// a seam — auto-play on stillness is NOT the default: a visitor who lingers is
+// looking, and standing still is part of the day. Never while paused, never
+// mid-piece. The offer names its cost ("Full telling · 7 min"). "Again" is a
+// separate control from "more" — the re-listen is not the full telling.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ondoway/models/trip.dart';
@@ -57,7 +55,7 @@ ItineraryStop _stop(int n, {required double lat, bool major = false}) => Itinera
   closeText: "And that's Stop $n.",
   fullNarration: major ? _fullText : null,
   fullCloseText: major ? 'And that closes the second story.' : null,
-  // S7.3: the footprint these fixtures assumed (the phone's old 40 m circle) is
+  // The footprint these fixtures assumed (the phone's old 40 m circle) is
   // now STATED on each stop, as the wire carries it.
   trigger: const StopTrigger(radiusM: 40),
 );
@@ -134,7 +132,7 @@ void main() {
 }
 
 // ---------------------------------------------------------------------------
-// Phase 6 S6.8 — the tour's own voice (owner ruling 2026-08-19).
+// The tour's own voice (owner ruling 2026-08-19).
 // ---------------------------------------------------------------------------
 
 ItineraryStop _voicedStop(int n, {required double lat}) => ItineraryStop(
@@ -159,7 +157,7 @@ ItineraryStop _voicedStop(int n, {required double lat}) => ItineraryStop(
   fullNarration: _fullText,
   fullCloseText: 'And that closes the second story.',
   fullCloseAudioUrl: 'https://cdn.example.com/$n-full-close.mp3',
-  trigger: const StopTrigger(radiusM: 40), // S7.3: the footprint, stated
+  trigger: const StopTrigger(radiusM: 40), // the footprint, stated
 );
 
 void _s68Tests() {

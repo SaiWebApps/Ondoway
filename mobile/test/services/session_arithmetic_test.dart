@@ -1,15 +1,13 @@
-// Phase 5 S5.10 — the phone's ARITHMETIC (design §4.1/§4.3) and the phone half
-// of THE SESSION CLOCK SEAM (design §4.6; plan S5.10).
+// The phone's ARITHMETIC and the phone half of THE SESSION CLOCK SEAM.
 //
-// Design §4.1: "Walking pace, learned within the first ~15 minutes, replacing
-// the preset (Marcus's bag stops being a permanent deficit)"; "Listening rate,
-// learned from replays and playback speed ... the remaining day's estimates
-// scale to the observed rate" (Paulo). §4.3: "Pause — suspends the clock;
-// treated as information, never lateness". W5.2's plan-facing consequences
-// (phase5-ledger.md): pace from moving minutes on WALKING LEGS only; the rate
-// applied to narration seconds; a pause suspends the TOUR clock but the WALL
-// clock keeps spending; skip = unplayed AND unopened; wandering inside a stop
-// is not a divergence. The plan's S5.10 seam: exactly one re-timing expression
+// Walking pace is learned within the first ~15 minutes and replaces the preset,
+// so a walker slowed by a heavy bag is not behind all day. Listening rate is
+// learned from replays and playback speed, and the remaining day's estimates
+// scale to the observed rate. A pause suspends the clock and is treated as
+// information, never lateness. So: pace from moving minutes on WALKING LEGS
+// only; the rate applied to narration seconds; a pause suspends the TOUR clock
+// but the WALL clock keeps spending; skip = unplayed AND unopened; wandering
+// inside a stop is not a divergence. The seam: exactly one re-timing expression
 // on the phone, COMPARED with the server's on every held version, a gap beyond
 // `retime_tolerance_seconds` REPORTED and never corrected.
 
@@ -44,7 +42,7 @@ ItineraryStop _stop(
   audioUrl: 'https://cdn.example.com/$n.mp3',
   audioDurationSec: audioSeconds,
   dwellSeconds: dwellSeconds,
-  // S7.3: the footprint these fixtures assumed (the phone's old 40 m circle) is
+  // The footprint these fixtures assumed (the phone's old 40 m circle) is
   // now STATED on each stop, as the wire carries it; the phone draws no circle.
   trigger: const StopTrigger(radiusM: 40),
 );
@@ -76,7 +74,7 @@ void main() {
     retimeToleranceSeconds: 180,
     walkingPaceKmh: 3.0,
     dayStartHhmm: '09:00',
-    // S7.3: the day's own-place radius — the start square's width — comes off
+    // The day's own-place radius — the start square's width — comes off
     // the wire (the server's one number), never a circle of the phone's.
     placement: const PlacementPolicy(ownPlaceM: 60),
   );
@@ -159,7 +157,7 @@ void main() {
       clock.tick(100);
       audio.simulateComplete(); // heard once, at its stated length
       expect(service.listeningRate, closeTo(1.0, 0.01));
-      // Paulo replays it: another 100 s of wall time against the same 100 s.
+      // The listener replays it: another 100 s of wall time against the same 100 s.
       audio.play('item-0', 'https://cdn.example.com/0.mp3');
       clock.tick(100);
       audio.simulateComplete();
@@ -239,7 +237,7 @@ void main() {
       expect(service.tourElapsedSeconds, 0, reason: 'not the tour yet');
       expect(service.tourClockRunning, isFalse);
       // The first step off the square starts it — the square's width is the
-      // day's own-place radius from the wire (S7.3: 60 m), so 80 m is off it.
+      // day's own-place radius from the wire (60 m), so 80 m is off it.
       location.simulatePosition(square + 80 * _degPerMeterLat, 2.35);
       expect(service.tourClockRunning, isTrue);
       clock.tick(600);
@@ -338,7 +336,7 @@ void main() {
       await service.startTour(stops);
       service.holdSession(session());
       expect(service.measure().skippedStopId, isNull);
-      service.noteTranscriptOpened(stops[1]); // Paulo read Stop 1
+      service.noteTranscriptOpened(stops[1]); // the person read Stop 1
       service.skipToStop(2);
       // Stop 0 was neither played nor opened: that is the skip. Stop 1 was read.
       expect(service.measure().skippedStopId, 'poi-0');

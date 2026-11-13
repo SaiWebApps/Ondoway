@@ -24,7 +24,7 @@ class _SavedTripsPageState extends State<SavedTripsPage> {
   }
 
   /// The tab's list is the SERVER's list — GET /trips returns every trip the
-  /// caller captains or crews (ADR 0005), so a day someone else planned for
+  /// caller captains or crews, so a day someone else planned for
   /// the family appears here without this phone ever generating anything.
   /// The in-memory list filled by the local generate flow is only the
   /// starting picture until this answers.

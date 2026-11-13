@@ -20,8 +20,8 @@ void main() {
   testWidgets(
       'type scale renders the Material 3 hierarchy at runtime (display > body)',
       (tester) async {
-    // Finding B claimed the size-less TextStyles collapse every role to ~14px.
-    // They do not: M3 sizes live in the Typography *geometry*, which the Theme
+    // The size-less TextStyles do not collapse every role to ~14px:
+    // M3 sizes live in the Typography *geometry*, which the Theme
     // widget merges into the text theme at runtime (null fontSize -> role size).
     // This asserts the real, rendered hierarchy via Theme.of(context).
     late TextTheme rt;

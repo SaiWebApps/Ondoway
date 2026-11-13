@@ -1,15 +1,14 @@
-// Phase 5 S5.11 — announcement etiquette, the phone's half (design §4.4; W5.2
-// R2/R3/R4). §4.4.1: speech queues to a natural moment — never into a
-// conversation, never onto a walking leg. §4.4.2: everything spoken also
-// appears on screen. §4.4.4: one sentence, maximum; mute beats graceful. §4.2:
-// fabric events are absorbed SILENTLY. R3: the observable proxy — a seam in the
-// audio at a stop, still ~20–30 s, not paused; never on a leg, never mid-piece,
-// never on stillness alone; a stale line expires undelivered, only the question
-// survives. R4: repeated pauses → screen-only per PARTY, the narration never
-// muted, the question still said once, undone by one touch. Deviation viii's
-// third row (plan S5.11): audit F :282's C7 ruling — "Audio overlaps the
-// walking" — holds for STORIES and NOT for announcements; this is that separate
-// rule, written fresh: an announcement never lands on a leg.
+// Announcement etiquette, the phone's half. Speech queues to a natural
+// moment — never into a conversation, never onto a walking leg. Everything
+// spoken also appears on screen. One sentence, maximum; mute beats graceful.
+// Fabric events are absorbed SILENTLY. The observable proxy for a natural
+// moment — a seam in the audio at a stop, still ~20–30 s, not paused; never on
+// a leg, never mid-piece, never on stillness alone; a stale line expires
+// undelivered, only the question survives. Repeated pauses → screen-only per
+// PARTY, the narration never muted, the question still said once, undone by
+// one touch. "Audio overlaps the walking" holds for STORIES and NOT for
+// announcements; this is that separate rule: an announcement never lands on a
+// leg.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ondoway/models/trip.dart';
@@ -48,7 +47,7 @@ ItineraryStop _stop(int n, {required double lat}) => ItineraryStop(
   audioUrl: 'https://cdn.example.com/$n.mp3',
   audioDurationSec: 100,
   dwellSeconds: 300,
-  // S7.3: the footprint these fixtures assumed (the phone's old 40 m circle) is
+  // The footprint these fixtures assumed (the phone's old 40 m circle) is
   // now STATED on each stop, as the wire carries it.
   trigger: const StopTrigger(radiusM: 40),
 );
@@ -90,7 +89,7 @@ void main() {
     contingencies: [_questionEntry(), _fabricEntry()],
     dayStartHhmm: '09:00',
     party: party,
-    // S7.3 (W7.2 R1): the day's placement policy rides the session — the
+    // The day's placement policy rides the session — the
     // family piece starts at the first standstill inside the footprint.
     placement: PlacementPolicy(
       startAt: party == 'family' ? 'standstill' : 'arrival',
@@ -120,10 +119,10 @@ void main() {
         'leg — audit F :282\'s C7 ("audio overlaps the walking") holds for '
         'stories, not for announcements; it is said once at the seam after the '
         'settling period', () async {
-      // A FAMILY day (S7.3, W7.2 R1): the stop's piece ARMS at the footprint
+      // A FAMILY day: the stop's piece ARMS at the footprint
       // edge and starts at the first standstill, so the seam at Stop 0 is a
       // standstill with the first piece not yet begun — the question goes
-      // first, then the story. (Before S7.3 the fixture stood 25 m out of a
+      // first, then the story. (Earlier the fixture stood 25 m out of a
       // 10 m auto-play circle to get the same seam; that circle is gone.)
       final w = await walking(party: 'family');
       var lat = base - 600 * _degPerMeterLat;
@@ -138,7 +137,7 @@ void main() {
         w.service.tick();
       }
       expect(w.voice.said, isEmpty, reason: 'never onto a walking leg');
-      // A red light on the leg (Julien): still for 45 s, 150 m from any stop.
+      // A red light on the leg: still for 45 s, 150 m from any stop.
       // Stillness alone is never a moment — never on a walking leg.
       w.clock.tick(45);
       w.service.tick();
@@ -175,7 +174,7 @@ void main() {
       // A replay is mid-piece again: the switch line (family, two pauses cut
       // into the replay) waits for its end.
       w.service.holdSession(plan(party: 'family'));
-      w.voice.play('item-0', 'https://cdn.example.com/0.mp3'); // Paulo replays
+      w.voice.play('item-0', 'https://cdn.example.com/0.mp3'); // a visitor replays
       w.service.pauseTour();
       w.service.resumeTour(); // the piece comes back untouched
       w.service.pauseTour();
@@ -225,7 +224,7 @@ void main() {
         'said once; one touch restores the voice', () async {
       final w = await walking(party: 'family');
       w.gps.simulatePosition(base, 2.35);
-      // S7.3 (W7.2 R1): on the family day the piece starts at the first
+      // On the family day the piece starts at the first
       // STANDSTILL inside the footprint, not at the edge — stand still for the
       // settling period so the piece plays, then let it end on its own.
       w.clock.tick(TourPlaybackService.kSettleSeconds + 1);
@@ -253,7 +252,7 @@ void main() {
       w.service.tick();
       expect(w.voice.said.last, _question);
       // NEVER a pause length, a count, "you paused" or "behind by N" on the
-      // screen or aloud (R4) — the switch line and the question carry none.
+      // screen or aloud — the switch line and the question carry none.
       for (final line in [
         TourPlaybackService.kScreenOnlyLine,
         ...w.voice.said,

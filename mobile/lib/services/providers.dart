@@ -21,31 +21,30 @@ abstract class LocationProvider extends ChangeNotifier {
   void stopTracking();
 }
 
-/// Phase 7 S7.9 (W7.2 R5): what the platform's audio session tells the walk,
+/// What the platform's audio session tells the walk,
 /// reduced to the three things the policy distinguishes — an interruption that
 /// PAUSES the piece (a call, Siri, another app's music), one that only DUCKS
 /// it (a navigation prompt: the piece carries on), and the end of either.
 enum AudioInterruptionKind { pauseBegin, duckBegin, ended }
 
-/// Phase 8 S8.7 (persona 09, Fiona & Dev step 4): what the person asked of the
+/// What the person asked of the
 /// TRANSPORT CONTROLS the platform owns — the lock screen, the earbud, the car
-/// — reduced to the two the walk answers. Dev's phone is in his pocket and the
-/// pause he presses there is the TOUR's pause, never the player's alone: "the
-/// pause is not an interruption of the product, it is the product being used
-/// correctly".
+/// — reduced to the two the walk answers. A pause pressed on a phone in a
+/// pocket is the TOUR's pause, never the player's alone: it is the product
+/// being used correctly, not an interruption of it.
 enum AudioRemoteCommand { play, pause }
 
 /// Abstract interface for audio playback.
 /// Allows mocking in tests without depending on an audio plugin.
 abstract class AudioProvider extends ChangeNotifier {
-  /// The platform's interruptions, through ONE door (S7.9; W7.2 R5). The
+  /// The platform's interruptions, through ONE door. The
   /// policy — pause, resume at the cut sentence's start, the couple's tap,
   /// the missed close — lives in the playback service; the player only
   /// translates. The default never emits, so a double that has no session
   /// need not implement it.
   Stream<AudioInterruptionKind> get interruptions => const Stream.empty();
 
-  /// The platform's TRANSPORT BUTTONS, through ONE door (S8.7) — the same shape
+  /// The platform's TRANSPORT BUTTONS, through ONE door — the same shape
   /// as [interruptions] and for the same reason: the player only TRANSLATES
   /// what the lock screen did; the policy — the tour's clock suspended beside
   /// the audio, the pause counted as the person's — is the playback service's,
@@ -58,23 +57,23 @@ abstract class AudioProvider extends ChangeNotifier {
 
   /// True when the current piece has reached its END on its own. Not the same
   /// as "not playing": a paused piece is not playing and has not completed
-  /// (W5.13: pausing was read as completion and the tour jumped a stop). The
+  /// (read as completion, a pause would jump the tour a stop). The
   /// default is false so a double that never completes need not implement it.
   bool get isCompleted => false;
 
   /// True while the currently-playing source is a "keep exploring here"
-  /// deep-dive clip (KE6). The tour auto-advance MUST NOT fire when this is set
+  /// deep-dive clip. The tour auto-advance MUST NOT fire when this is set
   /// — a deep dive is served off the tour budget and never moves the itinerary.
   bool get isDeeperDive;
 
-  /// Where the current piece is, from its start (Phase 6 S6.4): the session
+  /// Where the current piece is, from its start: the session
   /// uses it to stop a piece at the end of its CURRENT SENTENCE on [Head back
-  /// now] — never a cut word, never the whole piece (W6.2 R8). The default is
+  /// now] — never a cut word, never the whole piece. The default is
   /// zero so a double that does not track position need not implement it.
   Duration get position => Duration.zero;
 
-  /// The REAL length of the loaded piece, as the player decoded it (Phase 7
-  /// S7.8; W7.2 R6): the sentence arithmetic trusts this over the wire's stored
+  /// The REAL length of the loaded piece, as the player decoded it:
+  /// the sentence arithmetic trusts this over the wire's stored
   /// length once the file is loaded. Zero = not known (nothing loaded, or a
   /// double that never reports one).
   Duration get duration => Duration.zero;
@@ -82,7 +81,7 @@ abstract class AudioProvider extends ChangeNotifier {
   /// Play [audioUrl] under [beatId]. Set [isDeeperDive] for on-demand
   /// "keep exploring here" audio so completion does not auto-advance the tour.
   ///
-  /// [title] is what the LOCK SCREEN shows while this piece plays (S8.7) — the
+  /// [title] is what the LOCK SCREEN shows while this piece plays — the
   /// place's own name, or the line being said. Null when the caller has no name
   /// for it; the piece's id then stands in, and nothing is invented.
   void play(
@@ -93,30 +92,30 @@ abstract class AudioProvider extends ChangeNotifier {
   });
   void stop();
 
-  /// Move the current piece to [position] (Phase 7 S7.6). The default does
+  /// Move the current piece to [position]. The default does
   /// nothing so a double that never seeks need not implement it.
   Future<void> seek(Duration position) => Future.value();
 
   /// Play [audioUrl] under [beatId] FROM [from] — the keep-listening tap at a
-  /// door resumes a cut piece from the start of its cut sentence (S7.6; W7.2
-  /// R3). ONE door to a position: the default plays, then seeks, so a double
+  /// door resumes a cut piece from the start of its cut sentence.
+  /// ONE door to a position: the default plays, then seeks, so a double
   /// need not implement it; the real player seeks before it starts.
   void playFrom(String beatId, String audioUrl, Duration from, {String? title}) {
     play(beatId, audioUrl, title: title);
     seek(from);
   }
 
-  /// Pause / resume the current piece. Phase 5 (design §4.3): the tour's own
+  /// Pause / resume the current piece. The tour's own
   /// pause goes through this door so the session can suspend its clock beside
   /// the audio; the defaults do nothing so a double that never pauses need not
   /// implement them.
   Future<void> pause() => Future.value();
   Future<void> resume() => Future.value();
 
-  /// Say one sentence of the SESSION's own voice (design §4.4) — never a story.
-  /// The playback service hands a line here only at a natural moment (W5.2 R3)
-  /// and only after it is already on the screen (§4.4.2). The default is silent:
-  /// the phone has no voice plugin today, and "mute beats graceful" (§4.4.4) —
+  /// Say one sentence of the SESSION's own voice — never a story.
+  /// The playback service hands a line here only at a natural moment
+  /// and only after it is already on the screen. The default is silent:
+  /// the phone has no voice plugin today, and "mute beats graceful" —
   /// wiring a voice is one implementation behind this door.
   Future<void> speak(String sentence) => Future.value();
 
@@ -136,7 +135,7 @@ abstract class AudioProvider extends ChangeNotifier {
   Future<void> releaseSession() => Future.value();
 
   /// Pre-fetch audio files to the device cache; returns how many are cached.
-  /// Phase 5 (design §4.7): the session prefetches its alternates' audio through
+  /// The session prefetches its alternates' audio through
   /// this same door. The default caches nothing, so a test double that never
   /// caches need not implement it.
   Future<int> prefetchAudio(List<BeatAudioInfo> beats) => Future.value(0);

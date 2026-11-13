@@ -69,7 +69,7 @@ class _TripItineraryContentState extends State<_TripItineraryContent> {
   String? _prepareError;
   Timer? _pollTimer;
 
-  /// Phase 4 (design §8.1): true while the confirm tap's compose call is in
+  /// True while the confirm tap's compose call is in
   /// flight, so the FAB cannot double-fire the write of the one day.
   bool _isComposing = false;
 
@@ -172,10 +172,10 @@ class _TripItineraryContentState extends State<_TripItineraryContent> {
     }
   }
 
-  /// Phase 4 (design §8.1): the server plans ONE day per trip, addressed by
+  /// The server plans ONE day per trip, addressed by
   /// the fixed route id `{tripId}-opt1`. Confirming writes that day (compose)
   /// and then runs the pre-existing prepare flow — no sheet, no pick.
-  /// Phase 5 (design §8.2): the frozen trip is deleted, so "already written"
+  /// The frozen trip is deleted, so "already written"
   /// is no longer a 409 from compose — it is a session that EXISTS
   /// (GET /trips/{id}/session answers 200): then the stops on hand ARE the
   /// composed day and nothing is re-written; a trip with no session yet is
@@ -302,10 +302,10 @@ class _TripItineraryContentState extends State<_TripItineraryContent> {
             continue;
           }
 
-          // Per-stop narration (Step 1.4d): poll + cache by the ItineraryItem
+          // Per-stop narration: poll + cache by the ItineraryItem
           // id — the same key playback uses, so the cache hits. A stop with no
           // item id has nothing to poll (a rest, or data older than the per-stop
-          // path: the per-beat poll was deleted at Phase 7 S7.10).
+          // path: the per-beat poll was deleted).
           final audioKey = stop.stopId;
           if (audioKey == null) {
             ready++;
@@ -522,16 +522,16 @@ class _TripItineraryContentState extends State<_TripItineraryContent> {
     );
   }
 
-  /// Start the walk (Phase 5 S5.11): the playback service takes the prepared
+  /// Start the walk: the playback service takes the prepared
   /// stops and HOLDS the living session — the plan and its contingency set
-  /// (design §4.6/§4.7) — then the session screen shows what it holds. A
+  /// — then the session screen shows what it holds. A
   /// session that cannot be fetched (offline) still starts the walk with the
   /// stops on hand; the phone can only act from what it already holds.
   Future<void> _startWalk() async {
     final playback = context.read<TourPlaybackService>();
     final tripService = context.read<TripService>();
     final authService = context.read<AuthService>();
-    // Phase 7 S7.7 (plan defect 9's class): the SESSION's stops are the one source
+    // The SESSION's stops are the one source
     // that carries every placed and voiced field — the trigger geometry, the leg
     // piece, the closes' files — overlaid live by the server at every GET. The
     // walk starts from them; the stops on hand are the offline fallback only.
@@ -583,8 +583,8 @@ class _TripItineraryContentState extends State<_TripItineraryContent> {
       );
     }
 
-    // Busy covers both halves of the confirm tap: writing the day (compose,
-    // design §8.1) and preparing its audio.
+    // Busy covers both halves of the confirm tap: writing the day (compose)
+    // and preparing its audio.
     final busy = _isPreparing || _isComposing;
     return FloatingActionButton.extended(
       onPressed: busy ? null : _confirmAndPrepareAudio,
@@ -760,8 +760,8 @@ class _StopCardState extends State<_StopCard> {
 
   ItineraryStop get stop => widget.stop;
 
-  /// KE7: generate + play the stop's "keep exploring here" deep-dive audio.
-  /// Plays as a DEEPER-DIVE source (KE6) so completion never auto-advances the
+  /// Generate + play the stop's "keep exploring here" deep-dive audio.
+  /// Plays as a DEEPER-DIVE source so completion never auto-advances the
   /// tour. status=='failed' comes back as a caught [KeepExploringException].
   Future<void> _keepExploring() async {
     final tripService = context.read<TripService>();
@@ -893,7 +893,7 @@ class _StopCardState extends State<_StopCard> {
               ).copyWith(color: c.ink),
             ),
           ),
-          // KE7: only stops with un-voiced extras offer a deeper dive.
+          // Only stops with un-voiced extras offer a deeper dive.
           if (hasExtras) _buildKeepExploring(colorScheme, textTheme),
         ],
       ),

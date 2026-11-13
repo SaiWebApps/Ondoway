@@ -14,7 +14,7 @@ export 'package:ondoway/services/providers.dart'
 
 enum TourState { idle, active, approaching, completed }
 
-/// The phone's MEASURED divergence, as facts (design §4.6). Every field is a
+/// The phone's MEASURED divergence, as facts. Every field is a
 /// number the phone observed or an id it stands at; none is a decision. The
 /// service matches these against the session's contingency triggers, in server
 /// order, and takes the first that fits — it never weighs one entry against another.
@@ -26,15 +26,15 @@ class Divergence {
   final String? wrapUpFromStopId;
   final String? atRiskStopId;
 
-  /// The stop whose door the walker found SHUT and said so (Docs/adr/0006 rule
-  /// 5). An observation like every other field here: the server already decided
-  /// what to offer instead, and the entry it precomputed is matched on this id.
+  /// The stop whose door the walker found SHUT and said so. An observation like
+  /// every other field here: the server already decided what to offer instead,
+  /// and the entry it precomputed is matched on this id.
   final String? closedStopId;
 
-  /// The stop the person is at or has just left (W5.12): a late/early/minutes-
+  /// The stop the person is at or has just left: a late/early/minutes-
   /// left band is the server's answer FROM that stop, so an entry names it and
   /// the phone matches it. Null = the position is unknown; the band alone
-  /// decides (the S5.9 lookup).
+  /// decides.
   final String? atStopId;
 
   const Divergence({
@@ -49,7 +49,7 @@ class Divergence {
   });
 }
 
-/// One remaining stop's re-timed clocks, in seconds from NOW (Phase 5 S5.10) —
+/// One remaining stop's re-timed clocks, in seconds from NOW —
 /// the output of the phone's one re-timing expression, [TourPlaybackService.retimeRemaining].
 class StopEta {
   final ItineraryStop stop;
@@ -69,19 +69,19 @@ class TourPlaybackService extends ChangeNotifier {
   final LocationProvider _locationService;
   final AudioProvider _audioService;
 
-  // ---- Phase 5 S5.10: the phone's ARITHMETIC (design §4.1/§4.3) ----------
+  // ---- The phone's ARITHMETIC -------------------------------------------
   // Learned pace, learned listening rate, pause as information, and the ONE
   // re-timing expression. Numbers the phone measured; never a decision.
 
-  // ---- Phase 7 S7.3: THE audio placement rule, the phone's half ------------
+  // ---- THE audio placement rule, the phone's half -----------------------
   // WHERE a piece plays is decided on the server (src/tour/placement.py — the
   // one rule) and rides each stop as its trigger geometry; the day's policy
   // rides the session. The phone asks ONE question of it — "am I at this
-  // place?" — and draws no circle of its own: until S7.3 two literals here
+  // place?" — and draws no circle of its own: two literals here once
   // (10 m to start a piece, 40 m to be "at" a place) decided for a 140 m
-  // square and a doorway alike (W7.2 R1, 11/11: both die). Inside the
-  // footprint the person is AT the stop: no leg, no pace training, no
-  // lateness (W5.2: "wandering inside a stop is not a divergence"). A stop
+  // square and a doorway alike. Inside the footprint the person is AT the
+  // stop: no leg, no pace training, no lateness, because wandering inside a
+  // stop is not a divergence. A stop
   // with no trigger has no geometry: nothing auto-plays there; a tap still does.
 
   /// THE one spelling of "within a radius of a point" on the phone.
@@ -109,14 +109,13 @@ class TourPlaybackService extends ChangeNotifier {
   }
 
   /// The stop whose footprint has been touched and whose piece has not yet
-  /// started (the family day waits here for the first standstill — R1; a
-  /// queued stop for the standstill or the tap — S7.5, R2).
+  /// started (the family day waits here for the first standstill; a
+  /// queued stop for the standstill or the tap).
   String? _armedKey;
 
-  /// S7.5 (W7.2 R2, Fiona & Dev / Nadia): the name of the stop whose piece is
-  /// armed and waiting for the PERSON'S TAP — a queued stop under the day's
-  /// `tap` policy. The screen offers it; [startArmedPiece] is the tap. Null when
-  /// nothing waits on a tap.
+  /// The name of the stop whose piece is armed and waiting for the PERSON'S
+  /// TAP — a queued stop under the day's `tap` policy. The screen offers it;
+  /// [startArmedPiece] is the tap. Null when nothing waits on a tap.
   String? get armedOffer {
     final key = _armedKey;
     final stop = currentStop;
@@ -127,18 +126,18 @@ class TourPlaybackService extends ChangeNotifier {
     return queued && byTap ? stop.poiName : null;
   }
 
-  /// The tap on the offer (S7.5): play the armed piece now.
+  /// The tap on the offer: play the armed piece now.
   void startArmedPiece() {
     if (armedOffer == null) return;
     _armedKey = null;
     _playCurrentStop();
   }
 
-  // ---- Phase 7 S7.6: THE DOOR (design §5.6 threshold silence; W7.2 R3) ------
+  // ---- THE DOOR: threshold silence --------------------------------------
   // At a stop whose visit goes INSIDE a place you enter, the piece ends at the
   // end of its current sentence when the placed OUTSIDE seconds have run since
   // it started — the only threshold a phone can see under a roof — then the
-  // stop's CLOSE plays (through S6.4's one cut: never a second sentence end).
+  // stop's CLOSE plays (through the one cut: never a second sentence end).
   // Inside, nothing auto-plays: the transcript is on the screen with a
   // keep-listening tap that resumes from the START of the cut sentence. Nothing
   // resumes by itself on exit; the door fires once per stop.
@@ -166,14 +165,13 @@ class TourPlaybackService extends ChangeNotifier {
     return stop.poiName;
   }
 
-  /// The whole transcript of the cut piece (design §5.7: every word spoken is
-  /// on the screen) while the offer stands; null otherwise.
+  /// The whole transcript of the cut piece (every word spoken is on the
+  /// screen) while the offer stands; null otherwise.
   String? get keepListeningTranscript =>
       keepListeningOffer == null ? null : _doorCutStop?.narration;
 
-  /// W7.13, Marcus — R3 quoted him ("transcript and leave-by on screen") and
-  /// S7.6 built the transcript half only. While the door's offer stands, the
-  /// screen also says WHEN TO LEAVE the interior to keep the plan: the cut
+  /// While the door's offer stands, the screen also says WHEN TO LEAVE the
+  /// interior to keep the plan: the cut
   /// stop's own planned departure — its arrival clock plus its dwell — shown,
   /// never spoken. Null when no door cut is on record or the clocks are absent.
   String? get doorLeaveByHhmm {
@@ -190,7 +188,7 @@ class TourPlaybackService extends ChangeNotifier {
     return '$hh:$mm';
   }
 
-  /// The keep-listening tap (R3): the cut piece again, from the start of the
+  /// The keep-listening tap: the cut piece again, from the start of the
   /// sentence the door cut — through the one door to a position.
   void keepListening() {
     final stop = _doorCutStop;
@@ -206,7 +204,7 @@ class TourPlaybackService extends ChangeNotifier {
   }
 
   /// THE door moment: the piece is this stop's, the stop is a door, its outside
-  /// seconds have run — cut at the sentence end (S6.4), then the close.
+  /// seconds have run — cut at the sentence end, then the close.
   void _maybeReachTheDoor() {
     final stop = currentStop;
     final key = _audioKeyOf(stop);
@@ -225,7 +223,7 @@ class TourPlaybackService extends ChangeNotifier {
     _closeLine = stop.closeText;
     _closePending = stop;
     _closePendingIsFull = false;
-    final wait = sentenceWaitFor(stop); // S7.8: the player's length, the party's cap
+    final wait = sentenceWaitFor(stop); // the player's length, the party's cap
     _sentenceEndTimer?.cancel();
     if (wait <= 0) {
       finishSentenceNow();
@@ -239,12 +237,12 @@ class TourPlaybackService extends ChangeNotifier {
   }
 
   /// The piece's sentence boundaries, in seconds from its start — THE one
-  /// table behind [secondsToSentenceEnd] and [sentenceStartSeconds] (W6.2 R8;
-  /// S7.6): the stop's own narration, word share against the file's length.
+  /// table behind [secondsToSentenceEnd] and [sentenceStartSeconds]: the
+  /// stop's own narration, word share against the file's length.
   /// Empty when the stop carries no text or no length.
   static List<double> _sentenceBoundaries(ItineraryStop stop, [double? lengthSec]) {
     final text = stop.narration;
-    // S7.8 (R6): the player's real length when the caller has it; else the wire's.
+    // The player's real length when the caller has it; else the wire's.
     final length = lengthSec ?? stop.audioDurationSec;
     if (text == null || text.trim().isEmpty || length == null || length <= 0) {
       return const [];
@@ -267,7 +265,7 @@ class TourPlaybackService extends ChangeNotifier {
 
   /// Seconds into the piece where the sentence playing at [position] BEGAN —
   /// the previous boundary, 0 in the first sentence, the last sentence's start
-  /// past the final boundary. The keep-listening tap resumes here (S7.6).
+  /// past the final boundary. The keep-listening tap resumes here.
   @visibleForTesting
   static int sentenceStartSeconds(ItineraryStop stop, Duration position, {double? lengthSec}) {
     final boundaries = _sentenceBoundaries(stop, lengthSec);
@@ -281,7 +279,7 @@ class TourPlaybackService extends ChangeNotifier {
   }
 
   /// Moving seconds needed before the learned pace replaces the preset
-  /// (§4.1 "within the first ~15 minutes": five minutes of actual walking).
+  /// (within the first ~15 minutes: five minutes of actual walking).
   static const int kPaceLearnAfterSeconds = 300;
 
   /// A segment slower than this is standing (a crossing, a conversation);
@@ -298,12 +296,11 @@ class TourPlaybackService extends ChangeNotifier {
 
   final DateTime Function() _now;
   DateTime? _startedAt;
-  // The TOUR clock starts at the first play or the first step off the square
-  // (W5.2 R1.3; W5.14 Fiona & Dev: "our tour clock ran from 15:00 while we
-  // stood on the square"); the WALL clock starts at the tap.
+  // The TOUR clock starts at the first play or the first step off the square,
+  // so standing on the square does not run it; the WALL clock starts at the tap.
   DateTime? _tourClockStartedAt;
   _Fix? _firstFix;
-  // The TWO clocks (§4.3): the wall keeps spending through a pause; the tour
+  // The TWO clocks: the wall keeps spending through a pause; the tour
   // clock is suspended by it. A pause is information, never lateness.
   int _pausedSeconds = 0;
   DateTime? _pausedAt;
@@ -330,36 +327,36 @@ class TourPlaybackService extends ChangeNotifier {
   // for the screen; nothing is ever corrected from them.
   final List<String> _clockNotices = [];
 
-  // ---- Phase 5 S5.11: announcement etiquette (design §4.4; W5.2 R3/R4) ----
+  // ---- Announcement etiquette -------------------------------------------
   /// Standing still this long at a stop before a moment can be "natural" — the
-  /// settling period the panel named (shaking out rain, looking up: R3).
+  /// settling period (shaking out rain, looking up).
   static const int kSettleSeconds = 30;
 
   /// A fix this far from the last one is movement.
   static const double kStillRadiusM = 8.0;
 
-  /// R4 — the day-long screen-only switch, per party: after the second pause
+  /// The day-long screen-only switch, per party: after the second pause
   /// of the day, or one pause longer than this (couple: 10 min; family: 5).
   static const int kLongPauseCoupleSeconds = 600;
   static const int kLongPauseFamilySeconds = 300;
 
-  /// The one plain sentence said once when the switch flips (Aiko, Camille).
+  /// The one plain sentence said once when the switch flips.
   static const String kScreenOnlyLine =
       "I'll keep this on the screen from here — tap the speaker to hear it again.";
 
-  // The speech QUEUE (§4.4.1): at most one line waiting to be said, and it is
+  // The speech QUEUE: at most one line waiting to be said, and it is
   // already on the screen. A newer line replaces an older one unsaid (a stale
-  // sentence EXPIRES undelivered — R3); the question is the one line that
-  // survives to the next moment, said once (R2.5, R4).
+  // sentence EXPIRES undelivered); the question is the one line that
+  // survives to the next moment, said once.
   String? _queuedLine;
-  String? _queuedLineAudioUrl; // S6.8: the line's pre-voiced file, when it has one
+  String? _queuedLineAudioUrl; // the line's pre-voiced file, when it has one
   bool _queuedIsQuestion = false;
   bool _questionSpoken = false;
   final List<String> _spoken = [];
   DateTime? _stillSince;
   bool _pieceEndedNaturally = false;
   bool _transcriptOpen = false;
-  // R4: pauses per stop (solo: two pauses inside ONE stop silence that stop).
+  // Pauses per stop (solo: two pauses inside ONE stop silence that stop).
   final Map<String, int> _pausesAtStop = {};
   bool _voiceRestored = false;
   bool _screenOnlyAnnounced = false;
@@ -367,7 +364,7 @@ class TourPlaybackService extends ChangeNotifier {
 
   List<ItineraryStop> _stops = [];
   // The day as planned — the list handed to [startTour]. Every entry the phone
-  // applies is an ordered subset of THIS (§4.7: it cannot add what it does not
+  // applies is an ordered subset of THIS (it cannot add what it does not
   // hold), so ids are always mapped over it, never over the working list.
   List<ItineraryStop> _planned = [];
   int _currentStopIndex = -1;
@@ -375,7 +372,7 @@ class TourPlaybackService extends ChangeNotifier {
   TourState _state = TourState.idle;
   double? _distanceToNext;
 
-  // THE LIVING SESSION the phone holds (Phase 5, design §4.6/§4.7): the plan
+  // THE LIVING SESSION the phone holds: the plan
   // the server sent and its contingency set. The phone SELECTS from it — the
   // one method that changes the current plan is [applyContingency], and its
   // only decision input is a server contingency id.
@@ -384,32 +381,32 @@ class TourPlaybackService extends ChangeNotifier {
   String? _screenText;
   String? _pendingQuestion;
 
-  // ---- Phase 6 S6.4: the CLOSE (design §5.3; W6.2 R8) ----------------------
+  // ---- The CLOSE ---------------------------------------------------------
   // [Head back now] is the seam the person made: the current SENTENCE finishes,
   // the piece does not; then the stretch's close — one line — then the way home
   // on the screen; then nothing. The close is narrator CONTENT: it plays as its
-  // own pre-voiced file when the wire carries one (S6.8), else it is handed to
-  // the one door and is on the screen either way (§4.4.2).
+  // own pre-voiced file when the wire carries one, else it is handed to
+  // the one door and is on the screen either way.
   String? _closeLine;
   String? _threadLine;
   final List<String> _closesPlayed = [];
   Timer? _sentenceEndTimer;
   ItineraryStop? _closePending;
-  bool _closePendingIsFull = false; // S6.6/S6.8: the pending cut is a FULL piece
+  bool _closePendingIsFull = false; // the pending cut is a FULL piece
 
   /// Seconds a tapped piece may keep playing to reach its sentence end before
   /// it is cut anyway — a person who tapped is not made to wait out a
-  /// forty-second sentence (Fiona: "five seconds is the whole budget"). W7.2
-  /// R6 (S7.8): eight, not twelve; a `wall` day five; the family nothing.
+  /// forty-second sentence: eight, not twelve; a `wall` day five; the family
+  /// nothing.
   static const int kSentenceEndCapSeconds = 8;
   static const int kSentenceEndCapWallSeconds = 5;
 
-  /// THE cap in force for this day (S7.8; W7.2 R6): the family cuts at once
-  /// (Nadia — a child is already walking), a day with a hard end waits at most
-  /// five seconds (Marcus), everyone else eight. W7.13 (F&D): the number rides
-  /// the WIRE's policy block — the server decided it from the party and the
-  /// hardness; the party branch below is only the stand-in for an older
-  /// session whose policy predates the field.
+  /// THE cap in force for this day: the family cuts at once (a child is
+  /// already walking), a day with a hard end waits at most five seconds,
+  /// everyone else eight. The number rides the WIRE's policy block — the
+  /// server decided it from the party and the hardness; the party branch
+  /// below is only the stand-in for an older session whose policy predates
+  /// the field.
   double get sentenceEndCapSeconds {
     final session = _session;
     final wired = session?.placement?.sentenceCapS;
@@ -421,7 +418,7 @@ class TourPlaybackService extends ChangeNotifier {
 
   /// The player's REAL length for the piece under [key], in seconds, when the
   /// player is on it and knows it; null otherwise (the wire's length then
-  /// stands in). S7.8: the wire's number is the estimate, the player's the fact.
+  /// stands in). The wire's number is the estimate, the player's the fact.
   double? _playerLengthFor(String? key) {
     if (key == null || _audioService.currentBeatId != key) return null;
     final length = _audioService.duration;
@@ -430,8 +427,8 @@ class TourPlaybackService extends ChangeNotifier {
   }
 
   /// THE ONE EXPRESSION of "how long until this sentence ends" the door, the
-  /// wrap-up and the full telling all read (S6.4's arithmetic over the stop's
-  /// own text; S7.8: over the player's real length when it is loaded, the
+  /// wrap-up and the full telling all read (the arithmetic over the stop's
+  /// own text, over the player's real length when it is loaded, the
   /// wire's when not; capped by the party's cap). [playingKey] names the piece
   /// the player is on when it is not the stop's own (the full telling's key).
   @visibleForTesting
@@ -446,13 +443,13 @@ class TourPlaybackService extends ChangeNotifier {
   VoidCallback? _locationListener;
   VoidCallback? _audioListener;
 
-  // ---- Phase 7 S7.9: INTERRUPTIONS (design §5.6 C7; W7.2 R5, 11/11) --------
+  // ---- INTERRUPTIONS -----------------------------------------------------
   // A call, Siri, another app's voice or music PAUSE the piece — not the
   // person's pause, so nothing is counted against them. The START of the cut
-  // sentence is remembered (S6.4's arithmetic over the player's real length —
-  // S7.8). When the interruption ends: still inside the stop's footprint, the
+  // sentence is remembered (the sentence arithmetic over the player's real
+  // length). When the interruption ends: still inside the stop's footprint, the
   // piece resumes from that start by itself, saying nothing — the COUPLE by
-  // their tap (F&D: "we restart when the conversation pauses"); off the
+  // their tap, so they restart when their conversation pauses; off the
   // footprint, nothing resumes: the stop is over, the missed CLOSE goes on the
   // screen and into the one queue for the next standing seam (never on a leg).
   // A navigation prompt only DUCKS the piece (the player's mechanics): the
@@ -463,7 +460,7 @@ class TourPlaybackService extends ChangeNotifier {
   int _interruptedFrom = 0;
   bool _resumeOffered = false;
 
-  /// The couple's resume offer (R5): the interrupted stop's name while its
+  /// The couple's resume offer: the interrupted stop's name while its
   /// piece waits for their tap; null otherwise.
   String? get resumeOffer {
     final stop = _interruptedStop;
@@ -481,7 +478,7 @@ class TourPlaybackService extends ChangeNotifier {
   void _onInterruption(AudioInterruptionKind kind) {
     switch (kind) {
       case AudioInterruptionKind.duckBegin:
-        return; // ducked, not cut: the piece carries on (R5)
+        return; // ducked, not cut: the piece carries on
       case AudioInterruptionKind.pauseBegin:
         final stop = currentStop;
         final key = _audioKeyOf(stop);
@@ -502,7 +499,7 @@ class TourPlaybackService extends ChangeNotifier {
         );
         _resumeOffered = false;
         _audioService.pause();
-        _pieceEndedNaturally = false; // a cut is not a seam (R3)
+        _pieceEndedNaturally = false; // a cut is not a seam
         notifyListeners();
       case AudioInterruptionKind.ended:
         final stop = _interruptedStop;
@@ -518,7 +515,7 @@ class TourPlaybackService extends ChangeNotifier {
           _advancePast();
           return;
         }
-        // W7.13 (F&D): the resume rule rides the wire's policy; the party
+        // The resume rule rides the wire's policy; the party
         // branch is the stand-in for an older session without the field.
         final byTap = _session?.placement?.interruptionResume != null
             ? (_session?.placement?.interruptionResumeByTap ?? false)
@@ -547,8 +544,8 @@ class TourPlaybackService extends ChangeNotifier {
   }
 
   /// The close a cut-and-abandoned stop never got to say: on the screen now,
-  /// through the one queue door for the next standing seam (R5: "the missed
-  /// close is played" — Rosemary; "once and done" — Greta).
+  /// through the one queue door for the next standing seam: the missed close
+  /// is played, once and done.
   void _missedClose(ItineraryStop stop) {
     final text = stop.closeText;
     if (text == null || text.isEmpty) return;
@@ -558,22 +555,20 @@ class TourPlaybackService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ---- Phase 8 S8.7: THE LOCK SCREEN (persona 09, Fiona & Dev step 4) -------
-  // "Dev pauses the tour without mentioning it, mid-sentence, because a voice in
-  // his ear is now in the way. The pause is not an interruption of the product.
-  // It is the product being used correctly." They do it five times in three
-  // hours and the phone never leaves the pocket, so the button they actually
-  // reach is the platform's, on the lock screen.
+  // ---- THE LOCK SCREEN ---------------------------------------------------
+  // A visitor with the phone in a pocket pauses mid-sentence because a voice in
+  // the ear is in the way. That pause is the product being used correctly, and
+  // the button they reach is the platform's, on the lock screen.
   //
-  // It arrives HERE, at the door the in-app pause already uses. F&D's pause
+  // It arrives HERE, at the door the in-app pause already uses. The pause
   // suspends the TOUR — the clock stops, the pause is counted as theirs, the
-  // wall keeps spending (§4.3) — and a press that stopped only the player would
-  // leave the session clock running and the plan drifting, which is their own
-  // step-4 complaint ("from here the app's finish time is fiction") made worse.
+  // wall keeps spending — and a press that stopped only the player would
+  // leave the session clock running and the plan's finish time drifting.
   // There is no second pause path: the command IS [pauseTour] / [resumeTour].
   //
-  // This is NOT S7.9. An interruption is the platform TAKING the audio and is
-  // never counted against the person; a transport button is the person ASKING.
+  // This is NOT the interruption policy. An interruption is the platform TAKING
+  // the audio and is never counted against the person; a transport button is
+  // the person ASKING.
   StreamSubscription<AudioRemoteCommand>? _remoteSub;
 
   void _onRemoteCommand(AudioRemoteCommand command) {
@@ -589,9 +584,9 @@ class TourPlaybackService extends ChangeNotifier {
   /// should bring back? The lock screen's button moves the PLAYER first and
   /// reaches the pause door a beat later, so "was a piece running" cannot be
   /// asked of the instant. A piece the walk has already left behind is not one
-  /// of these: an abandoned stop's (S7.9) and a finished telling's keys no
-  /// longer belong to the stop underfoot, and an INTERRUPTED piece is S7.9's
-  /// policy to bring back — by itself or by the couple's tap — never this one's.
+  /// of these: an abandoned stop's and a finished telling's keys no longer
+  /// belong to the stop underfoot, and an INTERRUPTED piece is the interruption
+  /// policy's to bring back — by itself or by the couple's tap — never this one's.
   bool get _pieceOfThisStopIsSuspended {
     final key = _audioKeyOf(currentStop);
     final loaded = _audioService.currentBeatId;
@@ -627,21 +622,21 @@ class TourPlaybackService extends ChangeNotifier {
   bool get hasPendingStop => _pendingStopIndex != null;
   SessionPlan? get session => _session;
   SessionContingency? get selectedContingency => _selected;
-  /// The one line the screen shows for the current state (§4.4.2 — everything
-  /// spoken is also on screen; a fabric change is on screen only).
+  /// The one line the screen shows for the current state (everything spoken
+  /// is also on screen; a fabric change is on screen only).
   String? get screenText => _screenText;
-  /// The ONE question, when a selected entry carries one (§4.2); null otherwise.
+  /// The ONE question, when a selected entry carries one; null otherwise.
   String? get pendingQuestion => _pendingQuestion;
-  /// The close the last wrap-up put on the screen (S6.4) — the stretch's own
+  /// The close the last wrap-up put on the screen — the stretch's own
   /// line, or the day's when no piece was playing. Null until a wrap-up.
   String? get closeLine => _closeLine;
 
-  /// S6.5 (W6.2 R5): the THREAD of the pair the session just made — one
+  /// The THREAD of the pair the session just made — one
   /// sentence, on screen through the leg, spoken once at a standing seam.
   String? get threadLine => _threadLine;
 
   /// The walking line of a leg whose FILE is absent, on the SCREEN for the
-  /// whole leg (ADR: a replan drops a stale line and rewrites its words; the
+  /// whole leg (a replan drops a stale line and rewrites its words; the
   /// audio catches up in the background, and until it does the leg is silent
   /// rather than wrong — but the person still gets the direction, in text).
   /// Null while at a stop, and the moment the target's footprint is reached.
@@ -649,7 +644,7 @@ class TourPlaybackService extends ChangeNotifier {
   String? _legTextLine;
 
   /// A text-only leg is UNDER WAY: the re-voiced file may have landed on the
-  /// server since this session was fetched (the ADR's background voicing, with
+  /// server since this session was fetched (the background voicing, with
   /// this walker's arrival as its deadline). The page watches this and
   /// refetches the session; [adoptSessionAudio] takes the fresh audio in.
   bool get audioCatchUpDue => _legTextLine != null;
@@ -694,12 +689,12 @@ class TourPlaybackService extends ChangeNotifier {
     return adoptedIds.length;
   }
 
-  /// S6.6 (design §5.5; W6.2 R3, 9/11 by name): THE LINGER RULE — a linger
-  /// OFFERS the full telling on the screen, silently; a TAP plays it. Never
+  /// THE LINGER RULE — a linger OFFERS the full telling on the screen,
+  /// silently; a TAP plays it. Never
   /// auto-play on stillness. The offer shows only at a standing seam INSIDE the
   /// stop's circle, after the stop's own tight piece ended on its own — never
   /// while paused, never mid-piece, never at an unplanned place (only planned
-  /// stops carry a full telling), and it names its cost (Marcus: "Full telling
+  /// stops carry a full telling), and it names its cost ("Full telling
   /// · 7 min"). Null when the stop has no authored full telling: the offer
   /// simply never appears there.
   String? get fullTellingOffer {
@@ -722,7 +717,7 @@ class TourPlaybackService extends ChangeNotifier {
   }
 
   /// The TAP on the offer: play the voiced full telling (the on-demand door's
-  /// artifact — S6.6 makes it the authored full telling, never the raw dump).
+  /// artifact — the authored full telling, never the raw dump).
   /// A second piece at this stop, through the player's own door.
   void playFullTelling(String audioUrl, {num? durationSec}) {
     final stop = _offeredFullStop();
@@ -734,10 +729,10 @@ class TourPlaybackService extends ChangeNotifier {
     notifyListeners();
   }
 
-  num? _fullPieceDurationSec; // S6.8: the playing full telling's length
+  num? _fullPieceDurationSec; // the playing full telling's length
 
-  /// "AGAIN" is a separate control from "more" (W6.2 R3, 8 personas by name:
-  /// the re-listen is not the full telling): replay THIS stop's tight piece.
+  /// "AGAIN" is a separate control from "more" (the re-listen is not the full
+  /// telling): replay THIS stop's tight piece.
   void playAgain() {
     final fix = _lastFix;
     final stop = fix == null ? null : _stopUnderfoot(fix);
@@ -758,7 +753,7 @@ class TourPlaybackService extends ChangeNotifier {
         _audioService = audioService,
         _now = now ?? DateTime.now;
 
-  // ---- S5.10 getters: the measured numbers -------------------------------
+  // ---- Getters: the measured numbers -----------------------------------
 
   /// Real seconds since the tour started (a pause does NOT stop this one).
   int get wallElapsedSeconds =>
@@ -767,7 +762,7 @@ class TourPlaybackService extends ChangeNotifier {
       _pausedAt == null ? 0 : _now().difference(_pausedAt!).inSeconds;
 
   /// The tour clock: seconds since the first play or the first step off the
-  /// square, minus every pause since (§4.3). Zero while the person still
+  /// square, minus every pause since. Zero while the person still
   /// stands where they started.
   int get tourElapsedSeconds {
     final from = _tourClockStartedAt;
@@ -785,14 +780,13 @@ class TourPlaybackService extends ChangeNotifier {
     _tourClockStartedAt ??= _now();
   }
 
-  // ---- W5.14 Q3: a firm or wall finish that has moved ----------------------
+  // ---- A firm or wall finish that has moved ------------------------------
   String? _finishMovedLine;
   int? _finishMovedNoticedAt;
 
-  /// One screen line when a FIRM or WALL finish has moved past the tolerance
-  /// (W5.14 Q3, the panel's majority: "one line on the screen at the next
-  /// moment, never spoken, never a question"; Fiona & Dev's 18:00 became 18:53
-  /// in silence). An OPEN day's finish moves in silence — nobody asked for that
+  /// One screen line when a FIRM or WALL finish has moved past the tolerance:
+  /// one line on the screen at the next moment, never spoken, never a question.
+  /// An OPEN day's finish moves in silence — nobody asked for that
   /// clock. Re-issued only when the finish moves again by more than the
   /// tolerance.
   String? get finishMovedLine => _finishMovedLine;
@@ -813,7 +807,7 @@ class TourPlaybackService extends ChangeNotifier {
     }
     final nowClock = dayFrameHhmm(eta);
     if (nowClock.isEmpty) return;
-    // Only a finish that moved LATER is news (R1.4: early days lengthen what is
+    // Only a finish that moved LATER is news (early days lengthen what is
     // there in silence).
     final gap = _hhmmGapSeconds(nowClock, session.plannedEndHhmm);
     if (gap <= session.retimeToleranceSeconds) {
@@ -860,7 +854,7 @@ class TourPlaybackService extends ChangeNotifier {
       ? (_wallListened / _statedListened).clamp(0.5, 3.0)
       : 1.0;
 
-  /// What the phone reported about a clock gap (S5.10's seam), for the screen.
+  /// What the phone reported about a clock gap, for the screen.
   List<String> get clockNotices => List.unmodifiable(_clockNotices);
 
   /// Start a tour with the given stops. Begins GPS tracking and geofence
@@ -956,13 +950,13 @@ class TourPlaybackService extends ChangeNotifier {
     // Listen to audio completion
     _audioListener = () => _onAudioStateChanged();
     _audioService.addListener(_audioListener!);
-    // S7.9: the platform's interruptions, through the one door.
+    // The platform's interruptions, through the one door.
     _interruptedStop = null;
     _interruptedKey = null;
     _resumeOffered = false;
     _interruptionSub?.cancel();
     _interruptionSub = _audioService.interruptions.listen(_onInterruption);
-    // S8.7: the lock screen's transport, through the ONE pause door.
+    // The lock screen's transport, through the ONE pause door.
     _remoteSub?.cancel();
     _remoteSub = _audioService.remoteCommands.listen(_onRemoteCommand);
 
@@ -991,7 +985,7 @@ class TourPlaybackService extends ChangeNotifier {
     _closePending = null;
     _interruptionSub?.cancel();
     _interruptionSub = null;
-    _remoteSub?.cancel(); // S8.7
+    _remoteSub?.cancel();
     _remoteSub = null;
     _interruptedStop = null;
     _interruptedKey = null;
@@ -1014,19 +1008,19 @@ class TourPlaybackService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ---- S5.10: pause as information (design §4.3) --------------------------
+  // ---- Pause as information ----------------------------------------------
 
   /// Pause the tour: the audio through the provider door, and the TOUR clock
   /// suspended — the wall keeps spending. Repeated pauses are counted for the
-  /// screen-only switch (S5.11, W5.2 R4); they are never lateness.
+  /// screen-only switch; they are never lateness.
   void pauseTour() {
     if (_startedAt == null || _pausedAt != null) return;
     _pausedAt = _now();
     _pauseCount++;
     final key = _audioKeyOf(currentStop);
     if (key != null) _pausesAtStop[key] = (_pausesAtStop[key] ?? 0) + 1;
-    // A piece cut off mid-way is not a seam (R3); a conversation after a
-    // piece ended on its own leaves that seam where it was. S8.7: the lock
+    // A piece cut off mid-way is not a seam; a conversation after a
+    // piece ended on its own leaves that seam where it was. The lock
     // screen pauses the player a beat BEFORE its command reaches this door, so
     // the second arm asks the piece, not the instant — without it a tour paused
     // from the pocket and resumed in the app comes back in silence.
@@ -1048,13 +1042,13 @@ class TourPlaybackService extends ChangeNotifier {
     _pausedMidPiece = false;
     _maybeAnnounceScreenOnly();
     _checkFinishMoved();
-    // Unpause, reconciled (R3): a natural moment ONLY when play resumes at a
+    // Unpause, reconciled: a natural moment ONLY when play resumes at a
     // stop with the piece not yet started — one sentence BEFORE the piece.
     _drainSpeech();
     notifyListeners();
   }
 
-  /// The transcript is open on the screen (Paulo): no voice while reading.
+  /// The transcript is open on the screen: no voice while reading.
   void setTranscriptOpen(bool open) {
     _transcriptOpen = open;
     if (!open) _drainSpeech();
@@ -1068,14 +1062,14 @@ class TourPlaybackService extends ChangeNotifier {
     if (_startedAt == null) return;
     _checkFinishMoved();
     _drainSpeech();
-    // S7.3: the family's standstill is measured by time passing, like the
+    // The family's standstill is measured by time passing, like the
     // natural moment — re-checked here for the same reason.
     _maybeStartArmed();
-    _maybeReachTheDoor(); // S7.6: the outside seconds run on the clock
-    _maybeStartSegment(); // S7.7 (B): the standstill at an anchor, by the clock
+    _maybeReachTheDoor(); // the outside seconds run on the clock
+    _maybeStartSegment(); // the standstill at an anchor, by the clock
   }
 
-  // ---- Phase 7 S7.7 (B): THE CHAPTERS (design §5.6 "segments"; W7.2 R4) ---
+  // ---- THE CHAPTERS (segments) -------------------------------------------
   // A marquee's story is cut on the server at its reviewed anchors; each
   // chapter rides the stop with its own place, radius and file. After the
   // stop's story, a chapter plays ITSELF outdoors at the first standstill
@@ -1089,18 +1083,14 @@ class TourPlaybackService extends ChangeNotifier {
   /// Stops whose GOODBYE has been said after their last chapter (once each).
   final Set<String> _chapterClosesSaid = {};
 
-  /// W7.11 defect 15 (the blind listening panel, ALL ELEVEN of them): a chaptered
-  /// stop's GOODBYE is the LAST thing said at that place. Until this the close ended
-  /// the story piece, so a marquee said farewell on arrival and then spoke again at
-  /// the chapter — "a farewell said at hello" (Julien); "I would take the earbud out
-  /// and put the phone away" (Théo); "'That's the walk' is a statement about my clock.
-  /// If I hear it and then hear more, I stop trusting everything else that voice tells
-  /// me about time" (Marcus). The server now keeps the close OUT of a chaptered story
-  /// (`render_md.stop_narration_text`); it is played here, once, when the stop's last
-  /// VOICED chapter has been told. A chapter the walker never reaches leaves the
-  /// goodbye unsaid — Marcus's own rule: "the last thing said at the last place, or it
-  /// is not said" — while the door (S7.6) and the wrap-up (S6.4) keep their own claims
-  /// on it.
+  /// A chaptered stop's GOODBYE is the LAST thing said at that place. Until this
+  /// the close ended the story piece, so a marquee said farewell on arrival and then
+  /// spoke again at the chapter. A listener who hears a farewell and then more stops
+  /// trusting what that voice says about time. The server now keeps the close OUT of
+  /// a chaptered story (`render_md.stop_narration_text`); it is played here, once,
+  /// when the stop's last VOICED chapter has been told. A chapter the walker never
+  /// reaches leaves the goodbye unsaid — the last thing said at the last place, or it
+  /// is not said — while the door and the wrap-up keep their own claims on it.
   void _maybeCloseAfterLastChapter() {
     final key = _audioService.currentBeatId;
     if (key == null || !_audioService.isCompleted) return;
@@ -1137,8 +1127,8 @@ class TourPlaybackService extends ChangeNotifier {
 
   /// The chapter the walker is STANDING AT: inside its own reviewed circle, or an
   /// indoor one (GPS is useless under a roof, so the whole footprint counts). THIS
-  /// is the only one that may start itself — R4's "where I stand, never sends me"
-  /// (Rosemary), "never narrate where I'm not standing" (Sofia). ``untoldOnly``
+  /// is the only one that may start itself: a chapter plays where the walker
+  /// stands and never sends them elsewhere. ``untoldOnly``
   /// false widens it to a TOLD chapter underfoot — the replay's question, never
   /// the auto-play's.
   (ItineraryStop, int)? _chapterAtHand({bool untoldOnly = true}) {
@@ -1161,16 +1151,14 @@ class TourPlaybackService extends ChangeNotifier {
   /// The chapter OFFERED on the screen: the one underfoot (heard or not), else the
   /// first chapter of this stop the walker has never heard.
   ///
-  /// W7.11, Aiko's dissent: a chapter gated on stopping still is lost to someone
-  /// who never stops — an UNHEARD chapter stays on the screen anywhere at the stop
-  /// ("I would lose it silently and never find out it existed"). W7.13, Camille:
-  /// R1(c)'s second half — "told once is told … A TAP REPLAYS" — was locked at
-  /// W7.2 and not built; a TOLD chapter is offered again where the walker STANDS
+  /// A chapter gated on stopping still is lost to someone who never stops, so an
+  /// UNHEARD chapter stays on the screen anywhere at the stop. Told once is told,
+  /// and a tap replays: a TOLD chapter is offered again where the walker STANDS
   /// AT it, and only the tap plays it. The AUTO-play rule is untouched: once, at
   /// the standstill, untold only.
   (ItineraryStop, int)? _chapterOffered() {
     // An UNHEARD chapter always outranks a replay: the one underfoot first, else
-    // the first unheard anywhere at the stop (Aiko). Only when every chapter has
+    // the first unheard anywhere at the stop. Only when every chapter has
     // been told does the tap become a REPLAY of the one the walker stands at.
     final untoldAtHand = _chapterAtHand();
     if (untoldAtHand != null) return untoldAtHand;
@@ -1204,7 +1192,7 @@ class TourPlaybackService extends ChangeNotifier {
   }
 
   /// Outdoors the due chapter starts itself at the first standstill inside its
-  /// anchor — solo days only (R4: the couple and the family tap); under a roof
+  /// anchor — solo days only (the couple and the family tap); under a roof
   /// never.
   void _maybeStartSegment() {
     final due = _chapterAtHand();
@@ -1216,14 +1204,14 @@ class TourPlaybackService extends ChangeNotifier {
     _playSegment(due.$1, due.$2);
   }
 
-  // ---- S5.11: THE QUEUE and the natural moment ---------------------------
+  // ---- THE QUEUE and the natural moment ---------------------------------
 
   /// What the session has said aloud, in order (for the screen's own record
   /// and for tests). Every line here was on the screen first.
   List<String> get spoken => List.unmodifiable(_spoken);
   String? get queuedLine => _queuedLine;
 
-  /// R4 — the session's own voice goes to the screen for the rest of the day
+  /// The session's own voice goes to the screen for the rest of the day
   /// (the NARRATION is never muted, and the question is still said once):
   /// couple / family / second-language after the SECOND pause of the day or one
   /// pause longer than ten minutes (family: five); solo, take-it-easy, no party:
@@ -1240,8 +1228,7 @@ class TourPlaybackService extends ChangeNotifier {
     return false;
   }
 
-  /// Solo / take-it-easy: two pauses inside ONE stop silence THAT stop only
-  /// (Rosemary, Greta).
+  /// Solo / take-it-easy: two pauses inside ONE stop silence THAT stop only.
   bool get currentStopSilenced {
     final key = _audioKeyOf(currentStop);
     return key != null && (_pausesAtStop[key] ?? 0) >= 2;
@@ -1266,7 +1253,7 @@ class TourPlaybackService extends ChangeNotifier {
     }
   }
 
-  /// R3 — the observable proxy for "a natural moment": at a STOP (inside its
+  /// The observable proxy for "a natural moment": at a STOP (inside its
   /// circle, or the last stop's), a SEAM in the audio (nothing playing; the
   /// piece ended on its own OR the first piece has not begun), standing still
   /// for the settling period, not paused, transcript closed. NEVER on a walking
@@ -1299,14 +1286,14 @@ class TourPlaybackService extends ChangeNotifier {
   }
 
   /// Say the waiting line if this is a natural moment. The QUESTION is said
-  /// once even under screen-only (Théo, Camille: "a question I cannot hear is a
-  /// decision made for me"); a fabric line under screen-only, or at a stop the
+  /// once even under screen-only (a question the person cannot hear is a
+  /// decision made for them); a fabric line under screen-only, or at a stop the
   /// person has silenced, stays on the screen.
   void _drainSpeech() {
     final line = _queuedLine;
     if (line == null || !isNaturalMoment) return;
     // Under screen-only only the question and the switch's own one sentence
-    // are said (R4: "said once in one plain sentence").
+    // are said, once, in one plain sentence.
     final isSwitchLine = line == kScreenOnlyLine;
     if (!_queuedIsQuestion &&
         !isSwitchLine &&
@@ -1320,7 +1307,7 @@ class TourPlaybackService extends ChangeNotifier {
     _queuedLine = null;
     if (_queuedIsQuestion) _questionSpoken = true;
     _queuedIsQuestion = false;
-    // S6.8 (owner ruling: the tour's own voice): a line with a pre-voiced file
+    // The tour's own voice: a line with a pre-voiced file
     // plays through the narrator's door; only file-less lines use the plain
     // voice. Same seam, same etiquette either way.
     final url = _queuedLineAudioUrl;
@@ -1343,21 +1330,21 @@ class TourPlaybackService extends ChangeNotifier {
     _drainSpeech();
   }
 
-  /// The person read this stop's transcript on the screen (Paulo): a stop
+  /// The person read this stop's transcript on the screen: a stop
   /// opened is not a stop skipped, even if its audio never played.
   void noteTranscriptOpened(ItineraryStop stop) {
     final key = _audioKeyOf(stop);
     if (key != null) _opened.add(key);
   }
 
-  /// [Head back now] — the one control the person has (W5.2 R1.1/R4): the
+  /// [Head back now] — the one control the person has: the
   /// measured divergence names the current stop as the wrap-up point.
   void requestWrapUp() {
     _wrapUpRequested = true;
     notifyListeners();
   }
 
-  /// The walker found this door SHUT and said so (Docs/adr/0006 rule 5). It
+  /// The walker found this door SHUT and said so. It
   /// records the observation and nothing else: the server has already decided
   /// what to offer instead, and [matchContingency] finds that entry from here.
   void reportDoorClosed(String poiId) {
@@ -1369,18 +1356,18 @@ class TourPlaybackService extends ChangeNotifier {
   String? _closedStopId;
 
   /// Every stop the phone HOLDS: the walked day, plus the standbys the session
-  /// carries beside it (M6b). An id is resolved against this — a standby is not
+  /// carries beside it. An id is resolved against this — a standby is not
   /// on the walked day, and resolving against that list alone is exactly how a
-  /// place the server offered gets dropped on sight (§4.7 cuts the other way:
+  /// place the server offered gets dropped on sight (the holding rule cuts the other way:
   /// what the phone holds it may seat; what it does not hold it may not invent).
   List<ItineraryStop> get _held => [
         ..._planned,
         ...(_session?.standbys ?? const <ItineraryStop>[]),
       ];
 
-  // ---- S5.10: THE ONE re-timing expression --------------------------------
+  // ---- THE ONE re-timing expression --------------------------------------
 
-  /// THE phone's ONE re-timing expression (S5.10's seam; design §4.1): seconds
+  /// THE phone's ONE re-timing expression: seconds
   /// from NOW to each remaining stop's arrival and departure — from the last
   /// fix, at the learned pace with the server's own straight-line correction,
   /// spending at each stop the longer of its planned visit and its narration
@@ -1498,16 +1485,16 @@ class TourPlaybackService extends ChangeNotifier {
     return null;
   }
 
-  /// The phone's MEASURED divergence, as facts (design §4.6) — what
-  /// [matchContingency] takes. Lateness and earliness on the TOUR clock (§4.3:
-  /// a pause is never lateness); minutes left on the WALL clock (the platform
-  /// clock keeps moving through a pause and the number on screen moves with it
-  /// — Marcus, W5.2 R4); a skip only for a stop neither played nor opened; a
+  /// The phone's MEASURED divergence, as facts — what
+  /// [matchContingency] takes. Lateness and earliness on the TOUR clock (a
+  /// pause is never lateness); minutes left on the WALL clock (the platform
+  /// clock keeps moving through a pause and the number on screen moves with
+  /// it); a skip only for a stop neither played nor opened; a
   /// protected promise at risk when its tour-frame arrival runs past the plan
   /// by more than the tolerance.
   Divergence measure() {
-    // A walk that is over has nothing left to diverge from (W5.13: a finished
-    // day still matched a promise entry when poked).
+    // A walk that is over has nothing left to diverge from (a finished day
+    // must not match a promise entry when poked).
     if (!isActive) return const Divergence();
     final etas = retimeRemaining();
     final session = _session;
@@ -1527,7 +1514,7 @@ class TourPlaybackService extends ChangeNotifier {
         if (gap < 0) early = (-gap) ~/ 60;
       }
       // Minutes left on the WALL clock: to the day's planned end (an open day's
-      // bands count down to it — R1.3), else to the finish promise's clock.
+      // bands count down to it), else to the finish promise's clock.
       var end = session.plannedEndHhmm.length == 5 ? session.plannedEndHhmm : '';
       if (end.isEmpty) {
         for (final promise in session.promises) {
@@ -1574,14 +1561,14 @@ class TourPlaybackService extends ChangeNotifier {
     );
   }
 
-  /// THE SESSION CLOCK SEAM, phone half (S5.10; design §4.6): on every version
+  /// THE SESSION CLOCK SEAM, phone half: on every version
   /// the server hands over — the reconnect path — the phone's own re-timing is
   /// COMPARED with the server's clock for the next stop, in the day's frame. A
   /// gap beyond the session's tolerance is REPORTED — a line for the screen —
   /// and never corrected: nothing here assigns into the phone's clocks, its
   /// learned rates, or the server's plan. The reader who is tempted to "fix"
   /// the phone from the server here is looking at the silent-divergence bug
-  /// §4.6 exists to prevent.
+  /// this seam exists to prevent.
   void _compareClockWithServer(SessionPlan session) {
     if (_startedAt == null || _lastFix == null) return; // nothing measured yet
     final etas = retimeRemaining();
@@ -1601,7 +1588,7 @@ class TourPlaybackService extends ChangeNotifier {
     );
   }
 
-  /// Hold the session the server sent (design §4.7: the phone carries the
+  /// Hold the session the server sent (the phone carries the
   /// current plan and its contingency set so it can act offline, only from
   /// what it already holds). Replaces the held session on every new version.
   void holdSession(SessionPlan session) {
@@ -1640,7 +1627,7 @@ class TourPlaybackService extends ChangeNotifier {
         }
       }
     }
-    // THE PROMISE TIER ON THE LIVE PATH (W5.14): a live replan that could not
+    // THE PROMISE TIER ON THE LIVE PATH: a live replan that could not
     // keep everything the person asked for within the clock carries the ONE
     // question as an entry of kind "live" — applied at once (its default in
     // force, the two big buttons on the screen), never re-matched later.
@@ -1656,7 +1643,7 @@ class TourPlaybackService extends ChangeNotifier {
   /// Match the phone's MEASURED divergence against the held contingency set and
   /// return the FIRST entry, in server order, whose trigger fits — a band
   /// lookup or an id equality, nothing else. Null when nothing matches: the
-  /// phone then carries on and re-times (design §4.6's arithmetic fallback).
+  /// phone then carries on and re-times (the arithmetic fallback).
   SessionContingency? matchContingency(Divergence divergence) {
     final session = _session;
     if (session == null) return null;
@@ -1697,7 +1684,7 @@ class TourPlaybackService extends ChangeNotifier {
   }
 
   /// THE ONE METHOD THAT CHANGES THE CURRENT PLAN — and its only decision input
-  /// is a server contingency id (design §4.6: the phone SELECTS, it never
+  /// is a server contingency id (the phone SELECTS, it never
   /// DECIDES). Re-orders the remaining stops to the entry's stops (a subset of
   /// the planned day, in the server's order), puts the entry's screen text on
   /// screen, and surfaces its question if it carries one; the answer is applied
@@ -1716,14 +1703,14 @@ class TourPlaybackService extends ChangeNotifier {
     _selected = entry;
     _screenText = entry.screenText;
     _pendingQuestion = entry.question;
-    // §4.2: a fabric change is absorbed SILENTLY — on the screen, never said.
-    // The ONE question is the one line the session speaks (R2.5): queued to a
+    // A fabric change is absorbed SILENTLY — on the screen, never said.
+    // The ONE question is the one line the session speaks: queued to a
     // natural moment, on the screen already as two big buttons.
     final question = entry.question;
     if (question != null) {
       _queue(question, isQuestion: true);
     } else if (_queuedIsQuestion == false) {
-      _queuedLine = null; // a superseded fabric line expires unsaid (R3)
+      _queuedLine = null; // a superseded fabric line expires unsaid
     }
     if (entry.kind == 'wrap_up_from') {
       _wrapUp(entry);
@@ -1731,7 +1718,7 @@ class TourPlaybackService extends ChangeNotifier {
     if (entry.question == null) {
       _reorderRemaining(entry, entry.stopIds);
     } else if (entry.defaultArm == 'shorten') {
-      // The safe default is already in force until answered (§4.2).
+      // The safe default is already in force until answered.
       _reorderRemaining(
           entry,
           entry.alternateStopIds.isNotEmpty
@@ -1746,7 +1733,7 @@ class TourPlaybackService extends ChangeNotifier {
 
   /// Apply the person's answer to the ONE question of the selected entry:
   /// `keep` = the entry's stops (the protected thing kept), `shorten` = its
-  /// alternate. Silence applies the entry's own default (§4.2).
+  /// alternate. Silence applies the entry's own default.
   void answerQuestion(String arm) {
     final entry = _selected;
     if (entry == null || entry.question == null) return;
@@ -1762,14 +1749,14 @@ class TourPlaybackService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ---- S6.4: the tap is the seam -------------------------------------------
+  // ---- The tap is the seam -----------------------------------------------
 
   /// Seconds from [position] to the END OF THE CURRENT SENTENCE of [stop]'s
   /// piece — arithmetic over the stop's own narration (its word count per
   /// sentence against the file's length), capped at [kSentenceEndCapSeconds].
   /// Zero when the stop carries no narration or no length, or the position is
   /// past the last boundary. THE phone's one way of finding a sentence end
-  /// (W6.2 R8: "the current sentence finishes — never a cut word").
+  /// (the current sentence finishes — never a cut word).
   @visibleForTesting
   static double secondsToSentenceEnd(
     ItineraryStop stop,
@@ -1794,7 +1781,7 @@ class TourPlaybackService extends ChangeNotifier {
   /// is the entry's screen line and is never spoken. Nothing else follows.
   void _wrapUp(SessionContingency entry) {
     final stop = currentStop;
-    // S6.6/S6.8: the FULL TELLING is a stretch of its own (§7.4.5 — every
+    // The FULL TELLING is a stretch of its own (every
     // prefix ends decently): a tap mid-full finishes ITS sentence by ITS own
     // arithmetic and plays ITS close. The playing KEY names its stop — the
     // tour pointer may already sit a stop ahead (the tight completing advances
@@ -1836,7 +1823,7 @@ class TourPlaybackService extends ChangeNotifier {
     if (playingThis) {
       _closeLine = stop.closeText;
       _closePending = stop;
-      final wait = sentenceWaitFor(stop); // S7.8
+      final wait = sentenceWaitFor(stop);
       _sentenceEndTimer?.cancel();
       if (wait <= 0) {
         finishSentenceNow();
@@ -1849,7 +1836,7 @@ class TourPlaybackService extends ChangeNotifier {
       return;
     }
     // No piece playing: the day's close — the last planned stop's — on screen
-    // now; said at the next natural moment (never on a leg, §4.4.1), through
+    // now; said at the next natural moment (never on a leg), through
     // the queue like every session line. A stale queued fabric line expires.
     final last = _planned.isNotEmpty ? _planned.last : stop;
     final dayClose = last?.closeText ?? stop?.closeText;
@@ -1857,7 +1844,7 @@ class TourPlaybackService extends ChangeNotifier {
     _closeLine = dayClose;
     if (!_queuedIsQuestion) {
       _queuedLine = dayClose;
-      // S6.8: the day's close in the narrator's own voice when the wire
+      // The day's close in the narrator's own voice when the wire
       // carries its file.
       _queuedLineAudioUrl =
           (last?.closeText == dayClose ? last?.closeAudioUrl : stop?.closeAudioUrl);
@@ -1883,13 +1870,13 @@ class TourPlaybackService extends ChangeNotifier {
     if (_audioService.isPlaying && _audioService.currentBeatId == playingKey) {
       _audioService.stop();
     }
-    _pieceEndedNaturally = false; // a cut is not a seam for anything else (R3)
+    _pieceEndedNaturally = false; // a cut is not a seam for anything else
     if (wasFull) {
       _playFullClose(stop);
     } else {
       _playClose(stop);
     }
-    // S7.6: a DOOR cut ends the stretch by the plan's own rule (§7.4.5, a
+    // A DOOR cut ends the stretch by the plan's own rule (a
     // decent prefix): the next stop becomes the target — the same advance a
     // completed piece makes — while the keep-listening offer stays on screen.
     if (_doorAdvance) {
@@ -1899,7 +1886,7 @@ class TourPlaybackService extends ChangeNotifier {
   }
 
   /// The current stop's piece is over — completed on its own, or ended at its
-  /// door (S7.6): the next stop becomes the target; the last one completes
+  /// door: the next stop becomes the target; the last one completes
   /// the walk. THE one advance.
   void _advancePast() {
     if (_currentStopIndex + 1 < _stops.length) {
@@ -1914,7 +1901,7 @@ class TourPlaybackService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// S6.6/S6.8: the full telling's own close — its file through the narrator's
+  /// The full telling's own close — its file through the narrator's
   /// door when voiced, else the one silent door; on the screen either way.
   void _playFullClose(ItineraryStop stop) {
     final text = stop.fullCloseText;
@@ -1934,11 +1921,11 @@ class TourPlaybackService extends ChangeNotifier {
   }
 
   /// The close of [stop]: its pre-voiced file through the narrator's own door
-  /// when the wire carries one (S6.8 — keyed `<stop>-close`, played as a deeper
+  /// when the wire carries one (keyed `<stop>-close`, played as a deeper
   /// dive so completion never auto-advances the tour), else said through the
-  /// one silent door; on the screen already either way (§4.4.2).
+  /// one silent door; on the screen already either way.
   /// The full telling's sentence arithmetic rides the SAME static function as
-  /// the tight's, over the full's own text and length (S6.6/S6.8).
+  /// the tight's, over the full's own text and length.
   ItineraryStop _fullArithmeticStop(ItineraryStop stop) => ItineraryStop(
         sortOrder: stop.sortOrder,
         poiId: stop.poiId,
@@ -1977,7 +1964,7 @@ class TourPlaybackService extends ChangeNotifier {
   /// a skip "of k" lists the stops after k (k goes); a promise-at-risk lists
   /// the day from the stop before the promise. Everything before that point is
   /// kept as it stands. A stop id the phone does not hold is skipped, never
-  /// invented (§4.7: it cannot add narration it does not hold).
+  /// invented (it cannot add narration it does not hold).
   void _reorderRemaining(SessionContingency entry, List<String> stopIdsInOrder) {
     if (_stops.isEmpty) return;
     final triggerId = entry.triggerStopId;
@@ -2033,7 +2020,7 @@ class TourPlaybackService extends ChangeNotifier {
     _threadForNewPair(entry, keepCount);
   }
 
-  /// S6.5 (design §5.4; W6.2 R5, 11/11): when a reorder makes two stops
+  /// When a reorder makes two stops
   /// consecutive that the plan never had consecutive, the writer's THREAD for
   /// that pair — authored at compose time, riding the arriving stop as
   /// `threadLines[predecessor name]` — goes on the screen for the whole leg
@@ -2041,8 +2028,8 @@ class TourPlaybackService extends ChangeNotifier {
   /// lost on the move is waiting at the standstill). The pair the plan already
   /// had keeps its thread inside the arriving stop's own narration. No line
   /// for the pair means silence — none rather than glue. A wrap-up threads
-  /// nothing: the close owns that seam (R8), and the question outranks the
-  /// thread in the queue (R2.5).
+  /// nothing: the close owns that seam, and the question outranks the
+  /// thread in the queue.
   void _threadForNewPair(SessionContingency entry, int keepCount) {
     _threadLine = null;
     if (entry.kind == 'wrap_up_from') return;
@@ -2060,8 +2047,8 @@ class TourPlaybackService extends ChangeNotifier {
     _queue(line, isQuestion: false, audioUrl: next.threadAudioUrls?[from.poiName]);
   }
 
-  /// Prefetch the audio of every stop the held session may play (design §4.7:
-  /// the alternates and their audio, prefetched during walks) through the
+  /// Prefetch the audio of every stop the held session may play (the
+  /// alternates and their audio, prefetched during walks) through the
   /// EXISTING per-stop cache — the same key playback uses (`_audioKeyOf`).
   Future<int> prefetchSessionAudio() {
     final session = _session;
@@ -2076,7 +2063,7 @@ class TourPlaybackService extends ChangeNotifier {
   /// Skip to a specific stop index.
   void skipToStop(int index) {
     if (index < 0 || index >= _stops.length) return;
-    // Skip = unplayed AND unopened (S5.10): a stop passed over with its piece
+    // Skip = unplayed AND unopened: a stop passed over with its piece
     // neither played nor read on the screen is the skip the set answers.
     for (var i = max(0, _currentStopIndex); i < index; i++) {
       final key = _audioKeyOf(_stops[i]);
@@ -2086,8 +2073,8 @@ class TourPlaybackService extends ChangeNotifier {
     }
     _currentStopIndex = index;
     _pendingStopIndex = null;
-    _armedKey = null; // the tap IS the start (S7.3: a tap always plays)
-    _pieceEndedNaturally = false; // a skip is not a seam (R3)
+    _armedKey = null; // the tap IS the start (a tap always plays)
+    _pieceEndedNaturally = false; // a skip is not a seam
     _playCurrentStop();
   }
 
@@ -2121,9 +2108,9 @@ class TourPlaybackService extends ChangeNotifier {
     _distanceToNext = haversineDistance(lat, lng, target.lat, target.lng);
     final before = _lastFix;
     _firstFix ??= _Fix(lat, lng, _now());
-    // The first step off the square starts the tour clock (R1.3); standing
+    // The first step off the square starts the tour clock; standing
     // where you started is not the tour yet. The square's width is the day's
-    // OWN-PLACE radius off the wire (S7.3); with no policy held the clock
+    // OWN-PLACE radius off the wire; with no policy held the clock
     // starts at the first play, or on arrival at the first stop's footprint.
     final ownPlaceM = _session?.placement?.ownPlaceM;
     final steppedOff = ownPlaceM != null &&
@@ -2133,7 +2120,7 @@ class TourPlaybackService extends ChangeNotifier {
       _startTourClockIfNeeded();
     }
     _learnPace(lat, lng);
-    // Standing still is measured from the last fix that MOVED (R3).
+    // Standing still is measured from the last fix that MOVED.
     if (before == null ||
         haversineDistance(before.lat, before.lng, lat, lng) > kStillRadiusM) {
       _stillSince = _now();
@@ -2145,13 +2132,13 @@ class TourPlaybackService extends ChangeNotifier {
     _checkFinishMoved();
     _drainSpeech();
 
-    // THE ARRIVAL (S7.3; W7.2 R1): touching the target's footprint ARMS its
+    // THE ARRIVAL: touching the target's footprint ARMS its
     // piece; it starts at arrival — or, on the family day, at the first
     // standstill inside the footprint. Told once is told.
     _armOrStart(target, lat, lng);
-    _maybeReachTheDoor(); // S7.6
-    _maybeStartLeg(target, lat, lng); // S7.7: the walking line, on the walk
-    _maybeStartSegment(); // S7.7 (B): a chapter at its anchor
+    _maybeReachTheDoor();
+    _maybeStartLeg(target, lat, lng); // the walking line, on the walk
+    _maybeStartSegment(); // a chapter at its anchor
 
     // Approaching the NEXT stop's footprint while the current piece plays.
     if (_audioService.isPlaying && _currentStopIndex + 1 < _stops.length) {
@@ -2166,9 +2153,9 @@ class TourPlaybackService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Phase 7 S7.7 (design §5.6 C7 "audio overlaps the walking"; plan defect 7):
-  /// the target's LEG piece — its walking line, voiced as its own file — plays ON
-  /// THE LEG: the first stop's at the first fix (the start: "Settle in, you're
+  /// Audio overlaps the walking: the target's LEG piece — its walking line,
+  /// voiced as its own file — plays ON THE LEG: the first stop's at the first
+  /// fix (the start: "Settle in, you're
   /// starting in…"), every later stop's once the walker has left the previous
   /// stop's footprint; never inside the target's own footprint (there the STORY
   /// arms), never while anything plays, told once (a played key never replays).
@@ -2200,7 +2187,7 @@ class TourPlaybackService extends ChangeNotifier {
       return;
     }
     if (_played.contains(legKey) || _audioService.isPlaying) return;
-    _startTourClockIfNeeded(); // the first play starts the tour clock (R1.3)
+    _startTourClockIfNeeded(); // the first play starts the tour clock
     _legTextLine = null; // the caught-up file says the words; the screen line is done
     _audioService.play(legKey, url, title: target.poiName);
     notifyListeners();
@@ -2222,8 +2209,8 @@ class TourPlaybackService extends ChangeNotifier {
 
   /// Start the armed piece: at once, or — the family day, the session's
   /// policy — at the first standstill inside the footprint (the one stillness
-  /// the etiquette already measures, never a second one; Nadia, §4.4.4). At a
-  /// QUEUED stop (S7.5, R2: the line is the place) the piece waits for that
+  /// the etiquette already measures, never a second one). At a
+  /// QUEUED stop (the line is the place) the piece waits for that
   /// standstill for everyone, and under the day's `tap` policy it waits for the
   /// person's tap instead — [armedOffer] / [startArmedPiece].
   void _maybeStartArmed() {
@@ -2252,16 +2239,16 @@ class TourPlaybackService extends ChangeNotifier {
   }
 
   void _onAudioStateChanged() {
-    // KE6: a completed "keep exploring here" deep-dive clip NEVER advances the
+    // A completed "keep exploring here" deep-dive clip NEVER advances the
     // tour — it is served off the tour's time budget. Only scheduled per-stop
     // tour audio drives auto-advance, so bail before either advance path.
     if (_audioService.isDeeperDive) return;
     _observeListening();
-    // W7.11 defect 15: the goodbye of a chaptered stop lands after its last chapter.
+    // The goodbye of a chaptered stop lands after its last chapter.
     _maybeCloseAfterLastChapter();
-    // A piece that ended ON ITS OWN is a seam (R3) — the player says
+    // A piece that ended ON ITS OWN is a seam — the player says
     // completed, not merely "not playing": a pause is neither a seam nor an
-    // ending (W5.13: it used to be read as one and the tour jumped a stop).
+    // ending (read as one, the tour would jump a stop).
     if (_audioService.isPlaying) {
       _pieceEndedNaturally = false;
     } else if (_audioService.isCompleted) {
@@ -2288,7 +2275,7 @@ class TourPlaybackService extends ChangeNotifier {
   }
 
   /// The audio cache/playback key for a stop: the per-stop ItineraryItem id
-  /// (Step 1.4d) when present, falling back to the legacy per-beat id. Both the
+  /// when present, falling back to the legacy per-beat id. Both the
   /// play call and the completion check below use this so they always agree.
   String? _audioKeyOf(ItineraryStop? stop) =>
       stop == null ? null : (stop.stopId ?? stop.beatId);
@@ -2297,24 +2284,24 @@ class TourPlaybackService extends ChangeNotifier {
     if (_currentStopIndex < 0 || _currentStopIndex >= _stops.length) return;
     final stop = _stops[_currentStopIndex];
     if (stop.audioUrl != null) {
-      _startTourClockIfNeeded(); // the first play starts the tour clock (R1.3)
-      _threadLine = null; // the leg is over: the next story begins (S6.5)
+      _startTourClockIfNeeded(); // the first play starts the tour clock
+      _threadLine = null; // the leg is over: the next story begins
       _legTextLine = null;
-      _doorCutStop = null; // a new piece: the old door's offer is spent (S7.6)
+      _doorCutStop = null; // a new piece: the old door's offer is spent
       _audioService.play(_audioKeyOf(stop)!, stop.audioUrl!, title: stop.poiName);
-      _pieceStartedAt = _now(); // the outside seconds count from here (S7.6)
+      _pieceStartedAt = _now(); // the outside seconds count from here
       _pieceStartedKey = _audioKeyOf(stop);
       _state = TourState.active;
       notifyListeners();
     }
   }
 
-  // ---- S5.10: the two learners -------------------------------------------
+  // ---- The two learners -------------------------------------------------
 
   /// Train the pace on this fix: moving minutes on WALKING LEGS only. A
   /// low-accuracy fix (> 25 m, the provider's own flag) breaks the chain and
   /// trains nothing; inside the current stop's footprint or the last stop's
-  /// (the wire's geometry — S7.3) the person is wandering, not walking;
+  /// (the wire's geometry) the person is wandering, not walking;
   /// standing still and vehicle speeds are neither; a pause trains nothing.
   void _learnPace(double lat, double lng) {
     final now = _now();

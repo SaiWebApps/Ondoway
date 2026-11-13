@@ -1,5 +1,5 @@
-// Phase 5 W5.12 — THE KILL CRITERION, measured ON the iOS Simulator (plan W5.12;
-// design §4.6's two paths). Two bars: (a) SELECT <= 1 s — from a position update
+// THE KILL CRITERION, measured ON the iOS Simulator, on both of the phone's
+// paths. Two bars: (a) SELECT <= 1 s — from a position update
 // (or the person's own tap) that crosses a trigger to the question on screen /
 // the silent re-time applied and RENDERED, ten samples per persona trace, the
 // worst case reported; (b) LIVE REPLAN <= 8 s — from the phone firing the replan
@@ -13,7 +13,7 @@
 // result. Run:
 //   cd mobile && flutter test integration_test/w512_kill_criterion_test.dart \
 //     -d <simulator udid> $(python w512_setup.py)   # the dart-defines
-// Results are printed as lines starting "W512 " for the ledger.
+// Results are printed as lines starting "W512 ".
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -188,7 +188,7 @@ void main() {
           n++;
         }
       }
-      // A short day has fewer distinct stimuli than ten (Rosemary's one-stop
+      // A short day has fewer distinct stimuli than ten (the RO one-stop
       // day has one): repeat the person's own tap until ten timings exist.
       var again = 0;
       while (n < 10) {

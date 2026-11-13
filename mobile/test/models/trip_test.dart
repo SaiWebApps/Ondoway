@@ -184,7 +184,7 @@ void main() {
       expect(rebuilt.lng, original.lng);
     });
 
-    // Phase 7 S7.3 (design §5.6; W7.2 R1): the stop's placed trigger geometry
+    // The stop's placed trigger geometry
     // rides the wire and the phone READS it — the footprint is the server's
     // number, never a circle of the phone's. A legacy item carries none.
     test('fromJson reads the placed trigger geometry (S7.3) and keeps it '
@@ -212,7 +212,7 @@ void main() {
       expect(stop.copyWith(audioUrl: 'https://cdn/x.mp3').trigger!.radiusM, 140.0);
     });
 
-    // Phase 7 S7.7 (design §5.6 C7): the stop's LEG piece — its walking line,
+    // The stop's LEG piece — its walking line,
     // voiced as its own file — rides the wire beside the story and survives the
     // round trip and copyWith.
     test('fromJson reads the leg piece (S7.7) and keeps it through toJson and '
@@ -242,7 +242,7 @@ void main() {
       expect(stop.copyWith(audioUrl: 'https://cdn/x.mp3').legAudioUrl, stop.legAudioUrl);
     });
 
-    // Phase 7 S7.7 (B): a marquee's chapters ride the wire as a list, each with
+    // A marquee's chapters ride the wire as a list, each with
     // its own place, radius, roof flag, text and (once voiced) file.
     test('fromJson reads the chapters (S7.7 B); a legacy item has none', () {
       final json = {
@@ -384,8 +384,8 @@ void main() {
       expect(trip.stops[1].poiName, 'Louvre');
     });
 
-    // Phase 4 (design §8.1): the server plans ONE day, and generate keeps
-    // `options` on the wire as a list of exactly one (stored pre-Phase-4
+    // The server plans ONE day, and generate keeps
+    // `options` on the wire as a list of exactly one (stored older
     // trips carry multi-option lists, so the field stays a list forever).
     // The phone no longer parses or exposes it — the model has no options
     // surface at all, and an options key of ANY shape is ignored input.

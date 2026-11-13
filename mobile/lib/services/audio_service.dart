@@ -36,7 +36,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
   bool _nativeActive = false;
   Timer? _nativePosTimer;
 
-  // ---- Phase 7 S7.9 (W7.2 R5): the audio SESSION and its interruptions -----
+  // ---- The audio SESSION and its interruptions ------------------------------
   // The session is configured for SPOKEN playback (background audio — the
   // walk keeps talking pocketed; iOS ducks us for a navigation prompt on its
   // own and interrupts us for a call or another app's music). The platform's
@@ -64,7 +64,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
             _player.setVolume(0.25);
             _interruptions.add(AudioInterruptionKind.duckBegin);
           } else {
-            // S8.7: the platform is TAKING the audio, so the pause that follows
+            // The platform is TAKING the audio, so the pause that follows
             // is not a button anyone pressed. Held while it lasts so the remote
             // door below stays quiet — an interruption is never their pause.
             _interrupted = true;
@@ -85,7 +85,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
     }
   }
 
-  // ---- Phase 8 S8.7: THE LOCK SCREEN, translated (persona 09, Fiona & Dev) --
+  // ---- THE LOCK SCREEN, translated -----------------------------------------
   // just_audio_background owns the platform's command centre: a press on the
   // lock screen, the earbud or the car moves the PLAYER and tells the app
   // afterwards. So the app's own INTENT is remembered here, and a reported
@@ -102,7 +102,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
   Stream<AudioRemoteCommand> get remoteCommands => _remoteCommands.stream;
 
   void _translateRemoteCommand(PlayerState state) {
-    // An interruption's pause is the platform TAKING the audio (S7.9), not a
+    // An interruption's pause is the platform TAKING the audio, not a
     // button; loading and finishing are the app's own business either way.
     if (_interrupted ||
         state.processingState == ProcessingState.idle ||
@@ -116,7 +116,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
     );
   }
 
-  /// What the lock screen SHOWS while [beatId] plays (S8.7). The title is the
+  /// What the lock screen SHOWS while [beatId] plays. The title is the
   /// caller's real name for the piece — the place, the chapter, the line being
   /// said; with none, the piece's own id stands in and nothing is invented.
   static MediaItem _mediaItem(String beatId, String? title) =>
@@ -200,14 +200,14 @@ class AudioService extends ChangeNotifier implements AudioProvider {
   @override
   Duration get position => _position;
 
-  /// S7.8: the player's decoded length, through the provider door (R6).
+  /// The player's decoded length, through the provider door.
   @override
   Duration get duration => _duration;
   bool get isActive => _currentBeatId != null;
 
   /// Play audio for a beat. Uses cached file if available, otherwise streams from URL.
   ///
-  /// Set [isDeeperDive] for on-demand "keep exploring here" audio (KE6); the flag
+  /// Set [isDeeperDive] for on-demand "keep exploring here" audio; the flag
   /// is tracked so tour auto-advance can skip completion of a deep-dive clip.
   @override
   Future<void> play(
@@ -226,7 +226,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
     );
   }
 
-  /// Phase 7 S7.6 (W7.2 R3): the keep-listening tap at a door resumes the cut
+  /// The keep-listening tap at a door resumes the cut
   /// piece from the START of its cut sentence — the source is set, the player
   /// seeks, then plays; never a cut word. `void` because the provider's door is
   /// synchronous; the work is the same one start path [play] uses.
@@ -256,7 +256,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
     notifyListeners();
 
     try {
-      await _ensureSession(); // S7.9: spoken playback, interruptions heard
+      await _ensureSession(); // spoken playback, interruptions heard
       final cachedPath = await _getCachedPath(beatId);
 
       if (cachedPath != null && _useNativePlayer) {
@@ -270,7 +270,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
       // Streaming a URL, or any non-iOS platform: just_audio. Make sure the
       // native player is not left running underneath it.
       await _stopNative();
-      // S8.7: every just_audio source carries its MediaItem tag, or the lock
+      // Every just_audio source carries its MediaItem tag, or the lock
       // screen has nothing to show and just_audio_background refuses the
       // source outright.
       final tag = _mediaItem(beatId, title);
@@ -284,7 +284,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
       if (from != null && from > Duration.zero) {
         await _player.seek(from);
       }
-      _appWantsPlaying = true; // S8.7: the intent, before the player reports it
+      _appWantsPlaying = true; // the intent, before the player reports it
       await _player.play();
     } catch (e) {
       _isBuffering = false;
@@ -299,7 +299,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
   /// never overlap — the nullable form, so a native-only session never boots
   /// the just_audio engine just to stop it.
   ///
-  /// [from] is the keep-listening seek (S7.6, W7.2 R3): the native player has
+  /// [from] is the keep-listening seek: the native player has
   /// no start-at-position call, so it plays and then seeks. Without this the
   /// tap that resumes a cut piece would restart it from zero.
   Future<void> _playNative(String path, Duration? from) async {
@@ -374,7 +374,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
 
   @override
   Future<void> pause() async {
-    _appWantsPlaying = false; // S8.7: ours, so it is not read back as a command
+    _appWantsPlaying = false; // ours, so it is not read back as a command
     if (_nativeActive) {
       await _native.pause();
       _isPlaying = false;
@@ -398,17 +398,17 @@ class AudioService extends ChangeNotifier implements AudioProvider {
     await _player.play();
   }
 
-  /// The session's own voice (design §4.4). The phone carries no text-to-speech
+  /// The session's own voice. The phone carries no text-to-speech
   /// plugin today, so this door is SILENT: every line reaches it only after it
-  /// is on the screen (§4.4.2), and "mute beats graceful" (§4.4.4). Wiring a
-  /// voice is one implementation here; the etiquette (when a line may be said —
-  /// W5.2 R3/R4) lives in TourPlaybackService and does not change with it.
+  /// is on the screen, and "mute beats graceful". Wiring a
+  /// voice is one implementation here; the etiquette (when a line may be said)
+  /// lives in TourPlaybackService and does not change with it.
   @override
   Future<void> speak(String sentence) async {}
 
   @override
   Future<void> stop() async {
-    _appWantsPlaying = false; // S8.7
+    _appWantsPlaying = false;
     await _stopNative();
     // Only stop just_audio if it was actually booted — reading `_player` here
     // would create the engine for a session that was native-only.
@@ -465,8 +465,8 @@ class AudioService extends ChangeNotifier implements AudioProvider {
     return path != null;
   }
 
-  /// Check PER-STOP audio status by ItineraryItem id (Phase 1, Step 1.4d) —
-  /// THE status poll (the per-beat one was deleted at Phase 7 S7.10).
+  /// Check PER-STOP audio status by ItineraryItem id —
+  /// THE status poll (the per-beat one was deleted).
   ///
   /// GET /audio/stop-status/{stopId} reads the per-stop narration audio
   /// persisted by /audio/generate-trip-stops, so the itinerary flow polls/plays
@@ -552,7 +552,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
       _isPlaying = false;
       _position = _duration;
     }
-    _translateRemoteCommand(state); // S8.7: the lock screen, heard here
+    _translateRemoteCommand(state); // the lock screen, heard here
     notifyListeners();
   }
 

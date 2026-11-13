@@ -5,11 +5,11 @@ import 'package:ondoway/services/tour_playback_service.dart';
 import 'mocks/mock_audio_service.dart';
 import 'mocks/mock_location_service.dart';
 
-// Phase 7 S7.3 (design §5.6; W7.2 R1): every fixture STATES its footprint. These
+// Every fixture STATES its footprint. These
 // tests were written against the phone's own 10 m circle; that circle is gone
 // and "at the stop" is the wire's per-place radius, so the doorway-sized
 // footprint the old tests assumed is now an explicit 10 m trigger on each stop
-// (re-derived with the same meaning — plan: tests derive from the design). A
+// (re-derived with the same meaning). A
 // null radius is a legacy item: no geometry.
 ItineraryStop _makeStop({
   required int sortOrder,
@@ -60,7 +60,7 @@ ItineraryStop _makeStop({
   );
 }
 
-/// A player that records every door it is handed (S7.6).
+/// A player that records every door it is handed.
 class _DoorPlayer extends MockAudioService {
   final List<String> said = [];
   final List<(String, Duration)> playedFrom = [];
@@ -84,7 +84,7 @@ class _DoorPlayer extends MockAudioService {
 }
 
 // A 40-second piece of four sentences of 10 words each: boundaries at 10, 20,
-// 30 and 40 s (the S6.4 wrap-up fixture's shape).
+// 30 and 40 s.
 const _fourSentences =
     'One two three four five six seven eight nine ten. '
     'Eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty. '
@@ -298,7 +298,7 @@ void main() {
     });
 
     test('plays per-stop audio addressed by stopId (not beatId)', () async {
-      // Step 1.4d: when a stop carries a per-stop ItineraryItem id, the playback
+      // When a stop carries a per-stop ItineraryItem id, the playback
       // key is the stopId — the per-stop narration — not the legacy beatId.
       locationService.trackingWillSucceed = true;
       final stops = [
@@ -564,7 +564,7 @@ void main() {
 
     test('tour-audio completion auto-advances to the next stop (KE6 control)',
         () async {
-      // Control for the KE6 guard: a completed SCHEDULED per-stop tour clip
+      // Control for the deeper-dive guard: a completed SCHEDULED per-stop tour clip
       // still advances the itinerary index.
       locationService.trackingWillSucceed = true;
       final stops = [
@@ -808,12 +808,12 @@ void main() {
     });
   });
 
-  // Phase 7 S7.3 — THE AUDIO PLACEMENT RULE, the phone's half (design §5.6 C7,
-  // §4.6; W7.2 R1, 11/11). "At the stop" is the place's OWN footprint, placed on
-  // the server and read off the wire; the phone draws no circle. The piece ARMS
+  // THE AUDIO PLACEMENT RULE, the phone's half. "At the stop" is the place's
+  // OWN footprint, placed on the server and read off the wire; the phone draws
+  // no circle. The piece ARMS
   // at the first touch of the footprint (the edge you arrive by, never the pin)
   // and STARTS at arrival — the FAMILY day starts at the first standstill inside
-  // it (Nadia, §4.4.4). Told once is told: re-entering never replays; a tap
+  // it. Told once is told: re-entering never replays; a tap
   // does. A stop with no trigger has no geometry: nothing auto-plays there.
   group('the footprint is the place (S7.3; design §5.6; W7.2 R1)', () {
     const base = 48.85;
@@ -942,7 +942,7 @@ void main() {
       expect(audio.playCount, 2);
     });
 
-    // Phase 7 S7.5 — THE QUEUE PIECE (design §5.6; W7.2 R2). At a stop whose
+    // THE QUEUE PIECE. At a stop whose
     // arrival hour prices a line (the trigger's queue seconds), the piece does
     // not start at the footprint's edge: a solo walker's starts at the first
     // STANDSTILL inside the footprint — standing in the line is the place —
@@ -1014,8 +1014,7 @@ void main() {
       expect(service.armedOffer, isNull);
     });
 
-    // Phase 7 S7.6 — THE DOOR (design §5.6 threshold silence, §7.4.5; W7.2 R3,
-    // 11/11). At a stop whose visit goes INSIDE, the piece ends at the end of its
+    // THE DOOR. At a stop whose visit goes INSIDE, the piece ends at the end of its
     // current sentence when the placed OUTSIDE seconds have run (the phone's only
     // threshold under a roof), then the stop's CLOSE plays; inside, the screen
     // carries the transcript and a keep-listening tap that resumes from the cut
@@ -1042,7 +1041,7 @@ void main() {
       expect(player.stops, 0, reason: 'the outside minutes are not up');
       expect(doorService.keepListeningOffer, isNull);
       // Two minutes outside: the door. 13 s into the piece, the sentence ends
-      // at 20 s — the cut waits for it (S6.4's one arithmetic), never a word.
+      // at 20 s — the cut waits for it, never a word.
       player.pos = const Duration(seconds: 13);
       clock.tick(60);
       doorService.tick();
@@ -1102,9 +1101,8 @@ void main() {
       plain.dispose();
     });
 
-    // Phase 7 S7.7 — THE LEG PIECE (design §5.6 C7 "audio overlaps the walking";
-    // plan defect 7 — Théo, Greta, Aiko, Marcus: the stop's piece opened with the
-    // walking line the person had already walked). The stop's walking line is its
+    // THE LEG PIECE: audio overlaps the walking, so the stop's piece never opens
+    // with the walking line the person has already walked. The stop's walking line is its
     // own file, played ON THE LEG: the first stop's at the first fix (the tap —
     // "Settle in, you're starting in…"), every later stop's once the walker has
     // left the previous stop's footprint. Told once; the story at the footprint
@@ -1141,7 +1139,7 @@ void main() {
       expect(audio.currentBeatId, 'b2', reason: 'then the story starts');
     });
 
-    // S1.M7 — ADR: silence over wrongness, and the corrected words on the
+    // Silence over wrongness, and the corrected words on the
     // SCREEN while the audio catches up. A replan rewrites a stale leg line and
     // clears its file; until the voicing pass lands the new one, the leg piece
     // is text with no url. The walk must not lose the direction to the gap: the
@@ -1175,7 +1173,7 @@ void main() {
       expect(service.legTextLine, isNull, reason: 'arrival clears the line');
     });
 
-    // Cycle 6 (ADR full letter): the background voicing lands the re-voiced
+    // The background voicing lands the re-voiced
     // file on the server DURING the walk. The page refetches when the service
     // says a text-only leg is under way (audioCatchUpDue) and hands the fresh
     // stops in; [adoptSessionAudio] takes AUDIO ONLY, for the same words, and
@@ -1262,7 +1260,7 @@ void main() {
           reason: 'the file speaks for itself; the screen line is the fallback');
     });
 
-    // Phase 7 S7.7 (B) — THE CHAPTERS (design §5.6 "segments"; W7.2 R4): a
+    // THE CHAPTERS (the wire's "segments"): a
     // marquee's story is cut at its reviewed anchors; each chapter is its own
     // file at its own place inside the footprint. Outdoors it plays by itself
     // at the first standstill inside the anchor's radius; under a roof it is
@@ -1302,16 +1300,15 @@ void main() {
       service.startSegment();
       expect(audio.currentBeatId, 'nd-seg-1');
       audio.simulateComplete();
-      // RE-DERIVED at W7.13 (Camille, R1(c) "told once is told … a tap replays"):
-      // this line used to assert NO offer once every chapter was told — the exact
-      // shape the closing panel rejected ("a told chapter gives my thumb nothing
-      // to replay"). Standing at a told chapter's own anchor, the offer RETURNS
+      // Told once is told, and a tap replays. This line used to assert NO offer
+      // once every chapter was told, which left the thumb nothing to replay.
+      // Standing at a told chapter's own anchor, the offer RETURNS
       // as a replay; only the AUTO-play is once-only.
       expect(service.segmentOffer, 'The west front',
           reason: 'standing at a told chapter: the tap can replay it');
     });
 
-    // W7.13 (F&D): the sentence cap and the resume rule ride the WIRE's policy
+    // The sentence cap and the resume rule ride the WIRE's policy
     // block — the server decided them from the party and the hardness. The wire
     // outranks the phone's party stand-in: a SOLO session whose policy says
     // cap 5 and resume-by-tap behaves as the policy says, not as 'solo' would.
@@ -1342,9 +1339,8 @@ void main() {
       expect(audio.currentBeatId, 'p1');
     });
 
-    // W7.13, Marcus — R3 quoted him into the locked ruling ("transcript and
-    // leave-by on screen") and S7.6 built the transcript half only. At the door
-    // the screen carries WHEN TO LEAVE the interior to keep the plan: the cut
+    // At the door the screen carries the transcript and WHEN TO LEAVE the
+    // interior to keep the plan: the cut
     // stop's own planned departure (its arrival clock plus its dwell), on the
     // screen beside the keep-listening offer, never spoken.
     test('the door shows a leave-by clock beside the transcript (R3, Marcus)', () async {
@@ -1371,10 +1367,9 @@ void main() {
           reason: 'the tap spends the offer; the clock goes with it');
     });
 
-    // W7.13, Camille — R1(c)'s second half was locked at W7.2 and never built:
-    // "leaving and re-entering the footprint never replays; A TAP DOES." Fix four
-    // kept a never-heard chapter on the screen; a HEARD one still vanished from
-    // the thumb. The offer returns for a told chapter the walker is STANDING AT;
+    // Leaving and re-entering the footprint never replays; A TAP DOES. A
+    // never-heard chapter stays on the screen, and a HEARD one must not vanish
+    // from the thumb. The offer returns for a told chapter the walker is STANDING AT;
     // the tap replays it; the auto-play stays once-only.
     test('a told chapter can be replayed by tap where you stand — never by itself',
         () async {
@@ -1414,12 +1409,11 @@ void main() {
           reason: 'off its anchor a told chapter rests; only an unheard one follows you');
     });
 
-    // W7.11 defect 15 (the blind listening panel, ALL ELEVEN): the stop's GOODBYE
-    // used to end the story piece, so a chaptered marquee said farewell on arrival
-    // and then spoke again at the chapter. Théo would "take the earbud out and put
-    // the phone away"; Rosemary heard it "in the wind, and gone, and never learned
-    // there were twenty-seven kings". The server no longer puts the close in a
-    // chaptered story (render_md); the phone plays it when the LAST chapter is told.
+    // The stop's GOODBYE used to end the story piece, so a chaptered marquee
+    // said farewell on arrival and then spoke again at the chapter. A listener
+    // who hears the farewell puts the phone away and never learns a chapter is
+    // still owed. The server no longer puts the close in a chaptered story
+    // (render_md); the phone plays it when the LAST chapter is told.
     test('the goodbye is said after the LAST chapter, never before them', () async {
       const westLat = base + 50 * degPerMeterLat;
       final stop = _makeStop(
@@ -1462,17 +1456,15 @@ void main() {
       audio.simulateComplete();
       clock.tick(TourPlaybackService.kSettleSeconds + 1);
       service.tick();
-      // She never walked to the front. Marcus: "the goodbye is the last thing said
-      // at the last place, or it is not said."
+      // She never walked to the front. The goodbye is the last thing said
+      // at the last place, or it is not said.
       expect(service.closesPlayed, isEmpty);
     });
 
-    // W7.11, Aiko's dissent — the ONE reason she rejected the chaptered telling:
-    // "TWO's second half is gated on my walking to the west front and STOPPING
-    // MOVING there. Today I will not stop moving in the open… Under TWO I never
-    // hear the facade… I would lose it silently and never find out it existed."
-    // "Silence and 'there is nothing here' sound identical" (Paulo). Told-once
-    // (R4, 11/11) is about a piece ALREADY HEARD; a piece never heard is not that.
+    // A visitor who will not stop moving in the open never stands still at the
+    // west front, so a chapter that only starts itself there is lost silently.
+    // Silence and 'there is nothing here' sound identical. Told-once
+    // is about a piece ALREADY HEARD; a piece never heard is not that.
     // So: the chapter still STARTS ITSELF only where you stand at it, but the
     // OFFER stays on the screen anywhere at the stop, and the tap plays it.
     test('an untold outdoor chapter is offered anywhere at the stop, and the tap '

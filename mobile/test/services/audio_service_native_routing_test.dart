@@ -94,7 +94,7 @@ void main() {
 
   test('playFrom seeks the native player, so a cut piece does not restart',
       () async {
-    // W7.2 R3: the keep-listening tap at a door resumes the cut piece from the
+    // The keep-listening tap at a door resumes the cut piece from the
     // START of its cut sentence. The native player has no play-at-position
     // call, so the service must seek after starting it. Without that seek the
     // piece begins again from zero and the tourist re-hears what they already

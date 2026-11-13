@@ -1,8 +1,7 @@
-// Phase 5 S5.9 — the phone SELECTS from the contingency set; it never decides.
+// The phone SELECTS from the contingency set; it never decides.
 //
-// Design §4.6: "The phone selects from that set" — it holds none of the
-// server's planning machinery. The exhaustive list of what the phone may do
-// (04-implementation-plan.md, PHASE 5, "THE STRUCTURAL RULE"): (1) arithmetic
+// It holds none of the server's planning machinery. The exhaustive list of
+// what the phone may do: (1) arithmetic
 // re-timing over numbers the server gave it; (2) MATCH its measured divergence
 // against the triggers and select the entry — an equality/band lookup, taking
 // the FIRST in server order when two match, never a tie-break of its own;
@@ -135,7 +134,7 @@ void main() {
             ?.contingencyId,
         'c',
       );
-      // Under 10 minutes nothing opens the set (W5.2 R1.3): carry on and re-time.
+      // Under 10 minutes nothing opens the set: carry on and re-time.
       expect(
         service.matchContingency(const Divergence(minutesLate: 7)),
         isNull,
