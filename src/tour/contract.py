@@ -296,6 +296,7 @@ _PARTY_AXES: dict[str, dict[str, object]] = {
         "route_surface": "no_stairs",  # buggy
         "narration_register": "family",
     },
+    # A mobility preset never sets a per-stop ceiling: a step-free day may hold one long sit.
     "take_it_easy": {
         "walking_pace": 1.2,
         # The table's one numbered leg cap. 12 produced a ONE-STOP day on
