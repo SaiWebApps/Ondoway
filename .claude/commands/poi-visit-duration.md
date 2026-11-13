@@ -42,12 +42,10 @@ and are wrong by a factor of sixty.
 
 ### Why two numbers and not one
 
-One number cannot serve two visitors. Camille, who came to Paris for the architecture,
+One number cannot serve two visitors. A visitor who came to Paris for the architecture
 gives Sainte-Chapelle sixty-six minutes — twenty-eight of them queueing, thirty-eight
-under the glass. Théo, who came for revolutions and executions, gives the same building
-fifteen minutes from the pavement and never goes in. See
-`docs/personas/01-architecture-pilgrim.md` (steps 16-17) and
-`docs/personas/02-dark-history-walker.md` (step 11, and the comparison at line 48).
+under the glass. A visitor who came for revolutions and executions gives the same
+building fifteen minutes from the pavement and never goes in.
 Both are correct. A single "typical duration" has to be wrong for one of them.
 
 ### These describe the PLACE, not a visitor
@@ -182,7 +180,7 @@ not absurd.
 4. Every POI has a non-empty `visit_basis`.
 5. No `visit_seconds_inside` exceeds **5400 s (90 min)**. There is no bound in the
    codebase to derive a cap from, so 90 is chosen: it clears the longest real visit in
-   the persona set (Camille's 66 minutes at Sainte-Chapelle, queue included) while
+   the example above (66 minutes at Sainte-Chapelle, queue included) while
    still refusing a half-day at one stop.
 6. `typical_duration_min >= 2` for **every** POI. A place nobody pauses at for two
    minutes is a walk-past, not a stop.

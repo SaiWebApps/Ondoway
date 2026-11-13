@@ -34,8 +34,8 @@ PREFLIGHT := python3 scripts/preflight.py
 # requirements with it (PRE_PYTEST below), so a lane cannot silently run against a
 # graph nobody started:   make test-file LANE=2 FILE=tests/test_x.py::TestY::test_z
 #
-# Lane 4 is the SANDBOX lane — the one a multi-track worktree owns outright
-# (Docs/adr/0002). Lanes 2 and 3 are the definitive bar's own shards; a
+# Lane 4 is the SANDBOX lane — the one a multi-track worktree owns outright.
+# Lanes 2 and 3 are the definitive bar's own shards; a
 # sandbox never takes them. Adding a further lane is one compose service per
 # graph plus one preflight row each — do that rather than queueing behind a
 # busy lane.  `make test` and `make audit` are deliberately NOT parameterised:
@@ -389,7 +389,7 @@ test-workbench: ## Run the Playwright workbench suite against isolated Neo4j 768
 # pytest write its progress dots to stdout with no newline, so the test's own print
 # lands on the same line as them (`.GOLDEN-OVERLAP Ile 6/17 …`). `lstrip()` strips
 # whitespace, never dots, so a start-anchored match found nothing and this target
-# exited 2 on every run — green goldens included. Measured 2026-08-24 at W8.6.
+# exited 2 on every run — green goldens included. Measured 2026-08-24.
 golden-probe: ## Print golden overlap counts using provisioned dev data and Valhalla.
 	@$(PREFLIGHT) --label golden-probe $(PRE_PYTEST)
 	@set -o pipefail; $(TEST_EXEC) uv run pytest $(GOLDEN_TEST_FILES) \
@@ -804,7 +804,7 @@ poi-visit-duration: ## Price POI visit time. Usage: make poi-visit-duration SLUG
 	@$(RENDER_LOCAL_EXEC) uv run python scripts/poi_visit_duration.py \
 		--slug "$(or $(SLUG),paris)"$(if $(LIMIT), --limit $(LIMIT),) $(ARGS)
 
-# Learns each door's opening hours (Docs/adr/0006): two OSM/Overpass queries
+# Learns each door's opening hours: two OSM/Overpass queries
 # (the map comes first, refreshed every run), then a model pass for the doors
 # the map does not hold, answering in the map's own grammar. Spends real model
 # credits only for those, so LIMIT= runs a subset and writes nothing — the
@@ -814,7 +814,7 @@ poi-opening-hours: ## Learn POI opening hours. Usage: make poi-opening-hours SLU
 	@$(RENDER_LOCAL_EXEC) uv run python scripts/poi_opening_hours.py \
 		--slug "$(or $(SLUG),paris)"$(if $(LIMIT), --limit $(LIMIT),) $(ARGS)
 
-# Deterministic, $0, re-runnable at will (redesign data row 6.7): no model, no
+# Deterministic, $0, re-runnable at will: no model, no
 # network, no credentials — name tokens, description and poi_role in, one of a
 # closed twelve-word vocabulary out.
 poi-place-category: ## Categorise every POI (deterministic, $0). Usage: make poi-place-category SLUG=paris.
@@ -822,7 +822,7 @@ poi-place-category: ## Categorise every POI (deterministic, $0). Usage: make poi
 	@$(LOCAL_EXEC) uv run python scripts/poi_place_category.py \
 		--slug "$(or $(SLUG),paris)" $(ARGS)
 
-# The FOOTPRINT pass (Phase 7 S7.4; design §5.6): how far from the pin a walker is AT
+# The FOOTPRINT pass: how far from the pin a walker is AT
 # each place — `trigger_radius`, the field the audio placement rule reads. Deterministic,
 # $0: the kind table over the records still at the uploader's default, the marquees and
 # the eleven personas' stops reviewed by name with a basis sentence each.
@@ -839,7 +839,7 @@ poi-visit-report: ## Print the POI visit-capacity audit table. Usage: make poi-v
 	@$(LOCAL_EXEC) uv run python scripts/report_visit_durations.py \
 		--slug "$(or $(SLUG),paris)" $(ARGS)
 
-# Toilets and benches (redesign data row 6.3): one bulk OSM/Overpass query,
+# Toilets and benches: one bulk OSM/Overpass query,
 # no model, no credentials, $0. Written to data/{slug}/body-places.json,
 # never poi-raw.json — body places are not narrated places.
 poi-body-places: ## Fetch toilets/benches from OSM ($0). Usage: make poi-body-places SLUG=paris [LIMIT=10].
@@ -847,9 +847,9 @@ poi-body-places: ## Fetch toilets/benches from OSM ($0). Usage: make poi-body-pl
 	@$(LOCAL_EXEC) uv run python -m scripts.poi_body_places \
 		--slug "$(or $(SLUG),paris)"$(if $(LIMIT), --limit $(LIMIT),) $(ARGS)
 
-# Three practical affordances per POI (redesign data row 6.4): can children
+# Three practical affordances per POI: can children
 # run here, can two people sit and talk here, is it good to be left standing
-# here after dark. The ONLY data row with no external source — reviewed at
+# here after dark. These judgements have no external source — reviewed at
 # twice the normal rate. Spends real model credits, exactly the
 # poi-visit-duration pattern.
 poi-place-judgements: ## Judge child/talk/dark affordances. Usage: make poi-place-judgements SLUG=paris [LIMIT=10].
@@ -857,8 +857,8 @@ poi-place-judgements: ## Judge child/talk/dark affordances. Usage: make poi-plac
 	@$(RENDER_LOCAL_EXEC) uv run python scripts/poi_place_judgements.py \
 		--slug "$(or $(SLUG),paris)"$(if $(LIMIT), --limit $(LIMIT),) $(ARGS)
 
-# The wait BEFORE entering, priced separately from visit time (redesign data
-# row 6.5): class, peak/off-peak minutes, the peak hour bands, and the sentence
+# The wait BEFORE entering, priced separately from visit time:
+# class, peak/off-peak minutes, the peak hour bands, and the sentence
 # arguing for them. Spends real model credits, so LIMIT= runs a subset and
 # writes nothing — exactly the poi-visit-duration pattern, whose call door it
 # imports. Review at the standard rate with named spot checks (Louvre,
@@ -868,8 +868,8 @@ poi-queues: ## Price POI queues (row 6.5). Usage: make poi-queues SLUG=paris [LI
 	@$(RENDER_LOCAL_EXEC) uv run python scripts/poi_queues.py \
 		--slug "$(or $(SLUG),paris)"$(if $(LIMIT), --limit $(LIMIT),) $(ARGS)
 
-# The third manual performance of the same block became the template
-# (CLAUDE.md §1.7): propagates every enriched field poi-raw.json carries into
+# The third manual performance of the same block became this target. It
+# propagates every enriched field poi-raw.json carries into
 # every data/{slug}/export/*.json chunk. $0, no network, no credentials.
 sync-poi-exports: ## Sync enriched fields into export chunks. Usage: make sync-poi-exports SLUG=paris [ARGS=--check].
 	@$(PREFLIGHT) --label sync-poi-exports $(PRE_PY)

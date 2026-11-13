@@ -10,7 +10,7 @@ Accepted as a free-form string; parse out:
 - `--lenses` (optional): comma-separated child-lens slugs (e.g. `historic_arch,famous_residents`). Empty = no interest bias.
 - `--round-trip` (flag, optional): walk returns to origin. Default off (one-way).
 - `--theme` (optional): free-text theme hint surfaced in the markdown header.
-- `--city-slug` (optional): default `paris`. Multi-city safe per CLAUDE.md.
+- `--city-slug` (optional): default `paris`. Multi-city safe.
 
 If an argument is missing or unparseable, surface a one-line error and stop.
 
@@ -35,7 +35,7 @@ The harness:
 
 The harness uses `MockGlueClient` by default. This is the deterministic stand-in: it emits whitelist-valid sentences ("Walk to the next stop.", "Settle in.") that pass validation. **Cost is reported as a projected upper bound** (≈4 chars/token × prompt template, ×150 max output tokens × Haiku 4.5 list price).
 
-If `ANTHROPIC_API_KEY` is set in the environment AND the user explicitly requested live Haiku, append `--haiku` to the harness invocation. The same pipeline runs against `HaikuGlueClient` and the printed cost is **measured** rather than projected. Phase 5 ships with mocked glue — measured cost is a launch-readiness gate, not a runtime requirement.
+If `ANTHROPIC_API_KEY` is set in the environment AND the user explicitly requested live Haiku, append `--haiku` to the harness invocation. The same pipeline runs against `HaikuGlueClient` and the printed cost is **measured** rather than projected. Measured cost is a launch-readiness gate, not a runtime requirement.
 
 ## Validation gate
 
@@ -44,9 +44,9 @@ The harness exits non-zero if `script.validation.passed` is False. Treat that as
 - `untraceable_sentences` — runtime emitted text that does not trace to a known beat or whitelisted glue label. Almost always a bug; report verbatim.
 - `forbidden_phrase_hits` — `imagine`/`picture this`/etc., or a new proper noun/year leaked into glue. Report and stop.
 
-## Density gate (Phase 6)
+## Density gate
 
-Before selection runs, the harness assesses tourability density per `Docs/tour-builder/phase-1-design.md` §3.7. Three outcomes:
+Before selection runs, the harness assesses tourability density. Three outcomes:
 
 - **GREEN** — generate as normal. The summary line ends with `tourability: GREEN`.
 - **YELLOW** — generate, but the markdown opens with a thin-tour banner and the summary names the recommended longer-fill duration. Surface the warning in your reply; do not bury it.
@@ -55,10 +55,10 @@ Before selection runs, the harness assesses tourability density per `Docs/tour-b
 
 Exit codes: 0 = pass, 1 = validation fail, 2 = input/resolution error, 3 = density RED **or** empty delivery (both structured refusals).
 
-## Pipeline guardrails (per CLAUDE.md, non-negotiable)
+## Pipeline guardrails (non-negotiable)
 
 1. All queries are city-scoped. The harness threads `city_slug` everywhere.
-2. Per phase-1-design §3.6: source-traceable output is the launch gate. Don't rationalise validation failures.
+2. Source-traceable output is the launch gate. Don't rationalise validation failures.
 3. Glue is structural (navigation, staging, pacing, closing). It never invents claims, names, or dates. The whitelist is enforced in `validation.py`.
 4. SYNTHESIZED_OPENER is a graceful degradation, not a feature. When it fires, the markdown footer flags it for the user — quality gradient at first stops without `stop_orientation` beats.
 
@@ -74,8 +74,8 @@ Exit codes: 0 = pass, 1 = validation fail, 2 = input/resolution error, 3 = densi
 - TTS generation (downstream).
 - Real-time GPS triggering (downstream runtime).
 - Beat re-extraction or POI cleanup (separate `/unified-beat-extract` / `/poi-generate` pipelines).
-- Claim-level dedup across tours (B8, deferred).
-- Stop_orientation gap-fill via re-extraction (post-launch backlog item 4).
+- Claim-level dedup across tours (deferred).
+- Stop_orientation gap-fill via re-extraction (post-launch).
 
 ## Failure modes to surface honestly
 

@@ -199,7 +199,7 @@ services:
       <<: *neo4j-health
       test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "ondoway_workbench3_2026", "RETURN 1"]
 
-  # ── lane 4 (the multi-track sandbox lane, docs/adr/0002) ──────────────────
+  # ── lane 4 (the multi-track sandbox lane) ─────────────────────────────────
   # Owned outright by a second worktree; the definitive bar never consumes it
   # as a shard, so a sandbox session's fixtures cannot collide with the bar's.
   neo4j-dev4:
@@ -247,7 +247,7 @@ services:
       <<: *neo4j-health
       test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "ondoway_workbench4_2026", "RETURN 1"]
 
-  # M1 routing engine, shared by every lane. Never started by the db-* targets
+  # The routing engine, shared by every lane. Never started by the db-* targets
   # (they are service-scoped); use `make valhalla-up`. First start builds tiles
   # from any .osm.pbf in ./valhalla/custom_files (`make valhalla-build-tiles`
   # downloads the Île-de-France extract there). Tiles live in the bind mount, so

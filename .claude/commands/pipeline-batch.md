@@ -403,7 +403,7 @@ Once the user resolves all REVIEW QUEUE items:
 
 ## GUARDRAILS
 
-Apply the 5 pipeline guardrails from CLAUDE.md (they are baked into the agent prompt template above).
+Apply the 5 pipeline guardrails (they are baked into the agent prompt template above).
 
 **Additional batch guardrails:**
 6. Cross-chunk dedup check before export

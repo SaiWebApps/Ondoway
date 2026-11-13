@@ -109,7 +109,7 @@ Wikipedia articles are structured by **topic section**, not by a walking route. 
   - `beat_type: stop_orientation` — **never emit.** Wikipedia has no "stand here, face this" staging.
   - `trigger_address` — almost always `null`. Wikipedia does not circle a square address-by-address. Populate only in the rare case the article itself ties a discrete story to a specific street address.
   - `beat_type: sidebar` — rare; only for a genuinely self-contained tangent (e.g. a "Cultural Allusions" story that stands apart from the main narrative).
-- **Establishing beats are welcome.** Wikipedia's lead section is an ideal source for a clean `narrative_function: establishing` beat on a POI that lacks one — useful for filling the AC-6 establishing-coverage gaps the book corpus left.
+- **Establishing beats are welcome.** Wikipedia's lead section is an ideal source for a clean `narrative_function: establishing` beat on a POI that lacks one — useful for filling the establishing-coverage gaps the book corpus left.
 
 Everything else — anchor/mid/seasoning/micro classing, the lens scan, multi-beat-per-lens, sub-POI emergence, physical_cues for visible features — works exactly as in `/unified-beat-extract`.
 

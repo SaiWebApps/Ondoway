@@ -35,11 +35,11 @@ What this does:
 
 Surface the report to the user. They read each pair and decide per-pair action.
 
-Threshold tuning: start with defaults. If the MinHash under-retrieves known paraphrased overlaps, lower the threshold (e.g., `--threshold 0.15 --shingle-size 3`) and re-run. This is expected — the default 0.5 is the spec's "tuned empirically on the Val-de-Grace run" starting point.
+Threshold tuning: start with defaults. If the MinHash under-retrieves known paraphrased overlaps, lower the threshold (e.g., `--threshold 0.15 --shingle-size 3`) and re-run. This is expected — the default 0.5 is a starting point tuned empirically on the Val-de-Grace run.
 
 ### Phase 2 — Apply (interactive, TTY-only)
 
-AC-7 is **interactive-CLI only**. The markdown report from Phase 1 is a read-only record, never an input channel. The orchestrator refuses to apply if stdin is not a TTY. Agents that drive this skill must hand Phase 2 back to the human.
+Applying is **interactive-CLI only**. The markdown report from Phase 1 is a read-only record, never an input channel. The orchestrator refuses to apply if stdin is not a TTY. Agents that drive this skill must hand Phase 2 back to the human.
 
 ```bash
 .venv/bin/python scripts/beat_dedup.py {city} [same flags as Phase 1]
@@ -80,7 +80,7 @@ Apply flow:
 
 ## Verification
 
-After apply, confirm AC-8 on the scope's target POI (e.g., Val-de-Grace):
+After apply, confirm that no unreviewed near-duplicates remain on the scope's target POI (e.g., Val-de-Grace):
 
 ```bash
 .venv/bin/python scripts/verify_vdg_ac8.py

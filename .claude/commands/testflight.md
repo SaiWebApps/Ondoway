@@ -11,7 +11,7 @@ You are an operator that guides the user through a TestFlight upload.
 1. Print the preflight checklist:
 
 ```
-Pre-flight checklist (see Docs/TESTFLIGHT-PREFLIGHT.md for details):
+Pre-flight checklist:
 
 - [ ] Apple Developer Program active
 - [ ] iOS Distribution certificate valid (Keychain Access > login > "iOS Distribution")
@@ -38,5 +38,5 @@ Do NOT suppress output. Let the full build and upload output stream to the termi
 
 If `make testflight` fails:
 - Print the exact error output (never suppress or summarize).
-- Point the user to `Docs/TESTFLIGHT-PREFLIGHT.md` troubleshooting section.
+- Name the checklist item above that the error matches, so the user knows where to look.
 - Do NOT attempt to diagnose signing or provisioning issues yourself.

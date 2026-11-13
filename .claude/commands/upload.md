@@ -19,7 +19,7 @@ Before anything else, run the dedup validator on the city's beats.json:
 ```
 If exit code is non-zero, STOP. Print the validator's output verbatim and do
 not proceed to any other step. There is no warn-and-continue mode — duplicate
-or hash-colliding beats are a hard block per AC-9. Override only by fixing
+or hash-colliding beats are a hard block. Override only by fixing
 `beats.json` (e.g. via `/beat-wipe` then re-extract, or a manual delete) and
 re-running this skill from the top.
 

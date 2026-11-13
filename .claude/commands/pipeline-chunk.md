@@ -168,4 +168,4 @@ Before delivering the report:
 
 ## GUARDRAILS
 
-Apply the 5 pipeline guardrails from CLAUDE.md. They are non-negotiable.
+Apply the 5 pipeline guardrails. They are non-negotiable.

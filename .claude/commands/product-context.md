@@ -1,6 +1,6 @@
 # Ondoway — Product Context Reference
 
-This file captures the stable product knowledge that informs all 5 PM modes. It is derived from the project documents and resolved technical decisions. Load this when you need deep context beyond what SKILL.md provides.
+This file captures the stable product knowledge that informs all 5 PM modes. Load this when you need deep context beyond what SKILL.md provides.
 
 ## North Star
 

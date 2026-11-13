@@ -371,7 +371,7 @@ Multiple beats per lens are allowed (disambiguated by topic_slug and, for tier-4
 
 When a beat's subject is a specific, named zone inside an already-existing large POI (e.g., "the Denon Wing" inside the Louvre, "the Place des Vosges colonnade" inside Place des Vosges, "Marie de Médicis's apartment" inside the Luxembourg Palace), emit a **sub-POI** — do NOT attach the beat to the parent POI, because the tour builder needs to route the user to the specific sub-spot.
 
-Sub-POI emission rules (AC-9):
+Sub-POI emission rules:
 
 1. **`parent_poi`** set to the exact name of the existing POI the sub-POI lives inside.
 2. **`poi_role`** classified from the source text. Ask: does the book describe it as a place to stop and listen (`stop`), a contextual through-path (`setting`), or a minor reference to walk past (`walk_by_only`)? Use the text, not world knowledge.
@@ -396,7 +396,7 @@ Do NOT write these to `poi-raw.json`. The user triages them separately.
 
 ---
 
-## PHASE 4 — ESTABLISHING-BEAT COVERAGE (AC-6)
+## PHASE 4 — ESTABLISHING-BEAT COVERAGE
 
 After all beats are emitted for this chunk, walk through every POI that received at least one new beat in this run. For each:
 
@@ -406,7 +406,7 @@ After all beats are emitted for this chunk, walk through every POI that received
    - **No**, and `importance_tier <= 2` → set `establishing_not_applicable: true` on the POI in `poi-raw.json`. Log in pipeline report: *"Auto-flagged establishing_not_applicable for tier-{n} {name}"*.
    - **No**, and `importance_tier >= 3` → **DO NOT auto-flag.** Log in pipeline report as a blocker: *"Tier-{n} {name} ({role}) has no establishing beat — run extraction on additional source material or hand-author one before upload."*
 
-This enforces AC-6 at emission time rather than leaving it to downstream validation.
+This enforces establishing-beat coverage at emission time rather than leaving it to downstream validation.
 
 ---
 
@@ -678,7 +678,7 @@ The honest fix on this particular beat is to drop both flagged clauses and re-em
 
   If `commit` raises `BeatValidationError`: do NOT retry, do NOT partial-write, do NOT shell out to manually edit `beats.json`. Print the exception message (it includes the full validator report with colliding beat IDs and conflict types) and stop. The user resolves the conflict upstream and re-runs.
 
-- **Sub-POIs only:** append new sub-POI entries (those with `parent_poi` set and `source_passage` non-empty) to `data/{city_slug}/poi-raw.json`. Every existing entry in that file stays untouched (preservation boundary — verified in Scope 5's AC-2d check).
+- **Sub-POIs only:** append new sub-POI entries (those with `parent_poi` set and `source_passage` non-empty) to `data/{city_slug}/poi-raw.json`. Every existing entry in that file stays untouched (preservation boundary).
 - **Completely-new POIs (no parent):** flag only in the pipeline report. Do NOT write to `poi-raw.json`. The user triages these separately via `/poi-generate`.
 - **POI `establishing_not_applicable` auto-flag:** for every POI touched in this run that qualifies (see Phase 4), set the field on the existing entry in `poi-raw.json`. This is a permitted modification of existing POIs under the rule.
 
@@ -686,7 +686,7 @@ The honest fix on this particular beat is to drop both flagged clauses and re-em
 
 After writing the output, tell the user what to run next:
 
-1. **If any sub-POIs were emitted:** `/poi-geocode {city_slug} --missing-only` — this will fill in the `latitude`/`longitude` for every newly-created sub-POI using OpenStreetMap. Any sub-POI whose geocode is LOW confidence or resolves to its parent's exact coordinates gets flagged for manual review (per AC-2c).
+1. **If any sub-POIs were emitted:** `/poi-geocode {city_slug} --missing-only` — this will fill in the `latitude`/`longitude` for every newly-created sub-POI using OpenStreetMap. Any sub-POI whose geocode is LOW confidence or resolves to its parent's exact coordinates gets flagged for manual review.
 2. **If any sub-POIs were emitted:** `/poi-dedup paris` after geocoding — the strict-merge skill catches any sub-POI that's actually an alias of an existing POI we missed.
 3. **If `new_poi: true` flags exist:** `/poi-generate` can enrich those separately; they are out of scope for this extraction run.
 4. **Before Neo4j upload:** run `.venv/bin/python scripts/verify_scope4_acs.py --beats data/{city_slug}/beats.json --city {city_slug}` to check every emitted beat passes Pydantic. Upload is handled by `/upload`, not here.
@@ -760,7 +760,7 @@ After processing, report:
 
 2. **POI matching:**
    - Beats matched to existing POIs (count)
-   - New POIs flagged (count, list) — deferred to Scope 5
+   - New POIs flagged (count, list)
 
 3. **Collision check:**
    - Within-run beat_id collisions (expected: 0)
@@ -773,9 +773,9 @@ After processing, report:
    - narrative_function, beat_type, emotional_register frequencies
    - Flag any enum value exceeding 70% of beats (suggests over-defaulting)
 
-6. **Establishing-beat coverage (informational only; enforcement is Scope 5):**
+6. **Establishing-beat coverage (informational only):**
    - POIs with ≥1 establishing beat
-   - POIs with zero establishing beats (listed; Scope 5 will enforce)
+   - POIs with zero establishing beats (listed)
 
 7. **Sensory-anchor/physical-cues consistency:**
    - Beats with `sensory_anchor: true` and zero physical_cues (expected: 0)
