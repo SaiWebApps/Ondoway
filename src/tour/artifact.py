@@ -162,7 +162,7 @@ class PlaceEvidenceProvenance(BaseModel):
     """Replayable source identity for place evidence.
 
     This contract records what authority supplied the evidence and its exact
-    canonical payload.  The M3-E trusted coordinator must additionally enforce
+    canonical payload.  The trusted coordinator must additionally enforce
     that ``authority_id`` is present in the frozen corpus manifest, calibrated
     provider set, or authorized human-review roster before it constructs a
     certifiable bundle; a self-asserted authority is not made trustworthy by a
@@ -301,9 +301,9 @@ class SentencePlaceAssessment(BaseModel):
 class PlaceEvidenceBundle(BaseModel):
     """Typed place semantics frozen into the blueprint before certification.
 
-    M3-C can prove the mechanism against this evidence but cannot make its
+    This bundle can prove the mechanism against this evidence but cannot make its
     authorities trustworthy. Production authorization remains explicitly
-    reserved for M3-E's manifest/calibration/human-authority allowlisting.
+    reserved for the trusted coordinator's manifest/calibration/human-authority allowlisting.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -318,7 +318,7 @@ class DerivedNarrationEvidence(BaseModel):
 
     The reviewer never infers authority from a glue label.  This binding says
     which immutable inputs actually licensed the sentence and whether the
-    sentence must contain a fact-checked claim.  M3 will populate corpus-field
+    sentence must contain a fact-checked claim.  A later stage will populate corpus-field
     bindings while assembling the product artifact; route-only bindings can be
     derived here without trusting model output.
     """
@@ -508,7 +508,7 @@ def derive_playback_assignments(
 ) -> tuple[PlaybackAssignment, ...]:
     """Emit and freeze today's explicit playback policy at generation time.
 
-    ``transit_beat_ids`` (P9R-S1): the corpus transit beats ``_build_transit``
+    ``transit_beat_ids``: the corpus transit beats ``_build_transit``
     voices FOR the leg — their sentences freeze as leg playback, so the phone
     plays the walk's own narration while walking, never standing at the stop.
     """
@@ -911,7 +911,7 @@ def _route_narration_evidence(
 
     Request prose, theme hints, and pre-bake script estimates are deliberately
     absent.  Corpus cues, pronunciations, and reflection claims must be supplied
-    explicitly by M3 instead of being silently blessed by this fallback seam.
+    explicitly by the caller instead of being silently blessed by this fallback seam.
     """
     evidence: list[DerivedNarrationEvidence] = []
     for sentence_index, sentence in enumerate(script.script):

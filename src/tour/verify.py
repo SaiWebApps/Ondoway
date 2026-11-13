@@ -1,4 +1,4 @@
-"""VERIFY with teeth (§2.6, M7) — provenance + faithfulness checks.
+"""VERIFY with teeth — provenance + faithfulness checks.
 
 Two INDEPENDENT checks layered on top of validation.validate_script's
 traceability + forbidden-phrase gates (rapidfuzz alone is not faithfulness):
@@ -166,9 +166,9 @@ def _visited_claims(
 def _own_stop_support(
     script: Script, beats_by_id: dict[str, BeatRef], stop_idx: int
 ) -> tuple[str, ...]:
-    """The claims AND bodies of every beat cited AT ``stop_idx`` — what a close may land
-    (Phase 6 S6.4). The reflection's `_visited_claims` looks strictly BEFORE a stop;
-    a close looks at its own."""
+    """The claims AND bodies of every beat cited AT ``stop_idx`` — what a close may land.
+    The reflection's `_visited_claims` looks strictly BEFORE a stop; a close looks
+    at its own."""
     cited: list[str] = []
     for sentence in script.script:
         if sentence.stop_idx != stop_idx or sentence.source_type != "beat":
@@ -210,7 +210,7 @@ def verify_faithfulness(
     showed claims-only entailment flags the corpus's own detail sentences as
     unfaithful. Invented facts still fail: they are in neither.
 
-    Phase 4 (Step 4.2) — reflections are FAIL-CLOSED, unlike other glue: a
+    Reflections are FAIL-CLOSED, unlike other glue: a
     ``GLUE_REFLECTION`` sentence must entail from the union of key_claims of
     beats cited STRICTLY BEFORE its stop (what the walker has already heard);
     an empty union is itself a failure — an unverifiable reflection never
@@ -221,13 +221,12 @@ def verify_faithfulness(
     checks: list[tuple[Sentence, tuple[str, ...] | None, str]] = []
     for sentence in script.script:
         if sentence.source_type == "glue" and sentence.source_id == GLUE_REFLECTION:
-            # Phase 6 S6.5 (design §5.4; W6.2 R1/R5): the slot holds THE THREAD — one
-            # sentence binding THIS stop to the walk through ONE fact of this stop,
-            # never a recap. Its support is what the walker has heard PLUS the
-            # arriving stop's own beats: Phase 4's visited-only window was the
-            # recap's, and it ruled the thread's defining fact inadmissible by
-            # construction. Still fail-closed on an empty union: an unverifiable
-            # line never ships.
+            # The slot holds THE THREAD — one sentence binding THIS stop to the
+            # walk through ONE fact of this stop, never a recap. Its support is what
+            # the walker has heard PLUS the arriving stop's own beats: the old
+            # visited-only window was the recap's, and it ruled the thread's
+            # defining fact inadmissible by construction. Still fail-closed on an
+            # empty union: an unverifiable line never ships.
             claims = _visited_claims(script, beats_by_id, sentence.stop_idx)
             own = _own_stop_support(script, beats_by_id, sentence.stop_idx)
             support = (*claims, *(piece for piece in own if piece not in claims))
@@ -237,10 +236,10 @@ def verify_faithfulness(
                 checks.append((sentence, support, "unfaithful_reflection"))
             continue
         if sentence.source_type == "glue" and sentence.source_id == GLUE_CLOSING:
-            # Phase 6 S6.4 (design §5.3): an AUTHORED close lands only what ITS stop
-            # voiced — entailed against the claims and bodies of the beats cited at its
-            # own stop, the reflection's rule turned inward. The stitch's fallback
-            # template carries no fact and is exempt (never sent to the checker).
+            # An AUTHORED close lands only what ITS stop voiced — entailed against
+            # the claims and bodies of the beats cited at its own stop, the
+            # reflection's rule turned inward. The stitch's fallback template
+            # carries no fact and is exempt (never sent to the checker).
             poi_name = (
                 script.selected_pois[sentence.stop_idx].name
                 if sentence.stop_idx < len(script.selected_pois)

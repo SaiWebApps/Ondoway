@@ -259,7 +259,7 @@ def plan_premium_authoring(
     ``standalone_place`` plans a place recipe: a place told on its own, with no walk
     (see ``_certification_compose_requests``).
 
-    ``single_stop`` + ``already_told_by_stop`` (Phase 6 S6.6, design §5.5): a FULL
+    ``single_stop`` + ``already_told_by_stop``: a FULL
     TELLING is a one-stop composition over the stop's SECOND story, planned through
     THIS same builder so the request/verify shape cannot fork — the source script
     holds only that stop's overflow sentences, the coverage bar adapts to the one
@@ -365,7 +365,7 @@ def certification_planning_policy(*, policy_id: str) -> RoutePlanningPolicy:
 class SilentGlueClient:
     """The glue client BLOCK 1 plans with: it writes nothing and calls nobody.
 
-    OWNER RULING 1, 2026-08-04: during route planning, on both surfaces, the options show
+    Owner ruling, 2026-08-04: during route planning, on both surfaces, the options show
     THE PLACES ALONE — POI names, order, walking times, ETA. No descriptive text of any
     kind. All prose arrives only at script generation, after a route has been picked.
 
@@ -425,7 +425,7 @@ def _premium_route_refusal(route: Route) -> str | None:
     if not route.pois:
         return "Premium planning requires a route with at least one stop"
     # One leg INTO each stop, plus — on a round trip — the loop-home leg
-    # (W4.10's live-wire finding, 2026-08-11: the strict equality refused
+    # (a live-wire finding, 2026-08-11: the strict equality refused
     # EVERY round-trip day on the API path with "one walking leg per stop";
     # the harness never hit it because it plans without the premium gate, and
     # no test had ever pushed a round trip through this door).
@@ -445,7 +445,7 @@ def record_routing_degradations(
     PUBLIC because planning is not the only place a receiptless route reaches a person.
     Composing a saved trip rebuilds its route directly through ``summarise_route`` and
     never comes back through here, so it must call this itself or ship an unlabelled
-    estimate — which AC-18 forbids on EITHER surface. ``component`` names the caller,
+    estimate, and neither surface may ship one unlabelled. ``component`` names the caller,
     since that is what the field is for (src/tour/degradations.py:50-51).
     """
 
@@ -482,7 +482,7 @@ def record_routing_degradations(
         if transit.valhalla_receipt is not None
     }
     # THIS build's settings under ANY route-surface override are this build's
-    # settings (W5.14, Rosemary's step-free day was falsely labelled): only a
+    # settings (a step-free day was falsely labelled without this): only a
     # receipt whose configuration matches none of them was routed by something else.
     foreign = receipt_configs - THIS_BUILDS_ROUTING_CONFIG_SHA256S
     if foreign:
@@ -614,14 +614,14 @@ def plan_premium_tour(
 ) -> PremiumTourPlan:
     """BLOCK 1 — THE day of one request, planned, with no per-stop authoring.
 
-    ``replan`` (Phase 5 S5.6, `contract.ReplanContext`) plans RELATIVE to a day
-    that exists — the session's replans and the contingency set (S5.7) hand one
+    ``replan`` (`contract.ReplanContext`) plans RELATIVE to a day
+    that exists — the session's replans and the contingency set hand one
     in; it rides straight through to `select_route`, THE one planner. There is
-    no second planner behind this door (plan §10.8.1). A replanned TAIL may be
-    the bare walk to its finish (one leg home, W5.2 R1.1): the end sentinel is
+    no second planner behind this door. A replanned TAIL may be
+    the bare walk to its finish (one leg home): the end sentinel is
     its one stop, so the structural refusal below still sees a route with a stop.
 
-    Phase 4 (design §8.1) deleted pick-one-of-three: no persona ever wanted to
+    Pick-one-of-three is deleted: a visitor does not want to
     compare routes, so the planner plans ONE day — one ``select_route`` call — and
     the dials on the request are how a person changes it. ``choose_discrete_route``
     stays as the container-identity refusal on the one route: with containers
@@ -630,7 +630,7 @@ def plan_premium_tour(
 
     FREE, and free BY DEFAULT. ``glue_client=None`` here means ``SilentGlueClient``,
     not ``generate``'s paid Haiku default: planning a route is a places-and-times
-    question and makes no provider call at all (OWNER RULING 1). The DEFAULT is the
+    question and makes no provider call at all. The DEFAULT is the
     part that matters — a free path that is only free when a caller remembers to ask
     is one refactor away from being paid again, on an endpoint that stays anonymous.
     """
@@ -740,7 +740,7 @@ def execute_premium_plan(
         receipt_sink.before_call(unit)
 
     def invoke(unit: PremiumComposeUnit) -> PhysicalProviderResponse:
-        # AC-4: a unit that fails inside the fan-out must be recorded — exception
+        # A unit that fails inside the fan-out must be recorded — exception
         # type, message and stop index, in the CALLER's scope — before it is
         # re-raised. A partial premium tour must abort, never ship
         # half-narrated, so this never swallows the exception.
@@ -767,8 +767,8 @@ def execute_premium_plan(
         return tuple(pool.map(in_current_context(invoke), plan.units))
 
 
-#: Phase 6 S6.6 (W6.2 R3): the full telling's HARD length cap — twelve minutes
-#: (Theo 12; F&D 3x capped at 12; Camille 8-12) — and the words-per-second the
+#: The full telling's HARD length cap — twelve minutes, and at most three times
+#: the tight telling — and the words-per-second the
 #: engine's own clock arithmetic uses (150 wpm).
 FULL_TELLING_CAP_SECONDS: int = 720
 FULL_TELLING_MAX_RATIO: int = 3
@@ -778,7 +778,7 @@ FULL_TELLING_DROPPED_DEGRADATION = "full_telling_dropped"
 
 @dataclass(frozen=True)
 class FullTellingBudget:
-    """One major stop's two lengths, in seconds (W6.2 R3)."""
+    """One major stop's two lengths, in seconds."""
 
     tight_seconds: int
     full_budget_seconds: int
@@ -796,7 +796,7 @@ class FullTelling:
 
 def full_telling_budget(tight_words: int) -> FullTellingBudget:
     """A stop's two lengths from its tight telling's word count: the full telling may
-    run three times the tight one, never past the hard cap (W6.2 R3)."""
+    run three times the tight one, never past the hard cap."""
 
     tight_seconds = round(tight_words / _WORDS_PER_SECOND)
     return FullTellingBudget(
@@ -839,14 +839,13 @@ def full_telling_majors(
 ) -> dict[int, FullTellingBudget]:
     """The MAJOR stops of a composed day, with each one's full-telling budget.
 
-    W6.2 R3 (11/11 "major is not a tier"): MAJOR = a stop whose PRICED VISIT can
+    MAJOR = a stop whose PRICED VISIT can
     hold the full telling after the tight one AND whose corpus holds a second
     story. Read as: ``overflow_by_poi`` non-empty (the second story exists) and
     ``planned_visit_seconds >= 2 x tight`` — the floor at which a continuation at
-    least as long as the telling itself fits inside the priced dwell (Marcus: "a
-    budget, not a badge"; Théo: "my dwell is several times the tight"). The
+    least as long as the telling itself fits inside the priced dwell. The
     budget is ``min(3 x tight, FULL_TELLING_CAP_SECONDS)``. Where the corpus is
-    thin there is no full telling, and that beats water (Aiko, F&D, Paulo).
+    thin there is no full telling, and that beats water.
     """
     words_by_stop: dict[int, int] = {}
     for sentence in script.script:
@@ -920,7 +919,7 @@ def plan_premium_full_telling(
     ``standalone_place`` plans a place recipe's full telling: the place told on its
     own, stored and later played inside walks it cannot see.
 
-    Design §5.5 + W6.2 R3 (LOCKED): FULL = a second COMPOSED piece from the same
+    FULL = a second COMPOSED piece from the same
     material — the stop's OVERFLOW beats — never the leftover corpus served raw.
     The mini source script holds the overflow sentences plus the stitch's own
     fallback close (the sentence the writer must rewrite, exactly as on the
@@ -935,9 +934,9 @@ def plan_premium_full_telling(
     overflow = [beats_by_id[bid] for bid in overflow_ids if bid in beats_by_id]
     if not overflow:
         # EXPLICIT, never inferred: the second story is exactly the overflow the
-        # cap trimmed (design §5.5 "promoted from an extra"). Falling back to "all
+        # cap trimmed. Falling back to "all
         # this stop's beats" would re-compose the TIGHT material as the full
-        # telling — the re-telling R3 exists to kill.
+        # telling — the re-telling this rule exists to kill.
         raise ValueError(f"stop {stop_index} has no second story to author")
     mini_source = one_stop_source(
         script, overflow, poi_name=poi.name, stop_index=stop_index, n_stops=len(route.pois)
@@ -976,13 +975,12 @@ def finalize_premium_full_telling(
 ) -> FullTelling | None:
     """Verify and keep one full telling — or DROP AND REPORT it, never the day.
 
-    The full telling is OPTIONAL enrichment (the S6.5 precedent): a gate miss is
+    The full telling is OPTIONAL enrichment, like a thread: a gate miss is
     recorded on the degradations channel (``full_telling_dropped``) and the stop
     simply keeps only its tight telling — the on-demand route still serves it.
     Gates, beyond the seam's own (traceability, entailment when checked, the
-    authored close): the WORD BUDGET (W6.2 R3: <= 3x the tight, hard cap 12 min)
-    and NO REPETITION of the tight telling (11/11: a re-telling is "a press
-    cutting; cut it rather than serve it" — Rosemary, measured on the Orsay).
+    authored close): the WORD BUDGET (<= 3x the tight, hard cap 12 min)
+    and NO REPETITION of the tight telling (a re-telling is cut rather than served).
     """
     from .verify import _normalize_for_verbatim
 
@@ -1111,7 +1109,7 @@ def finalize_premium_composition(
         plan.source,
         plan.sequence,
         plan.route,
-        # A FULL-TELLING plan's requests carry the tight telling (Phase 6 S6.6);
+        # A FULL-TELLING plan's requests carry the tight telling;
         # the replay must rebuild them with it or the grounded-source equality
         # check refuses its own plan. Derived from the plan itself — empty on a
         # day plan, byte-identical behaviour.
@@ -1148,7 +1146,7 @@ def finalize_live_composition(
         faithfulness_checker=faithfulness_checker,
         enforce_claim_coverage=True,
         scan_glue_for_invention=True,
-        # Every stop ends on its close (design §5.3); the certification replay's
+        # Every stop ends on its close; the certification replay's
         # default stays OFF — the sealed candidates predate it.
         require_closes=True,
         # Every sentence must be true WHERE IT PLAYS; the certification replay's
@@ -1167,12 +1165,11 @@ class PremiumBuildIdentity:
     # which the working tree does NOT match, so this build is reproducible only by
     # whoever ran it. WHAT READS THIS: the server's WARNING log line, and nothing
     # else — the BuildFingerprint on the blueprint carries only commit_sha, so a
-    # reader of the blueprint cannot tell (W5.15 judge: said plainly, not claimed
-    # otherwise). Certification builds its own candidates through
+    # reader of the blueprint cannot tell. Certification builds its own candidates through
     # scripts/tour_batch_candidate.py and never comes through this door; stamping
     # this flag onto the fingerprint would change the sealed blueprint hash of every
-    # committed certification record, so whether it bites there is Phase 8's
-    # (the re-seal) to decide.
+    # committed certification record, so whether it bites there is for
+    # the re-seal to decide.
     local_dirty_tree: bool = False
 
 
@@ -1228,7 +1225,7 @@ def resolve_build_identity() -> PremiumBuildIdentity:
 class PremiumTourResult:
     blueprint: FinalTourBlueprint
     candidate: AuthoringCandidateIdentity
-    #: Phase 6 S6.5 (design §5.4): the writer's THREADS by stop index, then by the name
+    #: The writer's THREADS by stop index, then by the name
     #: of the stop that may come right before it — beside the script, never inside a
     #: stop's narration (they play only when the session makes that pair consecutive).
     threads_by_stop: dict[int, dict[str, str]] = dataclasses.field(default_factory=dict)
@@ -1264,7 +1261,7 @@ def finalize_premium_tour(
     vignette_beat_ids = frozenset(
         beat.id for beats in plan.sequence.vignette_beats.values() for beat in beats
     )
-    # The walk's own corpus narration (P9R-S1): a transit-class beat's sentences
+    # The walk's own corpus narration: a transit-class beat's sentences
     # freeze as leg playback, so the phone plays them while walking.
     transit_beat_ids = transit_class_beat_ids(
         beat for pb in plan.sequence.poi_beats for beat in pb.beats
@@ -1294,13 +1291,13 @@ def finalize_premium_tour(
         policy_version=plan.policy_version,
         routing_engine="valhalla",
         routing_version=plan.routing_version,
-        # THE ROUTING IDENTITY THE LEGS WERE ROUTED UNDER (Phase 6 S6.1a). A day with a
-        # route-surface axis (take-it-easy step-free, family no-stairs — design §2.4,
-        # plan S2.7) is routed under that surface's costing and every leg receipt
+        # THE ROUTING IDENTITY THE LEGS WERE ROUTED UNDER. A day with a
+        # route-surface axis (take-it-easy step-free, family no-stairs)
+        # is routed under that surface's costing and every leg receipt
         # carries THAT config hash; stamping the default here made
         # `FinalTourBlueprint` refuse every such day ("Valhalla receipt routing
         # configuration differs from build fingerprint" — measured 2026-08-19 on
-        # Rosemary's day, three attempts). "any" is the default hash, byte-identical.
+        # a step-free day, three attempts). "any" is the default hash, byte-identical.
         routing_config_sha256=VALHALLA_ROUTING_CONFIG_SHA256_BY_SURFACE[
             plan.tour_input.route_surface
         ],

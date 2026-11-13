@@ -1,9 +1,9 @@
-"""Within-POI beat ordering — §3.3 of phase-1-design.
+"""Within-POI beat ordering.
 
 Given a POI and its active beats, pick an ordering strategy and emit a
 deterministic ordered list.
 
-Phase 7.5 (2026-04-29) tightened the Area cold-open hoist
+A 2026-04-29 change tightened the Area cold-open hoist
 (`find_area_orientation_beat`): a sibling-POI orientation beat may only
 hoist when (a) it is the start POI's own beat, (b) the beat carries no
 physical_cues at all, or (c) the beat's source POI is within
@@ -15,9 +15,9 @@ the cold-open. Falls through to SYNTHESIZED_OPENER instead.
   curated; otherwise fall back to the (alphabetically stable) order of
   distinct sub_locations seen on the beats. Pick at most one beat per
   sub_location bucket. The trailing "no sub_location" pool then emits
-  best-first (R1) — not a single closer.
+  best-first — not a single closer.
 - "trigger_address": square circumnavigation. Stable order by trigger
-  address; one beat per address, then the no-address pool best-first (R1).
+  address; one beat per address, then the no-address pool best-first.
 
 Every strategy's plan is then trimmed to a per-tier ceiling (DEFAULT_FLAT_MAX
 for dense stops) centrally in select_poi_beats — the golden's human-ideal roster
@@ -25,9 +25,9 @@ never voices more than that at a single stop.
 - "narrative_function": flat fallback. hook → establishing → deepen →
   climax -> callback (and any remaining), 4-6 beats.
 
-Branch thresholds match phase-1-design.md: sub_location active when
-≥3 distinct values populated on tier-5/4 anchors; trigger_address active
-when ≥5 distinct values; otherwise flat.
+Branch thresholds: sub_location active when the stop's active beats carry
+≥3 distinct values; trigger_address active when ≥5 distinct values;
+otherwise flat.
 
 Pure functions. No Neo4j. The Neo4j loader lives in selection.py.
 """
@@ -53,7 +53,7 @@ NARRATIVE_FUNCTION_ORDER: tuple[str, ...] = (
 
 SUB_LOCATION_THRESHOLD: int = 3  # ≥3 distinct values → building walk
 TRIGGER_ADDRESS_THRESHOLD: int = 5  # ≥5 distinct values → square circumnav
-# Phase 4 calibration (2026-04-29): bumped from 6 to 8. The empirical Île
+# Calibration (2026-04-29): bumped from 6 to 8. The empirical Île
 # walk's Sainte-Chapelle (5 beats) + Île de la Cité (4 beats) lost
 # fixture deepens to the 6-beat trim. 8 keeps all empirical anchor-flat
 # beats while staying under the audio budget for 90-min tours
@@ -64,27 +64,28 @@ DEFAULT_FLAT_MAX: int = 12
 # minimum, not a separate unlimited quota: additional unlocated beats may win
 # the ordinary score-based remainder, and the overall tier cap still applies.
 SPATIAL_NO_KEY_RESERVE: int = 1
-# Phase 4 calibration (2026-04-29): bumped from 2 to 3. The empirical
+# Calibration (2026-04-29): bumped from 2 to 3. The empirical
 # Vert-Galant pause stop carries 3 beats (establishing + view + tarnished);
 # the prior cap dropped the 'tarnished' deepen.
 PAUSE_BEATS_MAX: int = 4  # tier-3 stop
 
-# Phase 4 calibration (2026-04-29): when both sub_location and
+# Calibration (2026-04-29): when both sub_location and
 # trigger_address meet their thresholds, pick the dominant primitive.
-# §3.3 spec defined the two threshold tests but didn't prescribe a
-# tie-break; the empirical Place des Vosges walk (6 sub_locs, 23
-# trigger_addresses) demonstrated trigger should win when the address
-# pool is much richer. Without this rule, sub_loc fires first and PdV
-# emits ~8 beats instead of ~25. Conciergerie (6 sub_locs, 0 triggers)
-# still uses sub_location because triggers don't meet threshold.
+# The two threshold tests alone prescribe no tie-break; the empirical
+# Place des Vosges walk (6 sub_locs, 23 trigger_addresses) demonstrated
+# trigger should win when the address pool is much richer. Without this
+# rule, sub_loc fires first and PdV emits ~8 beats instead of ~25.
+# Conciergerie (6 sub_locs, 0 triggers) still uses sub_location because
+# triggers don't meet threshold.
 
-# B8-lite (Phase 3.5) — claim-level dedup. Runs after the per-strategy
-# ordering and before tone-variety. Only beats that share at least one
-# lens are eligible to collide; ``J`` is Jaccard on the tokenised set.
+# Claim-level dedup. Runs after the per-strategy ordering and before
+# tone-variety. Only beats that share at least one lens (or both have none)
+# are eligible to collide. They collide when ``J``, the Jaccard of their
+# entity sets or of their subject-tag word sets, reaches this value.
 B8_JACCARD_THRESHOLD: float = 0.8
 
-# Phase 7 (2026-04-29) recall-recalibration. Three known phase-6-rerun dup
-# pairs all evaded the 0.8 entities/subject_tag thresholds:
+# Recall recalibration (2026-04-29). Three known duplicate pairs from an
+# earlier rerun all evaded the 0.8 entities/subject_tag thresholds:
 #   Mesme Gallet  (de1377b4 / bf668074): entities J=0.500, subject_tag empty
 #   Hugo affair   (b41d4c77 / a1833622): entities J=0.667, subject_tag empty
 #   Pantheon-vow  (ee115ca8 / 142060a7): entities J=0.125 (Saint vs St.),
@@ -112,13 +113,13 @@ _NARRATIVE_FUNCTION_PRIORITY: dict[str, int] = {
 
 
 def choose_ordering_strategy(beats: Iterable[BeatRef]) -> OrderingStrategy:
-    """Pick the spatial primitive to sequence by, per §3.3.
+    """Pick the spatial primitive to sequence by.
 
-    Phase 4 calibration: when both primitives meet threshold, the one
-    with more distinct values wins. PdV (6 sub_locs, 23 trigger_addrs)
-    requires trigger_address to reproduce the empirical address-by-address
-    circumnavigation; Conciergerie (6 sub_locs, 0 triggers) keeps
-    sub_location because triggers fail the threshold gate.
+    When both primitives meet threshold, the one with more distinct values
+    wins. PdV (6 sub_locs, 23 trigger_addrs) requires trigger_address to
+    reproduce the empirical address-by-address circumnavigation; Conciergerie
+    (6 sub_locs, 0 triggers) keeps sub_location because triggers fail the
+    threshold gate.
     """
     sub_n = len({b.sub_location for b in beats if b.sub_location})
     trig_n = len({b.trigger_address for b in beats if b.trigger_address})
@@ -138,12 +139,12 @@ def select_poi_beats(
     interest_lenses: Iterable[str] | None = None,
     apply_cap: bool = True,
 ) -> POIBeats:
-    """Order and trim a POI's beats per §3.3, returning the chosen plan.
+    """Order and trim a POI's beats, returning the chosen plan.
 
-    ``apply_cap=False`` (KE0, via :func:`select_poi_beats_full`) skips the per-tier
+    ``apply_cap=False`` (via :func:`select_poi_beats_full`) skips the per-tier
     ceiling so the FULL ordered plan is returned. The capped plan is always a
     SUBSET of the full plan in the same order — a prefix for the flat strategy, a
-    score-selected subset for the spatial strategies (R1, ``_cap_spatial_by_score``)
+    score-selected subset for the spatial strategies (``_cap_spatial_by_score``)
     — so keep-exploring extras (full minus voiced) stay well-defined either way.
     """
     active = [b for b in beats if b.active_status == "active"]
@@ -165,7 +166,7 @@ def select_poi_beats(
     else:
         ordered = _order_by_narrative_function(poi, active, interest)
 
-    # Phase 3.5: orientation is a cold-open primitive that competes
+    # Orientation is a cold-open primitive that competes
     # with anchor-class beats in the no_loc / no_addr slot under the
     # spatial strategies. When an orientation beat exists at the POI,
     # prepend the highest-scoring one so the cold-open lookup can find
@@ -186,8 +187,8 @@ def select_poi_beats(
     )
     ordered = _apply_b8_lite_dedup(ordered, interest, protected_id=protected_id)
 
-    # Per-tier ceiling (R1), applied AFTER dedup (so the capped plan is a strict
-    # subset of the uncapped KE0 plan — one shared dedup pass, no diverging
+    # Per-tier ceiling, applied AFTER dedup (so the capped plan is a strict
+    # subset of the uncapped plan — one shared dedup pass, no diverging
     # paraphrase-survivors) but BEFORE tone-variety. Order matters: _hoist_orientation
     # puts the cold-open at index 0, and _enforce_tone_variety may swap it off index 0;
     # capping before tone lets the cap protect the still-at-head orientation, and tone
@@ -230,12 +231,12 @@ def select_poi_beats_full(
     *,
     interest_lenses: Iterable[str] | None = None,
 ) -> POIBeats:
-    """KE0: the UNCAPPED beat plan — every active beat, ordered, no per-tier trim.
+    """The UNCAPPED beat plan — every active beat, ordered, no per-tier trim.
 
     Identical ordering/dedup/tone-variety to :func:`select_poi_beats` but without
     the per-tier ceiling, so ``select_poi_beats(...).beats`` is a SUBSET of this
     plan's beats in the same order (a prefix for the flat strategy; a score-selected
-    subset for the spatial strategies, R1). The beats NOT in the capped output are a
+    subset for the spatial strategies). The beats NOT in the capped output are a
     stop's "keep exploring here" extras — what the tour budget had no room to voice.
     """
     return select_poi_beats(poi, beats, interest_lenses=interest_lenses, apply_cap=False)
@@ -248,14 +249,14 @@ def extra_beat_ids(
     *,
     interest_lenses: Iterable[str] | None = None,
 ) -> tuple[str, ...]:
-    """KE1: the ordered ids of a stop's beats the tour did NOT voice.
+    """The ordered ids of a stop's beats the tour did NOT voice.
 
     A stop's "keep exploring here" extras: the uncapped plan
     (:func:`select_poi_beats_full`) minus the beats already voiced in the tour
     (its ScriptPOI ``beat_ids``), in the full plan's order — narrative-priority
     order for the flat strategy, walk order for the spatial strategies. Empty when
     the tour voiced everything the stop had. (The spatial strategies voice the
-    best-scoring beats, R1, so these extras are the lower-value remainder.)
+    best-scoring beats, so these extras are the lower-value remainder.)
 
     Transit-class beats never enter the pool: extras play STANDING at the stop
     (the tap), and a walk's own narration — a beat the origin-verified pick may
@@ -281,7 +282,7 @@ def govern_poi_beats(
     *,
     interest: frozenset[str] | None = None,
 ) -> tuple[POIBeats, tuple[str, ...]]:
-    """Cap a POI's emitted plan to a per-stop audio allowance (C9 governor).
+    """Cap a POI's emitted plan to a per-stop audio allowance (the audio governor).
 
     ``allowance_seconds is None`` marks an EXEMPT stop (the start-anchor or the
     fixed-end-B / pulled endpoint): the plan passes through untouched with no
@@ -307,7 +308,7 @@ def govern_poi_beats(
         return plan, ()
     kept = list(plan.beats[:cut])
     overflow = list(plan.beats[cut:])
-    # Phase 9 S3: a stop seated FOR a subject must not be governed mute on it.
+    # A stop seated FOR a subject must not be governed mute on it.
     # The arc orders the buckets, so an off-family hook can outrank every
     # on-family beat and the prefix cut sheds the lot. When the person asked
     # and the prefix keeps none of the family the plan holds, swap ONE in for
@@ -365,11 +366,11 @@ def _order_by_sub_location(
         # keep-exploring extras (mirrors the no_loc pool below).
         out.extend(_top_by_score(bucket, interest, len(bucket)))
 
-    # Trailing "no sub_location" pool. R1: emit the un-keyed pool best-first (not
+    # Trailing "no sub_location" pool: emit the un-keyed pool best-first (not
     # one closer) — a dense POI like Île de la Cité carries most of its beats with
     # sub_location=None and the single-closer rule silently dropped ~15 of them.
     # Best-first keeps the old _pick_best beat at the front. The per-tier ceiling in
-    # select_poi_beats bounds the VOICED plan (the C9 governor exempts the marquee,
+    # select_poi_beats bounds the VOICED plan (the audio governor exempts the marquee,
     # so a local ceiling is what stops the marquee becoming an encyclopedia-dump);
     # the un-voiced tail surfaces as keep-exploring extras.
     if no_loc:
@@ -397,7 +398,7 @@ def _order_by_trigger_address(
     out: list[BeatRef] = []
     for k in ordered_keys:
         out.extend(_top_by_score(by_addr[k], interest, len(by_addr[k])))
-    # R1: emit the no-trigger_address pool best-first (see _order_by_sub_location);
+    # Emit the no-trigger_address pool best-first (see _order_by_sub_location);
     # the per-tier ceiling in select_poi_beats bounds the voiced plan.
     if no_addr:
         out.extend(_top_by_score(no_addr, interest, len(no_addr)))
@@ -411,7 +412,7 @@ def _order_by_narrative_function(
 ) -> list[BeatRef]:
     """Flat tier-5/4 fallback or tier-3 pause: the full hook→…→callback arc,
     UNCAPPED. The per-tier ceiling is applied centrally in :func:`select_poi_beats`
-    (gated by ``apply_cap``), uniformly with the spatial strategies (R1)."""
+    (gated by ``apply_cap``), uniformly with the spatial strategies."""
     by_fn: dict[str, list[BeatRef]] = defaultdict(list)
     for b in beats:
         by_fn[(b.narrative_function or "establishing")].append(b)
@@ -557,7 +558,7 @@ def _pick_best(bucket: list[BeatRef], interest: frozenset[str]) -> BeatRef:
 
 def _top_by_score(pool: list[BeatRef], interest: frozenset[str], n: int) -> list[BeatRef]:
     """The n best-scoring beats, highest first. ``_top_by_score(pool, i, 1)[0]``
-    is exactly ``_pick_best(pool, i)`` — so R1's no-key emission keeps the old
+    is exactly ``_pick_best(pool, i)`` — so the no-key emission keeps the old
     single-closer beat at the front and merely adds the runners-up behind it."""
     return sorted(pool, key=lambda b: _beat_score(b, interest), reverse=True)[:n]
 
@@ -603,9 +604,9 @@ def _address_sort_key(addr: str) -> tuple:
 def reorder_final_stop_for_closing(beat_sequence: BeatSequence) -> BeatSequence:
     """Move a closing-friendly beat to the last position at the final stop.
 
-    Phase 7 (2026-04-29): the closing glue ("End the walk here, or carry
+    2026-04-29: the closing glue ("End the walk here, or carry
     on…") fires after the last beat of the last stop regardless of what
-    that beat is. phase-6-rerun outputs ended mid-Tour-de-France-jersey
+    that beat is. Earlier outputs ended mid-Tour-de-France-jersey
     (Tour 4) and mid-Mme-de-Motteville-zinger (Tour 1) because the
     closing glue followed whichever beat happened to land last in the
     spatial / narrative ordering.
@@ -652,7 +653,7 @@ def reorder_final_stop_for_closing(beat_sequence: BeatSequence) -> BeatSequence:
 
 
 def _find_closing_friendly_index(beats: tuple[BeatRef, ...]) -> int | None:
-    """Index of the most closing-friendly beat per Phase 7 preference.
+    """Index of the most closing-friendly beat (callback, climax, longest).
 
     ``stop_orientation`` beats are excluded — they're cold-open
     primitives the per-POI hoist places at position 0; relocating one
@@ -685,12 +686,12 @@ def _find_closing_friendly_index(beats: tuple[BeatRef, ...]) -> int | None:
 
 
 HOIST_PROXIMITY_M: float = 100.0
-"""Phase 7.5 cold-open hoist proximity gate (Fix 1).
+"""Cold-open hoist proximity gate.
 
 A sibling-POI orientation beat may only hoist to the start stop when
 the source POI is within this radius — otherwise the beat's
 physical_cues describe somewhere else (Pariswalks PdV "children's
-play area" landing at Hotel de Sully). 100 m matches the v3 schema's
+play area" landing at Hotel de Sully). 100 m matches the schema's
 geofence trigger radius, which is the natural notion of "same place".
 """
 
@@ -702,7 +703,7 @@ def _vignette_beat_names_poi(body: str | None, poi_name: str) -> bool:
     A vignette one-liner is stitched into the leg INTO the next seated stop, so a
     line that does not name its own POI (e.g. "The statue of Nelson at the top was
     carved from…") reads as if it belongs to that stop — the Nelson's-Column-under-
-    the-National-Gallery mis-attribution a hostile panel caught. Preferring a
+    the-National-Gallery mis-attribution. Preferring a
     self-naming beat ("Nelson's Column is a monument in Trafalgar Square…") fixes
     it in canonical corpus text, with no glue and no new proper-noun leakage."""
     if not body or not poi_name:
@@ -725,15 +726,15 @@ def select_vignette_beats(
     *,
     lenses: Iterable[str] | None = None,
 ) -> dict[int, tuple[BeatRef, ...]]:
-    """Track B (Step B.4): ONE best voiceable beat per walk-past vignette POI.
+    """ONE best voiceable beat per walk-past vignette POI.
 
-    Builds ``BeatSequence.vignette_beats`` from ``Route.vignettes`` (Step B.2)
+    Builds ``BeatSequence.vignette_beats`` from ``Route.vignettes``
     + the corpus snapshot's ``beats_by_poi`` mapping. Per vignette POI: the
     first ACTIVE beat with a ``script_body``, preferring — when lenses are
     requested — one that carries a requested lens (the one-liner should speak
     to the user's genre when the corpus allows). A POI with no voiceable beat
     contributes nothing; a leg whose POIs all lack one is dropped. Beat order
-    follows the vignette POI order (spotlight desc, then id — Step B.1).
+    follows the vignette POI order (spotlight desc, then id).
     """
     interest = frozenset(s.lower() for s in (lenses or []))
     out: dict[int, tuple[BeatRef, ...]] = {}
@@ -782,22 +783,21 @@ def find_area_orientation_beat(
 ) -> BeatRef | None:
     """Search the Route for a stop_orientation beat that can hoist to cold-open.
 
-    Phase 7 (2026-04-29): the per-POI hoist in ``select_poi_beats`` only
-    surfaces an orientation beat when one exists at the start POI. Most
-    tier-5 anchors lack one (phase-1-design §3.4), so the cold-open
-    falls back to the SYNTHESIZED_OPENER even when a sibling POI in the
-    same Area carries the canonical Pariswalks-format opener.
+    2026-04-29: the per-POI hoist in ``select_poi_beats`` only surfaces an
+    orientation beat when one exists at the start POI. Most tier-5 anchors
+    lack one, so the cold-open falls back to the SYNTHESIZED_OPENER even when
+    a sibling POI in the same Area carries the canonical Pariswalks-format opener.
 
-    Phase 7.5 (Fix 1, 2026-04-29) added a geographic-honesty guard. The
-    Phase 7 hoist promoted any orientation beat from the same Area as
+    A geographic-honesty guard (2026-04-29) limits that. The unguarded
+    hoist promoted any orientation beat from the same Area as
     the start stop, which produced Tour 1 stop 1 emitting the Pariswalks
     "find a bench in the garden, near the children's play area" beat at
     Hotel de Sully — those features exist at Place des Vosges (the
     sibling POI), not at the start. The refined rule accepts a
     candidate only when:
 
-    - (a) the beat's POI matches the start POI (Phase 5 behaviour;
-      preferred), OR
+    - (a) the beat's POI matches the start POI (the original
+      behaviour; preferred), OR
     - (b) the beat has no physical_cues at all (treat as Area-generic), OR
     - (c) the beat's source POI is within ``HOIST_PROXIMITY_M`` of the
       start stop (cues describe nearby features the listener can see).
@@ -856,9 +856,9 @@ def _hoist_geographically_honest(
     start_poi_id: str,
     peer_distance_m: float,
 ) -> bool:
-    """Phase 7.5 Fix 1 gate. See ``find_area_orientation_beat`` docstring."""
+    """The geographic-honesty gate. See ``find_area_orientation_beat`` docstring."""
     if beat_poi_id == start_poi_id:
-        return True  # same POI — original Phase 5 behaviour
+        return True  # same POI — the original behaviour
     if not beat.physical_cues:
         return True  # no cues → Area-generic; safe to hoist
     return peer_distance_m <= HOIST_PROXIMITY_M
@@ -890,7 +890,7 @@ def _hoist_orientation(
 def _apply_b8_lite_dedup(
     beats: list[BeatRef], interest: frozenset[str], *, protected_id: str | None = None
 ) -> list[BeatRef]:
-    """Drop near-duplicate beats per phase-1-design §3.3.
+    """Drop near-duplicate beats.
 
     Two beats collide when they share at least one lens (or are both
     lensless) AND either entities Jaccard ≥ B8_JACCARD_THRESHOLD or
@@ -971,11 +971,11 @@ def _claims_collide(a: BeatRef, b: BeatRef) -> bool:
         return True
     if _subject_tag_jaccard(a, b) >= B8_JACCARD_THRESHOLD:
         return True
-    # Phase 7: char-5-gram body Jaccard catches paraphrase pairs that
+    # Char-5-gram body Jaccard catches paraphrase pairs that
     # the entity threshold misses (Mesme Gallet, Hugo affair).
     if _char_ngram_jaccard(a, b) >= B8_CHAR_NGRAM_THRESHOLD:
         return True
-    # Phase 7: same year + ≥2 shared canonical entities catches
+    # Same year + ≥2 shared canonical entities catches
     # "same founding story, divergent prose" pairs (Pantheon vow).
     return bool(_shares_year_and_canonical_entities(a, b))
 
@@ -1089,7 +1089,7 @@ def _jaccard(a: set[str], b: set[str]) -> float:
 
 
 def _pick_dedup_loser(a: BeatRef, b: BeatRef, interest: frozenset[str]) -> BeatRef:
-    """Return the beat to drop. Tie-breakers per §3.3 docstring above."""
+    """Return the beat to drop. Tie-breakers per the dedup docstring above."""
     score_a = _beat_score(a, interest)
     score_b = _beat_score(b, interest)
     if score_a > score_b:
@@ -1133,7 +1133,7 @@ def _enforce_tone_variety(
     beats: list[BeatRef],
     group_of: Callable[[BeatRef], str | None] | None = None,
 ) -> list[BeatRef]:
-    """Avoid 3 consecutive somber/reverent beats (§3.3 tone variety).
+    """Avoid 3 consecutive somber/reverent beats (tone variety).
 
     Constructive interleave: bucket the beats into somber/reverent vs.
     relief (everything else), preserving each bucket's stable input order.

@@ -1,17 +1,16 @@
-"""RouteOption assembly — the §2.8 output contract, one per flavour (M6).
+"""RouteOption assembly — the output contract, one per flavour.
 
 Pure functions over engine outputs (Route + Script + the snapshot's beat
-refs). The API layer wraps these into responses; M7 fills stop_audio and
-the grounded why_this_works.
+refs). The API layer wraps these into responses; a later stage fills
+stop_audio and the grounded why_this_works.
 
-Phase 3 Step 3.4: populate the spotlight model on the output. Each stop
-carries its computed ``spotlight`` score (s3.1) and its collapsed output
-``band`` ("dwell" vs "vignette"); the option carries a per-corridor
-``lens_coverage_note`` (s3.1) when lenses were requested. This is ANNOTATION
-ONLY -- which stops are selected and their ORDER are decided upstream in
-select_route by the existing gates, so the Step-2.0d identity baseline is
-untouched. Selected (on-corridor) stops score at proximity 1.0 (detour 0),
-so spotlight == gravity x lens_relevance, always strictly positive.
+Populates the spotlight model on the output. Each stop carries its computed
+``spotlight`` score and its collapsed output ``band`` ("dwell" vs
+"vignette"); the option carries a per-corridor ``lens_coverage_note`` when
+lenses were requested. This is ANNOTATION ONLY -- which stops are selected
+and their ORDER are decided upstream in select_route by the existing gates,
+and this module leaves them untouched. Selected (on-corridor) stops score at
+proximity 1.0 (detour 0), so spotlight == gravity x lens_relevance, always strictly positive.
 """
 
 from __future__ import annotations
@@ -54,9 +53,9 @@ def dominant_lens(
 
     Computed from the beats themselves (BeatRef.lenses) — never fabricated.
     Ties break deterministically by lens name so the result is stable across
-    runs. (Moved from the API adapter in M6 so the engine and API share it.)
+    runs. (Moved from the API adapter so the engine and API share it.)
 
-    ``prefer`` (Phase 9 S3) is the requested subject family, expanded: when any
+    ``prefer`` is the requested subject family, expanded: when any
     voiced beat answers it, the label is the most common ASKED lens — the stop's
     role in the person's own day — never the plain majority of whatever context
     rode along, which is how an architecture request came back wearing
@@ -98,8 +97,8 @@ def option_eta_seconds(route: Route, script: Script) -> int:
     with a routed duration but a haversine provenance would have made the served
     clock and the planned clock disagree, silently.
 
-    The COMBINING (walk + dwell) delegates to ``served_elapsed_seconds`` (dedup-
-    review 2026-08-07) — the one rule every elapsed-time caller in the engine now
+    The COMBINING (walk + dwell) delegates to ``served_elapsed_seconds``
+    (2026-08-07) — the one rule every elapsed-time caller in the engine now
     shares; this function's own job is only supplying the two honest terms.
     """
     return served_elapsed_seconds(
@@ -143,7 +142,7 @@ def build_route_option(
     eta_seconds is unchanged and still counts routed legs (or the pace-corrected
     haversine) plus every dwell: a vignette or leg card costs no elapsed time.
 
-    Step 3.4 (s3.1/s7): each stop is annotated with its ``spotlight`` score and
+    Each stop is annotated with its ``spotlight`` score and
     collapsed output ``band``, and the option carries a per-corridor
     ``lens_coverage_note``. ANNOTATION ONLY -- the stop set and order come from
     select_route's gates upstream; this only describes them. ``snapshot``
@@ -152,7 +151,7 @@ def build_route_option(
     on-corridor, so proximity is the on-path default (detour 0 -> 1.0) and
     spotlight == gravity x lens_relevance, which is strictly positive.
 
-    Track B (Step B.3): ``route.vignettes`` (leg_idx -> walk-past POIs, leg i
+    ``route.vignettes`` (leg_idx -> walk-past POIs, leg i
     = the walk INTO stop i) are interleaved as ``band="vignette"`` stops right
     after their leg-origin stop — the vignette on leg i sits between stop i-1
     and stop i (a leg-0 vignette would precede stop 0; a round trip's closing
@@ -164,7 +163,7 @@ def build_route_option(
     roles = {p.id: p.poi_role for p in route.pois}
     pois_by_id: dict[str, POI] = {p.id: p for p in route.pois}
     lenses_fs = frozenset(script.inputs.lenses or ())
-    # The S3 label rule (dominant_lens's ``prefer``): a card on a lensed day is
+    # The label rule (dominant_lens's ``prefer``): a card on a lensed day is
     # labelled by the asked family, the same expansion the session stops use —
     # one stop never wears two labels on one wire.
     prefer = expanded_interest_lenses(script.inputs.lenses, snapshot)
@@ -176,7 +175,7 @@ def build_route_option(
     # model uses, so a sentence shown on a leg card is exactly a sentence the rubric
     # scored as costing no elapsed time.
     vignette_beat_ids = {b.id for beats in sequence.vignette_beats.values() for b in beats}
-    # The walk's own corpus narration (P9R-S1): transit-beat sentences ride the
+    # The walk's own corpus narration: transit-beat sentences ride the
     # leg card, exactly where the phone plays them.
     transit_ids = transit_class_beat_ids(beats_by_id.values())
     dwell_sents: dict[int, list[str]] = {}
@@ -242,7 +241,7 @@ def build_route_option(
                 snapshot=snapshot,
                 narration=per_stop.get(i, ""),
                 has_deeper_dive=bool(sequence.overflow_by_poi.get(sp.id)),
-                # The honesty surface (W4.2 deviation v), straight off the
+                # The honesty surface, straight off the
                 # Route the planner priced — never recomputed here.
                 queue_minutes=round(route.planned_queue_seconds.get(sp.id, 0) / 60),
                 goes_inside=route.visit_goes_inside.get(sp.id),
@@ -291,7 +290,7 @@ def _build_stop(
     queue_minutes: int = 0,
     goes_inside: bool | None = None,
 ) -> RouteOptionStop:
-    """One RouteOptionStop with its Step 3.4 spotlight + band annotation.
+    """One RouteOptionStop with its spotlight + band annotation.
 
     Falls back to gravity-only scoring (no lens dimming) when the POI is not in
     ``route.pois`` -- e.g. a synthesized fixed-end B sentinel that carries no
@@ -335,7 +334,7 @@ def _vignette_stop(
     snapshot: CorpusSnapshot,
     narration: str,
 ) -> RouteOptionStop:
-    """One walk-past vignette as a RouteOptionStop (Track B Step B.3).
+    """One walk-past vignette as a RouteOptionStop.
 
     ``band="vignette"``, ``visit_or_walk_past="walk_past"``, ``minutes=0`` —
     a one-liner as you pass, never dwell time. ``spotlight`` is the POI's
@@ -388,14 +387,14 @@ def _lens_coverage_note(
     lenses: frozenset[str],
     snapshot: CorpusSnapshot,
 ) -> str | None:
-    """Per-corridor lens density (s3.1): how many route POIs speak to the lens.
+    """Per-corridor lens density: how many route POIs speak to the lens.
 
     Returns None when no lens was requested (nothing to surface). Otherwise
     counts the route POIs whose beats hit the requested lenses -- a hit is any
     ``lens_relevance`` above the floor (a direct or one-hop match; a miss sits
     at LENS_FLOOR). The note states "N of M places on this route speak to the
     chosen lens(es)" so the user can judge whether to broaden the genre before
-    composing (s3.1: REACH measures and surfaces coverage, never silently ships
+    composing (REACH measures and surfaces coverage, never silently ships
     an off-tone tour).
     """
     if not lenses:

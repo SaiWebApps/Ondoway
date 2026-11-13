@@ -1,10 +1,10 @@
 """How long a visitor spends AT a place — the third hand on the tour clock.
 
 Time at a stop is min(what the place absorbs, what this visitor's interest
-justifies, the party's ceiling). All three arguments matter: Camille
-(historic_arch) spends 33 minutes in the Cour Carrée where Théo (dark_history)
-spends 8, and a chocolate museum is 90 minutes for one visitor and a walk-past
-for the next. See docs/personas/.
+justifies, the party's ceiling). All three arguments matter: an architecture
+visitor (historic_arch) spends 33 minutes in the Cour Carrée where a
+dark-history visitor (dark_history) spends 8, and a chocolate museum is 90
+minutes for one visitor and a walk-past for the next.
 """
 
 from __future__ import annotations
@@ -17,8 +17,8 @@ from .contract import POI, PromiseShape
 
 if TYPE_CHECKING:
     # CorpusSnapshot lives in selection.py, NOT contract.py — and it is imported
-    # only for the annotation, because step 3B.8 has selection importing the
-    # combining rule back out of this module. A real import both ways is a cycle.
+    # only for the annotation, because selection imports the combining rule
+    # back out of this module. A real import both ways is a cycle.
     # Same shape as src/tour/density.py, which solved this first.
     from .selection import CorpusSnapshot
 
@@ -27,22 +27,21 @@ if TYPE_CHECKING:
 #: a second scale.
 ONE_HOP_VISIT_FRACTION: float = 0.6
 
-#: Rain halves what standing in an UNCOVERED place is worth (plan S3.3,
-#: deviation iv). The queue is exempt: the line takes what it takes, whatever
-#: falls on it.
+#: Rain halves what standing in an UNCOVERED place is worth. The queue is
+#: exempt: the line takes what it takes, whatever falls on it.
 RAIN_DWELL_FRACTION: float = 0.5
 
-#: The place categories (contract row 6.7 vocabulary) that shelter a visit.
+#: The place categories that shelter a visit.
 #: Everything else — square, garden, street, bridge, park, market, monument,
 #: other, and the "" of an unjudged corpus — counts as OPEN, the safe direction
-#: for rain (plan S3.3, deviation i): never promise shelter the data cannot
+#: for rain: never promise shelter the data cannot
 #: back. A wrong "open" under-prices a dry arcade; a wrong "covered" strands a
 #: visitor in the rain.
 _COVERED_CATEGORIES: frozenset[str] = frozenset({"arcade", "museum", "church", "gallery"})
 
 #: The queue_class values that CLAIM a line exists. None is no claim at all
 #: (the audited pass has not reached this POI) and "none" is the audited claim
-#: that there IS no line (contract row 6.5) — neither prices a second of wait,
+#: that there IS no line — neither prices a second of wait,
 #: and neither gives a `wall` end anything to refuse.
 _QUEUE_CLAIMS: frozenset[str] = frozenset({"short", "long", "unpredictable"})
 
@@ -50,8 +49,8 @@ _QUEUE_CLAIMS: frozenset[str] = frozenset({"short", "long", "unpredictable"})
 def place_is_covered(poi: POI) -> bool:
     """THE covered/open decision — rain pricing's only input, defined once.
 
-    The plan names the sabotage this guards against: "a second coveredness map
-    in selection.py". `tests/test_one_promise_pricing.py` scans the engine for
+    This guards against a second coveredness map in selection.py.
+    `tests/test_one_promise_pricing.py` scans the engine for
     any other file that speaks of cover while naming `place_category`.
     """
     return poi.place_category in _COVERED_CATEGORIES
@@ -90,7 +89,7 @@ def _parse_peak_bands(bands_json: str) -> tuple[tuple[float, float], ...] | None
     CACHED because the repair prices thousands of trials per request and each
     trial re-prices every stop at its arrival hour: parsing the same ~370
     corpus strings per call multiplied a JSON decode into the planner's hot
-    path (measured as part of a 4-8x wall-clock blowup at W3.2). The corpus
+    path (measured as part of a 4-8x wall-clock blowup). The corpus
     holds at most one distinct string per POI, so the cache is tiny and
     permanent.
     """
@@ -117,7 +116,7 @@ def _parse_peak_bands(bands_json: str) -> tuple[tuple[float, float], ...] | None
 
 
 def _queue_seconds(poi: POI, clock_hour: int | None) -> int:
-    """Seconds of line this arrival stands, from the row-6.5 corpus fields.
+    """Seconds of line this arrival stands, from the queue corpus fields.
 
     "short"/"long" price by arrival-hour band: `queue_minutes_peak` inside a
     `queue_peak_hours` band, `queue_minutes_offpeak` outside one. An undated
@@ -150,11 +149,10 @@ def visit_shape(
 ) -> PromiseShape:
     """THE promise pricing — what standing at this place costs, as a shape.
 
-    Camille's Sainte-Chapelle is 38 minutes of chapel and 28 minutes of line,
-    and "price the building at a single 66 and the line becomes permanent"
-    (docs/personas/01-architecture-pilgrim.md:77-84) — so the cost is three
-    numbers, not one: outside seconds, inside seconds, and a queue that belongs
-    to the hour rather than the building (design §3.3).
+    An architecture visitor's Sainte-Chapelle is 38 minutes of chapel and 28
+    minutes of line, and a building priced at a single 66 minutes makes the line
+    permanent — so the cost is three numbers, not one: outside seconds, inside
+    seconds, and a queue that belongs to the hour rather than the building.
 
     ``snapshot`` may be None ONLY when no interest was declared, because that is
     the one case the lens graph is never consulted for. Callers without a corpus
@@ -167,9 +165,9 @@ def visit_shape(
        party ceiling); 2. queue by arrival-hour band; 3. a queue the ceiling
        cannot cover collapses the stop to outside-only — nobody stands 28
        minutes of line for the zero minutes the ceiling has left; 4. a `wall`
-       end refuses ANY audited line ("no stop whose duration is unboundable",
-       design §2.3) but never the place; 5. `closed_today` voids the door and
-       keeps the exterior (delete-vs-demote, panel W1.9 dissent 1);
+       end refuses ANY audited line ("no stop whose duration is unboundable")
+       but never the place; 5. `closed_today` voids the door and
+       keeps the exterior (demote the stop, never delete it);
        5b. `exterior_only` is THE DAY'S OWN CLOCK saying the same thing — the
        planner's last-resort "step outside" repair move, for a stop whose
        interior the requested minutes cannot hold; 6. rain
@@ -222,7 +220,7 @@ def visit_shape(
     if (
         closed_today
         # A wall refuses ANY audited line, not only the unpredictable class:
-        # Marcus is four minutes from £180 (04-layover-sprinter.md:45-47).
+        # a visitor on a hard deadline cannot afford even a short line.
         or (wall and poi.queue_class in _QUEUE_CLAIMS)
         # THE DAY'S OWN CLOCK. The other three triggers are facts about the
         # PLACE (a locked door, an unboundable line) or about the PARTY (a stop
@@ -240,8 +238,8 @@ def visit_shape(
         )
     ):
         # Outside-only, NEVER deleted: the stop survives as the exterior view
-        # ("excluded entirely under wall" excludes the line and the interior,
-        # design §3.3; a closed museum is still worth standing in front of).
+        # ("excluded entirely under wall" excludes the line and the interior;
+        # a closed museum is still worth standing in front of).
         goes_inside = False
         inside_seconds = 0
         queue_seconds = 0
@@ -252,9 +250,8 @@ def visit_shape(
     # A covered CATEGORY shelters the visit; a voided door has no visit. A
     # museum the clock closed — or the day's own repair stepped outside of —
     # is a facade in the weather, so its outdoor stand pays the rain penalty
-    # like any square (Docs/adr/0004's acceptance finding: the closed Louvre
-    # was a rainy day's longest outdoor stand, exempt because its category
-    # said covered).
+    # like any square (otherwise a closed Louvre is a rainy day's longest
+    # outdoor stand, exempt because its category says covered).
     door_voided = closed_today or exterior_only
     if weather == "rain" and (not place_is_covered(poi) or door_voided):
         outside_seconds = round(outside_seconds * RAIN_DWELL_FRACTION)
@@ -283,10 +280,10 @@ def shape_at_place_seconds(shape: PromiseShape) -> int:
     """Time AT the place — the line excluded. THE one spelling of that sum.
 
     A genuinely different quantity from `shape_total_seconds`, not a shortcut
-    around it: design §3.3 forbids folding the wait into the visit ("price
-    the building at a single 66 and the line becomes permanent"), so a
-    surface that prints an at-place number beside a queue column needs this
-    exact split. The harness's shape column is the founding consumer.
+    around it: the wait is never folded into the visit, because a building
+    priced at a single 66 minutes makes the line permanent. So a surface that
+    prints an at-place number beside a queue column needs this exact split.
+    The harness's shape column is the founding consumer.
     """
     return shape.outside_seconds + shape.inside_seconds
 
@@ -294,17 +291,17 @@ def shape_at_place_seconds(shape: PromiseShape) -> int:
 def visit_ceiling_seconds(poi: POI, *, party_ceiling_seconds: int | None = None) -> int:
     """The MOST a visitor could justify standing at this place — its shape ceiling.
 
-    Design §3.1's shape has a top: the full interior for a place with one (the
+    The shape has a top: the full interior for a place with one (the
     "direct" relation already prices it there; a one-hop or no-lens visitor is
     priced 60 % of the way, so that gap is their headroom), and the outside number
     itself for a place with none — a square is not lengthened by a dial, because a
-    planner giving Place de la Concorde forty-five minutes is "walking you somewhere
-    pointless" (design §8.3); Camille's twenty silent minutes there are HER choice.
+    planner giving Place de la Concorde forty-five minutes is walking you somewhere
+    pointless; a visitor's own twenty silent minutes there are that visitor's choice.
     The party ceiling caps it like every other visit (a family's six-minute stop).
 
-    THE one spelling of the ceiling: the drop primitive's redistribution (Phase 5
-    S5.5, W4.2 locked semantics 4 — "freed minutes flow to the anchors within shape
-    ceilings") reads it, and nothing else may spell "as long as this place can be".
+    THE one spelling of the ceiling: the drop primitive's redistribution (freed
+    minutes flow to the anchors within shape ceilings) reads it, and nothing else
+    may spell "as long as this place can be".
     """
     outside = poi.typical_duration_min * 60
     top = poi.visit_seconds_inside if poi_has_interior(poi) else outside
@@ -343,13 +340,13 @@ def visit_seconds(
 
 def listened_seconds(audio_seconds: int, listening_rate: float = 1.0) -> int:
     """What a piece of narration COSTS this person, in seconds — its stated length
-    scaled by the learned listening rate (design §4.1: Paulo replays and consumes
-    narration at ~1.5x; the remaining day's estimates scale to the observed rate).
+    scaled by the learned listening rate (a visitor who replays narration
+    consumes it at ~1.5x; the remaining day's estimates scale to the observed rate).
     THE one place the rate meets narration on the server: the final gate, every
-    trial under a replan and the session's clock all price through it (Phase 5
-    S5.10), so the certified day and the wire clock agree by construction. 1.0 is
-    the identity. **Extends** `stop_seconds`, which then takes the longer of the
-    visit and THIS."""
+    trial under a replan and the session's clock all price through it, so the
+    certified day and the wire clock agree by construction. 1.0 is the identity.
+    **Extends** `stop_seconds`, which then takes the longer of the visit and
+    THIS."""
     return round(audio_seconds * listening_rate)
 
 
@@ -365,12 +362,12 @@ def stop_seconds(visit_seconds: int, audio_seconds: int) -> int:
     A stop is never shorter than what it says — the tour cannot cut its own
     narration off mid-sentence — and never shorter than what the place and the
     visitor jointly justify. So it is the longer of the two, and a long silence
-    inside it is CORRECT: Camille stands twenty minutes at Concorde for four
-    minutes of audio (docs/personas/01-architecture-pilgrim.md, step 5).
+    inside it is CORRECT: an architecture visitor stands twenty minutes at
+    Concorde for four minutes of audio.
 
     Defined here rather than at the final gate because the density gate needs it
     first, and a second copy written at the second use is exactly the defect
-    this phase exists to remove.
+    this rule exists to remove.
     """
     return max(visit_seconds, audio_seconds)
 
@@ -380,7 +377,7 @@ def served_elapsed_seconds(walk_seconds: int, dwell_seconds: int) -> int:
 
     A two-term sum barely looks worth a function, and that is precisely why it
     grew two spellings: the planner's final band gate composed it in selection.py
-    and the rubric's C7 composed it again in quality_rubric.py. Two expressions of
+    and the rubric's time-budget check composed it again in quality_rubric.py. Two expressions of
     one quantity agree until one of them is edited, and then a tour is certified at
     one length and judged at another.
 

@@ -1,7 +1,7 @@
 """Packaged hashes for the frozen Premium authoring authorities.
 
 The two manifests these last two hashes are taken from live under
-``fixtures/tour-certification/``. Both moved out of a ``specs/`` tree that was
+``fixtures/tour-certification/``. Both moved out of an older tree that was
 deleted 2026-09-02 by owner ruling; this docstring named that tree until the
 same day.
 

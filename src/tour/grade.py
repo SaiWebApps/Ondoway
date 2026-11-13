@@ -1,11 +1,11 @@
-"""GRADE — exemplar-calibrated tour rubric (§2.7, M8).
+"""GRADE — exemplar-calibrated tour rubric.
 
 A pure, weighted multi-axis score of a generated tour against a golden
 fixture. This is a CI REGRESSION gate, not the ≥90% golden-overlap ideal:
 the baseline is set so the current corpus passes with margin and a genuine
 regression (POIs lost, spine wrong, beats dropped, validation broken) drops
 below it. Never self-tunes — changing a weight or the baseline is a
-deliberate, reviewed edit (§2.7).
+deliberate, reviewed edit.
 
 The scoring function is pure (no DB, no engine) so it is unit-tested in the
 default bar; the live grading harness (``tests/test_tour_grade.py``, marked
@@ -24,10 +24,10 @@ W_BEAT_OVERLAP = 0.30
 W_SPINE_MATCH = 0.20
 W_VALIDATION = 0.10
 
-# A generated tour must grade at or above this to pass. Re-calibrated at
-# Phase 8 to measure the SHIPPED path (build_poi_beat_plans_capped, 9 beats
+# A generated tour must grade at or above this to pass. Calibrated to
+# measure the SHIPPED path (build_poi_beat_plans_capped, 9 beats
 # on Île) rather than the raw uncapped path (23 beats). Measured 2026-08-27:
-# Île 0.506, PdV 0.743. D6 floor = 85% of the lower score = 0.43.
+# Île 0.506, PdV 0.743. The floor is 85% of the lower score = 0.43.
 GRADE_BASELINE = 0.43
 
 
@@ -127,8 +127,7 @@ def grade_tour(
         spine_match=spine_match,
         validation=validation,
         score=score,
-        # Phase 8 S8.4b (audit F's ordered rewrite; design §7.2): a failed
-        # validation FAILS the grade outright — never a 0.10 dock. The axis
+        # A failed validation FAILS the grade outright — never a 0.10 dock. The axis
         # keeps its weight in the breakdown (the score still reports it), but a
         # fabricating tour scoring 0.90 must not clear a 0.65 baseline while the
         # validation gate refuses to serve it. The weight test is re-derived as

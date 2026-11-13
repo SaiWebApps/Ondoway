@@ -36,7 +36,7 @@ def render_markdown(
 ) -> str:
     """Render a Script + telemetry into the empirical-walks markdown format.
 
-    Phase 6 added the optional ``tourability`` arg: when a YELLOW
+    The optional ``tourability`` arg: when a YELLOW
     assessment is passed, a warning banner is prepended at the top so
     the user sees the thin-tour caveat before the script.
     """
@@ -143,7 +143,7 @@ def _partition_by_stop(script: Script) -> dict[int, tuple[list[Sentence], list[S
     """Per stop: (the LEG sentences — spoken on the walk INTO the stop; the STOP
     sentences — spoken standing there), split by THE one leg-vs-stop rule
     (`generation.is_walk_concurrent` — the same rule the workbench's leg cards and the
-    blueprint's playback assignments read), in order. Phase 7 S7.7, design §5.6 C7."""
+    blueprint's playback assignments read), in order."""
     vignettes = _vignette_beat_ids(script)
     out: dict[int, tuple[list[Sentence], list[Sentence]]] = {}
     for sentence in script.script:
@@ -172,18 +172,16 @@ def stop_narration_text(script: Script, *, anchor_of: AnchorOf | None = None) ->
     the cold-open, the beat sentences and (unless the stop is chaptered) the close;
     NOT the walking line into it, and NOT the chapters cut out to a reviewed anchor.
 
-    The text that becomes the stop's own audio file, placed at the footprint (Phase 1
-    wired it to TTS; Phase 7 S7.7 took the leg out of it — design §5.6 C7, plan defect 7:
-    the piece used to OPEN with the walk the person had already walked). The leg's
-    sentences are `stop_leg_text`. ``anchor_of`` (S7.7 B, design §5.6 "segments") names
+    The text that becomes the stop's own audio file, placed at the footprint. The leg is
+    not in it: the piece used to OPEN with the walk the person had already walked. The
+    leg's sentences are `stop_leg_text`. ``anchor_of`` names
     the reviewed anchor a sentence is told AT, if any — built by THE placement rule
     (`placement.anchor_of`) — and such a sentence belongs to `stop_segment_text`, never
     here.
 
-    W7.11 defect 15 (the blind panel, all eleven): a CHAPTERED stop's story does not carry
-    its GOODBYE. The close used to end the story piece, so a marquee said farewell on
-    arrival and then spoke again at the chapter — "a farewell said at hello" (Julien);
-    "the goodbye is the last thing said at the last place, or it is not said" (Marcus).
+    A CHAPTERED stop's story does not carry its GOODBYE. The close used to end the story
+    piece, so a marquee said farewell on arrival and then spoke again at the chapter. The
+    goodbye is the last thing said at the last place, or it is not said.
     The close is already its own hash-guarded artifact (`stop_close_text`), and the phone
     plays it when the last chapter has been told. A stop with NO chapters is untouched.
 
@@ -207,14 +205,13 @@ def stop_segment_text(
     script: Script, anchor_of: AnchorOf
 ) -> dict[int, tuple[tuple[Anchor, str], ...]]:
     """Per stop, the CHAPTERS: one entry per reviewed anchor a sentence is told at, in
-    first-appearance order, each the anchor and its sentences joined in SCRIPT order
-    (Phase 7 S7.7 B; design §5.6 "segments"). A stop with no anchored sentence is absent —
-    its story stays whole.
+    first-appearance order, each the anchor and its sentences joined in SCRIPT order.
+    A stop with no anchored sentence is absent — its story stays whole.
 
     Every sentence of the stop is considered, not only the stationary ones: an anchored
-    sentence belongs AT its anchor wherever the leg-vs-stop rule would otherwise put it
-    (W7.11 defect 17), so the walk this reads and the leg `stop_leg_text` builds partition
-    the stop's sentences between them with nothing lost and nothing said twice."""
+    sentence belongs AT its anchor wherever the leg-vs-stop rule would otherwise put it,
+    so the walk this reads and the leg `stop_leg_text` builds partition the stop's
+    sentences between them with nothing lost and nothing said twice."""
     out: dict[int, dict[str, tuple[Anchor, list[str]]]] = {}
     for sentence in script.script:
         anchor = anchor_of(sentence)
@@ -231,13 +228,13 @@ def stop_segment_text(
 def stop_leg_text(script: Script, *, anchor_of: AnchorOf | None = None) -> dict[int, str]:
     """Per-stop spoken LEG: the walk-concurrent sentences INTO the stop — its nav line,
     a reflection placed on that leg, the walk-past one-liners — joined in order: the
-    stop's LEG piece, voiced as its own file and played on the leg (Phase 7 S7.7).
+    stop's LEG piece, voiced as its own file and played on the leg.
     A stop whose leg carries nothing is absent (silence, never an empty piece).
 
-    ``anchor_of`` (W7.11 defect 17): a sentence belonging to a reviewed anchor is told AT
-    that anchor and never on the walk toward it. Aiko, on a real leg piece: "'These facade
-    kings' is wrong twice. *These* points at a facade I cannot see for another ten minutes,
-    and it spends the reveal early." Such a sentence rides `stop_segment_text` instead."""
+    ``anchor_of``: a sentence belonging to a reviewed anchor is told AT that anchor and
+    never on the walk toward it. On the leg it points at something the walker cannot see
+    yet, and it spends the reveal early. Such a sentence rides `stop_segment_text`
+    instead."""
     return {
         idx: text
         for idx, (legs, _stops) in _partition_by_stop(script).items()
@@ -250,8 +247,8 @@ def stop_leg_text(script: Script, *, anchor_of: AnchorOf | None = None) -> dict[
 
 
 def stop_close_text(script: Script) -> dict[int, str]:
-    """Per-stop CLOSE: the text of the stop's GLUE_CLOSING sentence (Phase 6 S6.4; design
-    §5.3) — the one line [Head back now] plays and shows for THIS stretch, travelling
+    """Per-stop CLOSE: the text of the stop's GLUE_CLOSING sentence — the
+    one line [Head back now] plays and shows for THIS stretch, travelling
     beside the narration it ends (`stop_narration_text`) rather than being parsed out of
     it. A stop with no close (a legacy script) is absent from the map."""
     out: dict[int, str] = {}
@@ -333,7 +330,7 @@ def _build_sub_lookup(
 def _yellow_banner(tourability, lenses: list[str] | None = None) -> str:
     """Top-of-tour warning when density.assess returned YELLOW.
 
-    D9 fix: YELLOW fires for several distinct reasons (density.py's
+    YELLOW fires for several distinct reasons (density.py's
     ``_status`` — low fill, thin anchor pool, or a spread-out cluster with
     otherwise-surplus fill). The banner used to unconditionally print the
     "below the 70-80% audio-fill bar" sentence, which is a lie when fill is

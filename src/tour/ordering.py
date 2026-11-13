@@ -1,9 +1,9 @@
-"""ORDER — visiting order for the selected anchor set (M4).
+"""ORDER — visiting order for the selected anchor set.
 
 The greedy's insertion order is a by-product of selection, not an optimum;
-§3.2's ORDER step makes it exact. ``order_stops`` is the entry point every
+the ORDER step makes it exact. ``order_stops`` is the entry point every
 caller uses: it orders EXACTLY (Held-Karp) while that is tractable, and by
-cheapest insertion above it. No OR-Tools (the design forbids the dependency).
+cheapest insertion above it. No OR-Tools dependency.
 
 Costs come from the same LegSecondsFn divisor selection uses (routed when
 Valhalla is up, pace-corrected haversine otherwise) and may be asymmetric —
@@ -199,7 +199,7 @@ def order_stops(
         round_trip=round_trip,
         routed_cost_fn=routed_cost_fn,
     )
-    # NEVER WORSE THAN THE ORDER GIVEN (Phase 6 S6.6). The heuristic builds its
+    # NEVER WORSE THAN THE ORDER GIVEN. The heuristic builds its
     # open chain blind to the pin and appends ``fixed_end`` after the fact, so a
     # chain whose tail wandered away from the pin buys a huge closing leg: on the
     # 120-minute one-way sweep (21 stops — heuristic territory only since the

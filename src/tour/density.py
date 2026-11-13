@@ -1,4 +1,4 @@
-"""Density gating — §3.7 of phase-1-design.
+"""Density gating.
 
 Density gating guards against two failure modes that the selection
 guards alone do not catch:
@@ -42,7 +42,7 @@ from .visit_time import stop_seconds, visit_seconds
 if TYPE_CHECKING:
     from .selection import CorpusSnapshot
 
-# §3.7 thresholds — frozen at Phase 6 calibration.
+# Status thresholds, frozen at calibration.
 GREEN_FILL_RATIO_MIN: float = 1.0
 # Empirical audio-fill observed on the reference walks (module docstring:
 # "The empirical walks run 70-80% audio fill"). Display-honesty threshold
@@ -56,7 +56,7 @@ YELLOW_FILL_RATIO_MIN: float = 0.5
 YELLOW_ANCHOR_CANDIDATES_MIN: int = 3
 YELLOW_CLUSTER_COMPACTNESS_MAX: float = 0.7
 
-# Phase 6 calibration (2026-04-29): the canonical compactness check
+# Calibration (2026-04-29): the canonical compactness check
 # (≤ 0.6 for GREEN) misfires for long one-way tours where rich anchor
 # candidates legitimately spread across the envelope. The empirical
 # Île de la Cité one-way 90min from Pont Neuf scores fill=3.95 (4x
@@ -73,7 +73,7 @@ RICH_POOL_ANCHOR_CANDIDATES_MIN: int = 6
 
 # Anchor candidate definition: tier ≥ 3 and at least this many active
 # beats. Excludes 0-beat POIs even if they would otherwise score well
-# (the Phase 5 Petit Palais bug — tier 4, 0 beats, selected anyway).
+# (the Petit Palais bug — tier 4, 0 beats, selected anyway).
 ANCHOR_CANDIDATE_TIER_MIN: int = 3
 ANCHOR_CANDIDATE_BEAT_COUNT_MIN: int = 3
 
@@ -88,7 +88,7 @@ class FeasibilityAlternative(NamedTuple):
     - ``"loop"`` — drop the fixed destination B and walk an open loop from A.
     - ``"extend"`` — keep B but lengthen the tour to ``duration_min`` so the
       routed A→B leg fits inside the walk budget.
-    - ``"closer_b"`` (Step 2.2b) — keep the requested duration but aim the user
+    - ``"closer_b"`` — keep the requested duration but aim the user
       at a nearer destination B' that IS reachable inside the walk budget.
       Carries the chosen anchor's ``poi_id``/``lat``/``lng`` so the harness can
       offer it as the new endpoint.
@@ -115,10 +115,10 @@ class TourabilityRefusedError(Exception):
 
     Two refusal causes share this exception:
 
-    1. **Density RED** (Phase 6) — ``density.assess()`` returns RED. Carries the
+    1. **Density RED** — ``density.assess()`` returns RED. Carries the
        ``assessment`` so the harness can surface fill_ratio,
        anchor_candidate_count, and the recommended alternatives.
-    2. **Fixed-destination infeasibility** (Step 2.2a) — a fixed end B exists but
+    2. **Fixed-destination infeasibility** — a fixed end B exists but
        the routed A→B leg already exceeds the walk budget, so no in-budget tour
        can reach B. Carries ``gap_minutes`` (how many minutes the A→B leg
        overshoots the walk budget) plus a tuple of ``alternatives``
@@ -181,7 +181,7 @@ def assess(
     duration_min = tour_input.duration_min
     round_trip = tour_input.round_trip
 
-    # THE GATE AND THE PLANNER MUST SHRINK TOGETHER (plan S2.4 re-plan finding).
+    # THE GATE AND THE PLANNER MUST SHRINK TOGETHER.
     # `select_route` derives this same multiplier from the same
     # `TourInput.walking_pace` field; reading it here rather than threading a
     # second parameter is what keeps the two readings from drifting apart.
@@ -195,7 +195,7 @@ def assess(
 
     # Reachable POIs: within walk envelope AND eligible role AND at
     # least one active beat (zero-beat POIs are diagnostic noise, not
-    # tour content; the Phase 5 Petit Palais bug).
+    # tour content; the Petit Palais bug).
     # Lens-specific fill: count ONLY the standing-still time the requested lenses
     # would earn, so the surface can disclose "thin for YOUR interest"
     # (dark_history vs hidden_history) rather than a lens-agnostic pool number
@@ -238,15 +238,14 @@ def assess(
         # planner aiming at 2160 s and served a thin tour as healthy.
         #
         # Audio here is UNCAPPED on purpose. This is a measure of what the POOL
-        # holds, not of what one route would emit, and it is the currency C11a
-        # has always used (selection.py's delivered-thin check says so).
+        # holds, not of what one route would emit, and it is the currency
+        # selection.py's delivered-thin check has always used.
         visit_s = visit_seconds(poi, interest, snapshot)
         dwell_capacity_s += stop_seconds(visit_s, poi_audio_s)
         # "Thin for YOUR interest": a place that says nothing about the declared
         # lens contributes nothing here, and one that does contributes what this
-        # visitor would actually spend there. Theo's Conciergerie is 65 minutes
-        # inside BECAUSE it matches dark history
-        # (docs/personas/02-dark-history-walker.md, step 14).
+        # visitor would actually spend there. A dark-history visitor spends 65
+        # minutes inside the Conciergerie BECAUSE it matches that interest.
         if poi_on_lens_audio_s:
             on_lens_dwell_s += stop_seconds(visit_s, poi_on_lens_audio_s)
         reachable_beat_count += len(active)
@@ -398,7 +397,7 @@ def _status(
     anchor_candidate_count: int,
     cluster_compactness: float,
 ) -> str:
-    """The §3.7 status table (with Phase 6 rich-pool calibration).
+    """The status table (with the rich-pool calibration).
 
     GREEN  if (fill ≥ 1.0 AND anchors ≥ 4 AND compactness ≤ 0.6)
         OR (fill ≥ 1.5 AND anchors ≥ 6)   # rich-pool escape hatch
@@ -424,11 +423,11 @@ def _status(
         return "GREEN"
 
     yellow_by_fill = YELLOW_FILL_RATIO_MIN <= fill_ratio < GREEN_FILL_RATIO_MIN
-    # Phase 6 calibration (2026-04-29): the literal §3.7 spec allowed
+    # Calibration (2026-04-29): the literal status table allowed
     # the anchor-disjunct to fire alone. That let catastrophically thin
     # tours (Sacré-Cœur 90min RT at fill 0.17 with 4 colocated anchors)
-    # slip through as YELLOW instead of RED — contradicting the Phase 5
-    # audit's "refuse round-trip" expectation. Adding the same fill
+    # slip through as YELLOW instead of RED — contradicting the expectation
+    # that such a round trip is refused. Adding the same fill
     # floor as the by-fill clause (≥ 0.5) closes that loophole while
     # still preserving the disjunct as a "many tight anchors" pathway
     # for tours where fill is borderline-but-not-catastrophic.
@@ -437,7 +436,7 @@ def _status(
         and cluster_compactness <= YELLOW_CLUSTER_COMPACTNESS_MAX
         and fill_ratio >= YELLOW_FILL_RATIO_MIN
     )
-    # Monotonicity in fill (2026-07-02, density-critic finding): a pool with
+    # Monotonicity in fill (2026-07-02): a pool with
     # MORE than enough audio (fill >= 1.0) that misses GREEN on anchors or
     # compactness previously fell through every clause to RED — refusing as
     # "insufficient corpus" while holding a surplus, and (worse) adding audio

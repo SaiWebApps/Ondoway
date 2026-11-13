@@ -1,7 +1,7 @@
 """AUTHORING — the physical authoring primitives shared by every narration caller.
 
-Extracted BYTE-IDENTICALLY out of ``compose.py`` (step A1 of the one-true-tour-algorithm
-ledger).  ``compose.py`` — the whole-tour composer — is deleted later in Track A; these
+Extracted BYTE-IDENTICALLY out of ``compose.py``.  ``compose.py`` — the whole-tour
+composer — is deleted later; these
 pieces are the parts of it that survive, because they are what the per-stop authoring
 path, the Premium blueprint builder and the certification replay all actually need:
 
@@ -67,7 +67,7 @@ class ComposeRequest(BaseModel):
     ``visited_claims_by_slot`` maps each reflection slot (stop_idx) to the
     ordered union of key_claims of beats cited STRICTLY before that stop —
     the only facts a reflection may synthesize (VERIFY enforces this
-    fail-closed, Step 4.2). Slots with an empty union are omitted here:
+    fail-closed). Slots with an empty union are omitted here:
     an unverifiable reflection is never composed in the first place.
     """
 
@@ -82,13 +82,13 @@ class ComposeRequest(BaseModel):
     # single-stop rewrite still knows where it sits (cohesion) without re-writing
     # the other stops. Empty for a whole-tour compose.
     tour_context: tuple[str, ...] = ()
-    # Phase 6 S6.5 (design §5.4): the stops that may come RIGHT BEFORE this one when
+    # The stops that may come RIGHT BEFORE this one when
     # the day is replanned — the skip pairs the contingency set produces by
-    # construction (W5.2 R1.2: a skip for every stop, so stop k-2 -> k for every k).
+    # construction (a skip for every stop, so stop k-2 -> k for every k).
     # The writer answers with one THREAD per name (or leaves it out), inside this
     # stop's own authoring call — zero extra calls.
     thread_from: tuple[str, ...] = ()
-    # Phase 6 S6.6 (design §5.5; W6.2 R3): the FULL TELLING's request carries the
+    # The FULL TELLING's request carries the
     # TIGHT telling here — the continuation must repeat nothing of it. Empty on a
     # tight (day) compose.
     already_told: str = ""
@@ -125,7 +125,7 @@ class CertificationComposition(BaseModel):
 
     script: Script
     composition_trace: tuple[CompositionTrace, ...]
-    #: Phase 6 S6.5 (design §5.4): the writer's THREADS by stop index, then by the
+    #: The writer's THREADS by stop index, then by the
     #: name of the stop that may come right before it — one sentence each, kept
     #: beside the script (they are not part of any stop's narration: they play on the
     #: leg into the stop only when the session makes that pair consecutive).
@@ -152,13 +152,13 @@ class CompletedCertificationComposeUnit(BaseModel):
     request_sha256: str = Field(..., pattern=r"^[0-9a-f]{64}$")
     response_sha256: str = Field(..., pattern=r"^[0-9a-f]{64}$")
     parsed_payload_sha256: str = Field(..., pattern=r"^[0-9a-f]{64}$")
-    #: Phase 6 S6.5: the writer's threads for this stop, (from-name, text) pairs as
+    #: The writer's threads for this stop, (from-name, text) pairs as
     #: parsed from the response — verified and kept by the finalizer.
     parsed_threads: tuple[tuple[str, str], ...] = ()
 
 
 COMPOSE_MODEL = "claude-opus-4-8"
-# FACT review ran a cheaper-model experiment (claude-sonnet-5, §0.1.6) and the
+# FACT review ran a cheaper-model experiment (claude-sonnet-5) and the
 # frozen calibration REFUSED it, twice-measured 2026-08-28: with a ceiling that
 # let it finish (end_turn, 11,760 of 32,000), Sonnet still judged two
 # human-labeled PASS paraphrase cases FAIL (fact-policy-4, fact-policy-6) — it
@@ -173,12 +173,12 @@ FACT_REVIEW_MODEL = COMPOSE_MODEL
 # Paris compose mid-JSON (live gate, 2026-07-02). Stream + 64K per the SDK
 # guidance; a max_tokens stop is raised as a hard error, never parsed.
 COMPOSE_MAX_OUTPUT_TOKENS = 64000
-# Per-stop ceiling tightened at Phase 8 to 2.7x the measured max (11,797
+# Per-stop ceiling tightened to 2.7x the measured max (11,797
 # output tokens across 45 stops, thinking included). A max_tokens stop under
 # zero-retry is paid-and-lost, so the margin is deliberately wide.
 CERTIFICATION_COMPOSE_MAX_OUTPUT_TOKENS = 32_000
 
-# The LOCKED narrator voice (its spec tree is retired — git history): ONE warm,
+# The LOCKED narrator voice: ONE warm,
 # second-person narrator; the newcomer's curiosity captured as STRUCTURE;
 # lens = a register/diction dial on the one voice. Grounding is enforced by
 # VERIFY, but the prompt states the rules so attempt 1 usually passes.
@@ -640,7 +640,7 @@ def candidate_compose_request_envelope(
 
 
 def _threads_from_json(payload: dict) -> tuple[tuple[str, str], ...]:
-    """The writer's THREADS from a compose response's JSON (Phase 6 S6.5): the optional
+    """The writer's THREADS from a compose response's JSON: the optional
     ``threads`` array of ``{"from", "text"}`` pairs, shape-checked here (TypeError on a
     malformed entry, caught by the caller as "not a valid Premium sentence payload");
     the CONTENT rules — one sentence, under fifteen words, a name the request asked for —
@@ -678,10 +678,10 @@ def _edit_distance_at_most_1(a: str, b: str) -> bool:
 
 
 def _corrected_citation(cited_id: str, known_ids: frozenset[str]) -> str:
-    """The one deterministic copy-error correction (Phase 8 S8.3e; W8.2 R4).
+    """The one deterministic copy-error correction.
 
     A cited id at edit distance 1 from exactly ONE id the request supplied is a
-    WRITER'S TYPO, corrected — W7.14's live instance killed Camille's day 422
+    WRITER'S TYPO, corrected — one live instance refused a whole day (422)
     three times over one dropped character (`1311cfd-…` for `1311cf7d-…`). A
     known id, an id with no close neighbour, or one with TWO close neighbours
     (never guess) comes back untouched, and traceability still blocks the
@@ -707,9 +707,9 @@ def _sentences_from_json(sentences: list[dict], request: ComposeRequest) -> tupl
     slot ``stop_idx``; an unknown ``source_id`` (a hallucinated beat) is left as-given for
     the traceability gate to reject.
 
-    Phase 8 S8.3e: a beat citation (``source_id`` or an ``also_cites`` entry) one
+    A beat citation (``source_id`` or an ``also_cites`` entry) one
     character off exactly ONE id of this stop's stitch is corrected first
-    (``_corrected_citation``) — the mechanical consequence of W8.2 R4: the
+    (``_corrected_citation``), so the
     writer's typos stop killing days, and everything else still fails closed.
 
     The SAME doctrine covers the TYPE field (live 2026-08-29, v3 batch): a
@@ -763,7 +763,7 @@ def _door_state(route: Route, stop_index: int) -> str:
     Three different truths get three different sentences, keyed the way the
     wire keys them (`ClockExclusion.kept_outside` and `.guessed`): a door the
     CLOCK voided on MAP hours may be said plainly to be closed today; one
-    voided on GUESSED hours (Docs/adr/0006) keeps its hedge — the writer may
+    voided on GUESSED hours keeps its hedge — the writer may
     say we think it is closed and could not confirm that, never state it; a
     stop outside-only because the day has no time for its interior is NOT
     closed, and calling it closed would be the checkable lie the
@@ -816,7 +816,7 @@ def _certification_compose_requests(
 ) -> tuple[dict[str, BeatRef], list[int], dict[int, ComposeRequest]]:
     """Rebuild the canonical per-stop requests from the grounded source.
 
-    ``already_told_by_stop`` (Phase 6 S6.6): set only on a FULL-TELLING plan — the
+    ``already_told_by_stop``: set only on a FULL-TELLING plan — the
     stop's request carries the tight telling as ALREADY TOLD, and asks for NO
     threads (a full telling plays inside its stop; threads belong to the day's
     tight compose).
@@ -830,7 +830,7 @@ def _certification_compose_requests(
     for sentence in stitched.script:
         by_stop[sentence.stop_idx].append(sentence)
     stops = sorted(by_stop)
-    # The UPPER bound was deleted 2026-08-04 (OWNER RULING 5): duration alone
+    # The UPPER bound was deleted 2026-08-04 by owner ruling: duration alone
     # decides how many stops a route has, and refusing to author one the same
     # engine had already planned was a limit with no reason behind it. The LOWER
     # bound stays: ``requests`` below is keyed by stop index, so an empty stitch
@@ -854,7 +854,7 @@ def _certification_compose_requests(
             for sentence in stop_sentences
             if sentence.source_type == "beat" and sentence.source_id in beats_by_id
         }
-        # Phase 6 S6.5: the skip pair. The set skips every stop (R1.2), so the stop
+        # The skip pair. The set skips every stop, so the stop
         # two back may come right before this one; its name asks for a thread.
         already_told = (already_told_by_stop or {}).get(stop_index, "")
         thread_from = (
@@ -883,8 +883,8 @@ def _certification_compose_requests(
 
 
 def _dedup_composed(sentences: list[Sentence], beat_sequence: BeatSequence) -> list[Sentence]:
-    """The composed-path de-dup, ported byte-for-byte from ``compose.py`` (one-true-
-    tour-algorithm ledger, step A5): collapse a fact voiced twice in the ASSEMBLED
+    """The composed-path de-dup, ported byte-for-byte from ``compose.py``:
+    collapse a fact voiced twice in the ASSEMBLED
     sentence stream — cross-beat claim repeat (the Île de la Cité three-source-book
     case, now most often cross-STOP since each stop is authored independently),
     same-stop byte-identical, and same-beat near-verbatim. Coverage-safe BY
@@ -902,7 +902,7 @@ def _dedup_composed(sentences: list[Sentence], beat_sequence: BeatSequence) -> l
     return out
 
 
-#: W6.2 R5: a thread is under fifteen words (Paulo, F&D).
+#: A thread is at most fifteen words; a longer one is dropped.
 THREAD_MAX_WORDS = 15
 THREAD_DROPPED_DEGRADATION = "thread_dropped"
 
@@ -910,7 +910,7 @@ THREAD_DROPPED_DEGRADATION = "thread_dropped"
 def _thread_repeats_the_telling(thread_text: str, own_sentences: list[str]) -> bool:
     """Is this thread a near-verbatim restatement of its stop's own telling?
 
-    The claim_dedup near-dup detector applied to the one pair R3 names: the
+    The claim_dedup near-dup detector applied to one pair: the
     thread against the sentences the same stop already voices. Token-set ratio
     at ``claim_dedup._NEAR_DUP_RATIO`` (90 — the Abelard echo measured 98-100,
     two different facts ~37); very short lines are never judged (the
@@ -938,18 +938,18 @@ def _keep_threads(
     beats_by_id: dict[str, BeatRef],
     checker: FaithfulnessChecker | None,
 ) -> dict[int, dict[str, str]]:
-    """The writer's THREADS, kept by stop and predecessor (Phase 6 S6.5; design §5.4;
-    W6.2 R5): each ONE sentence and under THREAD_MAX_WORDS words, answering a name the
+    """The writer's THREADS, kept by stop and predecessor:
+    each ONE sentence and under THREAD_MAX_WORDS words, answering a name the
     request actually asked for, and — when this run carries the real ``checker`` —
     ENTAILED against the same union the in-script thread is gated on (what the walker
     has heard plus the stop's own beats; a thread is content, fact-gated).
 
     A thread that misses the bar is DROPPED AND REPORTED on the degradations channel
-    (``thread_dropped``), and the day ships without it — the panel's own remedy for the
-    pair is silence, never glue (R5: "none rather than glue"), and the S6.4 precedent
+    (``thread_dropped``), and the day ships without it — the remedy for the
+    pair is silence, never glue, and the same rule as for closes
     holds: a refusal is for missing MANDATORY content (a close), a quality miss on
-    OPTIONAL enrichment ships degraded and visibly. MEASURED 2026-08-19 (s65-proof,
-    this ledger's S6.5): with these as ValueError, two of three real F&D composes died
+    OPTIONAL enrichment ships degraded and visibly. MEASURED 2026-08-19:
+    with these as ValueError, two of three real composes of one test day died
     whole — a 16-word thread and one unentailed line each killed a day whose every
     SENTENCE had passed the gate. Answering a name that was never asked for is not a
     quality miss but a protocol violation, and still refuses (ValueError)."""
@@ -990,12 +990,12 @@ def _keep_threads(
             if len(text.split()) > THREAD_MAX_WORDS:
                 drop(stop_index, from_name, text, f"is over {THREAD_MAX_WORDS} words")
                 continue
-            # Phase 8 S8.3d (W8.2 R3, 11/11): ONE FACT, ONE VOICE, PER DAY — a
+            # ONE FACT, ONE VOICE, PER DAY — a
             # thread that near-verbatim repeats a sentence of its OWN stop's
-            # telling is the measured repeat class (Greta's coronation
-            # story+thread; Sofia's Templar bridge leg+thread). Same detector as
+            # telling is the measured repeat class (a coronation
+            # story+thread; a Templar bridge leg+thread). Same detector as
             # the composed-script near-dup pass (rapidfuzz token_set_ratio at
-            # claim_dedup's threshold); the remedy stays R5's — silence.
+            # claim_dedup's threshold); the remedy stays silence.
             own_sentences = [s.text for s in composed.script if s.stop_idx == stop_index]
             if _thread_repeats_the_telling(text, own_sentences):
                 drop(stop_index, from_name, text, "repeats the stop's own telling")
@@ -1029,7 +1029,7 @@ def _drop_corpus_leg_lines_untrue_where_they_play(
     vignette_beat_ids: frozenset[str],
     transit_beat_ids: frozenset[str],
 ) -> tuple[int, Script]:
-    """ADR 0001's rule at FIRST compose: drop the failing line, say so, never
+    """The rule at FIRST compose: drop the failing line, say so, never
     refuse the day for it — scoped to the one class where a drop is safe.
 
     Eligible: a placement/leg-voice hit on a walk-concurrent CORPUS sentence
@@ -1078,8 +1078,8 @@ CLOSE_NOT_AUTHORED_DEGRADATION = "close_not_authored"
 def _require_one_close_per_stop(
     sentences: list[Sentence], stitched: Script, stops: list[int], route: Route
 ) -> None:
-    """Every composed stop ENDS on exactly one one-sentence GLUE_CLOSING (Phase 6 S6.4;
-    design §5.3, §7.4.5 "every prefix is decent"). Missing, doubled, not last, or more
+    """Every composed stop ENDS on exactly one one-sentence GLUE_CLOSING.
+    Missing, doubled, not last, or more
     than one sentence long → ValueError (the seam's refusal). A close byte-identical to
     the stitch's template is NOT authored: it ships, and is reported."""
     from .degradations import record
@@ -1151,14 +1151,14 @@ def finalize_certification_composition(
     source.  It performs no provider calls and
     needs no in-memory call ledger.
 
-    THE THREE GATE KNOBS, and why they are knobs (ledger decision D3).  This
+    THE THREE GATE KNOBS, and why they are knobs.  This
     finalizer was written for the CERTIFICATION replay, whose judgement of prose is
     SEMANTIC: it validates structure only and lets factual review own meaning, so its
     defaults are the trusting offline entailment stub, no coverage baseline and no
     lexical scan.  The persisted ``POST /trips/{id}/compose`` path is the opposite
     case — it writes an unreviewed tour into Neo4j — and the whole-tour composer it
-    replaced ran all three.  Rather than re-gate certification (a NEW check, which
-    this ledger forbids) each is injectable and defaults OFF:
+    replaced ran all three.  Certification gains no NEW check, so rather than
+    re-gate it each is injectable and defaults OFF:
 
     * ``faithfulness_checker`` — the real entailment checker; ``None`` keeps the
       trusting ``MockFaithfulnessChecker``.
@@ -1169,14 +1169,14 @@ def finalize_certification_composition(
       of the authorized-sources traceability below.  Structural traceability cannot
       see invention, so without this the count on the compose 422 reads 0 by
       construction rather than by measurement.
-    * ``require_closes`` (Phase 6 S6.4; design §5.3, §7.4.5) — every composed stop
+    * ``require_closes`` — every composed stop
       must END on exactly one GLUE_CLOSING sentence, one sentence long: the close is
       what a wrap-up plays, so a stop without one cannot ship (refused here with a
       ValueError, the seam's refusal shape). A close left as the stitch's TEMPLATE
       is not authored: it ships (the fallback beats silence) and is REPORTED on the
       degradations channel as ``close_not_authored``, never counted as the writer's.
       OFF for the certification replay (the sealed candidates predate closes).
-    * ``enforce_placement_floors`` (Phase 8 S8.3; W8.2 R1/R2/R5) — a sentence must
+    * ``enforce_placement_floors`` — a sentence must
       be TRUE WHERE IT PLAYS: ``validation.placement_floor_hits`` over the composed
       script, route-aware through this finalizer's own closure (the legs' routed
       minutes, each stop's door, the tap-only full-telling stops). Hits land on
@@ -1269,13 +1269,13 @@ def finalize_certification_composition(
         if sentence.source_type != "beat"
     ) | ({GLUE_REFLECTION} if any(request.slots for request in requests.values()) else set())
 
-    # Phase 8 S8.3: the route-aware inputs the placement floors need, computed
+    # The route-aware inputs the placement floors need, computed
     # once from what this finalizer already holds — placement itself stays THE
     # frozen rule (is_walk_concurrent + these vignette ids), never re-derived.
     vignette_beat_ids = frozenset(
         beat.id for beats in beat_sequence.vignette_beats.values() for beat in beats
     )
-    # The walk's own corpus narration (P9R-S1): transit-class beats play ON the
+    # The walk's own corpus narration: transit-class beats play ON the
     # leg, so the floor judges them by the leg's rules, not the stop's.
     transit_beat_ids = transit_class_beat_ids(beats_by_id.values())
     leg_minutes_by_stop = {
@@ -1351,7 +1351,7 @@ def finalize_certification_composition(
         base_validator=validate_authorized_sources,
     )
     report = verifier(composed)
-    # THE FIRST-COMPOSE DROP VALVE (P9R-S1; ADR 0001 extended): when the ONLY
+    # THE FIRST-COMPOSE DROP VALVE: when the ONLY
     # thing between this day and serving is a corpus leg line untrue where it
     # plays, the line is dropped and disclosed rather than the day refused.
     # The reduced script re-runs the FULL verifier, so a drop that breaks

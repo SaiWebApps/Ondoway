@@ -1,4 +1,4 @@
-"""Reflection placement — spec §6 (Phase 4 Step 4.1).
+"""Reflection placement.
 
 A reflection is a short synthesis of what has ALREADY been visited, spoken
 during a long walking leg to fill the audio deficit. This module owns only
@@ -6,7 +6,7 @@ the deterministic PLACEMENT — which legs get one. The reflection TEXT is
 composed at COMPOSE time (an LLM synthesis over the visited beats'
 key_claims — a template cannot write it) and is gated fail-closed by VERIFY.
 
-Placement rule (locked from the spec's deferred clarifications):
+Placement rule:
 
 - The leg INTO stop ``k`` (``k >= 1``) is eligible iff its walking time
   exceeds the audio the leg already carries by at least

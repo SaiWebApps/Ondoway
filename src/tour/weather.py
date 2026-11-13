@@ -1,18 +1,17 @@
-"""The forecast is fetched, never asked (design §2.5, data row 6.8, demo D3).
+"""The forecast is fetched, never asked.
 
 ``fetch_rain_likelihood`` asks open-meteo — keyless, no account — for one day's
 maximum precipitation probability and folds it to ``"rain"`` / ``"dry"`` /
 ``None``. ``None`` means "no signal": the caller plans exactly as it would
-today (design §2.5 "Weather (fetched)" — never asked of the user, never
-blocking), so every failure here fails OPEN — two attempts, then ``None``,
-never an exception to the caller.
+today (never asked of the user, never blocking), so every failure here fails
+OPEN — two attempts, then ``None``, never an exception to the caller.
 
-Extends (plan S3.9, per design §10.8.1): considered ``routing_client.py``, the
+Extends: considered ``routing_client.py``, the
 module that owns this package's HTTP — rejected, because that client speaks to
 OUR Valhalla with per-leg receipts and sticky degradation, and a public
 one-shot forecast fetch shares none of that contract. The descriptive
 User-Agent is imported from the established ingest door rather than restated
-(the W1.8 Overpass-406 lesson: anonymous clients get refused).
+(anonymous clients get refused).
 """
 
 from __future__ import annotations
@@ -26,7 +25,7 @@ from src.onboard.fetch import ONBOARD_USER_AGENT
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 
 # A day whose maximum precipitation probability reaches this percent plans as a
-# rain day (D3 "the rainy day": covered legs, covered anchors); below it, dry.
+# rain day (covered legs, covered anchors); below it, dry.
 RAIN_PROBABILITY_THRESHOLD = 50
 
 _ATTEMPTS = 2  # two tries, then None — a forecast is never worth blocking on

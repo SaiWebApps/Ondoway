@@ -1,9 +1,9 @@
-"""Source-traceability + forbidden-phrase validation — §3.5/§3.6.
+"""Source-traceability + forbidden-phrase validation.
 
 Runs after ``generate(...)`` and produces a ``ValidationReport``. The
 caller (skill orchestrator, CLI, or test harness) treats a non-empty
 report as a hard failure — these checks are the gate between
-generation and TTS per phase-1-design §3.6.
+generation and TTS.
 
 Two independent checks:
 
@@ -15,9 +15,8 @@ Two independent checks:
    Anything else lands in ``untraceable_sentences``.
 
 2. **Forbidden-phrase scan.** Glue sentences may not contain
-   "imagine" / "picture this" / "envision" / "visualize" (§3.5 +
-   feedback_tour_tone_default). Glue sentences may not introduce a
-   proper noun or 4-digit year that does not appear in any cited
+   "imagine" / "picture this" / "envision" / "visualize". Glue sentences
+   may not introduce a proper noun or 4-digit year that does not appear in any cited
    beat's ``script_body`` from the same Script.
 
 Beat-cited sentences are NOT scanned for forbidden words — the corpus
@@ -161,7 +160,7 @@ def _untraceable_sentences(
     *,
     allowed_derived_source_ids: frozenset[str] | None = None,
 ) -> list[Sentence]:
-    # Track B (B.4): the known-id set derives from poi_beats + vignette_beats
+    # The known-id set derives from poi_beats + vignette_beats
     # INTERNALLY — a walk-past one-liner is beat-cited against a vignette
     # beat, which is not a POIBeats entry. The signature does not change.
     known_beat_ids = {b.id for plan in beat_sequence.poi_beats for b in plan.beats}
@@ -229,15 +228,15 @@ def _forbidden_phrase_hits(
     # engine's own choice from the corpus rather than anything glue made up.
     if spine_area:
         cited_proper_nouns |= _proper_nouns_in(spine_area)
-    # THE CITY'S OWN NAME AND DEMONYM ARE THE WALK'S VOCABULARY (Phase 6 W6.12,
-    # measured: "the height of Parisian luxury" in an authored close was refused as
+    # THE CITY'S OWN NAME AND DEMONYM ARE THE WALK'S VOCABULARY (measured:
+    # "the height of Parisian luxury" in an authored close was refused as
     # new_proper_noun:Parisian, three attempts, the day dead). The tour's own city
     # can never be an invention.
     cited_proper_nouns |= _city_vocabulary(script.city_slug)
     cited_years = set(_YEAR_RE.findall(cited_text))
 
-    # Phase 6 S6.5 (W6.2 R4): the names of stops LATER than each stop index — a
-    # "you'll see"-class phrase is a promise only when it points past the stop.
+    # The names of stops LATER than each stop index — a "you'll see"-class phrase
+    # is a promise only when it points past the stop.
     stop_names = [poi.name for poi in script.selected_pois]
 
     def _names_a_later_stop(text: str, stop_idx: int) -> bool:
@@ -271,8 +270,8 @@ def _forbidden_phrase_hits(
             if phrase in lower:
                 out.append((sentence, f"forbidden_phrase:{phrase}"))
 
-        # Phase 6 S6.5 (W6.2 R4, LOCKED 8/11): a stop's text may NAME its neighbour
-        # as a fact but never PROMISE it — the session may trade the next stop away.
+        # A stop's text may NAME its neighbour as a fact but never PROMISE it — the
+        # session may trade the next stop away.
         # GLUE_NAV is the map speaking ("Next, walk to X" is its job) and is exempt.
         if sentence.source_id != GLUE_NAV:
             for phrase in FORWARD_PROMISE_PHRASES:
@@ -283,15 +282,15 @@ def _forbidden_phrase_hits(
                     out.append((sentence, f"forward_promise:{phrase}"))
 
         # Proper-noun + year leakage in glue. GLUE_NAV is exempt from the
-        # proper-noun half (Phase 6 W6.12, measured: the nav line naming the
+        # proper-noun half (measured: the nav line naming the
         # Seine was refused as new_proper_noun:Seine): the nav line is the MAP
         # speaking — its nouns are places by nature, exactly as the
         # forward-promise scan already treats it. Years and the phrase list
         # still apply to it; story glue keeps the full scan. What the nav voice
-        # may NOT do is speak compass (Phase 8 S8.3, W8.2 R1 11/11): a leg line
+        # may NOT do is speak compass: a leg line
         # names direction only as left/right/straight-ahead or a visible
-        # landmark — "Walk northwest along the Seine" pointed Greta the wrong
-        # way because the words never knew the route's own bearing.
+        # landmark — "Walk northwest along the Seine" pointed a walker the
+        # wrong way because the words never knew the route's own bearing.
         if sentence.source_id == GLUE_NAV:
             for match in _COMPASS_RE.finditer(sentence.text):
                 out.append((sentence, f"leg_voice_compass:{match.group(0).lower()}"))
@@ -351,7 +350,7 @@ def _name_is_licensed(token: str, licensed: set[str]) -> bool:
     one: the tokenizer (``_CAP_TOKEN_RE``) keeps an apostrophe-s inside the token, so
     "Ravaillac's" was compared against a set holding "Ravaillac" and refused as an
     invention; "André" was refused against a corpus that spells "Andre". Measured
-    2026-08-19 (Phase 6 W6.1): Fiona & Dev's compose was refused over the wire, every
+    2026-08-19: a couple's compose was refused over the wire, every
     attempt, for "…died under Francis Ravaillac's knife" and "André Maurois ranks
     him…" — reflections drawing on a voiced beat's own key claims. Fold diacritics,
     strip the possessive/plural endings, compare again; a genuinely different name
@@ -369,7 +368,7 @@ def _name_is_licensed(token: str, licensed: set[str]) -> bool:
             if ending in ("s'", "s\u2019"):
                 candidates.append(f"{bare}s")
     # A HYPHENATED COMPOUND whose capitalised head is licensed is that name in
-    # adjectival dress, not a new one (Phase 6 W6.12, measured on Camille's day:
+    # adjectival dress, not a new one (measured:
     # "From a Roman-style arch for Napoleon…" was refused as
     # new_proper_noun:Roman-style against a corpus that says "Roman" freely).
     if "-" in token:
@@ -386,11 +385,11 @@ def _cited_beat_corpus_text(script: Script, beat_sequence: BeatSequence) -> str:
             if beat.id in cited_ids:
                 if beat.script_body:
                     chunks.append(beat.script_body)
-                # Phase 4 (Step 4.2): key_claims are corpus-derived facts a
+                # key_claims are corpus-derived facts a
                 # reflection legitimately quotes; their proper nouns/years are
                 # canonical context, same class as cues/pronunciation.
                 chunks.extend(beat.key_claims)
-            # Phase 7.5: physical_cues + pronunciation are corpus-derived
+            # physical_cues + pronunciation are corpus-derived
             # facts that can surface in the synthesized cold-open. Include
             # them in canonical context so glue-validation doesn't flag
             # cue proper nouns ("Café Ma Bourgogne") as runtime invention.
@@ -399,7 +398,7 @@ def _cited_beat_corpus_text(script: Script, beat_sequence: BeatSequence) -> str:
                     chunks.append(cue.cue)
             if beat.pronunciation:
                 chunks.append(beat.pronunciation)
-    # Track B (B.4): cited vignette beats are corpus text too — their
+    # Cited vignette beats are corpus text too — their
     # script_body/key_claims join the canonical context exactly like
     # anchor-beat text (the walk-past one-liner is beat-cited, and glue may
     # legitimately reference facts the corpus already voiced).
@@ -409,7 +408,7 @@ def _cited_beat_corpus_text(script: Script, beat_sequence: BeatSequence) -> str:
                 if beat.script_body:
                     chunks.append(beat.script_body)
                 chunks.extend(beat.key_claims)
-    # Phase 7.5: Area names that surface in the synthesized opener
+    # Area names that surface in the synthesized opener
     # ("the Marais", "the Île de la Cité") are canonical context too.
     for poi in script.selected_pois:
         if poi.area:
@@ -418,16 +417,15 @@ def _cited_beat_corpus_text(script: Script, beat_sequence: BeatSequence) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Phase 8 S8.3 — the placement floors: a sentence is true where it PLAYS
-# (W8.2 LOCKED RULINGS R1/R2/R5; phase7-ledger carry 1; design §5.6/§8.2).
+# The placement floors: a sentence is true where it PLAYS.
 # Pure text checks over the composed script; the ROUTE-aware inputs (the legs'
 # routed minutes, each stop's door, which stops are tap-only) arrive as plain
 # mappings built by the authoring finalizer's closure, so this module stays
 # route-free and there is ONE definition of every floor.
 # ---------------------------------------------------------------------------
 
-#: Arrived deixis — words only true standing AT the place (R2's own list: here,
-#: this, you're standing, look up). "From here" is the leg's START and is true
+#: Arrived deixis — words only true standing AT the place (here, this,
+#: you're standing, look up). "From here" is the leg's START and is true
 #: where it plays (the final-destination template's own words).
 _ARRIVED_DEIXIS_RES: tuple[re.Pattern[str], ...] = (
     re.compile(r"\byou'?re standing\b|\byou are standing\b", re.IGNORECASE),
@@ -436,8 +434,8 @@ _ARRIVED_DEIXIS_RES: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bthis\b|\bthese\b", re.IGNORECASE),
 )
 
-#: A through-the-door line — legal ONLY where the wire says door=true (R2,
-#: Aiko's rule: her Bourse's words invited her into a closed rotunda). Verb
+#: A through-the-door line — legal ONLY where the wire says door=true (a line
+#: that invites the listener through a closed door is false). Verb
 #: phrases only: "a walk in the park" or "the walk to the tower" are nouns and
 #: must never read as an invitation.
 _DOOR_LINE_RE = re.compile(
@@ -446,8 +444,8 @@ _DOOR_LINE_RE = re.compile(
 )
 
 #: An imperative of motion — navigation language. Legal only in the nav line
-#: (R5: "navigation lives only in leg lines"); auto-played at a stop it MOVES
-#: the listener (Rosemary's "Step around the corner to 31 rue de Bellechasse").
+#: (navigation lives only in leg lines); auto-played at a stop it MOVES
+#: the listener ("Step around the corner to 31 rue de Bellechasse").
 #: The mid-sentence half fires only on unambiguous VERB uses — an unambiguous
 #: phrase, or a motion verb chained after and/then/now/a comma — so a close's
 #: "brings our walk to a close" (the noun) never reads as an instruction.
@@ -481,22 +479,22 @@ def placement_floor_hits(
     tap_only_stops: frozenset[int] | set[int] = frozenset(),
     transit_beat_ids: frozenset[str] | set[str] = frozenset(),
 ) -> list[tuple[Sentence, str]]:
-    """(sentence, code) for every sentence untrue WHERE IT PLAYS (W8.2 R1/R2/R5).
+    """(sentence, code) for every sentence untrue WHERE IT PLAYS.
 
     Placement is the frozen rule itself (``is_walk_concurrent`` + the vignette
     and transit ids — a corpus transit beat is the walk's own narration and
     plays ON the leg, so its motion imperatives are true where they play),
     never inferred from prose. Checked SENTENCE BY SENTENCE within each
-    piece (R2, Marcus: "never the opening alone"). The floors:
+    piece, never the opening alone. The floors:
 
     - ``fused_across_playback_contexts`` — one sentence citing both a seated
-      beat and a walk-past vignette beat cannot be placed at all (W8.1(f)
-      mechanism (c): the bare ``partition_final_script`` ValueError, named).
+      beat and a walk-past vignette beat cannot be placed at all (the
+      bare ``partition_final_script`` ValueError, named).
     - ``arrived_word_on_leg:<word>`` — no standing verb or arrived deictic in
       any leg piece (nav, thread, vignette one-liner alike).
     - ``leg_voice_minutes:<spoken>_routed_<n>`` — the nav line speaks minutes
-      only as the routed leg's own number (Théo: "written five, measured
-      nine"). A leg whose routed minutes are unknown is skipped, never guessed.
+      only as the routed leg's own number (the walker times
+      the leg by it). A leg whose routed minutes are unknown is skipped, never guessed.
     - ``moving_line_auto_played:<phrase>`` / ``door_line_without_door:<phrase>``
       — no imperative of motion in an auto-played stop piece; a through-the-door
       line only where the wire says door=true. Tap-only stops (the full

@@ -315,9 +315,9 @@ def craft_score(text: str) -> float:
     over-repetition, and the measured AI tells.
 
     G2/G3 (motivated_transition / causal_chain terms below): a LEXICAL PROXY for the
-    tour-quality standard's semantic checks G2 (motivated transitions, S2) and G3
-    (causal chain not list, S3) — see fixtures/tour-quality-standard/01-standard.md
-    §4. This module is already an explicitly lexical/statistical heuristic (see module
+    tour-quality standard's semantic checks G2 (motivated transitions) and G3
+    (causal chain not list).
+    This module is already an explicitly lexical/statistical heuristic (see module
     docstring). See _MOTIVATED_TRANSITION / _BARE_ADJACENCY / _CAUSAL_CHAIN above for
     the documented false-positive/false-negative shapes of this proxy.
 
@@ -343,8 +343,8 @@ def craft_score(text: str) -> float:
     To make these terms actually steer output, either widen the patterns until they
     register the variation that EXISTS between machine candidates (re-run the flip-rate
     measurement to confirm), or abandon the proxy and move the effort to a higher rung:
-    the compose PROMPT (what gets written) or beat SELECTION (what gets seated). See
-    [[founding-case-efficacy-rule]] — this change passed a gold-vs-machine validation
+    the compose PROMPT (what gets written) or beat SELECTION (what gets seated).
+    This change passed a gold-vs-machine validation
     and a full adversarial review while being a production no-op, because nobody
     measured the flip rate, which is the number that decides whether it does anything.
 
@@ -353,10 +353,10 @@ def craft_score(text: str) -> float:
       - compose.py:~1067 — a RANKER only: best-of-N tie-break among candidates that
         already tied on fact-safety (``_local_penalty``). Losing here means a
         differently-drafted-but-equally-fact-safe candidate ships instead; no content
-        is deleted. This is craft_score's ONLY surviving caller as of Track A step A6
-        (2026-07-30): the never-shipped author-engine track — including the
+        is deleted. This is craft_score's ONLY surviving caller as of 2026-07-30: the
+        never-shipped author-engine track — including the
         ``author.py:416`` COMPARATIVE GATE this docstring used to also describe — was
-        deleted at A6, and ``compose.py`` itself is scheduled for deletion at A8, after
+        deleted, and ``compose.py`` itself is scheduled for deletion, after
         which this function has zero production callers.
     BOUNDING THE GATE RISK: the G2/G3 terms below are deliberately kept small relative
     to the rest of the score so they cannot flip a close comparison on their own. Each of
@@ -371,7 +371,7 @@ def craft_score(text: str) -> float:
     the deciding factor — that is inherent to any composite score used to break ties, and
     is called out here rather than hidden. (The larger "remainder vs. stitch_fallback"
     hard-gate risk this section originally bounded belonged to the author-engine track's
-    ``_excise``, deleted at Track A step A6 — see the caller note above; only the lower-
+    ``_excise``, since deleted — see the caller note above; only the lower-
     stakes best-of-N ranker in compose.py remains.) See test_however_is_not_double_counted
     for the measured before/after swing.
     """

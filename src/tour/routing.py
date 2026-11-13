@@ -8,8 +8,8 @@ Constants and pure functions used by selection.py:
 - envelope_radius_m: the radius around `start` reachable inside the
   err-short walk budget.
 - insertion_cost_seconds: best-insertion marginal cost used by the greedy
-  selection step (§3.2 marginal_route_cost). Final ordering is exact —
-  see src/tour/ordering.py (M4 Held-Karp).
+  selection step. Final ordering is exact —
+  see src/tour/ordering.py (Held-Karp).
 - summarise_route: rolls up an ordered POI list into a Route shell with
   transit segments, walk distance, and walk-time totals.
 
@@ -40,12 +40,12 @@ if TYPE_CHECKING:
     # routing_client imports from this module; type-only import avoids the cycle.
     from .routing_client import RoutingClient
 
-# M3: walking seconds for one leg, (from_lat, from_lng, to_lat, to_lng) -> int.
+# Walking seconds for one leg, (from_lat, from_lng, to_lat, to_lng) -> int.
 # The default is the pace-corrected haversine; selection builds a memoized
 # routed version from a RoutingClient.
 LegSecondsFn = Callable[[float, float, float, float], int]
 
-# Walking time and the time budget — §3.2 of phase-1-design.
+# Walking time and the time budget.
 #: How fast a walker is assumed to move. A MEASUREMENT, and a wrong one: people walk
 #: about 4.5 km/h, so every leg time this product reports is inflated by about half.
 #:
@@ -58,8 +58,8 @@ LegSecondsFn = Callable[[float, float, float, float], int]
 #: time. That is arithmetically correct and is the reported bug's shape at a third of
 #: its size.
 #:
-#: The fix is a detour bound measured in METRES rather than minutes, which PLAN.md
-#: defers to Release 2 / Phase 5. Until it lands, an honest walking speed buys a
+#: The fix is a detour bound measured in METRES rather than minutes, which is not
+#: built yet. Until it lands, an honest walking speed buys a
 #: dishonest route, so this stays at 3.0 and the separation below is what makes
 #: raising it a one-line change when the discipline arrives.
 PACE_KMH: float = 3.0
@@ -70,8 +70,8 @@ PACE_KMH: float = 3.0
 #: measurement. While they were one constant, raising the pace would have scaled the
 #: search region by 1.5x — at a 300-minute request, 4,444 m becomes 6,667 m, and
 #: Parc de la Villette sits 5,614 m from Rue Royale, so it would have re-entered the
-#: circle Phase 1 shrank to exclude it. Phase 1 undone through a constant that has
-#: nothing to do with it.
+#: circle the reach radius was shrunk to exclude it. That shrink undone through a
+#: constant that has nothing to do with it.
 #:
 #: Two equal numbers with one name is a coincidence waiting to be mistaken for a
 #: rule. `test_pace_constants_lock` proves the radius does not follow the pace.
@@ -79,7 +79,7 @@ REACH_PACE_KMH: float = 3.0
 HAVERSINE_CORRECTION: float = 1.35
 WALK_FRACTION: float = 0.40  # of err-short total
 # Was AUDIO_FRACTION until 2026-08-06. The split is between WALKING and STANDING
-# STILL, and the standing-still half is not narration: Camille stands twenty
+# STILL, and the standing-still half is not narration: a visitor can stand twenty
 # minutes at Concorde for four minutes of audio. Naming this half "audio" made the
 # planner budget in narration seconds while the tourist spent visit seconds, so a
 # 120-minute request served 157 minutes and reported 120. See src/tour/visit_time.py.
@@ -172,10 +172,9 @@ DEFAULT_ROUTE_PLANNING_POLICY = RoutePlanningPolicy(
 
 #: Under `wall` the plan aims at this fraction of the asked time, and may not
 #: exceed it — the spare minutes are VISIBLE and deliberate, never a hard
-#: truncation at the asked number. Marcus's request verbatim: "2h40 of tour
-#: with 20 minutes of slack" beats "3h00 exactly"
-#: (docs/personas/04-layover-sprinter.md; redesign §2.3 — he currently lies to
-#: the product about his end time to manufacture exactly this margin).
+#: truncation at the asked number. A visitor with a hard end time wants a tour
+#: with visible slack before it, not one that runs exactly to it; without this,
+#: they give the product an earlier end time to get the margin.
 WALL_PLANNING_CEILING_FRACTION: float = 0.95
 
 
@@ -185,17 +184,16 @@ def route_planning_budget(
     *,
     end_hardness: str = "firm",
 ) -> RoutePlanningBudget:
-    """THE one home of the request's time arithmetic (redesign §2.3).
+    """THE one home of the request's time arithmetic.
 
     `end_hardness` bends the band without forking it:
     - "firm" (default): byte-identical to the policy's own band — every caller
       that does not thread a hardness plans exactly as before this existed.
     - "open": the minimum-elapsed floor drops to ZERO. The duration was a
       rough intent, so a shorter honest day is never padded toward a number
-      nobody defended (Julien; Camille's "is 15:00 a wall or a wish?" —
-      design 8.3 finishes the fill-the-requested-time deletion here).
+      nobody defended.
     - "wall": nominal and maximum cap at WALL_PLANNING_CEILING_FRACTION of the
-      request, so the plan itself carries visible spare minutes (Marcus).
+      request, so the plan itself carries visible spare minutes.
     """
     requested_seconds = duration_min * 60
     minimum_fraction = policy.minimum_requested_fraction
@@ -237,8 +235,8 @@ def within_planning_timebox(
 
 #: Civil-twilight zenith: the sun 6° below the horizon (90° + 6°). Between
 #: sunset and this moment there is still usable sky light; after it there is
-#: not, which is what "after dark" means for a finish (design §4.3's dusk
-#: trigger; data row 6.4's good_after_dark, consumed at the finish by S3.7).
+#: not, which is what "after dark" means for a finish: on a day that ends after
+#: dusk, the planner prefers a finishing place marked good_after_dark.
 CIVIL_TWILIGHT_ZENITH_DEG: float = 96.0
 
 #: IANA zone per coordinate region the corpus can serve. Dusk is solar
@@ -336,8 +334,8 @@ def civil_dusk_local(when: date, lat: float, lng: float) -> datetime | None:
 #
 # The table also could not be right. Every tier-5 anchor got the same 300 s,
 # which is simultaneously far too little for the Louvre and far too much for a
-# bridge, and nothing in it could express Camille and Theo spending 33 and 8
-# minutes at the same courtyard.
+# bridge, and nothing in it could express two visitors with different interests
+# spending 33 and 8 minutes at the same courtyard.
 
 
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -359,9 +357,8 @@ def pace_corrected_walk_seconds(
     Applies the x1.35 correction so that a 1km haversine line takes
     1350m / (3000m/h) ≈ 27 minutes worth of walking.
 
-    `pace_multiplier` (redesign §2.4; plan S2.4) divides the walking speed —
-    2.0 = half speed, Nadia's "Pace drops to roughly half"
-    (docs/personas/03-family-with-children.md step 4). 1.0 is the identity
+    `pace_multiplier` divides the walking speed — 2.0 = half speed, the pace of
+    a family with young children. 1.0 is the identity
     default: byte-identical to every caller before this parameter existed.
     The fast direction (< 1.0) is not this function's job to police — the
     contract field that feeds it (`TourInput.walking_pace`) is the one place
@@ -395,7 +392,7 @@ def envelope_radius_m(
     purpose — see the constant. This radius is how far a tour may range, and it must
     not move because people were re-measured as walking faster.
 
-    `pace_multiplier` (redesign §2.4; plan S2.4) SHRINKS the circle — a slow
+    `pace_multiplier` SHRINKS the circle — a slow
     party covers less ground in the same walking budget, so they are offered a
     smaller world, never the same one at a pace they cannot keep. 1.0 is the
     identity default. Density's own `assess` call (src/tour/density.py) and
@@ -540,8 +537,8 @@ def longest_walk_minutes(transits: Iterable[TransitSegment]) -> int:
     """The longest single walk of a route, in the minutes a person reads.
 
     THE ONE EXPRESSION for the number "Shorter walks = N min" is named after: the
-    head line prints it (``routes/trips.py``, W4.12 fix 6) and the planner certifies
-    the leg cap against it (Phase 5 S5.4) — the same per-leg number
+    head line prints it (``routes/trips.py``) and the planner certifies
+    the leg cap against it — the same per-leg number
     (``leg_walk_seconds``, exact when the street engine answered) through the same
     rounding, so what the planner promises and what the screen shows can never
     disagree by a rounding. Two spellings of this existed for exactly one phase:
@@ -551,7 +548,7 @@ def longest_walk_minutes(transits: Iterable[TransitSegment]) -> int:
 
 
 def default_leg_seconds(lat1: float, lng1: float, lat2: float, lng2: float) -> int:
-    """The haversine LegSecondsFn — the M3 routed divisor's fallback."""
+    """The haversine LegSecondsFn — the routed divisor's fallback."""
     return pace_corrected_walk_seconds(haversine_m(lat1, lng1, lat2, lng2))
 
 
@@ -618,8 +615,8 @@ def insertion_cost_seconds(
     For round-trip routes the path returns to the origin, so the closing leg
     is part of every cost evaluation.
 
-    Used by routing-aware greedy selection (§3.2). M3: ``leg_seconds_fn``
-    supplies routed leg times (the §3 divisor); default is haversine.
+    Used by routing-aware greedy selection. ``leg_seconds_fn``
+    supplies routed leg times (the selection divisor); default is haversine.
     """
     best_extra: int | None = None
     best_idx: int = 0
@@ -671,10 +668,9 @@ def path_leg_seconds(
     ``path_walk_seconds`` is the sum of this. They are one function split in two
     because a route's TOTAL walk and its LONGEST single walk are different
     questions with different answers, and both are needed: a walking budget is not
-    one number. Rosemary's 54-minute total is unremarkable while her twelve-minute
-    per-leg limit is the binding constraint, so "a route with one 25-minute leg and
-    one 5-minute leg has the same total and is unusable"
-    (``docs/personas/05-step-free-visitor.md``).
+    one number. For a step-free visitor, a 54-minute total is unremarkable while a
+    twelve-minute per-leg limit is the binding constraint, so a route with one
+    25-minute leg and one 5-minute leg has the same total and is unusable.
     """
     fn = leg_seconds_fn or default_leg_seconds
     return [
@@ -696,7 +692,7 @@ def _transit(
 ) -> TransitSegment:
     """Build one leg while retaining planning and routed measurements.
 
-    ``costing_options_override`` (plan S2.7) carries the route-surface axis's
+    ``costing_options_override`` carries the route-surface axis's
     Valhalla costing when set — ``None`` is today's request, byte-identical.
     """
     d = haversine_m(from_lat, from_lng, to_lat, to_lng)
@@ -711,7 +707,7 @@ def _transit(
         if callable(route_with_receipt):
             # The kwarg rides ONLY when a real surface override is set — the same
             # explicit legacy-injected-client compatibility contract leg_seconds and
-            # isochrone honour (Phase 3 ledger): at the identity default every
+            # isochrone honour: at the identity default every
             # existing test double works unmodified, and a client actually asked
             # for a surface MUST accept the keyword.
             surface_kwargs = (
@@ -774,7 +770,7 @@ def summarise_route(
     available. The final Route therefore reports those same road-network times
     and distances; haversine remains the explicit fallback when routing degrades.
 
-    ``costing_options_override`` (plan S2.7) carries the route-surface axis's
+    ``costing_options_override`` carries the route-surface axis's
     Valhalla costing to every leg this route contains, so the shipped route's
     times and shapes are the SAME step-avoiding request selection priced —
     never a route selected under one costing and reported under another.
@@ -795,12 +791,12 @@ def summarise_route(
     ``planned_visit_seconds`` is the one that cannot be recomputed at all: it is
     priced against a CorpusSnapshot and this function has none. A rebuild that
     omits it silently collapses every stop to the length of its own narration.
-    ``planned_queue_seconds`` (Phase 7 S7.5, the seventh extra) is priced at the
+    ``planned_queue_seconds`` (the seventh extra) is priced at the
     same one site in selection — the seconds of line at each stop's arrival hour
     — and rides the same way: the audio placement rule reads it to decide which
     stop's piece waits for the line, so a rebuild that omits it silently unqueues
     every stop. Empty is the identity every other caller gets. ``visit_goes_inside``
-    and ``planned_outside_seconds`` (S7.6, the eighth and ninth) are the door and
+    and ``planned_outside_seconds`` (the eighth and ninth) are the door and
     the seconds before it, from the same site — a rebuild without them has no
     door anywhere, and a marquee's piece runs on under the roof.
     """

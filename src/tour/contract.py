@@ -1,9 +1,9 @@
 """Tour-builder data contracts.
 
-INPUT: TourInput — the user-supplied request (§3.1 of phase-1-design).
+INPUT: TourInput — the user-supplied request.
 INTERMEDIATE: POI, BeatRef, TransitSegment, Route, POIBeats, BeatSequence,
 PromiseShape, Promise.
-OUTPUT: Script + Sentence + ValidationReport (§3.6 of phase-1-design).
+OUTPUT: Script + Sentence + ValidationReport.
 """
 
 from __future__ import annotations
@@ -32,13 +32,13 @@ SUPPORTED_CITIES: frozenset[str] = frozenset(city_registry.supported_cities())
 
 GENERIC_OPEN_TOUR_CLOSING = "And that brings our walk to a close."
 
-#: The doubt a GUESSED closure carries (Docs/adr/0006), in the words a person
+#: The doubt a GUESSED closure carries, in the words a person
 #: reads or hears — ONE home for every surface, so the exclusion line, the
 #: day's note, the voice at the door and the writer's brief never disagree.
 #: A guess opens with "we think", so the doubt is heard before the fact.
 GUESSED_CLOSURE_LEAD: str = "We think "
 GUESSED_CLOSURE_DOUBT: str = ", but we could not confirm that"
-#: The same guess after a walker REPORTED the door shut (rule 5): the doubt
+#: The same guess after a walker REPORTED the door shut: the doubt
 #: is stronger and says why. One report never rewrites hours; it only
 #: changes these words.
 REPORTED_SHUT: str = "a walker has found it shut"
@@ -55,10 +55,10 @@ def opening_doubt(closed_reports: int) -> str:
     but ..."): the report, once made, else that we could not confirm it."""
     return f", but {REPORTED_SHUT}" if closed_reports > 0 else GUESSED_CLOSURE_DOUBT
 # GENERIC_TOUR_SIGNOFF ("Thank you for coming along with me today. When you're ready,
-# take your time to keep exploring on your own.") was DELETED at Phase 6 S6.4: the W6.2
-# panel ruled 11/11 that a close never says "keep exploring on your own" (to someone
-# alone it is a remark — Greta, Sofia) and that a thank-you is not a close's job; every
-# stop now ends on one close, the day's at the last stop (generation._build_stop_close).
+# take your time to keep exploring on your own.") was DELETED: a close never says
+# "keep exploring on your own" (to someone alone it is a remark) and a thank-you is
+# not a close's job; every stop now ends on one close, the day's at the last stop
+# (generation._build_stop_close).
 NONPROPOSITIONAL_GLUE_TEMPLATES: frozenset[str] = frozenset(
     {
         "Settle in.",
@@ -85,7 +85,7 @@ def normalized_lens_list(v: list[str] | None) -> list[str] | None:
 
 
 class TourInput(BaseModel):
-    """User-supplied tour request. Mirrors §3.1 of phase-1-design.md."""
+    """User-supplied tour request."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -100,9 +100,9 @@ class TourInput(BaseModel):
     #
     # WHY A CEILING IS NEEDED AT ALL. The other two terms in a stop's length —
     # what the place absorbs and what the visitor's interest justifies — are both
-    # MAXIMISING, so nothing in them can express Nadia's "six minutes is the
-    # ceiling here, not the floor" (docs/personas/03-family-with-children.md
-    # step 3). The flat five-minute tier cap was protecting her by accident, and
+    # MAXIMISING, so nothing in them can express a family for whom six minutes
+    # is the ceiling at a stop, not the floor. The flat five-minute tier cap was
+    # protecting that family by accident, and
     # removing it without this would hand a family with a five-year-old a
     # 45-minute cathedral.
     #
@@ -124,72 +124,71 @@ class TourInput(BaseModel):
     # WHEN THE WALK STARTS, as a local ISO 8601 string, e.g. "2026-08-11T10:00".
     # None = no clock, which is today's dateless behaviour: nothing is filtered,
     # nothing is priced by hour, and every existing caller and golden stays
-    # byte-identical (redesign §2.2). A STRING rather than a datetime because
+    # byte-identical. A STRING rather than a datetime because
     # TourInput must survive TourInput(**inp.model_dump()) — only a string
     # round-trips — and because the API and persisted tour_input_json carry it
     # as text anyway.
     start_datetime: str | None = None
-    # HOW HARD THE END IS (redesign §2.3). "wall": missing it has a real cost —
-    # Marcus's 16:40 airport train — so planning keeps visible spare minutes.
+    # HOW HARD THE END IS. "wall": missing it has a real cost — a 16:40
+    # airport train — so planning keeps visible spare minutes.
     # "firm": today's behaviour, byte-identical. "open": the duration was a
-    # rough intent, never a number to pad toward — Julien's leavable-blank
-    # clock. The default is "firm" so an undated request plans exactly as
+    # rough intent, never a number to pad toward — a clock the visitor may
+    # leave blank. The default is "firm" so an undated request plans exactly as
     # before this field existed.
     end_hardness: Literal["wall", "firm", "open"] = "firm"
-    # WHO IS WALKING (redesign §2.4) — a preset is a SHORTCUT over the axes
+    # WHO IS WALKING — a preset is a SHORTCUT over the axes
     # below: `resolve_party_axes` expands it, an explicitly-set axis always
     # wins, and the axes are what the planner reads. None = no party stated,
     # which with every axis at its default is today's behaviour, byte-identical.
     party: Literal["solo", "couple", "family", "take_it_easy", "with_luggage"] | None = None
     # PACE MULTIPLIER on walking time, slow direction only: 2.0 = half speed
-    # (Nadia: "Pace drops to roughly half", 03-family-with-children.md step 4).
+    # (a family with small children walks at roughly half pace).
     # ge=1.0 because the FAST direction is the raised-and-held-back `PACE_KMH`
     # pin's locked half (src/tour/routing.py) — slow is a fact about real
     # walkers; fast would quietly re-price every budget. None = 1.0.
     walking_pace: float | None = Field(default=None, ge=1.0)
-    # THE PER-LEG CAP, in minutes. Rosemary's binding constraint is not her
-    # 54-minute walking total but her 12-minute per-leg limit — "A walking
-    # budget is not one number" (05-step-free-visitor.md, breaks bullet 1).
+    # THE PER-LEG CAP, in minutes. A visitor who needs frequent rests is bound
+    # not by a 54-minute walking total but by a 12-minute per-leg limit — a
+    # walking budget is not one number.
     # None = uncapped; the banded longest-leg RANK stays as the soft preference.
     max_leg_minutes: int | None = Field(default=None, ge=1)
     # HOW MUCH ACCUMULATED WALKING may pass before a body stop (bench/toilet)
-    # is seated (S2.5) — Nadia's "Ten minutes, zero cultural content, entirely
-    # non-negotiable" (03, step 5); design §3.1: "a rest window with no bench
-    # under it is thirteen minutes standing on a stick". None = no seating rule.
+    # is seated — a child's toilet stop is non-negotiable, and a rest window
+    # with no bench under it is thirteen minutes standing on a stick. None = no
+    # seating rule.
     rest_cadence_minutes: int | None = Field(default=None, ge=1)
     # EVERY CANDIDATE MUST SIT WITHIN THIS DISTANCE OF THE START — a constraint
     # on the whole loop, not on a leg: "a meltdown 25 minutes from the exit
-    # means carrying a child for 25 minutes" (design §2.4); panel locked cost
-    # D4: "cap DISTANCE FROM EXIT not just leg length" (03-panel-findings.md).
+    # means carrying a child for 25 minutes", so the cap is DISTANCE FROM EXIT,
+    # not just leg length.
     escape_radius_m: int | None = Field(default=None, ge=1)
     # WHAT THE ROUTE MAY BE MADE OF. "no_stairs" (buggy, wheeled luggage) and
-    # "step_free" (Rosemary) ride Valhalla's per-request pedestrian costing —
-    # capability-proven live in W2.1 (phase2-ledger.md): step_penalty moves the
+    # "step_free" (a visitor who cannot take steps) ride Valhalla's per-request
+    # pedestrian costing — capability-proven live: step_penalty moves the
     # route off the Rue Foyatier stairs; "step_free" adds the wheelchair
     # profile. "any" = today's requests, byte-identical.
     route_surface: Literal["any", "no_stairs", "step_free"] = "any"
-    # HOW THE NARRATION SPEAKS (design §2.4 bottom row) — carried on the input
+    # HOW THE NARRATION SPEAKS — carried on the input
     # now so presets can set it; consumed by the phase that reworks narration.
     # NEVER set by mobility ("slow the walking, never the talking") and
     # "warm" is warm, never romantic.
     narration_register: Literal["solo", "warm", "family"] | None = None
-    # STOPS THE VISITOR PINNED (design §3.2) — corpus POI ids the visitor has
+    # STOPS THE VISITOR PINNED — corpus POI ids the visitor has
     # promoted into promises: "the visitor may pin any offered stop into a
     # promise, or release one back into fabric". The one mechanism that lets
-    # one engine serve Théo (pins one thing absolutely) and Julien (pins
-    # nothing, wants an open walk). Empty = nothing pinned = today's
+    # one engine serve a visitor who pins one thing absolutely and one who pins
+    # nothing and wants an open walk. Empty = nothing pinned = today's
     # behaviour, byte-identical.
     pinned_poi_ids: tuple[str, ...] = ()
-    # THE SKY — FETCHED, NEVER ASKED (design §2.5, data row 6.8): the caller
+    # THE SKY — FETCHED, NEVER ASKED: the caller
     # fetches the forecast and hands the planner the decision it implies, so
     # the visitor is never questioned about it. Two values because that is
-    # the whole decision (Phase 3 demo D3: the same request, dry vs rain).
+    # the whole decision (the same request plans differently dry vs rain).
     # None = no signal fetched, which is today's behaviour, byte-identical
     # planning — the `start_datetime` None-means-no-clock precedent.
     weather: Literal["dry", "rain"] | None = None
-    # THE DIALS (Phase 4, W4.2 panel — all four rulings recorded in
-    # phase4-ledger.md; every default is today's behaviour, byte-identical).
-    # Adding fields moves every request_sha256 — declared, Phase 8 re-seals.
+    # THE DIALS (every default is today's behaviour, byte-identical).
+    # Adding fields moves every request_sha256 — declared.
     #
     # "Fewer stops, longer at each" / "More stops, shorter at each". "more"
     # resolves to the proven short-stop ceiling (resolve_party_axes); "fewer"
@@ -197,17 +196,17 @@ class TourInput(BaseModel):
     # whole). The bare stop-minutes ceiling was REJECTED as the fewer-mechanism
     # (a placebo in two of three measured starts).
     stop_density: Literal["fewer", "more"] | None = None
-    # "Less talking / More talking" — narration SUPPLY, never topic (the panel
-    # retired the topic-narrowing strawman unanimously). Phase 4 consumes it as
-    # beats-per-stop; the full point-first mechanics are Phase 6's.
+    # "Less talking / More talking" — narration SUPPLY, never topic (the
+    # topic-narrowing reading is retired). It is consumed as beats-per-stop;
+    # the full point-first mechanics come later.
     narration_density: Literal["less", "more"] | None = None
     # "Skip the queues" — queue-heavy stops are DIMMED in selection (the score
-    # channel), on top of Phase 3's queues-are-budgeted-never-credited rule.
-    # Named plainly because "quieter" is retired as a word (a sound word —
-    # Paulo; dangerous after dark — Sofia).
+    # channel), on top of the queues-are-budgeted-never-credited rule.
+    # Named plainly because "quieter" is retired as a word (it reads as a sound
+    # word, and as dangerous after dark).
     avoid_queues: bool = False
-    # "Less of THIS today" — place kinds excluded from dwell seating (Greta's
-    # "not what I did yesterday", Julien's "zero museums today"). Excluded
+    # "Less of THIS today" — place kinds excluded from dwell seating
+    # (a kind the visitor saw yesterday, or no museums at all today). Excluded
     # kinds SWAP other places in (the lens behaviour), never starve the day
     # (the shaved-stop behaviour), and each exclusion is DISCLOSED on the
     # day's notes channel like a closed door.
@@ -217,7 +216,7 @@ class TourInput(BaseModel):
     @classmethod
     def _check_start_datetime(cls, v: str | None) -> str | None:
         # Plain words, because the API surfaces this text to the person who
-        # typed the value (plan S1.2). fromisoformat is the whole grammar.
+        # typed the value. fromisoformat is the whole grammar.
         if v is None:
             return v
         from datetime import datetime
@@ -251,66 +250,66 @@ class TourInput(BaseModel):
 
     @model_validator(mode="after")
     def _end_round_trip_mutex(self) -> TourInput:
-        # A user-given destination and "return to A" are contradictory (spec §1).
+        # A user-given destination and "return to A" are contradictory.
         # A field_validator can't see round_trip, so the cross-field check lives here.
         if self.end is not None and self.round_trip:
             raise ValueError("end and round_trip are mutually exclusive")
         return self
 
 
-# THE §2.4 TABLE, TRANSCRIBED (01-design.md:118-126) — the one place the
+# THE PRESET TABLE, TRANSCRIBED — the one place the
 # preset→axes mapping lives. Numbers with no design pin carry their basis here:
-#  - family pace 2.0: "~half, variable" (03-family-with-children.md step 4).
-#  - rest cadence 20: Nadia's toilet lands after ~19 accumulated walking
-#    minutes (03 steps 2+4→5); the table gives the cadence to take-it-easy too
-#    (Rosemary's benches, 05 steps 3 and 7 — see phase2-ledger.md).
+#  - family pace 2.0: "~half, variable".
+#  - rest cadence 20: a family's toilet stop lands after ~19 accumulated walking
+#    minutes; the table gives the cadence to take-it-easy too (benches for a
+#    visitor who needs frequent rests).
 #  - escape radius 800 m: the design's failure case is "a meltdown 25 minutes
 #    from the exit"; 800 m is ~16 min back at the corpus pace, inside it with
-#    margin, and matches Nadia's real day (never further than ~700 m from
+#    margin, and matches a real family day (never further than ~700 m from
 #    Place des Vosges).
 #  - take-it-easy pace 1.2 / with-luggage 1.25: the table says "slow" for
 #    both with no number anywhere. take-it-easy was FIRST set to 1.5 (scaled
-#    against family's pinned 2.0, "half") and CORRECTED to 1.2 after the W2.10
-#    panel: three independent personas (Camille, Rosemary, Paulo) caught the
-#    same real defect on the real corpus — 1.5x pace combined with Rosemary's
+#    against family's pinned 2.0, "half") and CORRECTED to 1.2 after a
+#    review: three independent reviewers caught the
+#    same real defect on the real corpus — 1.5x pace combined with the
 #    locked 12-minute leg cap made every nearby leg exceed the cap on the
 #    FIRST hop, collapsing the day to one stop and 30 of 180 minutes. 1.2x
 #    was verified empirically on the same real request (Place des Vosges,
 #    180 min): four real stops including a seated rest bench, longest leg 9
-#    min, comfortably under the cap — see phase2-ledger.md. The 12-minute cap
-#    itself is Rosemary's own number and stays untouched; only the
+#    min, comfortably under the cap. The 12-minute cap
+#    itself is a measured visitor's own number and stays untouched; only the
 #    interpolated pace moved.
-#  - §2.4's family "short" longest-walk cell and with-luggage's "medium" cell
-#    carry NO number in the design, the plan, or any persona — deliberately
-#    not wired rather than invented (phase2-ledger.md).
+#  - the table's family "short" longest-walk cell and with-luggage's "medium"
+#    cell carry NO number anywhere — deliberately not wired rather than
+#    invented.
 _PARTY_AXES: dict[str, dict[str, object]] = {
-    # No ceiling for solo: panel locked cost D6 — "party-preset stop ceiling
-    # under 65 min DECAPITATES his day" (Théo, 03-panel-findings.md:193).
+    # No ceiling for solo: a party-preset stop ceiling under 65 min cuts the
+    # heart out of a solo history walker's day.
     "solo": {"narration_register": "solo"},
-    # Warm, NEVER romantic (design §2.4:126).
+    # Warm, NEVER romantic.
     "couple": {"narration_register": "warm"},
     "family": {
         "walking_pace": 2.0,
         "rest_cadence_minutes": 20,
         "escape_radius_m": 800,
-        "max_stop_minutes": 6,  # "Six minutes is the ceiling here, not the floor"
+        "max_stop_minutes": 6,  # six minutes is the ceiling at a stop, not the floor
         "route_surface": "no_stairs",  # buggy
         "narration_register": "family",
     },
     "take_it_easy": {
         "walking_pace": 1.2,
         # The table's one numbered leg cap. 12 produced a ONE-STOP day on
-        # Rosemary's own ground; her doctor's measured number is 13, and the
-        # 13-minute day (Orangerie -> bench -> Orsay) is the one every demo
-        # uses. OWNER RULING 2026-08-19 (Phase 6, ruling 4): raise to 13.
+        # a step-free visitor's own ground; her doctor's measured number is 13,
+        # and the 13-minute day (Orangerie -> bench -> Orsay) is the one every
+        # demo uses. The owner ruled on 2026-08-19: raise to 13.
         "max_leg_minutes": 13,
         "rest_cadence_minutes": 20,
         "route_surface": "step_free",
         # register DELIBERATELY absent: "slow the walking, never the talking".
     },
     "with_luggage": {
-        "walking_pace": 1.25,  # Marcus: "Slower than his normal pace" (04 step 2)
-        "route_surface": "no_stairs",  # the cobbles half rides S2.7's costing
+        "walking_pace": 1.25,  # slower than a traveller's normal pace
+        "route_surface": "no_stairs",  # the cobbles half rides the surface costing
         "narration_register": "solo",
     },
 }
@@ -319,15 +318,15 @@ _PARTY_AXES: dict[str, dict[str, object]] = {
 def resolve_party_axes(inp: TourInput) -> TourInput:
     """Expand a party preset into concrete axes; an explicit axis ALWAYS wins.
 
-    design §2.4:136-137: "the presets are shortcuts over axes, and the axes
-    are what the planner reads". A None-able axis counts as explicit when it
+    The presets are shortcuts over axes, and the axes are what the planner
+    reads. A None-able axis counts as explicit when it
     is non-None; `route_surface` (the one axis with a non-None default) counts
     as explicit when it appears in `model_fields_set`, so an explicitly-passed
     "any" beats the preset too. No party → the input comes back unchanged.
     Idempotent: re-resolving a resolved input moves nothing.
     """
     updates: dict[str, object] = {}
-    # THE STOPS DIAL, "more" direction (Phase 4, W4.2): "More stops, shorter at
+    # THE STOPS DIAL, "more" direction: "More stops, shorter at
     # each" resolves to the proven short-stop ceiling — the measured a-stop20
     # shape — unless the caller set a ceiling explicitly (explicit wins, the
     # rule of this whole function). The "fewer" direction has no axis mapping:
@@ -346,8 +345,8 @@ def resolve_party_axes(inp: TourInput) -> TourInput:
 
 
 class Anchor(BaseModel):
-    """ONE REVIEWED ANCHOR of a marquee place (Phase 7 S7.7 B; design §5.6 "segments";
-    W7.2 R4, all eleven): a spot inside the place's footprint where a person PLACED the
+    """ONE REVIEWED ANCHOR of a marquee place: a spot inside the place's footprint
+    where a person PLACED the
     coordinates by hand — never derived from the pin — naming the beat sub-locations it
     stands for, its own radius, whether it is under a roof (GPS is useless there: a tap,
     never auto), and the sentence that argues it. The story of the stop is cut at these
@@ -381,7 +380,7 @@ class POI(BaseModel):
     areas: tuple[str, ...] = ()
     beat_count: int = 0
     matching_lens_beat_count: int = 0
-    # D1 place semantics are additive so legacy corpora remain loadable.  A
+    # Place semantics are additive so legacy corpora remain loadable.  A
     # typed corpus may enter selection only after place_materialization has
     # validated these identities against its frozen manifest.
     canonical_place_id: str | None = Field(default=None, min_length=1)
@@ -390,10 +389,10 @@ class POI(BaseModel):
     requires_dwell: bool = False
     vignette_eligible: bool = True
     # HOW LONG A VISITOR SPENDS AT THIS PLACE — the third hand on the tour clock.
-    # Two numbers, because one cannot serve two visitors: Camille gives
-    # Sainte-Chapelle 38 minutes inside plus 28 in the queue, while Theo gives the
-    # same building 15 from the outside and never goes in
-    # (docs/personas/02-dark-history-walker.md:77).
+    # Two numbers, because one cannot serve two visitors: an architecture lover
+    # gives Sainte-Chapelle 38 minutes inside plus 28 in the queue, while a
+    # dark-history walker gives the same building 15 from the outside and never
+    # goes in.
     #
     # `typical_duration_min` is the OUTSIDE number and already existed on the API's
     # POICreate (src/api/models/nodes.py); this is its selection-side twin.
@@ -411,7 +410,7 @@ class POI(BaseModel):
     visit_seconds_inside: int | None = None
     visit_basis: str = ""
     typical_duration_min: int = 0
-    # WHEN THE PLACE CAN BE ENTERED (Docs/adr/0006) — additive, same style as
+    # WHEN THE PLACE CAN BE ENTERED — additive, same style as
     # the visit-capacity trio above. `opening_hours` is the place's hours as
     # OpenStreetMap text ("Mo-Su 10:00-18:00; PH off"), read at planning time
     # by the opening-hours library in the city's own country; text the library
@@ -425,7 +424,7 @@ class POI(BaseModel):
     opening_hours: str | None = None
     opening_hours_source: str | None = None
     opening_hours_basis: str = ""
-    # THE DOOR (Docs/adr/0006), additive in the same style. `gated` is the
+    # THE DOOR, additive in the same style. `gated` is the
     # explicit door verdict — True: a door, gate or ticket line stands between
     # the street and the experience; False: the whole value stands in the
     # open; None: the gated pass has not reached this POI, the fail-open
@@ -436,30 +435,30 @@ class POI(BaseModel):
     # a count above zero makes the next walker's warning stronger.
     gated: bool | None = None
     hours_closed_reports: int = 0
-    # WHAT KIND OF PLACE THIS IS (redesign 6.7): a closed vocabulary (gallery |
+    # WHAT KIND OF PLACE THIS IS: a closed vocabulary (gallery |
     # museum | church | square | arcade | market | park | garden | bridge |
-    # street | monument | other) derived deterministically at $0. Phase 3's
-    # category-diverse replacement is the consumer; Phase 1 surfaces it in the
-    # harness printout. "" = the categoriser has not run.
+    # street | monument | other) derived deterministically at $0. The
+    # category-diverse replacement is the consumer; the harness printout
+    # surfaces it. "" = the categoriser has not run.
     place_category: str = ""
-    # WHAT THIS PLACE AFFORDS (redesign row 6.4, plan S2.6) — three AI
+    # WHAT THIS PLACE AFFORDS — three AI
     # judgements with no external source, additive in the same style as the
     # trios above. False/"" = the pass has not reached this POI, the safe
     # direction: a corpus the pass never priced affords NOTHING rather than
-    # everything. `children_can_run` (Nadia: 38 of her 55 place-minutes were
-    # valuable because the kids could run — 03-panel-findings.md), `sit_and_talk`
-    # (Fiona & Dev's two green chairs — docs/personas/09-couple-who-would-
-    # rather-talk.md), `good_after_dark` (design §3.1's finish rule; consumed
-    # only in Phase 3). `judgement_basis` is the one sentence arguing all three
+    # everything. `children_can_run` (a family's place-minutes are worth most
+    # where the kids can run), `sit_and_talk` (two chairs where a couple can
+    # talk), `good_after_dark` (somewhere fit to be left standing in the dark;
+    # read when ranking the finish of an open walk that ends after dusk).
+    # `judgement_basis` is the one sentence arguing all three
     # — the whole audit trail, since this row has no OSM tag or observable fact
     # behind it.
     children_can_run: bool = False
     sit_and_talk: bool = False
     good_after_dark: bool = False
     judgement_basis: str = ""
-    # WHAT THE LINE COSTS (redesign row 6.5) — additive, same style as the
-    # opening-hours block above. A queue is a FOURTH kind of time (design
-    # §3.3): not walking, not being-at-a-place, not narration — priced
+    # WHAT THE LINE COSTS — additive, same style as the
+    # opening-hours block above. A queue is a FOURTH kind of time: not walking,
+    # not being-at-a-place, not narration — priced
     # separately, belonging to the day rather than the building, and excluded
     # entirely under a "wall" end. `queue_class` is the never-priced switch:
     # None = the audited queue pass has not reached this POI, and an unpassed
@@ -475,16 +474,16 @@ class POI(BaseModel):
     queue_minutes_offpeak: int = 0
     queue_peak_hours: str = ""
     queue_basis: str = ""
-    # HOW BIG THE PLACE IS ON THE GROUND (Phase 7 S7.3/S7.4; design §5.6, W7.2 R1):
+    # HOW BIG THE PLACE IS ON THE GROUND:
     # the radius, in metres, within which a walker is AT this place — the place's
     # FOOTPRINT. The corpus has carried it on every record (`trigger_radius`, written
     # by upload_paris) and nothing in the engine read it: the phone drew one 10 m
     # circle for every place, a 140 m square and a doorway alike. THE one audio
     # placement rule (src/tour/placement.py) reads it and puts it on the wire. None =
-    # the record was never measured (or the loader has not yet carried it — the hop is
-    # S7.4): the rule falls to its door-sized default, never to a second circle.
+    # the record was never measured (or the loader has not yet carried it): the rule
+    # falls to its door-sized default, never to a second circle.
     trigger_radius: float | None = Field(default=None, gt=0)
-    # THE REVIEWED ANCHORS (Phase 7 S7.7 B; design §5.6 "segments"; W7.2 R4): the spots
+    # THE REVIEWED ANCHORS: the spots
     # inside the footprint where a person placed a chapter of the story — marquee
     # places only, Notre-Dame first. Empty = no chapters, the story is told whole.
     anchors: tuple[Anchor, ...] = ()
@@ -497,8 +496,8 @@ class POI(BaseModel):
 
 
 class PhysicalCue(BaseModel):
-    """One physical_cue entry from a beat — Phase 7.5 uses cue + feature_type
-    to compose synthesized openers and to gate the Area-cold-open hoist.
+    """One physical_cue entry from a beat — cue + feature_type compose
+    synthesized openers and gate the Area-cold-open hoist.
     """
 
     model_config = ConfigDict(frozen=True, extra="ignore")
@@ -511,15 +510,15 @@ class PhysicalCue(BaseModel):
 class BeatRef(BaseModel):
     """A NarrativeBeat reference carrying just what selection/ordering needs.
 
-    Phase 3 added the optional ``script_body`` so generation can emit
-    sentence-level traceable records without re-querying Neo4j. Phase 2
-    selection/ordering ignores it; tests construct BeatRef without it.
+    The optional ``script_body`` lets generation emit sentence-level
+    traceable records without re-querying Neo4j. Selection/ordering
+    ignores it; tests construct BeatRef without it.
 
-    Phase 7.5 added optional ``physical_cues`` + ``pronunciation`` so the
-    refined cold-open hoist (Fix 1) and synthesized opener (Fix 2) can
-    compose deterministically without re-querying Neo4j.
+    The optional ``physical_cues`` + ``pronunciation`` let the refined
+    cold-open hoist and synthesized opener compose deterministically
+    without re-querying Neo4j.
 
-    M7 added ``source_passage``/``source_chunk_slug``/``key_claims`` for the
+    ``source_passage``/``source_chunk_slug``/``key_claims`` serve the
     VERIFY layer: ``source_passage`` is the verbatim span the beat was
     extracted from (rapidfuzz-matched against the source chunk for
     provenance) and ``key_claims`` are the atomic facts a beat-cited
@@ -550,7 +549,7 @@ class BeatRef(BaseModel):
     source_passage: str | None = None
     source_chunk_slug: str | None = None
     key_claims: tuple[str, ...] = ()
-    # ``id`` remains the graph UUID until the D2 upload/API migration.  These
+    # ``id`` remains the graph UUID until the upload/API migration.  These
     # fields carry the durable corpus identity in parallel without breaking
     # legacy fixtures or persisted trip payloads.
     stable_beat_id: str | None = Field(default=None, min_length=1)
@@ -698,7 +697,7 @@ class TransitSegment(BaseModel):
 
 
 class TourabilityAssessment(BaseModel):
-    """Phase 6 density-gate result — §3.7 of phase-1-design.
+    """The density-gate result.
 
     Lives on this contract module (not in ``density.py``) so ``Route``
     can carry it as an optional field without an import cycle. The
@@ -726,7 +725,7 @@ class TourabilityAssessment(BaseModel):
     round_trip: bool
     max_supportable_duration_min: int | None = None
     one_way_alternative_destination: str | None = None
-    # C11a: a GREEN-density pool can still DELIVER a thin route (the pool is rich
+    # A GREEN-density pool can still DELIVER a thin route (the pool is rich
     # but the reachable/walk-affordable dwell POIs are few or beat-thin). When
     # True the route carries this assessment with status GREEN so the surface can
     # disclose "honest but thin" instead of silently reading fully-GREEN.
@@ -740,7 +739,7 @@ class TourabilityAssessment(BaseModel):
 
 
 class ReachVerdict(BaseModel):
-    """REACH output (§2.1, M5): how the reachable area was computed and which
+    """REACH output: how the reachable area was computed and which
     mode the tour operates in.
 
     ``mode`` maps the density gate's status: GREEN → standard; YELLOW →
@@ -762,18 +761,18 @@ class ReachVerdict(BaseModel):
 class ClockExclusion(BaseModel):
     """One POI the clock found closed on a dated tour, and the plain-English fact.
 
-    Recorded so the day can SAY why the museum is missing (redesign 6.1 —
-    Aiko's locked door, Rosemary's Tuesday). `reason` is the CLOSURE FACT,
+    Recorded so the day can SAY why the museum is missing (a locked door, a
+    place shut on Tuesdays). `reason` is the CLOSURE FACT,
     written for a person ("closed all day Wednesday"), and nothing else.
 
     `kept_outside` is the planner's DECISION, as a flag rather than as words:
     True when the closed place has an exterior worth standing at and so stayed
-    in the pool at its outside price (W1.9 dissent 1 — a locked door is still a
-    facade); False when there was nothing to see from the street and it left the
+    in the pool at its outside price (a locked door is still a facade); False
+    when there was nothing to see from the street and it left the
     pool. Two readers need the decision — the harness table marks outside-only
     stops, and the wire writes the traveller's sentence — and both used to
     recover it by string-matching the reason ("outside only"), which broke the
-    moment the wording was made plain (W4.12). What the traveller is TOLD
+    moment the wording was made plain. What the traveller is TOLD
     ("we will see it from the outside" vs "so it is not in your day") depends
     on whether the place actually ended up ON the route, which only the reader
     holding the route can know — so that sentence is composed there, never here.
@@ -787,7 +786,7 @@ class ClockExclusion(BaseModel):
     kept_outside: bool = False
     #: Whether the place is shut for the WHOLE day the walk happens on — the
     #: planner sets it from the day's own empty window list, so the voice can
-    #: say "closed today" (Aiko must not plan a wasted return trip) instead of
+    #: say "closed today" (a visitor must not plan a wasted return trip) instead of
     #: "closed at the moment" (true for a door that opens later, or shut for
     #: lunch). A decision in a field, never recovered from the reason's words.
     #: Additive: False keeps every existing exclusion byte-identical.
@@ -800,13 +799,13 @@ class ClockExclusion(BaseModel):
     #: from the reason's words — and additive: False keeps every existing
     #: exclusion byte-identical.
     at_start: bool = False
-    #: Whether the closure rests on GUESSED hours (Docs/adr/0006): any source
+    #: Whether the closure rests on GUESSED hours: any source
     #: but the map. Every voice hedges from this field — "we think", "could
     #: not confirm" — never from the reason's words, and a guessed closure
     #: never removes a place from the day. Additive: False keeps every
     #: existing exclusion byte-identical.
     guessed: bool = False
-    #: How many walkers have reported this guessed door shut (rule 5), copied
+    #: How many walkers have reported this guessed door shut, copied
     #: from the place's `hours_closed_reports` so the voice can say so. Read
     #: only when `guessed` is True; 0 keeps every existing exclusion
     #: byte-identical.
@@ -816,9 +815,9 @@ class ClockExclusion(BaseModel):
 class PromiseShape(BaseModel):
     """The shape of one promised visit — the numbers the promise is made OF.
 
-    design §3.1: a promise includes "the shape of the visit — 65 minutes
-    *inside* is a different promise from 15 minutes outside, and the queue is
-    a third number again." The three seconds are those three numbers.
+    A promise includes the shape of the visit — 65 minutes *inside* is a
+    different promise from 15 minutes outside, and the queue is a third
+    number again. The three seconds are those three numbers.
     ``goes_inside`` says which side of the door this visitor's visit lives on;
     ``closed_today`` records that the clock has already voided the door, so
     the promise is the outside view and nothing inside is owed. All required:
@@ -838,14 +837,14 @@ class PromiseShape(BaseModel):
 class Promise(BaseModel):
     """One promised item of the day — OUTPUT, the planner's obligation.
 
-    design §3.1: a planned day is "a small set of PROMISES on a clock,
-    connected by FABRIC", and "fabric may change silently; promises may not"
-    (§4.3). ``kind`` names the four species the design lists: the interest
-    anchor, a stop the visitor pinned (§3.2), a body stop, and the finish.
+    A planned day is a small set of PROMISES on a clock, connected by
+    FABRIC, and fabric may change silently; promises may not. ``kind`` names
+    the four species: the interest anchor, a stop the visitor pinned, a body
+    stop, and the finish.
 
     A Promise carries NO scoring state — no score, no weight, no priority.
     Promises are what the planner OWES after deciding, not knobs it reads
-    while deciding: a §3.2 pin is the visitor's decision, not a preference to
+    while deciding: a pin is the visitor's decision, not a preference to
     be traded off, and ``extra="forbid"`` refuses any field that would turn
     an obligation back into a candidate.
     """
@@ -855,44 +854,41 @@ class Promise(BaseModel):
     kind: Literal["anchor", "pinned", "rest", "finish"]
     poi_id: str
     shape: PromiseShape
-    # THE WINDOW (Phase 4, W4.2 deviation v — the pre-commit surface shows
-    # timed promise windows; F&D locked them COARSE, a window not a
-    # minute-contract). Read off THE one arrival accumulation at assembly;
+    # THE WINDOW (the pre-commit surface shows timed promise windows, COARSE:
+    # a window, not a minute-contract). Read off THE one arrival accumulation at assembly;
     # "" on a dateless day — additive, every existing Promise byte-identical.
     arrives_hhmm: str = ""
     departs_hhmm: str = ""
 
 
 class ReplanContext(BaseModel):
-    """What makes a replan RELATIVE — INPUT to THE one planner (Phase 5 S5.6).
+    """What makes a replan RELATIVE — INPUT to THE one planner.
 
-    Design §4.6: "the server is the only place a plan decision is made"; a
-    replan is `select_route` called again with this beside the request — never a
-    second planner (plan §10.8.1, the argument Phase 4 used to collapse
-    `plan_premium_options`). It carries what a fresh plan cannot know:
+    The server is the only place a plan decision is made; a replan is
+    `select_route` called again with this beside the request — never a second
+    planner. It carries what a fresh plan cannot know:
 
-    - ``protected_poi_ids`` — §4.5.2's protected class as the CALLER defines it.
-      For the "More breaks" dial (CARRIED 3) that is the base day's anchor and
-      promises (W4.2 locked semantics 2: "never fund a rest by shaving an
-      anchor"); for a session replan it is what the PERSON asked for — pins, a
-      declared finish, the rests/meals/toilets the party or dial requested — and
-      NOT the planner's own anchor on an open unpinned walk (W5.2 R1.5, Fiona &
-      Dev and Julien by name). The planner seats them, never drops, folds or
+    - ``protected_poi_ids`` — the protected class as the CALLER defines it.
+      For the "More breaks" dial that is the base day's anchor and promises
+      (never fund a rest by shaving an anchor); for a session replan it is what
+      the PERSON asked for — pins, a declared finish, the rests/meals/toilets
+      the party or dial requested — and NOT the planner's own anchor on an open
+      unpinned walk. The planner seats them, never drops, folds or
       shaves them, and reports rather than refuses when they alone overrun.
-    - ``longest_leg_ceiling_seconds`` — §4.5.3: the base day's longest street
-      leg; a replan may not mint a longer one (Rosemary's 12 + 9 fusing into 21).
+    - ``longest_leg_ceiling_seconds`` — the base day's longest street leg; a
+      replan may not mint a longer one (a 12- and a 9-minute leg fusing into 21).
     - ``keep_to_poi_ids`` — the pool. None = any candidate; a tuple = ONLY these
-      (a subset of the planned day, in whatever order fits): W5.2 R1.2/R1.4 — a
-      skip's or an early band's answer never adds a building or new narration.
+      (a subset of the planned day, in whatever order fits): a skip's or an
+      early band's answer never adds a building or new narration.
     - ``visited_poi_ids`` — already stood at or skipped; never re-seated.
-    - ``spent_categories`` — Greta: the category walked away from is spent for
-      the day (§4.5.5 read against the day AND the person's refusals).
+    - ``spent_categories`` — the category walked away from is spent for the
+      day (read against the day AND the person's refusals).
     - ``floor_zero`` — a TAIL has no floor: one leg home with no stop is a legal
-      answer (W5.2 R1.1, 11/11; W5.1 defect 6 — today's planner refuses 5 of 6
-      tails). The density gate does not refuse a thin remainder, the underfill
+      answer (with a floor, the planner refused 5 of 6 measured tails). The density gate
+      does not refuse a thin remainder, the underfill
       line does not bind, and a remainder that cannot fit its minutes comes back
       as the protected day with ``Route.overrun_seconds`` REPORTED, never a 422.
-    - ``listening_rate`` — §4.1 (Paulo): scales the narration seconds left, never
+    - ``listening_rate`` — scales the narration seconds left, never
       planned stop minutes. The learned walking pace rides ``TourInput.walking_pace``,
       the weather ``TourInput.weather``, the clock ``start_datetime``, the minutes
       left ``duration_min``, the terminus ``end`` — the request already has them.
@@ -909,24 +905,24 @@ class ReplanContext(BaseModel):
     listening_rate: float = Field(default=1.0, ge=0.5, le=3.0)
     # MINUTES A DROP OR A SKIP ALREADY HANDED THESE PLACES (poi id -> seconds),
     # granted through the one drop primitive's grant rule before this replan runs
-    # (a skipped stop's minutes, an early band's minutes — W5.2 R1.2/R1.4: they
-    # LENGTHEN what is there); the planner seeds its extensions with them.
+    # (a skipped stop's minutes, an early band's minutes: they LENGTHEN what is
+    # there); the planner seeds its extensions with them.
     visit_extension_seconds: dict[str, int] = Field(default_factory=dict)
 
 
 class Route(BaseModel):
     """Selected POIs in walking order, with transit segments and budgets.
 
-    Phase 6 added the optional ``tourability`` slot so selection can
-    surface a YELLOW density assessment to the skill without raising.
+    The optional ``tourability`` slot lets selection surface a YELLOW
+    density assessment to the skill without raising.
 
-    Phase 7.5 (Fix 3) added ``demoted_beats``: when two selected POIs
+    ``demoted_beats``: when two selected POIs
     sit within ~15m of each other and share an address-overlap signal,
     selection demotes the smaller-tier POI and merges its beats into
     the larger POI's pool. The mapping ``host_poi_id -> tuple[BeatRef]``
     lets the harness pull the demoted beats without re-querying.
 
-    Track B (Step B.2) added ``vignettes``: walk-past vignette POIs along
+    ``vignettes``: walk-past vignette POIs along
     the legs — ``leg_idx -> POIs``, where leg ``i`` is the walk INTO stop
     ``i`` (matching ``transits`` indexing). ADDITIVE metadata only:
     selection populates it AFTER ordering, and ``pois``/``transits`` are
@@ -961,16 +957,15 @@ class Route(BaseModel):
     # build a Route without it (score_saved_tours, score_gold_text,
     # human_reference_tours, and the repair's throwaway trial) and inherit that.
     planned_visit_seconds: Mapping[str, int] = Field(default_factory=dict)
-    # THE HONESTY SURFACE'S PER-STOP FACTS (Phase 4, W4.2 deviation v — the
-    # panel ruled unanimously that queue minutes and the in/out shape must be
-    # visible BEFORE a person commits to a day). Priced at each stop's ordered
+    # THE HONESTY SURFACE'S PER-STOP FACTS (queue minutes and the in/out shape
+    # must be visible BEFORE a person commits to a day). Priced at each stop's ordered
     # ARRIVAL hour by the same shape closure the visits use, at the same one
     # site, so the surface and the budget can never disagree. Empty = unpriced
     # (dateless/legacy routes) = nothing rendered; the safe identity default.
     planned_queue_seconds: Mapping[str, int] = Field(default_factory=dict)
     visit_goes_inside: Mapping[str, bool] = Field(default_factory=dict)
-    # THE PLACED OUTSIDE SECONDS per stop (Phase 7 S7.6; design §5.6 threshold
-    # silence) — the same shape, priced at the same one site and the same arrival
+    # THE PLACED OUTSIDE SECONDS per stop (threshold silence) — the same shape,
+    # priced at the same one site and the same arrival
     # hour as the two maps above, carried so the audio placement rule can say how
     # long a piece has before the door: the only threshold a phone can see under a
     # roof. Empty = unpriced = no door anywhere; the safe identity default.
@@ -995,20 +990,20 @@ class Route(BaseModel):
     # HOW FAR OVER ITS MINUTES a REPLANNED remainder runs, in seconds — 0 for every
     # fresh plan (a fresh plan over its ceiling is REFUSED, never served). Under a
     # `ReplanContext` the protected stops alone may not fit the minutes left
-    # (Rosemary at her bench, 20.5 minutes from the Orsay with 15 left); the
+    # (a walker at a bench, 20.5 minutes from the finish with 15 left); the
     # planner then hands back the protected day and SAYS the overrun here, because
-    # a tail is not a request the phone can take a 422 for (W5.2 R1.1) — the
-    # overrun is the raw material of the ONE question (§4.2), never a refusal.
+    # a tail is not a request the phone can take a 422 for — the
+    # overrun is the raw material of the ONE question, never a refusal.
     overrun_seconds: int = Field(default=0, ge=0)
     # HOW FAR the longest street leg of a REPLANNED remainder runs over the person's
     # per-leg limit, in seconds — 0 for every fresh plan (a fresh plan is refused at
-    # the street certification, S5.4). A tail's walk home longer than the limit is a
-    # fact to say, not a 422 (W5.2 R1.1; Rosemary: "the entry must say where I sit on
-    # the way"): S5.11's one line reads it.
+    # the street certification). A tail's walk home longer than the limit is a
+    # fact to say, not a 422 (the entry must say where the walker can sit on the
+    # way): the session's one line reads it.
     leg_cap_breach_seconds: int = Field(default=0, ge=0)
-    # Track B (Step B.2): leg_idx -> walk-past vignette POIs on that leg.
+    # leg_idx -> walk-past vignette POIs on that leg.
     vignettes: dict[int, tuple[POI, ...]] = Field(default_factory=dict)
-    # WHO THE CLOCK EXCLUDED, AND WHY (redesign 6.1) — additive metadata in the
+    # WHO THE CLOCK EXCLUDED, AND WHY — additive metadata in the
     # `vignettes` mould: populated only on a dated request, default empty, so
     # every existing Route is byte-identical. ON THE ROUTE for the same reason
     # `elapsed_shortfall_seconds` gives above: `tourability` is None on exactly
@@ -1016,28 +1011,28 @@ class Route(BaseModel):
     # a disclosure riding a channel that is null in its own case discloses
     # nothing.
     clock_exclusions: tuple[ClockExclusion, ...] = ()
-    # WHAT THIS ROUTE PROMISES (design §3.1) — additive metadata in the
+    # WHAT THIS ROUTE PROMISES — additive metadata in the
     # `vignettes` mould: populated only by the promise-native planner, default
     # empty, so every existing Route is byte-identical. Output, never input:
     # these are the obligations the planner swore for this day, carried so
     # downstream phases can protect them through every replan ("fabric may
-    # change silently; promises may not", §4.3).
+    # change silently; promises may not").
     promises: tuple[Promise, ...] = ()
-    # M2 routed-metadata slots. ``routed`` is True iff every transit leg came
+    # Routed-metadata slots. ``routed`` is True iff every transit leg came
     # from Valhalla. ``route_polyline`` (stitched whole-route shape) and
     # ``backtrack_ratio``/``flow_score`` keep their defaults until the
-    # milestones that compute them (M3/M4) land.
+    # code that computes them lands.
     routed: bool = False
     route_polyline: str | None = None
     backtrack_ratio: float = Field(default=0.0, ge=0)
     flow_score: float = Field(default=0.0, ge=0)
-    # M5: the REACH verdict for the request that produced this route.
+    # The REACH verdict for the request that produced this route.
     reach: ReachVerdict | None = None
-    # C9 governor: the fixed-end-B / pulled-endpoint POI id — EXEMPT from the
+    # The governor: the fixed-end-B / pulled-endpoint POI id — EXEMPT from the
     # per-stop audio-share cap (it may dominate). None for round trips / open walks.
     fixed_end_poi_id: str | None = None
-    # C9 governor: the POSITIONAL start-anchor — the first-seated POI in the greedy
-    # (decision 3, "may dominate") — EXEMPT from the cap. Persisted here because
+    # The governor: the POSITIONAL start-anchor — the first-seated POI in the greedy
+    # (it "may dominate") — EXEMPT from the cap. Persisted here because
     # Held-Karp reorders ``pois`` after greedy, so ``pois[0]`` is NOT the anchor,
     # and compose/golden harnesses have no access to the greedy locals. None on
     # A→B (no positional start-anchor is seated) and for empty routes.
@@ -1059,10 +1054,9 @@ class POIBeats(BaseModel):
 
 
 class BeatSequence(BaseModel):
-    """The ordered beat plan for a Route — Phase 3 turns this into a Script.
+    """The ordered beat plan for a Route — generation turns this into a Script.
 
-    Track B (Step B.4, seam locked by the plan's adversarial review m-11)
-    added the ADDITIVE ``vignette_beats``: ``leg_idx -> chosen walk-past
+    The ADDITIVE ``vignette_beats``: ``leg_idx -> chosen walk-past
     beats`` (leg ``i`` = the walk INTO stop ``i``), ONE best beat per
     vignette POI, built by callers from ``Route.vignettes`` + the snapshot
     (see ``beat_select.select_vignette_beats``). The stitcher voices each as
@@ -1074,7 +1068,7 @@ class BeatSequence(BaseModel):
 
     poi_beats: tuple[POIBeats, ...]
     vignette_beats: dict[int, tuple[BeatRef, ...]] = Field(default_factory=dict)
-    # C9g: per-POI overflow beat ids — the beats the governor trimmed off a
+    # Per-POI overflow beat ids — the beats the governor trimmed off a
     # dominating stop. Carried here so _flatten_pois can surface them on
     # ScriptPOI.overflow_beat_ids (keep-exploring extras) instead of silently
     # dropping them. ``poi_id -> ordered overflow beat ids``; empty when the
@@ -1083,7 +1077,7 @@ class BeatSequence(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Phase 3 — Script (final output) + validation
+# Script (final output) + validation
 # ---------------------------------------------------------------------------
 
 
@@ -1093,10 +1087,10 @@ class BeatSequence(BaseModel):
 # stop. It is a WAYPOINT, not a place — no beats, no dwell — and every surface
 # that meets it must know that: the narrator never voices its name
 # (generation.py), and the wire flags the card so a screen can say "ends at
-# your finish point" instead of counting a zero-minute stop (W4.12 closing
-# panel: "Destination: 0 min · outside" listed as stop 5 of 5, and promised as
-# `finish Destination 12:50-12:50`; Sofia: "a winter tour must never end at a
-# nameless place in the dark"). ONE definition, read by selection, generation
+# your finish point" instead of counting a zero-minute stop
+# ("Destination: 0 min · outside" listed as stop 5 of 5, and promised as
+# `finish Destination 12:50-12:50`; a winter tour must never end at a
+# nameless place in the dark). ONE definition, read by selection, generation
 # and options — it used to be spelled twice.
 END_B_SENTINEL_PREFIX: str = "__end_b__"
 END_B_SENTINEL_NAME: str = "Your finish point"
@@ -1149,7 +1143,7 @@ class ScriptPOI(BaseModel):
     area: str | None = None
     dwell_seconds: int = 0
     beat_ids: tuple[str, ...] = ()
-    # C9 governor: ordered overflow beats capped OUT of this stop's plan — the
+    # The governor: ordered overflow beats capped OUT of this stop's plan — the
     # "keep exploring here" extras. Empty for exempt anchors and thin stops.
     overflow_beat_ids: tuple[str, ...] = ()
 
@@ -1179,30 +1173,30 @@ class RouteOptionStop(BaseModel):
     lens: str | None = None  # dominant lens of the stop's beats; None if unlensed
     visit_or_walk_past: Literal["visit", "walk_past"] = "visit"
     minutes: int = Field(default=0, ge=0)
-    # Phase 3 spotlight model (spec s7). Additive with behavior-preserving
-    # defaults: until Step 3.5 wires the spotlight effect into selection, every
+    # The spotlight model. Additive with behavior-preserving defaults: until
+    # the spotlight effect is wired into selection, every
     # stop is a full dwell with a zero score, so nothing downstream changes.
-    band: Literal["dwell", "vignette", "leg"] = "dwell"  # spotlight output band (spec s3)
+    band: Literal["dwell", "vignette", "leg"] = "dwell"  # spotlight output band
     spotlight: float = Field(default=0.0, ge=0)  # the computed spotlight score
     # The text this card voices. Empty only for a dwell stop whose stop_idx carried no
     # stationary sentence. A leg card is NEVER emitted with empty narration, and a
     # vignette card is never emitted without a voiceable one-liner.
     narration: str = ""
-    # KE9: this dwell stop has "keep exploring here" extras — beats the time budget
+    # This dwell stop has "keep exploring here" extras — beats the time budget
     # capped out. Always False on vignette and leg cards.
     has_deeper_dive: bool = False
-    # THE FIXED-END WAYPOINT, flagged (W4.12). True only on the card for the
+    # THE FIXED-END WAYPOINT, flagged. True only on the card for the
     # A→B sentinel (END_B_SENTINEL_PREFIX): the place a person asked to END at
     # when no seated stop is near it. Zero minutes, no beats, not a place — a
     # screen renders it as "ends at your finish point", never as a numbered
     # stop, and never counts it. Additive with a False default, so every earlier
     # payload and every consumer that ignores it is untouched.
     is_finish_point: bool = False
-    # THE HONESTY SURFACE (Phase 4, W4.2 deviation v — the panel ruled queue
-    # minutes and the in/out side of the door must be visible BEFORE a person
-    # commits). Priced at this stop's ordered arrival hour by the planner (the
+    # THE HONESTY SURFACE (queue minutes and the in/out side of the door must
+    # be visible BEFORE a person commits). Priced at this stop's ordered arrival
+    # hour by the planner (the
     # Route's own maps); 0 / None on unpriced (dateless/legacy) plans, on
-    # vignette and leg cards, and on every pre-Phase-4 payload — additive.
+    # vignette and leg cards, and on every older payload — additive.
     queue_minutes: int = Field(default=0, ge=0)
     goes_inside: bool | None = None
 
@@ -1237,15 +1231,15 @@ class RouteOption(BaseModel):
     degraded: bool = False
     profiles: tuple[str, ...] = ()
     offline_package: dict | None = None
-    # Phase 3 spotlight model (spec s7): per-corridor lens density surfaced to
-    # the user. None until REACH measures and fills it (later in Phase 3), so
+    # The spotlight model: per-corridor lens density surfaced to
+    # the user. None until REACH measures and fills it, so
     # the default preserves today's behavior.
     lens_coverage_note: str | None = None
 
 
 class StopCorrectionCounts(BaseModel):
     """Per-stop correct-loop outcome counts (ported from the
-    correct-don't-reject branch; its spec tree is retired — git history).
+    correct-don't-reject branch).
 
     ``verified`` = shipped beat-cited sentences that came through the gate
     unmodified; ``corrected`` = shipped sentences whose text was rewritten or
@@ -1264,11 +1258,11 @@ class StopCorrectionCounts(BaseModel):
 
 
 class ValidationReport(BaseModel):
-    """Source-traceability + forbidden-phrase + (M7) provenance/faithfulness
+    """Source-traceability + forbidden-phrase + provenance/faithfulness
     result for a Script. ``passed`` gates serving — a failing report blocks
-    audio (§2.6).
+    audio.
 
-    M7 added two independent VERIFY "teeth":
+    Two independent VERIFY "teeth":
     - ``provenance_failures``: (beat_id, rapidfuzz_score) for beats whose
       ``source_passage`` did not match its source chunk above threshold.
     - ``faithfulness_failures``: (sentence, reason) for beat-cited sentences
@@ -1326,7 +1320,7 @@ class ValidationReport(BaseModel):
     def passed(self) -> bool:
         """Structural failures BLOCK. Entailment and dropped-fact reports ADVISE.
 
-        OWNER RULING 2026-08-03. Measured that day on a real Paris tour, the first ever
+        The owner ruled on 2026-08-03. Measured that day on a real Paris tour, the first ever
         run with these two wired to the workbench: ``0 untraceable, 1 forbidden, 0
         provenance, 28 faithfulness, 6 coverage``. Of the 28, exactly ONE was a verified
         invention. Sampled false alarms included "Look hard at the façade, because it's
@@ -1347,8 +1341,7 @@ class ValidationReport(BaseModel):
 
         They return to blocking when the scored replacement lands: per-CLAIM scores
         carrying the unsupported SPAN, bands rather than an average, and a repair pass
-        before anything is cut (planned in the crash-never-silent run's addendum;
-        its spec tree is retired — git history).
+        before anything is cut.
 
         The three that remain are cheap, exact, and name their subject: an unknown cited
         beat id, a banned phrase, a source passage that does not match its chunk.
@@ -1399,7 +1392,7 @@ class StopVerifyStatus(BaseModel):
 
 
 class Script(BaseModel):
-    """Final tour-builder output. §3.6 of phase-1-design."""
+    """Final tour-builder output."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 

@@ -1,4 +1,4 @@
-"""Audit gate (§ "Audit gate", M8) — does the flagship route swim the Seine,
+"""Audit gate — does the flagship route swim the Seine,
 and is its ETA honest?
 
 Two independent geometric/temporal checks over a finished Route:

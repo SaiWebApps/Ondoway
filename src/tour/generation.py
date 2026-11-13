@@ -1,4 +1,4 @@
-"""Tour-builder generation — §3.4 of phase-1-design.
+"""Tour-builder generation.
 
 Turns a ``BeatSequence`` into a ``Script``: cold-open, anchor essays,
 circumnavigation, transit, closing. Sentence-level traceable output —
@@ -14,7 +14,7 @@ Design notes:
 
 - Stage 1 (cold open) prefers the first stop's ``stop_orientation``
   beat. When absent (most tier-5 anchors), falls back to a
-  ``SYNTHESIZED_OPENER`` template per §3.4. This documents the
+  ``SYNTHESIZED_OPENER`` template. This documents the
   data gap honestly rather than masking it.
 - Stages 2/3 (anchor essay + circumnavigation) just stream the
   pre-ordered beats from ``BeatSequence``. Beat ordering already
@@ -22,7 +22,7 @@ Design notes:
 - Stage 4 (transit) picks a corpus transit beat for the segment when
   one exists at either endpoint POI; otherwise emits a single
   ``GLUE_NAV`` glue sentence (Haiku or template).
-- Stage 5 (closing, Phase 6 S6.4) emits ONE ``GLUE_CLOSING`` fallback line at
+- Stage 5 (closing) emits ONE ``GLUE_CLOSING`` fallback line at
   the end of EVERY stop — the day's at the last stop — which the per-stop
   writer rewrites into the authored close.
 
@@ -120,7 +120,7 @@ def transit_class_beat_ids(beats: Iterable[BeatRef]) -> frozenset[str]:
 SPOKEN_WPM: int = 150
 
 # ---------------------------------------------------------------------------
-# Whitelisted glue labels — §3.5 of phase-1-design
+# Whitelisted glue labels
 # ---------------------------------------------------------------------------
 
 GLUE_NAV: str = "GLUE_NAV"
@@ -131,7 +131,7 @@ SENSORY_INVITATION: str = "Take a moment to take it in."
 GLUE_PACING: str = "GLUE_PACING"
 GLUE_CALLBACK: str = "GLUE_CALLBACK"
 GLUE_CLOSING: str = "GLUE_CLOSING"
-# Phase 4 (spec §6): a reflection synthesizes what has ALREADY been visited,
+# A reflection synthesizes what has ALREADY been visited,
 # spoken on a long leg. Placement is deterministic (reflection.py); the text is
 # LLM-composed at COMPOSE time and gated fail-closed by VERIFY — the stitcher
 # itself never writes one (a template cannot).
@@ -152,10 +152,10 @@ GLUE_LABELS: frozenset[str] = frozenset(
     }
 )
 
-# Phrases generation must never emit (§3.5 + feedback_tour_tone_default).
+# Phrases generation must never emit.
 FORBIDDEN_PHRASES: tuple[str, ...] = ("imagine", "picture this", "envision", "visualize")
 
-#: Phase 6 S6.5 (W6.2 R4, LOCKED 8/11): phrases that can ONLY be a promise of a later
+#: Phrases that can ONLY be a promise of a later
 #: place or telling — banned from story glue outright. The session may trade the next
 #: stop away; a promise to a place the walker never reaches is a small shut door.
 FORWARD_PROMISE_PHRASES: tuple[str, ...] = (
@@ -191,7 +191,7 @@ FORWARD_SIGHT_PHRASES: tuple[str, ...] = (
     "on our way to",
 )
 
-#: Phase 8 S8.3 (W8.2 R1, 11/11): the LEG'S VOICE knows its geometry. A nav line
+#: The LEG'S VOICE knows its geometry. A nav line
 #: names direction ONLY as left/right/straight-ahead or a visible landmark \u2014
 #: NEVER compass (compounds included; a chained "south-south-east" is caught by
 #: its first component) \u2014 and speaks minutes ONLY as the routed leg's own
@@ -264,7 +264,7 @@ _SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-ZÀ-ÖØ-Þ«„(\"'])")
 # Personal-name initials — a single capital letter + period, optionally chained
 # with '-' or more initials: "J.", "J.-B.", "J.B.". These end in a period but are
 # NEVER a sentence boundary, so the splitter must re-glue them (else TTS reads
-# "…a portrait by J.-B." as its own stuttered sentence — the User-agent finding).
+# "…a portrait by J.-B." as its own stuttered sentence).
 _INITIALS_RE = re.compile(r"^[A-ZÀ-ÖØ-Þ]\.(-?[A-ZÀ-ÖØ-Þ]\.)*$")
 # ...but these dotted-caps tokens have the SAME shape as name-initials yet DO
 # legitimately end a sentence ("the U.S.", "1914 A.D.", "by 5 P.M."). They must
@@ -450,7 +450,7 @@ def generate(
     client = glue_client if glue_client is not None else HaikuGlueClient()
     sentences: list[Sentence] = []
 
-    # Phase 7 Fix 5: ensure the final stop's last beat is closing-friendly
+    # Ensure the final stop's last beat is closing-friendly
     # (callback > climax > longest body). Closing glue lands after this.
     beat_sequence = reorder_final_stop_for_closing(beat_sequence)
     poi_beats = beat_sequence.poi_beats
@@ -508,22 +508,21 @@ def generate(
         for s in anchor_sents:
             if s.source_type == "beat":
                 consumed_beat_ids.add(s.source_id)
-        # EVERY stop ends on a close (Phase 6 S6.4; design §5.3 "every named stretch
-        # carries a written one-line close that can play wherever the stretch actually
-        # ends"; §7.4.5 every prefix is decent). The stitch's line is the FALLBACK — it
+        # EVERY stop ends on a close: every named stretch carries a written one-line
+        # close that can play wherever the stretch actually ends, so every prefix of
+        # the day ends decently. The stitch's line is the FALLBACK — it
         # ships when the writer leaves it unrewritten (reported as close_not_authored),
         # and it is the GLUE_CLOSING source the one writer is
         # licensed to rewrite into the authored close (the grounding rule: glue keeps a
         # source_id supplied in THIS stop's stitched script). The last stop's close is
-        # the DAY's (W6.2 R2: one close at the end, never the stop's and the day's in
-        # a row).
+        # the DAY's (one close at the end, never the stop's and the day's in a row).
         sentences.append(
             _build_stop_close(
                 beat_sequence, tour_input, route, stop_idx=stop_idx, n_stops=len(poi_beats)
             )
         )
 
-    # #22: drop beat sentences that restate a claim already voiced by an earlier
+    # Drop beat sentences that restate a claim already voiced by an earlier
     # beat (cross-book / cross-POI repetition). Runs after the full stitch so it
     # sees the whole route; never empties a beat, so emitted beat-ids are stable.
     sentences = suppress_repeated_claims(sentences, beat_sequence)
@@ -555,7 +554,7 @@ def generate(
     # is fixed, so a drop that loses a fact fails verify and is undone).
 
     # A beat is "voiced" only if at least one of its sentences actually survived
-    # the full stitch (cold-open/anchor/transit) AND #22 claim-dedup. A
+    # the full stitch (cold-open/anchor/transit) AND claim-dedup. A
     # transit-class beat the direction check rejected, or a beat whose every
     # sentence was deduped, emits nothing — it must NOT be reported as voiced
     # (dwell over-report) nor block keep-exploring (its ScriptPOI.beat_ids feeds
@@ -609,7 +608,7 @@ def _build_cold_open(
 ) -> tuple[list[Sentence], set[str]]:
     """Cold open: prefer a stop_orientation beat; otherwise synthesize.
 
-    Phase 7 (2026-04-29) added Area-level fallback: when the start POI
+    Area-level fallback (2026-04-29): when the start POI
     has no stop_orientation beat, search the rest of the Route for a
     sibling POI that shares an Area with the start POI and carries one.
     The found beat is hoisted to the cold-open and added to
@@ -645,7 +644,7 @@ def _build_cold_open(
         sentences.extend(_beat_to_sentences(orientation, stop_idx))
         consumed.add(orientation.id)
     else:
-        # SYNTHESIZED_OPENER fallback per §3.4. Phase 7.5 (Fix 2)
+        # SYNTHESIZED_OPENER fallback. It
         # composes the opener from real corpus data at the start POI:
         # Area name + pronunciation + a single physical_cue + an
         # optional sensory invitation if any beat has feature_type='view'.
@@ -677,7 +676,7 @@ def _build_synthesized_opener(
     tour_input: TourInput,
     stop_idx: int,
 ) -> list[Sentence]:
-    """Compose the Phase 7.5 SYNTHESIZED_OPENER block.
+    """Compose the SYNTHESIZED_OPENER block.
 
     Order:
       1. Area-anchored location line ("You're starting in the Marais.")
@@ -713,7 +712,7 @@ def _build_synthesized_opener(
     # 1b. Ground the walk ahead: name the first stop and how far it is. Honest —
     # the walker is still EN ROUTE (never "you're standing at {stop}"). Uses the
     # routed first-leg time, so it also sets pace/anticipation. The line arrives
-    # already placed (S8.3c): head-for rides the first leg as GLUE_NAV; standing
+    # already placed: head-for rides the first leg as GLUE_NAV; standing
     # variants stay stationary opener pieces.
     walk_line = _synth_first_leg_text(first_stop, route, stop_idx)
     if walk_line is not None:
@@ -733,7 +732,7 @@ def _build_synthesized_opener(
 
     # 3. Physical staging from the strongest available cue — UNLESS the clock
     # has shut this stop's door: a cue can point at something behind it ("Look
-    # up at crypt…" at the closed Panthéon directed Aiko underground), and the
+    # up at crypt…" at the closed Panthéon directed a visitor underground), and the
     # closure line has already staged the stop ("we'll take it in from out
     # here"). The stop keeps its story; only the pointing finger is lowered.
     clock_closed = any(
@@ -807,7 +806,7 @@ def _synth_first_leg_text(
     a very short leg reads "just ahead", a longer one "about an N-minute walk".
     Returns None when there is no stop name.
 
-    Phase 8 S8.3c (W8.2 R2; Paulo's Finding 14): the HEAD-FOR line is
+    The HEAD-FOR line is
     navigation, so it returns labelled ``GLUE_NAV`` — the frozen playback rule
     (``is_walk_concurrent``, untouched) then books it onto the first LEG, and a
     queued first stop no longer auto-plays a walking instruction to someone
@@ -955,7 +954,7 @@ def _build_anchor_block(
 ) -> list[Sentence]:
     """Stream the pre-ordered beats; skip cold-open and transit-class beats.
 
-    Phase 7: transit-class beats are routed only through ``_build_transit``
+    Transit-class beats are routed only through ``_build_transit``
     after a direction check. When the check rejects a beat, it must NOT
     leak back into the anchor block (where the listener would hear an
     out-of-place navigation sentence). Always filter transit-class beats
@@ -980,7 +979,7 @@ def _build_anchor_block(
 
 # The fixed-end sentinel id prefix (selection._materialize_fixed_end_b): a pinned
 # endpoint with no POI of its own is materialized as "__end_b__<lat>_<lng>". ONE
-# definition, in the contract (W4.12); this name is kept for its importers.
+# definition, in the contract; this name is kept for its importers.
 _END_B_SENTINEL_PREFIX: str = END_B_SENTINEL_PREFIX
 
 # Varied deterministic connective-tissue templates, cycled by leg so the tour
@@ -999,8 +998,7 @@ def _nav_walk_minutes(leg_seconds: int) -> int:
     Not a separate display-pace constant — the same leg-seconds the engine
     budgets everywhere else (routed Valhalla seconds when present, else the
     pace-corrected haversine fallback; see ``_segment_leg_seconds``). The
-    underlying tourist pace itself stays a tracked open question (the planner
-    diagnostic that tracks it lives in git history — its spec tree is retired).
+    underlying tourist pace itself stays an open question.
     """
     return round(leg_seconds / 60) if leg_seconds and leg_seconds > 0 else 0
 
@@ -1046,11 +1044,11 @@ def _build_transit(
 ) -> list[Sentence]:
     """Insert a corpus transit beat when present; otherwise a single glue nav.
 
-    Phase 7 (2026-04-29) adds direction-awareness. Pre-existing transit
+    Direction-awareness (2026-04-29): pre-existing transit
     beats encode an origin → destination direction inferred from their
     ``trigger_address`` + opening prose. Reusing them on routes that run
     the opposite direction (or start at unrelated POIs) produced
-    geographically-broken openings in phase-6-rerun:
+    geographically-broken openings in an earlier run:
 
     - Tour 4 stop 3 opened "Starting at Invalides Metro station…" when
       the user was arriving from Pont de la Concorde.
@@ -1071,7 +1069,7 @@ def _build_transit(
     block, or by a previous transit) isn't picked again. Without this,
     multi-anchor tours emitted the same transit beat 2-3 times.
 
-    Track B (Step B.4): ``vignette_beats`` — the chosen walk-past beats for
+    ``vignette_beats`` — the chosen walk-past beats for
     this leg (``BeatSequence.vignette_beats[stop_idx]``) — are voiced AFTER
     the transit beat/glue, one beat-cited one-liner each (the FIRST sentence
     of the beat's ``script_body``; corpus text, so no invention issue).
@@ -1105,7 +1103,7 @@ def _build_transit(
             # "walk to" a placeholder named "Destination". Skip the glue client.
             text = template_nav
         else:
-            # Phase 8 S8.3a (W8.2 R1, 11/11): the nav glue KNOWS ITS LEG — the
+            # The nav glue KNOWS ITS LEG — the
             # request hands Haiku the routed minutes (the same number the tour
             # was budgeted with) and the leg-voice rules, so the line cannot
             # guess a bearing or a length. The coercion guard below is the
@@ -1147,7 +1145,7 @@ def _vignette_one_liners(
     stop_idx: int,
     poi_names: dict[str, str] | None = None,
 ) -> list[Sentence]:
-    """One beat-cited sentence per walk-past vignette beat (Track B B.4).
+    """One beat-cited sentence per walk-past vignette beat.
 
     The beat's first sentence, clause-capped by ``vignette_one_liner_text`` when it
     is a long run-on, attributed to the beat's own id at the leg's ``stop_idx``.
@@ -1286,8 +1284,8 @@ def _is_verified_origin(prev_name: str, beat: BeatRef) -> bool:
 
 #: The one-line fallback close for a REST (a bench seated by the party or the dial —
 #: it has no story to land): nonpropositional, names the next stop so two rests on
-#: one day never repeat a sentence (the rubric's C5). Rosemary (05, step 3): "The
-#: bench is a stop. It has a location, a duration, and content."
+#: one day never repeat a sentence (the rubric's C5). A bench is a stop: it has a
+#: location, a duration and content.
 REST_CLOSE_TEMPLATE: str = "Sit as long as you like — {next} can wait."
 REST_CLOSE_LAST_TEMPLATE: str = "Sit as long as you like — that's the walk."
 #: The one-line fallback close for a story stop that is not the day's last.
@@ -1305,7 +1303,7 @@ def fallback_close_text(
 ) -> str:
     """THE fallback close for one stretch — the stitch's line, and the sentence the
     finalizer compares a composed close against to know whether the writer wrote one
-    (a template close is never counted as authored; Phase 6 S6.4). Deterministic and
+    (a template close is never counted as authored). Deterministic and
     name-only: the stop's own name is the one vocabulary glue is licensed to use."""
     if is_last:
         if is_rest:
@@ -1350,10 +1348,10 @@ def _build_stop_close(
 ) -> Sentence:
     """One GLUE_CLOSING line at the END of stop ``stop_idx`` — the fallback close.
 
-    Until Phase 6 S6.4 only the final stop closed, with two generic lines (a physical
-    closure and a thank-you-and-keep-exploring sign-off). The sign-off is gone (W6.2 R2,
-    11/11: "keep exploring on your own" / the thank-you are not a close's job), and every
-    stop now ends on one line. Phase 7 (2026-04-29) ``reorder_final_stop_for_closing``
+    Once only the final stop closed, with two generic lines (a physical closure and a
+    thank-you-and-keep-exploring sign-off). The sign-off is gone ("keep exploring on
+    your own" / the thank-you are not a close's job), and every stop now ends on one
+    line. ``reorder_final_stop_for_closing``
     still lifts the closing-friendly beat to be the LAST beat at the final stop; this
     line follows it. No thematic summary: the authored close (the one writer's) lands
     the point; this template only names the place.
@@ -1375,12 +1373,12 @@ def _build_stop_close(
 
 #: The spoken acknowledgment at a clock-closed stop — two branches, because
 #: two different things are true (`ClockExclusion.all_day` picks): a place
-#: shut for the whole day must say so, or Aiko plans a wasted return trip;
+#: shut for the whole day must say so, or the visitor plans a wasted return trip;
 #: "at the moment" stays for a partial closure, true whether the door opens
 #: later or already shut. No weekday, no clock time — the glue invention scan
 #: licenses neither, and the schedule detail stays on the day's notes channel.
-#: ``{lead}`` and ``{hedge}`` are the guess's doubt (`ClockExclusion.guessed`,
-#: Docs/adr/0006): empty for map hours; "We think " before the fact and ", but
+#: ``{lead}`` and ``{hedge}`` are the guess's doubt (`ClockExclusion.guessed`):
+#: empty for map hours; "We think " before the fact and ", but
 #: we could not confirm that" after it for a guess, so the doubt is heard first.
 CLOSED_STOP_LINE_TEMPLATE: str = (
     "{lead}{name} is closed at the moment{hedge}, so we'll take it in from out here."
@@ -1403,7 +1401,7 @@ CLOSED_START_ALL_DAY_LINE_TEMPLATE: str = (
 )
 #: The KEPT closed start, seated later than stop 0: the walker is standing at
 #: a shut door the day still visits from the outside. Spoken as a bare FACT —
-#: never "we'll come back" (W6.2 R4: the session may trade the stop away, and
+#: never "we'll come back" (the session may trade the stop away, and
 #: a promise to a place the walker never reaches is a small shut door). Its
 #: own stop speaks the full acknowledgment on arrival.
 CLOSED_START_KEPT_LINE_TEMPLATE: str = (
@@ -1604,7 +1602,7 @@ def _head_sentence(stop: POIBeats) -> str:
 def _coerce_glue_output(raw: str, *, default: str, leg_minutes: int | None = None) -> str:
     """Defang the LLM output: empty / sentinel → default; trim quotes.
 
-    Phase 8 S8.3a (W8.2 R1): a nav line that speaks COMPASS, or a minute count
+    A nav line that speaks COMPASS, or a minute count
     that is not the routed leg's own number (``leg_minutes``; None = no budget
     to check), falls back to the deterministic template — which is compass-free
     and speaks the routed number by construction. The guard sits behind the

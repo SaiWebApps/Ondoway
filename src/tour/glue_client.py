@@ -1,8 +1,8 @@
 """Haiku glue client — the model that writes the stitched script's glue lines.
 
 Generation calls this only for short, tightly-bounded structural
-connector sentences. The per-stop writer and the checkers use other models
-(phase-1-design §3.8). The prompt template (``templates/glue_prompt.txt``)
+connector sentences. The per-stop writer and the checkers use other models.
+The prompt template (``templates/glue_prompt.txt``)
 and the whitelist categories in ``generation.py`` enforce no-invention.
 
 Two implementations:
@@ -28,7 +28,7 @@ from typing import Protocol
 
 NO_GLUE_SENTINEL = "<<NO_GLUE>>"
 
-GLUE_MAX_OUTPUT_TOKENS = 150  # phase-1-design §3.8
+GLUE_MAX_OUTPUT_TOKENS = 150
 
 DEFAULT_HAIKU_MODEL = "claude-haiku-4-5-20251001"
 

@@ -156,7 +156,7 @@ class AuthoringCandidatePlan(BaseModel):
         # Strictly increasing, never dense-from-zero: a DAY plan is forced to
         # 0..n-1 by plan_premium_authoring's own coverage checks (one unit per
         # dwell stop, highest index in range), while a FULL-TELLING plan
-        # (Phase 6 S6.6, design §5.5) is one stop of the day at its own index —
+        # is one stop of the day at its own index —
         # stop 3's second story is a plan of exactly (3,).
         if any(b <= a for a, b in itertools.pairwise(indexes)):
             raise ValueError("candidate plan must cover every stop once in order")

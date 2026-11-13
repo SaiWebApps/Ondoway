@@ -1,4 +1,4 @@
-"""Valhalla pedestrian routing client with haversine fallback (M1).
+"""Valhalla pedestrian routing client with haversine fallback.
 
 Primary engine: Valhalla at ``VALHALLA_URL`` (the Render private service in
 production; Docker via ``make valhalla-up`` locally, port 8002) speaking the
@@ -32,7 +32,7 @@ from .contract import ValhallaLegReceipt
 from .corpus_places import canonical_json
 from .routing import PACE_KMH, REACH_PACE_KMH, haversine_m, pace_corrected_walk_seconds
 
-# Pace pin (2026-07-02, hostile-panel finding): Valhalla defaults pedestrians to
+# Pace pin (2026-07-02): Valhalla defaults pedestrians to
 # ~5.1 km/h, and every leg time the engine reports must come from the same walker
 # its budgets assume, or a routed leg and its haversine fallback describe two
 # different people. `PACE_KMH` was 3.0 until 2026-08-06 and is now 4.5, which is
@@ -55,8 +55,7 @@ _ROUTING_CONFIG = {
 }
 
 #: What each `TourInput.route_surface` axis value asks Valhalla for, per
-#: W2.1's live capability proof (redesign §2.4; plan S2.7; the redesign's
-#: spec tree is retired — git history): a real request
+#: a live capability probe: a real request
 #: over the Rue Foyatier stairs (Place Saint-Pierre -> Sacre-Coeur forecourt)
 #: measurably swung the route around the butte under `step_penalty` alone
 #: (+878 m, +1060 s) and under `step_penalty` + `type: "wheelchair"` combined
@@ -77,7 +76,7 @@ VALHALLA_ROUTING_CONFIG_SHA256 = hashlib.sha256(
 ).hexdigest()
 
 #: The hashes of THIS build's routing configuration under every route-surface
-#: override it can ask for (W5.14, Rosemary: a step-free day was labelled "worked out
+#: override it can ask for (a step-free day was labelled "worked out
 #: with different settings than this version expects" on every leg — the check
 #: expected only the default). A receipt carrying any of these was routed by this
 #: build's settings; one carrying none was not.
@@ -132,7 +131,7 @@ class RoutingClient:
         if "://" not in resolved_base_url:
             resolved_base_url = f"http://{resolved_base_url}"
         self._client = client or httpx.Client(base_url=resolved_base_url, timeout=timeout_s)
-        # M3: sticky degradation. The greedy makes hundreds-to-thousands of
+        # Sticky degradation. The greedy makes hundreds-to-thousands of
         # leg calls per request; once a TRANSPORT failure proves Valhalla is
         # away, stop attempting HTTP for this instance's lifetime. Bad
         # responses (4xx/5xx/garbage) do NOT degrade — those are per-request.
@@ -201,7 +200,7 @@ class RoutingClient:
         Fallback behavior remains byte-for-byte compatible with :meth:`route`;
         a ``None`` receipt is the explicit signal that no Valhalla result exists.
 
-        ``costing_options_override`` (plan S2.7; W2.1 proved live: `step_penalty`
+        ``costing_options_override`` (a live probe proved `step_penalty`
         genuinely moves a route off the Rue Foyatier stairs) merges INTO the
         pedestrian costing for THIS request only — ``None`` (the default) keeps
         ``_ROUTING_CONFIG``, byte-identical to every caller before this
@@ -312,9 +311,9 @@ class RoutingClient:
         """GeoJSON FeatureCollection of the walking isochrone, or ``None``.
 
         ``None`` tells the caller to keep using the analytic envelope radius
-        (``envelope_radius_m``) — the pre-M1 behavior.
+        (``envelope_radius_m``) — the analytic fallback.
 
-        ``walking_speed_kmh`` (plan S2.4) overrides the request's pedestrian
+        ``walking_speed_kmh`` overrides the request's pedestrian
         speed for THIS call only — the mechanism a slow party's pace shrinks
         the reach polygon with, so the road-network admission test and the
         analytic circle (``envelope_radius_m(..., pace_multiplier=...)``)
