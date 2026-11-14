@@ -25,7 +25,8 @@ WHAT IT PRODUCES, per POI in ``data/{slug}/poi-raw.json``:
                           tag, ``"guess"`` when a model wrote it. ``null`` with
                           null hours. The source decides how the hours are
                           SPOKEN; nothing else does.
-``opening_hours_basis``   The one-sentence argument, per the house style.
+``opening_hours_basis``   One sentence arguing the answer: what kind of place it
+                          is and where its hours came from, or why it has no door.
 
 THE MAP COMES FIRST, AND A GUESS NEVER OVERRULES IT. Two Overpass pulls over the
 city registry's bbox: the SCOPED classes (tourism, historic, worship, market,
@@ -250,7 +251,7 @@ def match_osm(
 ) -> dict[str, str]:
     """POI name -> raw OpenStreetMap ``opening_hours`` text.
 
-    The scoped classes first, by containment (today's rule, unchanged); a POI
+    The scoped classes first, by containment; a POI
     they leave unmatched is tried against the wide set by EQUAL name only.
     Nearest wins when several qualify. The scope is the disambiguation: the
     wide set holds every shop and restaurant in the city."""

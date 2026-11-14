@@ -49,14 +49,14 @@ LegSecondsFn = Callable[[float, float, float, float], int]
 #: How fast a walker is assumed to move. A MEASUREMENT, and a wrong one: people walk
 #: about 4.5 km/h, so every leg time this product reports is inflated by about half.
 #:
-#: RAISED TO 4.5 AND HELD BACK AT 3.0 (owner decision, 2026-08-06). Measured on the
-#: 300-minute Rue Royale -> Notre-Dame case, the rise moves the furthest stop off the
+#: HELD AT 3.0 although 4.5 is the honest figure. Measured on the
+#: 300-minute Rue Royale -> Notre-Dame case, a rise to 4.5 moves the furthest stop off the
 #: direct line from 527 m to 2,122 m — Montmartre — and total walking from 4.2 km to
 #: 7.6 km. The mechanism is NOT the reach radius, which `REACH_PACE_KMH` below pins
 #: successfully; it is the corridor test, which compares `walk(A->p) + walk(p->B)`
 #: against a budget in SECONDS, so a faster walker affords a wider detour in the same
-#: time. That is arithmetically correct and is the reported bug's shape at a third of
-#: its size.
+#: time. That is arithmetically correct, and it still sends the route far off the
+#: direct line.
 #:
 #: The fix is a detour bound measured in METRES rather than minutes, which is not
 #: built yet. Until it lands, an honest walking speed buys a
@@ -440,7 +440,7 @@ def governor_allowance_seconds(
     duration_min: int,
     policy: RoutePlanningPolicy = DEFAULT_ROUTE_PLANNING_POLICY,
 ) -> int:
-    """Per-stop audio allowance for the C9 share-governor (ratified 2026-07-03).
+    """Per-stop audio allowance for the audio governor (``beat_select.govern_poi_beats``).
 
     An INCIDENTAL stop's emitted narration is capped to this many voiced
     seconds; the ordered overflow beats become the keep-exploring extras. The
@@ -565,7 +565,7 @@ def insertion_extra_at_index(
 ) -> int:
     """Walk-time delta from inserting `candidate` at exactly position `idx`.
 
-    THE one single-index insertion-cost computation (dedup-review 2026-08-07):
+    THE one single-index insertion-cost computation:
     ``insertion_cost_seconds``'s per-position loop below and every single-index
     recompute in selection.py (the one-way pull-clamp case, and the pinned
     A→selected→B chain) independently rebuilt this same splice-and-diff before

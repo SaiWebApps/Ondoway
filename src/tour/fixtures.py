@@ -1,21 +1,21 @@
 """Named ordering tables for tier-5 anchors with hand-curated walks.
 
 Each entry maps a POI's `name` (city-scoped) to an ordered list of
-sub_location slugs as they appear in the empirical walk-throughs. The
-order encodes the spatial walk path through the building or square.
+sub_location slugs in the order a visitor walks them. The order encodes
+the spatial walk path through the building or square.
 
 Beat ordering for these POIs uses these tables when sub_location is
 populated. Beats whose `sub_location` is missing from the table sort
 last, in stable name order.
 
-Adding a new POI: follow the empirical-tour walk path. Don't infer
+Adding a new POI: follow the physical walk path through the place. Don't infer
 ordering from corpus-cluster heuristics — get it from a hand-write or
 the source guidebook.
 """
 
 from __future__ import annotations
 
-# Notre-Dame Cathedral, from empirical Tour 2 (2026-04-26).
+# Notre-Dame Cathedral.
 # Path: parvis approach → kilometre-zero medallion → west façade reading
 # (gallery of kings → portals) → bell-tower vestibule → interior nave →
 # choir → treasury → towers (climb-out) → exterior east end (square Jean XXIII).

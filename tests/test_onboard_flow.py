@@ -1,4 +1,4 @@
-"""Flow-primitive tests: ``consult_source`` resilience (FIX 2).
+"""Flow-primitive tests: ``consult_source`` resilience.
 
 A LIVE onboarding run consults several sources; ONE source failing (a 403, a
 timeout, a malformed payload) must NOT abort the whole run — it should degrade
@@ -102,8 +102,8 @@ def test_consult_source_swallows_fixture_parse_error(monkeypatch) -> None:
 def test_consult_source_normal_connector_returns_result_unchanged(monkeypatch) -> None:
     """A HEALTHY source is UNCHANGED by the resilience wrap: it returns exactly
     the result a direct ``parse`` of the same committed fixture yields, and emits
-    NO ``error`` event. (This is the guard that FIX 2 didn't alter the happy
-    path — it stays GREEN with or without the try/except.)"""
+    NO ``error`` event. (This guards that the resilience wrap leaves the happy
+    path alone — it stays GREEN with or without the try/except.)"""
     monkeypatch.setattr(fetch, "HTTP_MODE", "fixture")
     store, job_id = _store_job()
 

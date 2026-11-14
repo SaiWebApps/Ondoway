@@ -13,7 +13,8 @@ For each beat in the target beats.json, fill in (when empty):
                         co-located book-log.json and counting distinct
                         chunk values. Exactly one chunk → that chunk's
                         slug; ≥2 → sentinel `legacy_ambiguous` (never
-                        wiped by /beat-wipe per BP-8); zero → `legacy_unknown`
+                        wiped by /beat-wipe, which refuses that sentinel as a
+                        target); zero → `legacy_unknown`
 
 Idempotent: never overwrites a non-empty, non-sentinel existing value.
 Branches on `_meta.prompt_version`:
@@ -22,7 +23,7 @@ Branches on `_meta.prompt_version`:
   - else        → parse both `book_slug` (suffix) and `topic_slug` (middle)
                    from `{poi_slug}_{lens}_{topic_slug}_{book_slug}`
 
-Pre-flight (BP-6):
+Pre-flight:
   1. `git status --porcelain {beats.json} {book-log.json}` MUST be empty.
   2. Snapshot `{beats.json}.pre-migration` is written before any mutation.
   Both must succeed or the script exits non-zero without touching anything.
@@ -183,7 +184,7 @@ def migrate_beat(beat: dict, poi_chunk_index: dict[str, set[str]]) -> dict:
 
 
 def assert_git_clean(*paths: Path) -> None:
-    """BP-6 — `git status --porcelain` must be empty for all named paths.
+    """`git status --porcelain` must be empty for all named paths.
 
     Runs git from the beats file's parent directory so absolute paths from
     different working trees resolve against the right repository.
@@ -208,7 +209,7 @@ def assert_git_clean(*paths: Path) -> None:
 
 
 def write_snapshot(beats_path: Path) -> Path:
-    """BP-6 — write `{beats_path}.pre-migration` snapshot before mutating."""
+    """Write the `{beats_path}.pre-migration` snapshot before mutating."""
     snapshot = beats_path.with_suffix(beats_path.suffix + ".pre-migration")
     shutil.copy2(beats_path, snapshot)
     return snapshot

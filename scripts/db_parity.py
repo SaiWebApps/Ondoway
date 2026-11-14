@@ -120,8 +120,8 @@ def _expected(slug: str) -> dict:
     # OpenStreetMap text. In the parity set so the upload hop is mechanically
     # enforced — a field that reaches poi-raw.json and never the graph turns
     # the lane's dev-data preflight red instead of silently serving days that
-    # speak hours the repo no longer holds. Compared on EVERY target: the
-    # owner's rule is that production carries the same hours as dev.
+    # speak hours the repo no longer holds. Compared on EVERY target:
+    # production carries the same hours as dev.
     hours = {
         (
             canonical_name_key(p["name"]),
@@ -256,8 +256,8 @@ def _actual(session, slug: str) -> dict:
 
 def _cmp(label: str, exp: set, act: set, drift: list, sample=lambda x: x) -> None:
     """Every lane fails parity on every target. Production carries the same
-    data as dev, or the deploy that makes it so has not happened yet — a lane
-    that merely warned let the cloud lag the repo for weeks without a red."""
+    data as dev, or the deploy that makes it so has not happened yet; a lane
+    that only warned would let the cloud lag the repo without anything failing."""
     missing, extra = exp - act, act - exp
     if not (missing or extra):
         print(f"    [OK  ] {label}: repo={len(exp)} db={len(act)}")

@@ -1,20 +1,18 @@
 """Deploy-manifest guard — the public Render service must gate off the workbench.
 
-Defects #1 and #2 (both critical, same root cause): ``render.yaml`` provisions
-the public ``ondoway-api`` service but never sets ``WORKBENCH_API_ENABLED=false``.
+``render.yaml`` provisions the public ``ondoway-api`` service, so it must set
+``WORKBENCH_API_ENABLED`` to an off value.
 
 ``src/api/app.py`` mounts the editorial-workbench graph-CRUD routers (graph,
 nodes, edges, schema) — an UNAUTHENTICATED create / update / DETACH DELETE
 surface over the live Neo4j/Aura graph — whenever ``WORKBENCH_API_ENABLED`` is
-not an explicit off value (its default is ``"true"``). The code comment and
-``tests/test_api_startup.py`` assert the public deployment sets the flag to
-``false`` to disengage that surface, but the manifest that actually provisions
-prod does not, so the control is off in production and the destructive write
-surface is live on the internet.
+not an explicit off value (its default is ``"true"``). If the manifest that
+provisions prod leaves the flag out, that destructive write surface is live on
+the internet.
 
 This test reads the committed manifest and asserts the gate is set to a value
-that ``app._workbench_api_enabled()`` actually treats as OFF. It fails on the
-un-fixed manifest (flag absent) and passes once the flag is added.
+that ``app._workbench_api_enabled()`` actually treats as OFF. It fails when the
+flag is absent.
 """
 
 from __future__ import annotations

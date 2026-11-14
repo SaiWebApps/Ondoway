@@ -14,9 +14,8 @@ abstract class LocationProvider extends ChangeNotifier {
   /// want a fix while they are on screen; the tour asks for true.
   ///
   /// It is declared HERE, on the door, rather than only on the concrete
-  /// service. It was on the implementation alone until 2026-08-31 — so the
-  /// playback service, which holds this interface, could not ask for it and
-  /// silently started a walk on foreground-only tracking.
+  /// service, so the playback service, which holds this interface, can ask for
+  /// it.
   Future<bool> startTracking({bool background});
   void stopTracking();
 }
@@ -115,8 +114,9 @@ abstract class AudioProvider extends ChangeNotifier {
   /// Say one sentence of the SESSION's own voice — never a story.
   /// The playback service hands a line here only at a natural moment
   /// and only after it is already on the screen. The default is silent:
-  /// the phone has no voice plugin today, and "mute beats graceful" —
-  /// wiring a voice is one implementation behind this door.
+  /// the phone has no voice plugin today, and saying nothing is preferred to
+  /// a degraded fallback voice. Wiring a voice is one implementation behind
+  /// this door.
   Future<void> speak(String sentence) => Future.value();
 
   /// Activate the iOS audio session (.playback/.duckOthers) so playback is

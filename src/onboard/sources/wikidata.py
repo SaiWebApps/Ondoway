@@ -1,6 +1,6 @@
-"""The Step-3 WIKIDATA source connector.
+"""The WIKIDATA source connector.
 
-PURE, like every Step-3 connector: ``consult_url`` names the WDQS SPARQL
+PURE, like every source connector: ``consult_url`` names the WDQS SPARQL
 endpoint + a bounding-box query for the city, and ``parse`` maps the returned
 SPARQL-JSON to typed ``PoiCandidate`` hits. Neither touches the network or the
 filesystem — the actual GET goes through ``base.run_connector`` ->
@@ -40,7 +40,7 @@ _EVENT_P31_QIDS: tuple[str, ...] = (
 def _box_query(ctx: CityContext) -> str:
     """A valid WDQS ``wikibase:box`` query selecting every item with a P625
     coordinate inside ``ctx.bbox``, plus the NOTABILITY + ARTICLE signals the
-    Step-4 assemble filter needs to cut a live city's ~55K-hit firehose down to
+    assemble filter needs to cut a live city's ~55K-hit firehose down to
     the real landmarks:
 
     - ``?sitelinks`` — ``wikibase:sitelinks`` count (how many Wikipedias link it).
@@ -122,7 +122,7 @@ class WikidataConnector:
 
         Each binding carries an entity URI (``place``), a label (``placeLabel``),
         a WKT coordinate (``coord``), and the notability/article signals the
-        Step-4 assemble filter consumes: ``sitelinks`` (int), ``enwiki`` (the
+        assemble filter consumes: ``sitelinks`` (int), ``enwiki`` (the
         article title), and ``p31`` (pipe-joined class Q-ids). The Q-number is the
         URI tail, kept as a provenance scalar in ``meta['qid']``.
         """
@@ -134,7 +134,7 @@ class WikidataConnector:
             place_uri = binding.get("place", {}).get("value")
             name = binding.get("placeLabel", {}).get("value")
             coord_wkt = binding.get("coord", {}).get("value")
-            # A candidate with no usable name is useless for Step-4 dedup; one
+            # A candidate with no usable name is useless for assemble dedup; one
             # with no coordinate can't be placed. Skip either rather than crash
             # or emit a degenerate candidate.
             if not name or not coord_wkt or not place_uri:

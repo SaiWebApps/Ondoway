@@ -1,5 +1,5 @@
 // DEMO "stand here", on the iOS Simulator, on a day planned,
-// composed and VOICED on the app path (w711_days.py).
+// composed and VOICED on the app path.
 //
 // The moments:
 //  1. THE WALKING LINE PLAYS ON THE WALK:
@@ -25,12 +25,11 @@
 //     starts at the first standstill inside the footprint — the best listening
 //     slot of the day, silent until now.
 //
-// Same harness discipline as the earlier simulator demos: scripted GPS and clock through the
-// app's own doors, the real TripService over the wire, the session screen
-// pumped so the host's 2-second screenshot loop lands a frame per moment,
-// "W712 " transcript lines. The PLAYER is the test double here, as in every
-// prior demo — the real just_audio player was driven separately, on real files,
-// in its own interruption run.
+// The harness: scripted GPS and clock through the app's own doors, the real
+// TripService over the wire, the session screen pumped so the host's 2-second
+// screenshot loop lands a frame per moment, and "STAND-HERE " transcript lines.
+// The PLAYER is the test double here; the real just_audio player is exercised
+// on real files by the interruptions integration test.
 
 import 'dart:math';
 
@@ -157,14 +156,14 @@ void main() {
         String label, {bool pause = true}) async {
       s.tick();
       await tester.pump();
-      lines.add('W712 [$tag] $label '
+      lines.add('STAND-HERE [$tag] $label '
           '| at=${s.currentStop?.poiName ?? "-"} state=${s.state.name} '
           '| played: ${voice.playedKeys.join(",")} '
           '| chapter offer: "${s.segmentOffer ?? ""}" '
           '| keep-listening: "${s.keepListeningOffer ?? ""}" '
           '| close line: "${s.closeLine ?? ""}" '
           '| spoken: ${voice.said.length}');
-      debugPrint('W712 MOMENT $tag ${label.replaceAll(' ', '_')}');
+      debugPrint('STAND-HERE MOMENT $tag ${label.replaceAll(' ', '_')}');
       if (pause) await Future<void>.delayed(const Duration(seconds: 6));
     }
 
@@ -201,8 +200,8 @@ void main() {
     final bigStop = largestBy(
         (s) => (s.trigger?.queueSeconds ?? 0) == 0, (s) => s.trigger?.radiusM ?? 0);
 
-    lines.add('W712 [DAY] ${all.map((x) => "${x.poiName} r=${x.trigger?.radiusM}").join(" -> ")}');
-    lines.add('W712 [DAY] leg piece: ${legStop?.poiName ?? "none"} '
+    lines.add('STAND-HERE [DAY] ${all.map((x) => "${x.poiName} r=${x.trigger?.radiusM}").join(" -> ")}');
+    lines.add('STAND-HERE [DAY] leg piece: ${legStop?.poiName ?? "none"} '
         '| chapters: ${chapterStop?.poiName ?? "none"} '
         '| door: ${doorStop?.poiName ?? "none"} '
         '| priced queue: ${queuedStop?.poiName ?? "none"} '
@@ -227,10 +226,10 @@ void main() {
           'on the leg to ${legStop.poiName}: the WALKING LINE plays '
           '(${legStop.legAudioDurationSec}s), the story does not');
       final legKey = '${legStop.stopId}-leg';
-      lines.add('W712 [ACT1] leg piece played: '
+      lines.add('STAND-HERE [ACT1] leg piece played: '
           '${t.voice.playedKeys.contains(legKey) ? "YES" : "NO"} '
           '| story played: ${t.voice.playedKeys.contains(legStop.stopId) ? "YES (defect!)" : "NOT YET (correct)"}');
-      lines.add('W712 [ACT1] the line itself: "${legStop.legNarration}"');
+      lines.add('STAND-HERE [ACT1] the line itself: "${legStop.legNarration}"');
       await tester.pumpWidget(const SizedBox());
       t.s.stopTour();
     }
@@ -254,7 +253,7 @@ void main() {
       final d = _distance(edge.lat, edge.lng, bigStop.lat, bigStop.lng);
       await moment(t.s, t.voice, 'ACT2',
           'stepped onto the edge — ${d.round()} m from the pin: the story STARTS');
-      lines.add('W712 [ACT2] ${bigStop.poiName}: footprint ${r.round()} m; the piece '
+      lines.add('STAND-HERE [ACT2] ${bigStop.poiName}: footprint ${r.round()} m; the piece '
           'started ${d.round()} m from the pin. Before footprints the phone drew one 10 m '
           'circle here, so nothing played until the walker stood on the pin itself.');
       await tester.pumpWidget(const SizedBox());
@@ -283,7 +282,7 @@ void main() {
       await moment(t.s, t.voice, 'ACT3',
           'standing at "${chapter.label}" (its own ${chapter.radiusM.round()} m circle): the CHAPTER plays');
       final segKey = '${chapterStop.stopId}-seg-$chapterIdx';
-      lines.add('W712 [ACT3] chapter played: '
+      lines.add('STAND-HERE [ACT3] chapter played: '
           '${t.voice.playedKeys.contains(segKey) ? "YES" : "NO"} '
           '| it says: "${chapter.narration.split(RegExp(r"(?<=[.!?])\s+")).first}"');
       // Walk off, come back — no restart, no comment.
@@ -298,7 +297,7 @@ void main() {
       await moment(t.s, t.voice, 'ACT3',
           'walked off for four minutes and came back — told once is told');
       final after = t.voice.playedKeys.where((k) => k == segKey).length;
-      lines.add('W712 [ACT3] chapter replays on the way back: '
+      lines.add('STAND-HERE [ACT3] chapter replays on the way back: '
           '${after > before ? "YES (defect!)" : "NO (correct)"}');
       await tester.pumpWidget(const SizedBox());
       t.s.stopTour();
@@ -325,14 +324,14 @@ void main() {
       t.s.finishSentenceNow();
       await moment(t.s, t.voice, 'ACT4',
           'the sentence ended: the stop\'s CLOSE plays at the door');
-      lines.add('W712 [ACT4] close heard: "${t.s.closesPlayed.isEmpty ? "" : t.s.closesPlayed.last}"');
+      lines.add('STAND-HERE [ACT4] close heard: "${t.s.closesPlayed.isEmpty ? "" : t.s.closesPlayed.last}"');
       // The close is a piece too: the keep-listening offer belongs to the SILENCE
       // after it, not on top of it. Let it end, as it does on a real player.
       t.voice.simulateComplete();
       await moment(t.s, t.voice, 'ACT4',
           'the close has ended — she goes in, and the whole telling is on the screen '
           'with a KEEP LISTENING tap');
-      lines.add('W712 [ACT4] keep-listening offer: "${t.s.keepListeningOffer ?? "(none)"}" '
+      lines.add('STAND-HERE [ACT4] keep-listening offer: "${t.s.keepListeningOffer ?? "(none)"}" '
           '| transcript on screen: ${(t.s.keepListeningTranscript ?? "").isNotEmpty ? "YES" : "NO"} '
           '(${(t.s.keepListeningTranscript ?? "").split(RegExp(r"\s+")).length} words)');
       // Inside: nothing auto-plays.
@@ -340,7 +339,7 @@ void main() {
       t.clock.advance(const Duration(minutes: 3));
       t.gps.simulatePosition(doorStop.lat, doorStop.lng);
       await moment(t.s, t.voice, 'ACT4', 'three minutes inside: nothing auto-plays');
-      lines.add('W712 [ACT4] pieces started inside: '
+      lines.add('STAND-HERE [ACT4] pieces started inside: '
           '${t.voice.playedKeys.length - playedBefore} '
           '(nothing auto-plays under the roof)');
       await tester.pumpWidget(const SizedBox());
@@ -369,7 +368,7 @@ void main() {
       await moment(t.s, t.voice, 'ACT5',
           'the call ends and she is still on the footprint: it resumes at the '
           'START of the sentence it cut, saying nothing');
-      lines.add('W712 [ACT5] resumed from ${t.voice.lastSeek?.inSeconds ?? -1}s '
+      lines.add('STAND-HERE [ACT5] resumed from ${t.voice.lastSeek?.inSeconds ?? -1}s '
           '(the piece was cut at 30s) | said anything: '
           '${t.voice.said.length > saidBefore ? "YES (defect!)" : "NO (correct)"}');
       await tester.pumpWidget(const SizedBox());
@@ -395,7 +394,7 @@ void main() {
       t.gps.simulatePosition(queuedStop.lat, queuedStop.lng);
       await moment(t.s, t.voice, 'ACT6',
           'she stops moving — in the line — and the telling STARTS');
-      lines.add('W712 [ACT6] queue policy: ${t.session.placement?.queuePiece ?? "-"} '
+      lines.add('STAND-HERE [ACT6] queue policy: ${t.session.placement?.queuePiece ?? "-"} '
           '| the telling started: '
           '${t.voice.playedKeys.contains(queuedStop.stopId) ? "YES" : "NO"} '
           '| offered by tap instead: "${t.s.armedOffer ?? "(no — it played)"}"');

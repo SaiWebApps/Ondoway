@@ -1,4 +1,4 @@
-"""Integration tests for Steps 1+2: graph endpoint + node read endpoints.
+"""Integration tests for the graph endpoint and the node read endpoints.
 
 These tests use FastAPI's TestClient and require a running Neo4j instance
 with seeded data. They are skipped automatically if Neo4j is unavailable.

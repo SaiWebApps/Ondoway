@@ -1,4 +1,4 @@
-"""Unit tests for the Step-3 SHADOW-DISCOVERY source connector.
+"""Unit tests for the SHADOW-DISCOVERY source connector.
 
 Discovery-ONLY (grey-zone): ``parse`` maps an already-provided metadata payload
 to metadata-only ``DiscoveryPointer``s — NEVER a ``PoiCandidate``, a

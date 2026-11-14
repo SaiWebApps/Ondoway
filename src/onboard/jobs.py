@@ -32,7 +32,7 @@ def _now_iso() -> str:
 
 @dataclass(frozen=True)
 class JobSnapshot:
-    """An immutable-ish, copy-based view of a job for the Step-5 SSE/snapshot
+    """An immutable-ish, copy-based view of a job for the SSE/snapshot
     endpoint. ``events`` is a FRESH list (mutating it does not affect the store);
     ``max_seq`` is the job's current highest seq (0 if it has no events yet)."""
 
@@ -122,7 +122,7 @@ class JobStore:
             return [e for e in job.events if e.seq > after_seq]
 
     def snapshot(self, job_id: str, after_seq: int = 0) -> JobSnapshot:
-        """Return a COPY-based ``JobSnapshot`` for the Step-5 SSE/snapshot read
+        """Return a COPY-based ``JobSnapshot`` for the SSE/snapshot read
         path: the job's current ``status``/``error``, a FRESH list of events with
         ``seq > after_seq``, and the current max seq — all read under the lock so
         a concurrent writer cannot tear the view. Callers streaming events use

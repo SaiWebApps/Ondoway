@@ -145,8 +145,7 @@ def check_reference_lane(
 ) -> None:
     """THE shared experiential-vs-historical lane rules for a place reference.
 
-    One home (dedup-review 2026-08-07 — they were spelled twice, here and in
-    ``artifact.PlaceReferenceEvidence``): a contextual-historical reference
+    One home, shared with ``artifact.PlaceReferenceEvidence``: a contextual-historical reference
     carries no experiential semantics (no relation, no feature parent) and
     marks perceivability not applicable; an experiential reference requires a
     typed relation, a perceivability decision, and the feature_of/parent
@@ -180,8 +179,8 @@ def check_place_assessment_references(
 ) -> None:
     """THE shared consistency core for a sentence place assessment.
 
-    Three rules, one home (dedup-review 2026-08-07 — they were spelled twice,
-    here and in ``artifact.SentencePlaceAssessment``): (1) a no-claim
+    Three rules, one home, shared with ``artifact.SentencePlaceAssessment``:
+    (1) a no-claim
     assessment carries no references; (2) a place-references assessment
     carries at least one; (3) reference identities are unique. Each validator
     layer adds its OWN extra guards beside this call — sentence-hash binding

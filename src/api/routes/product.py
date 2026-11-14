@@ -29,8 +29,8 @@ def city_hours(slug: str, session: Session = Depends(get_session)) -> dict:
 
     The map's hours are share-alike: we read them, mix them with our own guesses,
     and speak them, so what we hold goes back out where anyone can check it. Each
-    row says WHERE its hours came from — the map, or our guess — because that is
-    the distinction the whole phase turns on, and a file that flattened the two
+    row says WHERE its hours came from — the map, or our guess — because the
+    source decides how the hours are spoken, and a file that flattened the two
     would republish a guess as if the map had said it.
 
     Public and unauthenticated, like the lens taxonomy beside it: an open file

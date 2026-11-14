@@ -1,4 +1,4 @@
-"""Step-3 SHADOW-DISCOVERY connector — the grey-zone discovery-ONLY path.
+"""SHADOW-DISCOVERY connector — the shadow-library discovery-ONLY path.
 
 This connector surfaces shadow-library (Anna's Archive / WeLib) search hits as
 metadata-only ``DiscoveryPointer``s, so a human can acquire the work LEGALLY and
@@ -7,7 +7,7 @@ returns a HUMAN search-page link that is only ever surfaced as an outbound link
 (never GET-ed — the shadow hosts are not on the ingest allowlist), and ``parse``
 maps an already-provided metadata payload to pointers.
 
-F8 (connector isolation) — this module imports ONLY ``src.onboard.models``. It
+Connector isolation: this module imports ONLY ``src.onboard.models``. It
 does NOT import ``src.onboard.fetch`` (the network door), ``src.onboard.sources
 .base`` (``run_connector``, the ONE thing that fetches), or any HTTP client
 (``httpx`` / ``requests`` / ``urllib.request``). With no network-capable import

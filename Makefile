@@ -825,7 +825,7 @@ poi-place-category: ## Categorise every POI (deterministic, $0). Usage: make poi
 # The FOOTPRINT pass: how far from the pin a walker is AT
 # each place — `trigger_radius`, the field the audio placement rule reads. Deterministic,
 # $0: the kind table over the records still at the uploader's default, the marquees and
-# the eleven personas' stops reviewed by name with a basis sentence each.
+# every stop of the eleven sample visitor days reviewed by name with a basis sentence each.
 poi-trigger-radius: ## Size every POI footprint by place kind ($0). Usage: make poi-trigger-radius SLUG=paris [ARGS=--dry-run].
 	@$(PREFLIGHT) --label poi-trigger-radius $(PRE_PY)
 	@$(LOCAL_EXEC) uv run python -m scripts.poi_trigger_radius \
@@ -849,9 +849,9 @@ poi-body-places: ## Fetch toilets/benches from OSM ($0). Usage: make poi-body-pl
 
 # Three practical affordances per POI: can children
 # run here, can two people sit and talk here, is it good to be left standing
-# here after dark. These judgements have no external source — reviewed at
-# twice the normal rate. Spends real model credits, exactly the
-# poi-visit-duration pattern.
+# here after dark. These judgements have no external source, so review samples
+# them at twice the rate of the externally-sourced passes. Spends real model
+# credits, exactly the poi-visit-duration pattern.
 poi-place-judgements: ## Judge child/talk/dark affordances. Usage: make poi-place-judgements SLUG=paris [LIMIT=10].
 	@$(PREFLIGHT) --label poi-place-judgements $(PRE_PY) render-key
 	@$(RENDER_LOCAL_EXEC) uv run python scripts/poi_place_judgements.py \
@@ -861,8 +861,8 @@ poi-place-judgements: ## Judge child/talk/dark affordances. Usage: make poi-plac
 # class, peak/off-peak minutes, the peak hour bands, and the sentence
 # arguing for them. Spends real model credits, so LIMIT= runs a subset and
 # writes nothing — exactly the poi-visit-duration pattern, whose call door it
-# imports. Review at the standard rate with named spot checks (Louvre,
-# Sainte-Chapelle, Orsay, every `unpredictable`).
+# imports. Review samples them at the rate of the other externally-sourced passes
+# and checks the Louvre, Sainte-Chapelle, Orsay and every `unpredictable` by name.
 poi-queues: ## Price POI queues. Usage: make poi-queues SLUG=paris [LIMIT=10].
 	@$(PREFLIGHT) --label poi-queues $(PRE_PY) render-key
 	@$(RENDER_LOCAL_EXEC) uv run python scripts/poi_queues.py \

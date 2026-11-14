@@ -160,7 +160,7 @@ def test_deploy_api_port_default_and_override(monkeypatch) -> None:
 def test_transient_api_env_opts_into_workbench_routes() -> None:
     """The areas upload talks to /nodes/Area, which app.py mounts fail-closed
     behind WORKBENCH_API_ENABLED — the deploy's own localhost uvicorn must opt
-    in explicitly or the health probe 404s forever (regression: 2026-07-18)."""
+    in explicitly or the health probe 404s forever."""
     env = deploy._transient_api_env()
     assert env["WORKBENCH_API_ENABLED"] == "1"
     assert "localhost" in env["NO_PROXY"]

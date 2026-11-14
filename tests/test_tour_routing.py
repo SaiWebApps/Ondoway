@@ -435,7 +435,7 @@ def test_planned_audio_seconds_sums_the_plan():
 
 # ---------------------------------------------------------------------------
 # governor_allowance_seconds — the per-stop share-governor allowance
-# (ratified 2026-07-03: budget / min(3, d//10) = budget/3 for d>=30).
+# (budget / min(3, d//10) = budget/3 for d>=30).
 # ---------------------------------------------------------------------------
 
 

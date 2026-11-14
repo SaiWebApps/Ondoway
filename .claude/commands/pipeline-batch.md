@@ -131,11 +131,11 @@ structured JSON in your final response.
 
 That contract includes (non-exhaustive):
 - All four phases of the unified_v2 pipeline
-- Every B-rule (B2 multi-granularity, B3 preserve-don't-paraphrase, B4 address-recognition for seasoning, B5 length discipline with asymmetric re-class, B6 sidebar detection, B7 verbatim source_passage, B9 location-anchored poi_name)
+- Every extraction rule: multi-granularity, preserve-don't-paraphrase on inline foreign phrases, address recognition for seasoning beats, length discipline with asymmetric re-class, sidebar detection, verbatim source_passage, location-anchored poi_name
 - The 5 v2 fields on every beat: `sub_location`, `trigger_address`, `beat_length_class` (one of `anchor`/`mid`/`seasoning`/`micro`), `inline_foreign_phrases` (list of `{phrase, gloss}`), `pronunciation`
 - The 3 new beat_type values: `stop_orientation`, `transit`, `sidebar` (in addition to the 7 narrative types)
-- **Fix 1**: a single source sentence grounds at most one beat; `source_passage` carries the minimum span; no two beats share the first real sentence of their source_passage
-- **Fix 2**: every beat with non-null `trigger_address` must have non-empty `physical_cues` — at minimum a façade/door/plaque cue at that address
+- A single source sentence grounds at most one beat; `source_passage` carries the minimum span; no two beats share the first real sentence of their source_passage
+- Every beat with non-null `trigger_address` must have non-empty `physical_cues` — at minimum a façade/door/plaque cue at that address
 - Tier-3+ POIs: `physical_cues` populated whenever the source passage cites a visible feature
 - `subject_tag` ≤ 3 space-separated words (use kebab-hyphenation for proper-noun French compounds like `poule-au-pot`, `pavillon-de-la-reine`)
 - `_meta.prompt_version` = `"unified_v2"` on every beat
@@ -403,7 +403,12 @@ Once the user resolves all REVIEW QUEUE items:
 
 ## GUARDRAILS
 
-Apply the 5 pipeline guardrails (they are baked into the agent prompt template above).
+The agent prompt template above already carries guardrails 1–5:
+1. Auto-correct a claim only when at least two independent sources agree
+2. Every `source_passage` must exist in the chunk text
+3. A new POI within 100m of an existing POI is flagged for user review
+4. Never auto-resolve claims about living people, superlatives, or story deletions
+5. Log every auto-correction with its source URLs
 
 **Additional batch guardrails:**
 6. Cross-chunk dedup check before export

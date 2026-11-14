@@ -1,4 +1,4 @@
-"""The tracker dashboard — option B, the owner's ruling (2026-09-03, in chat).
+"""The tracker dashboard.
 
 Boxes move by ARITHMETIC only: a story's displayed state is derived from its
 machine-verified step rows (a step is `completed` only because `track` re-ran
@@ -150,7 +150,7 @@ class TestSprintNotes:
         _feature(db, "f", _now())
         _story(db, "S1", "f")
         args = argparse.Namespace(
-            story="S1", text="M2 hit a missed caller; re-walking it.",
+            story="S1", text="A step hit a missed caller; re-walking it.",
             who="sprint-leader", db=None, json=False,
         )
         track.cmd_note(db, args)
@@ -166,8 +166,8 @@ class TestSprintNotes:
 
     def test_a_storyless_event_renders_a_real_dash_not_escaped_entity_text(self, db):
         """The log's no-story placeholder is markup, not data: passing it
-        through the escaper printed the literal text "&mdash;" on the page
-        (the owner saw it). The entity must survive escaping."""
+        through the escaper prints the literal text "&mdash;" on the page. The
+        entity must survive escaping."""
         _feature(db, "f", _now())
         args = argparse.Namespace(
             story=None, text="a note with no story", who="sprint-leader",

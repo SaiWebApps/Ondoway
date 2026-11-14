@@ -41,7 +41,7 @@ The default trigger radius is 10m, which works for buildings with a clear entran
 | Large park/district | 200-300m | Parc des Buttes-Chaumont, Bois de Vincennes |
 | Linear POI (street, canal) | 50-100m | Canal Saint-Martin, Rue Mouffetard, Promenade Plantee |
 
-Place the pin at the most central publicly accessible point for large POIs, and set the trigger radius wide enough that any reasonable approach would trigger it. For very large POIs (500m+), flag them in the report — they may need child POIs for individual entrances post-MVP.
+Place the pin at the most central publicly accessible point for large POIs, and set the trigger radius wide enough that any reasonable approach would trigger it. For very large POIs (500m+), flag them in the report — they may need child POIs for individual entrances.
 
 ---
 
@@ -116,7 +116,7 @@ trigger_radius = clamp(round(half_diagonal, 10), 30, 500)
 
 > The reusable implementation of the primary rule is `scripts/fix_area_trigger_radii.py`
 > (`make fix-area-radii CITY=<slug>`), which also writes an audit log with the OSM source
-> URL per the pipeline's "log every auto-correction" guardrail. Run it as a post-geocode
+> URL, because every auto-correction is logged with its source. Run it as a post-geocode
 > sweep, or to retrofit a city geocoded under the old keyword rule.
 
 ### Verification pass for major landmarks
@@ -168,7 +168,7 @@ Update each POI in `data/{city_slug}/poi-raw.json` with:
 - `_pipeline.geocode_audit.confidence`: HIGH/MEDIUM/LOW
 - `_pipeline.geocode_audit.placement`: One sentence describing exactly where the pin is placed and why
 - `_pipeline.geocode_audit.trigger_radius_reasoning`: Why this radius was chosen (e.g., "Medium park ~200m across, set to 100m so any entrance triggers")
-- `_pipeline.geocode_audit.notes`: Any concerns (e.g., "large building — centroid may be too far from street", "very large park — may need child POIs post-MVP")
+- `_pipeline.geocode_audit.notes`: Any concerns (e.g., "large building — centroid may be too far from street", "very large park — may need child POIs")
 
 ---
 

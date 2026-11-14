@@ -235,8 +235,8 @@ def test_out_of_bbox_candidate_dropped_and_centroid_in_bbox() -> None:
     assert min_lon <= mean_lon <= max_lon
 
 
-def test_wall3_discovery_pointer_never_reaches_disk(tmp_path: Path) -> None:
-    """WALL 3: a ConnectorResult carrying a shadow-library DiscoveryPointer must
+def test_discovery_pointer_never_reaches_disk(tmp_path: Path) -> None:
+    """A ConnectorResult carrying a shadow-library DiscoveryPointer must
     leave NO trace — not a filename, not a byte, not a POI name/variation.
     UNDO: give AssembledCity a ``pointers`` field that write_city dumps -> RED."""
     ctx = _ctx()
@@ -393,7 +393,7 @@ def test_write_city_rejects_traversal_slug_and_writes_nothing(tmp_path: Path) ->
 
 
 # ---------------------------------------------------------------------------
-# FIX 1 — every write_text must pass encoding="utf-8" (accented cities round-trip
+# Every write_text must pass encoding="utf-8" (accented cities round-trip
 # on a non-utf-8-locale runner; validate_beats READS with encoding="utf-8").
 # ---------------------------------------------------------------------------
 def test_write_city_writes_utf8_and_roundtrips_nonascii(
@@ -465,7 +465,7 @@ def test_cli_atomic_write_text_uses_utf8(
 
 
 # ---------------------------------------------------------------------------
-# FIX 2 — same-name merging must be GEO-AWARE (distinct places sharing a name are
+# Same-name merging must be GEO-AWARE (distinct places sharing a name are
 # NOT silently collapsed; co-located duplicates still merge to one POI).
 # ---------------------------------------------------------------------------
 def test_same_name_distant_places_are_kept_separate() -> None:
@@ -542,7 +542,7 @@ def test_same_name_colocated_still_merges() -> None:
 
 
 # ---------------------------------------------------------------------------
-# FIX 3 — the registry redirect must restore the global even if register_city
+# The registry redirect must restore the global even if register_city
 # raises (try/finally), and never corrupt the real src/cities.json.
 # ---------------------------------------------------------------------------
 def test_registry_global_restored_on_register_failure(
@@ -714,8 +714,8 @@ def test_firehose_collapses_to_real_landmarks_only() -> None:
 
 def test_admin_area_nodes_dropped_stage_a() -> None:
     """The CITY node itself + its boroughs are administrative areas, NEVER tour
-    stops — the live London onboard surfaced 'London' as a nonsensical STOP ("head
-    for London — a 3-minute walk from here"). STAGE A drops them by Wikidata P31
+    stops — 'London' as a STOP reads as nonsense ("head for London — a 3-minute
+    walk from here"). STAGE A drops them by Wikidata P31
     (Q515 city / Q211690 borough, both VERIFIED against Q84 / Q179351) and, for an
     OSM-only node carrying no p31, by name-equals-city. A real landmark (museum) is
     untouched.

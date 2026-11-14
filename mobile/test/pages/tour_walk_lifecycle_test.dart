@@ -21,7 +21,7 @@ import '../support/trip_fixture.dart';
 /// the itinerary. Neither is what a walk is.
 ///
 /// A cold entry is the other half: no tour running, so the page starts one and
-/// owns it, exactly as the fork's version always did.
+/// owns it.
 Widget _harness({
   required MockLocationService loc,
   required MockAudioService audio,

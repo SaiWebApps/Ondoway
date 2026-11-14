@@ -89,8 +89,9 @@ LENS_NEIGHBOURS = {
     "dark_history": frozenset({"history"}),
 }
 
-CAMILLE = frozenset({"historic_arch"})
-THEO = frozenset({"dark_history"})
+#: An interest set the place's beats hit directly, and one they miss.
+ARCHITECTURE_INTEREST = frozenset({"historic_arch"})
+DARK_HISTORY_INTEREST = frozenset({"dark_history"})
 
 
 def _corpus(poi: POI, *, beat_lens: str = "historic_arch"):
@@ -122,7 +123,7 @@ def _chapelle(**overrides) -> POI:
 
 
 # ---------------------------------------------------------------------------
-# The shape itself — outside, inside and line as separate numbers (rule 1 + rule 2)
+# The shape itself — outside, inside and line as separate numbers
 # ---------------------------------------------------------------------------
 
 
@@ -137,7 +138,7 @@ def test_the_chapel_and_the_line_are_priced_as_two_separate_numbers():
     from src.tour.visit_time import visit_shape
 
     poi = _chapelle()
-    shape = visit_shape(poi, CAMILLE, _corpus(poi), clock_hour=13)
+    shape = visit_shape(poi, ARCHITECTURE_INTEREST, _corpus(poi), clock_hour=13)
 
     assert shape.goes_inside is True
     assert shape.closed_today is False
@@ -146,7 +147,7 @@ def test_the_chapel_and_the_line_are_priced_as_two_separate_numbers():
     assert shape.outside_seconds == 15 * 60
     assert shape.inside_seconds == 38 * 60 - 15 * 60
     assert shape.outside_seconds + shape.inside_seconds == 38 * 60
-    # The line is its own number, priced at the hour she arrives.
+    # The line is its own number, priced at the hour the visitor arrives.
     assert shape.queue_seconds == 28 * 60
 
 
@@ -158,7 +159,7 @@ def test_the_line_shrinks_at_opening_time_because_it_belongs_to_the_hour():
     from src.tour.visit_time import visit_shape
 
     poi = _chapelle()
-    at_opening = visit_shape(poi, CAMILLE, _corpus(poi), clock_hour=9)
+    at_opening = visit_shape(poi, ARCHITECTURE_INTEREST, _corpus(poi), clock_hour=9)
     assert at_opening.queue_seconds == 10 * 60
     # The visit itself does not move with the hour; only the wait does.
     assert at_opening.outside_seconds + at_opening.inside_seconds == 38 * 60
@@ -173,7 +174,7 @@ def test_someone_who_stays_outside_never_pays_the_line():
     from src.tour.visit_time import visit_shape
 
     poi = _chapelle()
-    shape = visit_shape(poi, THEO, _corpus(poi), clock_hour=13)
+    shape = visit_shape(poi, DARK_HISTORY_INTEREST, _corpus(poi), clock_hour=13)
 
     assert shape.goes_inside is False
     assert shape.outside_seconds == 15 * 60
@@ -190,7 +191,7 @@ def test_an_undated_request_prices_the_line_at_off_peak():
     from src.tour.visit_time import visit_shape
 
     poi = _chapelle()
-    shape = visit_shape(poi, CAMILLE, _corpus(poi), clock_hour=None)
+    shape = visit_shape(poi, ARCHITECTURE_INTEREST, _corpus(poi), clock_hour=None)
     assert shape.queue_seconds == 10 * 60
 
 
@@ -206,7 +207,7 @@ def test_an_unpredictable_queue_is_priced_at_its_worst_known_bound():
     poi = _chapelle(queue="unpredictable", peak=20, offpeak=5)
     snapshot = _corpus(poi)
     for hour in (8, 13, None):  # off-band, in-band, undated — all the same
-        shape = visit_shape(poi, CAMILLE, snapshot, clock_hour=hour)
+        shape = visit_shape(poi, ARCHITECTURE_INTEREST, snapshot, clock_hour=hour)
         assert shape.queue_seconds == 20 * 60
 
 
@@ -220,7 +221,7 @@ def test_a_malformed_peak_band_fails_open_to_off_peak():
 
     for bad in ("not json", '{"mon": 1}', '[["10:30"]]', '[["aa:bb", "16:00"]]', ""):
         poi = _chapelle(bands=bad)
-        shape = visit_shape(poi, CAMILLE, _corpus(poi), clock_hour=13)
+        shape = visit_shape(poi, ARCHITECTURE_INTEREST, _corpus(poi), clock_hour=13)
         assert shape.queue_seconds == 10 * 60, f"bands={bad!r} did not fail open"
 
 
@@ -233,14 +234,14 @@ def test_an_unpassed_or_audited_free_door_prices_no_queue():
 
     for queue in (None, "none"):
         poi = _chapelle(queue=queue)
-        shape = visit_shape(poi, CAMILLE, _corpus(poi), clock_hour=13)
+        shape = visit_shape(poi, ARCHITECTURE_INTEREST, _corpus(poi), clock_hour=13)
         assert shape.queue_seconds == 0
         assert shape.goes_inside is True  # no line does not mean no door
 
 
 # ---------------------------------------------------------------------------
-# The ceiling covers the whole stop (rule 3), the wall refuses lines (rule 4),
-# a closed door demotes rather than deletes (rule 5)
+# The ceiling covers the whole stop, the wall refuses lines,
+# a closed door demotes rather than deletes
 # ---------------------------------------------------------------------------
 
 
@@ -257,7 +258,7 @@ def test_a_queue_the_ceiling_cannot_cover_collapses_the_stop_to_outside_only():
 
     # 38 min visit + 28 min line = 66 min > a 45-minute ceiling: collapse.
     collapsed = visit_shape(
-        poi, CAMILLE, snapshot, clock_hour=13, party_ceiling_seconds=45 * 60
+        poi, ARCHITECTURE_INTEREST, snapshot, clock_hour=13, party_ceiling_seconds=45 * 60
     )
     assert collapsed.goes_inside is False
     assert collapsed.inside_seconds == 0
@@ -266,7 +267,7 @@ def test_a_queue_the_ceiling_cannot_cover_collapses_the_stop_to_outside_only():
 
     # A 70-minute ceiling covers the whole 66: the full shape survives.
     covered = visit_shape(
-        poi, CAMILLE, snapshot, clock_hour=13, party_ceiling_seconds=70 * 60
+        poi, ARCHITECTURE_INTEREST, snapshot, clock_hour=13, party_ceiling_seconds=70 * 60
     )
     assert covered.goes_inside is True
     assert covered.outside_seconds + covered.inside_seconds == 38 * 60
@@ -275,7 +276,7 @@ def test_a_queue_the_ceiling_cannot_cover_collapses_the_stop_to_outside_only():
     # The ceiling still caps the collapsed outside view: it covers the WHOLE
     # stop, not only the interior it just refused.
     tight = visit_shape(
-        poi, CAMILLE, snapshot, clock_hour=13, party_ceiling_seconds=10 * 60
+        poi, ARCHITECTURE_INTEREST, snapshot, clock_hour=13, party_ceiling_seconds=10 * 60
     )
     assert tight.goes_inside is False
     assert tight.outside_seconds == 10 * 60
@@ -295,7 +296,7 @@ def test_a_wall_refuses_any_line_but_keeps_the_building(queue: str):
     from src.tour.visit_time import visit_shape
 
     poi = _chapelle(queue=queue, peak=20, offpeak=5)
-    shape = visit_shape(poi, CAMILLE, _corpus(poi), clock_hour=13, wall=True)
+    shape = visit_shape(poi, ARCHITECTURE_INTEREST, _corpus(poi), clock_hour=13, wall=True)
 
     assert shape.goes_inside is False
     assert shape.inside_seconds == 0
@@ -312,7 +313,7 @@ def test_a_wall_does_not_refuse_a_door_with_no_line():
 
     for queue in (None, "none"):
         poi = _chapelle(queue=queue)
-        shape = visit_shape(poi, CAMILLE, _corpus(poi), clock_hour=13, wall=True)
+        shape = visit_shape(poi, ARCHITECTURE_INTEREST, _corpus(poi), clock_hour=13, wall=True)
         assert shape.goes_inside is True
         assert shape.inside_seconds > 0
 
@@ -326,7 +327,7 @@ def test_a_closed_door_keeps_the_exterior_minutes():
     from src.tour.visit_time import visit_shape
 
     poi = _chapelle()
-    shape = visit_shape(poi, CAMILLE, _corpus(poi), clock_hour=13, closed_today=True)
+    shape = visit_shape(poi, ARCHITECTURE_INTEREST, _corpus(poi), clock_hour=13, closed_today=True)
 
     assert shape.closed_today is True
     assert shape.goes_inside is False
@@ -336,7 +337,7 @@ def test_a_closed_door_keeps_the_exterior_minutes():
 
 
 # ---------------------------------------------------------------------------
-# Rain (rule 6)
+# Rain
 # ---------------------------------------------------------------------------
 
 
@@ -351,17 +352,17 @@ def test_rain_halves_an_uncovered_place_and_leaves_a_covered_one_alone():
     assert RAIN_DWELL_FRACTION == 0.5
 
     square = _place("place-des-vosges", outside_min=20, inside_s=None, category="square")
-    dry = visit_shape(square, CAMILLE, _corpus(square), weather="dry")
-    rain = visit_shape(square, CAMILLE, _corpus(square), weather="rain")
+    dry = visit_shape(square, ARCHITECTURE_INTEREST, _corpus(square), weather="dry")
+    rain = visit_shape(square, ARCHITECTURE_INTEREST, _corpus(square), weather="rain")
     assert dry.outside_seconds == 20 * 60
     assert rain.outside_seconds == 10 * 60
 
     # "dry" and an unstated weather are the same promise.
-    unstated = visit_shape(square, CAMILLE, _corpus(square))
+    unstated = visit_shape(square, ARCHITECTURE_INTEREST, _corpus(square))
     assert unstated == dry
 
     museum = _chapelle(queue=None, category="museum")
-    sheltered = visit_shape(museum, CAMILLE, _corpus(museum), weather="rain")
+    sheltered = visit_shape(museum, ARCHITECTURE_INTEREST, _corpus(museum), weather="rain")
     assert sheltered.outside_seconds + sheltered.inside_seconds == 38 * 60
 
 
@@ -369,14 +370,12 @@ def test_a_voided_door_shelters_nobody_in_rain():
     """A covered category shelters the VISIT, and a voided door has no visit:
     a museum the clock closed (or the day's own repair stepped outside of) is
     a facade in the weather, and its outside stand pays the rain penalty like
-    any square. The acceptance listen's finding: the closed Louvre was the
-    rainy day's longest outdoor stand, exempt from the penalty it deserved
-    because its CATEGORY said covered."""
+    any square, even though its CATEGORY says covered."""
     from src.tour.visit_time import visit_shape
 
     museum = _chapelle(queue=None, category="museum")
     closed_in_rain = visit_shape(
-        museum, CAMILLE, _corpus(museum), weather="rain", closed_today=True
+        museum, ARCHITECTURE_INTEREST, _corpus(museum), weather="rain", closed_today=True
     )
     assert closed_in_rain.goes_inside is False
     assert closed_in_rain.outside_seconds == round(15 * 60 * 0.5), (
@@ -384,12 +383,12 @@ def test_a_voided_door_shelters_nobody_in_rain():
     )
 
     stepped_outside = visit_shape(
-        museum, CAMILLE, _corpus(museum), weather="rain", exterior_only=True
+        museum, ARCHITECTURE_INTEREST, _corpus(museum), weather="rain", exterior_only=True
     )
     assert stepped_outside.outside_seconds == round(15 * 60 * 0.5)
 
     # The door OPEN, the shelter holds — the existing promise, unmoved.
-    open_in_rain = visit_shape(museum, CAMILLE, _corpus(museum), weather="rain")
+    open_in_rain = visit_shape(museum, ARCHITECTURE_INTEREST, _corpus(museum), weather="rain")
     assert open_in_rain.outside_seconds + open_in_rain.inside_seconds == 38 * 60
 
 
@@ -402,7 +401,7 @@ def test_an_uncategorised_place_counts_as_uncovered_in_rain():
     from src.tour.visit_time import visit_shape
 
     unknown = _place("unjudged", outside_min=20, inside_s=None, category="")
-    rain = visit_shape(unknown, CAMILLE, _corpus(unknown), weather="rain")
+    rain = visit_shape(unknown, ARCHITECTURE_INTEREST, _corpus(unknown), weather="rain")
     assert rain.outside_seconds == 10 * 60
 
 
@@ -423,7 +422,9 @@ def test_rain_never_shortens_the_queue():
         bands='[["11:00", "17:00"]]',
         category="garden",
     )
-    shape = visit_shape(garden, CAMILLE, _corpus(garden), clock_hour=9, weather="rain")
+    shape = visit_shape(
+        garden, ARCHITECTURE_INTEREST, _corpus(garden), clock_hour=9, weather="rain"
+    )
 
     assert shape.goes_inside is True
     assert shape.outside_seconds == 5 * 60  # halved
@@ -446,9 +447,9 @@ def test_visit_seconds_is_the_shape_total_and_nothing_else():
 
     poi = _chapelle()
     snapshot = _corpus(poi)
-    shape = visit_shape(poi, CAMILLE, snapshot)
+    shape = visit_shape(poi, ARCHITECTURE_INTEREST, snapshot)
 
-    total = visit_seconds(poi, CAMILLE, snapshot)
+    total = visit_seconds(poi, ARCHITECTURE_INTEREST, snapshot)
     assert total == shape_total_seconds(shape)
     # 38 minutes of chapel + the 10-minute off-peak line an undated request
     # prices. The wait is IN the one total — that is what "one definition"
@@ -536,7 +537,7 @@ def test_coveredness_is_decided_in_one_place():
 def test_the_outside_inside_blend_is_computed_in_one_place():
     """Nothing else may blend `typical_duration_min * 60` with
     `visit_seconds_inside`: that arithmetic IS the visit price, and a second
-    copy is the two-tour-algorithms defect in miniature. The capacity pass may
+    copy is a second visit pricer that drifts from the first. The capacity pass may
     restate the relationship — it is the independent guard on the DATA, which
     is the one restatement allowed.
     """

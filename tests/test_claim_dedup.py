@@ -3,8 +3,8 @@
 Fixtures mirror the live Île de la Cité case: three beats from three source books
 each narrate the Parisii founding; a fourth (the Nanterre debate) merely mentions
 the Parisii and must survive. Only a PURE restatement is dropped — a compound
-sentence carrying a novel fact alongside a repeated one is kept whole (the
-content-safety property the skeptic panel demanded).
+sentence carrying a novel fact alongside a repeated one is kept whole, so a novel
+fact is never lost.
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ def _s(text: str, source_id: str, source_type: str = "beat") -> Sentence:
 
 
 def test_coverage_gate_works_for_keyless_beats_via_script_body():
-    """Silent-fact-loss regression (red-team): a KEYLESS beat (key_claims=(), the
+    """Silent-fact-loss guard: a KEYLESS beat (key_claims=(), the
     entire London corpus) must still get a coverage baseline from its script_body
     sentences — else the deletion gate is a no-op and a fusion can silently DROP a
     fact there. UNDO: revert _claims_for_coverage to key_claims-only -> the keyless
@@ -78,13 +78,13 @@ def test_coverage_gate_works_for_keyless_beats_via_script_body():
 
 
 def test_keyless_coverage_gates_a_lowercase_only_fact_deletion():
-    """Round-4 (judge-mandated): a keyless body sentence whose facts are ALL lowercase
+    """A keyless body sentence whose facts are ALL lowercase
     (no year, no proper noun) — 'duels', 'the nobility' — must STILL get a coverage
     baseline, so dropping the whole sentence is flagged. This pins the reason the
     coverage pseudo-claim is the FULL body sentence and NOT a 'hard facts' (years +
-    proper-nouns) extract: on the live London corpus that extract collapsed 85/562
-    keyless beats (incl. this pattern) to '<2 tokens' -> empty baseline -> a silent
-    deletion the gate no longer caught. UNDO: key _claims_for_coverage on
+    proper-nouns) extract: that extract collapses many keyless beats (incl. this
+    pattern) to '<2 tokens' -> empty baseline -> a silent deletion the gate cannot
+    catch. UNDO: key _claims_for_coverage on
     `_hard_facts` (years/proper-nouns only) -> this sentence -> pseudo-claim 'The' ->
     below MIN_SHARED_TOKENS -> no baseline -> deletion NOT flagged -> RED."""
     from src.tour.claim_dedup import claims_realized_by, verify_claim_coverage
@@ -112,9 +112,9 @@ def test_keyless_coverage_gates_a_lowercase_only_fact_deletion():
 
 
 def test_dedup_passes_never_resurrect_a_duplicate():
-    """Round-4 (Defect A): the also_cites never-empty restore in suppress_exact_repeats
-    / suppress_same_beat_near_duplicates was resurrecting a byte-identical / near-dup
-    sentence (the exact shipped-duplicate bug). Neither pass may keep a text duplicate.
+    """An also_cites never-empty restore in suppress_exact_repeats /
+    suppress_same_beat_near_duplicates would resurrect a byte-identical / near-dup
+    sentence and ship the duplicate. Neither pass may keep a text duplicate.
     UNDO: re-add the cited_beat_ids restore to either pass -> the duplicate ships ->
     RED."""
     seq = _seq(_beat("X", ("Fact X here about the tower",)), _beat("Z", ("Fact Z distinct",)))
@@ -131,7 +131,7 @@ def test_dedup_passes_never_resurrect_a_duplicate():
 
 
 def test_suppress_repeated_claims_keeps_a_fused_also_cites_sentence():
-    """Silent-fact-loss regression (red-team): a FUSED sentence (primary A, also_cites
+    """Silent-fact-loss guard: a FUSED sentence (primary A, also_cites
     B) carrying B's DISTINCT fact must NOT be dropped as a pure restatement of A alone
     when A's fact was already voiced — that silently EMPTIES beat B. The pass judges a
     sentence by the UNION of its cited beats' claims. UNDO: judge by source_id only
@@ -229,7 +229,7 @@ def test_same_beat_paraphrase_echo_dropped_only_with_flag() -> None:
             "nd01",
         ),
     ]
-    # Default (cross-beat only) = today's stitch behaviour, unchanged: both survive.
+    # Default (cross-beat only), the stitch's behaviour: both survive.
     assert len(suppress_repeated_claims(sents, seq)) == 2
     # Same-beat aware: the echo is dropped, the first (polished) telling kept.
     deduped = suppress_repeated_claims(sents, seq, include_same_beat=True)
@@ -239,8 +239,8 @@ def test_same_beat_paraphrase_echo_dropped_only_with_flag() -> None:
 
 def test_same_beat_near_duplicate_retelling_dropped() -> None:
     """The composer echoes ONE beat as two full re-tellings (near-verbatim, same
-    source_id) — the real Île de la Cité tour repeated the whole Abelard story (the
-    two tellings measured 98-100 rapidfuzz). This text-similarity pass drops the
+    source_id) — the whole Abelard story told twice at Île de la Cité, say (two such
+    tellings score 98-100 rapidfuzz). This text-similarity pass drops the
     echo where the claim-based pass can't (the re-telling drifts from the claim
     tokens). A DISTINCT fact of the same beat, and a similar-reading DIFFERENT beat,
     both survive.
@@ -268,7 +268,7 @@ def test_same_beat_near_duplicate_retelling_dropped() -> None:
 
 
 def test_compound_sentence_keeps_novel_fact() -> None:
-    # Skeptic-A regression: B3 fuses the repeated founding clause with the NOVEL
+    # B3 fuses the repeated founding clause with the NOVEL
     # palace-fortress fact (voiced nowhere else) -> the whole sentence is KEPT.
     out = suppress_repeated_claims(_founding_narration(), _seq(B1, B2, B3, B4))
     texts = [s.text for s in out]
@@ -453,7 +453,7 @@ def test_glue_sentences_are_never_deduped_by_exact_pass():
 
 # ---------------------------------------------------------------------------
 # Content-loss / coverage gate — compose may merge or reword a fact but never
-# silently DELETE one (the deletion blind spot the invention checks all shared).
+# silently DELETE one (the invention checks cannot see a deletion).
 # ---------------------------------------------------------------------------
 
 def _script_of(*sentences: Sentence) -> Script:
@@ -536,9 +536,8 @@ def test_coverage_allows_paraphrase_merge_but_catches_dropped_distinct_fact():
 def test_full_verifier_coverage_gate_reports_deletion():
     """The dropped-fact check must NAME the beat whose fact compose deleted.
 
-    It reports rather than refuses: the coverage check counts shared WORDS, so a
-    paraphrase reads to it as a deletion, and it was demoted to advisory by owner
-    ruling on 2026-08-03 (``ValidationReport.passed``; pinned by
+    It reports rather than refuses, because the coverage check counts shared WORDS
+    and a paraphrase reads to it as a deletion (``ValidationReport.passed``; pinned by
     test_tour_authoring_gates.py::test_faithfulness_and_dropped_facts_are_advisory_not_blocking).
     What still has teeth is detection: a faithful passthrough is clean, and a real
     deletion appears on the report against beat "A".

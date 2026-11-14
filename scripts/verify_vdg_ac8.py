@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Live duplicate-beat assertion for the Val-de-Grace cleanup.
+"""Live duplicate-beat assertion for the Val-de-Grace beats.
 
 Computes exact pairwise Jaccard over 5-gram word shingles on every
 Val-de-Grace beat in `data/paris/beats.json`. Asserts that no pair scores
@@ -24,7 +24,7 @@ from scripts.dedup_pairs import shingle_set  # noqa: E402
 BEATS_PATH = Path("data/paris/beats.json")
 LOG_PATH = Path("data/paris/_dedup_review/_log.jsonl")
 POI_MATCH = "grace"  # case-insensitive substring of poi_name ("Val-de-Grace")
-AC8_THRESHOLD = 0.8
+DUPLICATE_JACCARD_THRESHOLD = 0.8
 
 
 def _load_beats() -> list[dict]:
@@ -75,7 +75,7 @@ def main() -> int:
     violations: list[str] = []
     for a_id, b_id in combinations(sorted(beats_by_id), 2):
         j = _jaccard(shingles[a_id], shingles[b_id])
-        if j < AC8_THRESHOLD:
+        if j < DUPLICATE_JACCARD_THRESHOLD:
             continue
         pair_key = frozenset((a_id, b_id))
         both_reviewed = bool(
@@ -85,7 +85,7 @@ def main() -> int:
         if both_reviewed and keep_both:
             continue
         violations.append(
-            f"AC8_VIOLATION jaccard={j:.3f} A={a_id} B={b_id} "
+            f"DUPLICATE_PAIR jaccard={j:.3f} A={a_id} B={b_id} "
             f"both_reviewed={both_reviewed} keep_both_logged={keep_both}"
         )
 

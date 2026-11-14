@@ -104,7 +104,7 @@ def grade_tour(
     # SAME FAIL-OPEN CLASS AS THE BEATS AXIS ABOVE, and it survived the first repair of
     # it: a fixture with no `expected_spine_area` and an engine that produced no spine
     # compared None == None and scored a free 1.0 — 0.20 of a 0.65 baseline for declaring
-    # nothing. Caught by hostile review 2026-07-30. An absent expectation is a broken
+    # nothing. An absent expectation is a broken
     # fixture on every axis, not just the one that happened to be reported.
     expected_spine = fixture.get("expected_spine_area")
     if not expected_spine:

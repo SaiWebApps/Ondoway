@@ -1,21 +1,13 @@
 """Propagate enriched POI fields from poi-raw.json into every export chunk — one command.
 
-EXTENDS, by the rule that the third manual copy becomes the template. This same
-block was performed by hand three times before it became a script:
-
-  1. the mandatory hand-sync after the visit-duration pass, the step that gets
-     skipped, and skipping it makes the whole pass invisible;
-  2. the scratch script written to push the opening-hours trio and
-     ``place_category`` into the 48 Paris chunks (1,384 fields), deleted with its
-     spec folder;
-  3. the identical "NEXT, AND MANDATORY: sync data/{city}/export/*.json" warning all
-     three pass scripts printed — each now names ``make sync-poi-exports`` instead.
+ONE COMMAND FOR THE STEP EVERY ENRICHMENT PASS NEEDS. Each pass script ends by naming
+``make sync-poi-exports``; skipping the sync makes the whole pass invisible.
 
 WHY THE SYNC EXISTS AT ALL. ``data/{slug}/poi-raw.json`` is the canonical POI source
 per city, and it is what the enrichment passes write. But ``data/{slug}/export/*.json``
 is what `/upload` reads into Neo4j — a field that exists only in poi-raw never reaches
-the graph (the Notre-Dame tier-1 incident; ``tests/test_export_consistency.py`` guards
-the RESULT, and this script is the one way the fields travel).
+the graph. ``tests/test_export_consistency.py`` guards the RESULT, and this script is
+the one way the fields travel.
 
 THE SCRIPT OWNS THE FIELD LIST. ``SYNCED_FIELDS`` below is the single statement of
 which enriched fields flow poi-raw -> export; the pass trailers deliberately do not
@@ -33,8 +25,7 @@ chunk that does change is written through ``dump_pois`` — imported from
 ``scripts/poi_visit_duration.py``, never copied — whose round-trip guard refuses any
 write that would reformat the whole file and bury the real diff. And that same guard is
 asked during PLANNING, of every chunk that would be written, so an unfaithful file
-stops the run before the first write instead of after the third — the New York abort
-that left two chunks half-synced.
+stops the run before the first write and never leaves earlier chunks half-synced.
 
 POIs are matched canonical -> chunk by lower-cased ``name``, the same key
 ``tests/test_export_consistency.py`` has always matched on (there is no id field in
@@ -86,8 +77,7 @@ SYNCED_FIELDS: tuple[str, ...] = (
     "queue_peak_hours",
     "queue_basis",
     # The footprint — scripts/poi_trigger_radius.py.
-    # Registered with the pass; this is the field the
-    # tests/test_export_consistency.py TODO had recorded as drifting (19 entries).
+    # Registered with the pass so the sync never lags it.
     "trigger_radius",
     # The reviewed anchors of a marquee —
     # placed by hand on poi-raw.json; the graph reads them through the upload.
@@ -141,11 +131,10 @@ def main(argv: list[str] | None = None) -> int:
 
     # Plan every chunk before writing any, so an abort leaves nothing half-synced.
     # That means EVERY reason to abort has to be found here, in the planning phase.
-    # ``dump_pois``'s round-trip guard is one of them, and it used to be discovered
-    # mid-write instead: a New York run wrote chunks 01 and 02, then SystemExited on
-    # chunk 03 — the first one committed at a different indent — and left two
-    # half-synced files behind. So faithfulness is proven here, for every chunk that
-    # would be written, using the same ``serialise`` ``dump_pois`` writes through.
+    # ``dump_pois``'s round-trip guard is one of them: found mid-write, it would stop
+    # the run after earlier chunks were already written. So faithfulness is proven
+    # here, for every chunk that would be written, using the same ``serialise``
+    # ``dump_pois`` writes through.
     pending: list[tuple[Path, list[dict[str, Any]], str, int]] = []
     unknown: list[str] = []
     unfaithful: list[str] = []

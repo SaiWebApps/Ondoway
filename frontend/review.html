@@ -1096,7 +1096,7 @@
 
   // ── State ──
   // cityName is the CANONICAL key: lowercased/stripped to match POI.city_name,
-  // which ingestion normalizes the same way (src/api/crud/nodes.py, 2026-07-03).
+  // which ingestion normalizes the same way (src/api/crud/nodes.py).
   // Every graph query (beat fetch, worklist merge, MERGE payload) keys off it, so
   // a casing variant ('Paris' vs 'paris') must never leak into it or beat fetches
   // silently empty. cityDisplay is a cosmetic Title-Cased label for the header —
@@ -1343,7 +1343,7 @@
         opt.value = String(i);  // index into cityCatalogue
         const n = c.poi_count === 1 ? '1 POI' : `${c.poi_count} POIs`;
         // Display a human-friendly Title-Cased label; the canonical city_name key
-        // (lowercased at ingestion, 2026-07-03) is still looked up via the index.
+        // (lowercased at ingestion) is still looked up via the index.
         opt.textContent = `${titleCaseCity(c.city_name)} — ${n}`;
         citySelect.appendChild(opt);
       });
@@ -2190,12 +2190,9 @@
             <input type="text" id="tourStart" value="${escHtml(startVal)}" placeholder="48.8566,2.3522" /></div>
           <div class="field-row">
             <div class="field-group"><label>Duration (min)</label>
-              <!-- max was 240: the flagship case this release exists to fix is a
-                   300-minute Rue Royale to Notre-Dame walk, and at 240 the control
-                   rendered invalid for it. There is no <form> here and the value is
-                   read with parseInt, so a script could always drive 300 — but the
-                   acceptance screenshot showed a red box. 600 matches the engine's
-                   own ceiling (src/tour/contract.py: duration_min le=600). -->
+              <!-- max matches the engine's own ceiling (src/tour/contract.py:
+                   duration_min le=600), so every duration the engine accepts, such
+                   as a 300-minute walk, renders as a valid value in this control. -->
               <input type="number" id="tourDuration" value="60" min="15" max="600" /></div>
             <div class="field-group"><label>Lenses (comma-separated, optional)</label>
               <!-- A free-text lens field silently produced the UN-LENSED tour on any
@@ -2224,8 +2221,8 @@
           <div class="field-group"><label><input type="checkbox" id="tourRoundTrip" /> Round-trip (mutually exclusive with a destination)</label></div>
           <div class="field-group" style="color:var(--text-muted);font-size:0.8rem;">
             Tip: click the map — 1st click sets the start, 2nd the destination.</div>
-          <!-- THE DIALS (the option labels below are locked plain
-               language; keep them exactly). Every control writes into the ONE plan
+          <!-- THE DIALS. The option labels below are plain words for the person
+               planning the walk, not engine values. Every control writes into the ONE plan
                body generateTourPreview() builds and stores as lastTourPlanBody, and
                every change re-plans the day automatically (scheduleTourReplan). -->
           <div class="field-row">
@@ -3228,17 +3225,12 @@
         ttsProviderSelect.appendChild(opt);
       }
       // The workbench replicates the tourist's app
-      // experience as closely as possible, so it defaults to REAL audio. This
-      // block used to force-select 'mock' here, silently overriding the 'openai'
-      // default declared above and in the static <select>, so every workbench
-      // "play" was a silent WAV that an editor could mistake for real narration.
-      // That is the audio twin of the standing never-mock-in-the-workbench rule,
-      // which until now had only ever been applied to narration.
+      // experience as closely as possible, so it defaults to REAL audio, never a
+      // fake voice: an editor must not mistake a silent file for real narration.
       // 'openai' is the key the deployed API is pinned to (render.yaml
       // TTS_PROVIDER=openai) and a real provider in src/audio/provider.py's
-      // registry. Since 2026-07-31 that registry holds ONLY providers that
-      // really speak — the silent double is no longer registered, so this list
-      // physically cannot contain a fake and this page is not what keeps it out.
+      // registry. That registry holds ONLY providers that really speak, so this
+      // list cannot contain a fake and this page is not what keeps it out.
       // The Playwright audio tests stub POST /audio/preview in the browser
       // instead of asking the server for a fake (tests/test_workbench_ui.py).
       const realOpt = [...ttsProviderSelect.options].find(o => o.value === 'openai');
@@ -3407,10 +3399,9 @@
     const avoidQueuesEl = document.getElementById('tourAvoidQueues');
     const categoryMinus = Array.from(
       document.querySelectorAll('#tourCategoryMinus input:checked')).map(c => c.value);
-    // NO spend confirmation here, ever. The owner ordered the cost dialog removed
-    // on 2026-07-31: the workbench must replicate the tourist's app experience as
-    // closely as possible, and a tourist is never asked to approve spend. Do not
-    // reintroduce a spend dialog in this function.
+    // NO spend confirmation here, ever: the workbench replicates the tourist's
+    // app experience as closely as possible, and a tourist is never asked to
+    // approve spend. This function shows no spend dialog.
     genBtn.disabled = true; genBtn.textContent = '⏳ Planning…';
     // While replanning, the dials go quiet and a small note says so (the replanning note).
     // Snapshot the controls OUTSIDE #tourStops: the stop area is about to be wiped.
@@ -3429,12 +3420,10 @@
         center_lat: lat, center_lng: lng, duration_min: duration,
         lenses: lenses.length ? lenses : null, round_trip: roundTrip,
         end_lat: endLat, end_lng: endLng,
-        // city_slug was OMITTED here until 2026-07-19, so TripPreviewRequest's
-        // default ("paris") applied to EVERY preview. A London or New York
-        // workbench session therefore previewed the PARIS corpus against a
-        // London/NY start, found nothing reachable, and 422'd — the workbench
-        // "tour generation is horribly broken" report. cityName is the same
-        // canonical key every other fetch on this page already sends.
+        // city_slug is always sent. TripPreviewRequest defaults it to "paris", so
+        // a London or New York session that omitted it would preview the PARIS
+        // corpus against a London/NY start, find nothing reachable, and 422.
+        // cityName is the same canonical key every other fetch on this page sends.
         city_slug: cityName || 'paris',
         // The Finish dial always travels: "firm" is a named value, not an omission.
         end_hardness: finishEl ? finishEl.value : 'firm',
@@ -3720,7 +3709,7 @@
   // The PLAN screen: THE day. The plan reply's `options` is a list of exactly
   // ONE route, and that one day renders immediately: the map, the ordered places,
   // the timing split, and the honesty surface (promises, day notes, unplanned
-  // slack). Places only, by owner ruling: names, order, walking time and ETA, and no
+  // slack). Places only: names, order, walking time and ETA, and no
   // descriptive text of any kind. NOTHING has been written or voiced yet; the
   // one "Run it like the phone" action below is what writes and voices the day.
   // `requestedMinutes` is the duration asked for, which the short-tour notes name.
@@ -3893,9 +3882,8 @@
       const promises = document.createElement('div');
       promises.className = 'tour-promises';
       promises.style.cssText = 'color:var(--green);font-size:0.82rem;margin:0 0 8px;';
-      // The window is two wire fields (arrives_hhmm / departs_hhmm), not one —
-      // this used to read a `window` key that never existed, so the ruled-for
-      // windows were on the wire and never on the screen (nothing rendered them). A finish
+      // The window is two wire fields (arrives_hhmm / departs_hhmm), not one
+      // `window` key; both are read so every promised window reaches the screen. A finish
       // point has no stay, so it shows one time, not "12:50-12:50".
       const windowOf = (p) => {
         if (!p || !p.arrives_hhmm) return '';
@@ -3971,8 +3959,9 @@
     // The one action out of this planned day: "Run it like the phone", the
     // TOURIST's own path, end to end — the same endpoints the app calls, in the
     // same order, with a real signed-in identity: generate the trip, compose it,
-    // voice every stop, then tap for more. CLAUDE.md rule 1 is why it calls the
-    // app's endpoints rather than a workbench copy of the same steps: the full
+    // voice every stop, then tap for more. The workbench and the app run the same
+    // code, so it calls the app's endpoints rather than a workbench copy of the
+    // same steps: the full
     // telling and the keep-exploring extras are written ONLY by /compose and
     // voiced ONLY by /audio/stops/{id}/keep-exploring. It costs the same as the
     // day a tourist would get, and it is not asked to confirm that, because a
@@ -3990,8 +3979,9 @@
 
   // ── The tourist path, run from the workbench ──────────────────────────────
   //
-  // CLAUDE.md rule 1. Two pieces of tourist-audible content are written and voiced
-  // ONLY on the phone path, so before this block no editor could preview either:
+  // The workbench and the app run the same code. Two pieces of tourist-audible
+  // content are written and voiced ONLY on the phone path, so this block is how an
+  // editor previews either:
   //
   //   the FULL TELLING          plan_premium_full_telling / finalize_premium_full_telling,
   //                             written by POST /trips/{id}/compose for every major stop
@@ -3999,8 +3989,8 @@
   //                             also written at compose, voiced by
   //                             POST /audio/stops/{id}/keep-exploring
   //
-  // The fix is not a workbench copy of those steps — a second door into one stage is
-  // the defect rule 1 names. The workbench CALLS THE PHONE ENDPOINTS, in the phone
+  // The workbench never copies those steps, because a second door into one stage
+  // drifts from the first. The workbench CALLS THE PHONE ENDPOINTS, in the phone
   // order, with the phone payloads (mobile/lib/services/trip_service.dart is the
   // reference), holding a real signed-in identity:
   //
@@ -4015,8 +4005,7 @@
   // NO PROVIDER IS NAMED on either voicing call, deliberately, because the phone
   // names none: an unnamed provider resolves through the failover chain
   // (get_provider_with_fallback) and a named one resolves a single provider. Naming
-  // one here would rebuild the exact 2026-08-29 divergence the guard was written
-  // against — an editor watching a stop fail that the app would have voiced.
+  // one here would let an editor watch a stop fail that the app would have voiced.
 
   // The signed-in workbench session: minted on first use, re-minted on a 401.
   let workbenchAuth = null;
@@ -4127,7 +4116,7 @@
       if (btn) { btn.disabled = !!label; btn.textContent = label || 'Run it like the phone'; }
     };
     // NO spend confirmation, ever — a tourist is never asked to approve spend, and
-    // the workbench reproduces the tourist experience (owner ruling 2026-07-31).
+    // the workbench reproduces the tourist experience.
     busy('⏳ Signing in…');
     phoneStops = [];
     phoneTripId = null;
@@ -6606,7 +6595,7 @@
     get: () => lensDisplayToSlug,
     set: (v) => { lensDisplayToSlug = v; },
   });
-  // Regression-test surface for the 2026-07-19 workbench defect batch.
+  // More internals the Playwright regression tests call directly.
   window.runBeatConflictDetection = runBeatConflictDetection;
   window.showMergePreview = showMergePreview;
   window.detectConflicts = detectConflicts;

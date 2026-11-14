@@ -79,8 +79,8 @@ class TripGenerateRequest(BaseModel):
     # own narration (capped at 270 s), so a ceiling under 300 s could not be
     # honoured and would be a promise the tour breaks. Validated HERE rather than
     # only on TourInput so a bad value is a 422 to the caller instead of a
-    # pydantic error surfacing as a 500. Trimming narration to fit a shorter
-    # ceiling is Release 2.
+    # pydantic error surfacing as a 500. Narration is never trimmed to fit a
+    # shorter ceiling.
     max_stop_minutes: int | None = Field(
         default=None,
         ge=5,
@@ -168,7 +168,7 @@ class TripGenerateRequest(BaseModel):
     @classmethod
     def normalize_lenses(cls, v: list[str] | None) -> list[str] | None:
         """Drop blanks/whitespace; empty -> None — by calling THE one rule in
-        src/tour/contract.py (this used to restate it and "mirror" the other)."""
+        src/tour/contract.py."""
         return normalized_lens_list(v)
 
 
@@ -185,10 +185,9 @@ class GeneratedStop(BaseModel):
     lat: float
     lng: float
     #: The primary story beat. None for a stop that HAS no story — a rest (a bench
-    #: seated by the party or the "more breaks" dial carries no beat). Until
-    #: 2026-08-18 this was required, so every day that seated a rest 500'd at
-    #: generate on the app path (the preview path uses another model and never saw
-    #: it). The class: a contract written for story stops applied to a rest.
+    #: seated by the party or the "more breaks" dial carries no beat). Optional
+    #: because a contract written for story stops must not refuse a day that
+    #: seats a rest.
     beat_id: str | None = None
     lens_name: str | None = None
     lens_display: str | None = None
@@ -233,7 +232,7 @@ class GeneratedStop(BaseModel):
     #: gates (the stop keeps the tight telling; the on-demand route still answers).
     full_narration: str | None = None
     full_close_text: str | None = None
-    #: The tour's own voice (owner ruling): the pre-recorded files for
+    #: The tour's own voice: the pre-recorded files for
     #: the authored session lines — the stop's close, its thread lines (keyed like
     #: thread_lines), the full telling's close. Null until the voicing pass has run;
     #: the phone falls back to the plain spoken line.
@@ -308,21 +307,19 @@ class TripGenerateResponse(BaseModel):
     stops: list[GeneratedStop]
     options: list[RouteOption] = Field(
         default_factory=list,
-        description="THE day, as a one-element list (pick-one-of-three was deleted). "
-        "Stays a LIST because trips persisted before that deletion "
-        "store multi-option lists and one client parser reads both. options[0] is "
+        description="THE day, as a one-element list. A LIST because older persisted "
+        "trips store multi-option lists and one client parser reads both. options[0] is "
         "the persisted trip. Computed per request, not persisted.",
     )
-    # EVERYTHING THAT SILENTLY DEGRADED while building this tour (owner ruling
-    # 2026-07-31: "Don't just log errors. Actually show them in the workbench UI.
-    # Otherwise, they're invisible."). Each row carries BOTH registers — `human` is
-    # plain English with no identifiers, and `error_type`/`error_message`/`component`/
-    # `context` are what gets pasted to Claude to fix it. An empty list means nothing
-    # degraded, which is a real statement rather than an absence. The preview has
-    # carried this since 2026-07-31; the phone's two endpoints dropped it on the floor,
-    # so a tour planned on estimated walking legs looked identical to a measured one.
-    # Same name, type and default on all three responses, so one client parser reads
-    # them all. See src/tour/degradations.py.
+    # EVERYTHING THAT SILENTLY DEGRADED while building this tour — shown to the
+    # caller, never only logged, because a logged error is invisible. Each row
+    # carries BOTH registers — `human` is plain English with no identifiers, and
+    # `error_type`/`error_message`/`component`/`context` are what gets pasted to
+    # Claude to fix it. An empty list means nothing degraded, which is a real
+    # statement rather than an absence. Without it, a tour planned on estimated
+    # walking legs looks identical to a measured one. Same name, type and default on
+    # all three responses, so one client parser reads them all. See
+    # src/tour/degradations.py.
     degradations: list[dict] = Field(default_factory=list)
 
 
@@ -549,18 +546,15 @@ class TripPreviewRequest(BaseModel):
     def validate_lenses(cls, v: list[str] | None) -> list[str] | None:
         """Reject an unknown lens LOUDLY instead of silently ignoring it.
 
-        MEASURED 2026-07-19: an unrecognised lens string was not an error. It fell
-        through ``_lens_relation`` (``selection.py:2451-2477``), which classifies
-        every POI as a "miss", so ``lens_relevance`` returned the uniform
-        ``LENS_FLOOR`` (0.25) for the whole corpus. Because spotlight is
-        MULTIPLICATIVE, a uniform factor leaves relative ranking IDENTICAL to
-        passing no lens at all — so a typo produced the un-lensed tour with no
-        signal anywhere in the response that the lens had been ignored.
-
-        That is precisely the reported "tours for different lenses don't work":
-        the request looked accepted and the tour looked plausible, while the lens
-        did nothing. Validating here converts a silent no-op into a 422 that names
-        the valid vocabulary.
+        Unvalidated, an unrecognised lens string falls through ``_lens_relation``
+        (``selection.py``), which classifies every POI as a "miss", so
+        ``lens_relevance`` returns the uniform ``LENS_FLOOR`` (0.25) for the whole
+        corpus. Because spotlight is MULTIPLICATIVE, a uniform factor leaves
+        relative ranking IDENTICAL to passing no lens at all — so a typo produces
+        the un-lensed tour with no signal anywhere in the response that the lens
+        was ignored: the request looks accepted and the tour looks plausible, while
+        the lens does nothing. Validating here converts that silent no-op into a 422
+        that names the valid vocabulary.
 
         Scoped deliberately to the PREVIEW model (the workbench surface where a
         human types free text). ``TripGenerateRequest`` keeps its permissive
@@ -586,8 +580,8 @@ class TripPreviewTourability(BaseModel):
 
     YELLOW = "generate but WARN". Also GREEN-but-``delivered_thin``:
     a GREEN-density pool that still delivers thin (audio far under the request or
-    a single dominating stop) — the engine-side answer to the 2026-07-02
-    pool-vs-delivered gap. A fully-GREEN rich tour still ships tourability=null."""
+    a single dominating stop) — so a rich pool that delivers a thin tour is still
+    disclosed. A fully-GREEN rich tour still ships tourability=null."""
 
     status: Literal["GREEN", "YELLOW"]
     delivered_thin: bool = False
@@ -647,12 +641,12 @@ class TripPreviewResponse(BaseModel):
     day_notes: list[str] = Field(default_factory=list)
     slack_minutes: int | None = None
     # The longest single walk in the day, in minutes (the number the
-    # "Shorter walks" dial is named after; the surface used to print only the
-    # total). None only from an older server; 0 on a day with no walking legs.
+    # "Shorter walks" dial is named after). None only from an older server; 0 on a
+    # day with no walking legs.
     longest_walk_minutes: int | None = None
-    # EVERYTHING THAT SILENTLY DEGRADED while PLANNING this tour (owner ruling
-    # 2026-07-31: "Don't just log errors. Actually show them in the workbench UI.
-    # Otherwise, they're invisible."). A route built on estimated walking legs rather
+    # EVERYTHING THAT SILENTLY DEGRADED while PLANNING this tour — shown to the
+    # caller, never only logged, because a logged error is invisible. A route built
+    # on estimated walking legs rather
     # than measured ones is labelled here rather than shipped silently. Each row
     # carries BOTH registers — `human` is plain English with no identifiers,
     # `error_type`/`error_message`/`component`/`context` are what gets pasted to

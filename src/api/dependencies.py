@@ -120,8 +120,8 @@ def get_premium_compose_executor():
 
 def get_faithfulness_checker() -> FaithfulnessChecker | None:
     """VERIFY's entailment checker for the authoring paths — ALWAYS the real Haiku
-    checker, paired with the real Opus author (M-7: the real authoring is never
-    gated by the trusting Mock). The hermetic suite patches this to an offline
+    checker, paired with the real Opus author: real authoring is never gated by
+    a trusting stand-in checker. The hermetic suite patches this to an offline
     stub (``tests/conftest.py``'s money-guard); tests override to inject rejecting
     checkers.
     """

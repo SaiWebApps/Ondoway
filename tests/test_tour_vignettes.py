@@ -187,9 +187,9 @@ def test_dwell_band_poi_not_a_vignette_no_lens():
 
 
 def test_thin_dwell_band_poi_demoted_to_vignette():
-    """Filler-stub (2026-07-04): a THIN tier-3 dwell-band POI (under
-    MIN_DWELL_AUDIO_SECONDS) is demoted to a walk-by vignette rather than left as a
-    dedicated "walked here for one sentence" stop."""
+    """A THIN tier-3 dwell-band POI (under MIN_DWELL_AUDIO_SECONDS) is demoted to a
+    walk-by vignette rather than left as a dedicated "walked here for one sentence"
+    stop."""
     mid = _mid(_A, _B)
     v = _poi("v-thin", tier=3, lat=mid[0] + 20 * _DEG_PER_M_LAT, lng=mid[1])
     thin = [BeatRef(id="v-thin-b0", poi_id="v-thin", active_status="active", est_spoken_seconds=40)]
@@ -420,10 +420,10 @@ def _select_route_fixture() -> tuple[list[POI], POI]:
     Packed tight, so they contribute almost no walking and the walk that decides
     whether the hour can be filled is the 540 m run out east.
 
-    It used to be four anchors standing 5 m apart, each carrying 1920 s of
-    stories. Since the walk budget became two-sided on 2026-08-04 that delivered
-    about 39 minutes of tour against a 54-minute floor and was refused outright,
-    so the vignette placement these tests exist to check was never reached.
+    The walk budget is two-sided: four anchors standing 5 m apart, each carrying
+    1920 s of stories, deliver about 39 minutes of tour against a 54-minute floor
+    and are refused outright, so the vignette placement these tests check is never
+    reached.
     """
     background = _density_fillers(
         _PDV, n=6, radius_m=60.0, tier=3, beat_count=3, prefix="bg"

@@ -1,12 +1,12 @@
-"""Grey-zone hard-boundary tests (walls 1, 2, 5).
+"""Hard-boundary tests: network allowlist, metadata-only pointer type, clean repo data.
 
 These lock the STRUCTURAL guarantees that keep shadow-library (Anna's Archive /
 WeLib) copyrighted text out of the pipeline:
 
-- Wall 2 (network): src/onboard/fetch.py's allowlist rejects every non
-  license-clean host, including lookalikes.
-- Wall 1 (type):   DiscoveryPointer has no text field and forbids extras.
-- Wall 5 (repo):   no committed data/*/beats.json attribution references a
+- Network: src/onboard/fetch.py's allowlist rejects every non license-clean
+  host, including lookalikes.
+- Type:    DiscoveryPointer has no text field and forbids extras.
+- Repo:    no committed data/*/beats.json attribution references a
   shadow-library domain.
 
 Pure — no Neo4j, no network. Run with:
@@ -34,7 +34,7 @@ from src.onboard.fetch import (
 from src.onboard.models import DiscoveryPointer
 
 # ---------------------------------------------------------------------------
-# Wall 2 — network allowlist
+# Network allowlist
 # ---------------------------------------------------------------------------
 
 BLOCKED_URLS = [
@@ -107,7 +107,7 @@ def test_allowlisted_host_with_port_is_allowed() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Wall 1 — DiscoveryPointer is metadata-only (no text field, extras forbidden)
+# DiscoveryPointer is metadata-only (no text field, extras forbidden)
 # ---------------------------------------------------------------------------
 
 TEXT_BEARING_FIELDS = ["text", "content", "body", "full_text"]
@@ -145,7 +145,7 @@ def test_discovery_pointer_valid_metadata_constructs() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Wall 5 — no committed beats.json attribution references a shadow library
+# No committed beats.json attribution references a shadow library
 # ---------------------------------------------------------------------------
 
 # Shadow-library brand tokens. Matched only as word-bounded / domain-ish tokens
@@ -238,7 +238,7 @@ def test_no_beat_attribution_references_shadow_library(beats_path: Path) -> None
 
 
 # ---------------------------------------------------------------------------
-# F8 — connector isolation: shadow_discovery.py can never reach the network
+# Connector isolation: shadow_discovery.py can never reach the network
 # ---------------------------------------------------------------------------
 
 _SHADOW_DISCOVERY_SRC = _REPO_ROOT / "src" / "onboard" / "sources" / "shadow_discovery.py"
@@ -315,7 +315,7 @@ def _forbidden_imports_in_source(src: str) -> list[str]:
     dependency-closure check (resolve + parse every reachable module) is
     deliberately OUT OF SCOPE — over-scoping it here would trade a crisp,
     fast, deterministic file-level guarantee for a fragile whole-graph one.
-    F8's contract is precisely "this connector FILE is network-free" (and the
+    The contract is precisely "this connector FILE is network-free" (and the
     connector is kept tiny so that file-level guarantee is meaningful). Also
     not detectable statically: a COMPUTED module name (``__import__(var)`` where
     the string is built at runtime) — only string-LITERAL dynamic imports."""
@@ -390,7 +390,7 @@ def test_forbidden_import_check_passes_clean_source() -> None:
 
 
 def test_shadow_discovery_never_imports_the_fetcher() -> None:
-    """F8: the shadow-discovery connector imports ONLY ``src.onboard.models`` —
+    """The shadow-discovery connector imports ONLY ``src.onboard.models`` —
     never the fetch door, ``run_connector``, or any HTTP client. Parsed from the
     source with ``ast`` so the guarantee is STRUCTURAL, not a runtime accident: a
     connector that cannot import a network path cannot fetch, so it can only ever
@@ -400,7 +400,7 @@ def test_shadow_discovery_never_imports_the_fetcher() -> None:
 
 
 # ---------------------------------------------------------------------------
-# FIX 1 — Wikimedia User-Agent policy: a live GET must carry a descriptive
+# Wikimedia User-Agent policy: a live GET must carry a descriptive
 # default User-Agent (en.wikipedia.org 403s an anonymous UA), and an explicit
 # caller header still WINS over the default. Live mode only — fixture mode
 # raises before any httpx call, so it is untouched. Kept network-free by
@@ -448,7 +448,7 @@ def test_onboard_user_agent_constant_is_descriptive_with_contact() -> None:
 
 def test_http_get_json_sends_default_user_agent(monkeypatch) -> None:
     """A live JSON GET with no caller headers still carries the descriptive
-    default UA — the fix for the en.wikipedia.org 403.
+    default UA, because en.wikipedia.org answers an anonymous UA with a 403.
 
     UNDO: pass ``headers=headers`` (drop the UA merge) -> ``captured['headers']``
     is None -> this goes RED."""
@@ -470,7 +470,7 @@ def test_http_get_text_sends_default_user_agent(monkeypatch) -> None:
 
 def test_caller_user_agent_overrides_default(monkeypatch) -> None:
     """An explicit caller ``User-Agent`` still WINS over the default (the merge
-    spreads the caller's headers LAST). Guards that the fix does not clobber a
+    spreads the caller's headers LAST). Guards that the default does not clobber a
     connector that sets its own UA."""
     captured = _patch_live_capture(monkeypatch)
     fetch.http_get_json(

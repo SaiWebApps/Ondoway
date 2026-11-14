@@ -38,8 +38,8 @@ from src.tour.routing import haversine_m
 
 ROOT = Path(__file__).resolve().parent.parent
 
-#: The reported failing case: Rue Royale to Notre-Dame, the corridor this whole
-#: release is judged on. Coordinates are the owner's exact clicked start and end.
+#: The audited corridor: Rue Royale to Notre-Dame, a walk whose interiors must
+#: carry about two and a half hours of visit time between them.
 RUE_ROYALE: tuple[float, float] = (48.8686, 2.3229)
 NOTRE_DAME: tuple[float, float] = (48.8530, 2.3499)
 

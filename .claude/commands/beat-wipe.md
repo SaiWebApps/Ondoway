@@ -27,7 +27,7 @@ The `{city}/{book-slug}` form uses the kebab-case directory name (e.g. `around-a
 2. **Dry run first.** If the user did not pass `--apply`, run the command as given. The script will print:
    - The number of beats that would be removed, with each `beat_id`.
    - Whether the matching `chunks_processed` log entry would be removed.
-   - How many `legacy_ambiguous` beats at the same `book_slug` are being skipped (those are never touched — BP-8).
+   - How many `legacy_ambiguous` beats at the same `book_slug` are being skipped (those are never touched).
    - A `dry-run: no files written` footer.
 
 3. **Review with the user.** If the dry-run shows zero matches AND zero log entries, tell the user `already clean — nothing to wipe` and stop. Otherwise, show the user the plan and ask if they want to apply.
@@ -44,7 +44,7 @@ The `{city}/{book-slug}` form uses the kebab-case directory name (e.g. `around-a
 
 ## GUARDRAILS
 
-- **No book-wide wipe flag.** By design (Q-2 resolved in 04-red-team): there is no `--book` argument. Full-book re-baselines are done via a visible shell loop over chunks, not a single command.
+- **No book-wide wipe flag.** By design there is no `--book` argument. Full-book re-baselines are done via a visible shell loop over chunks, not a single command.
 - **`legacy_ambiguous` beats never deleted.** Beats whose `source_chunk_slug == "legacy_ambiguous"` are kept even when their `book_slug` matches the wipe target. These are the 17 POIs that appeared in ≥2 legacy chunks; manual deletion is the only safe path for those.
 - **Chunk-level matching only.** The script matches on `book_slug` + `source_chunk_slug` — never on `topic_slug` (per-beat, not per-chunk) and never globally.
 - **Atomic.** All writes go through `scripts.beats_io.commit`. There is no partial-write failure mode; either both files update or both remain untouched.

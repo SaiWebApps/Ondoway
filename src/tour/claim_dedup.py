@@ -243,11 +243,11 @@ def suppress_exact_repeats(
     A verbatim restatement carries zero new information, so this is always
     content-safe — the FIRST occurrence is kept. It catches the gross literal
     repeats the claim-based pass leaves behind: two beats seated at one POI that
-    share an identical sentence (the workbench "duplicated in the beats" report),
-    which ``suppress_repeated_claims`` misses when the sentence maps to no
-    ``key_claim``. Runs WITHIN a stop only (a repeated framing across distant
-    stops is left to the claim pass). Never empties a seated beat — vignette
-    walk-past beats are exempt (additive annotations).
+    share an identical sentence, which ``suppress_repeated_claims`` misses
+    when the sentence maps to no ``key_claim``. Runs WITHIN a stop only (a
+    repeated framing across distant stops is left to the claim pass). Never
+    empties a seated beat — vignette walk-past beats are exempt (additive
+    annotations).
     """
     vignette_ids = {b.id for beats in beat_sequence.vignette_beats.values() for b in beats}
     seen_by_stop: dict[int, set[str]] = defaultdict(set)
@@ -266,8 +266,8 @@ def suppress_exact_repeats(
         return sentences
     # Never empty a SEATED beat: restore its first dropped sentence if every one of
     # its sentences was a duplicate (keeps the emitted beat-id set stable). By SOURCE
-    # ID only — NOT cited_beat_ids: a round-4 red-team proved a cited-beat restore here
-    # RESURRECTS a byte-identical duplicate (the exact bug this system prevents). An
+    # ID only — NOT cited_beat_ids: a cited-beat restore here RESURRECTS a
+    # byte-identical duplicate (the exact bug this system prevents). An
     # also_cited beat whose sole carrier is a duplicate is either already covered by
     # its verbatim twin, or a genuine loss the (keyless-aware) coverage gate catches.
     kept_by_beat: dict[str, int] = defaultdict(int)
@@ -323,8 +323,8 @@ def suppress_same_beat_near_duplicates(
             drop.add(i)
         else:
             earlier.append(key)
-    # NO also_cites never-empty restore here (a round-4 red-team proved it RESURRECTS a
-    # near-verbatim duplicate — the exact bug this system prevents). A fused also_cited
+    # NO also_cites never-empty restore here (it would RESURRECT a near-verbatim
+    # duplicate — the exact bug this system prevents). A fused also_cited
     # beat whose only carrier is a near-dup is either covered by its near-identical twin
     # or a genuine loss the (keyless-aware) coverage gate catches and repairs.
     return [s for i, s in enumerate(sentences) if i not in drop]
@@ -346,11 +346,11 @@ def _claims_for_coverage(beat: BeatRef) -> tuple[str, ...]:
         return ()
     from .generation import split_sentences  # deferred: generation imports this module
 
-    # Pseudo-claim = each FULL body sentence. A round-4 attempt to key only on "hard
-    # facts" (years + proper nouns) was REVERTED: on the live London corpus it left
-    # 85/562 (15.1%) keyless beats with a <2-token baseline — e.g. "…a place for duels
-    # …members of the nobility" collapses to "The" — turning the deletion gate back into
-    # a NO-OP for those (the exact silent-fact-loss this subsystem exists to prevent).
+    # Pseudo-claim = each FULL body sentence. Keying only on "hard facts" (years +
+    # proper nouns) leaves many keyless beats with a <2-token baseline — e.g. "…a
+    # place for duels …members of the nobility" collapses to "The" — turning the
+    # deletion gate into a NO-OP for those (the exact silent-fact-loss this subsystem
+    # exists to prevent).
     # The full sentence keeps every fact gated. Over-gating a bold paraphrase is the
     # tolerable failure direction: _prefer_deduped fail-opens to the complete stitched
     # original — no fact lost, only a less-fused telling.
@@ -417,7 +417,7 @@ def candidate_duplicate_pairs(
     overlap at ``min_overlap`` — candidates the compose LLM is TOLD may restate
     one fact, so IT (not this threshold) makes the fuse/keep call on each.
 
-    Deliberately loose and hint-only: the red-team proved no threshold safely
+    Deliberately loose and hint-only: no threshold safely
     DROPS at these overlaps, but a hint drops nothing, so recall beats precision.
     Semantic repeats with near-zero lexical overlap (different framings of one
     fact) are missed here on purpose — the compose prompt's bold-fusion mandate

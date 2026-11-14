@@ -1,4 +1,4 @@
-"""Unit tests for the OSM (Overpass) Step-3 connector (osm.py).
+"""Unit tests for the OSM (Overpass) source connector (osm.py).
 
 Pure — no Neo4j, no network: ``parse`` is fed a saved Overpass JSON fixture and
 ``consult_url`` is exercised for its shape only. THE GOTCHA under test: a ``node``

@@ -2,46 +2,33 @@
 
 WHY
 ---
-``make score-saved-tours`` measured 191 real tours and found two WARN checks — C9 (mean
-sentence length) and C10 (look-cue opener) — firing on **100%** of them. A check that never
-passes discriminates nothing.
-
-BOTH ARE NOW RESOLVED, and in OPPOSITE directions (2026-07-27) — this script is what
-settled which was which. C9's cap was retuned 15 -> 20, because C9 ranked the gold above
-34 of 38 machine stops and only its threshold was wrong. C10 was DELETED, because it was a
-regex over 18 sentence-initial verbs that rated the gold's own opener "a bare fact".
-Openers are now UNCHECKED — see
-tests/test_tour_quality_rubric.py::test_openers_are_unchecked_since_c10_was_deleted.
-
-There are two possible explanations demanding opposite fixes:
+A rubric check that fires on every generated tour discriminates nothing, and there are
+two possible explanations demanding opposite fixes:
 
   1. every generated tour really is worse than the bar, or
   2. the bar sits somewhere the owner's OWN gold text cannot reach either.
 
 This settles it by running the SAME rubric over the gold text in
 ``fixtures/tour-quality-standard/01-standard.md``, the North Star section — the passage
-the owner wrote by hand and from which S1-S10 were derived.
+the owner wrote by hand as the bar every tour is held to.
 **A check the gold fails is mis-calibrated.**
 
 READ THIS BEFORE QUOTING A NUMBER
 ----------------------------------
-**Failing a check and being WORSE THAN MACHINE OUTPUT are different questions**, and
-conflating them already produced one wrong recommendation here. The gold fails C9 — but it
-also ranks BETTER than 34 of 38 machine stops on the very same measure. So C9's THRESHOLD
-is wrong while C9 itself orders the two correctly. Deleting it would have thrown away a
-working signal. Use ``--compare`` to print that ranking alongside the verdict; never quote
-the pass/fail line on its own.
+**Failing a check and being WORSE THAN MACHINE OUTPUT are different questions.** A check
+can fail the gold while still ranking it BETTER than most machine stops on the very same
+measure. Then the check's THRESHOLD is wrong while the check itself orders the two
+correctly, and deleting it would throw away a working signal. Use ``--compare`` to print
+that ranking alongside the verdict; never quote the pass/fail line on its own.
 
 Related trap: ``mean_sentence_words`` is what C9 reads, and it is NOT total words divided
-by total sentences. An earlier version of this script printed the naive figure in its
-header and the rubric's figure two lines below, and let the reader pick. Only the rubric's
-number appears now.
+by total sentences. Only the rubric's number is printed.
 
 HOW IT SCORES
 -------------
 The gold is one continuous narration at one place, so it is rehydrated into a single-stop
 ``Script`` and passed to the REAL ``quality_rubric.score_tour``. Nothing is
-re-implemented — an earlier version hand-rolled C5 and diverged from it (the real one
+re-implemented, so no check here can diverge from the rubric's own (C5, for one,
 lowercases and skips sentences under five words).
 
 Some checks cannot mean anything for a single passage of prose and are filtered out and
@@ -53,7 +40,7 @@ listed as NOT APPLICABLE rather than reported as passes:
   * C2-tier-inversion, C12-stops-too-close, C11-year-density-outlier — need >1 stop or POI
 
 What genuinely IS measured: **C5** (verbatim repetition), **C6** (empty stop), **C8**
-(gorging) and **C9**. C10 no longer exists.
+(gorging) and **C9**. The rubric does not check sentence openers.
 
 The gold text is extracted STRUCTURALLY — the markdown blockquote in the North Star section,
 matched on line prefixes, never a pattern match. See ``extract_gold_text``.
@@ -83,12 +70,11 @@ from src.tour.quality_rubric import Severity, score_tour
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 #: The owner's own gold passage. This script READS it, so it is a fixture and
-#: lives under `fixtures/` — the spec tree was deleted 2026-09-02 and is refused by
-#: the junk guard.
+#: lives under `fixtures/`.
 STANDARD = REPO_ROOT / "fixtures" / "tour-quality-standard" / "01-standard.md"
 GOLD_HEADING = "## 1. The North Star"
 
-#: c987848 fixed the audio clock; tours before it carry a meaningless audio number.
+#: Tours generated before this instant carry a meaningless audio number.
 AUDIO_CLOCK_FIXED = _dt.datetime.fromisoformat("2026-07-19T00:00:00+00:00")
 
 #: Checks a single passage of prose structurally cannot exercise. Filtered from the
@@ -259,8 +245,8 @@ def main() -> int:
             "\nBefore acting: a failing check is EITHER a mis-set threshold OR a broken\n"
             "measure, and the two need opposite fixes. Run with --compare to see whether\n"
             "the check still ranks the gold above machine output. If it does, retune it.\n"
-            "If it cannot tell them apart, replace it with the semantic check the\n"
-            "standard already specifies."
+            "If it cannot tell them apart, replace it with a check that judges what\n"
+            "the sentences mean rather than their surface form."
         )
     else:
         print("The gold passes every applicable check. The bar is reachable.")

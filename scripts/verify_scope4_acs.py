@@ -74,7 +74,7 @@ ALLOWED_CONTEXT_PATTERNS = [
 ]
 
 
-def check_ac4(beats: list[dict]) -> tuple[bool, list[str]]:
+def check_required_fields(beats: list[dict]) -> tuple[bool, list[str]]:
     """Every beat has all required fields + passes Pydantic validation."""
     from src.api.models.nodes import NarrativeBeatCreate
 
@@ -100,7 +100,7 @@ def check_ac4(beats: list[dict]) -> tuple[bool, list[str]]:
     return (not errors, errors)
 
 
-def check_ac5(beats: list[dict]) -> tuple[bool, list[str]]:
+def check_sensory_cues(beats: list[dict]) -> tuple[bool, list[str]]:
     """sensory_anchor=true implies non-empty structured physical_cues."""
     errors = []
     for i, b in enumerate(beats):
@@ -121,7 +121,7 @@ def check_ac5(beats: list[dict]) -> tuple[bool, list[str]]:
     return (not errors, errors)
 
 
-def check_ac8_code(skill_path: Path) -> tuple[bool, list[str]]:
+def check_no_city_hardcode(skill_path: Path) -> tuple[bool, list[str]]:
     """No city name is hardcoded in skill logic."""
     if not skill_path.exists():
         return (False, [f"skill file not found: {skill_path}"])
@@ -190,7 +190,7 @@ def main() -> int:
 
     # The skill-source city check always runs
     print("=== No city hardcoding in skill source ===")
-    ok, errors = check_ac8_code(Path(args.skill))
+    ok, errors = check_no_city_hardcode(Path(args.skill))
     if ok:
         print("  PASS")
     else:
@@ -209,7 +209,7 @@ def main() -> int:
         print(f"\n=== Beats loaded: {len(beats)} from {beats_path} ===\n")
 
         print("=== All required fields, Pydantic-valid ===")
-        ok, errors = check_ac4(beats)
+        ok, errors = check_required_fields(beats)
         if ok:
             print(f"  PASS ({len(beats)} beats)")
         else:
@@ -219,7 +219,7 @@ def main() -> int:
                 print(f"    {e}")
 
         print("\n=== sensory_anchor → structured physical_cues ===")
-        ok, errors = check_ac5(beats)
+        ok, errors = check_sensory_cues(beats)
         if ok:
             sa_count = sum(1 for b in beats if b.get("sensory_anchor"))
             print(f"  PASS ({sa_count} sensory-anchored beats)")

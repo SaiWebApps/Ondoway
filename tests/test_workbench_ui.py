@@ -407,10 +407,10 @@ def _stubbed_audio_preview(page: Page):
     That is not cosmetic. ``/audio/providers`` reports availability by probing the
     credential each provider needs, and this suite's server runs with a blanked
     ``OPENAI_API_KEY`` (conftest), so it honestly answers "openai (unavail)".
-    Since 2026-07-31 the page refuses to play an unavailable voice BEFORE issuing
-    a request — a real fix, because it replaces a bare "TTS failed (502)" with a
-    message naming the missing key. But it also means these tests never fire the
-    request they stub, and they time out waiting for it.
+    The page refuses to play an unavailable voice BEFORE issuing a request, with
+    a message naming the missing key rather than a bare "TTS failed (502)". So
+    without this stub these tests never fire the request they stub, and they
+    time out waiting for it.
     So: a test that wants to exercise the audio path must say so by presenting a
     server where the voice exists. Stubbing the availability probe states that
     premise explicitly instead of leaving it to a blank credential.
@@ -709,20 +709,17 @@ def _class_declares_a_routable_upstream(class_name: str) -> bool:
 def _class_refuses_to_speak_with_nothing_configured(name: str) -> bool:
     """Does this provider REFUSE to answer when nothing at all is configured?
 
-    The SECOND legitimate shape of a real voice, and the reason this pair of
-    checks exists rather than the single URL check that came before it. The rule
-    the owner set on 2026-07-31 is "no fake voice in front of a human", and the
+    The SECOND legitimate shape of a real voice, beside the routable-upstream
+    check above. No fake voice is ever put in front of a human, and the
     defining trait of the silent double is that it ANSWERS FROM NOTHING: no key,
     no endpoint, no model, and it still returns bytes.
 
-    "Names a routable upstream" was a faithful proxy for that while every real
-    provider was a vendor. It stopped being one on 2026-08-29, when a local
-    model was briefly registered here — genuinely synthesized speech that by
-    design named no host at all. That model has since been removed (tier 3
-    moved to the surfaces' own OS voice), but the guard keeps the question it
-    always meant: strip the environment bare and see whether the provider still
-    speaks. ``MockTTSProvider`` hands back its silent WAV regardless and is
-    caught; anything that DEPENDS on real configuration refuses and passes.
+    "Names a routable upstream" alone is too narrow a proxy for that: a local
+    model synthesizes real speech while naming no host at all. So this check
+    asks the question directly: strip the environment bare and see whether the
+    provider still speaks. ``MockTTSProvider`` hands back its silent WAV
+    regardless and is caught; anything that DEPENDS on real configuration
+    refuses and passes.
 
     DELIBERATELY SHALLOW, exactly like its sibling above: this asks whether the
     provider DEPENDS on something real, not whether its output came from one.
@@ -805,10 +802,9 @@ def _safe_assert(
 ) -> bool:
     """Assert a real expectation, logging the issue (+ screenshot) AND failing the test.
 
-    Made FATAL 2026-06-14: previously this only recorded to the BugReport and returned
-    False, so every check built on it was non-fatal — the suite stayed green even when a
-    UI expectation was violated ("green while broken"). It now raises after logging, so a
-    recorded issue is a real test failure. No caller depends on the bool return.
+    Every check built on this is FATAL: it records the issue to the BugReport and then
+    raises, so a recorded issue is a real test failure and the suite cannot stay green
+    while a UI expectation is violated. No caller depends on the bool return.
     """
     reporter.increment_tests()
     if not condition:
@@ -983,14 +979,13 @@ def api_server():
             # interpreter deliberately cannot resolve.
             "TTS_PROVIDER": "openai",
             # ONBOARD_PROVIDER: this shard drives the real Draft Beats button in a
-            # real browser, and get_drafter() (src/onboard/beat_draft.py) now FAILS
-            # CLOSED on an unset value — an unset drafter used to silently mean the
-            # free mock, which is what put fake beats in front of a human. So the
-            # pin has to be explicit. It is "mock" here and ONLY here: unlike
-            # TTS_PROVIDER above, this shard must not spend, and scripts/workbench.sh
-            # pins "anthropic" for the workbench a human actually uses. Naming the
-            # double in a test's own subprocess env is the sanctioned opt-in; what
-            # was forbidden was getting it without asking.
+            # real browser, and get_drafter() (src/onboard/beat_draft.py) FAILS
+            # CLOSED on an unset value, so an unset drafter never silently means
+            # the free mock. So the pin has to be explicit. It is "mock" here and
+            # ONLY here: unlike TTS_PROVIDER above, this shard must not spend, and
+            # scripts/workbench.sh pins "anthropic" for the workbench a human
+            # actually uses. The double is reachable only when a test's own
+            # subprocess env names it explicitly, never by default.
             "ONBOARD_PROVIDER": "mock",
             # Onboarding: point the panel's write + deploy at a module-scoped
             # tmp dir so the London upload->deploy round-trip is HERMETIC — it writes
@@ -1258,13 +1253,11 @@ def browser_page(seed_data, reporter):
         # handler is registered, so any confirm() in review.html silently becomes
         # a Cancel and the flow under test never runs at all.
         #
-        # HISTORY: added for the tour-preview spend gate ("Generate a Premium
-        # candidate? ... spends real money"), which had turned every tour-preview
-        # test into a timeout — generateTourPreview returned BEFORE its fetch.
-        # The owner ordered that dialog DELETED on 2026-07-31, because the
-        # workbench must replicate the tourist's app experience and a tourist is
-        # never asked to approve spend. Its absence is now pinned by
-        # tests/test_workbench_preview_wiring.py (section 4).
+        # The tour preview has no spend dialog: the workbench replicates the
+        # tourist's app experience, and a tourist is never asked to approve
+        # spend. tests/test_workbench_matches_the_app.py::
+        # test_no_consent_gate_between_the_click_and_the_tourist_facing_call
+        # keeps it out.
         #
         # The handler still belongs here: review.html confirms ELSEWHERE, and
         # that one is load-bearing — the zero-beat branch of showMergePreview
@@ -1387,7 +1380,7 @@ class TestApiServerGuard:
 
 
 # ---------------------------------------------------------------------------
-# Test: City Prompt + JSON Load + Duplicate Resolver (ACs #1-2) — Task 4
+# Test: City Prompt + JSON Load + Duplicate Resolver
 # ---------------------------------------------------------------------------
 
 
@@ -1415,7 +1408,7 @@ class TestWorkbenchLoadFlow:
             "City overlay (#cityOverlay) is visible",
             f"Overlay visible: {overlay_visible}",
             page,
-            "ac1-city-overlay-missing",
+            "load-city-overlay-missing",
         )
 
         # The city picker loads real cities from GET /cities (distinct
@@ -1443,7 +1436,7 @@ class TestWorkbenchLoadFlow:
             "No 'Other'/'add a city' option present",
             f"options: {option_texts}",
             page,
-            "ac1-no-other-option",
+            "load-no-other-option",
         )
         _safe_assert(
             reporter,
@@ -1455,7 +1448,7 @@ class TestWorkbenchLoadFlow:
             "#cityInput is absent from the DOM",
             f"#cityInput count: {page.locator(CITY_INPUT).count()}",
             page,
-            "ac1-no-freetext-input",
+            "load-no-freetext-input",
         )
         _take_screenshot(page, "city-picker-pure-dropdown")
         # Pick the seeded city from the list — one click, exact key, no typing
@@ -1483,7 +1476,7 @@ class TestWorkbenchLoadFlow:
                 "Overlay closes within 10s",
                 "Overlay still visible after 15s (DB connect slow/down)",
                 page,
-                "ac1-city-timeout",
+                "load-city-timeout",
             )
 
         if city_accepted:
@@ -1499,7 +1492,7 @@ class TestWorkbenchLoadFlow:
                 "'Paris' appears in #cityLabel",
                 f"Label text: '{label_text}'",
                 page,
-                "ac1-city-label",
+                "load-city-label",
             )
 
         # --- JSON Load Flow ---
@@ -1538,7 +1531,7 @@ class TestWorkbenchLoadFlow:
                 "No console errors",
                 f"{len(console_errors)} error(s): {'; '.join(console_errors[:3])}",
                 page,
-                "ac1-console-errors",
+                "load-console-errors",
             )
 
         # Check if error toast appeared (JSON validation failure)
@@ -1555,10 +1548,10 @@ class TestWorkbenchLoadFlow:
                 "No error toast",
                 f"Toast: {toast_text[:200]}",
                 page,
-                "ac1-json-error-toast",
+                "load-json-error-toast",
             )
 
-        # --- Duplicate Resolver (AC #2) ---
+        # --- Duplicate Resolver ---
         dup_overlay = page.locator(DUP_OVERLAY)
         try:
             dup_overlay.wait_for(state="visible", timeout=5000)
@@ -1578,11 +1571,11 @@ class TestWorkbenchLoadFlow:
             "#dupOverlay becomes visible",
             f"Overlay visible: {dup_visible}",
             page,
-            "ac2-dup-overlay-missing",
+            "load-dup-overlay-missing",
         )
 
         if dup_visible:
-            _take_screenshot(page, "ac2-dup-overlay")
+            _take_screenshot(page, "load-dup-overlay")
 
             # Find the rename input for one duplicate entry and rename it
             dup_inputs = page.locator(f"{DUP_OVERLAY} input[data-dup-idx]")
@@ -1617,10 +1610,10 @@ class TestWorkbenchLoadFlow:
                 "Overlay closes after resolution",
                 "Overlay still visible",
                 page,
-                "ac2-dup-not-resolved",
+                "load-dup-not-resolved",
             )
 
-        # --- Worklist Rendering (AC #1) ---
+        # --- Worklist Rendering ---
         # Wait for worklist rows to appear
         page.wait_for_timeout(2000)
         rows = page.locator(WORKLIST_ROW)
@@ -1646,14 +1639,14 @@ class TestWorkbenchLoadFlow:
             "13 .worklist-row elements visible",
             f"Found {row_count} rows",
             page,
-            "ac1-worklist-count",
+            "load-worklist-count",
         )
 
-        _take_screenshot(page, "ac1-worklist-loaded")
+        _take_screenshot(page, "load-worklist-loaded")
 
 
 # ---------------------------------------------------------------------------
-# Test: Detail View, Editing, Badges, Beats (ACs #3-7, #9-12) — Task 5
+# Test: Detail View, Editing, Badges, Beats
 # ---------------------------------------------------------------------------
 
 
@@ -1661,7 +1654,7 @@ class TestDetailViewAndEditing:
     """Tests for POI detail rendering, editing, badges, and beat cards."""
 
     def test_detail_view_rendering(self, browser_page):
-        """AC #3: Click each POI and verify detail view renders correct field values."""
+        """Click each POI and verify detail view renders correct field values."""
         page, _seed_data, reporter = browser_page
         fixture = _load_fixture()
 
@@ -1702,7 +1695,7 @@ class TestDetailViewAndEditing:
                     f"Name: '{expected_name}'",
                     f"Name: '{actual_name}'",
                     page,
-                    f"ac3-name-mismatch-{idx}",
+                    f"detail-name-mismatch-{idx}",
                 )
 
             # Check latitude
@@ -1720,7 +1713,7 @@ class TestDetailViewAndEditing:
                     f"Lat: {expected_lat}",
                     f"Lat: {actual_lat}",
                     page,
-                    f"ac3-lat-mismatch-{idx}",
+                    f"detail-lat-mismatch-{idx}",
                 )
 
             # Check longitude
@@ -1738,13 +1731,13 @@ class TestDetailViewAndEditing:
                     f"Lng: {expected_lng}",
                     f"Lng: {actual_lng}",
                     page,
-                    f"ac3-lng-mismatch-{idx}",
+                    f"detail-lng-mismatch-{idx}",
                 )
 
         reporter.increment_tests()
 
     def test_geofence_flag(self, browser_page):
-        """AC #4: Outside-geofence POI shows flagged badge and yellow warning."""
+        """Outside-geofence POI shows flagged badge and yellow warning."""
         page, _seed_data, reporter = browser_page
 
         # Find entry #4 (Times Square — outside geofence)
@@ -1772,7 +1765,7 @@ class TestDetailViewAndEditing:
                     ".badge-flagged visible on worklist row",
                     f"Badge visible: {has_flagged}",
                     page,
-                    "ac4-no-flagged-badge",
+                    "geofence-no-flagged-badge",
                 )
 
                 # Click to open detail
@@ -1795,10 +1788,10 @@ class TestDetailViewAndEditing:
                     "Yellow geofence warning visible in map area",
                     f"Warning visible: {warn_visible}",
                     page,
-                    "ac4-no-geofence-warning",
+                    "geofence-no-warning",
                 )
 
-                _take_screenshot(page, "ac4-geofence")
+                _take_screenshot(page, "geofence-flagged")
                 found = True
                 break
 
@@ -1813,11 +1806,11 @@ class TestDetailViewAndEditing:
                 "Entry #4 found in worklist",
                 "Not found",
                 page,
-                "ac4-poi-not-found",
+                "geofence-poi-not-found",
             )
 
     def test_invalid_coords(self, browser_page):
-        """AC #5: Invalid-coords POI shows field warnings and blocks upload."""
+        """Invalid-coords POI shows field warnings and blocks upload."""
         page, _seed_data, reporter = browser_page
 
         rows = page.locator(WORKLIST_ROW)
@@ -1846,7 +1839,7 @@ class TestDetailViewAndEditing:
                     ".field-warning visible near coordinate fields",
                     f"Found {warn_count} warnings",
                     page,
-                    "ac5-no-coord-warnings",
+                    "coords-no-field-warnings",
                 )
 
                 # Check map warning
@@ -1868,7 +1861,7 @@ class TestDetailViewAndEditing:
                     "'Invalid coordinates — pin removed' message visible",
                     f"Map warning visible: {map_warn_visible}",
                     page,
-                    "ac5-no-map-warning",
+                    "coords-no-map-warning",
                 )
 
                 # Try to click Mark as Complete — should be blocked
@@ -1893,10 +1886,10 @@ class TestDetailViewAndEditing:
                         "Upload blocked — POI stays in non-uploaded state",
                         "POI appears to have been uploaded",
                         page,
-                        "ac5-invalid-uploaded",
+                        "coords-invalid-uploaded",
                     )
 
-                _take_screenshot(page, "ac5-invalid-coords")
+                _take_screenshot(page, "coords-invalid")
                 found = True
                 break
 
@@ -1911,11 +1904,11 @@ class TestDetailViewAndEditing:
                 "Entry #5 found in worklist",
                 "Not found",
                 page,
-                "ac5-poi-not-found",
+                "coords-poi-not-found",
             )
 
     def test_edit_persistence(self, browser_page):
-        """AC #6: Edits persist when navigating away and back."""
+        """Edits persist when navigating away and back."""
         page, _seed_data, reporter = browser_page
 
         rows = page.locator(WORKLIST_ROW)
@@ -2001,7 +1994,7 @@ class TestDetailViewAndEditing:
                 f"Name: '{edited_name}'",
                 f"Name: '{current_name}'",
                 page,
-                "ac6-name-not-persisted",
+                "edit-name-not-persisted",
             )
 
         beat_script = page.locator(DATA_BEAT_FIELD.format("script_body"))
@@ -2021,7 +2014,7 @@ class TestDetailViewAndEditing:
                 "Script contains 'EDIT_MARKER'",
                 f"Script: '{current_script[:80]}...'",
                 page,
-                "ac6-script-not-persisted",
+                "edit-script-not-persisted",
             )
 
         # Restore original values to not pollute later tests
@@ -2034,10 +2027,10 @@ class TestDetailViewAndEditing:
             beat_script.first.fill(original_script)
             beat_script.first.dispatch_event("input")
 
-        _take_screenshot(page, "ac6-edit-persistence")
+        _take_screenshot(page, "edit-persistence")
 
     def test_defer_and_reselect(self, browser_page):
-        """AC #7: Defer a POI, badge changes to deferred, re-select and complete."""
+        """Defer a POI, badge changes to deferred, re-select and complete."""
         page, _seed_data, reporter = browser_page
 
         # Wait for worklist rows to be available
@@ -2055,7 +2048,7 @@ class TestDetailViewAndEditing:
                 "Worklist rows visible",
                 f"Count: {rows.count()}",
                 page,
-                "ac7-no-rows",
+                "defer-no-rows",
             )
             return
 
@@ -2110,16 +2103,16 @@ class TestDetailViewAndEditing:
                 ".badge-deferred visible on worklist row",
                 f"Badge found: {has_deferred}",
                 page,
-                "ac7-no-deferred-badge",
+                "defer-no-deferred-badge",
             )
 
-            _take_screenshot(page, "ac7-deferred")
+            _take_screenshot(page, "defer-deferred")
 
             # Re-select the deferred POI
             rows.nth(target_row).click()
             page.wait_for_timeout(500)
 
-            _take_screenshot(page, "ac7-reselected")
+            _take_screenshot(page, "defer-reselected")
         else:
             _safe_assert(
                 reporter,
@@ -2131,11 +2124,11 @@ class TestDetailViewAndEditing:
                 "Defer button visible",
                 "Button not found or not visible",
                 page,
-                "ac7-no-defer-btn",
+                "defer-no-defer-btn",
             )
 
     def test_beat_rendering(self, browser_page):
-        """ACs #9, #10, #12: Beat cards render all fields, multi-lens POI renders all beats."""
+        """Beat cards render all fields, multi-lens POI renders all beats."""
         page, _seed_data, reporter = browser_page
         _load_fixture()
 
@@ -2147,7 +2140,7 @@ class TestDetailViewAndEditing:
                 rows.nth(i).click()
                 page.wait_for_timeout(500)
 
-                # AC #10: Check beat card count
+                # Check beat card count
                 beats = page.locator(BEAT_CARD)
                 beat_count = beats.count()
                 _safe_assert(
@@ -2163,10 +2156,10 @@ class TestDetailViewAndEditing:
                     "4 beat cards rendered",
                     f"{beat_count} beat cards found",
                     page,
-                    "ac10-beat-count",
+                    "beats-card-count",
                 )
 
-                # AC #9: Check each beat card has all 5 fields
+                # Check each beat card has all 5 fields
                 for bi in range(beat_count):
                     beat = beats.nth(bi)
                     for field in [
@@ -2190,7 +2183,7 @@ class TestDetailViewAndEditing:
                             f"Field '{field}' present in beat card",
                             "Field not found",
                             page,
-                            f"ac9-missing-field-{field}-beat{bi}",
+                            f"beats-missing-field-{field}-beat{bi}",
                         )
 
                 # Check lens dropdown has 16 taggable options
@@ -2209,10 +2202,10 @@ class TestDetailViewAndEditing:
                         "16+ options in lens dropdown",
                         f"{option_count} options found",
                         page,
-                        "ac9-lens-count",
+                        "beats-lens-count",
                     )
 
-                # AC #12: Check beat count header
+                # Check beat count header
                 beats_header = page.locator("h3:has-text('Narrative Beats')")
                 if beats_header.count() > 0:
                     header_text = beats_header.first.text_content() or ""
@@ -2226,14 +2219,14 @@ class TestDetailViewAndEditing:
                         "'Narrative Beats (4)' in header",
                         f"Header: '{header_text}'",
                         page,
-                        "ac12-beat-header",
+                        "beats-count-header",
                     )
 
-                _take_screenshot(page, "ac9-10-12-beats")
+                _take_screenshot(page, "beats-rendered")
                 break
 
     def test_beat_editing(self, browser_page):
-        """AC #11: Beat lens and gravity edits persist after navigation."""
+        """Beat lens and gravity edits persist after navigation."""
         page, _seed_data, reporter = browser_page
 
         rows = page.locator(WORKLIST_ROW)
@@ -2291,7 +2284,7 @@ class TestDetailViewAndEditing:
                     f"Gravity: {new_gravity}",
                     f"Gravity: {current_gravity}",
                     page,
-                    "ac11-gravity-not-persisted",
+                    "beat-edit-gravity-not-persisted",
                 )
 
                 # Restore
@@ -2299,13 +2292,13 @@ class TestDetailViewAndEditing:
                 gravity_fields.first.fill(original_gravity)
                 gravity_fields.first.dispatch_event("input")
 
-        _take_screenshot(page, "ac11-beat-edit")
+        _take_screenshot(page, "beat-edit")
 
     def test_the_audio_dropdown_a_human_sees_offers_no_fake_provider(self, browser_page):
         """The workbench cannot offer a fake voice.
 
-        This is the owner's original complaint, checked where they saw it: in a
-        real browser, against a real server. The static ``<select>`` markup is
+        Checked where an editor sees it: in a real browser, against a real
+        server. The static ``<select>`` markup is
         NOT the dropdown — ``loadTtsProviders()`` does ``innerHTML = ''`` and
         rebuilds the list from ``GET /audio/providers`` — so this reads the
         options the page actually rendered and requires them to be exactly the
@@ -2329,12 +2322,9 @@ class TestDetailViewAndEditing:
            precisely what makes it a fake.
 
         The second half of (3) is not a loophole, it is the rule stated properly.
-        Until 2026-08-28 this asked only for a routable upstream, which was a
-        faithful proxy while every real provider was a vendor — and stopped being
-        one the day a local model was registered: real narration that names no
-        host, which the proxy would have banned while still being satisfiable by
-        any fake that hardcoded a URL it never called. The local model is gone
-        again, but the correctly-stated rule stays.
+        A routable upstream alone is the wrong test: a local model produces real
+        narration that names no host, and any fake could hardcode a URL it never
+        calls.
 
         It also pins the SELECTED value to what render.yaml pins for production,
         derived from the manifest rather than typed in here, so a workbench that
@@ -2414,20 +2404,19 @@ class TestDetailViewAndEditing:
         _take_screenshot(page, "audio-provider-dropdown-is-real")
 
     def test_beat_tts_play_decodes_audio(self, browser_page):
-        """Characterize beat-TTS BEFORE the COMPOSE-era refactor: clicking a beat's
-        Listen button POSTs /audio/preview and the <audio> actually DECODES
-        (readyState>=2) from a blob: URL. Pins ttsPlayBeat's real behavior so
-        the later ttsPlay-core extraction provably preserves it. Hard asserts (this
-        must bite); real browser, real click, real fetch, real decode.
+        """Beat TTS: clicking a beat's Listen button POSTs /audio/preview and the
+        <audio> actually DECODES (readyState>=2) from a blob: URL. Pins
+        ttsPlayBeat's real behavior, which plays through the shared ttsPlay core.
+        Hard asserts (this must bite); real browser, real click, real fetch, real
+        decode.
 
         The paid synthesis is answered in the browser (``_stubbed_audio_preview``)
-        rather than by selecting a fake provider — the API no longer serves one.
-        The request the page sent is asserted instead,
-        which is strictly more than the old version proved."""
+        rather than by selecting a fake provider — the API serves none. The
+        request the page sent is asserted instead."""
         page, _seed_data, _reporter = browser_page
 
         # Select the multi-lens POI that carries 4 beats with non-empty scripts
-        # (verified present in tests/fixtures/ui_test_fixture.json this session).
+        # (tests/fixtures/ui_test_fixture.json).
         rows = page.locator(WORKLIST_ROW)
         selected = False
         for i in range(rows.count()):
@@ -2534,7 +2523,7 @@ class TestDetailViewAndEditing:
             assert page.locator("#tourStops button.btn-primary").count() == 1, (
                 "the planned day must offer exactly one primary action"
             )
-            _take_screenshot(page, "step4-tour-plan-honesty-surface")
+            _take_screenshot(page, "tour-plan-honesty-surface")
         finally:
             _unroute_plan(page)
 
@@ -2815,7 +2804,7 @@ class TestDetailViewAndEditing:
         assert page.locator("#tourGenerateBtn").count() == 0, "tour form leaked into the POI view"
         assert page.locator("#tourStops").count() == 0, "tour stops leaked into the POI view"
         assert page.locator(BEAT_CARD).count() > 0, "standard POI beat cards should re-render"
-        _take_screenshot(page, "step6-tour-back-to-poi")
+        _take_screenshot(page, "tour-back-to-poi")
 
     def test_tour_preview_ab_destination_sends_end_and_renders(self, browser_page):
         """INVARIANT: an optional End pin (TourInput.end) is sent to the planner
@@ -2857,8 +2846,8 @@ class TestDetailViewAndEditing:
             sent = json.loads(captured["body"])
             assert sent.get("end_lat") == 48.8606, f"end_lat not sent: {sent}"
             assert sent.get("end_lng") == 2.3376, f"end_lng not sent: {sent}"
-            # The plan carries the CITY the page is connected to (2026-08-18: this
-            # replaced two static HTML scans with the real request the browser sent).
+            # The plan carries the CITY the page is connected to, read off the
+            # real request the browser sent.
             assert sent.get("city_slug"), f"city_slug not sent: {sent}"
 
             stops = page.locator("#tourStops .tour-stop")
@@ -2966,7 +2955,7 @@ class TestDetailViewAndEditing:
             assert page.locator(".tour-route-pin--vignette").count() == 1, (
                 "the walk-past pin should be hollow on the plan map"
             )
-            _take_screenshot(page, "b5-vignette-tag-and-hollow-pin")
+            _take_screenshot(page, "vignette-tag-and-hollow-pin")
         finally:
             _unroute_plan(page)
 
@@ -3089,7 +3078,7 @@ class TestDetailViewAndEditing:
         assert end_val != start_val, "the two clicks should set two different points"
         assert page.locator("#tourStart").input_value() == start_val, "2nd click must not move the start"
         assert page.locator(".tour-point-pin--end").count() == 1, "2nd click should drop a destination pin"
-        _take_screenshot(page, "b6-map-click-set-points")
+        _take_screenshot(page, "map-click-set-points")
 
         # Clear points -> both inputs reset (open walk) + pins removed.
         page.locator("#tourClearBtn").click()
@@ -3103,7 +3092,7 @@ class TestDetailViewAndEditing:
         page.wait_for_timeout(400)
         _click_map(0.50, 0.50)
         assert page.locator(".tour-point-pin").count() == 0, "map click outside the tour view dropped a pin"
-        _take_screenshot(page, "b6-map-click-cleared")
+        _take_screenshot(page, "map-click-cleared")
 
     def test_tour_generate_sends_clicked_coords(self, browser_page):
         """After click-setting start + destination, Generate POSTs exactly
@@ -3153,7 +3142,7 @@ class TestDetailViewAndEditing:
         assert sent.get("end_lat") == elat and sent.get("end_lng") == elng, (
             f"generate did not use the clicked destination: sent {sent}, clicked {end_val}"
         )
-        _take_screenshot(page, "b6-generate-uses-clicked-coords")
+        _take_screenshot(page, "generate-uses-clicked-coords")
 
     def test_four_dial_turns_each_replan_the_day(self, browser_page):
         """Turn a dial and the day re-plans
@@ -3270,10 +3259,10 @@ class TestDetailViewAndEditing:
                     "0 beat cards (empty beat stripped during load)",
                     f"{beat_cards.count()} beat cards found",
                     page,
-                    "ec1-empty-not-stripped",
+                    "edge-empty-not-stripped",
                 )
 
-                _take_screenshot(page, "ec1-empty-beat-stripped")
+                _take_screenshot(page, "edge-empty-beat-stripped")
                 break
 
     def test_long_text_no_overflow(self, browser_page):
@@ -3304,12 +3293,12 @@ class TestDetailViewAndEditing:
                         "Row fits within .left-panel width",
                         f"Row extends {box['x'] + box['width'] - parent_box['x'] - parent_box['width']:.0f}px beyond parent",
                         page,
-                        "ec3-overflow",
+                        "edge-overflow",
                     )
 
                 rows.nth(i).click()
                 page.wait_for_timeout(500)
-                _take_screenshot(page, "ec3-long-text")
+                _take_screenshot(page, "edge-long-text")
                 break
 
     def test_audit_notes_rendering(self, browser_page):
@@ -3338,7 +3327,7 @@ class TestDetailViewAndEditing:
                     ".poi-audit-notes-box present",
                     f"Found {poi_notes.count()} elements",
                     page,
-                    "ec4-no-poi-audit",
+                    "edge-no-poi-audit",
                 )
 
                 # Check beat-level audit notes
@@ -3355,10 +3344,10 @@ class TestDetailViewAndEditing:
                     ".audit-notes-box present in beat cards",
                     f"Found {beat_notes.count()} elements",
                     page,
-                    "ec4-no-beat-audit",
+                    "edge-no-beat-audit",
                 )
 
-                _take_screenshot(page, "ec4-audit-notes")
+                _take_screenshot(page, "edge-audit-notes")
                 break
 
     def test_gravity_boundaries(self, browser_page):
@@ -3394,7 +3383,7 @@ class TestDetailViewAndEditing:
                     "No gravity warnings for valid gravity 5",
                     f"Found warnings: {gravity_warn_texts}",
                     page,
-                    "ec2-gravity5-warning",
+                    "edge-gravity5-warning",
                 )
                 break
 
@@ -3425,13 +3414,13 @@ class TestDetailViewAndEditing:
                     "No gravity warnings for valid gravity 1",
                     f"Found warnings: {gravity_warn_texts}",
                     page,
-                    "ec2-gravity1-warning",
+                    "edge-gravity1-warning",
                 )
                 break
 
 
 # ---------------------------------------------------------------------------
-# Test: Upload Flow + Error Handling (ACs #8, #12a) — Task 6
+# Test: Upload Flow + Error Handling
 # ---------------------------------------------------------------------------
 
 
@@ -3439,7 +3428,7 @@ class TestUploadFlow:
     """Tests for single-POI upload via Mark as Complete and error handling."""
 
     def test_single_poi_upload(self, browser_page):
-        """AC #8: Mark a valid POI as complete, verify progressive upload."""
+        """Mark a valid POI as complete, verify progressive upload."""
         page, _seed_data, reporter = browser_page
 
         rows = page.locator(WORKLIST_ROW)
@@ -3463,7 +3452,7 @@ class TestUploadFlow:
                 "Entry #1 in worklist",
                 "Not found",
                 page,
-                "ac8-poi-not-found",
+                "upload-poi-not-found",
             )
             return
 
@@ -3483,7 +3472,7 @@ class TestUploadFlow:
                 "Button visible",
                 "Not visible",
                 page,
-                "ac8-no-mc-btn",
+                "upload-no-mc-btn",
             )
             return
 
@@ -3523,7 +3512,7 @@ class TestUploadFlow:
             "POI shows uploaded badge or success toast appears",
             f"Uploaded badge: {uploaded_found}, Toast: {toast_appeared}",
             page,
-            "ac8-upload-failed",
+            "upload-failed",
         )
 
         # Verify via API
@@ -3533,7 +3522,7 @@ class TestUploadFlow:
                 encoded = urllib.parse.quote(poi_name, safe="")
                 # city_name is a required query param on this endpoint and is the
                 # EXACT stored key. POI.city_name is canonically lowercased at
-                # ingestion (src/api/crud/nodes.py, 2026-07-03), and the workbench
+                # ingestion (src/api/crud/nodes.py), and the workbench
                 # picker keys off that same lowercase value, so the stored key is
                 # "paris" — query it with the canonical case or the exact-match
                 # beat fetch returns zero beats.
@@ -3555,7 +3544,7 @@ class TestUploadFlow:
                         "At least 1 beat returned",
                         f"{beat_count} beats returned",
                         page,
-                        "ac8-no-api-beats",
+                        "upload-no-api-beats",
                     )
                 elif isinstance(api_resp, list):
                     beat_count = len(api_resp)
@@ -3572,7 +3561,7 @@ class TestUploadFlow:
                         "At least 1 beat returned",
                         f"{beat_count} beats returned",
                         page,
-                        "ac8-no-api-beats",
+                        "upload-no-api-beats",
                     )
                 else:
                     status = (
@@ -3588,7 +3577,7 @@ class TestUploadFlow:
                         "200 OK with beat data",
                         f"Response: {api_resp}",
                         page,
-                        "ac8-api-error",
+                        "upload-api-error",
                     )
             except Exception as exc:
                 _safe_assert(
@@ -3602,10 +3591,10 @@ class TestUploadFlow:
                     str(exc),
                 )
 
-        _take_screenshot(page, "ac8-uploaded")
+        _take_screenshot(page, "upload-uploaded")
 
     def test_error_toast_structure(self, browser_page):
-        """AC #12a: Error toast exists in DOM with correct structure."""
+        """Error toast exists in DOM with correct structure."""
         page, _seed_data, reporter = browser_page
 
         error_toast = page.locator(ERROR_TOAST)
@@ -3621,14 +3610,14 @@ class TestUploadFlow:
             "#errorToast exists in DOM",
             f"Count: {error_toast.count()}",
             page,
-            "ac12a-no-toast",
+            "toast-missing",
         )
 
-        _take_screenshot(page, "ac12a-error-toast")
+        _take_screenshot(page, "toast-error")
 
 
 # ---------------------------------------------------------------------------
-# Test: Conflict Detection and Resolution (ACs #13-18) — Task 7
+# Test: Conflict Detection and Resolution
 # ---------------------------------------------------------------------------
 
 
@@ -3636,7 +3625,7 @@ class TestConflictDetection:
     """Tests for conflict detection across all Jaccard bands and resolution actions."""
 
     def test_conflict_detection_and_resolution(self, browser_page):
-        """ACs #13-18: resolve the incoming-Eiffel ↔ seeded-Champ-de-Mars proximity match as
+        """Resolve the incoming-Eiffel ↔ seeded-Champ-de-Mars proximity match as
         'Same Place', then verify all five beat-conflict bands and the resolution actions."""
         page, _seed_data, reporter = browser_page
 
@@ -3667,9 +3656,9 @@ class TestConflictDetection:
         same_btn.first.click()
         page.wait_for_timeout(3000)  # Wait for beat conflict detection API calls
 
-        _take_screenshot(page, "ac13-conflict-triggered")
+        _take_screenshot(page, "conflict-triggered")
 
-        # --- AC #13: Hard conflict — Beat A (hidden_history, same lens as seed) ---
+        # --- Hard conflict — Beat A (hidden_history, same lens as seed) ---
         hard_badges = page.locator(BEAT_CONFLICT_BADGE_HARD)
         has_hard = hard_badges.count() > 0
         _safe_assert(
@@ -3686,7 +3675,7 @@ class TestConflictDetection:
             "Red hard conflict badge visible on beat A",
             f"Hard badges found: {hard_badges.count()}",
             page,
-            "ac13-no-hard-badge",
+            "conflict-hard-no-badge",
         )
 
         if has_hard:
@@ -3703,7 +3692,7 @@ class TestConflictDetection:
                 "Text contains 'Conflict (same lens)' or similar",
                 f"Text: '{badge_text}'",
                 page,
-                "ac13-badge-text",
+                "conflict-hard-badge-text",
             )
 
         # Check side-by-side panel
@@ -3720,12 +3709,12 @@ class TestConflictDetection:
             "Side-by-side panel visible",
             f"Found {conflict_sides.count()} panels",
             page,
-            "ac13-no-side-by-side",
+            "conflict-hard-no-side-by-side",
         )
 
-        _take_screenshot(page, "ac13-hard-conflict")
+        _take_screenshot(page, "conflict-hard")
 
-        # --- AC #14: Net-new beat — Beat B (music_nightlife, no conflict) ---
+        # --- Net-new beat — Beat B (music_nightlife, no conflict) ---
         # Beat B should have NO conflict badge
         beat_cards = page.locator(BEAT_CARD)
         beat_b_idx = 1  # Second beat in the card list
@@ -3761,12 +3750,12 @@ class TestConflictDetection:
                 "No conflict badge on net-new beat",
                 f"Hard: {b_hard.count()}, Review: {b_review.count()}, Soft: {b_soft.count()}",
                 page,
-                "ac14-unexpected-conflict",
+                "conflict-net-new-unexpected",
             )
 
-        _take_screenshot(page, "ac14-net-new")
+        _take_screenshot(page, "conflict-net-new")
 
-        # --- AC #15: Soft conflict ≥70% — Beat C (food_culinary) ---
+        # --- Soft conflict ≥70% — Beat C (food_culinary) ---
         # Beat C should show amber conflict badge with similarity percentage
         beat_c_idx = 2
         if beat_cards.count() > beat_c_idx:
@@ -3795,7 +3784,7 @@ class TestConflictDetection:
                 "Amber badge with 'Conflict (XX% similar)'",
                 f"Badge found: {has_soft}, text: '{soft_text}'",
                 page,
-                "ac15-no-soft-badge",
+                "conflict-soft-no-badge",
             )
 
             # Check side-by-side panel for soft conflict
@@ -3812,12 +3801,12 @@ class TestConflictDetection:
                 "Side-by-side panel visible",
                 f"Found {c_sides.count()} panels",
                 page,
-                "ac15-no-side-by-side",
+                "conflict-soft-no-side-by-side",
             )
 
-        _take_screenshot(page, "ac15-soft-conflict")
+        _take_screenshot(page, "conflict-soft")
 
-        # --- AC #16: Review band 30-69% — Beat D (art_street) ---
+        # --- Review band 30-69% — Beat D (art_street) ---
         beat_d_idx = 3
         if beat_cards.count() > beat_d_idx:
             beat_d = beat_cards.nth(beat_d_idx)
@@ -3837,7 +3826,7 @@ class TestConflictDetection:
                 "Yellow review badge with 'Review (XX% similar)'",
                 f"Review badges found: {d_review.count()}",
                 page,
-                "ac16-no-review-badge",
+                "conflict-review-no-badge",
             )
 
             if has_review:
@@ -3852,12 +3841,12 @@ class TestConflictDetection:
                     "Text contains 'Review' and similarity percentage",
                     f"Text: '{review_text}'",
                     page,
-                    "ac16-badge-text",
+                    "conflict-review-badge-text",
                 )
 
-        _take_screenshot(page, "ac16-review-band")
+        _take_screenshot(page, "conflict-review")
 
-        # --- AC #17: Pass-through <30% — Beat E (nature_green) ---
+        # --- Pass-through <30% — Beat E (nature_green) ---
         beat_e_idx = 4
         if beat_cards.count() > beat_e_idx:
             beat_e = beat_cards.nth(beat_e_idx)
@@ -3888,12 +3877,12 @@ class TestConflictDetection:
                 "No conflict badge on pass-through beat",
                 f"Hard: {e_hard.count()}, Review: {e_review.count()}, Soft: {e_soft.count()}",
                 page,
-                "ac17-unexpected-conflict",
+                "conflict-pass-through-unexpected",
             )
 
-        _take_screenshot(page, "ac17-pass-through")
+        _take_screenshot(page, "conflict-pass-through")
 
-        # --- AC #18: Conflict Resolution Actions ---
+        # --- Conflict Resolution Actions ---
         # Test Replace action on hard-conflict beat (beat 0)
         self._test_resolution_action(
             page,
@@ -3902,7 +3891,7 @@ class TestConflictDetection:
             0,
             "replace",
             "Will replace",
-            "ac18-replace",
+            "resolution-replace",
         )
 
         # Test Skip action on soft-conflict beat (beat 2)
@@ -3913,7 +3902,7 @@ class TestConflictDetection:
             2,
             "skip",
             "Will skip",
-            "ac18-skip",
+            "resolution-skip",
         )
 
         # Test Merge action on hard-conflict beat (beat 0) — click resolved label to re-open,
@@ -3924,9 +3913,9 @@ class TestConflictDetection:
             if resolved_label.count() > 0:
                 resolved_label.first.click()
                 page.wait_for_timeout(500)
-        self._test_merge_action(page, reporter, beat_cards, 0, "ac18-merge")
+        self._test_merge_action(page, reporter, beat_cards, 0, "resolution-merge")
 
-        _take_screenshot(page, "ac18-all-resolutions")
+        _take_screenshot(page, "resolution-all")
 
     def _test_resolution_action(
         self,
@@ -4115,7 +4104,7 @@ class TestConflictDetection:
 
 
 # ---------------------------------------------------------------------------
-# Test: Proximity Matching Logic (POI Matching Fix)
+# Test: Proximity Matching Logic
 # ---------------------------------------------------------------------------
 
 PROXIMITY_SAME_BTN = ".proximity-same-btn"
@@ -4124,10 +4113,10 @@ PROXIMITY_PANEL = ".proximity-match-panel"
 
 
 class TestProximityMatching:
-    """Frontend tests for location-first POI deduplication (ACs #1-8)."""
+    """Frontend tests for location-first POI deduplication."""
 
     def test_find_proximity_matches_empty_for_distant_poi(self, browser_page):
-        """AC 1: POI >50m from all existing → empty array (auto-new)."""
+        """POI >50m from all existing → empty array (auto-new)."""
         page, _seed_data, _reporter = browser_page
         result = page.evaluate("""() => {
             // POI far from any existing (200m+ away)
@@ -4138,7 +4127,7 @@ class TestProximityMatching:
         assert len(result) == 0, "Distant POI should have no proximity matches"
 
     def test_find_proximity_matches_returns_nearby(self, browser_page):
-        """AC 2: POI within 50m of one existing → single match returned."""
+        """POI within 50m of one existing → single match returned."""
         page, _seed_data, _reporter = browser_page
         result = page.evaluate("""() => {
             // Find first cached POI with location and create a nearby point
@@ -4158,7 +4147,7 @@ class TestProximityMatching:
         assert result["firstDist"] <= 50, "Match should be within 50m"
 
     def test_find_proximity_matches_sorted_by_distance(self, browser_page):
-        """AC 3: Multiple matches sorted ascending by distance."""
+        """Multiple matches sorted ascending by distance."""
         page, _seed_data, _reporter = browser_page
         result = page.evaluate("""() => {
             // Create two fake cached POIs close together, test a point near both
@@ -4174,7 +4163,7 @@ class TestProximityMatching:
         assert result[0]["dist"] <= result[1]["dist"], "Matches should be sorted by distance"
 
     def test_same_name_distant_poi_is_new(self, browser_page):
-        """AC 8: Identical names 200m apart → both auto-new (no proximity match)."""
+        """Identical names 200m apart → both auto-new (no proximity match)."""
         page, _seed_data, _reporter = browser_page
         result = page.evaluate("""() => {
             const fakeCached = [
@@ -4187,7 +4176,7 @@ class TestProximityMatching:
         assert len(result) == 0, "Same-name POI 200m away should have no proximity match"
 
     def test_detect_conflicts_missing_coords(self, browser_page):
-        """AC 7: POI without coordinates → missingCoords: true."""
+        """POI without coordinates → missingCoords: true."""
         page, _seed_data, _reporter = browser_page
         result = page.evaluate("""() => {
             const testPoi = { poi_name: 'No Coords POI', beats: [] };
@@ -4197,7 +4186,7 @@ class TestProximityMatching:
         assert len(result["errors"]) > 0
 
     def test_detect_conflicts_auto_new_no_match(self, browser_page):
-        """AC 1: POI with no nearby existing → isNew: true."""
+        """POI with no nearby existing → isNew: true."""
         page, _seed_data, _reporter = browser_page
         result = page.evaluate("""() => {
             const testPoi = { poi_name: 'Distant POI', latitude: 48.90, longitude: 2.50, beats: [] };
@@ -4207,7 +4196,7 @@ class TestProximityMatching:
         assert len(result["proximityMatches"]) == 0
 
     def test_map_poi_for_api_with_existing_name(self, browser_page):
-        """AC 6: useExistingName sends the existing name in payload."""
+        """useExistingName sends the existing name in payload."""
         page, _seed_data, _reporter = browser_page
         result = page.evaluate("""() => {
             const poi = { poi_name: 'Incoming Name', latitude: 48.85, longitude: 2.35 };
@@ -4216,7 +4205,7 @@ class TestProximityMatching:
         assert result["name"] == "Existing Name"
 
     def test_map_poi_for_api_with_force_create(self, browser_page):
-        """AC 5: forceCreate sends force_create: true."""
+        """forceCreate sends force_create: true."""
         page, _seed_data, _reporter = browser_page
         result = page.evaluate("""() => {
             const poi = { poi_name: 'Test POI', latitude: 48.85, longitude: 2.35 };
@@ -4253,15 +4242,15 @@ class TestProximityMatching:
 
 
 # ---------------------------------------------------------------------------
-# Test: Regressions for six confirmed workbench defects (2026-07-06)
+# Test: Regressions for workbench merge, dedup and upload defects
 # ---------------------------------------------------------------------------
 
 
 class TestDefectRegressions:
-    """Real-browser regressions for defects 5, 6, 12, 13, 15, 16.
+    """Real-browser regressions for merge, dedup, upload and city-load defects.
 
-    These run in the shared module page. The stateful cases (5, 12, 6, 16)
-    reload review.html first so they start from a clean IIFE and never leak
+    These run in the shared module page. The stateful cases reload
+    review.html first so they start from a clean IIFE and never leak
     ``poiData``/``cachedPoiList`` mutations into other tests; the exposed
     ``window`` setters let each test stage exactly the state it needs.
     """
@@ -4272,8 +4261,8 @@ class TestDefectRegressions:
         page.wait_for_load_state("networkidle")
         page.wait_for_function("() => typeof window.mergeIncomingIntoDbPois === 'function'")
 
-    def test_defect5_two_incoming_matching_one_db_poi_keeps_all_beats(self, browser_page):
-        """DEFECT 5: two incoming POIs matching one DB POI accumulate — no beat loss.
+    def test_two_incoming_matching_one_db_poi_keeps_all_beats(self, browser_page):
+        """Two incoming POIs matching one DB POI accumulate — no beat loss.
 
         Before the fix, ``match.existingPoi._incomingBeats = entry.beats`` was a
         plain overwrite, so the second matching entry clobbered the first and its
@@ -4309,8 +4298,8 @@ class TestDefectRegressions:
         )
         assert result["remainingIncoming"] == 0, "both matched incoming POIs are consumed"
 
-    def test_defect12_case_and_whitespace_forks_trigger_dup_resolver(self, browser_page):
-        """DEFECT 12: 'Louvre' / 'louvre' / 'Louvre ' collapse to one dedup key.
+    def test_case_and_whitespace_forks_trigger_dup_resolver(self, browser_page):
+        """'Louvre' / 'louvre' / 'Louvre ' collapse to one dedup key.
 
         Before the fix the exact-name check keyed on the RAW poi_name, so casing/
         whitespace variants were distinct keys and the duplicate resolver never
@@ -4353,8 +4342,8 @@ class TestDefectRegressions:
             "distinct names must NOT open the duplicate resolver"
         )
 
-    def test_defect15_popup_merge_button_has_no_inline_onclick(self, browser_page):
-        """DEFECT 15: the DB popup merge button is wired via addEventListener.
+    def test_popup_merge_button_has_no_inline_onclick(self, browser_page):
+        """The DB popup merge button is wired via addEventListener.
 
         Before the fix the button interpolated poi.id into a single-quoted inline
         onclick and escHtml did not escape single quotes — a latent XSS / broken
@@ -4393,8 +4382,8 @@ class TestDefectRegressions:
             "the click closure must pass the exact (raw) poi.id to _startMergeMode"
         )
 
-    def test_defect6_merge_write_failure_aborts_before_postmerge(self, browser_page):
-        """DEFECT 6: a 500 on a merge write throws, so postMergeUpdate never runs.
+    def test_merge_write_failure_aborts_before_postmerge(self, browser_page):
+        """A 500 on a merge write throws, so postMergeUpdate never runs.
 
         Before the fix executeMerge ignored response.ok, so a DB 500 mid-merge still
         spliced the source POI out of the cache/map and showed a green 'Merged'
@@ -4486,8 +4475,8 @@ class TestDefectRegressions:
             dup_overlay.wait_for(state="hidden", timeout=5000)
         page.wait_for_selector(WORKLIST_ROW, timeout=10000)
 
-    def test_defect13_failed_edge_link_surfaces_upload_error(self, browser_page):
-        """DEFECT 13: a 500 on the HAS_BEAT edge POST fails the upload (no orphan).
+    def test_failed_edge_link_surfaces_upload_error(self, browser_page):
+        """A 500 on the HAS_BEAT edge POST fails the upload (no orphan).
 
         Before the fix uploadSinglePoi created the beat with a checked POST but
         fired the HAS_BEAT / TAGGED_WITH edges WITHOUT checking .ok — a failed edge
@@ -4539,10 +4528,10 @@ class TestDefectRegressions:
         finally:
             page.unroute("**/api/v1/edges/HAS_BEAT")
 
-    def test_defect16_city_fetch_failure_keeps_overlay_open_and_button_usable(
+    def test_city_fetch_failure_keeps_overlay_open_and_button_usable(
         self, browser_page
     ):
-        """DEFECT 16: a DB fetch failure leaves the overlay open + Set City usable.
+        """A DB fetch failure leaves the overlay open + Set City usable.
 
         Before the fix activateCity hid the overlay BEFORE awaiting the fetch and
         swallowed the error, so a DB failure left the user locked out: overlay gone,
@@ -4588,7 +4577,7 @@ class TestDefectRegressions:
     # exposed window.executeMerge / window.executeUpload directly with staged
     # state, then assert the SEQUENCE of API calls the function made. They do
     # not depend on the seeded graph (every relevant endpoint is stubbed), so
-    # the recorded-request log is the ground truth for each defect.
+    # the recorded-request log is the ground truth for each case.
 
     @staticmethod
     def _install_request_recorder(page, handlers):
@@ -4622,10 +4611,10 @@ class TestDefectRegressions:
         page.route("**/api/v1/**", _handler)
         return calls
 
-    def test_defect1_merge_deletes_source_has_beat_by_edge_id_not_bodiless(
+    def test_merge_deletes_source_has_beat_by_edge_id_not_bodiless(
         self, browser_page
     ):
-        """DEFECT 1: executeMerge deletes the source HAS_BEAT edge by id.
+        """executeMerge deletes the source HAS_BEAT edge by id.
 
         The edges API exposes DELETE only as ``/edges/{rel}/{edge_id}``; there is
         no bodiless ``DELETE /edges/HAS_BEAT`` route (it is 405). Before the fix
@@ -4699,8 +4688,8 @@ class TestDefectRegressions:
         finally:
             page.unroute("**/api/v1/**")
 
-    def test_defect2_change_lens_deletes_old_tagged_with(self, browser_page):
-        """DEFECT 2: change-lens moves the TAGGED_WITH tag instead of duplicating it.
+    def test_change_lens_deletes_old_tagged_with(self, browser_page):
+        """Change-lens moves the TAGGED_WITH tag instead of duplicating it.
 
         Before the fix the change-lens branch POSTed a new TAGGED_WITH edge to the
         chosen lens but never deleted the beat's existing tag to its original
@@ -4773,10 +4762,10 @@ class TestDefectRegressions:
         finally:
             page.unroute("**/api/v1/**")
 
-    def test_defect3_bulk_upload_matched_poi_merge_failure_surfaces_error(
+    def test_bulk_upload_matched_poi_merge_failure_surfaces_error(
         self, browser_page
     ):
-        """DEFECT 3: a failed POI merge in the bulk path is not a silent orphan.
+        """A failed POI merge in the bulk path is not a silent orphan.
 
         Before the fix the matched-poi (and conflict) branches of executeUpload
         did ``const poiNode = await poiResp.json()`` WITHOUT checking poiResp.ok.
@@ -4831,10 +4820,10 @@ class TestDefectRegressions:
         finally:
             page.unroute("**/api/v1/**")
 
-    def test_defect4_bulk_upload_failed_edge_link_not_counted_as_linked(
+    def test_bulk_upload_failed_edge_link_not_counted_as_linked(
         self, browser_page
     ):
-        """DEFECT 4: a failed HAS_BEAT link in the bulk path is not counted.
+        """A failed HAS_BEAT link in the bulk path is not counted.
 
         Before the fix executeUpload ran ``stats.relsLinked++`` unconditionally
         after each edge POST, so a failed HAS_BEAT link (an orphaned beat) was
@@ -4888,9 +4877,8 @@ def _committed_tree_snapshot() -> dict[str, bytes]:
     """Content snapshot of the committed artifacts a HERMETIC (tmp-root) onboard must
     never touch: ``src/cities.json`` plus every file under ``data/london/`` (when it
     exists). Comparing a before/after snapshot proves the onboard wrote ONLY under its
-    tmp root — robust to london being a REAL committed city. (The pre-milestone check
-    asserted london was *absent* from the committed tree; that inverts the day london
-    ships, so we assert *unchanged bytes* instead.)"""
+    tmp root — robust to london being a REAL committed city, which is why this asserts
+    *unchanged bytes* rather than that london is *absent* from the committed tree."""
     snap: dict[str, bytes] = {}
     registry = REPO_ROOT / "src" / "cities.json"
     if registry.exists():
@@ -4978,14 +4966,11 @@ class TestOnboardPanel:
         assert poi_n >= 30, f"expected >= 30 merged POIs (36), got {poi_n} from {poi_text!r}"
         _take_screenshot(page, "onboard-03-pois-rendered")
 
-        # (e) Draft beats — ONE click, no spend dialog. OWNER DECISION 2026-07-31:
-        # the workbench replicates the tourist's app experience, and a tourist is
-        # never asked to approve spend, so the cost-confirmation modal that used to
-        # sit between these two steps is gone (the same ruling that removed
-        # generateTourPreview's window.confirm). The page sends confirm_cost:true
-        # itself; the API's contract is unchanged for other callers.
-        # tests/test_workbench_preview_wiring.py::test_drafting_beats_shows_no_spend_confirmation
-        # guards the page source; this is the end-to-end half.
+        # (e) Draft beats — ONE click, no spend dialog. The workbench replicates
+        # the tourist's app experience, and a tourist is never asked to approve
+        # spend, so no cost-confirmation modal sits between these two steps. The
+        # page sends confirm_cost:true itself; the API's contract is unchanged for
+        # other callers. This end-to-end check is what keeps the modal out.
         assert page.locator("#costModal").count() == 0, (
             "the cost-confirmation modal is back in the onboard page — the "
             "workbench must never ask a human to approve spend"
@@ -5038,8 +5023,8 @@ class TestOnboardPanel:
         assert "london" in tmp_registry, f"tmp cities.json is missing 'london': {tmp_registry}"
         # And the COMMITTED tree is byte-untouched by the hermetic (tmp-root) onboard:
         # src/cities.json and any committed data/london/ are identical before/after.
-        # (Robust to london being a REAL committed city — the pre-milestone "london is
-        # absent from the committed tree" check inverts the day london ships.)
+        # (Robust to london being a REAL committed city, which an "absent from the
+        # committed tree" check would not be.)
         assert _committed_tree_snapshot() == committed_before, (
             "the hermetic onboard mutated the COMMITTED tree (src/cities.json or "
             "data/london/) — the tmp-root pin failed"
@@ -5074,7 +5059,7 @@ class TestOnboardPanel:
 
 
 # ---------------------------------------------------------------------------
-# Test: Bug Report Generation (Task 8)
+# Test: Bug Report Generation
 # ---------------------------------------------------------------------------
 
 
@@ -5102,8 +5087,7 @@ class TestBugReport:
 #
 # Every other tour test in this file answers its own /trips/preview with a canned
 # payload, so none of them can notice that the workbench cannot plan a day.
-# That is not hypothetical: on 2026-07-31 the whole suite was green while the UI
-# produced nothing. tests/test_suite_honesty.py fails if this class disappears.
+# tests/test_suite_honesty.py fails if this class disappears.
 #
 # The original stub's excuse was accurate — "the test DB's tier-1 fixture POIs
 # can't produce a day". Two things made it impossible, both fixed here:
@@ -5425,8 +5409,8 @@ class TestFailuresAreShown:
 
 # ── The workbench runs the TOURIST path ─────────────────────────────────────
 #
-# CLAUDE.md rule 1: the workbench and the app run the EXACT SAME code for
-# everything they share. Two pieces of tourist-audible content are written and
+# The workbench and the app run the EXACT SAME code for everything they
+# share. Two pieces of tourist-audible content are written and
 # voiced ONLY on the phone path, so until the "Run it like the phone" action no
 # editor could preview either on any screen:
 #
@@ -5618,8 +5602,8 @@ class TestWorkbenchRunsThePhonePath:
            keep-exploring stitch, the two things no editor could see before.
         6. THE TAP FOR MORE NAMES NO PROVIDER. An unnamed provider resolves
            through the failover chain (get_provider_with_fallback); a named one
-           resolves a single provider, which is the exact 2026-08-29 divergence
-           the one-engine guard was written against.
+           resolves a single provider, so the workbench would hear a different
+           voice chain from the phone.
 
         UNDO TEST: make playKeepExploring send {"provider": ttsProvider} -> RED on
         (6). Point the compose call at a workbench-only endpoint -> RED on (1).

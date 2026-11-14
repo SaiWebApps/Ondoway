@@ -198,7 +198,7 @@ def test_split_sentences_regnal_numerals_end_the_sentence():
     ]
     # ACCEPTED tradeoff: a regnal terminal before a NON-opener-initial sentence
     # ("World War I. Waterloo…") stays glued — a minor missing pause, deliberately
-    # preferred over ever risking a mid-name break. Documented, not a bug.
+    # preferred over ever risking a mid-name break. Deliberate, not a bug.
     assert split_sentences("It marked World War I. Waterloo closed later.") == [
         "It marked World War I. Waterloo closed later."
     ]
@@ -215,8 +215,7 @@ def test_split_sentences_regnal_numerals_end_the_sentence():
     # followed by a SURNAME must NOT be split — "John D. Rockefeller" (~15 such names
     # live in the NY corpus) must stay whole, or TTS breaks mid-name. The regnal
     # split fires ONLY when the next word is a sentence-opener function word, never a
-    # surname. (Regression the judge caught in an earlier "neither-neighbour-initial"
-    # rule that split C/D/I/L/M/V/X middle initials.)
+    # surname.
     for name in ("John D. Rockefeller", "Franklin D. Roosevelt", "Arthur C. Clarke",
                  "William M. Tweed", "Daniel D. Tompkins"):
         assert split_sentences(f"A plaque honours {name} here. Fans visit.") == [
@@ -226,7 +225,7 @@ def test_split_sentences_regnal_numerals_end_the_sentence():
 
 
 def test_split_sentences_never_breaks_mid_name_across_corpus():
-    """Runtime corpus guard (judge-mandated): ``split_sentences`` must NEVER emit a
+    """Runtime corpus guard: ``split_sentences`` must NEVER emit a
     piece ending in a single-letter initial immediately followed by a piece starting
     with a capitalized NON-opener word — that is a mid-name break ("John D." |
     "Rockefeller's firm") that TTS would read with a wrong full stop. Structurally
@@ -280,7 +279,7 @@ _NELSON_50W = (
 
 def test_vignette_one_liner_caps_a_long_run_on_but_keeps_the_poi_name():
     """A walk-past one-liner must land in one breath. A raw 50-word Wikipedia lead
-    (Nelson's Column — surfaced by a live Opus-vs-ChatGPT A/B) is clause-capped to its
+    (Nelson's Column) is clause-capped to its
     first top-level clause, which stays under the word cap AND still names the POI.
     UNDO: make vignette_one_liner_text return split_sentences(body)[0] unchanged ->
     this returns the 50-word line -> RED."""
@@ -1111,16 +1110,15 @@ def test_synthesized_opener_lowercases_raw_leading_the_in_cue():
 
 
 # ---------------------------------------------------------------------------
-# 2026-07-03 — per-stop emission guards (the "thin single-beat-feeling
-# narration" half of the 2026-07-02 regression).
+# Per-stop emission guards.
 #
 # validate_script checks only traceability + forbidden phrases, and
 # ScriptPOI.beat_ids reflects the PLAN, not emissions — so a stop can ship
 # glue-only narration while every existing check stays green. The first test
-# below is the per-stop emitted-beat floor for healthy pools; the two
-# "current_contract_pin" tests make BOTH known zero-emission holes executable
-# and version-controlled. The per-stop floor/disclosure for those holes is
-# deferred design — when it lands, flip the pinned assertions DELIBERATELY, don't delete them.
+# below is the per-stop emitted-beat floor for healthy pools; the next two
+# make both known zero-emission paths executable. No per-stop floor or
+# disclosure covers the Area-hoist path; if one is added, flip that test's
+# pinned assertion DELIBERATELY, don't delete it.
 # ---------------------------------------------------------------------------
 
 
@@ -1264,9 +1262,8 @@ def test_transit_only_stop_dropped_beat_is_not_reported_as_voiced():
     assert sp2.beat_ids == ()
     # (1b) FIX: dwell does not over-report the 120s of never-voiced audio. It
     # floors at what this visitor spends AT the stop — 300 s here, supplied by
-    # the route exactly as selection supplies it. It was the flat tier-5 dwell
-    # until 2026-08-06; the number is the same, the reason is not, and the
-    # property under test is unchanged: never ABOVE the floor on unvoiced audio.
+    # the route exactly as selection supplies it. The property under test:
+    # never ABOVE the floor on unvoiced audio.
     assert sp2.dwell_seconds == 300
     # (1c) A rejected transit beat is
     # NOT an extra either. Extras play STANDING at the stop, and this beat's
@@ -1299,8 +1296,8 @@ def test_cold_open_area_hoist_strips_donor_stop_current_contract_pin():
     consumed_beat_ids so it never fires at its own stop; when it was the
     donor's ONLY beat, the donor emits zero beat sentences while its
     ScriptPOI.beat_ids stays non-empty — the second known glue-only-stop
-    path. The per-stop floor is deferred design; flip assertion (2)
-    DELIBERATELY when it lands. Assertion (3) simultaneously guards the
+    path. No per-stop floor covers this path; if one is added, flip
+    assertion (2) DELIBERATELY. Assertion (3) simultaneously guards the
     CROSS-stop double-fire regression (the same-stop case is covered by
     test_orientation_beat_not_emitted_twice above).
     """
@@ -1389,7 +1386,7 @@ def test_reported_dwell_floors_at_its_visit_time_when_a_stop_is_beat_thin():
             ),
         )
     )
-    # WAS the flat 300 s tier-5 dwell, deleted 2026-08-06. The floor is now what
+    # The floor is what
     # THIS visitor spends at THIS place, priced in selection and carried on the
     # route — so the fixture must supply it, exactly as a real route does.
     route = _route((poi,), visit_seconds={poi.id: 300})
@@ -1458,7 +1455,7 @@ def test_first_leg_text_short_leg_is_just_ahead():
 def test_first_leg_text_at_the_stop_does_not_say_head_for():
     """When the first stop is essentially where the walker is already standing
     (routed leg under ~20s), don't tell them to 'head for' a place they're on
-    top of — the Tuileries/Concorde 'walk to where you already are' complaint."""
+    top of."""
     line = _synth_first_leg_text(_stop("Place de la Concorde"), _route_with_first_leg(5))
     assert line.text == (
         "You're starting right at Place de la Concorde. Take a moment to take it in."
@@ -1574,7 +1571,7 @@ def test_template_nav_minutes_from_leg_seconds_when_routed():
     easily beats straight-line distance at 80 m/min — so a regression to the old
     formula would read a different (wrong) minute count.
 
-    TIGHTENED 2026-08-06: a leg is routed when VALHALLA SAID SO, not merely when
+    A leg is routed when VALHALLA SAID SO, not merely when
     ``leg_seconds`` is set. The fixture therefore declares its provenance, and the
     second half below pins the case that distinction exists for — a client that
     answered with seconds but produced no shape, which is what a mid-route
@@ -1623,8 +1620,8 @@ def test_template_nav_minutes_fall_back_to_walk_seconds_when_unrouted():
 
 
 def test_nav_minutes_stay_consistent_with_options_eta_accounting():
-    """The 'announced legs sum to the displayed tour total' honesty
-    criterion: the leg-seconds _segment_leg_seconds feeds to _template_nav
+    """The announced legs sum to the displayed tour total: the
+    leg-seconds _segment_leg_seconds feeds to _template_nav
     must be the exact same per-leg figures options.py's build_route_option
     sums into eta_seconds — one routed leg, one walk_seconds fallback leg."""
     pois = (
@@ -1685,7 +1682,7 @@ def test_generate_nav_glue_names_destinations_not_flat_walk_to_next_stop():
 
 
 def test_sum_audio_drops_when_dedup_suppresses_sentences():
-    """The GUARANTEE, preserved across the 2026-07-19 audio-clock rewrite: a
+    """The GUARANTEE: a
     claim-dedup-trimmed beat reports only its SURVIVING audio, never the whole
     beat — so tour minutes stay honest when content is suppressed.
 
@@ -1717,9 +1714,9 @@ def test_sum_audio_drops_when_dedup_suppresses_sentences():
 
 
 def test_sum_audio_gives_full_credit_when_compose_merges_sentences():
-    """The compose refinement's GUARANTEE, preserved across the 2026-07-19 rewrite:
-    a composer that MERGES a beat's sentences while voicing every word keeps FULL
-    audio credit. Re-merging text must never look like losing content.
+    """The compose refinement's GUARANTEE: a composer that MERGES a beat's
+    sentences while voicing every word keeps FULL audio credit. Re-merging text
+    must never look like losing content.
 
     Under the words/SPOKEN_WPM clock this is exact rather than approximate: the
     seconds depend only on the words voiced, so any regrouping of the same words
@@ -1747,7 +1744,7 @@ def test_sum_audio_gives_full_credit_when_compose_merges_sentences():
 
 
 def test_sum_audio_credits_glue_by_its_real_length_not_a_flat_estimate():
-    """THE FOUNDING DEFECT of the 2026-07-19 audio-clock rewrite.
+    """Glue is credited by its real length, never a flat estimate.
 
     The old model credited EVERY non-beat sentence a flat 4 seconds regardless of
     length (``total += glue_count * 4``). A 60-word reflection takes ~24 s to speak
@@ -1903,7 +1900,7 @@ def _closed_route(pois, closed_ids, *, all_day=False):
 
 
 def test_a_closed_stop_says_so_before_any_of_its_story():
-    """Owner ruling: interior description at a closed stop is fine — a gift to
+    """Interior description at a closed stop is fine — a gift to
     a visitor who came for the story — as long as the closure is acknowledged
     ONCE, and first, so no visitor is invited into a shut rotunda and every
     visitor hears orientation before description. The acknowledgment is the

@@ -99,11 +99,10 @@ class TestPreviewAudio:
         """Every registered provider sends text to a real speech service and
         returns MP3, so the route declares audio/mpeg unconditionally.
 
-        This used to branch on ``provider.name == "mock"`` to answer audio/wav.
-        That branch was DELETED 2026-07-31 (owner order: zero mock references in
-        production code). The test-only double still returns WAV bytes inside a
-        pytest process, but the wire contract is the real one — asserting the
-        double's format here would re-encode the removed branch in a test.
+        Product code holds no mock references, so the route never branches on
+        ``provider.name == "mock"``. The test-only double still returns WAV bytes
+        inside a pytest process, but the wire contract is the real one — asserting
+        the double's format here would encode a mock branch in a test.
         """
         resp = client.post(
             "/api/v1/audio/preview",
@@ -148,8 +147,7 @@ class TestPreviewAudio:
         assert "content-disposition" in resp.headers
         # The filename names the provider that produced the bytes — that is what
         # makes a downloaded preview self-identifying. The extension is .mp3 for
-        # every provider now: the mock-specific ".wav" branch was deleted with
-        # the rest of the production mock references (2026-07-31).
+        # every provider: product code has no mock-specific ".wav" branch.
         disposition = resp.headers["content-disposition"]
         assert "preview-mock.mp3" in disposition, disposition
 
@@ -312,7 +310,7 @@ class TestEvalRegeneratesOnDegradedAudio:
         assert data["verdict"] == "FAIL", "a genuine quality failure must still surface"
 
     def test_transient_ttserror_on_retry_keeps_earlier_result(self, client, monkeypatch):
-        """Regression (Defect #1): a transient TTSError on a LATER attempt must
+        """A transient TTSError on a LATER attempt must
         not discard an already-captured result. Attempt 1 evaluates (result
         captured, high WER so the loop retries); attempt 2's generate raises a
         transient TTSError. The endpoint must return 200 with the best result so

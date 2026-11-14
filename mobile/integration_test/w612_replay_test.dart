@@ -1,8 +1,8 @@
-// Replays EACH PERSONA DAY ON ITS OWN. The days are generated and composed on
-// the app path by w612_days.py and passed in at build time; this test opens
-// each over the wire on the simulator, walks its opening stretch, then taps
+// Replays EACH DAY ON ITS OWN. The days are generated and composed on the app
+// path before the run and passed in at build time as dart-defines; this test
+// opens each over the wire on the simulator, walks its opening stretch, then taps
 // [Head back now] — the same one divergence for every day — printing a
-// "W612 [name]" transcript line per moment to judge beside the composed text.
+// "REPLAY [name]" transcript line per moment to judge beside the composed text.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -75,7 +75,7 @@ Widget _app(TourPlaybackService service, String tripId) {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('each persona on their own day', (tester) async {
+  testWidgets('each day on its own', (tester) async {
     expect(_token.isNotEmpty, isTrue);
     expect(_days.isNotEmpty, isTrue);
     final tripService = TripService();
@@ -88,7 +88,7 @@ void main() {
       try {
         session = await tripService.fetchSession(tripId, _token);
       } catch (e) {
-        lines.add('W612 [$name] NO SESSION: $e');
+        lines.add('REPLAY [$name] NO SESSION: $e');
         continue;
       }
       final stops = [
@@ -108,7 +108,7 @@ void main() {
       await tester.pumpWidget(_app(s, tripId));
       await tester.pump();
 
-      lines.add('W612 [$name] DAY v${session.planVersion} '
+      lines.add('REPLAY [$name] DAY v${session.planVersion} '
           '${session.dayStartHhmm}-${session.plannedEndHhmm} party=${session.party}: '
           '${stops.map((x) => "${x.poiName} ${x.startTime}").join(" -> ")} '
           '| closes ${stops.where((x) => (x.closeText ?? "").isNotEmpty).length}/${stops.length}'
@@ -129,7 +129,7 @@ void main() {
         clock.now = clock.now.add(const Duration(seconds: 40));
         s.tick();
         await tester.pump();
-        lines.add('W612 [$name] after the first stretch: at=${s.currentStop?.poiName} '
+        lines.add('REPLAY [$name] after the first stretch: at=${s.currentStop?.poiName} '
             'offer="${s.fullTellingOffer ?? ""}" spoken=${voice.said.length} '
             'played=${voice.playedKeys.join(",")}');
       }
@@ -144,13 +144,13 @@ void main() {
         clock.now = clock.now.add(const Duration(seconds: 35));
         s.tick();
         await tester.pump();
-        lines.add('W612 [$name] WRAP: close line "${s.closeLine ?? ""}" '
+        lines.add('REPLAY [$name] WRAP: close line "${s.closeLine ?? ""}" '
             '| session line "${s.screenText ?? ""}" '
             '| played=${voice.playedKeys.join(",")} | spoken=${voice.said.join(" || ")}');
       } else {
-        lines.add('W612 [$name] WRAP: no entry matched (day state: ${s.state.name})');
+        lines.add('REPLAY [$name] WRAP: no entry matched (day state: ${s.state.name})');
       }
-      debugPrint('W612 MOMENT $name done');
+      debugPrint('REPLAY MOMENT $name done');
       await Future<void>.delayed(const Duration(seconds: 4));
       await tester.pumpWidget(const SizedBox());
       s.stopTour();

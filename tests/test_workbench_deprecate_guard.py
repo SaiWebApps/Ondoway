@@ -109,7 +109,7 @@ def _created_beat_posts(page) -> int:
 
 
 class TestDeprecateGuardSinglePoi:
-    """DEFECT 1 — uploadSinglePoi (single-POI Replace path)."""
+    """uploadSinglePoi (single-POI Replace path)."""
 
     def test_failed_deprecate_aborts_before_create(self, page):
         page.evaluate(_STAGE_LENS)
@@ -148,7 +148,7 @@ class TestDeprecateGuardSinglePoi:
 
 
 class TestDeprecateGuardIncomingBeats:
-    """DEFECT 2a — uploadIncomingBeatsForDbPoi (matched-DB-POI Replace path)."""
+    """uploadIncomingBeatsForDbPoi (matched-DB-POI Replace path)."""
 
     def test_failed_deprecate_aborts_before_create(self, page):
         page.evaluate(_STAGE_LENS)
@@ -190,7 +190,7 @@ class TestDeprecateGuardIncomingBeats:
 
 
 class TestDeprecateGuardExecuteUpload:
-    """DEFECT 2b/2c — executeUpload replace & merge conflict branches."""
+    """executeUpload replace & merge conflict branches."""
 
     def _run_conflict(self, page, resolution: str) -> dict:
         page.evaluate(_STAGE_LENS)
@@ -245,7 +245,7 @@ class TestDeprecateGuardExecuteUpload:
 
 
 class TestLatLngAttributeEscaping:
-    """DEFECT 3 — lat/lng interpolated into a value attribute must be escaped."""
+    """Lat/lng interpolated into a value attribute must be escaped."""
 
     def test_non_numeric_coord_is_escaped_in_value_attribute(self, page):
         # Render the detail form for a POI whose latitude carries an attribute-

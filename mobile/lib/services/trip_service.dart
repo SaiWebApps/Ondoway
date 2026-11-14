@@ -38,8 +38,8 @@ class TripService extends ChangeNotifier {
     bool kidFriendlyOnly = false,
     String? tripName,
     // "Is 6pm a hard deadline or a rough idea?" — the planner's one
-    // question. 'firm' (the default, per the owner's ruling: skipping the question
-    // means a hard deadline), 'open' (a rough idea), or 'wall' (booked — a train,
+    // question. 'firm' (the default: skipping the question means a hard
+    // deadline), 'open' (a rough idea), or 'wall' (booked — a train,
     // a table; the day must end early enough to make it).
     String endHardness = 'firm',
   }) async {
@@ -144,8 +144,7 @@ class TripService extends ChangeNotifier {
 
   /// POST /audio/generate-trip-stops/{tripId} — trigger PER-STOP narration audio.
   /// Voices each stop's stitched narration (cold-open →
-  /// beats → transit → closing), keyed by ItineraryItem id — the per-stop
-  /// replacement for the retired per-primary-beat generation.
+  /// beats → transit → closing), keyed by ItineraryItem id.
   ///
   /// Returns the generation response with counts of generated/skipped/failed.
   Future<Map<String, dynamic>> confirmTripStopAudio(
@@ -179,9 +178,8 @@ class TripService extends ChangeNotifier {
   /// audio_url is null — audio is generated afterwards by the existing
   /// per-stop flow).
   ///
-  /// The frozen trip is deleted — a second compose is
-  /// version N+1 of the living session, never a 409, so there is no
-  /// "already composed" exception any more; a day already written is found
+  /// A second compose is version N+1 of the living session, never a 409, so
+  /// there is no "already composed" exception; a day already written is found
   /// through [fetchSession] (200) rather than by composing into a lock.
   /// Throws [ComposeVerificationException] when the backend REFUSES the day
   /// (422 compose_verification_failed); one day per trip means there is no

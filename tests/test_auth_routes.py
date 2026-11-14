@@ -366,7 +366,8 @@ class TestGoogleAuthEndpoint:
 
 @needs_neo4j
 class TestWorkbenchSession:
-    """The editorial workbench's own identity (CLAUDE.md rule 1).
+    """The editorial workbench's own identity: the workbench runs the app's own
+    authenticated routes, never a parallel copy of them.
 
     The full telling and the keep-exploring extras are written by
     POST /trips/{id}/compose and voiced by POST /audio/stops/{id}/keep-exploring —

@@ -140,13 +140,12 @@ DEFAULT_DURATION_MIN = 60
 
 # --- Upstream LLM provider failures -> 502/503, never a raw 500 ---------------
 # anthropic.RateLimitError / APITimeoutError / APIConnectionError / APIStatusError
-# escaping a compose route surfaced as an HTTP 500 with a stack trace and no
-# Retry-After, so the workbench and the mobile client could not tell a transient
-# upstream throttle from a real server bug and could not back off. feedback.py
-# already maps these exact exceptions to 503/502; the far more expensive compose
-# paths did not. Imported defensively so the module still imports (and the
-# hermetic suite still runs) if the SDK is absent — `except ()` simply never
-# matches, leaving behaviour identical to before.
+# escaping a compose route as an HTTP 500 with a stack trace and no Retry-After
+# leaves the workbench and the mobile client unable to tell a transient upstream
+# throttle from a real server bug, or to back off. feedback.py maps these exact
+# exceptions to 503/502 the same way. Imported defensively so the module still
+# imports (and the hermetic suite still runs) if the SDK is absent — `except ()`
+# simply never matches.
 try:  # pragma: no cover - exercised both ways only across environments
     import anthropic as _anthropic
 
@@ -191,8 +190,8 @@ def _upstream_provider_errors():
 def _owned_profile_id(session: Session, user_id: str, profile_id: str) -> str | None:
     """The profile id iff `user_id` owns it, else None.
 
-    Ownership-scoped, NOT existence-scoped: the previous
-    ``MATCH (p:Profile {id: $pid})`` check let any caller read or mutate any
+    Ownership-scoped, NOT existence-scoped: a bare
+    ``MATCH (p:Profile {id: $pid})`` check would let any caller read or mutate any
     profile's trips by guessing a profile id. A miss returns 404 at the call
     site (never 403) so the endpoint does not confirm foreign profile ids.
     """
@@ -266,7 +265,7 @@ def _resolve_persisted_pick(poi_ids: list[str], pois_by_id: dict[str, POI]) -> l
     THE ENGINE'S OWN END SENTINEL IS NOT CORPUS DRIFT: an A→B
     day whose destination has no corpus POI within snapping distance persists
     a synthesized `__end_b__<lat>_<lng>` stop — its id carries its coordinate,
-    so the rebuild re-materializes it. Measured: a Châtelet day 409'd
+    so the rebuild re-materializes it. Treated as drift, such a day would 409
     "corpus_changed" on every compose, permanently uncomposable.
     """
     for pid in poi_ids:
@@ -309,18 +308,14 @@ def _build_tour_input(**kwargs) -> TourInput:
     messages the caller needs to correct the request.
 
     RESOLVED, exactly as the harness resolves it (scripts/tour_build.py). The
-    party presets and the "more stops" dial are shortcuts over axes, and "the
-    axes are what the planner reads" — but `resolve_party_axes`
-    was called by the harness ALONE. On this wire a preset never expanded and
-    `stop_density="more"` never became its stop ceiling, so the workbench's
-    Party dropdown and its More-stops dial were dead while the identical
-    request through the harness worked. MEASURED 2026-08-18:
-    the wire's "More stops" day was byte-identical to base and kept a 47-minute
-    museum, while an explicit 20-minute ceiling on the same request reshaped
-    the day. This is the ONE construction door for the request-driven API sites
-    (generate, preview) and the persisted-request restorer, so resolving here
-    keeps the surfaces one engine (tests/test_workbench_matches_the_app.py's
-    whole reason to exist).
+    party presets and the "more stops" dial are shortcuts over axes, and the
+    planner reads only the axes: an unresolved preset never expands and
+    `stop_density="more"` never becomes its stop ceiling, so the workbench's
+    Party dropdown and More-stops dial would do nothing while the identical
+    request through the harness works. This is the ONE construction door for
+    the request-driven API sites (generate, preview) and the persisted-request
+    restorer, so resolving here keeps the surfaces one engine
+    (tests/test_workbench_matches_the_app.py checks it).
     """
     try:
         return resolve_party_axes(TourInput(**kwargs))
@@ -347,10 +342,8 @@ def _refusal_detail(
     the routed-leg gap and the loop/extend/closer_b alternatives (closer_b
     includes its target poi_id/lat/lng).
 
-    BOTH refusals share this shape since 2026-08-04. ``CertificationPlanningInfeasible
-    Error`` used to have no alternatives at all and no handler on POST /trips/generate,
-    so a traveller whose request simply did not fit the time band got a 500. ``cause``
-    lets a surface tell the two apart — "there is not enough to see near here" versus
+    BOTH refusals share this shape, so a traveller whose request simply does not fit
+    the time band gets alternatives, never a 500. ``cause`` lets a surface tell the two apart — "there is not enough to see near here" versus
     "this cannot be walked in the time you asked for" — without parsing prose.
     """
     return {
@@ -360,14 +353,11 @@ def _refusal_detail(
             else "tourability"
         ),
         # THE SENTENCE A PERSON READS, and the line an operator reads, apart: the
-        # workbench prints `reason` straight onto the page, and it carried the whole exception
-        # text — "Certification planning infeasible under ondoway-premium-tour-v1:
-        # ... required 9720-10800s, best eligible bounded route 4248s." — a
-        # product codename, the word "certification", and time in seconds, wrapped
-        # around the one plain clause the planner had written for a traveller.
-        # `reason` is now that clause alone; `technical` keeps the whole line, so
-        # nothing an operator needs is lost, and the refusal still names the
-        # budget it could not fill, on the field that keeps the whole line.
+        # workbench prints `reason` straight onto the page, so `reason` is the one
+        # plain clause the planner writes for a traveller — never the whole exception
+        # text with its policy id, the word "certification" and time in seconds.
+        # `technical` keeps the whole line, so nothing an operator needs is lost, and
+        # the refusal still names the budget it could not fill there.
         "reason": (
             exc.reason if isinstance(exc, CertificationPlanningInfeasibleError) else str(exc)
         ),
@@ -396,10 +386,9 @@ def _infeasible_detail() -> dict:
     duration that makes an unroutable start routable), so gap_minutes is None and
     there are no alternatives to offer.
 
-    PLAIN ENGLISH, never an identifier. This branch used to emit the literal string
-    ``premium_route_infeasible`` as ``reason``, and both surfaces render ``reason``
-    straight onto the page — so a person was shown an internal symbol and told
-    nothing about what to do next.
+    PLAIN ENGLISH, never an identifier: both surfaces render ``reason`` straight onto
+    the page, so it says what to do next; the internal symbol
+    ``premium_route_infeasible`` rides on ``technical``.
     """
     return {
         "cause": "routing",
@@ -432,13 +421,12 @@ def _restored_vignettes(
     }
 
 
-#: Field names the 2026-08-06 currency move changed, stored -> current.
+#: Field names older saved trips recorded their disclosure under, stored -> current.
 #:
-#: WHY THIS EXISTS AND WHY IT IS NOT OPTIONAL. Every trip saved before that date
-#: recorded its disclosure under the old names, and ``TourabilityAssessment`` is
-#: ``extra="forbid"``, so validating one of those dicts raises. The function below
-#: fails OPEN, so the failure would not be an error anyone sees — the thin-area
-#: warning would simply stop appearing, on every trip saved before today, silently.
+#: WHY THIS EXISTS AND WHY IT IS NOT OPTIONAL. ``TourabilityAssessment`` is
+#: ``extra="forbid"``, so validating one of those older dicts raises. The function
+#: below fails OPEN, so the failure would not be an error anyone sees — the
+#: thin-area warning would simply stop appearing on every older trip, silently.
 _RENAMED_TOURABILITY_FIELDS = {
     "audio_capacity_seconds": "dwell_capacity_seconds",  # stored-schema
     "target_audio_seconds": "target_dwell_seconds",  # stored-schema
@@ -469,9 +457,8 @@ def _resolve_lenses(session: Session, body: TripGenerateRequest) -> list[str] | 
     """Lens precedence: request -> profile PREFERS_LENS -> None (engine unbiased).
 
     Profile lens names are sorted so the engine input is deterministic
-    regardless of edge-traversal order. A computed per-city default starter
-    set is a future feature; until it
-    exists, a no-lens profile runs the engine without lens bias.
+    regardless of edge-traversal order. A no-lens profile runs the engine
+    without lens bias.
     """
     if body.lenses:
         return body.lenses
@@ -532,11 +519,9 @@ def _reports_degradations(
     """Hand back everything that quietly degraded while the handler ran.
 
     A soft failure that only reaches a log file is indistinguishable from success
-    to the person looking at the screen. The preview has opened a collection
-    scope inline since 2026-07-31; these two did not, so
-    ``degradations.record`` was a silent no-op on the phone's own endpoints
-    (src/tour/degradations.py:137-139) and a tour planned on estimated walking legs
-    looked exactly like one planned on measured ones.
+    to the person looking at the screen. Without a collection scope
+    ``degradations.record`` is a silent no-op, and a tour planned on estimated walking
+    legs looks exactly like one planned on measured ones.
 
     A DECORATOR RATHER THAN AN ``_impl`` SPLIT, deliberately. Moving each body into a
     private function and leaving a thin route wrapper behind reads the same at the call
@@ -582,8 +567,9 @@ def generate_trip(
       request back-compat but are inert: the engine derives its own walk
       radius and stop count from `duration_min`.
     - The Script's narration (sentence stream) is not persisted or returned;
-      it belongs to the COMPOSE/audio milestone. The validation report that
-      `generate` attaches is non-blocking here for the same reason.
+      the words are written by POST /trips/{id}/compose and voiced by the audio
+      routes. The validation report that `generate` attaches is non-blocking
+      here for the same reason.
     """
     # OWNERSHIP, not existence: an existence-only check let any caller create trips
     # against any profile id. 404 (not 403) on a foreign profile so the endpoint
@@ -601,10 +587,10 @@ def generate_trip(
         round_trip=body.round_trip,
         max_stop_minutes=body.max_stop_minutes,
         end=_end_point(body.end_lat, body.end_lng),
-        # THE DAY HAS A CLOCK: the phone sends the date
-        # and the time as two halves and never the joined field, so every
-        # phone-planned day was "dateless" to the planner and the living session
-        # could not place NOW. Both halves are always present; join them.
+        # THE DAY HAS A CLOCK: the phone sends the date and the time as two
+        # halves and never the joined field. Both halves are always present; join
+        # them, or every phone-planned day is dateless to the planner and the
+        # living session cannot place NOW.
         start_datetime=body.start_datetime or f"{body.start_date}T{body.start_time}",
         end_hardness=body.end_hardness,
         **_dial_kwargs(body),
@@ -612,22 +598,19 @@ def generate_trip(
 
     snapshot = load_paris_corpus(driver, city_slug=tour_input.city_slug)
     try:
-        # ONE ALGORITHM. plan_premium_tour is BLOCK 1, the only planner on either
-        # surface: it applies the certification walk budget (0.90-1.10, nominal 1.00)
-        # and enforces the Premium receipt bar. There is no pick-one-of-three: the
-        # planner plans THE day, and the dials on the request are how a person
-        # changes it.
+        # ONE ALGORITHM. plan_premium_tour is the planning step, the only planner on
+        # either surface: it applies the certification walk budget (0.90-1.10,
+        # nominal 1.00) and enforces the Premium receipt bar. The planner plans THE
+        # day, and the dials on the request are how a person changes it.
         #
-        # Provider-free: Block 1 defaults to the silent glue client, so planning here
-        # costs nothing. The words arrive at /trips/{id}/compose.
+        # Provider-free: planning defaults to the silent glue client, so it costs
+        # nothing here. The words arrive at /trips/{id}/compose.
         with RoutingClient() as routing_client:
             plan = plan_premium_tour(tour_input, snapshot, routing_client=routing_client)
     except (TourabilityRefusedError, CertificationPlanningInfeasibleError) as exc:
-        # The certification band refusal reaches this route for the first time in
-        # 2026-08-04's collapse: the timebox repair used to run only on the preview
-        # path. Uncaught it is a 500 with a stack trace; caught it is the same
-        # structured 422 with gap-minutes and alternatives the fixed-destination
-        # refusal already returns.
+        # The certification band refusal reaches this route too. Uncaught it is a
+        # 500 with a stack trace; caught it is the same structured 422 with
+        # gap-minutes and alternatives the fixed-destination refusal returns.
         raise HTTPException(422, _refusal_detail(exc)) from exc
     except (PremiumRouteInfeasibleError, ValueError) as exc:
         raise HTTPException(422, _infeasible_detail()) from exc
@@ -709,7 +692,7 @@ def generate_trip(
         }
     )
     # EVERYTHING ABOUT A FLAVOUR THAT COMPOSE CANNOT WORK OUT AGAIN. Ordered poi ids,
-    # the C9 exempt-anchor identity (Held-Karp reorders pois and the compose-rebuilt
+    # the marquee the stop cap exempts (Held-Karp reorders pois and the compose-rebuilt
     # route has no greedy locals), the walk-past sights, the thin-area disclosure, and
     # the elapsed time this flavour was OFFERED as. Compose hands all of it straight
     # back into the route it rebuilds, so the tour the traveller is given is the tour

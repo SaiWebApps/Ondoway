@@ -1,4 +1,4 @@
-"""Red-first unit tests for the Wikivoyage Step-3 source connector.
+"""Red-first unit tests for the Wikivoyage source connector.
 
 Pure — no network, no Neo4j: ``parse`` runs against a committed fixture (a
 MediaWiki ``revisions`` response whose main-slot WIKITEXT — not a plain extract —

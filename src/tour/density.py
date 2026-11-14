@@ -4,8 +4,8 @@ Density gating guards against two failure modes that the selection
 guards alone do not catch:
 
 1. A sparse starting point yields a mostly silent tour — under 11% audio
-   fill, such as 5 minutes of audio over a 1.3 km, 90-minute walk. The
-   empirical walks run 70-80% audio fill.
+   fill, such as 5 minutes of audio over a 1.3 km, 90-minute walk. A
+   healthy walk runs 70-80% audio fill.
 2. A tier-3+ POI with **zero active beats** gets picked as an anchor,
    because routing-aware scoring does not look at the beat count.
 
@@ -44,8 +44,7 @@ if TYPE_CHECKING:
 
 # Status thresholds, frozen at calibration.
 GREEN_FILL_RATIO_MIN: float = 1.0
-# Empirical audio-fill observed on the reference walks (module docstring:
-# "The empirical walks run 70-80% audio fill"). Display-honesty threshold
+# The low end of a healthy walk's 70-80% audio fill. Display-honesty threshold
 # only — the banner may claim "below the 70-80% bar" solely under this value;
 # classification does NOT use it.
 EMPIRICAL_FILL_BAR: float = 0.70
@@ -56,18 +55,16 @@ YELLOW_FILL_RATIO_MIN: float = 0.5
 YELLOW_ANCHOR_CANDIDATES_MIN: int = 3
 YELLOW_CLUSTER_COMPACTNESS_MAX: float = 0.7
 
-# Calibration (2026-04-29): the canonical compactness check
-# (≤ 0.6 for GREEN) misfires for long one-way tours where rich anchor
-# candidates legitimately spread across the envelope. The empirical
-# Île de la Cité one-way 90min from Pont Neuf scores fill=3.95 (4x
-# target), anchors=28 (well above min), but compactness=0.74 because
-# the candidate pool genuinely spans the 1.1km traverse from end to
-# end. The literal formula classifies it RED, but the user-facing gate
-# requires Tours 1, 2, 4 to remain GREEN. Resolution: a "rich-pool"
-# escape hatch that bypasses the compactness ceiling when fill *and*
-# anchor count both clear higher bars. This preserves the formula's
-# protection against thin tours (Sacré-Cœur 5% fill, Pantheon 11% fill)
-# while letting genuinely-dense traverses through.
+# The rich-pool escape hatch. The compactness check (≤ 0.6 for GREEN)
+# misfires for long one-way tours where rich anchor candidates
+# legitimately spread across the envelope. The Île de la Cité one-way
+# 90min from Pont Neuf scores fill=3.95 (4x target), anchors=28 (well
+# above min), but compactness=0.74 because the candidate pool genuinely
+# spans the 1.1km traverse from end to end; the compactness check alone
+# would classify that healthy tour RED. So the compactness ceiling is
+# bypassed when fill *and* anchor count both clear higher bars. This
+# keeps the protection against thin tours (Sacré-Cœur 5% fill, Pantheon
+# 11% fill) while letting genuinely-dense traverses through.
 RICH_POOL_FILL_RATIO_MIN: float = 1.5
 RICH_POOL_ANCHOR_CANDIDATES_MIN: int = 6
 
@@ -423,14 +420,12 @@ def _status(
         return "GREEN"
 
     yellow_by_fill = YELLOW_FILL_RATIO_MIN <= fill_ratio < GREEN_FILL_RATIO_MIN
-    # Calibration (2026-04-29): the literal status table allowed
-    # the anchor-disjunct to fire alone. That let catastrophically thin
-    # tours (Sacré-Cœur 90min RT at fill 0.17 with 4 colocated anchors)
-    # slip through as YELLOW instead of RED — contradicting the expectation
-    # that such a round trip is refused. Adding the same fill
-    # floor as the by-fill clause (≥ 0.5) closes that loophole while
-    # still preserving the disjunct as a "many tight anchors" pathway
-    # for tours where fill is borderline-but-not-catastrophic.
+    # The anchor clause never fires alone: it carries the same fill floor
+    # as the by-fill clause (≥ 0.5). Without that floor, catastrophically
+    # thin tours (Sacré-Cœur 90min RT at fill 0.17 with 4 colocated
+    # anchors) would pass as YELLOW instead of being refused as RED. The
+    # clause stays as a "many tight anchors" pathway for tours where fill
+    # is borderline-but-not-catastrophic.
     yellow_by_anchors = (
         anchor_candidate_count >= YELLOW_ANCHOR_CANDIDATES_MIN
         and cluster_compactness <= YELLOW_CLUSTER_COMPACTNESS_MAX

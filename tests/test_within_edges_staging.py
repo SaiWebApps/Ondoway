@@ -1,4 +1,4 @@
-"""Offline regression tests for the Phase A-3 WITHIN-edge staging file.
+"""Offline regression tests for the WITHIN-edge staging file.
 
 These tests validate `data/paris/within_edges.json` against `areas.json` and
 `poi-raw.json` without requiring a running Neo4j or API. They guard against
@@ -38,7 +38,7 @@ def test_every_area_has_at_least_one_poi():
         pois_per_area.setdefault(e["area_name"], 0)
         pois_per_area[e["area_name"]] += 1
     empty = [a["name"] for a in areas if pois_per_area.get(a["name"], 0) == 0]
-    assert not empty, f"no_empty_data violation: Areas with 0 POIs: {empty}"
+    assert not empty, f"every Area must hold at least one POI; Areas with 0 POIs: {empty}"
 
 
 def test_area_to_area_acyclic():
@@ -60,7 +60,7 @@ def test_paris_is_only_root():
 
 
 def test_le_marais_post_expansion_membership():
-    """After Phase A-3 polygon expansion, Le Marais should contain ≥40 POIs."""
+    """Le Marais's expanded polygon contains at least 40 POIs."""
     _, _, edges = _load()
     marais = [e for e in edges["poi_to_area"] if e["area_name"] == "Le Marais"]
     assert len(marais) >= 40, f"Le Marais should have ≥40 POIs after expansion; got {len(marais)}"

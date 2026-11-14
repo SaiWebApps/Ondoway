@@ -178,7 +178,7 @@ def _wide_plan(stop_count: int) -> AuthoringCandidatePlan:
 
 
 def test_no_authoring_surface_imposes_a_stop_ceiling() -> None:
-    """"No stop limits, period" — on the AUTHORING side.
+    """No authoring surface caps the number of stops in a tour.
 
     Three ceilings used to sit behind the planner and reject a route it had
     already built: the identity layer's ``MAX_CANDIDATE_STOPS`` (15), the compose

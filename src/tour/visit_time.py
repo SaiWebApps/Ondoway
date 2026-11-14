@@ -88,8 +88,8 @@ def _parse_peak_bands(bands_json: str) -> tuple[tuple[float, float], ...] | None
 
     CACHED because the repair prices thousands of trials per request and each
     trial re-prices every stop at its arrival hour: parsing the same ~370
-    corpus strings per call multiplied a JSON decode into the planner's hot
-    path (measured as part of a 4-8x wall-clock blowup). The corpus
+    corpus strings per call multiplies a JSON decode into the planner's hot
+    path. The corpus
     holds at most one distinct string per POI, so the cache is tiny and
     permanent.
     """
@@ -165,8 +165,7 @@ def visit_shape(
        party ceiling); 2. queue by arrival-hour band; 3. a queue the ceiling
        cannot cover collapses the stop to outside-only — nobody stands 28
        minutes of line for the zero minutes the ceiling has left; 4. a `wall`
-       end refuses ANY audited line ("no stop whose duration is unboundable")
-       but never the place; 5. `closed_today` voids the door and
+       end refuses ANY audited line but never the place; 5. `closed_today` voids the door and
        keeps the exterior (demote the stop, never delete it);
        5b. `exterior_only` is THE DAY'S OWN CLOCK saying the same thing — the
        planner's last-resort "step outside" repair move, for a stop whose
@@ -238,8 +237,8 @@ def visit_shape(
         )
     ):
         # Outside-only, NEVER deleted: the stop survives as the exterior view
-        # ("excluded entirely under wall" excludes the line and the interior;
-        # a closed museum is still worth standing in front of).
+        # (these triggers drop the line and the interior, never the stop; a
+        # closed museum is still worth standing in front of).
         goes_inside = False
         inside_seconds = 0
         queue_seconds = 0
@@ -389,7 +388,6 @@ def served_elapsed_seconds(walk_seconds: int, dwell_seconds: int) -> int:
     so the combining is what lives here.
 
     Walking is the whole walk, never a share of it: narration heard on the move is
-    free (product ruling 2026-07-19) because it happens inside a walk this sum
-    already counts.
+    free because it happens inside a walk this sum already counts.
     """
     return walk_seconds + dwell_seconds

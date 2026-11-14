@@ -208,7 +208,7 @@ def test_a_door_is_the_plan_s_own_goes_inside_and_an_arcade_is_a_roof():
     assert bare["chapelle"].door is False and bare["chapelle"].outside_seconds == 0
 
 
-def test_a_trigger_is_a_closed_shape_this_phase():
+def test_a_trigger_is_a_closed_shape():
     """`kind` is reserved for the CARRIED line/polygon row: a circle needs a
     positive radius, nothing else rides on it, and no other kind exists yet."""
     with pytest.raises(ValidationError):

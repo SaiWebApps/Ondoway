@@ -2,19 +2,10 @@
 
 Uses mocked Neo4j sessions — does NOT require a running database.
 
-TOMBSTONE: the per-beat audio library is deleted. The
-per-beat library's tests were DELETED here, not adapted: ``TestBuildStorageKey``,
-``TestGenerateBeatAudio``, ``TestGenerateBatch``,
-``TestGetDuration::test_result_includes_duration``, ``TestScriptChangeDetection``,
-``TestPipelineErrorWrapping``, ``TestBatchMixedResults``,
-``TestScriptHashDeterminism``, ``TestStaleInvariant`` and the beat half of
-``TestStorageConstructionSoftFails`` all pinned ``generate_beat_audio`` /
-``generate_batch`` / ``check_audio_status`` / ``_build_storage_key`` /
-``_script_hash`` / ``_is_stale`` — the NarrativeBeat audio path replaced
-by the per-stop path (``generate_stop_audio``: tests/test_audio_stop.py and
-tests/test_audio_stop_trip_api.py). What survives below is the format-level
-duration reader (its MP3 half MEASURES the duration, and the clocks trust it) and
-the per-stop storage soft-failure.
+Covers the format-level duration reader (its MP3 half MEASURES the duration, and
+the clocks trust it), the per-stop storage soft-failure and the per-stop provider
+fallback. The per-stop path itself (``generate_stop_audio``) is tested in
+tests/test_audio_stop.py and tests/test_audio_stop_trip_api.py.
 """
 
 from __future__ import annotations
@@ -64,11 +55,10 @@ class TestGetDuration:
 class TestStorageConstructionSoftFails:
     """get_storage() must be inside the guarded block of the per-stop path.
 
-    StorageError/ValueError are not PipelineError, so an unknown or broken
-    storage backend escaped the `except PipelineError` handlers in
-    src/api/routes/audio.py and surfaced as an uncaught HTTP 500 — violating
-    the documented "TTS failure returns 200 with status=failed (never a 500)"
-    contract.
+    StorageError/ValueError are not PipelineError, so outside that block an
+    unknown or broken storage backend would escape the `except PipelineError`
+    handlers in src/api/routes/audio.py as an uncaught HTTP 500. A TTS failure
+    returns 200 with status=failed, never a 500.
     """
 
     def test_unknown_storage_stop_path_raises_pipeline_error(self, monkeypatch):
@@ -85,8 +75,8 @@ class TestStorageConstructionSoftFails:
 class TestStopAudioFallsOverToTheUnderstudy:
     """The per-stop path is THE tourist's audio, so it resolves the whole chain.
 
-    OpenAI answered an intermittent 500 on 2026-08-28 — their outage, their
-    words. ``generate_stop_audio`` therefore resolves through
+    A vendor can answer an intermittent 500 during its own outage.
+    ``generate_stop_audio`` therefore resolves through
     ``get_provider_with_fallback``: an UNNAMED provider means the pin plus its
     ``TTS_FALLBACK`` understudies, and the result records who actually spoke.
 
@@ -170,8 +160,8 @@ class TestMeasuredMp3Duration:
     """The duration is MEASURED, and the clocks trust it: the
     reader walks EVERY frame and sums samples / sample rate — exact for constant- and
     variable-bitrate files and for MPEG-1, MPEG-2 and MPEG-2.5 alike, skipping an ID3v2
-    tag. It used to read one header and divide the file size by that bitrate: a VBR
-    file was off by the bitrate ratio and an MPEG-2 file measured 0.0 (the phone then cut
+    tag. Reading one header and dividing the file size by that bitrate is wrong: a VBR
+    file is off by the bitrate ratio and an MPEG-2 file measures 0.0 (the phone then cuts
     its sentences at the wrong place, or at once)."""
 
     def test_a_constant_bitrate_mpeg1_file_measures_its_frame_count_exactly(self):
@@ -189,7 +179,7 @@ class TestMeasuredMp3Duration:
         data = b"".join(frames)
         exact = 400 * 1152 / 44100
         assert abs(_get_duration(data) - exact) < 0.01
-        # The first-frame guess (size * 8 / 256 kbps) is ~37% short — the defect.
+        # The first-frame guess (size * 8 / 256 kbps) is ~37% short.
         assert abs((len(data) * 8 / 256000) - exact) > 2.0
 
     def test_an_mpeg2_low_sample_rate_file_measures_too(self):

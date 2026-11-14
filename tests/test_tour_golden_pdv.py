@@ -36,52 +36,26 @@ FIXTURE_PATH = (
 OVERLAP_TARGET = 0.90
 # AN ABSOLUTE HIT COUNT, NOT A RATIO — see the longer note in test_tour_golden_ile.py.
 #
-# THIS FLOOR WENT DOWN, from 5 required hits to 3. It is the weakest golden floor and
-# the one to argue with.
+# This is the weakest golden floor and the one to argue with.
 #
-# A PREVIOUS VERSION OF THIS COMMENT DEFENDED IT WITH A FALSEHOOD — that 27.8% "was never
-# met and never could be". A hostile review refuted that from the repo's own records: this
-# gate was live and PASSING at PdV 12/18 = 66.7% (2026-06-13) and 10/18 = 55.6%
-# after the pace pin (tests/test_tour_beat_select.py). The bar was earned, twice. Anyone
-# reading this must not repeat the retracted claim.
+# THE FLOOR IS THE MEASUREMENT, NOT 85% OF IT. The 85% rule is right for a larger count
+# but DEGENERATES at a small one: 85% of 3 rounds to 2, a floor that shrugs at losing a
+# third of the hits. There is no headroom to buy: this gate is deterministic by
+# construction (src/tour/selection.py orders POIs by p.id specifically so two loads of the
+# same graph cannot drift). So the floor IS the measurement — lose a single hit and this
+# goes red, which is what a regression floor is for. If it ever flakes, the fix is to name
+# the non-determinism here, not to add slack.
 #
-# THE TRUE REASON THE OLD NUMBER IS NOT A BASELINE FOR THIS ONE: the 18-id expectation it
-# was measured against did not encode this document. Measured 2026-07-30, only 8 of the
-# old fixture's 25 tag keys exist verbatim in
-# fixtures/reference-tours/01-place-des-vosges.md — the rest named tags the
-# document does not contain. So 12/18 was scored against a partly fabricated expectation,
-# while today's 4/21 is scored against 24 of 25 real document tags, every one verified
-# against the corpus. The measurements are not comparable, and the honest move is to say
-# so rather than to claim the gate never worked.
-#
-# THE NUMBER IS 4, NOT 85% OF 4. The rule 'floor = 85% of the measurement'
-# is right for Ile (85% of 18 = 15, tolerating a 3-hit regression) but DEGENERATES at n=4:
-# 85% of 4 rounds to 3, i.e. a floor that shrugs at a 25% regression on a 4-hit
-# measurement. A judge consult flagged it as near-vacuous, and there is no headroom to
-# buy: this gate is deterministic by construction (src/tour/selection.py orders POIs by
-# p.id specifically so two loads of the same graph cannot drift). So the floor IS the
-# measurement — lose a single hit and this goes red, which is what a regression floor is
-# for. If it ever flakes, the fix is to name the non-determinism here, not to add slack.
-#
-# WHY ONLY 19%: the human document is a deep walk of ONE square, narrating the Place des
+# WHY SO LOW: the human document is a deep walk of ONE square, narrating the Place des
 # Vosges arcade address by address (no 3, no 16, no 20, no 23, no 24, Pavillon de la
-# Reine, Coconnas, Ma Bourgogne, Hotel de Chaulnes). Measured via `make golden-diff`, the
-# engine selects FOUR beats at Place des Vosges and spends the rest of the time budget on
-# Musee Carnavalet and Hotel de Sully; all 17 misses are arcade addresses at that one
-# square. MAX_DWELL_AUDIO_SECONDS=270 caps one stop near 675 words, so a 21-beat
-# single-square walk is not a tour this engine can build. Closing the gap means teaching
-# it sub-location stops (a standing position inside one POI), NOT moving this number.
+# Reine, Coconnas, Ma Bourgogne, Hotel de Chaulnes). Every miss sits at Place des Vosges
+# ITSELF — the square the day does seat — so none is structurally unreachable and none is
+# removed from the pinned set of 21. The per-stop audio ceiling (MAX_DWELL_AUDIO_SECONDS)
+# caps how many beat words one stop voices, so a 21-address single-square walk is not a
+# tour this engine can build. Closing the gap means teaching it sub-location stops (a
+# standing position inside one POI), NOT moving this number.
 #
-# RE-DERIVED (2026-08-24), 4 -> 3, and the PINNED SET IS UNCHANGED AT 21.
-# Every one of the 18 misses sits at Place des Vosges ITSELF — the square the day
-# does seat — so none is structurally unreachable and none is removed: they are the
-# per-stop audio ceiling (MAX_DWELL_AUDIO_SECONDS = 180 s, ~450 beat words) meeting a
-# 21-address single-square document, exactly the gap the paragraph above describes.
-# What changed is the DAY: before 2026-08-24 this request served Place de la Bastille, 12
-# minutes' walk away, and said nothing about the square underfoot (overlap 0/21). The
-# planner fix (the under-fill choice ranks by story value, not by walking) put the
-# square back, and the fresh measurement of OUTPUT is 3. The floor IS the measurement
-# at this n, as the paragraph above requires — lose a hit and this goes red.
+# The fresh `make golden-probe` measurement of OUTPUT is 3 hits.
 OVERLAP_MIN_HITS = 3
 
 

@@ -1,4 +1,4 @@
-"""The ONLY ingest HTTP door (grey-zone wall 2).
+"""The ONLY ingest HTTP door.
 
 Every source connector calls ``assert_ingestable(url)`` BEFORE any
 network I/O. Only registrable domains that are license-clean / public-domain

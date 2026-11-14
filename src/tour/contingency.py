@@ -168,8 +168,8 @@ _SENTENCE_BREAK = re.compile(r"[.!?](?:\s|$)")
 
 def one_sentence(text: str) -> str:
     """Refuse anything the session would show or say that is more than ONE sentence
-    (over a screaming five-year-old, mute beats graceful; the question is one
-    sentence with two arms). A sentence
+    (a line caught in passing must land whole, and silence beats a long one; the
+    question is one sentence with two arms). A sentence
     break is a full stop, question or exclamation mark followed by a space or the
     end; a clock ("15:09") or a separator ("·") is not one. Returns it unchanged."""
     stripped = text.strip()

@@ -1,1 +1,1 @@
-"""Step-3 source connectors; each implements ``base.SourceConnector``."""
+"""Source connectors for new-city onboarding; each implements ``base.SourceConnector``."""

@@ -15,10 +15,10 @@ hands the compose path `OfflinePremiumExecutor`). No second session client, no
 second planner, no second clock — every number a trace asserts on is read off
 the wire the server wrote.
 
-THE ELEVEN DAYS are not re-derived here either. `DAYS` below is the fixed request
-set — the same start coordinates, clocks, lenses, party presets and end-hardness
-every earlier run used. A twelfth spelling of one persona's request would make a
-trace measure a day nobody ever judged.
+THE ELEVEN DAYS are not re-derived here either. `DAYS` below is the one fixed
+request set — start coordinates, clocks, lenses, party presets and end-hardness.
+A second spelling of one persona's request would let two traces measure two
+different days under one name.
 """
 
 from __future__ import annotations
@@ -32,9 +32,9 @@ from src.tour.routing import haversine_m
 #: The disposable identity these traces walk as. Its own ids
 #: (tests/test_trip_api.py has its own): a trace writes Trips and
 #: ItineraryItems to the live dev graph and deletes them again.
-TRACE_USER_ID = "s85-persona-trace-user"
-TRACE_USER_EMAIL = "s85-persona-trace@example.test"
-TRACE_PROFILE_ID = "s85-persona-trace-profile"
+TRACE_USER_ID = "persona-trace-user"
+TRACE_USER_EMAIL = "persona-trace@example.test"
+TRACE_PROFILE_ID = "persona-trace-profile"
 
 #: The named places, as the corpus places them.
 PLACES: dict[str, tuple[float, float]] = {
@@ -74,13 +74,11 @@ DAYS: dict[str, dict] = {
                    party="with_luggage", end_hardness="wall"),
     # The Orsay and back, three hours, art, step-free.
     #
-    # `narration_density="more"` is HER OWN DIAL, and it is on the request for a
-    # recorded reason: the serving gate measures her echoed day at ~0.117
-    # audio-per-walking against the 0.12 floor — a floor whose calibration corpus
-    # held no take-it-easy day. Her own carried ask is MORE narration at the
-    # bench, so the dial and the floor agree, and the day stays hers: bench
-    # seated, 13-minute legs, step-free. The same re-derivation
-    # tests/test_trip_api.py made twice for the same reason.
+    # `narration_density="more"` is HER OWN DIAL: the serving gate measures her
+    # day at ~0.117 audio-per-walking against the 0.12 floor, a floor calibrated
+    # without any take-it-easy day. She asks for MORE narration at the bench, so
+    # the dial and the floor agree and the day keeps its shape: bench seated,
+    # 13-minute legs, step-free.
     "rosemary": dict(start=PLACES["Musée d'Orsay"], duration_min=180, round_trip=True,
                      start_datetime="2026-08-19T14:00", party="take_it_easy",
                      lenses=["visual_art"], end_hardness="open",
@@ -290,8 +288,7 @@ def elapsed_at(day: dict, stop: dict, *, extra_minutes: int = 0) -> int:
 
 
 #: The linger, in minutes: past the widest precomputed late band (30-40), so the
-#: answer cannot be a band's — it is the live path's own (a 46-minute linger
-#: once dropped the step-free day's Orsay in silence).
+#: answer cannot be a band's — it is the live path's own.
 LINGER_MINUTES = 46
 
 #: Minutes left on the clock at the stream's last step, so that what the day still
@@ -410,9 +407,9 @@ def walk_the_day(client, trace: Trace) -> Trace:
     if ahead:
         # THE PROMISE AT RISK. The steps above never put one there: a lingering
         # walker still has hours, and the planner keeps a promised place because
-        # it fits. The case that matters is where it does NOT fit — the whole
-        # point of "no promise is ever silently dropped" is a day that can no
-        # longer hold everything. So the last step of the stream leaves
+        # it fits. The case that matters is where it does NOT fit: a promise is
+        # never silently dropped, and that rule is tested only by a day that can
+        # no longer hold everything. So the last step of the stream leaves
         # `MINUTES_LEFT_AT_RISK` on the clock: the remainder cannot hold what is
         # promised, and the server must either keep it and say the day runs over,
         # or ask the one question. What it may not do is drop it in silence.

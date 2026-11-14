@@ -1,11 +1,11 @@
-"""The Step-3 connector Protocol and the single network door for sources.
+"""The source-connector Protocol and the single network door for sources.
 
 Every connector is PURE: ``consult_url`` names the URL + params it wants GET-ed,
 and ``parse`` maps a raw JSON payload to a typed ``ConnectorResult`` — neither
 touches the network or the filesystem. ``run_connector`` below is the ONE place
 that actually fetches, and this module is the SINGLE caller of
 ``src.onboard.fetch`` in the ``sources`` package (which enforces the ingest
-allowlist — grey-zone wall 2 — before any I/O).
+allowlist before any I/O).
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from src.onboard.models import CityContext, ConnectorResult
 
 @runtime_checkable
 class SourceConnector(Protocol):
-    """What every Step-3 source connector implements.
+    """What every source connector implements.
 
     ``consult_url`` and ``parse`` are BOTH pure (no network, no I/O):
     ``consult_url`` names the URL + optional query params the connector wants
@@ -49,8 +49,8 @@ def run_connector(
     It builds the full URL (params urlencoded when present), emits a
     ``source_consult`` event naming the concrete URL, GETs the payload via
     ``http_get_json`` (which enforces the ingest allowlist FIRST), parses it,
-    emits a ``candidate_batch`` event carrying SCALAR counts only (wall 3 — never
-    body text in ``data``), and returns the typed result.
+    emits a ``candidate_batch`` event carrying SCALAR counts only (never body
+    text in ``data``), and returns the typed result.
     """
     url, params = c.consult_url(ctx)
     full = f"{url}?{urlencode(params)}" if params else url
@@ -83,7 +83,7 @@ def run_discovery(
     ``shadow_discovery`` surface pointers without ever touching a blocked door.
     It parses the payload, emits one ``discovery_pointer`` event per surfaced
     pointer (message + source + outbound url from the pointer, NO text in
-    ``data`` — wall 3), and returns the typed result.
+    ``data``), and returns the typed result.
     """
     result = c.parse(payload, ctx)
     for pointer in result.pointers:

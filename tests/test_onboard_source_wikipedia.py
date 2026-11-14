@@ -1,4 +1,4 @@
-"""Unit tests for the Step-3 Wikipedia source connector.
+"""Unit tests for the Wikipedia source connector.
 
 Pure — no Neo4j, no network. The connector's ``parse`` maps a raw MediaWiki
 ``list=geosearch`` payload to a typed ``ConnectorResult``, so the bar drives it
@@ -31,7 +31,7 @@ def _parse_london() -> list:
 def test_every_candidate_has_coordinates() -> None:
     """KEY assertion (red-first): a geosearch hit ALWAYS carries lat + lon, and
     the connector MUST surface them on every candidate — a coordinate-less
-    Wikipedia candidate is useless to the Step-4 assemble/geofence pass.
+    Wikipedia candidate is useless to the assemble/geofence pass.
     """
     candidates = _parse_london()
 

@@ -187,9 +187,9 @@ void main() {
       expect(service.themePreference, isNull);
     });
 
-    // --- Write path (updateThemePreference) is still on the old /nodes/Profile
-    // PUT endpoint — deferred, unchanged by this repoint. These verify the
-    // client-side optimistic-update logic; the fetch setup uses the new /profile.
+    // --- Write path: updateThemePreference sends a PUT to /nodes/Profile/<id>,
+    // while fetchProfile reads /profile. These verify the client-side
+    // optimistic-update logic.
 
     test('updateThemePreference sends PUT and updates state', () async {
       String? capturedBody;

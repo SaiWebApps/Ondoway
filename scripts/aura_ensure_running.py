@@ -2,8 +2,8 @@
 
 The free prod Aura auto-pauses after ~3 days; while paused its DNS is withdrawn
 (connections fail with NXDOMAIN). Every `-cloud` make target runs this FIRST so a
-paused instance is resumed and awaited instead of being mistaken for a dead one
-(the 2026-07-12 incident). Unlike the
+paused instance is resumed and awaited instead of being mistaken for a dead one.
+Unlike the
 request-path ResumeCoordinator (fire-and-forget), a deploy MUST wait, so this
 polls to completion.
 
@@ -12,11 +12,9 @@ things independently: a CONTROL-PLANE lifecycle status (`GET /v1/instances/{id}`
 what the console's instance list shows) and the Bolt endpoint the data actually
 travels on. They disagree by design — an instance under a rolling `updating`
 keeps serving queries throughout, which is why the console can show `UPDATING`
-and `connected` at the same moment. Measured 2026-09-03: this script polled a
-`updating` instance to its 300 s timeout and failed the cloud shard while
-`make db-parity TARGET=cloud` passed against that same instance completely.
-`updating` is not even in the status vocabulary ``src.aura_resume`` documents,
-so it was neither accepted nor terminal — just unrecognised, and fatal.
+and `connected` at the same moment. `updating` is not in the status vocabulary
+``src.aura_resume`` documents, so a wait that ended on a status string would
+treat a serving instance as unrecognised and time out against it.
 
 So the status is consulted for exactly one thing: deciding whether to fire a
 resume and whether it is still worth waiting. What ENDS the wait is a real

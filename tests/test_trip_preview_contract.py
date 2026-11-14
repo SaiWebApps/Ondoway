@@ -1,15 +1,12 @@
 """Hermetic /trips/preview wire contract — fake driver, no Neo4j, no Valhalla.
 
-2026-07-03 single-stop class guard, API layer. The engine side of the
-2026-07-02 regression is pinned in test_tour_selection.py (the lone-anchor
-YELLOW contract, the endpoint-pull no-collapse guard); nothing before this
-module executed trips.py's payload mapping hermetically — TestPreviewTrip in
-test_trip_api.py needs the live 7687 graph and skips silently without it.
+Single-stop class guard, API layer. The engine side is pinned in
+test_tour_selection.py (the lone-anchor contract, the endpoint-pull no-collapse
+guard); this module executes trips.py's payload mapping hermetically.
 Someone dropping the ``tourability=...`` kwarg from TripPreviewResponse,
 reordering ``route.model_copy`` calls so ``route.tourability`` is lost, or
 renaming a TripPreviewTourability field makes 1-stop tours silently look
-like bugs again — the exact 2026-07-02 finding. These tests
-fail on the wire, where the workbench reads it.
+like bugs. These tests fail on the wire, where the workbench reads it.
 
 Plumbing (all in-process):
 
@@ -301,16 +298,15 @@ def _lone_anchor_records():
     duration_it_could_support.) One tier-4 anchor with 5 x 240s = 1200s of beat
     audio, far too little to fill the requested hour.
 
-    SINCE 2026-08-05 THIS IS A REFUSAL, NOT A YELLOW-BY-FILL TOUR, and the change
-    is arithmetic rather than policy. Unifying the two surfaces onto one walk
-    budget made that budget two-sided: the band demands 90% of the requested
-    duration, while a ONE-STOP tour can deliver at most 40% of it in walking plus
-    a single stop's 270s speech ceiling. Those two ranges only overlap below about
+    THIS IS A REFUSAL, NOT A YELLOW-BY-FILL TOUR, and the reason is arithmetic
+    rather than policy. The two surfaces share one walk budget, and it is
+    two-sided: the band demands 90% of the requested duration, while a ONE-STOP
+    tour can deliver at most 40% of it in walking plus a single stop's 270s speech
+    ceiling. Those two ranges only overlap below about
     nine minutes, so a lone anchor cannot satisfy the band at any duration the
-    product sells. The engine now refuses and names the duration the area COULD
-    support, which is a better answer than a tour nobody wants — but it means the
-    build-it-anyway-with-a-warning path is unreachable here. The disclosure
-    mechanism itself is alive and still tested, on a corpus that can be built.
+    product sells. The engine refuses and names the duration the area COULD
+    support, which is a better answer than a tour nobody wants — so the
+    build-it-anyway-with-a-warning path is unreachable here.
     """
     return {
         "pois": [
@@ -386,18 +382,12 @@ def test_preview_green_multi_stop_has_null_tourability_and_multiple_stops(make_c
 
     Pins the RICH contract: a GREEN pool that also DELIVERS richly (multi-stop,
     audio at/over target) ships tourability == null — no spurious banner on a
-    healthy tour. This is the control arm for the GREEN-thin test below:
-    the engine attaches tourability on YELLOW OR ``delivered_thin``, so both
-    "always attach" (banner on every tour) and "never attach on GREEN" (the
-    2026-07-02 silent pool-vs-delivered collapse) are pinned out. Also gives the
-    multi-stop engine path hermetic API-level coverage (TestPreviewTrip's live-DB
-    narration test skips silently on CI without 7687).
+    healthy tour. The engine attaches tourability on YELLOW OR
+    ``delivered_thin``, so "always attach" (a banner on every tour) is pinned out
+    here. Also gives the multi-stop engine path hermetic API-level coverage.
 
     The fixture is deliberately BOTH rich pool AND rich delivery: 6 compact
-    anchors the greedy seats several of, ~4.0x target audio. Contrast
-    test_preview_green_but_thin_delivery_carries_tourability, where the pool is
-    GREEN (6 rich anchors, rich-pool escape) but the delivery collapses to one
-    stop — that one MUST carry tourability with delivered_thin=True.
+    anchors the greedy seats several of, ~4.0x target audio.
     """
     offsets = [
         (0.0004, 0.0),
@@ -621,15 +611,12 @@ def test_preview_returns_the_plan_and_spends_nothing(make_client, monkeypatch):
     detail = short.json()["detail"]
     assert set(detail) >= {"cause", "reason", "gap_minutes", "alternatives"}
     assert detail["cause"] == "time_budget"
-    # The pinned range was "3240-3960s" — the
-    # old 1.10 band ceiling. The repair's ceiling is THE REQUEST ITSELF (60 min
-    # = 3600 s; "ask for five hours and the tour is at most five hours"), so
-    # the refusal now names the range it actually enforces. The invariant is
-    # unchanged: the refusal names the budget it could not fill.
+    # The repair's ceiling is THE REQUEST ITSELF (60 min = 3600 s): a tour is
+    # never longer than what was asked for, so the refusal names the range it
+    # actually enforces — the budget it could not fill.
     # The traveller's `reason` is the planner's plain clause and
-    # never the exception wrapper; the budget in seconds moved to `technical`,
-    # where the invariant still holds — the refusal names the budget it
-    # could not fill, on the field an operator reads.
+    # never the exception wrapper; the budget in seconds is on `technical`,
+    # the field an operator reads.
     assert "required 3240-3600s" in detail["technical"], (
         "the refusal must name the time budget it could not fill"
     )
@@ -665,16 +652,14 @@ def test_estimated_legs_are_labelled_not_silently_shipped(make_client):
     internal thing; the operator's diagnosis must survive in the structured half where
     a person debugging a bad tour can find it.
 
-    ON THE OLD "3 OPTIONS" WORDING, read this before weakening anything. The rule is
-    that the outage must not cost the traveller any of the choice a working service would
-    have given them, and that is asserted here EXACTLY, against a control run of the
-    same request through a measured client: same number of options, same places, same
-    order, same arrival times. It is deliberately not spelled ``== 3``, because this
-    fixture yields ONE option even when every leg is measured — the flavour collapse a
-    separate lane owns, unrelated to routing. Pinning the literal 3 would make this
-    test fail for a reason it is not about, and pinning "at least 1" would let a future
-    change quietly drop two flavours during an outage. Equality with the control does
-    neither, and it strengthens by itself the day the collapse is fixed.
+    WHY THE OPTION COUNT IS COMPARED, NOT SPELLED — read this before weakening
+    anything. The rule is that the outage must not cost the traveller any of the choice
+    a working service would have given them, and that is asserted here EXACTLY, against
+    a control run of the same request through a measured client: same number of
+    options, same places, same order, same arrival times. A literal count would make
+    this test fail for a reason it is not about (the option count does not depend on
+    routing), and pinning "at least 1" would let a change quietly drop options during
+    an outage. Equality with the control does neither.
     """
     measured = make_client(_green_cluster_records())
     control = measured.post(
@@ -790,16 +775,14 @@ def test_a_route_with_no_stops_is_still_a_hard_refusal(make_client):
 # ---------------------------------------------------------------------------
 # A band refusal reaches BOTH surfaces as a 422 with alternatives
 # ---------------------------------------------------------------------------
-# Rehomed 2026-08-18 from tests/test_tour_one_engine.py when that file's
-# deleted-stack tombstones were retired (owner ruling: keep the invariants,
-# drop the name-greps). The invariant: a request that cannot fit its time band
+# The invariant: a request that cannot fit its time band
 # is a REFUSAL, never a crash — the band refusal carries the same
 # cause/reason/gap/alternatives payload the density refusal does, and the
 # phone's generate route catches it. Assertion 3 stays STRUCTURAL because
 # there is no hermetic generate path (the phone route persists a trip, which
-# the fake driver cannot answer); its docstring says so. The old assertion 4
-# ("no refusal body shows a human an identifier") is now proven on a REAL 422
-# by the ban-list on ``reason`` in test_preview_returns_the_plan_and_spends_nothing.
+# the fake driver cannot answer); its docstring says so. That no refusal body
+# shows a human an identifier is proven on a REAL 422 by the ban-list on
+# ``reason`` in test_preview_returns_the_plan_and_spends_nothing.
 
 
 def _minimal_assessment():
@@ -824,11 +807,11 @@ def _minimal_assessment():
 def test_a_band_refusal_reaches_both_surfaces_with_alternatives() -> None:
     """A request that cannot fit its time band is a refusal, not a crash.
 
-    Two defects, both landed with the 2026-08-04 branch collapse: making the
-    timebox repair run for EVERY route shape put CertificationPlanningInfeasibleError
-    onto the phone's ``POST /trips/generate`` for the first time, and that route
-    caught only TourabilityRefusedError — a traveller whose walk did not fit got a
-    500 with a stack trace.
+    The timebox repair runs for EVERY route shape, so
+    CertificationPlanningInfeasibleError reaches the phone's ``POST /trips/generate``.
+    That route must catch it beside TourabilityRefusedError, and it must carry the
+    same alternatives, or a traveller whose walk does not fit gets a 500 with a stack
+    trace.
 
     UNDO (each turns this RED): drop ``alternatives``/``gap_minutes`` from
     CertificationPlanningInfeasibleError -> assertion 1; narrow the generate

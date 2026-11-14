@@ -50,9 +50,9 @@ def seeded_user_id(seeded_driver):
 def client(seeded_driver, seeded_user_id):
     """TestClient backed by the real Neo4j database with seed data.
 
-    GET /trips is ownership-scoped since the 2026-07-19 IDOR fix (it used to
-    serve ANY profile's trips to an anonymous caller), so the client
-    authenticates as the User who owns the seeded profiles.
+    GET /trips is ownership-scoped (it never serves a profile's trips to a caller
+    who does not own that profile), so the client authenticates as the User who
+    owns the seeded profiles.
     """
     app = create_app()
     with TestClient(app) as c:

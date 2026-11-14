@@ -43,14 +43,14 @@ from src.tour.selection import load_paris_corpus, select_route
 from tests.conftest import needs_neo4j
 from tests.live_graph import open_dev_driver
 
-LENSED_PROFILE_ID = "m0b-trip-api-test-profile-lensed"
-NOLENS_PROFILE_ID = "m0b-trip-api-test-profile-nolens"
+LENSED_PROFILE_ID = "trip-api-test-profile-lensed"
+NOLENS_PROFILE_ID = "trip-api-test-profile-nolens"
 PROFILE_IDS = [LENSED_PROFILE_ID, NOLENS_PROFILE_ID]
-# The trip routes are ownership-scoped (2026-07-19 IDOR fix): they require a bearer
+# The trip routes are ownership-scoped: they require a bearer
 # token AND the profile must hang off the calling User. Own both disposable profiles
 # with one disposable User so these tests exercise the authorized path.
-TEST_USER_ID = "m0b-trip-api-test-user"
-TEST_USER_EMAIL = "m0b-trip-api@example.test"
+TEST_USER_ID = "trip-api-test-user"
+TEST_USER_EMAIL = "trip-api@example.test"
 PROFILE_LENSES = ["hidden_history", "literary_heritage"]
 
 # Same input as fixtures/tour_golden/ile_oneway_90min.json.
@@ -102,7 +102,7 @@ def test_profiles(live_neo4j):
         )
         for pid in PROFILE_IDS:
             s.run(
-                "MERGE (p:Profile {id: $pid}) SET p.display_name = 'M0b API Test' "
+                "MERGE (p:Profile {id: $pid}) SET p.display_name = 'Trip API Test' "
                 "WITH p MATCH (u:User {id: $uid}) MERGE (u)-[:HAS_PROFILE]->(p)",
                 pid=pid,
                 uid=TEST_USER_ID,
@@ -142,15 +142,12 @@ def client(live_neo4j, test_profiles):
         Ownership-scoped routes: authenticate as the User owning both profiles.
 
         Minted per REQUEST, not once per module, and that is load-bearing rather than
-        fastidious. `ACCESS_TOKEN_EXPIRE_MINUTES` is 60 (src/api/auth/config.py:121) and
-        this fixture is module-scoped, so a single token used to cover the whole file.
-        On 2026-08-05 this module's runtime passed that hour — the planner explores far
-        more since the stop ceilings were removed and the fixtures were enriched to fill
-        a real hour — and every test after the 60-minute mark got 401 "Invalid or expired
-        token" while asserting a 422. That surfaced as 3 failures and 11 fixture errors
-        in a full-suite run, and NONE of them was a product fault: a 60-minute access
-        token is correct in production. A per-request token cannot expire mid-module no
-        matter how slow the suite becomes.
+        fastidious. `ACCESS_TOKEN_EXPIRE_MINUTES` is 60 and this fixture is
+        module-scoped, while this module can run for longer than an hour. One token for
+        the whole file would expire mid-module, and every later test would get 401
+        "Invalid or expired token" while asserting something else — failures that are
+        no product fault, because a 60-minute access token is correct in production. A
+        per-request token cannot expire mid-module no matter how slow the suite becomes.
         """
         request.headers["Authorization"] = (
             f"Bearer {create_access_token(TEST_USER_ID, TEST_USER_EMAIL)}"
@@ -211,15 +208,12 @@ def ile_response(client):
 
 
 @needs_neo4j
-def test_generate_plans_through_the_shared_block_one(ile_response, snapshot):
-    """The phone's day IS Block 1's plan, not a second planner's.
+def test_generate_plans_through_the_shared_planner(ile_response, snapshot):
+    """The phone's day IS the shared planner's plan, not a second planner's.
 
-    Pick-one-of-three is gone, so Block 1 is ``plan_premium_tour`` and the
-    endpoint publishes exactly ONE option. The invariant this test has always
-    carried is unchanged: the endpoint plans through the one shared planner, and
-    what it publishes is byte-identical to what that planner produced for the
-    identical input. The K-diversity clause died with the flavours (it pinned the
-    deleted Jaccard machinery).
+    The shared planner is ``plan_premium_tour`` and the endpoint publishes exactly
+    ONE option. The endpoint plans through that one planner, and what it publishes
+    is byte-identical to what that planner produced for the identical input.
 
     * STRUCTURAL — the handler calls the shared planner and no longer contains a
       second route-selection or script-generation pass of its own.
@@ -238,7 +232,7 @@ def test_generate_plans_through_the_shared_block_one(ile_response, snapshot):
     ):
         assert second_pass not in planner_source, (
             f"generate_trip still runs its own {second_pass.rstrip('(')} pass — "
-            "that is the duplicate algorithm this slice removes"
+            "that is a duplicate algorithm"
         )
 
     body = ile_response
@@ -306,13 +300,8 @@ class TestTripGenerateEngine:
 
     def test_options_surface_the_one_day(self, ile_response):
         """The response carries exactly ONE RouteOption
-        — THE day — and its DWELL stops mirror the persisted trip.
-
-        Re-derived from the old K-flavours pin: the
-        1-to-3 count and the pairwise-Jaccard diversity clause pinned the deleted
-        flavour machinery; the surviving invariants — the option mirrors the trip,
-        carries a positive arrival time, and every card is one of the three known
-        kinds — are unchanged.
+        — THE day — and its DWELL stops mirror the persisted trip. The option carries a
+        positive arrival time, and every card is one of the three known kinds.
 
         band="vignette" walk-past stops are interleaved into
         RouteOption.stops — additive annotations, not itinerary stops — so the
@@ -704,8 +693,8 @@ def _hallucinate_defect(sentences: list[dict]) -> list[dict]:
 class _OneBadRollExecutor:
     """A stateful roll-dependent author: the DAY compose of each `bad_stops` stop
     gets `defect` applied on its first roll (every roll when `always`), and every
-    later roll echoes the stitch clean — the measured live shape of the writer's
-    stochastic collisions (one live run vs the two after it, 2026-08-23). Full-telling
+    later roll echoes the stitch clean — the shape of the writer's stochastic
+    collisions, where one roll fails and the next identical request is clean. Full-telling
     calls (already_told set) are never defected and are excluded from
     `day_calls_by_stop`, so assertions about the bounded targeted re-roll count
     only the day's own composes."""
@@ -770,10 +759,10 @@ def test_a_dirty_local_tree_is_stamped_and_warned_never_refused(monkeypatch, cap
     """A build fingerprint names the commit a tour came from. Off a deployment, the
     local HEAD is that commit — TAGGED ``local_dirty_tree=True`` with a WARNING when
     the working tree has uncommitted changes (not reproducible, not certifiable) —
-    and it is NEVER a refusal and needs no opt-in (2026-08-18). The class of error
-    this closes: an environment condition disguised as a product failure — the old
-    refusal turned every `make api` compose on a developer tree into a 503, and each
-    entry point had to remember a flag. On Render the commit is the deployment's and
+    and it is NEVER a refusal and needs no opt-in. The class of error this closes: an
+    environment condition disguised as a product failure — a refusal would turn every
+    `make api` compose on a developer tree into a 503, and each entry point would have
+    to remember a flag. On Render the commit is the deployment's and
     git is never consulted. UNDO: bring the refusal back -> RED here on any dirty tree
     (and this suite's own tree is dirty whenever it is being worked on)."""
     import logging
@@ -827,10 +816,9 @@ def test_a_day_with_a_rest_generates_on_the_app_path(client, live_neo4j) -> None
     """A take-it-easy art day (Orsay round trip, take-it-easy, art lens, the
     Orangerie pinned — `_orangerie_pin` — and a 13-minute leg cap) seats
     a BENCH — a rest with no story beat. The app
-    path (`/trips/generate`, the model the phone reads) must carry it: until
-    2026-08-18 it 500'd on the rest's missing beat, and every family / take-it-easy
-    day that seated a rest was unreachable from the phone while the preview path
-    (another model) showed it fine. Found by a demo setup. UNDO: require
+    path (`/trips/generate`, the model the phone reads) must carry it: a stop with
+    no beat is a valid stop, or every family / take-it-easy day that seats a rest
+    500s on the phone while the preview path (another model) shows it fine. UNDO: require
     `GeneratedStop.beat_id` -> RED (500)."""
     resp = client.post(
         "/api/v1/trips/generate",
@@ -859,11 +847,10 @@ def test_a_day_with_a_rest_generates_on_the_app_path(client, live_neo4j) -> None
 def test_generate_and_compose_report_what_degraded(client, live_neo4j, cutover_trip) -> None:
     """The phone's two endpoints say what quietly went wrong, like the web does.
 
-    The owner, 2026-07-31: "Don't just log errors. Actually show them in the workbench
-    UI. Otherwise, they're invisible." The workbench preview has carried that list since
-    then. The phone's own two calls collected the same facts and threw them away, so a
-    tour planned on estimated walking times looked, on a phone, exactly like one planned
-    on measured ones.
+    Errors are shown, not only logged: a logged error is invisible. The workbench
+    preview carries the list, and the phone's own two calls carry the same facts rather
+    than throwing them away — otherwise a tour planned on estimated walking times looks,
+    on a phone, exactly like one planned on measured ones.
 
     The fault injected is the real one rather than a synthetic marker: the walking
     service is unreachable, so every leg falls back to a straight-line estimate and the
@@ -877,17 +864,16 @@ def test_generate_and_compose_report_what_degraded(client, live_neo4j, cutover_t
     is an object carrying a ``human`` string. ``human`` is the only key the production
     Dart reads.
 
-    WHY GENERATE IS PROVEN WITH A PLANTED ROW. Both halves were first written against
-    the real outage. Generate does not pass that way, and NOT because of anything this
-    change does: with estimated legs the live 90-minute walk comes out at 6009s against
-    a 4860-5940s band, and the planner refuses it 422 — the over-ceiling refusal a
-    separate lane is fixing, which the timebox repair cannot bring back down because it
-    can add or swap a stop but not drop one. Asserting generate's routing row on the
-    live corpus would import that unrelated bug into this test and make it fail for a
-    reason it is not about. A planted row proves what this step actually changed — that
-    a degradation recorded anywhere inside the request reaches the top level of the
-    reply instead of the floor — with no dependence on which route the planner happens
-    to pick. The routing row's own content is proven end-to-end on the planning surface
+    WHY GENERATE IS PROVEN WITH A PLANTED ROW. Generate cannot be proven against the
+    real outage: with estimated legs the live 90-minute walk comes out at 6009s against
+    a 4860-5940s band, and the planner refuses it 422 — an over-ceiling refusal that
+    the timebox repair cannot bring back down because it can add or swap a stop but not
+    drop one. Asserting generate's routing row on the live corpus would import that
+    unrelated refusal into this test and make it fail for a reason it is not about. A
+    planted row proves what this test is about — that a degradation recorded anywhere
+    inside the request reaches the top level of the reply instead of the floor — with
+    no dependence on which route the planner happens to pick. The routing row's own
+    content is proven end-to-end on the planning surface
     generate shares by
     test_trip_preview_contract.py::test_estimated_legs_are_labelled_not_silently_shipped.
 
@@ -1020,8 +1006,8 @@ class TestLivingSession:
         detail = refused.json()["detail"]
         assert detail["reason"] == "compose_verification_failed"
         # A VERIFY refusal spends ONE bounded targeted re-roll of the failing
-        # stops before refusing (a live run, 2026-08-23: one bad roll killed a
-        # day two clean rolls served). This executor fails
+        # stops before refusing, so one bad roll does not kill a day a clean roll
+        # would serve. This executor fails
         # EVERY roll, so the refusal stands — at attempts=2, honestly counted.
         assert detail["attempts"] == 2
         assert detail["untraceable"] > 0
@@ -1290,15 +1276,12 @@ class TestLivingSession:
         kind "live" the phone applies at once. UNDO: drop the
         own place from `_person_protected` -> the Orsay is gone from the reply -> RED.
 
-        RE-DERIVED 2026-08-19 (a written decision, not a quiet edit): the lateness was
-        FIFTY minutes, tuned while compose rebuilt the day on the default routing
-        surface (stairs allowed) and the session's clocks came from those legs. On the
-        step-free legs the day was actually planned with, 50 minutes late leaves the
-        remainder 340 s over its 17:00 with everything kept — more than its 8-minute
-        bench can give up above the 3-minute shortest rest (a rest is shortened, never
-        removed), so the product correctly asks NOTHING and lets the finish move with
-        one screen line. Forty-six minutes is the same scenario on
-        the right clocks: 100 s over, a 6-minute sit absorbs it, the question fires."""
+        Why forty-six minutes: the session's clocks come from the step-free legs the
+        day is planned with. On them, 50 minutes late leaves the remainder 340 s over
+        its 17:00 with everything kept — more than its 8-minute bench can give up above
+        the 3-minute shortest rest (a rest is shortened, never removed), so the product
+        correctly asks NOTHING and lets the finish move with one screen line. Forty-six
+        minutes late is 100 s over: a 6-minute sit absorbs it, and the question fires."""
         gen = client.post(
             "/api/v1/trips/generate",
             json=_body(
@@ -1318,8 +1301,8 @@ class TestLivingSession:
                 # audio-per-walking — a coin-flip under C3's 0.12 floor, whose
                 # calibration corpus held no take-it-easy day. The "More talking"
                 # dial keeps the day the visitor's own (bench, 13-minute legs,
-                # step-free) and feeds it the narration the carried ask wants at
-                # the bench —
+                # step-free) and feeds it the narration the question at the bench
+                # needs —
                 # a day the product serves, which is this test's premise.
                 narration_density="more",
             ),
@@ -1335,7 +1318,7 @@ class TestLivingSession:
         orsay = next(s for s in stops if "Orsay" in s["poi_name"])
         assert any(p["kind"] == "anchor" or p["protected"] for p in session["promises"])
         first = stops[0]  # the Orangerie
-        # Standing at the first stop, having stayed 50 minutes past its clock.
+        # Standing at the first stop, having stayed 46 minutes past its clock.
         hh, mm = (int(x) for x in first["start_time"].split(":"))
         dh, dm = (int(x) for x in session["day_start_hhmm"].split(":"))
         elapsed = (hh * 60 + mm - dh * 60 - dm) * 60 + int(first["dwell_seconds"]) + 46 * 60
@@ -1353,7 +1336,7 @@ class TestLivingSession:
         day = reply.json()
         kept = [s["poi_name"] for s in day["stops"]]
         assert orsay["poi_id"] in {s["poi_id"] for s in day["stops"]}, (
-            f"the Orsay is her day; the live replan dropped it: {kept}"
+            f"the Orsay is the visitor's own place; the live replan dropped it: {kept}"
         )
         live = [e for e in day["contingencies"] if e["trigger"]["kind"] == "live"]
         kinds = [e["trigger"] for e in day["contingencies"]]
@@ -1368,8 +1351,8 @@ class TestLivingSession:
     def test_a_phone_clock_that_diverges_is_reported_never_corrected(
         self, client, live_neo4j, cutover_trip
     ):
-        """THE SESSION CLOCK SEAM, on the wire (the silent-divergence bug the
-        one-brain rule exists to prevent). The phone sends
+        """THE SESSION CLOCK SEAM, on the wire: the server is the one place that times
+        the day, so a phone clock that silently diverges from it must surface. The phone sends
         its OWN re-timed clock for the stop it is heading to; the server compares it
         with what ITS one expression says for the same stop in the version it just
         minted (`stop_clocks`, the wire's `start_time`) and a gap beyond the session's
@@ -1509,10 +1492,10 @@ class TestLivingSession:
         self, client, live_neo4j, cutover_trip
     ):
         """The bounded retry: untraceable writer output refuses at AUTHORING time
-        with the bounded retry, so a day composes deterministically. Measured live
-        2026-08-23: one run's compose died 422 on ONE bad roll (`fused_across_playback_contexts`,
-        stop 3) while the identical request rolled clean twice after. One
-        targeted same-request re-roll of ONLY the stops the VERIFY report names
+        with the bounded retry, so a day composes deterministically: a compose can
+        fail on ONE bad roll (`fused_across_playback_contexts`, say) where the identical
+        request rolls clean the next time. One targeted same-request re-roll of ONLY
+        the stops the VERIFY report names
         turns a one-bad-roll day into a served day; a stop that fails twice
         still refuses (the always-bad case keeps
         `test_a_verification_failure_is_a_422_that_persists_nothing` honest,
@@ -1648,15 +1631,13 @@ class TestLivingSession:
     ):
         """The route surface rides through compose. A take-it-easy day is planned
         step-free, and a route is never selected under one costing and reported
-        under another. Compose REBUILDS the persisted pick through `summarise_route`
-        — which, measured 2026-08-19, was handed no costing override: every leg of a
-        take-it-easy composed day was re-routed on the default surface (stairs
-        allowed), and the composed clocks, legs and polylines the phone plays were
-        not the day the visitor was shown.
-        (It composed at all only because `finalize_premium_tour` stamped the
-        default hash — the sibling test in tests/test_tour_party.py.) Here: the
-        router is asked, on EVERY leg compose routes, for the step-free costing, and
-        the compose still lands (the fingerprint now names that identity). UNDO:
+        under another. Compose REBUILDS the persisted pick through `summarise_route`,
+        so that call must carry the day's costing override; without it every leg of a
+        take-it-easy composed day is re-routed on the default surface (stairs
+        allowed), and the composed clocks, legs and polylines the phone plays are
+        not the day the visitor was shown. Here: the router is asked, on EVERY leg
+        compose routes, for the step-free costing, and the compose still lands (the
+        fingerprint names that identity). UNDO:
         drop the override from compose's `summarise_route` call -> the recorded
         overrides are all None -> RED."""
         from src.tour import routing_client as routing_client_module

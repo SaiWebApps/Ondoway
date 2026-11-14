@@ -177,13 +177,12 @@ def test_empty_vignette_beats_is_todays_script():
 
 
 def test_vignette_line_counts_only_the_sentence_it_actually_voices():
-    """THE GUARANTEE (unchanged across the 2026-07-19 audio-clock rewrite): a
-    walk-past vignette voices ONE sentence, so the tour's audio may grow only by
-    that sentence — never by the vignette beat's whole duration (100 s here).
-    Counting the whole beat would inflate every tour that passes a landmark.
+    """THE GUARANTEE: a walk-past vignette voices ONE sentence, so the tour's
+    audio may grow only by that sentence — never by the vignette beat's whole
+    duration (100 s here). Counting the whole beat would inflate every tour that
+    passes a landmark.
 
-    The arithmetic changed: audio is now the voiced words at SPOKEN_WPM rather
-    than a flat 4 s per non-beat sentence, so the one-liner is credited its real
+    Audio is the voiced words at SPOKEN_WPM, so the one-liner is credited its real
     length. The upper bound — well under the whole beat — is what matters and is
     asserted directly.
     """
@@ -302,8 +301,8 @@ def test_select_vignette_beats_prefers_requested_lens():
 def test_select_vignette_beats_prefers_self_naming_beat():
     """Among a POI's voiceable beats, the one whose FIRST sentence names the POI
     wins — so the walk-past one-liner reads as unmistakably about that POI, never
-    mis-attributed to the seated stop it lands under (the Nelson's-Column-under-
-    the-National-Gallery bug a hostile tour-adversary panel caught).
+    mis-attributed to the seated stop it lands under (Nelson's Column voiced under
+    the National Gallery).
     UNDO: drop the self-naming preference (fall back to ``voiceable[0]``) -> the
     non-naming 'The statue…' beat is chosen -> RED."""
     poi = _v_poi("Nelson's Column")  # name == id
@@ -368,8 +367,7 @@ def test_generated_vignette_one_liner_is_capped_end_to_end():
     built from route.VIGNETTES (walk-past POIs), NOT route.pois (seated) — a vignette
     beat's poi_id is never in route.pois. UNDO: build _build_transit's poi_names from
     route.pois only -> empty name -> guard falls back to the full 50-word run-on ->
-    the voiced line is 50 words -> RED. (This is the exact bug the live $0 preview
-    caught before any paid re-validation.)"""
+    the voiced line is 50 words -> RED."""
     nelson_poi = _poi("v-nelson", "Nelson's Column")
     vbeat = _beat("vb-nelson", "v-nelson", _NELSON_50W_VOICING)
     seq = _seq(vignette_beats={1: (vbeat,)})
@@ -394,8 +392,8 @@ def test_vignette_self_naming_detects_abbreviation_leading_name():
     Cathedral is…") must still be detected as self-naming. The one-liner is voiced
     with ``generation.split_sentences`` (which re-glues "St."), so the naming check
     must use the SAME splitter — a naive ". " split truncates at "St." and misses
-    the name. Guards the ~25 real St./numbered POIs across the live corpora the
-    opus skeptic enumerated (St. Paul's Chapel, St. Patrick's Cathedral, …).
+    the name. Guards the real St./numbered POIs across the live corpora (St. Paul's
+    Chapel, St. Patrick's Cathedral, …).
     UNDO: revert ``_vignette_beat_names_poi`` to a naive ``re.split(". ")[0]`` ->
     "St." is the first fragment, the name isn't found, the non-naming beat wins,
     so the wrong beat is selected -> RED."""

@@ -1,9 +1,9 @@
 """Walk the whole tour flow on both surfaces. They must enter each stage by the
 same door.
 
-CLAUDE.md rule 1: "The workbench and the app run the EXACT SAME code for
-everything they share — routing, planning, authoring, audio: one algorithm, one
-construction site, imported by both surfaces."
+The workbench and the app run the EXACT SAME code for everything they share —
+routing, planning, authoring, audio: one algorithm, one construction site,
+imported by both surfaces.
 
 Written after a divergence shipped with a comment beside it explaining why the
 split seemed reasonable: the tourist's audio resolved its voice through the
@@ -44,9 +44,8 @@ decision two ways.
 A stage only counts when BOTH surfaces reach that module at all, so a feature
 only one surface has is never mistaken for drift.
 
-NO REGEX (owner ruling 2026-08-29, enforced by no-regex-in-hooks.py). Quote
-splitting and `ast` are parses. A pattern would only catch the spellings someone
-thought of.
+NO REGEX. Quote splitting and `ast` are parses. A pattern would only catch the
+spellings someone thought of.
 """
 
 from __future__ import annotations
@@ -113,7 +112,7 @@ def _string_literals(text):
     surfaces. An apostrophe that never closes on its line is not a literal and
     is stepped over; a backtick may legitimately span lines and is not.
 
-    Still no regex (owner ruling 2026-08-29): a character walk and ``str.find``
+    Still no regex: a character walk and ``str.find``
     are parses, and the walk is exactly what a pattern could not do here — the
     thing that broke the old version was context, not spelling.
     """
@@ -325,9 +324,9 @@ def test_both_surfaces_enter_every_shared_stage_by_the_same_door():
         phone_doors = doors_into(module, phone_entries, calls, defined_in)
         bench_doors = doors_into(module, bench_entries, calls, defined_in)
 
-        # THE RULE IS DIRECTIONAL (owner ruling 2026-08-29): the workbench must
-        # match the phone identically, and where the phone does MORE the
-        # workbench must do more too. Its entire purpose is to reproduce the
+        # THE RULE IS DIRECTIONAL: the workbench must match the phone
+        # identically, and where the phone does MORE the workbench must do
+        # more too. Its entire purpose is to reproduce the
         # tourist's experience and debug it — a stage the tourist's path exercises
         # and the workbench's does not is a stage no editor can ever see go wrong.
         #
@@ -344,7 +343,7 @@ def test_both_surfaces_enter_every_shared_stage_by_the_same_door():
             )
 
     assert not problems, (
-        "THE SURFACES ENTER A SHARED STAGE BY DIFFERENT DOORS (CLAUDE.md rule 1).\n\n"
+        "THE SURFACES ENTER A SHARED STAGE BY DIFFERENT DOORS.\n\n"
         + "\n".join(problems)
         + "\n\nOne surface gets behaviour the other does not. Everything the two "
         "share must be ONE function called by both — a second door is a defect "

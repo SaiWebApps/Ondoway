@@ -1,9 +1,9 @@
-"""Unit tests for the INTERNET_ARCHIVE Step-3 connector (F6 legal wall).
+"""Unit tests for the INTERNET_ARCHIVE source connector (legal wall).
 
 archive.org is allowlisted BY HOST, but the host also serves in-copyright
 Controlled-Digital-Lending scans. The host wall does NOT prove public-domain —
 so the connector MUST verify per-item PD status and REFUSE (emit ZERO documents)
-for anything that is not provably public-domain. The F6 assertion below
+for anything that is not provably public-domain. The zero-documents assertion below
 (``result.documents == []`` for the in-copyright fixture) is a committed legal
 wall: it must stay airtight.
 
@@ -46,7 +46,7 @@ def _ctx() -> CityContext:
 
 
 def test_incopyright_fixture_emits_zero_documents() -> None:
-    """F6 KEY assertion (the legal wall): an in-copyright CDL scan hosted on the
+    """KEY assertion (the legal wall): an in-copyright CDL scan hosted on the
     allowlisted host is NOT provably public-domain, so the connector emits ZERO
     documents. If this ever goes green with a document, we would be ingesting
     copyrighted text off archive.org — that must be impossible."""
@@ -280,7 +280,7 @@ def test_hostile_licenseurl_fixture_emits_zero_documents() -> None:
     assert conn.parse(_load("internet_archive_hostile_licenseurl.json"), ctx).documents == []
 
 
-# ── DEFECT 2: unguarded bracket access on real-shaped data ──────────────────
+# ── Unguarded bracket access on real-shaped data ────────────────────────────
 
 
 def test_doc_missing_title_is_skipped_not_crash() -> None:

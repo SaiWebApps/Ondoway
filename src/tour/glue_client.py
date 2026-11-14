@@ -135,7 +135,7 @@ class HaikuGlueClient:
                 category,
                 exc_info=True,
             )
-            # A log line is invisible (owner ruling 2026-07-31). Record it so the
+            # A log line alone is invisible. Record it so the
             # API can hand it to the workbench and the editor SEES that these
             # transitions were not written by the narrator.
             from src.tour.degradations import record as _record_degradation

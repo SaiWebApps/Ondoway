@@ -1,6 +1,5 @@
-"""beat_select.py: ordering + length-class fallback.
-
-B8-lite claim-dedup tests sit at the end.
+"""beat_select.py: ordering, length-class fallback, claim dedup, the orientation
+hoist and the per-stop audio governor.
 """
 
 from __future__ import annotations
@@ -262,9 +261,9 @@ def test_narrative_function_ordering_when_no_spatial_primitive():
 
 
 def test_narrative_function_caps_at_default_flat_max_for_anchor():
-    """Calibration: DEFAULT_FLAT_MAX bumped 8→12 (2026-07-09) so a
-    dense marquee voices more of its deepens (Île 42.6%→55.3%, PdV 55.6%→66.7%);
-    the C9 governor still bounds per-stop audio downstream.
+    """Calibration: DEFAULT_FLAT_MAX is 12 so a dense marquee voices more of its
+    deepens; the per-stop audio governor (govern_poi_beats) still bounds per-stop
+    audio downstream.
     """
     poi = _poi("Sainte-Chapelle")  # tier 5
     beats = [_beat(f"b{i}", narrative_function="deepen") for i in range(DEFAULT_FLAT_MAX + 4)]
@@ -273,9 +272,8 @@ def test_narrative_function_caps_at_default_flat_max_for_anchor():
 
 
 def test_narrative_function_pause_tier3_caps_at_pause_max():
-    """Calibration: PAUSE_BEATS_MAX bumped 3→4 (2026-07-09) so a
-    tier-3 pause stop can carry its 4th deepen (the empirical Vert-Galant miss
-    ranked exactly 4th).
+    """Calibration: PAUSE_BEATS_MAX is 4 so a tier-3 pause stop can carry its 4th
+    deepen (a Vert-Galant deepen ranks exactly 4th).
     """
     poi = _poi("Some Pause", tier=3)
     beats = [_beat(f"b{i}", narrative_function="deepen") for i in range(6)]
@@ -405,11 +403,11 @@ def test_tone_variety_breaks_run_with_two_reliefs_no_pingpong():
 
 
 # ---------------------------------------------------------------------------
-# B8-lite claim dedup
+# Claim dedup
 # ---------------------------------------------------------------------------
 
 
-def test_b8_lite_drops_overlapping_entities():
+def test_claim_dedup_drops_overlapping_entities():
     # Two beats sharing 4-of-5 entities (Jaccard 0.8) at the same lens →
     # the longer body wins, the shorter is dropped.
     poi = _poi("Hotel de Sully")
@@ -449,7 +447,7 @@ def test_b8_lite_drops_overlapping_entities():
     assert "other" in ids
 
 
-def test_b8_lite_keeps_complementary_when_overlap_below_threshold():
+def test_claim_dedup_keeps_complementary_when_overlap_below_threshold():
     # Two beats sharing only 1-of-3 entities (Jaccard 0.33) at the same
     # lens are NOT collapsed — complementary detail is preserved.
     poi = _poi("Notre-Dame Cathedral")
@@ -476,7 +474,7 @@ def test_b8_lite_keeps_complementary_when_overlap_below_threshold():
     assert ids == {"a", "b"}
 
 
-def test_b8_lite_skips_pairs_with_no_lens_overlap():
+def test_claim_dedup_skips_pairs_with_no_lens_overlap():
     # Same entities, but disjoint lenses → no collision.
     poi = _poi("Place des Vosges")
     a = _beat(
@@ -515,7 +513,7 @@ def test_b8_lite_skips_pairs_with_no_lens_overlap():
     assert {"a", "b"}.issubset(ids)
 
 
-def test_b8_lite_subject_tag_overlap_triggers_dedup():
+def test_claim_dedup_subject_tag_overlap_triggers_dedup():
     # Empty entities, but identical subject_tag → collide.
     poi = _poi("Conciergerie")
     a = _beat(
@@ -564,18 +562,17 @@ def test_b8_lite_subject_tag_overlap_triggers_dedup():
     assert "short" not in ids
 
 
-def test_b8_lite_threshold_constant_is_pinned():
+def test_claim_dedup_threshold_constant_is_pinned():
     # The duplicate rule's threshold is 0.8 — guard against silent drift.
     assert B8_JACCARD_THRESHOLD == 0.8
 
 
 # ---------------------------------------------------------------------------
-# B8-lite recalibration: catch the 3 known duplicate pairs from a real run
+# Claim dedup catches three known paraphrase pairs from the Paris corpus
 # ---------------------------------------------------------------------------
 
 
-# Real script bodies pulled from the live Paris corpus 2026-04-29 — these
-# are the exact pairs an earlier tour run failed to dedup.
+# Real script bodies from the Paris corpus: each pair tells one fact twice.
 
 _MESME_DE = (
     "The Hotel de Sully was built in 1624 for Mesme Gallet, a notorious "
@@ -625,8 +622,8 @@ _PANTHEON_142 = (
 )
 
 
-def test_b8_lite_catches_mesme_gallet_paraphrase():
-    """An earlier run's Tour 1 Stop 1 emitted both beats; dedup must collapse them."""
+def test_claim_dedup_catches_mesme_gallet_paraphrase():
+    """Both beats tell the same Hotel de Sully fact; dedup must collapse them."""
     poi = _poi("Hotel de Sully")
     de = _beat(
         "de1377b4",
@@ -651,8 +648,8 @@ def test_b8_lite_catches_mesme_gallet_paraphrase():
     assert len(ids) == 1, f"Expected dedup; got both {ids}"
 
 
-def test_b8_lite_catches_hugo_affair_paraphrase():
-    """An earlier run's Tour 1 Stop 4 emitted both beats; dedup must collapse them."""
+def test_claim_dedup_catches_hugo_affair_paraphrase():
+    """Both beats tell the same Hugo affair; dedup must collapse them."""
     poi = _poi("Musee Victor Hugo", tier=4)
     b41 = _beat(
         "b41d4c77",
@@ -675,8 +672,8 @@ def test_b8_lite_catches_hugo_affair_paraphrase():
     assert len(ids) == 1, f"Expected dedup; got both {ids}"
 
 
-def test_b8_lite_catches_pantheon_geneviève_pair():
-    """An earlier run's Tour 5 Stop 3 emitted both Pantheon-vow beats.
+def test_claim_dedup_catches_pantheon_geneviève_pair():
+    """Both Pantheon-vow beats tell the same fact; dedup must collapse them.
 
     Entities-Jaccard = 0.125 because supporting cast diverges
     (Soufflot/Chateauroux vs Voltaire/Rousseau) and "Saint Genevieve" /
@@ -733,7 +730,7 @@ def _route_for(pois: list[POI]) -> Route:
 def test_area_level_orientation_hoist_picks_up_sibling_orientation():
     """Start POI has no stop_orientation beat; sibling in same Area does → hoist.
 
-    Mirrors the Tour 1 PdV scenario: Hotel de Sully (start) has none,
+    The Le Marais scenario: Hotel de Sully (start) has none,
     Place des Vosges (5th stop, same Le Marais) carries the canonical
     Pariswalks "find a bench" opener.
     """
@@ -982,7 +979,7 @@ def test_closing_reorder_skips_beatless_ab_destination_sentinel():
     assert out.poi_beats[-1].beats == ()
 
 
-def test_b8_lite_does_not_overcollapse_complementary_pdv_addresses():
+def test_claim_dedup_does_not_overcollapse_complementary_pdv_addresses():
     """Two PdV addresses with the same lens but distinct content must NOT merge.
 
     Pinning behaviour for the golden corpus: the empirical PdV walk has
@@ -1065,7 +1062,7 @@ def test_orientation_beat_hoisted_under_trigger_address_strategy():
 
 
 def test_dedup_never_drops_hoisted_orientation_cold_open():
-    """B8-lite dedup must not evict the hoisted stop_orientation cold-open head.
+    """Claim dedup must not evict the hoisted stop_orientation cold-open head.
 
     The orientation beat (micro, low score) shares a lens with an anchor-class
     paraphrase carrying the SAME entities (Jaccard 1.0), so the pair collides.
@@ -1177,7 +1174,7 @@ def _hoist_seq(
 
 
 def test_hoist_rejected_when_beat_describes_distant_features():
-    """The Tour 1 PdV scenario.
+    """The Hotel de Sully / Place des Vosges scenario.
 
     Hotel de Sully (start, tier 4) shares Le Marais with Place des Vosges
     (sibling, tier 5). PdV's orientation beat carries physical_cues
@@ -1342,7 +1339,7 @@ def test_hoist_rejected_when_beat_describes_distant_features_constant_check():
 
 
 # ---------------------------------------------------------------------------
-# C9 governor — govern_poi_beats truncation + additive contract fields.
+# The per-stop audio governor — govern_poi_beats truncation + additive contract fields.
 # _beat's word_count=250 -> beat_spoken_seconds round(250/150*60)=100s;
 # word_count=750 -> 300s.
 # ---------------------------------------------------------------------------
@@ -1393,7 +1390,7 @@ def test_govern_empty_plan_is_noop():
     assert overflow == ()
 
 
-def test_c9c_additive_contract_field_defaults():
+def test_governor_additive_contract_field_defaults():
     sp = ScriptPOI(id="x", name="X", tier=5, lat=48.0, lng=2.0)
     assert sp.overflow_beat_ids == ()
     route = _route_for([_poi("A")])
@@ -1407,8 +1404,8 @@ def test_c9c_additive_contract_field_defaults():
 
 def _flat_beats(n: int) -> list[BeatRef]:
     # Distinct word_counts (desc) => deterministic score order; distinct bodies
-    # so B8-lite never dedups them; all 'establishing' => the flat cap path.
-    # No body + a unique entity per beat => B8-lite finds no near-duplicate,
+    # so claim dedup never dedups them; all 'establishing' => the flat cap path.
+    # No body + a unique entity per beat => claim dedup finds no near-duplicate,
     # so every beat survives to exercise the cap vs. no-cap difference.
     return [
         _beat(
@@ -1762,7 +1759,7 @@ def test_order_body_chronologically_is_pure_reorder_no_drops():
     assert [b.id for b in out] == ["b1500", "b1800", "b2001"]
 
 
-# --- tone variety must not outrank spatial coherence (2026-07-19) -----------
+# --- tone variety must not outrank spatial coherence ---------------------------
 
 
 def _groups_in_order(beats: list[BeatRef]) -> list[str | None]:
@@ -1797,9 +1794,8 @@ def test_tone_variety_ungrouped_splits_a_sub_anchor():
     """MUTATION PROOF: the pre-fix whole-stop interleave DOES split a sub-anchor.
 
     This pins the defect itself, so the grouped test below cannot pass vacuously.
-    Observed in a real tour (data/paris/tours/pont-neuf-60min-5afc2e.md): the
-    Conciergerie emitted `### rue-de-paris-cells` at two non-contiguous points,
-    separated by marie-antoinette-cell and kitchen-pavilion.
+    Ungrouped, a real Conciergerie stop emits `### rue-de-paris-cells` at two
+    non-contiguous points, separated by marie-antoinette-cell and kitchen-pavilion.
     """
     out = _enforce_tone_variety(_somber_split_case())
     groups = _groups_in_order(out)
@@ -1859,11 +1855,11 @@ def test_select_poi_beats_keeps_sub_anchors_contiguous_end_to_end():
 def test_governor_seam_preserves_every_beat_and_voiced_contiguity():
     """The governor seam is where a reorder can silently DEMOTE a voiced beat.
 
-    Regression guard (2026-07-19): the sub-anchor grouping fix reordered the
-    Conciergerie's beats, which moved beat 3e99f26f past govern_poi_beats' audio
-    cut — voiced 9->8, overflow 3->4. That is acceptable (the beat survives as
-    keep-exploring content) but it must never happen SILENTLY, and the prefix cut
-    must not reintroduce a split sub-anchor in the part the listener actually hears.
+    Regression guard: grouping sub-anchors reorders the Conciergerie's beats, which can
+    move a beat past govern_poi_beats' audio cut — voiced 9->8, overflow 3->4. That is
+    acceptable (the beat survives as keep-exploring content) but it must never happen
+    SILENTLY, and the prefix cut must not reintroduce a split sub-anchor in the part the
+    listener actually hears.
 
     Two invariants, both cheap and both currently unguarded by `make test`
     (pyproject deselects golden/grade/invariants, and those are the only other

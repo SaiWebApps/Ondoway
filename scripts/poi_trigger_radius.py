@@ -19,19 +19,19 @@ WHAT IT WRITES, per POI in ``data/{slug}/poi-raw.json``:
 - A record named in ``REVIEWED`` takes the reviewed footprint, whatever it carried: the
   marquees and every stop of the eleven sample visitor days, each with the
   sentence that argues it, written so someone who has never been to Paris can judge it.
-- Every other record keeps its curated value (the area-radius fix of 2026-06-16, the
-  geocoder's curated streets and squares) — this pass never lowers a reviewed-elsewhere
-  number and never touches a record it has no reason for.
-- The argument lands in ``_pipeline.trigger_radius_basis`` on the record, the audit trail
-  (the ``geocode_audit.trigger_radius_reasoning`` precedent of the New York pass).
+- Every other record keeps its curated value (the area radii and the geocoder's curated
+  streets and squares) — this pass never lowers a number set elsewhere and never touches a
+  record it has no reason for.
+- The argument lands in ``_pipeline.trigger_radius_basis`` on the record, its audit trail.
 
 The write path (``load_pois`` / ``dump_pois``, the refuse-to-write-on-reformat guard) is
 imported from the capacity pass, never copied. Then, AND MANDATORY: ``make sync-poi-exports``
 — a field written here does not reach the export chunks, or the graph the API upload
 builds, until that sync runs; `tests/test_export_consistency.py` now pins the two equal.
 
-CARRIED (not this pass): a line for a street, a polygon for a cemetery or a garden's walls;
-the corpus holds no such geometry and the rule's ``kind`` field is where it lands.
+LIMIT: a footprint is a circle. A street would need a line, and a walled cemetery or garden
+a polygon; the corpus holds no such geometry, and the rule's ``kind`` field is where one
+would go.
 """
 
 from __future__ import annotations
@@ -61,15 +61,14 @@ UPLOADER_DEFAULT_M: int = 10
 #: What still holds New York out is only that this pass has not been run over it.
 CITIES_WITH_FOOTPRINTS: tuple[str, ...] = ("paris",)
 
-#: THE REVIEWED FOOTPRINTS, by the corpus name, each with its argument. The marquees, the
-#: places a review named, and every stop of the eleven sample visitor days.
+#: THE REVIEWED FOOTPRINTS, by the corpus name, each with its argument. The marquees and
+#: every stop of the eleven sample visitor days.
 #: Metres from the corpus pin.
 REVIEWED: dict[str, tuple[int, str]] = {
-    # The "unreviewed footprint" CLASS: a value that
-    # was neither the uploader's default nor on this list was never looked at. The two
-    # instances a review named, reviewed now; the class rule from here on: a stop the
-    # visit GOES INSIDE must have a footprint that covers its BUILDING, or leaving the
-    # circle happens indoors and the next leg piece can start under the roof.
+    # A value that is neither the uploader's default nor on this list was never looked
+    # at. The rule for every entry: a stop the visit GOES INSIDE has a footprint that
+    # covers its BUILDING, or leaving the circle happens indoors and the next leg piece
+    # can start under the roof.
     "Jardin des Tuileries": (
         430,
         "The garden runs about 900 m gate to gate and the pin sits mid-garden: at the "
@@ -77,7 +76,7 @@ REVIEWED: dict[str, tuple[int, str]] = {
         "played nothing for a five-minute walk. 430 reaches both "
         "terraces AND the Jardin du Carrousel at the east end — the spot the corpus "
         "voices, 415 m from the pin, whose reviewed anchor says 'right here' there; "
-        "the gates themselves are the carried polygon row.",
+        "a circle cannot follow the gates themselves.",
     ),
     "La Samaritaine": (
         60,
@@ -96,14 +95,14 @@ REVIEWED: dict[str, tuple[int, str]] = {
         "minutes the walker stands in the square before moving: the own-place circle is "
         "drawn round the walker's FIRST FIX and this one round the pin, so on a square "
         "this wide a walker can leave the first while still standing inside the second. "
-        "70 kept; where the clock's circle is centred is the carried item, not the "
-        "footprint.",
+        "70 kept: the gap comes from where the clock's circle is centred, not from "
+        "the footprint.",
     ),
     "Notre-Dame Cathedral": (
         100,
         "The pin sits in the building; the parvis where a walker stands runs about "
         "100 m west of the facade, so the footprint reaches it "
-        "(the pin itself stays where the corpus put it — a carried data row).",
+        "(the pin itself stays where the corpus put it).",
     ),
     "Louvre Museum": (
         120,
@@ -159,14 +158,14 @@ REVIEWED: dict[str, tuple[int, str]] = {
         "(placement.py), so the square they set out from is ONE circle whichever of the "
         "two is read. It overlaps the Pont Neuf's footprint by geometry, not by error: "
         "the apex IS the bridge's approach, 125 m pin to pin, so stop one's piece arms "
-        "over those twelve minutes — the carried edge.",
+        "over those twelve minutes.",
     ),
     "Pere Lachaise Cemetery": (
         500,
-        "Forty-four hectares inside walls; the 2026-06-16 area fix sized it at the "
-        "setting cap and the Mur des Fédérés, the columbarium and the memorials are all "
-        "inside it — kept (the walls themselves are a carried polygon row). The other "
-        "half of the question is answered beside this number rather than in it: three "
+        "Forty-four hectares inside walls, sized at the setting cap: the Mur des "
+        "Fédérés, the columbarium and the memorials are all inside it (a circle cannot "
+        "follow the walls themselves). Where in it you stand is answered beside this "
+        "number rather than in it: three "
         "reviewed ANCHORS ride the record — the Mur des Fédérés first, then Edith "
         "Piaf's grave and Oscar Wilde's tomb — so the 500 m disc says which cemetery "
         "you are in and the anchor says where in it you are standing.",

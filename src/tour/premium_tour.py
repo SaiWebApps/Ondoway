@@ -265,10 +265,10 @@ def plan_premium_authoring(
     holds only that stop's overflow sentences, the coverage bar adapts to the one
     stop, and its request carries the tight telling as ALREADY TOLD.
 
-    THE ONE Block-2 plan builder. Pure and provider-free: no routing client, no
-    selection, no LLM. It is called by ``plan_premium_tour`` (which plans the route
+    THE ONE per-stop authoring plan builder. Pure and provider-free: no routing client,
+    no selection, no LLM. It is called by ``plan_premium_tour`` (which plans the route
     first) and by ``POST /trips/{trip_id}/compose`` (whose route is already persisted),
-    so the two surfaces cannot drift into separate per-stop request shapes again.
+    so the two surfaces cannot drift into separate per-stop request shapes.
 
     ``tour_input`` is taken from ``source.inputs`` rather than accepted separately:
     ``generate`` writes it there verbatim (src/tour/generation.py:424), and
@@ -363,13 +363,13 @@ def certification_planning_policy(*, policy_id: str) -> RoutePlanningPolicy:
 
 
 class SilentGlueClient:
-    """The glue client BLOCK 1 plans with: it writes nothing and calls nobody.
+    """The glue client route planning uses: it writes nothing and calls nobody.
 
-    Owner ruling, 2026-08-04: during route planning, on both surfaces, the options show
-    THE PLACES ALONE — POI names, order, walking times, ETA. No descriptive text of any
-    kind. All prose arrives only at script generation, after a route has been picked.
+    During route planning, on both surfaces, the options show THE PLACES ALONE — POI
+    names, order, walking times, ETA. No descriptive text of any kind. All prose
+    arrives only at script generation, after a route has been picked.
 
-    This is what makes Block 1 genuinely free. ``generate`` defaults to the REAL, paid
+    This is what makes route planning genuinely free. ``generate`` defaults to the REAL, paid
     ``HaikuGlueClient`` (src/tour/generation.py), so planning three route options would
     otherwise make three tours' worth of Haiku calls on an endpoint whose whole value
     proposition is that it costs nothing. Returning the NO_GLUE sentinel for every
@@ -379,7 +379,8 @@ class SilentGlueClient:
     NOT a mock and not a test double: it is never substituted for anything, and nothing
     else is standing behind it. It is the literal expression of "planning writes no
     words", and it is what the PRODUCT uses. A caller that wants prose passes a real
-    client explicitly, which is what AUTHOR does for the one option the traveller picked.
+    client explicitly, which is what composing does for the one option the traveller
+    picked.
     """
 
     def stitch(self, category: str, context: str, request: str) -> str:
@@ -411,7 +412,7 @@ def _premium_route_refusal(route: Route) -> str | None:
     every consumer downstream assumes (``route_summary``'s ``enumerate`` below, and the
     leg-walk map in ``build_route_option``).
 
-    MISSING ROUTE MEASUREMENTS DO NOT REFUSE (owner ruling 2026-08-04). The walking
+    MISSING ROUTE MEASUREMENTS DO NOT REFUSE. The walking
     engine is a real production service that can cold-start, restart or rebuild its map
     (render.yaml:98-124), and a refusal here would take tour generation down for every
     user for the duration of that. It is labelled instead — see
@@ -424,11 +425,8 @@ def _premium_route_refusal(route: Route) -> str | None:
 
     if not route.pois:
         return "Premium planning requires a route with at least one stop"
-    # One leg INTO each stop, plus — on a round trip — the loop-home leg
-    # (a live-wire finding, 2026-08-11: the strict equality refused
-    # EVERY round-trip day on the API path with "one walking leg per stop";
-    # the harness never hit it because it plans without the premium gate, and
-    # no test had ever pushed a round trip through this door).
+    # One leg INTO each stop, plus — on a round trip — the loop-home leg, so a
+    # round-trip day has one more leg than it has stops and still passes.
     if len(route.transits) not in (len(route.pois), len(route.pois) + 1):
         return "Premium planning requires one walking leg per stop"
     return None
@@ -514,16 +512,15 @@ def resolve_routing_version(routing_client: RoutingClient) -> str:
     GET /status and treats a missing or malformed answer as an error
     (src/tour/routing_client.py:183-200).
 
-    Left bare, that escapes as a transport error — a generic 500 on the planning path,
-    and on the compose path it used to be swept up and relabelled
-    ``compose_verification_failed``, a code meaning "the narrator wrote something
-    untraceable", which blames the writer for a container that is merely still booting.
+    Left bare, that would escape as a transport error — a generic 500 on the planning
+    path, or on the compose path a failure that blames the narrator for a container
+    that is merely still booting.
 
-    RESOLVED 2026-08-05 TO A DEGRADATION, NOT A REFUSAL, which is the same answer the
-    receipt bar above now gives to the same outage. A hard refusal here would take tour
-    generation down app-wide for a cold start, which is exactly what the owner ruled
-    against; and the provenance a refusal would be protecting does not exist during an
-    outage, because unmeasured legs were measured by no engine. Recording
+    So a missing version is A DEGRADATION, NOT A REFUSAL, the same answer the receipt
+    bar above gives to the same outage. A hard refusal here would take tour generation
+    down app-wide for a cold start; and the provenance a refusal would be protecting
+    does not exist during an outage, because unmeasured legs were measured by no
+    engine. Recording
     ``unavailable`` states that plainly, and the traveller is told on the wire rather
     than in a log file nobody opens.
     """
@@ -612,7 +609,7 @@ def plan_premium_tour(
     glue_client: GlueClient | None = None,
     replan: ReplanContext | None = None,
 ) -> PremiumTourPlan:
-    """BLOCK 1 — THE day of one request, planned, with no per-stop authoring.
+    """THE day of one request, planned, with no per-stop authoring.
 
     ``replan`` (`contract.ReplanContext`) plans RELATIVE to a day
     that exists — the session's replans and the contingency set hand one
@@ -1150,7 +1147,7 @@ def finalize_live_composition(
         # default stays OFF — the sealed candidates predate it.
         require_closes=True,
         # Every sentence must be true WHERE IT PLAYS; the certification replay's
-        # default stays OFF — the sealed candidates predate the rulings.
+        # default stays OFF — the sealed candidates predate this check.
         enforce_placement_floors=True,
     )
 

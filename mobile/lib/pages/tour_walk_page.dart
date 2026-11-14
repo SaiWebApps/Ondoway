@@ -14,21 +14,15 @@ import 'package:provider/provider.dart';
 
 /// THE walking screen — the one the tourist is on, and the only one.
 ///
-/// It is the wireframe-05 live guide: a dark, audio-led screen over a real map
+/// It is the live guide: a dark, audio-led screen over a real map
 /// with stop pins, a now-playing card, an approaching nudge and a completion
 /// panel. It is also the SESSION screen: the day's next line and finish clock,
 /// the close and the thread, every offer the walk can make, and — the reason
 /// this screen exists at all — the ONE question, as two big buttons with the
 /// default named in words, plus [Head back now] on every screen.
 ///
-/// THOSE TWO SCREENS USED TO BE TWO SCREENS. `SessionPage` rendered the whole
-/// live surface and **nothing navigated to it** — the itinerary pushed here, and
-/// here had none of it. So the walk that ships could not ask the question, its
-/// pause button stopped the audio while the tour clock kept running, and its
-/// scrubber was a hardcoded 28%. A tourist running late was never asked what to
-/// drop, because the screen that asks was unreachable. Absorbed 2026-08-31 and
-/// the other screen deleted; the plan's own instruction was to rebuild remote's
-/// screen against local's playback service, and this finishes it.
+/// The guide and the session surface are ONE screen: the itinerary pushes
+/// here, so everything the live walk shows or asks lives here and nowhere else.
 ///
 /// A thin VIEW over [TourPlaybackService], which decides everything:
 /// geofence, auto-play, advance, the clock, which question is due. This
@@ -77,8 +71,8 @@ class TourWalkPage extends StatefulWidget {
 }
 
 class _TourWalkPageState extends State<TourWalkPage> {
-  // See prior note: cached in didChangeDependencies so dispose() doesn't do a
-  // Provider ancestor lookup on a possibly-deactivated element.
+  // Cached in didChangeDependencies so dispose() doesn't do a Provider
+  // ancestor lookup on a possibly-deactivated element.
   TourPlaybackService? _engine;
 
   /// The screen ticks the service once a second. The geolocator sends no fix
@@ -95,7 +89,7 @@ class _TourWalkPageState extends State<TourWalkPage> {
   /// the page must not restart what is already running, and must not end a walk
   /// it did not begin: popping back to glance at the itinerary is not the end
   /// of the walk. On a cold entry the engine is idle, the page starts the tour
-  /// and owns it, and disposal ends it — which is the fork's own behaviour.
+  /// and owns it, and disposal ends it.
   bool _startedHere = false;
 
   @override
@@ -197,12 +191,10 @@ class _TourWalkPageState extends State<TourWalkPage> {
               ),
               SafeArea(
                 child: engine.state == TourState.completed
-                    // A FINISHED WALK CAN STILL HAVE SOMETHING TO HEAR. The
-                    // completion panel used to be the whole screen, so a walker
-                    // standing inside the last stop — Notre-Dame, with its
-                    // indoor chapter unheard — was told "Tour complete" and
-                    // offered nothing, while the service was holding the offer
-                    // the whole time. The offers outlive the walk because they
+                    // A FINISHED WALK CAN STILL HAVE SOMETHING TO HEAR. A walker
+                    // standing inside the last stop with an indoor chapter
+                    // unheard sees "Tour complete" AND the offer the service
+                    // is holding. The offers outlive the walk because they
                     // are about WHERE THE PERSON IS STANDING, not about whether
                     // the itinerary has any stops left.
                     ? Stack(
@@ -275,9 +267,9 @@ class _TourWalkPageState extends State<TourWalkPage> {
                                           onPrev: () => engine.skipToStop(
                                               engine.currentStopIndex),
                                           // THE TOUR'S pause, not the player's.
-                                          // Stopping the audio alone left the
-                                          // tour clock running, so a pocketed
-                                          // phone kept "walking" while its owner
+                                          // Stopping the audio alone would leave
+                                          // the tour clock running, so a pocketed
+                                          // phone would keep "walking" while its owner
                                           // stood still. One door: the service
                                           // suspends its clock beside the audio.
                                           onPlayPause: () => engine.isPaused
@@ -334,7 +326,7 @@ class _TourWalkPageState extends State<TourWalkPage> {
   }
 }
 
-/// Cobalt to match the wireframe's route + play button (the dark theme's accent
+/// Cobalt for the route + play button (the dark theme's accent
 /// is a lighter blue used for the softer glow).
 Color get _cobalt => OndowayColors.light.accent;
 
@@ -741,8 +733,7 @@ class _WalkControls extends StatelessWidget {
   /// records the observation and SELECTS the answer it is holding: the standby
   /// question comes up at once, offline, with no round trip to wait through at
   /// a locked door. Only when no such answer was precomputed does this fall
-  /// back to asking the server to replan the day without the stop, which is
-  /// what every shut door used to do.
+  /// back to asking the server to replan the day without the stop.
   Future<void> _reportClosed(BuildContext context) async {
     final stop = engine.currentStop;
     if (stop == null) return;
@@ -868,7 +859,7 @@ class _WalkExitButton extends StatelessWidget {
 
 /// The real map behind the guide: a basic Apple Map centered on the current
 /// stop, with a pin per stop. Dark map styling, the route polyline and
-/// camera-follow are not built yet (the MapView seam).
+/// camera-follow are not built yet.
 class _MapBackdrop extends StatelessWidget {
   final List<ItineraryStop> stops;
   final int currentIndex;
@@ -888,10 +879,10 @@ class _MapBackdrop extends StatelessWidget {
       annotations: {
         for (final s in stops)
           Annotation(
-            // Local's ItineraryStop.beatId is nullable — a rest (a bench) has
-            // no story and so no beat — where the fork's was not, so
-            // this needs a third fallback the fork did not. poiId is always
-            // present and unique within a trip, which is all a pin id needs.
+            // ItineraryStop.beatId is nullable — a rest (a bench) has no
+            // story and so no beat — so poiId is the third fallback. poiId is
+            // always present and unique within a trip, which is all a pin id
+            // needs.
             annotationId: AnnotationId(s.stopId ?? s.beatId ?? s.poiId),
             position: LatLng(s.lat, s.lng),
             infoWindow: InfoWindow(title: s.poiName),
@@ -1002,8 +993,7 @@ class _NowPlayingPlayer extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Dims.spaceMd),
-          // Where the piece actually is. This was a hardcoded 0.28 until
-          // 2026-08-31 — a bar that looked alive and told you nothing.
+          // Where the piece actually is, read from the player.
           Row(
             children: [
               Text(_clock(elapsedSec),

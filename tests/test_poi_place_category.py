@@ -31,7 +31,7 @@ DATA_ROOT = REPO_ROOT / "data"
 CITIES_WITH_PLACE_CATEGORY: tuple[str, ...] = ("paris",)
 
 
-def test_the_vocabulary_is_closed_and_exactly_the_plan_s_twelve() -> None:
+def test_the_vocabulary_is_closed_and_exactly_twelve() -> None:
     """The vocabulary is fixed at twelve values; a silently widened one gives
     the category-diverse replacement classes nobody reviewed. Order-insensitive on purpose:
     the tuple's ORDER is presentation, its SET is the contract."""

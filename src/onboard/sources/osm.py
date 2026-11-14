@@ -1,4 +1,4 @@
-"""The OSM (Overpass) Step-3 source connector.
+"""The OSM (Overpass) source connector.
 
 PURE, like every connector: ``consult_url`` names the Overpass endpoint + the
 Overpass QL it wants POST-ed as the ``data`` param, and ``parse`` maps a raw

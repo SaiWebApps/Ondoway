@@ -1,24 +1,23 @@
 #!/usr/bin/env python
-"""Programmatic gates for `/unified-beat-extract` (B11 + B12).
+"""Programmatic gates for `/unified-beat-extract`.
 
-Three honor-system rules are now mechanical:
+Three rules are checked mechanically:
 
-1. **Source-span gate (B12)** — count contiguous factual sentences in the
-   cited source_passage; cap `beat_length_class`. Honors the
-   semicolon-clause rule from the prompt patch.
+1. **Source-span gate** — count contiguous factual sentences in the
+   cited source_passage; cap `beat_length_class`. A semicolon-joined
+   clause carrying its own factual claim counts as its own sentence.
 2. **Length-class enforcer** — word count vs class range, with a
    re-class suggestion when a beat drifts outside its declared band.
-3. **Fabrication probe (B11 honesty)** — extract concrete claims (years,
+3. **Fabrication probe** — extract concrete claims (years,
    proper-noun phrases, specific quantities) from `script_body` and from
    each `physical_cues[].cue` text; flag any that don't appear in the
    cited `source_passage` AND don't appear anywhere in the broader
    `chunk_text`. Returns the suggested `extractor_state` plus a list of
    strings to drop into `flagged_claims`.
 
-The probe is heuristic — it can't catch every paraphrase drift. But it
-catches the high-yield patterns that drove fabrication in the
-2026-05-01 Parisians chunk-13 v1 run (1869, 1957 replacement, December
-centenary, Communard column-pulldown, Henri IV 1605, etc.).
+The probe is heuristic — it can't catch every paraphrase drift. It
+targets the patterns that most often carry an invented fact: years,
+named entities, and phrases such as "replacement" or "rebuilt".
 
 `validate_beat()` orchestrates all three checks and returns a structured
 verdict the extractor can act on before `scripts.beats_io.commit`.
@@ -31,7 +30,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Any
 
-# ─── B12 source-span gate ────────────────────────────────────────────────
+# ─── Source-span gate ────────────────────────────────────────────────────
 
 # A "factual sentence" boundary is a period/question/exclamation OR a
 # semicolon followed by a clause that introduces a new factual claim.
@@ -43,8 +42,8 @@ _SENT_SPLIT_RE = re.compile(r"[.!?;]+\s+")
 def count_source_sentences(source_passage: str) -> int:
     """Count factual-sentence units in a source_passage.
 
-    Per B12 (post-2026-05-01 patch), semicolon-joined clauses each carrying
-    an independent factual claim count as separate sentences. We approximate
+    Semicolon-joined clauses each carrying an independent factual claim
+    count as separate sentences. We approximate
     this by splitting on terminal punctuation OR semicolons and dropping
     fragments that don't carry ≥3 words (filter ellipses, headings,
     "I.A.i."-style numbering, etc.).
@@ -100,8 +99,8 @@ def check_length_class(script_body: str, beat_length_class: str) -> tuple[bool, 
       - `(True, None)` if word count is inside the class range.
       - `(False, suggested)` where `suggested` is the class whose range
         the actual word count falls into. Caller decides whether to
-        re-class down (preferred per the spec) or expand prose from
-        source.
+        re-class down (preferred: a beat is never longer than its source
+        supports) or expand prose from source.
     """
     wc = word_count(script_body)
     lo, hi = _CLASS_RANGES.get(beat_length_class, (0, 10**9))
@@ -113,7 +112,7 @@ def check_length_class(script_body: str, beat_length_class: str) -> tuple[bool, 
     return False, None
 
 
-# ─── B11 fabrication probe ────────────────────────────────────────────────
+# ─── Fabrication probe ────────────────────────────────────────────────────
 
 
 def _normalize(s: str) -> str:
@@ -153,7 +152,7 @@ _SENTENCE_START_FUNCTION_WORDS = {
     "but", "and", "or", "yet", "so", "however",
 }
 # Imported-context red flags — phrases that frequently arrive from world
-# knowledge, not the source. Curated from the 2026-05-01 chunk-13 audit.
+# knowledge, not the source.
 _RED_FLAG_TERMS = [
     "replica",
     "replacement",
@@ -319,12 +318,11 @@ def fabrication_probe(
 
 
 # ─── Source-grounding gate ──────────────────────────────────────────────
-# B12 and the fabrication probe both trust `source_passage` as ground truth;
-# nothing verifies the passage itself was quoted from the chunk. A 2026-05-28
-# Wikipedia run produced beats whose source_passage was reconstructed from
-# model memory (wrong facts, absent from the pinned file) yet cleared every
-# other gate. This gate closes that hole: each contiguous span the passage
-# claims to quote must actually appear in chunk_text.
+# The source-span gate and the fabrication probe both trust `source_passage`
+# as ground truth. This gate verifies the passage itself: each contiguous span
+# the passage claims to quote must actually appear in chunk_text, so a passage
+# reconstructed from model memory fails here even when it clears every other
+# gate.
 
 _ELLIPSIS_RE = re.compile(r"\.{3}|…")
 
@@ -375,20 +373,20 @@ def validate_beat(beat: dict, chunk_text: str) -> BeatVerdict:
     """Run all three programmatic gates against a single beat.
 
     `ok=False` when an error is present (length-class out of range that
-    can't be auto-fixed, or a hard B12 violation). Warnings + fabrication
+    can't be auto-fixed, or a hard source-span violation). Warnings + fabrication
     findings populate even when `ok=True` — the caller decides how strict
     to be.
     """
     errors: list[str] = []
     warnings: list[str] = []
 
-    # B12 source-span gate
+    # Source-span gate
     span_max = source_span_gate(beat.get("source_passage", ""))
     declared = beat.get("beat_length_class", "")
     rank = ["micro", "seasoning", "mid", "anchor"]
     if rank.index(declared) > rank.index(span_max):
         errors.append(
-            f"B12 violation: beat_length_class={declared!r} exceeds source-span ceiling "
+            f"source-span violation: beat_length_class={declared!r} exceeds source-span ceiling "
             f"of {span_max!r} ({count_source_sentences(beat.get('source_passage',''))} "
             f"source sentences). Re-class down or cite more source."
         )

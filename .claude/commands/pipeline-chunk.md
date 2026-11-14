@@ -168,4 +168,9 @@ Before delivering the report:
 
 ## GUARDRAILS
 
-Apply the 5 pipeline guardrails. They are non-negotiable.
+These are non-negotiable:
+1. Auto-correct a claim only when at least two independent sources agree
+2. Every `source_passage` must exist in the chunk text
+3. A new POI within 100m of an existing POI goes to the review queue
+4. Never auto-resolve claims about living people, superlatives, or story deletions
+5. Log every auto-correction with its source URLs

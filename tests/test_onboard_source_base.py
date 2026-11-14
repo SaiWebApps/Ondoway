@@ -1,4 +1,4 @@
-"""Unit tests for the Step-3 connector Protocol + network door (base.py).
+"""Unit tests for the source connector Protocol + network door (base.py).
 
 Pure — no Neo4j, no network: ``http_get_json`` is monkeypatched so
 ``run_connector`` never hits the wire. Run with:

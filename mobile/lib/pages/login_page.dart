@@ -14,7 +14,6 @@ import 'package:ondoway/theme/tokens.dart';
 
 /// Sign in — editorial: photographic Paris hero with the wordmark + tagline,
 /// a bone panel that slides up holding magic-link + social sign-in.
-/// (Wireframe screen 01.)
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -57,10 +56,7 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       // The way in to the on-device proof harnesses, debug builds only. They are
       // how the locked-phone-in-a-pocket walk gets done, and a route you can
-      // only reach by typing an address is a route nobody walks with. The
-      // location-spike button main also carried is gone with its page: the
-      // finding that spike produced is now permanent in native_audio_backend
-      // and the AppDelegate, so the harness had nothing left to prove.
+      // only reach by typing an address is a route nobody walks with.
       floatingActionButton: !kReleaseMode
           ? Column(
               mainAxisSize: MainAxisSize.min,

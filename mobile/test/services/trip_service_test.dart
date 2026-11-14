@@ -83,7 +83,7 @@ void main() {
       expect(capturedBody!['start_time'], '09:00');
       expect(capturedBody!['kid_friendly_only'], false);
       expect(capturedBody!['end_hardness'], 'firm',
-          reason: 'unanswered means a hard deadline (owner ruling 2026-08-19)');
+          reason: 'unanswered means a hard deadline');
     });
 
     test('generateTrip sends the chosen end_hardness', () async {
@@ -900,7 +900,7 @@ void main() {
   });
 }
 
-// The end-hardness question ("is 18:00 a table or a guess?"; owner ruling
-// 2026-08-19: skipping the question means a HARD DEADLINE): the answer rides
+// The end-hardness question ("is 18:00 a table or a guess?"; skipping the
+// question means a HARD DEADLINE): the answer rides
 // the generate request as `end_hardness`, and an unanswered planner sends
 // "firm" explicitly — the server's own default, stated rather than implied.

@@ -415,10 +415,10 @@ def test_mutation_guard_rejects_direct_workflow_state_edits(tmp_path):
 
 
 def test_mutation_guard_protects_the_process_files_without_any_run(tmp_path):
-    """The law is not editable by the party it polices. A past commit reads
-    'a guard that is absent stops blocking': deleting or editing the guard,
-    the settings that register it, or the tracker's code must be refused even
-    when no teamflow run is active."""
+    """The law is not editable by the party it polices, and a guard that is
+    absent stops blocking: deleting or editing the guard, the settings that
+    register it, or the tracker's code must be refused even when no teamflow
+    run is active."""
     guard = _load_mutation_guard()
     for target in (
         ".agents/team/mutation_guard.py",

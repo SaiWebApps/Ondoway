@@ -241,7 +241,7 @@ def test_a_poi_without_visit_capacity_still_constructs_and_defaults_safely():
 
 
 def test_every_transit_segment_declares_its_mode():
-    """Walking is the only mode Release 1 plans, and it must be SAID.
+    """Walking is the only mode the planner plans, and every segment must SAY so.
 
     The field exists so adding public transport later is an addition rather than a
     rewrite. Without it, "these seconds are walking seconds" is an unstated
@@ -371,7 +371,7 @@ def test_poi_rejects_an_unknown_queue_class():
 def test_promise_shape_and_promise_carry_the_visit_shape_and_nothing_else():
     """A promise is OUTPUT — the planner's obligation — never a scoring knob.
 
-    A promise includes "the shape of the visit" — 65 minutes
+    A promise includes the shape of the visit — 65 minutes
     inside is a different promise from 15 minutes outside, and the queue is a
     third number again. Those three numbers, which side of the door the visit
     lives on, and whether the clock has already voided the door are the ENTIRE
@@ -404,7 +404,7 @@ def test_promise_shape_and_promise_carry_the_visit_shape_and_nothing_else():
 def test_promise_kinds_are_the_four_species_of_the_day():
     """The promise list, as a vocabulary: the interest anchor, the
     visitor's pin, a body stop, the finish. A detour is fabric, and
-    fabric is never promised — "fabric may change silently; promises may not".
+    fabric is never promised: fabric may change silently, a promise may not.
     """
     shape = PromiseShape(
         outside_seconds=900,
@@ -466,8 +466,8 @@ def test_route_promises_default_empty_and_carry_through():
 
     An unpromised Route — every Route today — must stay byte-identical, and a
     promise-native Route carries the planner's obligations so downstream
-    phases can protect them through replans ("fabric may change silently;
-    promises may not").
+    phases can protect them through replans: fabric may change silently, a
+    promise may not.
     """
     poi = POI(id="p1", name="X", tier=5, poi_role="stop", lat=48.85, lng=2.35)
     seg = TransitSegment(from_poi_id=None, to_poi_id="p1", distance_m=120, walk_seconds=144)

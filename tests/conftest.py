@@ -7,11 +7,10 @@ Tests connect to a dedicated test Neo4j instance (bolt://localhost:7688)
 so that production data in the dev instance is never touched.
 Start it with: make db-up DB=test
 
-Hardening (2026-04-29): _wipe() hard-asserts the connected URI's
-port belongs to _TEST_PORT_ALLOWLIST before running DETACH DELETE. Stops a
-recurrence of the incident where load_dotenv(override=True) inside
-a test mutated NEO4J_URI to the dev port and the conftest fixture wiped
-the production corpus.
+_wipe() hard-asserts the connected URI's port belongs to
+_TEST_PORT_ALLOWLIST before running DETACH DELETE, so a test that mutates
+NEO4J_URI (for example through load_dotenv(override=True)) can never point a
+wipe at the dev or production corpus.
 """
 
 from __future__ import annotations
@@ -43,11 +42,6 @@ if not _LIVE_PROVIDER_TESTS:
 os.environ["ONBOARD_PROVIDER"] = "mock"
 os.environ.setdefault("WORKBENCH_API_ENABLED", "true")
 
-# (A local test run used to declare itself a local build here with
-# ONDOWAY_ALLOW_DIRTY_LOCAL_BUILD=1. A dirty tree is no longer a refusal anywhere —
-# src.tour.premium_tour.resolve_build_identity stamps HEAD tagged dirty and warns —
-# so there is nothing to declare, 2026-08-18.)
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -65,30 +59,25 @@ from src.audio.provider import MockTTSProvider, register_provider
 # or serve it. The whole audio suite keeps costing $0 and no human can be shown
 # a fake.
 register_provider("mock", MockTTSProvider)
-# get_provider() now fails closed on an unset TTS_PROVIDER (it used to fall back
-# to "mock" — the defect). Pin the test process to the double it just registered
+# get_provider() fails closed on an unset TTS_PROVIDER. Pin the test process to
+# the double it just registered
 # so provider-less calls in the suite keep their free path. setdefault, so
 # `make test-live` or a deliberate override still wins.
 os.environ.setdefault("TTS_PROVIDER", "mock")
 
 # ── The $0 glue seam (same principle, the narration side)
 #
-# src/tour/generation.py now builds a REAL HaikuGlueClient when no client is
-# passed. That was the right fix — the canned client had been the silent default
-# on every live path, so every transition sentence in every tour the owner ever
-# read was a fixed string. But POST /trips/generate exposes no seam to inject a
-# client, so every hermetic test that goes through that route now constructs a
-# paid Anthropic client and the money guard refuses AT FIXTURE SETUP: whole
-# modules error out instead of running.
+# src/tour/generation.py builds a REAL HaikuGlueClient when no client is passed;
+# product code has no canned default. POST /trips/generate exposes no seam to
+# inject a client, so every hermetic test that goes through that route would
+# construct a paid Anthropic client and the money guard would refuse AT FIXTURE
+# SETUP: whole modules would error out instead of running.
 #
 # Bind the double HERE, the same one door the audio seam uses, and ONLY outside
 # the live shard. `make test-live` sets ONDOWAY_LIVE_TESTS=1 and therefore keeps
-# the real client — so this can never quietly stand in for a live run, which is
-# the failure mode the never-mock-as-default rule exists to prevent. Product code
-# keeps no fallback: outside this interpreter the real client is the only one.
-#
-# Keyed on ONDOWAY_LIVE_TESTS since the ONDOWAY_ENABLE_PAID_LLM_CALLS gate was
-# removed 2026-07-31 — see src/tour/anthropic_client.py for why.
+# the real client — so this double can never quietly stand in for a live run: a
+# double is never the default on a live path. Product code keeps no fallback:
+# outside this interpreter the real client is the only one.
 if os.getenv("ONDOWAY_LIVE_TESTS") != "1":
     import src.tour.generation as _generation
     from src.tour.glue_client import MockGlueClient as _MockGlueClient
@@ -136,11 +125,10 @@ def _money_guard_no_live_compose(request, monkeypatch):
     import src.tour.verify as _verify_mod
 
     # isort: split
-    # The import inside the arm below is deliberately local (it used to be pinned
-    # byte-for-byte by a structural test retired 2026-08-18); keep it local so the
-    # premium module is only imported when the guard actually arms.
+    # The import inside the arm below is deliberately local, so the premium
+    # module is only imported when the guard actually arms.
 
-    # PREMIUM authoring money-guard: the workbench now uses the same zero-retry,
+    # PREMIUM authoring money-guard: the workbench uses the same zero-retry,
     # receipt-preserving physical boundary as certification batches. Product
     # construction is replaced by the explicit $0 adapter; injected fake
     # providers still exercise the real executor in unit tests.

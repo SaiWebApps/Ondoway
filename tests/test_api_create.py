@@ -94,7 +94,7 @@ class TestCreatePOI:
         assert props["importance_tier"] == 1
 
     def test_poi_city_name_normalized_to_canonical_lowercase(self, client):
-        """Casing-fork guard (2026-07-03): POI.city_name is the canonical city
+        """Casing-fork guard: POI.city_name is the canonical city
         slug the tour engine and the workbench city picker key off. It is
         normalized (stripped + lowercased) at ingestion so '  Paris ' stores
         'paris' and cannot fork the (name, city_name) MERGE key."""
@@ -114,7 +114,7 @@ class TestCreatePOI:
     def test_poi_city_name_casing_variants_merge_to_one_node(self, client):
         """Two uploads of the same POI name under different city_name casings
         MERGE to ONE node (no duplicate/fork) because both normalize to 'paris'
-        — the exact silent-empty-beats failure the city picker exists to end."""
+        — a forked city_name would leave the picked city silently without beats."""
         base = {
             "name": "Merge Guard Place",
             "latitude": 48.8600,

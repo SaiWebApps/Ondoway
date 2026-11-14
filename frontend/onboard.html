@@ -237,8 +237,8 @@
 
     <div class="modes">
       <label><input type="checkbox" id="mode-license_clean" checked> License-clean web auto-ingest</label>
-      <label class="disabled"><input type="checkbox" id="mode-shadow_discovery_only" disabled> Shadow-library discovery only (later slice)</label>
-      <label class="disabled"><input type="checkbox" id="mode-manual_book_drop" disabled> Manual rights-cleared book drop (later slice)</label>
+      <label class="disabled"><input type="checkbox" id="mode-shadow_discovery_only" disabled> Shadow-library discovery only (not available yet)</label>
+      <label class="disabled"><input type="checkbox" id="mode-manual_book_drop" disabled> Manual rights-cleared book drop (not available yet)</label>
     </div>
 
     <button class="btn btn-primary" id="onboardStartBtn">Start onboarding</button>
@@ -273,7 +273,7 @@
     <p class="hint">Write the assembled city to data/{slug}/ and deploy it into the API's active graph.</p>
     <div class="row-actions">
       <button class="btn btn-success" id="uploadLocalBtn">Upload locally</button>
-      <button class="btn btn-outline" id="uploadCloudBtn" disabled title="later slice">Upload to cloud</button>
+      <button class="btn btn-outline" id="uploadCloudBtn" disabled title="not available yet">Upload to cloud</button>
     </div>
     <div id="uploadResult"></div>
   </div>
@@ -487,8 +487,8 @@ document.getElementById('onboardStartBtn').addEventListener('click', async () =>
 // Never ask the operator to approve spend here. This
 // used to POST with confirm_cost:false, catch the API's 409 cost estimate, and
 // raise a modal. The workbench mirrors the tourist's app experience, and a
-// tourist is never asked to approve spend — the same ruling that removed the
-// window.confirm from generateTourPreview in review.html.
+// tourist is never asked to approve spend — which is also why generateTourPreview
+// in review.html carries no window.confirm.
 //
 // The API's confirm_cost contract is UNCHANGED and still defends every other
 // caller; the page simply confirms on the operator's behalf. The drafter itself

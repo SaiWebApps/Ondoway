@@ -1,12 +1,11 @@
-"""INTERNET_ARCHIVE source connector — with the F6 per-item public-domain wall.
+"""INTERNET_ARCHIVE source connector — with a per-item public-domain wall.
 
-archive.org is allowlisted BY HOST (grey-zone wall 2), but the SAME host also
+archive.org is allowlisted BY HOST on the ingest allowlist, but the SAME host also
 serves in-copyright Controlled-Digital-Lending scans. Being reachable through
 the allowlist door therefore does NOT prove an item is public-domain. This
 connector closes that gap: ``_is_public_domain`` verifies per-item PD status and
 ``parse`` emits a ``SourceDocument`` ONLY for items that pass — anything not
-provably PD emits NOTHING. That refusal (asserted by the F6 zero-documents test)
-is a committed legal wall.
+provably PD emits NOTHING. That refusal is a legal wall.
 
 CONSERVATIVE CONTRACT (fail-closed, ONE authoritative signal). This wall keyed
 on the ``licenseurl`` acceptance path THREE times and it broke THREE times — a
@@ -84,7 +83,7 @@ class InternetArchiveConnector:
         )
 
     def _is_public_domain(self, doc: dict) -> bool:
-        """The F6 legal wall, per item. A SINGLE authoritative signal, fail-
+        """The public-domain legal wall, per item. A SINGLE authoritative signal, fail-
         closed: True IFF ``possible-copyright-status`` normalizes to exactly
         ``NOT_IN_COPYRIGHT`` (string or list; see ``_status_is_public_domain``).
 
@@ -98,7 +97,7 @@ class InternetArchiveConnector:
 
     def parse(self, payload: dict, ctx: CityContext) -> ConnectorResult:
         """Map an advancedsearch JSON payload to license-clean documents. Each
-        PD-passing doc becomes one ``SourceDocument``; docs that fail the F6 gate
+        PD-passing doc becomes one ``SourceDocument``; docs that fail the PD gate
         emit NOTHING. Defensive against real IA shapes: a body with no
         ``response``/``docs`` yields no documents, and a doc missing an essential
         field (``title`` or ``identifier``) is skipped rather than crashing or

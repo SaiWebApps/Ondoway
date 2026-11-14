@@ -1,21 +1,16 @@
 """THE WORKBENCH MUST BEHAVE LIKE THE REAL APP — NO MOCKS, EVER.
 
-The owner, 2026-07-31: "We need stronger guards or tests to prevent Claude or
-ChatGPT from ever trying to spoof anything in the workbench. No mocks ever."
-
 The editorial workbench exists for one reason: so the owner can judge the product
 a TOURIST gets. Anything that makes it resolve a different implementation than
-production makes that judgement worthless. This repo already had the rule for
-NARRATION ("never mock in the workbench: wiring mock as the workbench default and
-calling it real is the specific lie that destroyed trust"). Nobody extended it to
-AUDIO, and that is the hole the owner found in two screenshots on 2026-07-31:
+production makes that judgement worthless. The rule covers NARRATION and AUDIO
+alike, and two places on the page are where it is easiest to break:
 
-1. the audio provider selector was sitting on ``mock`` — ``loadTtsProviders``
-   force-selected it after fetching the provider list, silently overriding the
-   ``openai`` default, so every "play" was a silent WAV; and
-2. ``generateTourPreview`` opened a ``window.confirm`` spend warning before every
-   preview ("...spends real money on your API key"), which no tourist ever sees
-   and which also blocks any automated demo run.
+1. the audio provider selector — ``loadTtsProviders`` selects the provider
+   render.yaml pins, exactly once, so no "play" is a mock's silent WAV (test 12);
+   and
+2. the path from a click to a tourist-facing call — no ``window.confirm`` spend
+   warning or other gate stands in between, because no tourist ever sees one and
+   it also blocks any automated demo run (test 10).
 
 THE INVARIANT THESE TESTS ENCODE: whatever the workbench causes the API to do, it
 must resolve THE SAME REAL IMPLEMENTATIONS PRODUCTION RESOLVES.
@@ -25,7 +20,7 @@ forbidden names anywhere in this file, and no list of *permitted* ones either: a
 guard that names "mock" only catches something called mock, and the next spoof
 will be called replay, offline, stub, fixture, sample or studio.
 
-No regex, no greps, no allowlists, no denylists (owner-banned). Parsing is done
+No regex, no greps, no allowlists, no denylists. Parsing is done
 with ``ast`` and plain string operations, and every derivation asserts it found
 something before asserting anything is absent, so a broken parser fails loudly
 instead of passing vacuously.
@@ -82,15 +77,12 @@ WHAT THIS FILE CANNOT CATCH (human must watch — do not delete this list):
   by workbench and production, so downgrading it is not a workbench-vs-prod
   divergence at all — it is a product change and no parity check can see it.
   Test 7 does catch the env-var half (``OPENAI_VOICE`` set only locally).
-* **THE PREVIEW STOP CAP — CLOSED 2026-08-04, and test 14 now guards the
-  closure.** Until that date ``certification_planning_policy`` capped the preview
-  at 8 stops while the persisted path allowed 15, so the workbench structurally
-  could not show a tour as long as one a tourist could be given. "No stop limits,
-  period" removed BOTH, and every other ceiling with them.
-  Duration is now the only bound on tour length on every surface, including the
-  quality scorer. Test 14 measures that a long request really does seat more than
-  15 stops, and pins the tractability fallback that replaced the ceilings' one
-  useful side effect — keeping the exponential order solver off a 25-stop route.
+* **A PREVIEW STOP CAP — test 14 guards this one.** Duration is the only bound
+  on tour length on every surface, including the quality scorer, so the
+  workbench can show a tour as long as one a tourist can be given. Test 14
+  measures that a long request really does seat more than 15 stops, and pins the
+  tractability fallback that keeps the exponential order solver off a 25-stop
+  route.
 * **RUNTIME DOM BEHAVIOUR.** Test 12 reads the selection code rather than
   executing it. Only the Playwright shard
   (``make test-workbench``) executes this page.
@@ -2148,7 +2140,7 @@ _PDV = (48.85675, 2.341033)
 
 
 def test_duration_is_the_only_stop_bound_on_the_planning_path(monkeypatch) -> None:
-    """"No stop limits, period" — measured, not asserted.
+    """Duration is the only bound on how many stops a tour has — measured, not asserted.
 
     Until 2026-08-04 the planner clamped every tour to at most 15 seated anchors
     (``selection.HARD_ANCHOR_CAP``) and the certification policy clamped the
@@ -2214,8 +2206,8 @@ def test_duration_is_the_only_stop_bound_on_the_planning_path(monkeypatch) -> No
         maximum_requested_fraction=2.0,
         policy_id="test-no-cap",
     )
-    # There is only ONE planning branch since step 6 deleted the legacy flat policy, so
-    # this fixture reaches the same code the preview does; only the band differs.
+    # There is only ONE planning branch, so this fixture reaches the same code the
+    # preview does; only the band differs.
     assert no_cap_policy.nominal_requested_fraction > 0
     route = select_route(inp, snap, planning_policy=no_cap_policy)
 
@@ -2435,14 +2427,14 @@ def test_a_flag_allowed_to_differ_never_steers_the_request_path() -> None:
 # TESTS 16-19 — ONE ENGINE: the phone and the workbench run the SAME OBJECTS
 # --------------------------------------------------------------------------
 #
-# THE OWNER'S QUESTION, 2026-08-04: "prove to me that the app and the workbench
-# ultimately invoke the exact same tour logic code end-to-end. No duplicate, no
-# separate modules with the logic. The exact same code."
+# THE CLAIM: the app and the workbench invoke the exact same tour logic code
+# end-to-end. No duplicate, no separate module holding the logic. The exact same
+# code.
 #
 # Two client programs in two languages — the phone is Dart
 # (``mobile/lib/services/trip_service.dart``), the workbench is JavaScript
 # (``frontend/review.html``) — and both cross into Python at
-# ``src/api/routes/trips.py``. So the question reduces to a single one that can be
+# ``src/api/routes/trips.py``. So the claim reduces to a single question that can be
 # answered by running something: DO THOSE HANDLERS EXECUTE THE SAME FUNCTIONS?
 #
 # WHY NOT A TRACER. The obvious instrument — ``sys.settrace``, record every code
@@ -2629,7 +2621,7 @@ class _StubGraph:
             # POI exists (`poi_found`) so a wrong id fails loudly and the A→B finish
             # sentinel is stored. On this stand-in every non-sentinel POI "exists".
             "poi_found": True,
-            # The family split gave the trip routes a roles read (captain or
+            # The trip routes read the user's role on the trip (captain or
             # crew); this store's one user captains its one trip.
             "roles": ["IS_CAPTAIN_OF"],
         }
@@ -2654,12 +2646,8 @@ class _StubGraph:
 
 
 # ---------------------------------------------------------------------------
-# The dense GREEN corpus + mock-transport routing client. MOVED HERE from
-# tests/test_tour_flavours.py: that file was the k-flavours
-# suite and died with select_k_routes, and this file was the only
-# other importer of these two fixtures — an import that cannot resolve does not
-# fail loudly at collection, it fails at run time, so the fixtures move INTO
-# their importer before the file dies.
+# The dense GREEN corpus + mock-transport routing client, the fixed inputs the
+# one-engine tests below plan against.
 #
 # 4 directional clusters x 5 rich POIs (20 tier-5 anchors, 300s dwell each),
 # reaching ~533m from the start — inside the 60-min one-way envelope (738m).
@@ -2768,9 +2756,9 @@ def _proof_client(monkeypatch, graph: _StubGraph):
     The corpus reader and the walking-times client are replaced ONCE, on the route
     module, so both surfaces get byte-identical inputs — that is what makes the
     output comparison in test 19 mean something. The routing client is the
-    mock-transport one defined above: a stubbed upstream SERVICE,
-    which the no-mocks rule permits and in fact requires, since the alternative is a
-    live Valhalla whose answers can move between two back-to-back requests.
+    mock-transport one defined above: a stubbed upstream SERVICE. Test doubles live
+    under ``tests/``, and this one is required, since the alternative is a live
+    Valhalla whose answers can move between two back-to-back requests.
 
     The app's lifespan is deliberately NOT entered: it opens a real Neo4j driver, and
     every database dependency is overridden here anyway.
@@ -2846,9 +2834,8 @@ def test_the_phone_and_the_workbench_name_one_planner_and_one_author() -> None:
 
     The check is ``is``, not ``==``. Two byte-identical copies of the planner living
     in two modules would diff clean, pass every text search, satisfy any "same
-    algorithm" review — and FAIL here, because they are two objects. That is exactly
-    the failure the owner asked about: not "does the workbench run something similar"
-    but "does it run the same code".
+    algorithm" review — and FAIL here, because they are two objects. The claim is
+    not that the workbench runs something similar but that it runs the same code.
 
     Every binding is checked, not the obvious one. ``from x import y`` gives the
     importer its own reference, so "the route module's planner" and "the engine

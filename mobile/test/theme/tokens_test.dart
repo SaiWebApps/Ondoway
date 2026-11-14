@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ondoway/theme/tokens.dart';
 
 void main() {
-  test('light tokens match v10 hex values', () {
+  test('light tokens match their hex values', () {
     const c = OndowayColors.light;
     expect(c.accent, const Color(0xFF2C6CC0));
     expect(c.bg, const Color(0xFFE9E5DB));
@@ -14,7 +14,7 @@ void main() {
     expect(c.onAccent, const Color(0xFFFFFFFF));
   });
 
-  test('dark tokens match v10 hex values', () {
+  test('dark tokens match their hex values', () {
     const c = OndowayColors.dark;
     expect(c.accent, const Color(0xFF7BB2F5));
     expect(c.bg, const Color(0xFF101218));

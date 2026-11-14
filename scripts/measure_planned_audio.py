@@ -1,9 +1,8 @@
 """Measure per-POI planned voiced audio vs the tier-dwell proxy.
 
-The dwell/audio reconciliation critique (its spec tree is retired — git history)
-requires this measurement before changing the accounting: for each candidate
-anchor, what would selection consume under honest accounting
-max(tier_dwell, planned_audio) versus a flat tier constant?
+Take this measurement before changing the dwell/audio accounting: for each
+candidate anchor, what would selection consume under honest accounting,
+max(dwell, planned_audio), versus the dwell alone?
 
 Planned audio mirrors generation._sum_audio's per-beat rule exactly
 (est_spoken_seconds override, else word_count @ 150 wpm) applied to the plan
@@ -52,8 +51,7 @@ def measure(
         active = snapshot.beats_for(poi.id)
         plan = select_poi_beats(poi, active, interest_lenses=lenses)
         planned = planned_audio_seconds(plan.beats)
-        # Was compute_dwell_seconds(poi.tier), a flat per-tier number deleted
-        # 2026-08-06. A stop's length is now priced per visitor against the
+        # A stop's length is priced per visitor against the
         # place's own capacity, so the comparable figure here is what the
         # place absorbs from the outside — the one number every POI carries.
         dwell = poi.typical_duration_min * 60

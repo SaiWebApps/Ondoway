@@ -140,7 +140,7 @@ LENS_ADJACENCY_MISS: float = 0.0
 #
 # LENS_FLOOR (=0.25): lens_relevance on a thematic miss. A landmark on the
 # user's path still clears the floor on gravity → at least a brief mention;
-# "the only silence is low-gravity AND off-genre".
+# a POI is silent only when it is both low-gravity and off-genre.
 LENS_FLOOR: float = 0.25
 LENS_RELEVANCE_DIRECT: float = 1.0  # direct lens hit
 LENS_RELEVANCE_ONE_HOP: float = 0.6  # parent/child 1-hop via lens_neighbors
@@ -189,16 +189,16 @@ BAND_THRESHOLD_VIGNETTE: float = 0.5  # >= 0.5 -> walk-past vignette; below -> s
 # The silence invariant is structural, NOT a pure score threshold: silence
 # requires BOTH a lens miss AND low gravity. A high-gravity landmark
 # (tier >= BAND_LANDMARK_TIER) is NEVER silent -- lens alone can dim it to a
-# vignette but never to silence ("the only silence is low-gravity AND
-# off-genre"). This guard floors such a POI at VIGNETTE even if a large
+# vignette but never to silence (silence needs both low gravity and an
+# off-genre miss). This guard floors such a POI at VIGNETTE even if a large
 # proximity detour would otherwise push its score below the silent cut.
 BAND_LANDMARK_TIER: int = 4
 
-# Filler-stub demotion (2026-07-04, user-agent ratified). The dwell/vignette band
+# Filler-stub demotion. The dwell/vignette band
 # decision (band_for_spotlight) is score-driven (gravity x lens x proximity) and
 # NEVER looks at how much a stop will actually SPEAK. So a low-tier POI with one
-# 56s beat still becomes a full DWELL stop — a "walked here for one sentence"
-# anticlimax the tourists flagged (Crypte 56s, Hotel de la Monnaie 44s). A DWELL
+# 56s beat still becomes a full DWELL stop — the visitor walks there for one
+# sentence, an anticlimax. A DWELL
 # stop that would emit fewer than this many voiced seconds is demoted to a
 # walk-by vignette instead — EXCEPT a landmark (tier >= BAND_LANDMARK_TIER), which
 # never vanishes to a one-liner (a thin landmark discloses, per the density gate).
@@ -207,9 +207,9 @@ BAND_LANDMARK_TIER: int = 4
 # on-lens but ~275s total) is correctly KEPT.
 MIN_DWELL_AUDIO_SECONDS: int = 90
 
-# Absolute per-stop audio CEILING (C9h, 2026-07-16). No single stop may voice more
-# than this many seconds of continuous narration — the 10-minute "wall, not a walk"
-# monologue an acceptance review flagged as the top reason tours feel stilted.
+# Absolute per-stop audio CEILING. No single stop may voice more than this many
+# seconds of continuous narration: a longer stop is a monologue the visitor stands
+# through, which makes a tour feel stilted.
 # The terminal stop keeps a closing-friendly beat by swapping lower-priority
 # kept beats back into overflow; it does not receive an over-cap exception.
 # Applied to EVERY stop (the marquee included) on BOTH open-walk and A→B routes, as
@@ -218,39 +218,21 @@ MIN_DWELL_AUDIO_SECONDS: int = 90
 # recomputes its coverage baseline on the capped stitch, so NO fact is lost. Well
 # above MIN_DWELL_AUDIO_SECONDS so a capped stop never demotes to a vignette.
 # Tunable: raise to let a star dominate longer; lower for tighter stops.
-# DERIVED, not chosen (2026-07-19). This ceiling and the quality standard's per-stop
-# WORD cap were written independently and silently drifted: at 420 s, and with
-# routing.beat_spoken_seconds converting at 150 wpm, this permitted 420*150/60 = 1050
-# words in a single stop -- 40% above the published 750-word cap
-# (src/tour/quality_rubric.py GORGE_MAX_WORDS_PER_STOP, set from museum-sector
-# practice).
-# Notre-Dame's MEASURED 1038-word stop was therefore the ceiling WORKING AS CONFIGURED,
-# not a cap failure. Tied to the word cap so the two can no longer drift:
-#     750 words / 150 wpm = 5.0 min = 300 s
 #
-# THEY DRIFTED AGAIN. GORGE_MAX_WORDS_PER_STOP moved 750 -> 850 in a069efd (measured:
-# the widest stop in the certified corpus is 808 words, and 750 was BLOCKING three
-# tours this project itself certified). This constant did not move with it, and the
-# "can no longer drift" above is therefore false as written. Re-derived against 850 it
-# would be 850/150*60 - 30 = 310 s.
-#
-# LEFT AT 270 DELIBERATELY, PENDING AN OWNER DECISION (2026-07-27), then decided
-# (2026-08-19): a tight stop is point-first, about three minutes (~450 words), and
-# never past four. The measured big stops on a couple's day ran 4.5 and 4.9 min at
-# this 270. 180 s at 150 wpm = 450 beat words; the ~75-word glue reserve rides on
-# top as before (a rendered stop ~525 words,
-# ~3.5 min spoken). The ceiling is ALSO the price of a stop's dwell in the budget
-# (planned_capped_audio_seconds), so tighter tellings seat more stops per day — one
-# constant, one truth; a compose-time-only trim would fork priced from voiced, the
-# drift class this comment already records twice. The gap to
-# GORGE_MAX_WORDS_PER_STOP (850) is now deliberate headroom: the stitch can no longer
-# gorge a stop, so C8 guards COMPOSE inflation only. The full telling is a SECOND
-# composed piece with its own budget (<= 3x tight, hard cap 12 min),
-# never this ceiling raised.
-# MINUS a MEASURED glue reserve: the ceiling caps BEAT audio, but a rendered stop also
-# carries generation glue (arrival line, look-cue, closer). Measured per-stop glue on
-# the Ile de la Cite tour: 2 / 65 / 16 / 12 / 73 words. Budgeting the worst case
-# (~75 words = 30 s) keeps the RENDERED stop inside the cap instead of landing at 765.
+# A tight stop is point-first: about three minutes (~450 words), never past four.
+# 180 s at 150 wpm (routing.beat_spoken_seconds) = 450 beat words. The ceiling caps
+# BEAT audio, but a rendered stop also carries generation glue (arrival line,
+# look-cue, closer), measured at up to ~75 words (~30 s), so a rendered stop runs
+# ~525 words, ~3.5 min spoken.
+# The ceiling is ALSO the price of a stop's dwell in the budget
+# (planned_capped_audio_seconds), so tighter tellings seat more stops per day. One
+# constant prices and voices a stop; a compose-time-only trim would let the priced
+# stop and the voiced stop disagree.
+# The gap to the quality rubric's per-stop word cap (GORGE_MAX_WORDS_PER_STOP in
+# quality_rubric.py, 850 words) is deliberate headroom: the stitch cannot gorge a
+# stop, so the rubric's C8-gorged check guards compose-time inflation only. The full
+# telling is a SECOND composed piece with its own budget (<= 3x tight, hard cap
+# 12 min), never this ceiling raised.
 MAX_DWELL_AUDIO_SECONDS: int = 180
 
 # The five band labels, ordered loudest -> quietest. "silent" means excluded.
@@ -291,11 +273,9 @@ POI_ROLE_MULTIPLIER: dict[str, float] = {
 
 ANCHOR_TIERS: frozenset[int] = frozenset({3, 4, 5})
 
-# DELETED 2026-08-04 ("no stop limits, period"): ANCHOR_CAP_DIVISOR
-# and HARD_ANCHOR_CAP. The greedy now stops only when the walk budget or the audio
-# budget is spent, so DURATION is the sole bound on how many stops a tour has. The
-# tractability role the 15-anchor cap used to carry incidentally — keeping the exact
-# Held-Karp orderer under its one-second guard — now belongs to
+# There is no stop-count cap. The greedy stops only when the walk budget or the
+# audio budget is spent, so DURATION is the sole bound on how many stops a tour has.
+# Keeping the exact Held-Karp orderer under its one-second guard belongs to
 # ``ordering.ORDERING_EXACT_MAX``, which switches to cheapest insertion above 16
 # points without ever dropping a stop.
 
@@ -333,7 +313,7 @@ SPINE_AREA_TYPE_PRIORITY: tuple[str, ...] = (
 #
 # Threshold is the v3 schema geofence radius (100 m) — the same distance
 # the runtime uses to decide two coordinates point at "the same physical
-# place". An earlier plan called for 15 m, but live Paris corpus
+# place". A tighter gate such as 15 m is too small: live Paris corpus
 # coordinates show PdV (centroid 48.8555,2.3656) sits ~85 m from
 # Musée Victor Hugo's pin (48.8548,2.3661); a 15 m gate would never
 # catch the headline case the rule was written to fix. The name-token
@@ -465,21 +445,17 @@ MAX_STOP_PURE_DETOUR_SECONDS: int = 1800
 def stop_earns_its_walk(marginal_walk_seconds: int, stop_dwell_seconds: int) -> bool:
     """THE ONE walking-worth line.
 
-    Is this stop worth the walking it costs to add? Both halves of the ruling,
+    Is this stop worth the walking it costs to add? Both halves of the rule live
     in one definition every site that ADDS a stop calls — the ordinary fill, the
     under-fill rescue, and the timebox repair's slog test — because a rule that
-    lives in three places is a rule that forks. Before this, the
-    rescue applied a ratio, the repair applied the same ratio, and the ordinary
-    fill applied NOTHING but the walk budget, so a stop the rescue would refuse
-    was bought a line earlier as long as the budget had room. That is the
-    measured Shape B zig-zag (concorde-250 at 3.5-7.8x, greenwich at 2.7-4.1x):
-    a planner that flags 60.7x with one hand and buys it with the other is not
-    planning, it is arguing with itself.
+    lives in three places is a rule that forks. A fill that checked only the walk
+    budget would buy a zig-zag detour that the rescue refuses and the
+    illogical-detour gate flags.
 
     The currency is VISITOR-TIME on both sides: seconds of
     walking against the seconds the stop earns the visitor standing there —
-    never against what it says, because "a forty-minute interior carrying ninety
-    seconds of audio" is the shape this release exists to seat.
+    never against what it says, so a forty-minute interior carrying ninety
+    seconds of audio earns its walk.
     """
     return (
         marginal_walk_seconds <= RESCUE_MAX_WALK_PER_DWELL_SECOND * max(1, stop_dwell_seconds)
@@ -490,23 +466,22 @@ def stop_earns_its_walk(marginal_walk_seconds: int, stop_dwell_seconds: int) -> 
 # accumulate into a walk-heavy route — a 1->2 stop lift is the fix; a rich dense
 # area already seats more via the greedy, and this never fires there.
 RESCUE_STOP_FLOOR: int = 2
-# C11a: a GREEN-density route whose DELIVERED audio is below this fraction of the
+# A GREEN-density route whose DELIVERED audio is below this fraction of the
 # audio target is disclosed as thin (delivered_thin). ~0.5 flags the pool-vs-
 # delivered gap (e.g. a 90-min request delivering ~7 min) while leaving genuinely
 # rich tours (Ile ~0.68 of target) unflagged.
 GREEN_THIN_DELIVERY_FRAC: float = 0.5
-# C9 governor v4 (domination-gated share-of-DELIVERED, 2026-07-04). The cap acts
+# The per-stop audio governor (domination-gated share-of-DELIVERED). The cap acts
 # ONLY on a genuine DOMINATING OUTLIER — a non-exempt stop whose emitted audio
 # both exceeds GOVERNOR_SHARE_OF_DELIVERED of the tour's total delivered audio AND
 # exceeds GOVERNOR_DOMINATION_FACTOR x the MEAN of the OTHER non-exempt stops (so
-# it is drowning its peers, e.g. the UC5 'Ile de la Cite' encyclopedia-dump; the
+# it is drowning its peers, e.g. an encyclopedia-dump 'Ile de la Cite' stop; the
 # mean-of-others gate means two co-dominators can't shield each other). Balanced
 # tours (every stop near its fair share) are NEVER capped — an always-on share
 # cap over-trims them. EXEMPT (may dominate): the marquee (the
 # highest-tier delivered stop, ties -> highest-audio) and the fixed destination /
-# pulled endpoint. Importance-based exemption fixes the v3 bug where the greedy's
-# nearest proximity-seed (often a thin courtyard) held the exemption while the
-# real star was capped.
+# pulled endpoint. The exemption is importance-based so it lands on the real star,
+# never on the greedy's nearest proximity-seed (often a thin courtyard).
 GOVERNOR_SHARE_OF_DELIVERED: float = 1.0 / 3.0
 GOVERNOR_DOMINATION_FACTOR: float = 1.5
 
@@ -575,13 +550,9 @@ class CertificationPlanningInfeasibleError(Exception):
         self.gap_minutes = gap_minutes
         self.alternatives = alternatives
         # The tail is a whole clause, not a substituted number, because there are two
-        # different truths to tell and one of them has no number in it. Measured
-        # 2026-08-25 on a New York 60-minute start: `best_elapsed_seconds` was None and
-        # the old form rendered "best eligible bounded route nones." — the word "none"
-        # with the seconds unit glued on, in a sentence that had already claimed "the
-        # shortest one found is still longer than asked for" while nothing had been
-        # found at all. An editor-facing refusal must be "a line
-        # edit, not a guess"; a sentence that contradicts itself is neither.
+        # different truths to tell and one of them has no number in it: when
+        # `best_elapsed_seconds` is None, no bounded route was found at all. An editor
+        # reads this refusal to decide what to change, so it never contradicts itself.
         if best_elapsed_seconds is None:
             tail = "and no bounded route could be priced at all"
         else:
@@ -592,7 +563,7 @@ class CertificationPlanningInfeasibleError(Exception):
         )
 
 
-# Endpoint-pull (Q1, one-way only): after greedy completes, force-include
+# Endpoint-pull (one-way only): after greedy completes, force-include
 # the highest-scoring un-selected POI in the far half of the reachable
 # envelope as the final stop. The "far half" is anything beyond this
 # fraction of max_radius from start.
@@ -609,7 +580,7 @@ ENDPOINT_PULL_CANDIDATE_TOP_K: int = 5
 ENDPOINT_PULL_RESERVED_BUDGET_FRACTION: float = 0.25
 
 
-# Fixed-destination B-materialization (HYBRID, 2026-06-30).
+# Fixed-destination B-materialization (snap onto a nearby stop, else synthesize).
 # When the request carries a fixed end B, ORDER must pin a concrete POI as
 # the last stop. If a selected (already in-corridor) POI sits within this
 # many metres of B, snap B onto it — the user's "end here" is satisfied by
@@ -1339,10 +1310,10 @@ def _decode_physical_cues(raw) -> tuple[PhysicalCue, ...]:
 
 
 def _decode_coordinate_provenance(raw):
-    """Decode a D1 coordinate evidence object; missing legacy data stays None.
+    """Decode a coordinate evidence object; missing legacy data stays None.
 
     A present but malformed value is rejected rather than downgraded to
-    untrusted coordinates.  D2 will persist this canonical JSON shape.
+    untrusted coordinates.
     """
 
     if raw is None or raw == "":
@@ -1494,7 +1465,7 @@ def _closer_b_alternative(
 
 
 # ---------------------------------------------------------------------------
-# Fixed-destination B-materialization (HYBRID)
+# Fixed-destination B-materialization (snap or synthesize)
 # ---------------------------------------------------------------------------
 
 
@@ -1506,7 +1477,7 @@ def _materialize_fixed_end_b(
 ) -> tuple[list[POI], POI]:
     """Resolve a fixed end B to a concrete POI inside ``selected`` for ORDER.
 
-    HYBRID rule (locked):
+    The rule:
     - If a selected POI sits within ``B_SNAP_PROXIMITY_M`` of B, snap B onto
       the nearest such POI (ties broken by ascending id for determinism) and
       return it unchanged — ``selected`` is returned as-is.
@@ -1593,9 +1564,8 @@ def build_poi_beat_plans(
     sibling's beats merged into its host (the single source shared by
     ``/trips/generate``, ``/trips/{id}/compose``, ``scripts/tour_build.py`` and
     the golden harnesses). Vignette handling + ``BeatSequence`` construction stay
-    at the call sites (they differ per surface). C9b: an identity refactor of the
-    three production loops that already merged ``demoted_beats``; the golden
-    harnesses are routed through it too so they measure the shipped pipeline.
+    at the call sites (they differ per surface). The golden harnesses call it too,
+    so they measure the shipped pipeline.
     """
     require_materialized_snapshot(snapshot, operation="beat planning")
     family = expanded_interest_lenses(lenses, snapshot)
@@ -1675,7 +1645,7 @@ def build_poi_extra_narration(
 
 
 def _domination_caps(is_exempt: list[bool], audio: list[int]) -> list[int | None]:
-    """Per-stop second-caps for the v4 domination-gated governor.
+    """Per-stop second-caps for the domination-gated governor.
 
     Exempt stops → ``None`` (uncapped). A non-exempt stop is capped ONLY when it is
     a genuine DOMINATING OUTLIER: it exceeds ``GOVERNOR_SHARE_OF_DELIVERED`` of the
@@ -1685,7 +1655,7 @@ def _domination_caps(is_exempt: list[bool], audio: list[int]) -> list[int | None
     co-dominators would each hide behind the other. A dominator is capped to the
     share ceiling; capping lowers the total, so we re-check to a fixed point. A
     balanced tour, where no stop dwarfs the mean of its peers, is NEVER capped —
-    the whole point of governor v4. A cluster of 3+ NEAR-EQUAL rich stops
+    the whole point of this governor. A cluster of 3+ NEAR-EQUAL rich stops
     converges to a balanced delivery (only the single largest, if any, trims)
     rather than each being cut. Needs ≥2 non-exempt stops for "domination" to mean
     anything.
@@ -1722,7 +1692,7 @@ def _domination_caps(is_exempt: list[bool], audio: list[int]) -> list[int | None
 
 def _is_filler_stub(poi: POI, snapshot: CorpusSnapshot, lenses: Iterable[str] | None) -> bool:
     """A dwell-eligible POI too THIN to justify a dedicated stop — demote it to a
-    walk-by vignette (the "walked here for one sentence" anticlimax).
+    walk-by vignette (a visitor walked there for one sentence is an anticlimax).
 
     True iff the POI would be a DWELL stop (on-path dwell band) that is NOT a
     landmark (tier < BAND_LANDMARK_TIER) AND whose full emitted audio is under
@@ -1749,17 +1719,17 @@ def build_poi_beat_plans_capped(
     narration_density: str | None = None,
     closes_a_day: bool = True,
 ) -> tuple[tuple[POIBeats, tuple[str, ...]], ...]:
-    """C9 governor v4 — the shared EMISSION choke point: ``(kept, overflow_ids)``
+    """The per-stop audio governor — the shared EMISSION choke point: ``(kept, overflow_ids)``
     per POI, in route order. All six build sites (generate, compose, preview,
     tour_build, the two golden harnesses) go through here so the cap lives in ONE
     place.
 
     Two caps compose (whichever is tighter wins per stop):
-    1. The v4 DOMINATION governor (:func:`_domination_caps`) — relative, runs only
+    1. The DOMINATION governor (:func:`_domination_caps`) — relative, runs only
        on ``end_is_none`` (round-trip / open-walk); caps a single dominating outlier
        and EXEMPTS the MARQUEE (highest-tier delivered stop, ties -> highest audio)
        and ``route.fixed_end_poi_id``.
-    2. The absolute ``MAX_DWELL_AUDIO_SECONDS`` CEILING (C9h) — no stop, marquee
+    2. The absolute ``MAX_DWELL_AUDIO_SECONDS`` CEILING — no stop, marquee
        included, may voice more than this on EITHER route type, so no spot becomes a
        10-minute monologue. The marquee may still dominate, but only up to the
        ceiling.
@@ -1868,9 +1838,9 @@ def served_dwell_seconds(
     ONE definition, and the reason this function exists rather than the sum being
     written at each site. Four places price a route's non-walking time — the final
     band gate, the timebox repair's trial, the fixed-end rescue trim, and the
-    generated tour — and while any of them spelled it differently they could
-    disagree about the same route. The planner then buys a tour the tourist does
-    not get, which is the defect this whole phase removes.
+    generated tour — and if any of them spelled it differently they would
+    disagree about the same route, and the planner would buy a tour the tourist
+    does not get.
 
     Per stop it is ``stop_seconds(what the visitor spends there, what it says)``,
     where "what it says" is this route's own CAPPED plan — the same emission choke
@@ -1953,11 +1923,11 @@ def planned_capped_audio_seconds(
     lenses: Iterable[str] | None,
     allowance: int | None,
 ) -> int:
-    """Voiced seconds a POI's plan CONSUMES under the C9 governor: the capped
-    (allowance-truncated) beats for an incidental stop, or the full uncapped plan
-    for an exempt anchor (``allowance is None``). This is selection's FLOOR-LESS
-    audio currency — no tier floor; tier dwell survives only as C8's reported
-    minute floor. Pure per (poi, lenses, allowance); memoize at the call site.
+    """Voiced seconds a POI's plan CONSUMES under the per-stop audio governor: the
+    capped (allowance-truncated) beats for an incidental stop, or the full uncapped
+    plan for an exempt anchor (``allowance is None``). This is selection's
+    FLOOR-LESS audio currency — no tier floor is added. Pure per (poi, lenses,
+    allowance); memoize at the call site.
     """
     family = expanded_interest_lenses(lenses, snapshot)
     plan = select_poi_beats(poi, snapshot.beats_for(poi.id), interest_lenses=family)
@@ -2004,9 +1974,9 @@ def reach_envelope_searched(
     ceiling is the right bound. Hence one arm.
 
     WHY THE HARNESS SHARES THIS RATHER THAN RE-DERIVING IT. A harness that computed
-    the radius from the requested duration would have printed 4,444 m both before
-    and after this fix, and the phase verifying the fix would have recorded "no
-    change" while proving nothing. See VALHALLA_MAX_CONTOUR_MINUTES above for the
+    the radius from the requested duration would print the same 4,444 m whatever
+    the planner actually searched, so it could never show a change in the planner's
+    reach. See VALHALLA_MAX_CONTOUR_MINUTES above for the
     second half of that hazard: this circle is only the FALLBACK admission test, so
     a report of it must also say whether the road polygon was available.
 
@@ -2049,10 +2019,10 @@ def select_route(
     CUSTOMER IS THE "MORE BREAKS" DIAL: a rest cadence with no
     context of its own is planned as a replan of the SAME request without the
     cadence — the base day's anchor and promises held, its longest leg a ceiling —
-    because the dial "may NEVER lengthen the longest
-    leg, never fund a rest by shaving an anchor", and a fresh plan under a
-    rest-shrunk budget did exactly that (measured: PdV walking 23 -> 39, longest
-    10 -> 18, Carnavalet 47-inside -> Rue des Rosiers 25-outside, no rest promise).
+    because the dial never lengthens the longest leg and never funds a rest by
+    shaving an anchor, and a fresh plan under a rest-shrunk budget does both: it
+    walks further, stretches the longest leg, trades an anchor's inside visit for
+    an outside one, and can still seat no rest.
     Two calls to the one planner; no second planner.
 
     ``_select_route_once`` is the whole planning pass (spine, greedy, repair,
@@ -2061,11 +2031,9 @@ def select_route(
     routed transits through ``routing.longest_walk_minutes`` — the same number,
     through the same rounding, the head line prints. Upstream the cap is checked
     on the legs each pass minted (`_insertion_legs_fit_cap`, the repair's chains),
-    but a later DROP merges two legs — measured live 2026-08-18: the repair
-    certified Carnavalet -> Victor Hugo 538 s and Victor Hugo -> Place des Vosges
-    176 s under a 540 s cap, co-located demotion folded Victor Hugo away, and the
-    merged 576 s leg shipped under "Shorter walks = 9" ("dropping a stop
-    MERGES its two legs"). And the estimate can
+    but a later DROP merges two legs: when co-located demotion folds a middle
+    stop away, its two certified legs fuse into one that can exceed the cap. And
+    the estimate can
     simply differ from the street (measured: -187 s to +285 s per leg). On a
     breach: tighten by the overshoot and retry ONCE; if the street still breaks
     the cap, REFUSE with the cap named in the dial's own words —
@@ -2136,8 +2104,8 @@ def select_route(
         return route
     # TIGHTEN AND RETRY, ONCE, at the exceeded value: plan again under a cap
     # shrunk by exactly the overshoot, so the legs the street stretches land
-    # under the cap the person set. One retry, never a loop (the plan's own
-    # sabotage line): a second miss is a refusal.
+    # under the cap the person set. One retry, never a loop: a second miss is a
+    # refusal.
     tightened = cap - (longest - cap)
     retried: Route | None = None
     if tightened >= 1:
@@ -2373,7 +2341,7 @@ def _select_route_once(
 
     ``score_penalty`` (poi_id → multiplicative factor) is the per-place score
     channel. Its live producers are the RAIN pricing below (a stop with no
-    cover dims on a wet day — commit 71654c97) and the skip-the-queues dial;
+    cover dims on a wet day) and the skip-the-queues dial;
     leave None for normal selection. It was born as the k-flavours diversity
     knob; the flavours were removed and the channel stayed.
 
@@ -2452,11 +2420,10 @@ def _select_route_once(
     # places up and a take-it-easy/couple day weights `sit_and_talk` up. None
     # (no party) = today's scoring, byte-identical.
     party = input.party
-    # RAIN REACHES THE RANKING. Halving a wet
-    # square's DWELL was supposed to shift selection toward covered places
-    # "through the existing value model" — but dwell flows into the greedy as
-    # COST, not worth, so cheaper wet squares packed DENSER: the first rain
-    # run swapped a covered church OUT for an open street. Worth reaches
+    # RAIN REACHES THE RANKING. Halving a wet square's DWELL alone does not
+    # shift selection toward covered places: dwell flows into the greedy as
+    # COST, not worth, so cheaper wet squares pack DENSER and a covered church
+    # can be swapped OUT for an open street. Worth reaches
     # selection only through score, and the planner already owns exactly one
     # per-place score knob — the penalty dict — so rain rides it: every
     # uncovered place's score dims by the same RAIN_DWELL_FRACTION the dwell
@@ -2483,12 +2450,11 @@ def _select_route_once(
                 queue_penalty[poi.id] = queue_penalty.get(poi.id, 1.0) * AVOID_QUEUES_SCORE_FACTOR
         score_penalty = queue_penalty
     # A fixed destination changes the SHAPE of the route, not how far a visitor can
-    # walk. The 2026-08-04 "certification reach model" that used to branch here has
-    # been deleted: it sized both the reach circle and the greedy's walking cap from
-    # `maximum_elapsed_seconds + tolerance`, the ceiling on walking PLUS narration.
-    # There is no route shape for which a walking-plus-talking ceiling is the right
-    # bound on walking alone. Both quantities now come from the walk budget, on
-    # every shape. See reach_envelope_searched.
+    # walk. Both the reach circle and the greedy's walking cap come from the walk
+    # budget, on every shape, never from `maximum_elapsed_seconds + tolerance`, the
+    # ceiling on walking PLUS narration: there is no route shape for which a
+    # walking-plus-talking ceiling is the right bound on walking alone. See
+    # reach_envelope_searched.
     certification_fixed_end = input.end is not None
     # The walk-cost divisor — routed leg times when a client is given (memoized;
     # the greedy re-evaluates the same coordinate pairs many times), else the
@@ -2948,8 +2914,8 @@ def _select_route_once(
                 # only the reader holding the finished route knows that (once:
                 # "Lapin Agile — closed all day Wednesday — we will see it from the
                 # outside" printed on a Tuileries→Notre-Dame day; Lapin Agile is in
-                # Montmartre). "seated outside only" was already ruled out:
-                # "seated" is the engine's word, and on a MARKET it read
+                # Montmartre). The wording "seated outside only" is never used:
+                # "seated" is the engine's word, and on a MARKET it reads
                 # as tables outside a shut market.
                 # A GUESS MAY SAY CLOSED BUT NEVER REMOVES A PLACE: only the map's
                 # hours may take a place out of the
@@ -2977,8 +2943,9 @@ def _select_route_once(
             and haversine_m(start_lat, start_lng, poi.lat, poi.lng) > input.escape_radius_m
         ):
             # THE ESCAPE RADIUS — a constraint on
-            # DISTANCE FROM THE START, not on any one leg: "a meltdown 25
-            # minutes from the exit means carrying a child for 25 minutes".
+            # DISTANCE FROM THE START, not on any one leg: a party that must
+            # leave at once (a tired child) walks back the whole distance from
+            # wherever it is.
             # Dwell pool only, same layer and same identity default as the
             # clock filter above — walking past a far place is still fine.
             # Recorded NOWHERE, unlike a closed museum: a closed door needs
@@ -2992,8 +2959,8 @@ def _select_route_once(
             #
             # This briefly also exempted anything WORTH VISITING regardless of what
             # it says, so a chocolate museum — low tier, thin beats, ninety minutes
-            # of interior — could be a stop. That is a real shape and the release
-            # is built for it, but measured on the live corpus the exemption cost
+            # of interior — could be a stop. That is a real shape the planner
+            # serves, but measured on the live corpus the exemption cost
             # more than it bought, twice:
             #
             #   * The 60-minute Place des Vosges round trip walked twenty minutes
@@ -3006,9 +2973,9 @@ def _select_route_once(
             #
             # The cause is that the greedy ranks by score over insertion cost, so a
             # cheap-to-reach silent place outranks a rich one the moment silence
-            # stops disqualifying it. Seating a place that says nothing is not what
-            # "a stop is worth what the visitor spends there" was ever meant to
-            # license: a visitor's silence at Concorde is silence AT a place the
+            # stops disqualifying it. A stop is worth what the visitor spends there,
+            # but that never licenses seating a place that says nothing: a visitor's
+            # silence at Concorde is silence AT a place the
             # tour told them about.
             #
             # Re-opening this needs the greedy to value what a stop CONTRIBUTES,
@@ -3032,7 +2999,7 @@ def _select_route_once(
             continue
         candidates.append(poi)
 
-    # THE RAIN DIM REACHES A VOIDED DOOR (an acceptance finding): the
+    # THE RAIN DIM REACHES A VOIDED DOOR: the
     # pre-pool rain overlay dims only category-uncovered places, so a closed
     # museum kept as a facade still scored as SHELTER and out-competed open
     # streets on a wet day — the walker handed a 30-minute stand outside a
@@ -3167,14 +3134,14 @@ def _select_route_once(
         if candidate.id not in held_ids
     ]
 
-    # C9 governor (SCOPED to round-trip / open-walk, end is None; A->B keeps the
-    # Phase-2 currency + corridor discipline — see _capped_audio): floor-less
-    # capped-audio currency. The first-seated POI is the START-ANCHOR
-    # (positional, decision 3) and is exempt (allowance None => full accounting);
-    # every other stop is capped to the per-stop allowance. The audio break is
-    # SUPPRESSED until the route reaches the min(3, d//10) stop floor, so a
-    # beat-rich anchor can never collapse the tour to one stop (the abandoned
-    # >=2 hard-ceiling refutation).
+    # The per-stop audio governor (SCOPED to round-trip / open-walk, end is None;
+    # A->B caps every stop at the absolute ceiling and keeps the corridor
+    # discipline — see _capped_audio): floor-less capped-audio currency. The
+    # first-seated POI is the START-ANCHOR (positional) and is exempt (allowance
+    # None => full accounting); every other stop is capped to the per-stop
+    # allowance. The audio break is SUPPRESSED until the route reaches the
+    # min(3, d//10) stop floor, so a beat-rich anchor can never collapse the tour
+    # to one stop.
     # STILL AN AUDIO CAP, deliberately: it bounds how long one ordinary stop may
     # TALK, which is a fairness rule about narration share and has nothing to do
     # with how long the visitor stands there. Only its base moved, and the number
@@ -3408,7 +3375,7 @@ def _select_route_once(
         consumed_walk += best_extra
         # Start-anchor exemption applies ONLY to round-trip / open-walk (end is
         # None): there the first-seated POI is genuinely the start-anchor and may
-        # dominate (decision 3). For A->B the first-seated is an INCIDENTAL
+        # dominate. For A->B the first-seated is an INCIDENTAL
         # corridor POI — exempting it would starve the real destination B (which
         # is materialized post-greedy and exempt at EMISSION), so A->B caps every
         # corridor stop.
@@ -3678,18 +3645,18 @@ def _select_route_once(
         # comes with it because the move only offers a stop the visitor would
         # otherwise have gone INSIDE.
         #
-        # PLANNING ONLY — NEVER ON A LIVE REPLAN, and this is the whole rule.
-        # "Fabric may change silently; promises may not." At planning
+        # PLANNING ONLY — NEVER ON A LIVE REPLAN, and this is the whole rule:
+        # fabric (what was never promised) may change silently; a promise may
+        # not. At planning
         # time nothing has been promised yet, so trading a cathedral's interior for
         # its facade is an honest way to serve the hour that was asked for. Once the
         # day is on the wire that interior IS a promise, and withdrawing it because
         # the walker is running late is a silently thinner day, which is
         # forbidden. The session's own machinery already owns that moment:
         # it ASKS ("keep the rest, or shorten?") rather than deciding for them.
-        # MEASURED 2026-08-25: with the move live on the replan path,
-        # `test_a_day_built_around_one_place_asks_rather_than_dropping_it` lost its
-        # question entirely — the engine stepped the visitor's Orsay outside instead
-        # of asking. Forcing `exterior_only` off restored the question exactly.
+        # With the move live on the replan path the engine would step the visitor
+        # outside instead of asking;
+        # `test_a_day_built_around_one_place_asks_rather_than_dropping_it` pins it.
         exterior_only_ids=exterior_only_ids if replan is None else None,
         shape_visit=shape_visit if replan is None else None,
     )
@@ -3812,7 +3779,7 @@ def _select_route_once(
     # endpoint stays pinned last (if demotion didn't absorb it); round trips
     # optimize the closed tour.
     #
-    # When the request carries a fixed end B, materialize B (HYBRID:
+    # When the request carries a fixed end B, materialize B (
     # snap to the nearest in-corridor selected POI within ~150m, else
     # synthesize a sentinel at B's exact coord and add it to ``selected``) and
     # pin it as ``fixed_end`` so the route literally ends at B. This SUPERSEDES
@@ -4150,7 +4117,7 @@ def _select_route_once(
                     closed_reports=poi.hours_closed_reports,
                 )
             )
-    # C9 governor exempt identity — record which POIs are EXEMPT from the per-stop
+    # Governor exempt identity — record which POIs are EXEMPT from the per-stop
     # audio cap so compose and the golden harnesses (which lack the greedy locals,
     # and where pois[0] is NOT the start-anchor after Held-Karp) read the SAME
     # exempt set the greedy used. Additive metadata only; pois/transits/beats are
@@ -4158,7 +4125,7 @@ def _select_route_once(
     # Only persist an anchor id that is ACTUALLY in the final route: the greedy's
     # first-seated exempt_anchor_id can be dropped afterward by co-located demotion
     # (folded into its host), which would otherwise leave start_anchor_poi_id
-    # dangling on a POI the route no longer contains. (v4's governor exempts the
+    # dangling on a POI the route no longer contains. (The governor exempts the
     # marquee, computed in-wrapper, so this field is advisory — but keep it
     # consistent for the persisted options_json contract.)
     route_poi_ids = {p.id for p in route.pois}
@@ -4262,17 +4229,16 @@ def _select_route_once(
         )
     # THE ONE UNDERFILL LINE. The floor is soft above it, and
     # below it a day is refused with what binds named: a best-possible day
-    # under HALF the ask is "no day, mislabelled".
+    # under HALF the ask is no day at all, and serving it under the ask's name
+    # mislabels it.
     # It lives HERE and only here, after every pass that can shorten a day has
     # run — the repair, the concentrate dial, co-located demotion, twin collapse,
-    # ordering, orientation, body seating — because the passes were measured
-    # composing under a line each of them respected on its own (leg 9 + rest 40
-    # + fewer shipped 68 of 180), and because the repair's
-    # copy of this line compared against the repair's rest-shrunk budget while
-    # printing that shrunk number as "asked for" ("132 minutes
-    # asked for" against a 180-minute request). Currency: the day's
-    # EXPERIENCE — elapsed minus the queue seconds it budgets
-    # ("queues are budgeted, never credited") — against the REQUEST's own
+    # ordering, orientation, body seating — because passes that each respect the
+    # line on their own can still compose to a day far under it, and because a
+    # copy of this line inside the repair would compare against the repair's
+    # rest-shrunk budget and print that shrunk number as "asked for". Currency:
+    # the day's EXPERIENCE — elapsed minus the queue seconds it budgets (queue
+    # time is budgeted, never credited as experience) — against the REQUEST's own
     # nominal. `open` zeroes the floor and is exempt by construction.
     final_experience = final_elapsed - sum(route.planned_queue_seconds.values())
     if (
@@ -4322,23 +4288,23 @@ def _select_route_once(
     vignettes = _select_vignettes_validated(route, snapshot, lenses=interest or None)
     if vignettes:
         route = route.model_copy(update={"vignettes": vignettes})
-    # C11a: a GREEN-density pool can still DELIVER thin — audio far under the
+    # A GREEN-density pool can still DELIVER thin — audio far under the
     # request (few reachable/affordable dwell POIs, or beat-thin ones) or a
     # single dominating stop. Flag it so the surface discloses "honest but thin"
-    # instead of silently reading fully-GREEN. (The engine-side answer to the
-    # 2026-07-02 pool-vs-delivered gap; replaces the client-side thin heuristic.)
+    # instead of silently reading fully-GREEN. The engine decides this, not a
+    # client-side heuristic.
     if assessment.status == "GREEN":
-        # v4: measure the UNCAPPED available content, NOT the governor-capped
+        # Measure the UNCAPPED available content, NOT the governor-capped
         # emission. The governor only moves a dominating stop's overflow into
         # keep-exploring extras (still available to the walker on demand), so a
         # capped tour is not "thin" — its content is all there. Measuring capped
         # audio would flip a healthy tour to a spurious thin banner when the
-        # governor fires. This is the original C11a currency.
+        # governor fires.
         #
-        # BOTH SIDES ARE STANDING-STILL SECONDS since 2026-08-06. Comparing
+        # BOTH SIDES ARE STANDING-STILL SECONDS. Comparing
         # delivered NARRATION against a dwell target would call a tour thin for
         # being quiet, which is the opposite of true: a route of long interior
-        # visits is the richest thing this release can produce, and sixteen
+        # visits is the richest thing the planner can produce, and sixteen
         # silent minutes at Concorde are the tour working.
         delivered_dwell = sum(
             stop_seconds(
@@ -4383,7 +4349,7 @@ def apply_co_located_demotion(
     on a tie, fewer beats loses; final tie-break is alphabetical id so
     the outcome is deterministic.
 
-    The Tour 1 case: Musée Victor Hugo (tier 4) sits at the same
+    The headline case: Musée Victor Hugo (tier 4) sits at the same
     physical address as Place des Vosges no. 6 (tier 5). PdV carries a
     beat with sub_location ``hugo-museum-no-6`` whose tokens overlap
     Hugo museum's distinctive ``hugo`` token. Hugo museum demotes;
@@ -4643,12 +4609,10 @@ def _apply_fill_pass(
         ``FILL_PASS_WALK_BUDGET_FRAC x walk_budget``;
       - no remaining candidate fits.
 
-    Until 2026-08-06 the first of those counted narration and called it a
-    "dwell-seconds proxy". It is no longer a proxy: ``stop_cost_fn`` returns
-    what the visitor actually spends at a stop, so a place with a long interior
-    and little to say now fills the tour, which is the whole point of the
-    release. A room you stand in for forty minutes used to count for the ninety
-    seconds it spoke.
+    The first of those is not a narration proxy: ``stop_cost_fn`` returns what
+    the visitor actually spends at a stop, so a place with a long interior and
+    little to say fills the tour. A room you stand in for forty minutes counts
+    for forty minutes, not for the ninety seconds it speaks.
 
     Insertions go through ``insertion_cost_seconds`` so the route stays
     geometrically sane. The post-endpoint-pull last-anchor (one-way
@@ -4798,8 +4762,8 @@ def _apply_fill_pass(
             # logic exists to prevent.
             #
             # NO `party=` HERE, DELIBERATELY: this call feeds a BAND
-            # classification (dwell vs vignette eligibility), not a ranking —
-            # "banding is not party-aware in this phase". Threading party into
+            # classification (dwell vs vignette eligibility), not a ranking, and
+            # banding is not party-aware. Threading party into
             # the score above would let a family's affordance boost change
             # WHETHER a POI is eligible at all, not just how it ranks among
             # already-eligible candidates.
@@ -4823,10 +4787,8 @@ def _apply_fill_pass(
                 continue
             cand_dwell = stop_cost_fn(cand, exempt=False)
             # IS THE WALK WORTH THE STOP? Priced against what the stop EARNS the
-            # visitor, not what it says. The old form divided by narration alone,
-            # so a forty-minute interior carrying ninety seconds of audio was
-            # classified a walk-slog and refused — which is exactly the shape of
-            # stop this release exists to seat.
+            # visitor, not what it says, so a forty-minute interior carrying ninety
+            # seconds of audio is never classified a walk-slog.
             #
             # THE WORTH LINE, through its one
             # definition. A stop that cannot earn its walk is not rescued into
@@ -4980,8 +4942,8 @@ def _seat_body_stops(
     leg_seconds_fn: LegSecondsFn | None,
 ) -> list[POI]:
     """Seat a bench or toilet at every stretch of walking longer than the
-    rest cadence — the body-stop promise: "a rest
-    window with no bench under it is thirteen minutes standing on a stick".
+    rest cadence — the body-stop promise: a rest window with no bench under it
+    leaves the visitor standing through the whole rest.
     A family's toilet stop is ten minutes, zero cultural content, and not
     negotiable.
 
@@ -5302,8 +5264,8 @@ def _walk_arrivals(
     request's start hour; anything that prices a DECIDED order — the repair's
     trials, the rescue trim, the final Route, the promise assembly — walks
     the chain instead, so a stop reached at 14:00 pays the 14:00 queue, not
-    the 09:00 one. A second walk of this accumulation anywhere is the fork
-    the phase forbids; `_arrival_priced_visits` and `_assemble_promises` are
+    the 09:00 one. A second walk of this accumulation anywhere would fork the
+    arithmetic; `_arrival_priced_visits` and `_assemble_promises` are
     both views of this one.
 
     ``legs[i]`` is the walk INTO stop ``i`` (`_full_route_leg_seconds`' shape;
@@ -5358,8 +5320,8 @@ class _CertificationRouteTrial:
     walk_seconds: int
     dwell_seconds: int
     #: Seconds of LINE inside this trial's dwell, at each stop's arrival hour.
-    #: Queues are BUDGETED, never credited ("the fit metric cannot tell a
-    #: minute under Sainte-Chapelle's glass from a minute in a queue"): the
+    #: Queues are BUDGETED, never credited (a fit metric on raw elapsed cannot
+    #: tell a minute under Sainte-Chapelle's glass from a minute in a queue): the
     #: elapsed ceiling
     #: counts them in full, but the rank's nearest-the-request preference
     #: measures elapsed MINUS this, so the day that stands in line longest can
@@ -5367,8 +5329,9 @@ class _CertificationRouteTrial:
     queue_seconds: int = 0
     #: The longest SINGLE walk in this route. A walking budget is not one number:
     #: for a visitor who rests every twelve minutes, a 54-minute total is
-    #: unremarkable and the per-leg limit binds, so "a route with one 25-minute leg
-    #: and one 5-minute leg has the same total and is unusable". A family's
+    #: unremarkable and the per-leg limit binds, so a route with one 25-minute leg
+    #: and one 5-minute leg has the same total as an even one and is unusable. A
+    #: family's
     #: afternoon ends early when a leg runs long, and a visitor with a train to
     #: catch is watching the clock. Nothing in the model expresses
     #: this yet; ranking on it is the cheapest thing that stops the planner
@@ -5384,9 +5347,9 @@ class _CertificationRouteTrial:
         seconds under the floor and keeps buying enormous walks to close a gap
         the visit term already closed. That is Parc de la Villette coming back.
 
-        Delegates the actual combining to ``served_elapsed_seconds`` (dedup-
-        review 2026-08-07) — this trial's own walk/dwell terms are legitimately
-        its own, but the RULE for adding them is the one rule every caller uses.
+        Delegates the actual combining to ``served_elapsed_seconds`` — this trial's
+        own walk/dwell terms are legitimately its own, but the RULE for adding them
+        is the one rule every caller uses.
         """
         return served_elapsed_seconds(self.walk_seconds, self.dwell_seconds)
 
@@ -5505,7 +5468,7 @@ def _marquee_index(
     interest: frozenset[str],
 ) -> int:
     """The marquee stop's index: highest tier, ties → highest uncapped audio,
-    then id. The same identity the C9 governor exempts at emission
+    then id. The same identity the per-stop audio governor exempts at emission
     (build_poi_beat_plans_capped), restated because no Route exists at
     planning time; the loop orientation and the anchor promise
     both read THIS one computation."""
@@ -5540,8 +5503,8 @@ def _orient_loop(
     ONLY: an open walk's order is geometry, and this function is never
     called for one.
 
-    The marquee here is the same identity the C9 governor exempts at
-    emission — highest tier, ties → highest uncapped audio — restated
+    The marquee here is the same identity the per-stop audio governor exempts
+    at emission — highest tier, ties → highest uncapped audio — restated
     because no Route exists yet at ordering time; ids break the final tie
     so the choice never depends on list order. The anchor promise reads
     this same computation.
@@ -5576,15 +5539,10 @@ def _orient_loop(
 #: drops no stop; a sixth pinned/rest stop is still seated and protected, it
 #: is simply not headlined.
 #:
-#: LOWERED 5 -> 3 BY A SPEED KILL CRITERION (2026-08-11): the
-#: 180-min dated cells measured 7-47 s against the <= 11 s budget, and the
-#: criterion permits exactly one trade for speed — this count — before
-#: anything else. Applied with the caveat the measurement itself
-#: forced: capped and uncapped runs time IDENTICALLY (solo 32.19 s
-#: uncapped vs 32.25 s re-measured), so the promise list is NOT the cost —
-#: the repair's multi-pass enumeration over a demotion-widened dated pool is,
-#: and that lever is named for the owner and the next phase rather than
-#: silently traded here.
+#: Three is a speed trade: a 180-minute dated plan must finish inside an 11 s
+#: budget, and this count is the one thing traded for speed. The promise list
+#: itself is NOT the cost — capped and uncapped runs time identically; the
+#: repair's multi-pass enumeration over a demotion-widened dated pool is.
 MAX_PROMISES: int = 3
 
 
@@ -5732,8 +5690,8 @@ TIMEBOX_REPAIR_MAX_TRIALS: int = 4000
 # `select_route`, after every pass). The band floor stays SOFT — an honestly
 # short day ships with its shortfall disclosed (the well-liked base
 # days run 62-68%) — but a best-possible day delivering under HALF the requested
-# experience is "no day, mislabelled" (never quietly hand back a fraction of
-# what was asked), and it
+# experience is no day at all, and serving it as the asked day mislabels it
+# (never quietly hand back a fraction of what was asked), and it
 # REFUSES with the binding constraint named instead. `open` end-hardness zeroes
 # the band floor and is exempt by construction.
 UNDERFILL_REFUSAL_FRACTION: float = 0.5
@@ -5865,7 +5823,7 @@ def drop_stop(
     - A PROTECTED stop (a rest, meal, toilet, pin, the finish) is never
       dropped by arithmetic; it triggers the question. Asking to drop one is a
       programming error here, not a policy: ``ValueError``.
-    - "Dropping a stop MERGES its two legs" (a 12-minute and a 9-minute leg
+    - Dropping a stop MERGES its two legs (a 12-minute and a 9-minute leg
       fuse into 21): the merged leg is priced with the SAME leg function selection uses
       and reported against the cap; a caller must not take a drop whose
       ``merged_leg_fits`` is False. Measured live 2026-08-18: co-located demotion
@@ -6074,8 +6032,8 @@ def _apply_certification_timebox_repair(
         # set, which can mint a brand-new over-cap leg — and these trials LOOK
         # leg-aware because rank() reads max_leg_seconds, but rank only ranks.
         # Same filter shape as the ceiling above: over the cap = ineligible in
-        # every list, because under the axis a route with one over-cap leg "has
-        # the same total and is unusable".
+        # every list, because under the axis a route with one over-cap leg is
+        # unusable whatever its total.
         if input.max_leg_minutes is not None and trial.max_leg_seconds > input.max_leg_minutes * 60:
             return
         # THE WALKING BUDGET IS AN ADMISSION RULE HERE TOO — on days whose
@@ -6117,8 +6075,8 @@ def _apply_certification_timebox_repair(
             # even larger detour.
             marginal_walk = max(0, trial.walk_seconds - reference_walk_seconds)
             # THE PRODUCER OF THE TWO LISTS, and it has to move with the consumer
-            # below or the guard keeps demoting exactly the stops this release
-            # exists to seat. Priced in narration, a forty-five-minute interior
+            # below or the guard demotes exactly the long-interior stops the
+            # planner should seat. Priced in narration, a forty-five-minute interior
             # carrying ninety seconds of audio rates its walk at 30x and is filed
             # as a last-resort slog. Priced in what the visitor gets, the same
             # stop rates under 1x and is preferred — which is correct, because
@@ -6443,9 +6401,9 @@ def _apply_certification_timebox_repair(
             # so until now: the total was capped and the worst leg was free, so a
             # route with one fifty-minute march could out-rank a route of five
             # short ones that filled the same clock. For a visitor who stops every
-            # twelve minutes, "a route with one 25-minute leg and one 5-minute leg
-            # has the same total and is unusable"; a family's afternoon simply
-            # ends when a leg runs long.
+            # twelve minutes, a route with one 25-minute leg and one 5-minute leg
+            # has the same total as an even one and is unusable; a family's
+            # afternoon simply ends when a leg runs long.
             #
             # BANDED, not exact, and that is the point: shaving forty seconds off
             # the worst leg is not worth losing a better set of places for, so
@@ -6453,9 +6411,9 @@ def _apply_certification_timebox_repair(
             # only fires when one route asks for a materially longer unbroken walk
             # than another.
             trial.max_leg_seconds // 600,
-            # NEAREST THE REQUEST, MEASURED IN EXPERIENCE — elapsed minus queue
-            # ("the fit metric cannot tell a minute under Sainte-Chapelle's glass
-            # from a minute in a queue"). The ceiling banked the FULL elapsed above,
+            # NEAREST THE REQUEST, MEASURED IN EXPERIENCE — elapsed minus queue,
+            # because raw elapsed cannot tell a minute under Sainte-Chapelle's
+            # glass from a minute in a queue. The ceiling banked the FULL elapsed above,
             # so a queue still spends the budget; it just never EARNS rank — the
             # first corpus runs measurably promoted a 40-minute Louvre line
             # to "best fit" over queue-free multi-stop days because lines were
@@ -6644,10 +6602,10 @@ def _apply_certification_timebox_repair(
         if stepped_outside is not None:
             return stepped_outside
         # Nothing banked at all. TWO different worlds land here and the refusal
-        # must not confuse them (the c-leg12 defect: the message claimed
-        # the day "overruns" while its own numbers showed 75 built against 270
-        # required): with a leg cap set, every candidate day may have been
-        # REJECTED AT THE CAP — the day starved, it did not overrun.
+        # must not confuse them: with a leg cap set, every candidate day may have
+        # been REJECTED AT THE CAP — the day starved, it did not overrun, and a
+        # message saying it overruns would contradict its own numbers (75 minutes
+        # built against 270 required).
         # THREE worlds, not two. The
         # old test was `min(observed) < floor` and then REPORTED `max(observed)`,
         # so a candidate set that straddled the band — some days too short, some
@@ -6985,9 +6943,9 @@ def _is_excluded(area: str, snapshot: CorpusSnapshot) -> bool:
 #: enough to let a richer children's/talkable place occasionally beat a
 #: marginally higher-scoring one, never large enough to override a landmark
 #: (`importance` alone spans 1-5). `spotlight` does NOT gain this factor:
-#: banding is not party-aware in this phase, and this is a NEW factor added
-#: to `poi_score` alone, not a re-opening of the poi_score/spotlight
-#: deliberate-overlap ruling (dedup-review 2026-08-07).
+#: banding is not party-aware. The factor lives in `poi_score` alone and
+#: leaves the deliberate overlap between `poi_score` and `spotlight` (stated
+#: in `poi_score`) as it is.
 PARTY_AFFORDANCE_BOOST: float = 1.25
 
 
@@ -7020,12 +6978,12 @@ def poi_score(
     switch: with the candidate-pool lens gate removed, a lens-miss POI is
     eligible, so its score must DIM rather than ZERO -- otherwise the greedy
     would still never pick it and a tier-5 off-genre landmark would silently
-    drop out (violating "lens alone never silences a landmark"). The
+    drop out, and lens alone must never silence a landmark. The
     objective stays strictly multiplicative; only the lens factor's
     miss value changed from 0.0 to a positive floor. With no lenses requested
     both functions return 1.0, so the unlensed objective is byte-identical.
     """
-    # DELIBERATE OVERLAP WITH `spotlight`, not a fork (dedup-review 2026-08-07):
+    # DELIBERATE OVERLAP WITH `spotlight`, not a fork:
     # both multiply a tier-derived weight by the ONE `lens_relevance` definition,
     # and that shared factor already lives in one function. The tier transforms
     # differ ON PURPOSE — the greedy weighs raw tier against richness/alignment/
@@ -7185,7 +7143,7 @@ def band_for_spotlight(spotlight_score: float, *, tier: int) -> str:
     threshold: silence requires BOTH a lens miss AND low gravity. A high-gravity
     landmark (``tier >= BAND_LANDMARK_TIER``) is therefore floored at
     ``vignette`` even if a large proximity detour drove its score below the
-    silent cut -- "lens alone never silences a landmark on the user's path"
+    silent cut: lens alone never silences a landmark on the user's path
     (and a detour alone never does either). Only a genuinely low-gravity,
     off-genre POI (low tier whose score fell below BAND_THRESHOLD_VIGNETTE)
     goes silent.
@@ -7361,7 +7319,7 @@ def _has_active_beats(poi: POI, snapshot: CorpusSnapshot) -> bool:
 def _attach_tourability_if_yellow(route: Route, assessment: TourabilityAssessment) -> Route:
     """Attach the assessment to the Route for surface-side disclosure.
 
-    Attached when YELLOW, OR (C11a) when GREEN-but-delivered-thin. A fully-GREEN
+    Attached when YELLOW, OR when GREEN-but-delivered-thin. A fully-GREEN
     route that delivers richly carries NO tourability field — its absence signals
     "no warning needed". RED tours never reach this code path (raised earlier).
     """

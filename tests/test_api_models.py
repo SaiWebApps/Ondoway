@@ -20,7 +20,7 @@ class TestNodeLabel:
         assert len(NodeLabel) == 9
 
     def test_every_constrained_label_is_addressable(self):
-        """The drift guard the family split exposed: a label that carries a
+        """Drift guard: a label that carries a
         unique constraint is a real node kind the API must be able to
         address — a constraint without an enum member makes its endpoints
         an unconditional 422."""

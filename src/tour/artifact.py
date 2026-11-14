@@ -232,8 +232,8 @@ class PlaceReferenceEvidence(BaseModel):
 
     @model_validator(mode="after")
     def _reference_lane_is_consistent(self) -> PlaceReferenceEvidence:
-        # The shared lane core lives in corpus_places (dedup-review
-        # 2026-08-07); the artifact layer's own extras — directional
+        # The shared lane core lives in corpus_places; the artifact layer's
+        # own extras — directional
         # semantics and exact coordinate identity — follow it.
         check_reference_lane(
             self.reference_kind,
@@ -286,8 +286,8 @@ class SentencePlaceAssessment(BaseModel):
 
     @model_validator(mode="after")
     def _assessment_is_complete(self) -> SentencePlaceAssessment:
-        # The shared three-rule core lives in corpus_places (dedup-review
-        # 2026-08-07); the artifact layer's own guard — every reference bound
+        # The shared three-rule core lives in corpus_places; the artifact
+        # layer's own guard — every reference bound
         # to THIS exact sentence — follows it.
         check_place_assessment_references(
             self.assessment,
@@ -308,7 +308,7 @@ class PlaceEvidenceBundle(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    authority_scope: Literal["mechanism_only_m3c"] = "mechanism_only_m3c"
+    authority_scope: Literal["mechanism_only"] = "mechanism_only"
     primary_places: tuple[CanonicalPrimaryPlaceEvidence, ...]
     sentence_assessments: tuple[SentencePlaceAssessment, ...]
 
@@ -520,9 +520,9 @@ def derive_playback_assignments(
         cited_ids = set(sentence.cited_beat_ids)
         if cited_ids & seated_beat_ids and cited_ids & frozen_vignette_ids:
             raise ValueError("one fused sentence cannot cross stop and leg playback contexts")
-        # THE one leg-vs-stop rule is generation.is_walk_concurrent — this used
-        # to re-spell its glue-label set inline, so the freeze and the audio
-        # clock could drift apart (dedup-review finding, 2026-08-07).
+        # THE one leg-vs-stop rule is generation.is_walk_concurrent — re-spelling
+        # its glue-label set here would let the freeze and the audio clock drift
+        # apart.
         placement: Placement = (
             "leg"
             if is_walk_concurrent(sentence, frozen_vignette_ids, frozen_transit_ids)

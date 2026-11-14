@@ -143,12 +143,11 @@ def test_certification_fixed_end_rescue_reaches_exact_repair_once(monkeypatch):
         )
 
     # The contour REACH asks for is the WALKING envelope: 4 minutes at a 10-minute
-    # request (10 x 1.00 nominal x 0.40 WALK_FRACTION). It asserted 12 until
-    # 2026-08-06, because the fixed-destination arm sized its reach from
-    # ``maximum_elapsed_seconds + tolerance`` — the ceiling on walking PLUS
-    # narration. That is the defect this release removes; at a 300-minute request
-    # the same units error searched 12,259 m instead of 4,444 m, which is how a Rue
-    # Royale walk reached Parc de la Villette. Asserted against the budget rather
+    # request (10 x 1.00 nominal x 0.40 WALK_FRACTION). Sizing the fixed-destination
+    # reach from ``maximum_elapsed_seconds + tolerance`` — the ceiling on walking PLUS
+    # narration — would ask for 12 here; at a 300-minute request that units error
+    # searches 12,259 m instead of 4,444 m, which is how a Rue Royale walk reaches
+    # Parc de la Villette. Asserted against the budget rather
     # than as a bare literal, so this states the RULE and cannot quietly re-encode a
     # wrong number the next time the policy moves.
     assert captured["iso_minutes"] == round(budget.walk_envelope_minutes)
@@ -170,7 +169,7 @@ def test_timebox_drop_never_removes_the_materialized_fixed_destination():
     # NEAREST the request — it wins the repair's ranking outright, and only the
     # guard keeps it out.
     #
-    # RE-BASELINED 2026-08-06 for the hard ceiling, and the two numbers
+    # RE-BASELINED for the hard ceiling, and the two numbers
     # that moved both had to. "Nearest the request" used to mean nearest a nominal
     # sitting in the MIDDLE of a two-sided band, so a SHORTER route could win it;
     # now the request is the ceiling, so nearest means longest-without-crossing.
@@ -433,11 +432,10 @@ def test_select_route_off_corridor_rescue_reaches_exact_certification_repair_onc
     # needs rescuing. Both bounds now come from the same walking budget, so the
     # window between them is narrow.
     #
-    # It was hardcoded at y=0.002 until 2026-08-06. That sat inside a reach circle
-    # sized by walking PLUS narration (444 m at this fixture) and outside the
-    # corrected one (148 m) — so the fix that made the reach circle a WALKING
-    # envelope put this place genuinely out of reach: 221 m of walking, each way,
-    # against a 4-minute total walking allowance. The fixture was encoding the bug.
+    # A hardcoded y=0.002 sits inside a reach circle sized by walking PLUS
+    # narration (444 m at this fixture) and outside the WALKING envelope (148 m):
+    # 221 m of walking, each way, against a 4-minute total walking allowance. Such a
+    # fixture is genuinely out of reach and only passes against the wrong circle.
     #
     # Deriving the position means a future change to pace or to the budget
     # fractions MOVES this fixture rather than breaking it, and the assertion below
@@ -518,8 +516,8 @@ def test_final_certification_guard_rechecks_every_route_shape_after_transforms(
 ):
     """The last-line guard still re-prices a route the transforms moved.
 
-    RE-BASELINED 2026-08-06 when the request became a hard ceiling, and the two
-    directions no longer have the same right answer.
+    The request is a hard ceiling, and the two directions have different right
+    answers.
 
     OVER the request: refuse. A traveller who asked for thirty minutes and is
     handed fifty has been given something worse than a refusal, because they find
@@ -527,9 +525,9 @@ def test_final_certification_guard_rechecks_every_route_shape_after_transforms(
 
     UNDER the floor: SERVE IT, and say how short it is. Duration is a ceiling, not
     a contract to fill, and the only way a planner can guarantee filling one is by
-    walking somebody somewhere pointless — which is the reported bug this release
-    exists to remove. So the underfill case now asserts a route WITH a disclosure
-    rather than an exception; asserting a refusal here would be pinning the bug.
+    walking somebody somewhere pointless. So the underfill case asserts a route
+    WITH a disclosure rather than an exception; asserting a refusal here would pin
+    that pointless walk.
 
     The claim the test is named for is unchanged: the guard runs after the
     post-selection transforms, on every route shape.
@@ -590,26 +588,24 @@ def test_final_certification_guard_rechecks_every_route_shape_after_transforms(
 def test_fixed_destination_reach_radius_is_a_walk_envelope_not_a_total_ceiling():
     """The circle the reach test searches must be sized by WALKING time.
 
-    The sibling of the greedy walk-budget defect below, and nothing covered it
-    until this test. ``select_route`` sizes the fixed-destination reach circle from
-    the TOTAL time ceiling — walking PLUS narration — while the open arm sizes the
-    same circle from the walk envelope. The reach question is identical on both
-    arms ("how far can this visitor walk from here?"), so the two answers must be
-    the same. They are not.
+    The sibling of the greedy walk-budget guard below. The open arm sizes the
+    reach circle from the walk envelope, and the fixed-destination arm must too:
+    the reach question is identical on both arms ("how far can this visitor walk
+    from here?"), so the two answers must be the same.
 
-    MEASURED on the live Paris dev graph, 2026-08-06, through the tour-build
-    harness at a 300-minute request: **12259 m searched on the fixed-destination
-    arm against a 4444 m walk envelope** — a factor of 2.76. Paris is roughly 10 km
-    across, so the fixed-end arm searches a circle wider than the city in order to
-    plan a walk between two points about 30 walking minutes apart. That is the
-    arithmetic by which a Rue Royale to Notre-Dame request reaches Parc de la
-    Villette, 5.6 km away and in the wrong direction.
+    Sized from the TOTAL time ceiling — walking PLUS narration — a 300-minute
+    request through the tour-build harness searches **12259 m on the
+    fixed-destination arm against a 4444 m walk envelope**, a factor of 2.76. Paris
+    is roughly 10 km across, so the fixed-end arm would search a circle wider than
+    the city in order to plan a walk between two points about 30 walking minutes
+    apart. That is the arithmetic by which a Rue Royale to Notre-Dame request
+    reaches Parc de la Villette, 5.6 km away and in the wrong direction.
 
     Pinned against the DEFAULT planning policy on purpose, so the numbers here are
     the same ones the harness prints rather than a fixture's private arithmetic.
     """
-    start = (48.8686, 2.3229)  # Rue Royale, the owner's clicked start
-    end = (48.8530, 2.3499)  # Notre-Dame, the owner's clicked end
+    start = (48.8686, 2.3229)  # Rue Royale
+    end = (48.8530, 2.3499)  # Notre-Dame
 
     open_radius, _open_iso = reach_envelope_searched(
         TourInput(start=start, duration_min=300, city_slug="test")
@@ -636,15 +632,15 @@ def test_fixed_destination_greedy_is_capped_by_the_walk_budget_not_the_total_cei
 ):
     """The greedy spends WALKING seconds, so a WALK budget must bound it.
 
-    REGRESSION (2026-08-04). ``greedy_walk_budget`` was set to
-    ``certification_total_ceiling`` on the fixed-destination arm. That value is
-    the ceiling on total ACTIVE time — walking PLUS narration — so at 90 minutes
-    it handed the greedy 6000 walking seconds against a 2160-second walking
-    allocation. Every A→B route could therefore spend the whole tour's elapsed
-    budget on walking before one second of narration was counted, and the final
-    band check refused the planner's own answer. Measured on the live Paris dev
-    graph the same day: a 90-minute walk ending 27 m from its own start seated
-    15 stops and 5787 s of walking, then refused.
+    REGRESSION GUARD. Setting ``greedy_walk_budget`` to
+    ``certification_total_ceiling`` on the fixed-destination arm is wrong. That
+    value is the ceiling on total ACTIVE time — walking PLUS narration — so at 90
+    minutes it hands the greedy 6000 walking seconds against a 2160-second walking
+    allocation. Every A→B route could then spend the whole tour's elapsed budget on
+    walking before one second of narration is counted, and the final band check
+    refuses the planner's own answer: on the Paris dev graph a 90-minute walk
+    ending 27 m from its own start seats 15 stops and 5787 s of walking, then
+    refuses.
 
     The units error is the whole bug, so this test measures units. It captures
     the stop set the greedy hands to the fill pass and prices the walking it
@@ -734,11 +730,10 @@ def test_the_repair_and_the_final_gate_price_the_same_stop_set_identically():
 
     The timebox repair banks a stop set only if IT thinks the set is in band;
     the final gate then re-prices the winner and refuses it if IT disagrees. So
-    a route can only survive when the two agree, and until 2026-08-06 they
-    could not: the repair added walking to NARRATION while the gate was moving
-    to walking plus VISITS. A repair that sees a route thousands of seconds
-    short keeps buying enormous walks to close a gap the visit term had already
-    closed, which is Parc de la Villette returning by a different door.
+    a route can only survive when the two agree. A repair that adds walking to
+    NARRATION while the gate prices walking plus VISITS sees a route thousands of
+    seconds short and keeps buying enormous walks to close a gap the visit term
+    has already closed, which is Parc de la Villette returning by a different door.
     """
     from src.tour.selection import served_dwell_seconds
 
@@ -792,12 +787,11 @@ def test_the_repair_and_the_final_gate_price_the_same_stop_set_identically():
 def test_a_place_worth_standing_in_is_a_preferred_add_not_a_walk_slog():
     """The producer of the preferred / last-resort split moved with its consumer.
 
-    The guard asks "is this detour justified by what we get?" and until
-    2026-08-06 it answered in narration alone, so a place worth twenty minutes
-    of anyone's afternoon but carrying one short beat was filed as a walk-slog
-    and demoted. That is precisely the shape of stop this release exists to
-    seat: the Conciergerie is sixty-five minutes inside and the audio is a
-    fraction of it.
+    The guard asks "is this detour justified by what we get?", and what we get
+    includes the visit. Answered in narration alone, a place worth twenty minutes
+    of anyone's afternoon but carrying one short beat is filed as a walk-slog and
+    demoted — and that is precisely the shape of stop the planner must seat: the
+    Conciergerie is sixty-five minutes inside and the audio is a fraction of it.
 
     THE OBSERVABLE. ``eligible_trials = preferred_trials or last_resort_trials``,
     so a single preferred trial makes the whole last-resort list unreachable.
@@ -843,7 +837,7 @@ def test_a_place_worth_standing_in_is_a_preferred_add_not_a_walk_slog():
     assert museum.id in seated, (
         "the interior stop was still classified a walk-slog, so the ratio's "
         "denominator is still narration and the guard keeps demoting exactly "
-        "the stops this release exists to seat"
+        "the stops the planner must seat"
     )
     assert thin.id not in seated, (
         "a preferred trial exists, so the last-resort list must be unreachable"
@@ -885,20 +879,17 @@ def test_an_area_that_cannot_fill_the_request_returns_a_short_tour_not_a_refusal
     """THE FLOOR IS SOFT — for honest near-misses. A thin corridor gets a
     shorter tour and a sentence.
 
-    This is the last door through which the reported bug returns. A planner
+    This is the last door through which a padding walk returns. A planner
     that MUST reach the floor has only one currency to pay in — distance — so
     it walks the tourist across the city to pad the clock, which is exactly how
     a Rue Royale walk ended up at Parc de la Villette. Making the floor a
     disclosure instead of a refusal removes the pressure entirely.
 
-    RE-DERIVED (a written decision, not an edit-to-pass): a line sits UNDER the
-    soft floor: a best-possible day under HALF the ask is "no day,
-    mislabelled" (the measured a-leg6 cell: one stop, 30 minutes, sold as
-    planned-180, GREEN) and REFUSES with the binding constraint named. This
-    fixture used to deliver ~22% of a 90-minute ask and pin that it shipped;
-    the same corpus now proves BOTH arms: at 30 minutes it is an honest
-    near-miss (~65%) and ships short with the disclosure; at 90 minutes it is
-    the extreme and refuses.
+    A line sits UNDER the soft floor: a best-possible day under HALF the ask is
+    "no day, mislabelled" (one stop and 30 minutes sold as a 180-minute plan) and
+    REFUSES with the binding constraint named. The same corpus proves BOTH arms:
+    at 30 minutes it is an honest near-miss (~65%) and ships short with the
+    disclosure; at 90 minutes it is the extreme (~22%) and refuses.
     """
     from src.tour.density import TourabilityRefusedError
     from src.tour.selection import CertificationPlanningInfeasibleError
@@ -1245,10 +1236,10 @@ def test_a_queue_never_earns_the_rank():
 
 
 def test_select_route_wires_the_queue_closure_into_the_repair():
-    """The judge's close-gate finding (2026-08-11): the queue-never-earns-rank
-    rule was proven against an injected double, while the PRODUCTION wiring —
-    select_route handing the repair a real queue closure — had no guard, so
-    deleting that one line kept every test green. This scan is the guard: the
+    """The queue-never-earns-rank rule is proven against an injected double, so the
+    PRODUCTION wiring — select_route handing the repair a real queue closure —
+    needs its own guard, or deleting that one line keeps every test green. This
+    scan is the guard: the
     repair call inside select_route must pass `queue_visit=` built on the
     pricer's own shape. RED when the wiring line is deleted; the functional
     half (the rank preferring the quiet day) is test_a_queue_never_earns_the_rank.

@@ -1,10 +1,9 @@
-"""API startup resilience — the Render deploy fix.
+"""API startup resilience.
 
-Regression guard for the 2026-07 outage: the app EAGERLY verified the Neo4j
-connection during FastAPI lifespan startup (`init_driver` -> `create_driver()`),
-so when the Aura instance became unreachable (DNS `Cannot resolve address ...`)
-the whole process crashed on startup, never opened its port, and every Render
-deploy failed its health check -> daily "deploy failed" emails.
+An app that EAGERLY verified the Neo4j connection during FastAPI lifespan startup
+(`init_driver` -> `create_driver()`) would crash whenever the database is
+unreachable (DNS `Cannot resolve address ...`), never open its port, and fail
+every deploy's health check.
 
 The app must START even when the database is unreachable: build the driver
 lazily, and let DB errors surface per-request. `/api/v1/healthz` then returns
@@ -54,7 +53,7 @@ def test_init_driver_never_crashes_startup(monkeypatch):
 
 
 def test_workbench_crud_gated_off_public_deployment(monkeypatch):
-    """Defect #2 (hostile red-team): the graph/nodes/edges/schema routers are the
+    """The graph/nodes/edges/schema routers are the
     LOCAL editorial workbench's UNAUTHENTICATED create/update/delete surface. On
     the public deployment (WORKBENCH_API_ENABLED=false) they must NOT be mounted,
     so an anonymous caller can't mutate the graph; the mobile-facing routes stay
@@ -74,9 +73,9 @@ def test_workbench_crud_gated_off_public_deployment(monkeypatch):
 
 
 def test_workbench_crud_gated_off_by_default(monkeypatch):
-    """New FAIL-CLOSED contract (2026-07-14 security hardening): the workbench
+    """FAIL-CLOSED contract: the workbench
     graph-CRUD routers are the LOCAL editorial workbench's UNAUTHENTICATED
-    create/update/DETACH-DELETE surface. They now mount ONLY when
+    create/update/DETACH-DELETE surface. They mount ONLY when
     WORKBENCH_API_ENABLED is EXPLICITLY truthy — an unset (or typo'd) value
     leaves them OFF, so a mis-configured deploy can never silently expose the
     repo-write/deploy surface on the internet. Checked via the route table so no
@@ -105,7 +104,7 @@ def test_workbench_gate_truthy_values_mount(monkeypatch, value):
 @pytest.mark.parametrize("value", ["false", "0", "no", "off", "FALSE", "", "garbage", "disabled"])
 def test_workbench_gate_non_truthy_values_stay_off(monkeypatch, value):
     """FAIL-CLOSED parser: explicit off values AND any unrecognized/empty value
-    (a typo, a garbage export) keep the gate OFF — the whole point of the flip."""
+    (a typo, a garbage export) keep the gate OFF."""
     monkeypatch.setenv("WORKBENCH_API_ENABLED", value)
     assert _workbench_api_enabled() is False
 

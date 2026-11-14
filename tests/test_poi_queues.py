@@ -1,8 +1,8 @@
 """Structural guard on the per-POI queue pricing in `data/{city}/poi-raw.json`.
 
 Five fields price the LINE in front of a place: the queue is a FOURTH kind of
-time, "priced separately, by hour and season", belonging to the day rather than
-to the building, and "excluded entirely under `wall`" — a visitor's 28-minute
+time, priced separately by hour and season, belonging to the day rather than
+to the building, and excluded entirely under `wall` — a visitor's 28-minute
 line is priced, and a hard-wall day is never promised an unboundable one.
 
   `queue_class`           str   none | short | long | unpredictable (closed).
@@ -310,9 +310,8 @@ def test_every_export_chunk_carries_the_queue_fields() -> None:
     """The export sync propagated all five fields into every export chunk.
 
     `data/{slug}/export/*.json` is what the deploy uploads, so a field written
-    only to poi-raw.json never reaches the graph — the Notre-Dame tier-1
-    incident shape. Presence and shape only; value agreement with poi-raw.json
-    is `tests/test_export_consistency.py`'s job.
+    only to poi-raw.json never reaches the graph. Presence and shape only; value
+    agreement with poi-raw.json is `tests/test_export_consistency.py`'s job.
     """
     for city in CITIES_WITH_QUEUE_PRICING:
         offenders = []
@@ -509,7 +508,7 @@ def test_the_export_sync_carries_the_queue_fields() -> None:
     poi-raw → export chunks — must carry all five queue fields, registered
     with the pass so the sync never lags it. Without
     this, the pass writes poi-raw.json and the deploy uploads chunks that
-    never heard of it — the Notre-Dame tier-1 incident shape.
+    never heard of it.
     """
     from scripts.sync_poi_exports import SYNCED_FIELDS
 

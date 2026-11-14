@@ -281,10 +281,10 @@ def test_empty_promises_route_prints_no_promises_line(capsys):
 
 
 def test_shape_column_renders_in_out_and_closed_out(capsys):
-    """Every stop's row fills the shape column (the sabotage list forbids a
-    column that only fills on promise stops): a goes-inside promise renders
+    """Every stop's row fills the shape column (never a column that only
+    fills on promise stops): a goes-inside promise renders
     `44m in` (240s outside + 2400s inside; the queue is NOT folded in, because
-    'folding them into one 66 makes the wait permanent'), an
+    one folded 66 makes the wait look permanent), an
     outside promise renders `15 min out`, an outside-only clock exclusion
     renders `closed — outside only` (units spelled out and the phrasal-verb
     collision removed, so a second-language listener reads it plainly), and

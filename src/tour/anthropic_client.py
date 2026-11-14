@@ -19,10 +19,9 @@ or contended call, while still bounding a stall.
 
 ``COMPOSE_TIMEOUT_S`` = 180 s. Compose is Opus, STREAMING, with
 ``thinking={"type": "adaptive"}`` and ``max_tokens=COMPOSE_MAX_OUTPUT_TOKENS``
-(64 000). Note that 64 000 was sized for the WHOLE-TOUR composer ("16K truncated
-a real 45-min Paris compose mid-JSON", ``compose.py:213-217``); the per-chapter
-composer this preview actually uses emits ONE stop of roughly 700 words (~1500
-tokens). 180 s is therefore already several times a healthy per-stop call.
+(64 000). That ceiling is sized so a whole tour's output never truncates
+mid-JSON; the per-chapter composer this preview actually uses emits ONE stop of
+roughly 700 words (~1500 tokens). 180 s is therefore already several times a healthy per-stop call.
 
 Retries: judges get 2 (they are cheap, and transient 429/529 is the common
 failure); compose gets zero hidden SDK retries. A fresh complete-tour candidate
@@ -56,19 +55,11 @@ COMPOSE_ABSOLUTE_DEADLINE_S: float = float(os.getenv("ONDOWAY_COMPOSE_ABSOLUTE_D
 # An SDK retry would evade that ledger, so the certification path always uses zero.
 CERTIFICATION_MAX_RETRIES: int = 0
 
-# REMOVED 2026-07-31 (owner order): the ONDOWAY_ENABLE_PAID_LLM_CALLS gate.
-#
-# It raised RuntimeError here, at SDK-client construction, unless an env var was
-# set. That is the wrong place for a gate: the failure surfaced deep inside
-# whatever happened to be running, as "paid LLM calls are locked" in a test that
-# was not trying to spend anything. Measured cost on the day it was removed —
-# 15 errors in test_trip_api and 2 in the authoring gates, none of them about
-# spending, all of them this guard ambushing a fixture. Measured benefit: none
-# observed; it never once prevented an actual overspend.
-#
-# Do not reinstate it here. If spend needs bounding, bound it at the entry point
-# — the route or the CLI — where the error is legible to the person who caused it
-# and can say what will be spent and on what.
+# No paid-call gate lives here, at SDK-client construction. A gate here fails
+# deep inside whatever happens to be running, including tests that spend
+# nothing. If spend needs bounding, bound it at the entry point — the route or
+# the CLI — where the error is legible to the person who caused it and can say
+# what will be spent and on what.
 
 
 def _build(timeout_s: float | None, max_retries: int) -> Any:

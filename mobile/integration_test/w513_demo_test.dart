@@ -1,19 +1,19 @@
-// The demo "the walk that noticed", on the iOS
-// Simulator. Both persona traces replayed as scripted position streams and a
+// A walk on the iOS Simulator in which the phone notices a long pause, a
+// linger and a late day. Both traces replayed as scripted position streams and a
 // scripted clock through the app's own doors (LocationProvider / AudioProvider
 // test doubles; the real TripService over the wire for the live replan), the
 // walk screen rendering every moment, and a verbatim transcript printed as
-// "W513 " lines (the host writes it to a file).
+// "NOTICED " lines (the host writes it to a file).
 // Screenshots: the host captures the simulator every 2 s; each moment pauses
 // six seconds after printing its marker so a frame lands on it.
 //
-// The days are the ones the planner GIVES these personas today (generated and
-// composed on the app path by w512_setup.py): FD — Fiona & Dev, Place Dauphine,
-// couple, 180 min from 15:00; RO — Rosemary, Orsay round trip, take-it-easy,
-// art lens (ONE stop under her preset's 12-minute cap); RO13 — the same request
-// at a 13-minute leg length (Orangerie, her bench, the Orsay). The
-// audio URLs are stand-ins so the doubles can "play" a piece; narration is not
-// the subject.
+// The days are the ones the planner gives these requests today (generated and
+// composed on the app path before the run, their trip ids passed in as
+// dart-defines): couple — Place Dauphine, couple, 180 min from 15:00; easy —
+// Orsay round trip, take-it-easy, art lens (ONE stop under the preset's
+// 12-minute cap); easy-13min — the same request at a 13-minute leg length
+// (Orangerie, a bench, the Orsay). The audio URLs are stand-ins so the doubles
+// can "play" a piece; narration is not the subject.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -95,7 +95,7 @@ class _Trace {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('the walk that noticed', (tester) async {
+  testWidgets('a walk that notices a pause, a linger and a late day', (tester) async {
     expect(_token.isNotEmpty, isTrue, reason: 'run with the dart-defines');
     final tripService = TripService();
 
@@ -119,7 +119,7 @@ void main() {
       await tester.pumpWidget(_app(service, tripId));
       await tester.pump();
       final t = _Trace(name, tripId, session, stops, service, voice, gps, clock);
-      t.lines.add('W513 [$name] DAY v${session.planVersion}: '
+      t.lines.add('NOTICED [$name] DAY v${session.planVersion}: '
           '${stops.map((s) => "${s.poiName} ${s.startTime} (${s.plannedVisitSeconds ~/ 60} min)").join(" -> ")}; '
           'day ${session.dayStartHhmm}-${session.plannedEndHhmm}; party ${session.party}; '
           'promises: ${session.promises.map((p) => "${p.kind} ${p.name} ${p.arrivesHhmm}${p.protected ? " (protected)" : ""}").join(", ")}; '
@@ -136,7 +136,7 @@ void main() {
       s.tick();
       await tester.pump();
       final etas = s.retimeRemaining();
-      final line = StringBuffer('W513 [${t.name}] ${hhmm(t.clock.now)} '
+      final line = StringBuffer('NOTICED [${t.name}] ${hhmm(t.clock.now)} '
           '(tour ${(s.tourElapsedSeconds ~/ 60).toString().padLeft(3)} min, wall ${(s.wallElapsedSeconds ~/ 60).toString().padLeft(3)} min) '
           '$label | state=${s.state.name} at=${s.currentStop?.poiName ?? "-"} '
           '| SCREEN: "${TourWalkPage.nextLineFor(s) ?? ""}" / "${TourWalkPage.finishLineFor(s) ?? ""}"'
@@ -151,7 +151,7 @@ void main() {
           '| eta: ${etas.map((e) => "${e.stop.poiName}@${s.dayFrameHhmm(e.secondsToArrival)}").join(", ")}');
       t.lines.add(line.toString());
       // The marker the host matches a screenshot to.
-      debugPrint('W513 MOMENT ${t.name} ${label.replaceAll(' ', '_')} ${DateTime.now().toIso8601String()}');
+      debugPrint('NOTICED MOMENT ${t.name} ${label.replaceAll(' ', '_')} ${DateTime.now().toIso8601String()}');
       if (pause) await Future<void>.delayed(const Duration(seconds: 6));
     }
 
@@ -163,9 +163,9 @@ void main() {
       }
     }
 
-    // ---------------- Fiona & Dev — the silence bar ---------------------------
+    // ---------------- The couple — a long pause announces nothing -------------
     if (_tripFd.isNotEmpty) {
-      final t = await open('FD', _tripFd, 15, 0);
+      final t = await open('couple', _tripFd, 15, 0);
       final s = t.service;
       final st = t.stops;
       t.gps.simulatePosition(48.856407, 2.342655); // Place Dauphine, 15:00
@@ -179,10 +179,10 @@ void main() {
       t.voice.simulateComplete();
       t.gps.simulatePosition(st[1].lat, st[1].lng);
       await moment(t, 'arrive ${st[1].poiName}, piece playing');
-      // 15:44 — Dev pauses. The tour clock stops; the wall does not.
+      // 15:44 — one of them pauses. The tour clock stops; the wall does not.
       t.clock.setHhmm(15, 44);
       s.pauseTour();
-      await moment(t, 'Dev pauses (minute 44)');
+      await moment(t, 'they pause (minute 44)');
       t.clock.setHhmm(16, 15);
       await moment(t, 'still paused, 31 minutes in — nothing announced');
       // 16:47 — minute 107 — they resume.
@@ -208,19 +208,19 @@ void main() {
         t.voice.simulateComplete();
       }
       await moment(t, 'end of the day');
-      t.lines.add('W513 [FD] SPOKEN LINES, verbatim: ${t.voice.said.isEmpty ? "(none)" : t.voice.said.join(" || ")}');
+      t.lines.add('NOTICED [couple] SPOKEN LINES, verbatim: ${t.voice.said.isEmpty ? "(none)" : t.voice.said.join(" || ")}');
       await close(t);
     }
 
-    // ---------------- Rosemary — the bar sentence, on both her days -----------
-    for (final (name, tripId) in [('RO', _tripRo), ('RO13', _tripRo13)]) {
+    // ---------------- The easy day — the one question, at both leg lengths ----
+    for (final (name, tripId) in [('easy', _tripRo), ('easy-13min', _tripRo13)]) {
       if (tripId.isEmpty) continue;
       final t = await open(name, tripId, 14, 0);
       final s = t.service;
       final st = t.stops;
       t.gps.simulatePosition(48.859962, 2.326561); // the Orsay, 14:00
       await moment(t, 'start at the Orsay');
-      // Walk her day at its own clocks: arrive each stop at its start_time,
+      // Walk the day at its own clocks: arrive each stop at its start_time,
       // the piece completes at its planned departure (a bench has no piece).
       for (var i = 0; i < st.length; i++) {
         final parts = st[i].startTime.split(':');
@@ -238,7 +238,7 @@ void main() {
         }
         await moment(t, 'leave ${st[i].poiName} at its planned departure', pause: false);
       }
-      // Her trace: at 16:32 she sits, and by 16:45 she has lingered
+      // The trace: at 16:32 she sits, and by 16:45 she has lingered
       // thirteen minutes. Wherever the day has left her.
       t.clock.setHhmm(16, 32);
       s.pauseTour();
@@ -251,13 +251,13 @@ void main() {
       final wrap = s.matchContingency(s.measure());
       if (wrap != null) s.applyContingency(wrap.contingencyId);
       await moment(t, 'she taps [Head back now]');
-      t.lines.add('W513 [$name] SPOKEN LINES, verbatim: ${t.voice.said.isEmpty ? "(none)" : t.voice.said.join(" || ")}');
+      t.lines.add('NOTICED [$name] SPOKEN LINES, verbatim: ${t.voice.said.isEmpty ? "(none)" : t.voice.said.join(" || ")}');
       await close(t);
     }
 
-    // ---------------- Rosemary, RO13 — the LIVE path, when the set has no answer
+    // ---------------- easy-13min — the LIVE path, when the set has no answer
     if (_tripRo13.isNotEmpty) {
-      final t = await open('RO13-live', _tripRo13, 14, 0);
+      final t = await open('easy-13min-live', _tripRo13, 14, 0);
       final s = t.service;
       final st = t.stops;
       t.gps.simulatePosition(48.859962, 2.326561);
@@ -270,7 +270,7 @@ void main() {
       t.clock.now = t.clock.now.add(const Duration(minutes: 50));
       final d = s.measure();
       final entry = s.matchContingency(d);
-      t.lines.add('W513 [RO13-live] measured: late ${d.minutesLate} min, at ${d.atStopId}, '
+      t.lines.add('NOTICED [easy-13min-live] measured: late ${d.minutesLate} min, at ${d.atStopId}, '
           'precomputed answer: ${entry?.contingencyId ?? "NONE — the live path"}');
       final sw = Stopwatch()..start();
       final next = await tripService.replanSession(
@@ -287,7 +287,7 @@ void main() {
       );
       s.holdSession(next);
       sw.stop();
-      t.lines.add('W513 [RO13-live] LIVE REPLAN in ${sw.elapsedMilliseconds} ms -> v${next.planVersion}: '
+      t.lines.add('NOTICED [easy-13min-live] LIVE REPLAN in ${sw.elapsedMilliseconds} ms -> v${next.planVersion}: '
           '${next.stops.map((x) => "${x.poiName} ${x.startTime}").join(" -> ")}; '
           'promises: ${next.promises.map((p) => "${p.kind} ${p.name} ${p.arrivesHhmm}${p.protected ? " (protected)" : ""}").join(", ")}; '
           'degradations: ${next.degradationNotices.join(" | ")}');

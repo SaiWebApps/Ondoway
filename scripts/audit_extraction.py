@@ -3,12 +3,11 @@
 
 The extraction report has ~12 sections (lens distribution,
 length-class shape, sub_location coverage, foreign-phrase preservation,
-extractor_state summary, etc.). Until now those were hand-computed in
-ad-hoc Python after each extraction. This module turns them into a
-single callable that returns a structured dict.
+extractor_state summary, etc.). This module computes them in a single
+callable that returns a structured dict.
 
-The output dict is what the skill's PIPELINE REPORT step reads back to
-the user. It also feeds the end-of-book promotion gate (≤5 %
+The output dict holds every section of the pipeline report an extraction
+run reads back to the user. It also feeds the end-of-book promotion gate (≤5 %
 imported_context across the whole book, fabrication audit at chunk
 boundaries).
 

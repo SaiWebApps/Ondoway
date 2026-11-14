@@ -1,6 +1,6 @@
 """Seed NarrativeBeat nodes tied to POIs and tagged with Lenses.
 
-Duration follows the Living Doc formula: importance_tier * 60 seconds.
+A beat's duration is importance_tier * 60 seconds.
 Café de Flore gets two beats (different lenses) to prove multi-beat per POI.
 """
 

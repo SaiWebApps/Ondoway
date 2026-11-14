@@ -26,13 +26,13 @@ Sainte-Chapelle 38 minutes inside plus 28 more in the queue to get in; another g
 the same building 15 from the outside and never goes in. The pair is what lets an
 interest change how long you stay, not only where you go.
 
-QUEUES COUNT, AND THE BASIS SENTENCE RECORDS THE SPLIT (owner ruling 2026-08-06).
+QUEUES COUNT, AND THE BASIS SENTENCE RECORDS THE SPLIT.
 ``visit_seconds_inside`` is the honest elapsed cost of going in, queue included,
-because this release exists to make the tour's clock match the tourist's day and
-Release 1 has no concept of what time of day it is — a queue excluded here is
+because the tour's clock has to match the tourist's day — a queue excluded here is
 simply lost, and every ticketed interior would quietly under-run. The basis
 sentence must state the split ("28 minutes of queue plus 38 under the glass") so
-Release 2's opening-hours work can separate the two without re-pricing the city.
+the queue pass (``scripts/poi_queues.py``) can price the line on its own without
+re-pricing the city.
 
 THE NUMBERS ARE ARGUED FOR, NOT ASSERTED. ``visit_basis`` exists because nobody
 reviewing this data has been to most of these places. A number with no sentence

@@ -1,11 +1,9 @@
 """Every Anthropic client in the tour engine must be BOUNDED.
 
-FOUNDING CASE (measured 2026-07-19): a workbench ``POST /trips/preview`` held 128
-sockets to api.anthropic.com (91 CLOSE_WAIT, 34 ESTABLISHED and unmoving) and had
-not returned after 32 MINUTES, against a UI promising "~1 min". The Anthropic API
-was healthy throughout (a direct Haiku call answered in 1.2 s). The cause was
-local: every client was constructed bare, inheriting the SDK's 600 s timeout with
-2 retries — up to 30 minutes of silent waiting for ONE stalled call.
+A client constructed bare inherits the SDK's 600 s timeout with 2 retries — up to
+30 minutes of silent waiting for ONE stalled call, while the request that made it
+(a workbench ``POST /trips/preview``, say) hangs with its sockets open, however
+healthy the Anthropic API is.
 
 These tests are the guard. They fail if a future change reintroduces a bare
 ``anthropic.Anthropic()`` anywhere in the tour engine, or drops the explicit
@@ -26,13 +24,11 @@ TOUR_DIR = REPO / "src" / "tour"
 
 #: EVERY directory that may construct an Anthropic client, not just src/tour.
 #:
-#: The first version of this guard globbed ``src/tour/*.py`` only. An adversarial
-#: review found two bare clients it structurally COULD NOT SEE:
+#: Clients are constructed outside ``src/tour`` too:
 #: ``src/api/routes/feedback.py`` (a live, request-blocking user route) and
-#: ``src/onboard/beat_draft.py`` (bulk city onboarding) — both carrying the identical
-#: 30-minute exposure the guard was written to eliminate, while the claim "the
-#: 30-minute hang is closed" was being made. A guard whose scope is narrower than
-#: the defect is a false assurance, so this now sweeps all of ``src/``.
+#: ``src/onboard/beat_draft.py`` (bulk city onboarding) carry the same 30-minute
+#: exposure. A guard whose scope is narrower than the code that can construct a
+#: client is a false assurance, so this sweeps all of ``src/``.
 SRC_DIR = REPO / "src"
 
 #: The factory module itself names the bare constructor in its docstring (that is
@@ -66,9 +62,8 @@ def _bare_anthropic_calls(path: pathlib.Path) -> list[int]:
 def test_no_bare_anthropic_client_anywhere_in_src() -> None:
     """NO module under src/ may construct an unbounded client directly.
 
-    Swept across ALL of src/, not just src/tour — see SRC_DIR's comment: the
-    tour-only version of this guard missed a live user-facing route and the
-    onboarding path, both with the same 30-minute exposure.
+    Swept across ALL of src/, not just src/tour — a live user-facing route and the
+    onboarding path construct clients too, with the same 30-minute exposure.
 
     UNDO TEST: revert any one call site (e.g. src/tour/verify.py:117,
     src/api/routes/feedback.py, src/onboard/beat_draft.py) to
@@ -94,7 +89,7 @@ def test_the_guard_actually_sweeps_beyond_src_tour() -> None:
 
     A scope regression is invisible: the suite stays green while the defect walks
     back in somewhere the glob no longer looks. This asserts the sweep really does
-    reach the two directories the original tour-only guard missed.
+    reach the two client-constructing modules outside src/tour.
     """
     swept = {str(p.relative_to(REPO)) for p in SRC_DIR.rglob("*.py")}
     for required in ("src/api/routes/feedback.py", "src/onboard/beat_draft.py"):

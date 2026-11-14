@@ -82,10 +82,10 @@ def is_walk_concurrent(
 ) -> bool:
     """Is this sentence spoken WHILE THE TOURIST WALKS, rather than at a stop?
 
-    Per the 2026-07-19 product ruling ("Audio overlaps the walking. It is a part of
-    the tour experience."), walk-concurrent narration costs no elapsed time — it
-    rides a leg the tourist is walking anyway. Everything else is spoken standing
-    still at a stop and does consume the tour's minutes.
+    Audio overlaps the walking and is part of the tour, so walk-concurrent
+    narration costs no elapsed time — it rides a leg the tourist is walking anyway.
+    Everything else is spoken standing still at a stop and does consume the tour's
+    minutes.
 
     ``vignette_beat_ids`` identifies walk-past one-liners, and
     ``transit_beat_ids`` the corpus transit beats ``_build_transit`` voices FOR
@@ -115,8 +115,8 @@ def transit_class_beat_ids(beats: Iterable[BeatRef]) -> frozenset[str]:
 #: NOT a new constant: ``routing.beat_spoken_seconds`` already falls back to
 #: ``word_count / 150 * 60`` and density's ``word_count / 2.5`` is the same figure.
 #: The live Paris corpus's populated ``est_spoken_seconds`` implies it tightly
-#: (486 beats: p10 147, median 150, p90 153). The standard's cited external range
-#: is 130-150 wpm (Nubart, Musa Guide) — 150 is the end this corpus was built at.
+#: (486 beats: p10 147, median 150, p90 153). Audio guides speak at 130-150 wpm;
+#: 150 is the end this corpus was built at.
 SPOKEN_WPM: int = 150
 
 # ---------------------------------------------------------------------------
@@ -367,7 +367,7 @@ def _last_word_is_abbrev(s: str) -> bool:
 # A walk-past vignette is ONE line heard in passing. A raw Wikipedia lead sentence
 # ("Nelson's Column is a monument in Trafalgar Square in the City of Westminster,
 # Central London, England, United Kingdom, built to commemorate …" — 50 words) recited
-# as a walk-past is the "reading Wikipedia aloud" failure a live A/B surfaced. Cap it.
+# as a walk-past sounds like reading Wikipedia aloud. Cap it.
 VIGNETTE_ONE_LINER_MAX_WORDS: int = 24
 
 
@@ -436,17 +436,11 @@ def generate(
     from .beat_select import reorder_final_stop_for_closing  # avoid cycles
     from .validation import validate_script  # avoid import cycle
 
-    # REAL BY DEFAULT (owner ruling 2026-07-31). This line used to read
-    # `glue_client or MockGlueClient()`, which made the CANNED client the default on
-    # every live path — trips.py generate_trip, trips.py compose_trip and
-    # premium_tour.plan_premium_tour all call generate() without a client, so every
-    # transition sentence in every tour the owner has ever read was a fixed string
-    # ("Stand here.", "Take a moment.", "End the walk here."). HaikuGlueClient, the real
-    # implementation, had ZERO call sites in product code. Tests were green throughout,
-    # because the tests were the code using the mock.
-    #
-    # The fake is no longer the default. A caller that wants a double must pass one
-    # explicitly; production passes nothing and gets the real thing.
+    # REAL BY DEFAULT. Every live path — trips.py generate_trip, trips.py
+    # compose_trip and premium_tour.plan_premium_tour — calls generate() without a
+    # client, so the default is the real HaikuGlueClient. A caller that wants a
+    # double must pass one explicitly; production passes nothing and gets the real
+    # thing.
     client = glue_client if glue_client is not None else HaikuGlueClient()
     sentences: list[Sentence] = []
 
@@ -835,7 +829,7 @@ def _synth_first_leg_text(
     secs = leg.leg_seconds or leg.walk_seconds or 0
     if secs < 20:
         # You're already standing at the first stop — don't tell the walker to
-        # "head for" a place they're on top of (the Tuileries/Concorde complaint).
+        # "head for" a place they're on top of.
         return _line(f"You're starting right at {name}. {SENSORY_INVITATION}", SYNTHESIZED_OPENER)
     minutes = round(secs / 60)
     if minutes <= 1:
@@ -983,8 +977,7 @@ def _build_anchor_block(
 _END_B_SENTINEL_PREFIX: str = END_B_SENTINEL_PREFIX
 
 # Varied deterministic connective-tissue templates, cycled by leg so the tour
-# never reads the identical nav line twice in a row (the "Walk to the next stop."
-# ten-times complaint). No em-dashes (TTS-clean).
+# never reads the identical nav line twice in a row. No em-dashes (TTS-clean).
 _NAV_TEMPLATES: tuple[str, ...] = (
     "From {prev}, make your way on to {cur}{dist}.",
     "Leaving {prev} behind, head for {cur}{dist}.",
@@ -1044,16 +1037,14 @@ def _build_transit(
 ) -> list[Sentence]:
     """Insert a corpus transit beat when present; otherwise a single glue nav.
 
-    Direction-awareness (2026-04-29): pre-existing transit
-    beats encode an origin → destination direction inferred from their
-    ``trigger_address`` + opening prose. Reusing them on routes that run
-    the opposite direction (or start at unrelated POIs) produced
-    geographically-broken openings in an earlier run:
+    Direction-awareness: corpus transit beats encode an origin → destination
+    direction inferred from their ``trigger_address`` + opening prose. Reusing
+    them on routes that run the opposite direction (or start at unrelated POIs)
+    produces geographically-broken openings, such as:
 
-    - Tour 4 stop 3 opened "Starting at Invalides Metro station…" when
-      the user was arriving from Pont de la Concorde.
-    - Tour 3 stop 3 opened "Leave the Sacré-Cœur…" before the user had
-      visited Sacré-Cœur.
+    - "Starting at Invalides Metro station…" for a walker arriving from
+      Pont de la Concorde.
+    - "Leave the Sacré-Cœur…" before the walker has visited Sacré-Cœur.
 
     A corpus transit beat is accepted only when the pick can VERIFY its
     direction (``_find_directional_transit_beat``): the previous stop as
@@ -1427,7 +1418,7 @@ def _closure_opening_lines(route: Route) -> dict[int, Sentence]:
     """stop_idx → the closure acknowledgment, for every on-route stop whose
     door the CLOCK voided (``ClockExclusion.kept_outside`` — never the no-time
     or dusk notes, which describe places that are not closed and stay on the
-    screen channel). Owner ruling: interior description at a closed stop is
+    screen channel). Interior description at a closed stop is
     welcome — a gift to the visitor who will come back — once the closure is
     said, once, FIRST. The caller places this as the stop's first stationary
     sentence; the premium writer receives it in the stitch and may rewrite it
@@ -1682,7 +1673,7 @@ def _flatten_pois(
                     planned_audio_seconds(plan_beats),
                 ),
                 beat_ids=beat_ids,
-                # C9g: the governor's trimmed-off beats, surfaced for
+                # The governor's trimmed-off beats, surfaced for
                 # keep-exploring (never silently dropped). Empty unless the cap
                 # fired on this stop.
                 overflow_beat_ids=beat_sequence.overflow_by_poi.get(poi.id, ()),
@@ -1707,41 +1698,34 @@ def _word_count(text: str) -> int:
 def _sum_audio(sentences: Iterable[Sentence], beat_sequence: BeatSequence) -> int:
     """Spoken seconds of the tour: the WORDS ACTUALLY VOICED, at ``SPOKEN_WPM``.
 
-    REWRITTEN 2026-07-19 because the previous model could not measure the thing it
-    was named for, and an entire day of tuning was spent optimising it before that
-    was noticed. It had two defects, either one disqualifying:
+    Two models are wrong, and either one would make ``total_audio_seconds``
+    measure SEATING VOLUME rather than audio:
 
-    1. **A flat 4 s per glue sentence**, regardless of length. Every reflection,
-       every navigation line, every vignette one-liner counted as 4 s. A 60-word
-       reflection takes ~24 s to speak and was credited 4 s. That made leg content
-       invisible to the tour's own audio clock: the engine would write narration
-       for a walking leg, refuse to count it, conclude it was short on audio, and
-       respond by seating ANOTHER STOP — creating more walking, hence more silence.
+    1. **A flat credit per glue sentence**, regardless of length. A 60-word
+       reflection takes ~24 s to speak; a flat 4 s credit makes leg content
+       invisible to the tour's own audio clock: the engine writes narration for a
+       walking leg, refuses to count it, concludes it is short on audio, and
+       responds by seating ANOTHER STOP — creating more walking, hence more silence.
 
     2. **A hard cap at the CORPUS estimate** — ``beat_secs * min(1.0, voiced/body)``.
-       The ratio is capped at 1.0, so richer composed prose could never raise the
-       number; only dedup could lower it. "How much audio does this tour deliver?"
-       was therefore answerable only downward. Measured by an adversarial review:
-       1 862 composed words (~745 s of speech) were credited as 696 s.
+       With the ratio capped at 1.0, richer composed prose can never raise the
+       number; only dedup can lower it, so composed speech is under-credited
+       (1 862 composed words, ~745 s of speech, are credited as 696 s).
 
-    Together these meant ``total_audio_seconds`` measured SEATING VOLUME, not audio.
-    Every figure derived from it — the 0.8 C3 floor comparisons, the fill pass's
-    sense of a deficit — was reading an instrument pointed at the wrong quantity.
-
-    THE NEW MODEL. Sum the words of every voiced sentence and divide by one
-    documented rate. That is all. It needs no per-source special cases: a vignette
+    THE MODEL. Sum the words of every voiced sentence and divide by one
+    rate. That is all. It needs no per-source special cases: a vignette
     voices one sentence and is credited that sentence's words; a merged beat is
     credited exactly the words the merge kept; a composed stop that genuinely says
-    more is credited more. The dedup honesty the old ratio was reaching for falls
-    out for free, because suppressed sentences contribute no words.
+    more is credited more. Dedup honesty falls out for free, because suppressed
+    sentences contribute no words.
 
-    ``SPOKEN_WPM`` is 150 — NOT a new judgement call. It is already this engine's
-    rate: ``routing.beat_spoken_seconds`` falls back to ``word_count / 150 * 60``,
+    ``SPOKEN_WPM`` is 150 — this engine's one rate:
+    ``routing.beat_spoken_seconds`` falls back to ``word_count / 150 * 60``,
     density's ``word_count / 2.5`` is the same figure, and the live Paris corpus's
     own populated ``est_spoken_seconds`` implies it tightly (486 beats: p10 147,
-    median 150, p90 153). The standard's cited external range is 130-150 wpm
-    (Nubart, Musa Guide); 150 is the fast end of it and the end this corpus was
-    built at, so keeping it preserves continuity with every existing estimate.
+    median 150, p90 153). Audio guides speak at 130-150 wpm; 150 is the fast end
+    of that range and the end this corpus was built at, so it agrees with every
+    existing estimate.
 
     ``beat_sequence`` is retained in the signature: callers pass it, and the
     per-beat identity it carries is still what the CALLERS use for their own

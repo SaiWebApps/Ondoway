@@ -37,9 +37,8 @@ def _poi(
 ) -> POI:
     # The two visit arguments default to the CONTRACT defaults (0 and None), so a
     # POI built without them prices at zero visit seconds and the gate's capacity
-    # collapses to exactly the beat seconds it counted before 2026-08-06. That is
-    # what keeps every hand-computed fixture in this file valid across the
-    # currency move rather than needing re-derivation.
+    # is exactly its beat seconds. That is what keeps every hand-computed fixture
+    # in this file valid without re-derivation.
     return POI(
         id=pid,
         name=pid,
@@ -93,8 +92,7 @@ PANTHEON = (48.84622, 2.34604)
 def test_walk_radius_matches_canonical_formula():
     """walk_radius = (duration x nominal x 0.4 x 3000 / 1.35) / 60, halved if round-trip.
 
-    The nominal fraction is 1.00 since 2026-08-04; it was a flat 0.83 until the legacy
-    planning policy was deleted, which is why this radius grew from ~738 m to ~889 m.
+    The nominal fraction is 1.00, so the 60-minute one-way radius is ~889 m.
     """
     # 60-min one-way: 60 x 1.00 x 0.4 x 3000 / 1.35 / 60 = 888.9m
     expected_one_way = (60 * 1.00 * 0.4 * 3000 / 1.35) / 60
@@ -105,9 +103,8 @@ def test_walk_radius_matches_canonical_formula():
 def test_target_audio_matches_canonical_formula():
     """target_audio_s = duration x the policy's nominal fraction x 0.6 x 60.
 
-    Nominal is 1.00 since 2026-08-04 (was a flat 0.83), so this is 2160 s, and it is now
-    THE SAME NUMBER selection fills — the whole point of threading the policy into the
-    density gate.
+    Nominal is 1.00, so this is 2160 s, and it is THE SAME NUMBER selection fills — the
+    whole point of threading the policy into the density gate.
     """
     pois = [_poi("p", lat=PDV[0], lng=PDV[1])]
     beats = {"p": (_beat("b1", "p"),)}
@@ -368,7 +365,7 @@ def test_compactness_close_to_one_when_anchors_at_envelope_edge():
 def test_le_marais_dense_centroid_green():
     """Le Marais centroid 60-min round-trip should be GREEN (synthetic stand-in).
 
-    An earlier finding said Le Marais is dense; this synthetic
+    Le Marais is a dense area; this synthetic
     fixture pins that property in unit tests so a regression in the
     formula (e.g., a misplaced 0.83 factor) is caught.
     """
@@ -461,7 +458,7 @@ def test_refused_carries_assessment():
 
 
 def test_surplus_fill_with_spread_anchors_is_yellow_not_red():
-    """Status-table hole (density-critic finding, 2026-07-02): fill >= 1.0 with
+    """Status-table hole: fill >= 1.0 with
     anchors 3-5 but compactness > 0.7 fell through EVERY clause to RED —
     yellow_by_fill requires fill < 1.0, yellow_by_anchors requires comp <= 0.7,
     GREEN requires anchors >= 4 AND comp <= 0.6. A pool with MORE than enough

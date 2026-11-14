@@ -121,8 +121,8 @@ def test_coordinates_sit_inside_the_city_bbox() -> None:
     """Every record sits inside its own city's registry bbox (the one bbox
     table, `src.city_registry.bbox_map()`). A bench outside the geofence can
     never be walked to inside the tour envelope, and its presence would mean
-    the fetch queried the wrong box (data conventions: all queries scoped to
-    the city geofence, never global)."""
+    the fetch queried the wrong box. Every query is scoped to the city
+    geofence, never global."""
     from src.city_registry import bbox_map
 
     for city in CITIES_WITH_BODY_PLACES:
@@ -143,8 +143,8 @@ def test_coordinates_sit_inside_the_city_bbox() -> None:
 
 def test_ids_are_unique() -> None:
     """No id appears twice. The id is the stable key the upload MERGEs on, so a
-    duplicate would silently collapse two physical places into one graph node
-    (data conventions: MERGE keys are multi-city safe and collision-free)."""
+    duplicate would silently collapse two physical places into one graph node.
+    A MERGE key is multi-city safe and collision-free."""
     for city in CITIES_WITH_BODY_PLACES:
         seen: set[str] = set()
         offenders = []

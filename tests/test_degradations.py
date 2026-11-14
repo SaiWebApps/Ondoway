@@ -1,10 +1,9 @@
 """The visible-failure machinery, measured.
 
-The owner asked on 2026-07-31: *"Don't just log errors. Actually show them in the
-workbench UI. Otherwise, they're invisible."* This file is the executable half of
-that. It shipped once with NO tests at all, which a judge caught — a feature
-whose entire purpose is "stop trusting that a problem was noticed" cannot itself
-be taken on trust.
+A failure is shown in the workbench UI, not only written to a log, so nobody has
+to notice it in a log to know it happened. A feature whose entire purpose is
+"stop trusting that a problem was noticed" cannot itself be taken on trust, so
+these tests measure it.
 
 The thread test is the load-bearing one. The first version of
 ``degradations.py`` claimed in its docstring to be "safe to call from anywhere,
@@ -53,7 +52,7 @@ def test_recording_outside_a_scope_is_a_no_op() -> None:
 
 
 def test_a_recorded_degradation_carries_both_registers() -> None:
-    """One row must serve the human AND the engineer — that is the whole ruling."""
+    """One row serves the human AND the engineer."""
     with degradation_scope() as collected:
         record(
             kind="glue_call_failed",

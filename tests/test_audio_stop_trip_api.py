@@ -41,7 +41,7 @@ N1 = "Settle in. Welcome to the Eiffel Tower."
 N2 = "Now walk on to the Arc de Triomphe."
 # item1 also carries a "keep exploring here" extra narration; item2 does not.
 KE_EXTRA = "The tower has three visitor levels. The top is 276 metres up."
-# The authored session lines the owner ruled PRE-VOICED in the
+# The authored session lines are PRE-VOICED in the
 # narrator's own voice — each stop's close, its thread lines, the full telling's
 # close. The set's fixed lines stay screen-only and are never voiced.
 CLOSE1 = "And that's the tower — iron meant to stand twenty years."
@@ -176,13 +176,11 @@ class TestGenerateTripStopAudio:
         assert data["skipped"] == 1
         assert data["failed"] == 0
 
-        # The exact stitched narration is voiced — not a lone beat.
-        # RE-DERIVED: the voicing pass now ALSO records each
-        # stop's authored session lines (close, threads, the full telling's
-        # close) in the same narrator voice — the owner's ruling. The narration
-        # is still voiced exactly once per stop. RE-DERIVED again: the
-        # stop's LEG piece (item2's walking line) is voiced as its own file too.
-        # RE-DERIVED again: item1's chapter is voiced as its own file too.
+        # The exact stitched narration is voiced — not a lone beat — exactly once
+        # per stop. The voicing pass ALSO records each stop's authored session
+        # lines (close, threads, the full telling's close), its LEG piece (item2's
+        # walking line) and item1's chapter, each as its own file in the same
+        # narrator voice.
         assert set(recorder.texts) == {N1, N2, CLOSE1, THREAD1, FULL_CLOSE1, CLOSE2, LEG2, SEG1}
 
         # Audio persisted on each item, keyed by the stop id (not the beat).
@@ -214,9 +212,8 @@ class TestGenerateTripStopAudio:
 
         # One artifact per generated stop on disk.
         files = list(_temp_audio_storage.rglob("*.mp3"))
-        # RE-DERIVED: two narration pieces PLUS the authored
-        # session lines (item1's close, thread and full-close; item2's close).
-        # RE-DERIVED again: plus item2's leg piece, plus item1's chapter.
+        # Two narration pieces, the authored session lines (item1's close, thread
+        # and full-close; item2's close), item2's leg piece and item1's chapter.
         assert len(files) == 8
 
     def test_second_call_skips_existing(self, client, clean_driver, _temp_audio_storage):
@@ -244,11 +241,11 @@ class TestGenerateTripStopAudio:
     ):
         """Rewriting a stop's narration must re-voice THAT stop and only it.
 
-        The per-stop path was the one generation path with no content hash, so
-        "has a url" was the whole staleness test: an edited stop kept playing the
-        old recording forever. Phase 2 is that defect. Phase 3 is the pre-existing
-        self-heal (a row whose bytes vanished off disk must still re-voice), which
-        now shares an `and` chain with the new hash term and must survive it.
+        Without a content hash, "has a url" would be the whole staleness test and
+        an edited stop would keep playing the old recording forever. Phase 2 checks
+        the hash. Phase 3 checks the self-heal (a row whose bytes vanished off disk
+        must still re-voice), which shares an `and` chain with the hash term and
+        must survive it.
         """
         item1 = f"{TRIP_ID}-item1"
         item2 = f"{TRIP_ID}-item2"
@@ -305,7 +302,7 @@ class TestGenerateTripStopAudio:
             f"the provider must be handed the rewritten text exactly once: {recorder2.texts}"
         )
 
-        # ── Phase 3 — the self-heal still fires beside the new hash term.
+        # ── Phase 3 — the self-heal still fires beside the hash term.
         urls = _item_audio(clean_driver)
         artifact = _temp_audio_storage / urls[item2].removeprefix("/api/v1/audio/files/")
         assert artifact.exists(), f"phase-3 setup found no artifact at {artifact}"
@@ -581,10 +578,6 @@ class TestUnknownProviderNever500:
     catches only PipelineError is exercised with {"provider": "evil"} against the
     REAL get_provider (no patch) so the unknown-provider ValueError actually
     fires at its true source (pipeline.get_provider_with_fallback).
-
-    TOMBSTONE: the two per-BEAT rows — ``/audio/generate-trip`` and
-    ``/audio/generate-batch`` (with ``_seed_beats``) — were DELETED, not adapted:
-    those routes belong to the per-beat audio library, which is deleted.
     """
 
     def test_keep_exploring_unknown_provider_soft_fails(
@@ -621,7 +614,7 @@ class TestUnknownProviderNever500:
 
 @needs_neo4j
 class TestPreVoicedSessionLines:
-    """Owner decision, 2026-08-19: the tour's own voice, never the robot.
+    """The tour's own voice, never the robot.
     The per-stop voicing pass ALSO records
     each stop's authored session lines — the close, the thread lines, the full
     telling's close — as their own small artifacts on the item, in the same
@@ -674,9 +667,8 @@ class TestPreVoicedSessionLines:
 class TestSessionCarriesLiveAudio:
     """Audio facts live on the ITEMS; the saved session snapshots its
     stops at compose time, BEFORE voicing — so the session GET overlays the items'
-    current audio fields at read time. Measured 2026-08-19: five voiced closes in
-    the graph, none on the wire, until this overlay. UNDO: return the saved payload
-    untouched -> RED."""
+    current audio fields at read time; without the overlay, closes voiced into the
+    graph never reach the wire. UNDO: return the saved payload untouched -> RED."""
 
     def test_the_overlay_reads_the_items_current_files(self, client, clean_driver):
         from src.api.models.trips import GeneratedStop, SessionPlan
@@ -734,18 +726,17 @@ class TestSessionCarriesLiveAudio:
 
 @needs_neo4j
 class TestTheFinishSentinelIsARealStop:
-    """An A→B day's finish stop carried its goodbye as TEXT ONLY: no file could ever
-    exist for it.
-    Mechanism, as measured: `_create_itinerary_items`'s Cypher opens with
-    `MATCH (poi:POI {id: $poi_id})`, the finish sentinel's id names no POI node, so the
-    whole CREATE silently matched nothing — no item, no HAS_STOP — while the minted item
-    id was returned and embedded in the saved session as a phantom. The voicing pass
-    iterates HAS_STOP, so the finish could never be voiced. The CLASS is wider than the
-    sentinel: ANY stop whose poi id is absent from the graph vanished silently instead
-    of failing loudly (the guard below only counted beats).
+    """An A→B day's finish stop is a real stored item, so its goodbye gets a file.
 
-    The fix: the POI match is OPTIONAL; the sentinel's item is CREATED (stored, voiced,
-    its id real); a NON-sentinel stop whose POI is genuinely missing now raises."""
+    The finish sentinel's id names no POI node. With a required
+    `MATCH (poi:POI {id: $poi_id})`, `_create_itinerary_items` would silently create
+    nothing — no item, no HAS_STOP — while returning the minted item id as a phantom
+    in the saved session, and the voicing pass, which iterates HAS_STOP, could never
+    voice the finish. ANY stop whose poi id is absent from the graph would vanish the
+    same way instead of failing loudly.
+
+    So the POI match is OPTIONAL; the sentinel's item is CREATED (stored, voiced, its
+    id real); a NON-sentinel stop whose POI is genuinely missing raises."""
 
     TRIP2 = "finish-sentinel-test-trip"
     DAY_CLOSE = "That's the walk — a quai that still carries the old tanners' name."
@@ -812,7 +803,7 @@ class TestTheFinishSentinelIsARealStop:
         )
         assert rows[1]["narr"] == self.DAY_CLOSE
 
-        # The voicing pass now SEES the finish: its goodbye gets a file.
+        # The voicing pass SEES the finish: its goodbye gets a file.
         recorder = _Recorder()
         with patch("src.audio.pipeline.get_provider_with_fallback", return_value=recorder):
             resp = client.post(

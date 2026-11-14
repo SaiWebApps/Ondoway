@@ -235,7 +235,7 @@ Areas describe the spatial container hierarchy (city → district → neighborho
 **6c. Area-attached beats** — beats whose source content is genuinely district-level (etymology, neighborhood typology) attach to the Area, not a POI. In `data/{city_slug}/beats.json`, these have `poi_name` set to the Area name (e.g. `"Marais"`). Process:
 - Look up the corresponding Area in Neo4j by `(name, area_type, city_name)`. Confirm the canonical Area name matches (e.g. beats reference `"Marais"`, but the Area is `"Le Marais"` — pipeline output may use a non-canonical alias; resolve via your areas.json metadata or a per-city alias map).
 - MERGE the NarrativeBeat (POST `/api/v1/nodes/NarrativeBeat`).
-- POST `/api/v1/edges/HAS_BEAT` from the **Area** to the NarrativeBeat. The HAS_BEAT relationship type accepts any source label per Schema v3.
+- POST `/api/v1/edges/HAS_BEAT` from the **Area** to the NarrativeBeat. The HAS_BEAT relationship type places no constraint on its source label, so an Area can own a beat.
 - POST `/api/v1/edges/TAGGED_WITH` from the NarrativeBeat to the Lens.
 
 Track Area-attached beats separately in the report so reviewers can confirm they were not orphaned to a phantom POI.

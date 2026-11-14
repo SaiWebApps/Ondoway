@@ -5,9 +5,9 @@ Resolves a named or coordinate start point against Paris Neo4j, runs
 JSON Script + Markdown render to ``data/{city_slug}/tours/{id}.json``
 + ``.md``, and prints a one-line summary.
 
-Defaults to the deterministic ``MockGlueClient`` so this works without
-``ANTHROPIC_API_KEY``. Pass ``--haiku`` to switch on the real Haiku
-glue stitch (requires the env var).
+Who writes the transitions has no default: pass ``--haiku`` for the real
+Haiku glue stitch (requires ``ANTHROPIC_API_KEY``), or ``--canned`` for the
+deterministic ``MockGlueClient`` fixed strings (free, no key).
 
 Exit codes:
 - 0 — validation passed
@@ -76,8 +76,8 @@ def _lookup_place(
     ``poi_id`` is None when no single corpus POI names the spot: a raw
     coordinate, or an Area centroid. A pin needs an id, so ``want_poi_id``
     additionally snaps a coordinate onto the nearest corpus POI within
-    ``B_SNAP_PROXIMITY_M`` — the established "the destination IS this
-    place" threshold from B-materialization — and only then, because the
+    ``B_SNAP_PROXIMITY_M`` — the planner's own "the destination IS this
+    place" threshold — and only then, because the
     extra query would be dead weight on every ordinary --start resolution.
     """
     if "," in arg:
@@ -172,8 +172,7 @@ def _resolve_start(driver, start_arg: str, city_slug: str) -> tuple[tuple[float,
     """Coordinate string or POI/Area name \u2192 (lat, lng) + display label.
 
     A thin wrapper over ``_lookup_place`` \u2014 the ladder lives THERE so --pin
-    can share it; the raise and its message are unchanged from
-    before the extraction.
+    can share it.
     """
     found = _lookup_place(driver, start_arg, city_slug)
     if found is None:
@@ -308,9 +307,8 @@ def _print_breakdown(
 
     The reach radius comes from ``reach_envelope_searched`` -- the SAME function
     the planner uses -- so this reports the circle actually searched. Deriving it
-    here from the requested duration would print ~4,444 m at 300 minutes while the
-    fixed-destination planner searched ~12,259 m, and the harness built to expose
-    that bug would have hidden it.
+    here from the requested duration would print a far smaller circle than the one
+    a fixed-destination planner searches.
 
     The promise view adds a ``promises:`` line above the per-stop
     table (kind, stop name, arrive-depart window), a SHAPE column (``44m in``
@@ -396,7 +394,7 @@ def _print_breakdown(
     # `radius_m` is the analytic FALLBACK circle. The planner's primary admission
     # test is the Valhalla road polygon, used whenever the contour it asks for is
     # within the engine's limit. Reporting the circle without saying which of the
-    # two applied invites a phase to record a shrink that never happened: clamping
+    # two applied invites a report of a shrink that never happened: clamping
     # the contour makes the polygon available again, so the circle can fall while
     # the region the planner actually admits GROWS.
     if iso_minutes > VALHALLA_MAX_CONTOUR_MINUTES:
@@ -451,9 +449,8 @@ def _print_breakdown(
         promises_by_poi = {p.poi_id: p for p in route.promises}
         # A stop the clock voided but the day KEEPS, from the outside — the
         # promise-native planner records it as a clock exclusion flagged
-        # `kept_outside` (this used to string-match the reason for
-        # "outside only", and went silently blank the day the wording was made
-        # plain — a decision belongs in a field, not in a sentence). Distinct
+        # `kept_outside`, read here as a field and never matched against the
+        # reason's wording — a decision belongs in a field, not in a sentence. Distinct
         # from an excluded-and-dropped POI, which never appears in route.pois
         # and so never reaches this table.
         outside_only = {e.poi_id for e in route.clock_exclusions if e.kept_outside}
@@ -768,9 +765,8 @@ def main() -> int:
     # WHO WRITES THE TRANSITIONS — decided here, before any work, because a
     # refusal that arrives after selection and routing has already spent the
     # user's time. Fails closed like get_provider / get_drafter /
-    # build_full_verifier: MockGlueClient used to be the SILENT default, so a
-    # tour the owner read could be part fixed-string prose under a
-    # "validation: PASS" header with nothing naming it.
+    # build_full_verifier: a silent default would let a tour be part
+    # fixed-string prose under a "validation: PASS" header with nothing naming it.
     if args.haiku and args.canned:
         parser.error(
             "--haiku and --canned contradict: one uses a real model for the "
@@ -781,8 +777,7 @@ def main() -> int:
             "refusing to write a tour without saying who wrote the transitions. "
             "Pass --haiku for real Haiku glue (spends money), or --canned for "
             "the deterministic fixed-string glue (free). There is no default: "
-            "canned transitions presented as a finished tour is the defect this "
-            "replaces."
+            "canned transitions must never pass as a finished tour."
         )
     if args.weather == "auto" and not args.date:
         parser.error(
@@ -887,13 +882,11 @@ def main() -> int:
             )
             return 3
         except CertificationPlanningInfeasibleError as exc:
-            # CAUGHT, not allowed to escape. Until this clause existed, a request
-            # that merely did not fit its certification band ended the run in a
-            # Python traceback — the harness printed none of the numbers that
-            # explain WHY, and the one command meant to demonstrate the reported
-            # bug produced a stack trace instead of evidence. Everything printed
-            # here already lives on the exception (src/tour/selection.py:456-487);
-            # nothing is recomputed, so this cannot disagree with the planner.
+            # CAUGHT, not allowed to escape: a request that does not fit its
+            # certification band prints the numbers that explain WHY, never a
+            # Python traceback. Everything printed here already lives on the
+            # exception; nothing is recomputed, so this cannot disagree with the
+            # planner.
             rt = bool(args.round_trip)
             lo, hi = exc.minimum_elapsed_seconds, exc.maximum_elapsed_seconds
             best = exc.best_elapsed_seconds
@@ -984,10 +977,10 @@ def main() -> int:
         else:
             # CANNED GLUE, and it must be ASKED FOR. Every transition sentence in
             # the tour this prints comes from MockGlueClient's fixed table
-            # (src/tour/glue_client.py), not from a model. This used to be the
-            # silent default, so a tour the owner read could be part canned prose
-            # under a "validation: PASS" header with nothing naming it — the same
-            # shape of lie as reporting a faithfulness pass that never ran.
+            # (src/tour/glue_client.py), not from a model. As a silent default it
+            # would put canned prose under a "validation: PASS" header with nothing
+            # naming it — the same shape of lie as reporting a faithfulness pass
+            # that never ran.
             #
             # Reached only with an explicit --canned; the guard after
             # parse_args() has already refused the no-flag case. The summary
@@ -1002,19 +995,16 @@ def main() -> int:
             cost_kind = "projected"
 
         # VERIFY the deterministic stitch (traceability + forbidden + rapidfuzz
-        # provenance + faithfulness) and attach the merged report. There is no
-        # recompose ladder here any more: this harness renders the $0 stitch, and
-        # the whole-tour composer it used to re-run died with compose.py. A failing
-        # report is reported and exits 1 rather than re-rolling the same
-        # deterministic stitch. Chunk text isn't loaded here, so provenance is a
-        # no-op until the corpus backfills source_passage.
+        # provenance + faithfulness) and attach the merged report. This harness
+        # renders the $0 stitch and does not recompose: a failing report is
+        # reported and exits 1 rather than re-rolling the same deterministic
+        # stitch. Chunk text isn't loaded here, so provenance is a no-op until
+        # the corpus backfills source_passage.
         #
-        # FAITHFULNESS IS NOT CHECKED HERE, and that is now stated rather than
-        # implied. This call used to pass no checker at all, and the gate quietly
-        # substituted the trusting Mock — so the "validation: PASS" line below
-        # announced a pass on a check that never ran, on the very script the
-        # owner reads. The opt-out is explicit, and the printed summary says
-        # UNVERIFIED. Wiring the real Haiku checker here is a deliberate spend
+        # FAITHFULNESS IS NOT CHECKED HERE, and that is stated rather than
+        # implied: the opt-out is explicit, so the gate never substitutes a
+        # trusting checker behind a "validation: PASS", and the printed summary
+        # says the check did not run. Wiring the real Haiku checker here is a deliberate spend
         # decision, not something this harness should do by default.
         beats_by_id = {b.id: b for plan in beat_sequence.poi_beats for b in plan.beats}
         verify = build_full_verifier(
@@ -1077,9 +1067,9 @@ def main() -> int:
             f"forbidden={len(script.validation.forbidden_phrase_hits)})"
         )
         # Say plainly which checks actually ran, and what wrote the prose. "PASS"
-        # above covers traceability and forbidden phrases; it has never covered
-        # faithfulness on this path, and printing only PASS is what made an
-        # unverified tour read as verified. The same applies to the transitions:
+        # above covers traceability and forbidden phrases, never faithfulness on
+        # this path, and printing only PASS would make an unverified tour read as
+        # verified. The same applies to the transitions:
         # without --haiku they are canned strings, and a reader judging the tour
         # deserves to know which sentences no model wrote.
         print(

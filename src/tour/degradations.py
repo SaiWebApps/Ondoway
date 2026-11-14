@@ -1,20 +1,13 @@
 """Everything that silently made a tour worse, collected so a human can SEE it.
 
-WHY THIS EXISTS (owner ruling 2026-07-31). ``HaikuGlueClient`` was made to fail
-soft — a provider hiccup on one transition sentence falls back to a template
-instead of destroying the whole tour. The first version only wrote a log line,
-and the owner's answer was immediate and correct: *"Don't just log errors.
-Actually show them in the workbench UI. Otherwise, they're invisible."*
-
-He is right, and the project has the scars. A degrade nobody sees is
-indistinguishable from success — that is exactly how canned transitions shipped
-as the default for months, how a silent WAV passed for narration, and how a
-validation report read "clean" having verified nothing. Logging moves the lie
-from the product into a file nobody opens.
+``HaikuGlueClient`` fails soft — a provider hiccup on one transition sentence
+falls back to a template instead of destroying the whole tour. A degrade that
+is only logged is invisible: nobody sees it, so it is indistinguishable from
+success. Errors are never only logged; they are shown in the workbench.
 
 So: whatever degrades, RECORD it here, and the API hands it to the page.
 
-THE TWO AUDIENCES, both required by the ruling:
+THE TWO AUDIENCES, both required:
 
 1. **A human** reads ``human`` and knows what they lost, in plain words, with no
    identifiers: "The walking directions between stops were written from a

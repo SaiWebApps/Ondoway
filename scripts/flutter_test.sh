@@ -30,7 +30,6 @@
 # stderr line that never comes). The ENGINE wedge (#192014) did not appear once in
 # those 80 runs; at its old 1-in-27 rate that leaves roughly 5% odds it is
 # unchanged, so it reads as improved or gone on 3.47.2 — evidence, not proof.
-# Tally + full stall diagnoses: the 2026-09-03 suite-under-15 run's soak/ dir.
 #
 #   1. THE OBSERVED ONE (flutter/flutter#192014) — the engine wedges loading CanvasKit,
 #      mid-run. The specimen stopped at "+83: loading test/pages/home_page_test.dart" and
@@ -295,12 +294,11 @@ run_pids_csv() {
 #
 # The day field is split off FIRST and multiplied separately. It is delimited by a
 # hyphen, not a colon, and a day is 86400 seconds where the right-to-left chain would
-# have reached 60^3 = 216000 — so folding it into that chain is wrong twice over. A
-# verifier caught this: the earlier version read `2-03:04:05` as 7445 seconds instead
-# of 183845, because splitting on colons alone makes the first field the string
-# "2-03", which numifies to 2. Unreachable under a 900s deadline, and fixed anyway,
-# because a helper whose comment claims a format it cannot parse is the defect this
-# repo's verifier exists to catch — and the next caller will not know the difference.
+# have reached 60^3 = 216000 — so folding it into that chain is wrong twice over.
+# Splitting on colons alone would read `2-03:04:05` as 7445 seconds instead of 183845,
+# because the first field becomes the string "2-03", which numifies to 2. The case is
+# unreachable under a 900s deadline; the helper still parses every format its comment
+# claims, so the next caller can rely on it.
 cpu_seconds() {
   [ -n "${fpid:-}" ] || { echo 0; return; }
   ps -o time= -p "$(run_pids_csv)" 2>/dev/null | awk '

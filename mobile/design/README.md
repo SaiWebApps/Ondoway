@@ -1,17 +1,14 @@
 # Ondoway Mobile — Design System (source of truth)
 
-**Current version: v10.** The canonical design system — all screens, light + dark — is the
-published artifact **"Ondoway Mobile — Design System v10"**
-(https://claude.ai/code/artifact/b9471f16-c7f3-46cc-a255-28f4abf0331c, updated 2026-08-05).
+**Current version: v10.** `design-system-v10.html` in this folder is the design system — all
+screens, light + dark — committed so the repo is self-contained and the Flutter theme has a
+version-controlled reference. It is an export (it includes its own frame runtime; open it in
+a browser to view the screens). A new version replaces this file and this note together.
 
-`design-system-v10.html` in this folder is a **committed snapshot** of that artifact, so the
-repo is self-contained and the Flutter theme has a version-controlled reference. It is the raw
-artifact export (includes the claude.ai frame runtime; open it in a browser to view the
-screens). When the artifact iterates to v11+, re-snapshot here and bump this note.
+## Core tokens (from `design-system-v10.html` — the input for `mobile/lib/theme/`)
 
-## Core tokens (extracted from v10 — the input for `mobile/lib/theme/`)
-
-Full light + dark. Encode these into a `Tokens` class + `ThemeData` (Slice 0.1).
+Full light + dark. These are encoded in `OndowayColors` (`mobile/lib/theme/tokens.dart`) and
+`buildOndowayTheme` (`mobile/lib/theme/theme.dart`).
 
 | Token | Light | Dark |
 |---|---|---|
@@ -33,5 +30,5 @@ Full light + dark. Encode these into a `Tokens` class + `ThemeData` (Slice 0.1).
 `system-ui` fallback) · Space Mono (mono, Menlo fallback).
 
 **Color model:** a single cobalt accent + warm-neutral system + one warm "spark" highlight —
-NOT per-lens-category colors at the token level. Confirm LensTile category treatment against
-the v10 lens screens when building that component.
+NOT per-lens-category colors at the token level. The lens category tile colors sit beneath
+the accent, in `mobile/lib/theme/lens_palette.dart`.

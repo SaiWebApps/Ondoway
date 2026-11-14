@@ -131,8 +131,8 @@ def build_full_verifier(
 
     def verify(script: Script) -> ValidationReport:
         base = validator(script, beat_sequence)
-        # No chunk library loaded -> provenance is a genuine no-op. Since the
-        # Step-4.0 backfill, live beats DO carry source_passage/chunk_slug;
+        # No chunk library loaded -> provenance is a genuine no-op. Live beats
+        # DO carry source_passage/chunk_slug;
         # without this guard every one of them would fail at 0.0 against an
         # empty dict. A missing slug only means something when chunks exist.
         provenance = tuple(verify_provenance(beat_sequence, chunks)) if chunks else ()

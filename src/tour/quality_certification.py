@@ -2760,19 +2760,14 @@ def certify_quality(
 #: change that hash and silently invalidate the comparison. So a manifest keeps
 #: saying where a document WAS, and this table says where it IS.
 #:
-#: The move: `specs/` was deleted 2026-09-02 by owner ruling — plans and specs
-#: are scratch, not product — and three reference documents were living inside
-#: it. They are inputs this module OPENS at runtime, which makes them fixtures,
-#: so they went to `fixtures/` with the rest. Nothing was lost in the move: the
-#: loader below verifies each document's bytes against the manifest's own
-#: sha256, so a wrong file at the new path fails exactly as loudly as a missing
-#: one.
+#: The manifests name three reference documents under `specs/`. They are inputs
+#: this module OPENS at runtime, which makes them fixtures, so they live under
+#: `fixtures/certification-references/`. The loader below verifies each
+#: document's bytes against the manifest's own sha256, so a wrong file at the
+#: mapped path fails exactly as loudly as a missing one.
 #:
-#: This was found the expensive way. A path living in JSON DATA rather than in
-#: source is invisible to every search over the code, so two independent sweeps
-#: for "what reads a file under specs/" reported all-clear, and the full suite
-#: went red on 33 tests in this module. Any future move of these documents needs
-#: a line here, not a search.
+#: A path living in JSON DATA rather than in source is invisible to a search over
+#: the code, so any move of these documents needs a line here.
 REFERENCE_DOCUMENT_MOVES: tuple[tuple[str, str], ...] = (
     ("specs/", "fixtures/certification-references/"),
 )

@@ -1,7 +1,6 @@
-"""Regression tests for graph CRUD data-integrity defects (2026-07-06).
+"""Graph CRUD data-integrity tests.
 
-Each test class targets one confirmed defect in src/api/crud/{nodes,edges}.py.
-All are red-first: they fail against the pre-fix code and pass after the fix.
+Each test class pins one integrity rule of src/api/crud/{nodes,edges}.py.
 
 Requires test Neo4j on port 7688; the owning Make target starts it.
 Uses the module-scoped `client` fixture from conftest (clean DB, no seed).

@@ -2,7 +2,7 @@
 the canonical set defined in src/schema/definitions.py.
 
 This catches schema drift from stale seed files, hand-rolled migrations, or
-copy-pasted slugs that diverge from the V3 schema. Runs in <100ms with no
+copy-pasted slugs that diverge from the canonical set. Runs in <100ms with no
 database connection.
 
 How it works:
@@ -138,15 +138,13 @@ def test_no_parent_lens_in_city_beats(city: str) -> None:
     and enforces the stronger invariant that the API enforces at write
     time: only child/leaf lenses are taggable on beats.
 
-    Catches the failure mode that bit the Paris closeout: 5
-    beats slipped through with parent slug 'commerce_innovation', causing
-    silent TAGGED_WITH 422s at /upload time. Adding this test as a
-    pre-upload gate ensures the same regression can't recur on Paris or
-    any future city.
+    A beat carrying a parent slug (e.g. 'commerce_innovation') causes a
+    silent TAGGED_WITH 422 at /upload time. This test is the pre-upload
+    gate that stops such a beat in any city.
     """
     beats_path = Path(__file__).resolve().parent.parent / "data" / city / "beats.json"
-    # A listed-but-not-yet-materialized corpus (london before the onboarding milestone
-    # commits data/london/) has no beats to violate the invariant, so treat it as an
+    # A listed-but-not-yet-materialized corpus (london before data/london/ is
+    # committed) has no beats to violate the invariant, so treat it as an
     # empty corpus rather than pytest.skip(): this project's conftest flips EVERY skip
     # to a FAILURE (no silent non-runs), which would RED the london param until its data
     # lands. The moment data/{city}/beats.json exists its real beats are checked; the

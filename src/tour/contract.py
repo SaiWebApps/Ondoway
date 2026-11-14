@@ -74,9 +74,8 @@ NONPROPOSITIONAL_GLUE_TEMPLATES: frozenset[str] = frozenset(
 def normalized_lens_list(v: list[str] | None) -> list[str] | None:
     """THE one lens-list normalization: strip blanks/whitespace; empty -> None.
 
-    It was spelled twice — here and in the API request models, whose docstring
-    admitted one "mirrors" the other (dedup-review 2026-08-07). Both validators
-    now call this; the preview's vocabulary guard adds its own check on top.
+    TourInput and the API request models both call this; the preview's
+    vocabulary guard adds its own check on top.
     """
     if v is None:
         return None
@@ -108,7 +107,7 @@ class TourInput(BaseModel):
     #
     # IT BOUNDS STANDING THERE, NOT TALKING. Generation floors a stop at
     # max(planned_visit, planned_audio), so a ceiling below a stop's narration is
-    # overridden — Release 1 never truncates narration. The API refuses anything
+    # overridden — narration is never truncated. The API refuses anything
     # under 5 minutes for that reason: 300 s sits above the 270 s per-stop
     # speaking cap, so an accepted ceiling is always one the tour can honour.
     max_stop_minutes: int | None = Field(default=None, ge=5)
@@ -154,13 +153,13 @@ class TourInput(BaseModel):
     max_leg_minutes: int | None = Field(default=None, ge=1)
     # HOW MUCH ACCUMULATED WALKING may pass before a body stop (bench/toilet)
     # is seated — a child's toilet stop is non-negotiable, and a rest window
-    # with no bench under it is thirteen minutes standing on a stick. None = no
-    # seating rule.
+    # with no bench under it leaves a tired walker standing. None = no seating
+    # rule.
     rest_cadence_minutes: int | None = Field(default=None, ge=1)
     # EVERY CANDIDATE MUST SIT WITHIN THIS DISTANCE OF THE START — a constraint
-    # on the whole loop, not on a leg: "a meltdown 25 minutes from the exit
-    # means carrying a child for 25 minutes", so the cap is DISTANCE FROM EXIT,
-    # not just leg length.
+    # on the whole loop, not on a leg: when a child melts down, the party has
+    # to carry the child all the way back to the exit, so the cap is DISTANCE
+    # FROM EXIT, not just leg length.
     escape_radius_m: int | None = Field(default=None, ge=1)
     # WHAT THE ROUTE MAY BE MADE OF. "no_stairs" (buggy, wheeled luggage) and
     # "step_free" (a visitor who cannot take steps) ride Valhalla's per-request
@@ -168,14 +167,14 @@ class TourInput(BaseModel):
     # route off the Rue Foyatier stairs; "step_free" adds the wheelchair
     # profile. "any" = today's requests, byte-identical.
     route_surface: Literal["any", "no_stairs", "step_free"] = "any"
-    # HOW THE NARRATION SPEAKS — carried on the input
-    # now so presets can set it; consumed by the phase that reworks narration.
-    # NEVER set by mobility ("slow the walking, never the talking") and
-    # "warm" is warm, never romantic.
+    # HOW THE NARRATION SPEAKS — carried on the input so presets can set it;
+    # authoring and recipe reuse read it. NEVER set by mobility: a mobility
+    # preset slows the walking, never the narration. "warm" is warm, never
+    # romantic.
     narration_register: Literal["solo", "warm", "family"] | None = None
     # STOPS THE VISITOR PINNED — corpus POI ids the visitor has
-    # promoted into promises: "the visitor may pin any offered stop into a
-    # promise, or release one back into fabric". The one mechanism that lets
+    # promoted into promises. The visitor may pin any offered stop into a
+    # promise, or release one back into fabric. The one mechanism that lets
     # one engine serve a visitor who pins one thing absolutely and one who pins
     # nothing and wants an open walk. Empty = nothing pinned = today's
     # behaviour, byte-identical.
@@ -188,22 +187,21 @@ class TourInput(BaseModel):
     # planning — the `start_datetime` None-means-no-clock precedent.
     weather: Literal["dry", "rain"] | None = None
     # THE DIALS (every default is today's behaviour, byte-identical).
-    # Adding fields moves every request_sha256 — declared.
+    # Adding a field changes the request_sha256 of every frozen tour case.
     #
     # "Fewer stops, longer at each" / "More stops, shorter at each". "more"
-    # resolves to the proven short-stop ceiling (resolve_party_axes); "fewer"
+    # resolves to a 20-minute per-stop ceiling (resolve_party_axes); "fewer"
     # concentrates the day in selection (drop the weakest, keep the anchors
-    # whole). The bare stop-minutes ceiling was REJECTED as the fewer-mechanism
-    # (a placebo in two of three measured starts).
+    # whole). A bare stop-minutes ceiling cannot do the "fewer" job: in two of
+    # three measured starts it changed nothing.
     stop_density: Literal["fewer", "more"] | None = None
-    # "Less talking / More talking" — narration SUPPLY, never topic (the
-    # topic-narrowing reading is retired). It is consumed as beats-per-stop;
-    # the full point-first mechanics come later.
+    # "Less talking / More talking" — narration SUPPLY, never topic. It is
+    # consumed as beats-per-stop.
     narration_density: Literal["less", "more"] | None = None
     # "Skip the queues" — queue-heavy stops are DIMMED in selection (the score
     # channel), on top of the queues-are-budgeted-never-credited rule.
-    # Named plainly because "quieter" is retired as a word (it reads as a sound
-    # word, and as dangerous after dark).
+    # Named plainly, never "quieter": that reads as a sound word, and as
+    # dangerous after dark.
     avoid_queues: bool = False
     # "Less of THIS today" — place kinds excluded from dwell seating
     # (a kind the visitor saw yesterday, or no museums at all today). Excluded
@@ -265,19 +263,14 @@ class TourInput(BaseModel):
 #    needs frequent rests).
 #  - escape radius 800 m: a family must never be 25 minutes from the exit when a
 #    child melts down; 800 m is ~16 min back at the corpus pace, inside that with
-#    margin, and matches a real family day (never further than ~700 m from
-#    Place des Vosges).
+#    margin.
 #  - take-it-easy pace 1.2 / with-luggage 1.25: both walk slowly, and no
-#    measured number exists for either. take-it-easy was FIRST set to 1.5
-#    (scaled against family's 2.0, "half") and CORRECTED to 1.2 after a
-#    review: three independent reviewers caught the
-#    same real defect on the real corpus — 1.5x pace combined with the
-#    then 12-minute leg cap made every nearby leg exceed the cap on the
-#    FIRST hop, collapsing the day to one stop and 30 of 180 minutes. 1.2x
-#    was verified empirically on the same real request (Place des Vosges,
-#    180 min): four real stops including a seated rest bench, longest leg 9
-#    min, comfortably under the cap. The leg cap is a measured visitor's own
-#    number; only the interpolated pace moved.
+#    measured number exists for either. take-it-easy's pace must stay low
+#    enough that nearby legs fit under its leg cap: at 1.5x every nearby leg
+#    exceeds the cap on the first hop and the day collapses to one stop, while
+#    at 1.2x a 180-minute day from Place des Vosges holds four stops including
+#    a seated rest bench, longest leg 9 min. The leg cap is a measured number;
+#    the pace is interpolated.
 #  - family and with-luggage set no leg cap: no measured longest-walk number
 #    exists for either, so none is invented.
 _PARTY_AXES: dict[str, dict[str, object]] = {
@@ -297,14 +290,14 @@ _PARTY_AXES: dict[str, dict[str, object]] = {
     # A mobility preset never sets a per-stop ceiling: a step-free day may hold one long sit.
     "take_it_easy": {
         "walking_pace": 1.2,
-        # The only preset with a leg cap. 12 produced a ONE-STOP day on
-        # a step-free visitor's own ground; her doctor's measured number is 13,
-        # and the 13-minute day (Orangerie -> bench -> Orsay) is the one every
-        # demo uses. The owner ruled on 2026-08-19: raise to 13.
+        # The only preset with a leg cap. 13 minutes is a measured longest
+        # walk for a visitor who needs frequent rests; 12 leaves a one-stop day
+        # on step-free ground.
         "max_leg_minutes": 13,
         "rest_cadence_minutes": 20,
         "route_surface": "step_free",
-        # register DELIBERATELY absent: "slow the walking, never the talking".
+        # register DELIBERATELY absent: a mobility preset slows the walking,
+        # never the narration.
     },
     "with_luggage": {
         "walking_pace": 1.25,  # slower than a traveller's normal pace
@@ -326,8 +319,8 @@ def resolve_party_axes(inp: TourInput) -> TourInput:
     """
     updates: dict[str, object] = {}
     # THE STOPS DIAL, "more" direction: "More stops, shorter at
-    # each" resolves to the proven short-stop ceiling — the measured a-stop20
-    # shape — unless the caller set a ceiling explicitly (explicit wins, the
+    # each" resolves to a 20-minute per-stop ceiling unless the caller set a
+    # ceiling explicitly (explicit wins, the
     # rule of this whole function). The "fewer" direction has no axis mapping:
     # it concentrates the day inside selection instead.
     if inp.stop_density == "more" and inp.max_stop_minutes is None:
@@ -388,10 +381,10 @@ class POI(BaseModel):
     requires_dwell: bool = False
     vignette_eligible: bool = True
     # HOW LONG A VISITOR SPENDS AT THIS PLACE — the third hand on the tour clock.
-    # Two numbers, because one cannot serve two visitors: an architecture lover
-    # gives Sainte-Chapelle 38 minutes inside plus 28 in the queue, while a
-    # dark-history walker gives the same building 15 from the outside and never
-    # goes in.
+    # Two numbers, because one cannot serve two visitors: a visitor who loves
+    # architecture gives Sainte-Chapelle 38 minutes inside plus 28 in the queue,
+    # while a visitor here for its dark history gives the same building 15 from
+    # the outside and never goes in.
     #
     # `typical_duration_min` is the OUTSIDE number and already existed on the API's
     # POICreate (src/api/models/nodes.py); this is its selection-side twin.
@@ -667,7 +660,7 @@ class TransitSegment(BaseModel):
     leg_distance_m: float | None = Field(default=None, ge=0)
     polyline: str | None = None  # encoded polyline (6-digit precision), routed legs only
     source: Literal["valhalla", "haversine"] = "haversine"
-    # HOW this leg is travelled. Walking is the only mode Release 1 plans, and the
+    # HOW this leg is travelled. Walking is the only mode the planner plans, and the
     # field exists now so that adding transit later is an ADDITION rather than a
     # rewrite: every consumer that must branch on mode gets a compile-time-visible
     # place to do it, instead of "walking" being an unstated assumption baked into
@@ -976,8 +969,8 @@ class Route(BaseModel):
     # cannot honestly reach the requested length, the right answer is a shorter
     # tour with a sentence saying so — "this is 4h40 rather than 5h; the area does
     # not support more" — and not a refusal, and never a route that walks you
-    # across the city to pad the clock. That padding is the bug this release
-    # exists to remove, so the disclosure is the thing that makes removing it safe.
+    # across the city to pad the clock. The disclosure is what lets the planner
+    # return a shorter tour instead of padding it.
     #
     # WHY ON THE ROUTE AND NOT THE TOURABILITY PAYLOAD. `tourability` is attached
     # only when the assessment is YELLOW or the delivery is thin
@@ -997,8 +990,7 @@ class Route(BaseModel):
     # HOW FAR the longest street leg of a REPLANNED remainder runs over the person's
     # per-leg limit, in seconds — 0 for every fresh plan (a fresh plan is refused at
     # the street certification). A tail's walk home longer than the limit is a
-    # fact to say, not a 422 (the entry must say where the walker can sit on the
-    # way): the session's one line reads it.
+    # fact to record, not a 422: selection sets it on a replanned remainder.
     leg_cap_breach_seconds: int = Field(default=0, ge=0)
     # leg_idx -> walk-past vignette POIs on that leg.
     vignettes: dict[int, tuple[POI, ...]] = Field(default_factory=dict)
@@ -1014,8 +1006,8 @@ class Route(BaseModel):
     # `vignettes` mould: populated only by the promise-native planner, default
     # empty, so every existing Route is byte-identical. Output, never input:
     # these are the obligations the planner swore for this day, carried so
-    # downstream phases can protect them through every replan ("fabric may
-    # change silently; promises may not").
+    # downstream phases can protect them through every replan: fabric may
+    # change silently; promises may not.
     promises: tuple[Promise, ...] = ()
     # Routed-metadata slots. ``routed`` is True iff every transit leg came
     # from Valhalla. ``route_polyline`` (stitched whole-route shape) and
@@ -1088,8 +1080,8 @@ class BeatSequence(BaseModel):
 # (generation.py), and the wire flags the card so a screen can say "ends at
 # your finish point" instead of counting a zero-minute stop
 # ("Destination: 0 min · outside" listed as stop 5 of 5, and promised as
-# `finish Destination 12:50-12:50`; a winter tour must never end at a
-# nameless place in the dark). ONE definition, read by selection, generation
+# `finish Destination 12:50-12:50`; a tour must never end at a nameless
+# place). ONE definition, read by selection, generation
 # and options — it used to be spelled twice.
 END_B_SENTINEL_PREFIX: str = "__end_b__"
 END_B_SENTINEL_NAME: str = "Your finish point"
@@ -1153,9 +1145,9 @@ class RouteOptionStop(BaseModel):
     THREE bands, and a card is exactly one of them:
     - ``dwell`` — a stop the tourist stands at. ``minutes`` is its dwell time.
     - ``vignette`` — a walk-past one-liner. ``minutes`` is always 0.
-    - ``leg`` — narration spoken WHILE WALKING into the next dwell stop (product
-      ruling 2026-07-19: "Audio overlaps the walking. It is a part of the tour
-      experience."). ``minutes`` is the WALK's duration, so a six-minute walk sits
+    - ``leg`` — narration spoken WHILE WALKING into the next dwell stop: audio
+      overlaps the walking and is part of the tour. ``minutes`` is the WALK's
+      duration, so a six-minute walk sits
       next to seven seconds of narration and the gap is visible rather than averaged
       away. Its ``poi_id``/``lat``/``lng`` are the ARRIVAL stop's, and its ``name``
       reads "Walk to <that stop>". A consumer matching POI ids must therefore filter
@@ -1203,11 +1195,9 @@ class RouteOptionStop(BaseModel):
 class RouteOption(BaseModel):
     """Output contract — one per flavour, 2-3 per request.
 
-    Fields owned by later milestones keep honest defaults until they land:
-    ``stop_audio`` and ``why_this_works`` belong to COMPOSE/VERIFY;
-    ``route_polyline``/``flow_score``/``backtrack_ratio`` pass through the
-    Route slots left default; ``profiles`` is multi-profile;
-    ``offline_package`` is the offline-replay bundle, post-MVP-core.
+    ``stop_audio``, ``why_this_works``, ``profiles`` and ``offline_package``
+    keep their defaults: nothing fills them. ``route_polyline``/``flow_score``/
+    ``backtrack_ratio`` pass through the Route slots of the same names.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -1237,8 +1227,7 @@ class RouteOption(BaseModel):
 
 
 class StopCorrectionCounts(BaseModel):
-    """Per-stop correct-loop outcome counts (ported from the
-    correct-don't-reject branch).
+    """Per-stop correct-loop outcome counts.
 
     ``verified`` = shipped beat-cited sentences that came through the gate
     unmodified; ``corrected`` = shipped sentences whose text was rewritten or
@@ -1267,8 +1256,8 @@ class ValidationReport(BaseModel):
     - ``faithfulness_failures``: (sentence, reason) for beat-cited sentences
       that the entailment pass found unsupported by the beat's ``key_claims``.
 
-    The 2026-07 compose-safety addition closes the deletion blind spot the other
-    checks share (they all police INVENTION, none policed DROPPED content):
+    A third check closes the deletion blind spot the other two share (they
+    police INVENTION, not DROPPED content):
     - ``coverage_failures``: (beat_id, dropped_claim) for a key_claim that the
       pre-compose (stitched) script voiced but NO composed sentence still
       realizes — i.e. compose silently deleted a distinct fact. Empty (a no-op)
@@ -1277,7 +1266,7 @@ class ValidationReport(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    # Correct-loop telemetry, ported with the corrector. Additive defaults;
+    # Correct-loop telemetry. Additive defaults;
     # TELEMETRY ONLY — never part of ``passed``.
     # A TUPLE of (stop_idx, counts) pairs, NOT a dict. ValidationReport is
     # frozen=True and every other field is a tuple; a dict field silently breaks
@@ -1304,11 +1293,8 @@ class ValidationReport(BaseModel):
     coverage_failures: tuple[tuple[str, str], ...] = ()
 
     # Did the faithfulness pass actually RUN? An empty ``faithfulness_failures``
-    # used to mean both "checked and clean" and "never checked", and
-    # ``build_full_verifier`` quietly substituted a checker that approves
-    # everything when the caller passed none — so a report could read as
-    # verified having verified nothing. ``scripts/tour_build.py`` did exactly
-    # that, which is how tours the owner read carried clean-looking reports.
+    # alone cannot tell "checked and clean" from "never checked", so a report
+    # could read as verified having verified nothing.
     # Defaults False: a report that does not say it was checked was not.
     # TELEMETRY/HONESTY only — deliberately NOT part of ``passed``, because an
     # unchecked tour is not thereby a FAILING tour; it is an unverified one, and
@@ -1319,30 +1305,17 @@ class ValidationReport(BaseModel):
     def passed(self) -> bool:
         """Structural failures BLOCK. Entailment and dropped-fact reports ADVISE.
 
-        The owner ruled on 2026-08-03. Measured that day on a real Paris tour, the first ever
-        run with these two wired to the workbench: ``0 untraceable, 1 forbidden, 0
-        provenance, 28 faithfulness, 6 coverage``. Of the 28, exactly ONE was a verified
-        invention. Sampled false alarms included "Look hard at the façade, because it's
-        a manifesto of Art Nouveau" — the corpus's own sentence with two words changed —
-        and a dropped-fact report for "Square named for Henri IV" on a tour that says
-        precisely that in different words, because ``verify_claim_coverage`` counts
-        shared WORDS and a paraphrase therefore reads as a deletion.
+        The rule: a check may BLOCK only when it can NAME the specific thing that is
+        wrong; a check that can only say "I don't know" RECORDS. The entailment and
+        dropped-fact checks fire on faithful paraphrases — ``verify_claim_coverage``
+        counts shared WORDS, so a paraphrase reads as a deletion — and a check that
+        fires on a good tour cannot decide whether to ship it.
 
-        A check that fires on a fifth of a good tour cannot decide whether to ship it,
-        and while these two gated, EVERY tour was refused. The rule: a check may BLOCK
-        only when it can NAME the specific thing that is wrong; a check that can only
-        say "I don't know" RECORDS.
+        Both still run, both stay on this report, and the preview route logs both
+        per sentence. ``faithfulness_checked`` distinguishes "checked and clean" from
+        "never checked".
 
-        This is a DEMOTION, not a removal. Both still run, both stay on this report, and
-        both are logged per-sentence by the preview route, so the evidence a human needs
-        is strictly better than before. ``faithfulness_checked`` still distinguishes
-        "checked and clean" from "never checked".
-
-        They return to blocking when the scored replacement lands: per-CLAIM scores
-        carrying the unsupported SPAN, bands rather than an average, and a repair pass
-        before anything is cut.
-
-        The three that remain are cheap, exact, and name their subject: an unknown cited
+        The three that block are cheap, exact, and name their subject: an unknown cited
         beat id, a banned phrase, a source passage that does not match its chunk.
         """
         return not (

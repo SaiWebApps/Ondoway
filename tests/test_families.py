@@ -737,7 +737,7 @@ class TestJoinLateCrewsTheExistingDays:
 
 # ── A family day is one born in the family ───────────────────────────────────
 #
-# The acceptance probes, on identities of their own (the module's Fiona and
+# These tests plant identities of their own (the module's Fiona and
 # Dev become permanent co-members once TestFamilyFlow founds "The Fionas", so
 # a no-family premise cannot be staged on them). Days are planned through the
 # REAL creation path (create_trip_with_stops + write_trip_session), so each
@@ -824,7 +824,7 @@ def _join(client, family_id: str, inviter_uid: str, uid: str, email: str, pid: s
 
 @needs_neo4j
 class TestFoundersPreFamilyHistoryStaysPrivate:
-    """Probe 1: Fiona-like founder plans a solo day, THEN founds the family,
+    """A founder plans a solo day, THEN founds the family,
     THEN a joiner joins — the founder's pre-family day carries no mark, so the
     joiner never reads it and never lists it."""
 
@@ -872,7 +872,7 @@ class TestFoundersPreFamilyHistoryStaysPrivate:
 
 @needs_neo4j
 class TestPlanFirstInsideTheFamily:
-    """Probe 2: found the family FIRST, then plan the day — it is born inside
+    """Found the family FIRST, then plan the day — it is born inside
     the family (marked at creation), so a later joiner reads it and stays crew
     on writes. Green on the creation-time derivation both before and after the
     mark exists: the regression guard for the family's real order."""
@@ -919,7 +919,7 @@ class TestPlanFirstInsideTheFamily:
 
 @needs_neo4j
 class TestJoinOrderIndependence:
-    """Probe 3: two joiners at different times end with the identical readable
+    """Two joiners at different times end with the identical readable
     set — exactly the family's marked days — and neither reads the other's
     pre-join history."""
 

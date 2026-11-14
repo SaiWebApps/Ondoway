@@ -37,9 +37,8 @@ class _TripDurationPageState extends State<TripDurationPage>
   late DateTime _endDate;
   late TimeOfDay _endTime;
   // Is the end time a booking or a guess? The one
-  // question, asked at planning. Defaults to 'firm' — the owner's ruling: a
-  // person who types an end time and skips the question gets a day that
-  // finishes by it.
+  // question, asked at planning. Defaults to 'firm': a person who types an
+  // end time and skips the question gets a day that finishes by it.
   String _endHardness = 'firm';
   bool _isLoading = false;
   String? _error;
@@ -404,7 +403,7 @@ class _TripDurationPageState extends State<TripDurationPage>
           const SizedBox(height: 12),
 
           // The ONE question, in plain words. Skipping it keeps
-          // "Should end then" — a hard deadline (the owner's ruling).
+          // "Should end then" — a hard deadline.
           Text('Is the end time fixed?', style: tt.labelLarge),
           const SizedBox(height: 6),
           SegmentedButton<String>(

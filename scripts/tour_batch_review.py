@@ -379,9 +379,9 @@ def load_batch_review_inputs(
             )
         )
 
-    # The receipt count is the PLAN's own unit count, never a literal: the v1
-    # batch's day shapes carried 45 stops, the redesigned engine's carry ~16,
-    # and the set equality against the plan is the check that cannot go stale.
+    # The receipt count is the PLAN's own unit count, never a literal: how many
+    # stops a day carries changes with the engine, and the set equality against
+    # the plan is the check that cannot go stale.
     if not expected_receipt_keys or set(stop_receipts) != expected_receipt_keys:
         raise ValueError("review batch must contain exactly the planned provider receipts")
     return BatchReviewInputs(
@@ -421,8 +421,8 @@ def build_batch_review_material(
             # THE one parser (never a bare model_validate): the assembly judged
             # the day through `_sentences_from_json`'s deterministic corrections
             # (mangled beat ids, a glue line mistyped "beat"), so the review must
-            # read the SAME sentences — a raw re-parse choked on the mistyped
-            # GLUE_REFLECTION the parser had already corrected (v3, 2026-08-29).
+            # read the SAME sentences — a raw re-parse rejects a mistyped
+            # GLUE_REFLECTION that the parser corrects.
             sentences = _sentences_from_json(
                 raw_sentences, authoring_requests[(tour.case_id, stop_index)]
             )

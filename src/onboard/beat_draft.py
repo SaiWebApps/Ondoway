@@ -1,4 +1,4 @@
-"""Step-4 DRAFT: turn each POI's pinned Wikipedia lead into SEVERAL beats.
+"""Beat DRAFT: turn each POI's pinned Wikipedia lead into SEVERAL beats.
 
 A POI must carry **≥ 3 active beats** (and be tier ≥ 3) to count as an *anchor
 candidate* for the tour engine's density gate (``src/tour/density.py`` —

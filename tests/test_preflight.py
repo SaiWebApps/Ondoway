@@ -1,11 +1,10 @@
 """The prerequisite declarations are only worth what they are checked to be.
 
 Three properties are guarded here, each with the mutation that turns it red.
-(A fourth, MAKEFILE COVERAGE — every documented target declares its prerequisites
-and every declared name is real — was REMOVED 2026-08-18 by owner ruling: it
-asserted the Makefile's shape, not the tool's behaviour. Preflight still refuses
-at runtime on an unknown requirement name; a target that forgets its preflight
-line simply runs without one.)
+Whether each Makefile target declares its prerequisites is not checked: that is
+the Makefile's shape, not the tool's behaviour. Preflight refuses at runtime on
+an unknown requirement name; a target that forgets its preflight line simply
+runs without one.
 
 0.  LANE TABLE INTEGRITY -- the graphs preflight can start are exactly the ones
     docker-compose.yml defines, on the same ports, in the same containers. The
@@ -413,9 +412,9 @@ def test_a_completed_map_download_is_moved_into_place(monkeypatch, tmp_path):
 def test_a_foreign_process_holding_a_port_is_named_not_killed(monkeypatch):
     """Claiming a port by killing an unidentified process is collateral damage.
 
-    This repo has the precedent: a broader match once killed the user's desktop
-    app, which merely held client sockets to the same port. A repair may only
-    stop a listener it can identify as this project's own server.
+    A broader match also catches a process that merely holds client sockets to
+    the same port, such as a desktop app. A repair may only stop a listener it
+    can identify as this project's own server.
     """
     monkeypatch.setattr(
         preflight,
@@ -559,8 +558,8 @@ def test_preflight_runs_on_the_system_interpreter():
 
 
 # ── 4. the mechanism cannot be switched off ─────────────────────────────────
-# A hostile review ran 24 mutations against the guards above; 21 passed. These
-# close the holes it found. Each names the mutation it exists to catch.
+# Each guard below names the mutation that would switch the mechanism off
+# while every guard above stays green.
 
 
 # The reusable sets are the declaration for dozens of targets at once. Gutting
@@ -611,7 +610,7 @@ def test_lane4_is_a_complete_lane():
 def test_the_dev_half_of_a_lane_is_lane_aware():
     """`make api LANE=4` must serve lane 4's dev graph, never the canonical one.
 
-    Behavioural, per the ruling against shape assertions: the recipe `make`
+    Behavioural, not a shape assertion: the recipe `make`
     itself would run is read off a dry-run and must name the lane's profile,
     the lane's port and the lane's dev-graph requirement — and the same
     dry-run per lane pins the Makefile's port arithmetic to preflight's
@@ -1037,8 +1036,7 @@ def test_another_projects_server_is_not_mistaken_for_ours():
         "/opt/homebrew/bin/python3.11 -m src.server --port 8080",
         "python -m uvicorn src.api.app:app",  # right shape, no path to this checkout
         # A sibling worktree: its path CONTAINS this checkout's directory name,
-        # which is why a bare name match let the main checkout kill it. This repo
-        # has a recorded incident of a session destroying a sibling worktree.
+        # so a bare name match would let the main checkout kill it.
         f"{preflight.ROOT}-wt1/.venv/bin/python -m uvicorn src.api.app:app",
         f"{preflight.ROOT}-scope2/.venv/bin/python -m uvicorn src.api.app:app",
     ]
@@ -1300,9 +1298,9 @@ def test_a_live_server_of_this_checkout_is_not_stopped(monkeypatch):
     """Ownership is not disuse.
 
     The kill filter proves a server belongs to this checkout. It cannot prove
-    nobody is using it -- a live server on :8001 is a sibling session's browser
-    suite mid-run, and this repo's incident history is exactly that: a resource
-    destroyed by a session that merely had the right to.
+    nobody is using it -- a live server on :8001 may be a sibling session's
+    browser suite mid-run, and having the right to stop a resource is not a
+    reason to stop it.
     """
     port, server = _serving(_OnlyStatus)
     ours = f"{preflight.ROOT}/.venv/bin/python -m uvicorn src.api.app:app --port {port}"

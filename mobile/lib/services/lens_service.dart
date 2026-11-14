@@ -29,9 +29,9 @@ class LensService extends ChangeNotifier {
   ///
   /// The endpoint already returns the hierarchy nested (a list of parent
   /// lenses, each with its own `children`), so this is a single call — no
-  /// client-side join. Replaces the old `/nodes/Lens` + `/edges/IS_PARENT_OF`
-  /// pair, which is behind the workbench gate and 404s in prod
-  /// (project_mobile_prod_api_gap).
+  /// client-side join. The `/nodes/Lens` + `/edges/IS_PARENT_OF` pair is
+  /// behind the workbench gate and answers 404 in production, so the app never
+  /// calls it.
   Future<void> fetchLenses() async {
     final resp = await _httpClient.get(Uri.parse('$_baseUrl/lenses'));
     if (resp.statusCode != 200) {

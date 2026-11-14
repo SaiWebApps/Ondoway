@@ -149,7 +149,7 @@
         "trigger_radius_reasoning": "Default 10m for building entrance",
         "notes": ""
       },
-      "trigger_radius_basis": "The Cour Napoleon around the pyramid is 150 m across and the Cour Carree another 120 m east of it: a walker at the Louvre is anywhere in those courts (Greta, Aiko)."
+      "trigger_radius_basis": "The Cour Napoleon around the pyramid is 150 m across and the Cour Carree another 120 m east of it: a walker at the Louvre is anywhere in those courts."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1",
@@ -274,7 +274,7 @@
         "trigger_radius_reasoning": "Default 10m for building entrance",
         "notes": ""
       },
-      "trigger_radius_basis": "The pin sits in the building; the parvis where a walker stands runs about 100 m west of the facade, so the footprint reaches it (Camille's pin check: the pin itself stays where the corpus put it — a carried data row)."
+      "trigger_radius_basis": "The pin sits in the building; the parvis where a walker stands runs about 100 m west of the facade, so the footprint reaches it (the pin itself stays where the corpus put it)."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1",
@@ -328,7 +328,7 @@
         "lng": 2.34875,
         "radius_m": 80.0,
         "indoor": false,
-        "basis": "The whole facade — rose window, gallery and the row of kings together — is only visible from well back: a person STANDS on the parvis paving, sixty to eighty metres out, near the kilometre-zero star, and walks backwards until it fits (W7.11, 11/11: 45 m put the listener under the tympanum, craning). Eighty metres covers the paving people actually stand on and still stops short of the apse."
+        "basis": "The whole facade — rose window, gallery and the row of kings together — is only visible from well back: a person STANDS on the parvis paving, sixty to eighty metres out, near the kilometre-zero star, and walks backwards until it fits: at forty-five metres a listener stands under the tympanum, craning. Eighty metres covers the paving people actually stand on and still stops short of the apse."
       },
       {
         "label": "Inside",
@@ -353,7 +353,7 @@
         "lng": 2.35095,
         "radius_m": 55.0,
         "indoor": false,
-        "basis": "Square Jean-XXIII is the strip you STAND in to look back along the flying buttresses; the view needs the length of the garden, not its gate. Fifty-five metres covers the walk without reaching the parvis (W7.11 defect 16)."
+        "basis": "Square Jean-XXIII is the strip you STAND in to look back along the flying buttresses; the view needs the length of the garden, not its gate. Fifty-five metres covers the walk without reaching the parvis."
       }
     ],
     "gated": true
@@ -568,7 +568,7 @@
         "trigger_radius_reasoning": "Default 10m for building entrance",
         "notes": ""
       },
-      "trigger_radius_basis": "The forecourt between the river quay and the door is about 60 m deep; Rosemary's bench sits on it."
+      "trigger_radius_basis": "The forecourt between the river quay and the door is about 60 m deep; a bench sits on it."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1",
@@ -1249,7 +1249,7 @@
         "trigger_radius_reasoning": "Expanded to 50m for larger POI footprint",
         "notes": ""
       },
-      "trigger_radius_basis": "The square is 360 m by 210 m; Theo's three positions on it span the middle."
+      "trigger_radius_basis": "The square is 360 m by 210 m; a visitor's three positions on it span the middle."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1",
@@ -1682,7 +1682,7 @@
         "trigger_radius_reasoning": "Expanded to 30m for larger POI footprint",
         "notes": ""
       },
-      "trigger_radius_basis": "The garden is 275 m by 100 m behind the Cour d'Honneur; Greta's columns, Aiko's no. 177 and the three galleries are all inside that footprint."
+      "trigger_radius_basis": "The garden runs 275 m by 100 m behind the Cour d'Honneur, and the pin sits at the palace forecourt — so the far Beaujolais gallery is 295 m out. 300 covers the whole walk-in complex (the Tuileries precedent); the reviewed anchors, not the footprint edge, are what say 'right here' inside it."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1",
@@ -1801,7 +1801,7 @@
         "trigger_radius_reasoning": "Expanded to 40m for larger POI footprint",
         "notes": ""
       },
-      "trigger_radius_basis": "A 140 m square: the arcade runs seventy metres from the central statue, and stepping under the arcade is being there (Nadia, W7.2 R1). Her day starts, stops and finishes here, and the ten metres between this 70 and the 60 m own-place radius are NOT what starts her clock during the fifteen minutes she stands in the square before moving: the own-place circle is drawn round her FIRST FIX and this one round the pin, so on a square this wide she can leave the first while still standing inside the second. 70 kept; where the clock's circle is centred is the carried item, not the footprint (W7.13 carry 6)."
+      "trigger_radius_basis": "A 140 m square: the arcade runs seventy metres from the central statue, and stepping under the arcade is being there. One sample day starts, stops and finishes here, and the ten metres between this 70 and the 60 m own-place radius are NOT what starts the walker's clock during the fifteen minutes the walker stands in the square before moving: the own-place circle is drawn round the walker's FIRST FIX and this one round the pin, so on a square this wide a walker can leave the first while still standing inside the second. 70 kept: the gap comes from where the clock's circle is centred, not from the footprint."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1",
@@ -1894,7 +1894,7 @@
         "trigger_radius_reasoning": "Default 10m for building entrance",
         "notes": ""
       },
-      "trigger_radius_basis": "The bridge is 238 m long across both arms of the river: its half-length from the Vert-Galant point is 120 m (Theo, Fiona & Dev, Sofia)."
+      "trigger_radius_basis": "The bridge is 238 m long across both arms of the river: its half-length from the Vert-Galant point is 120 m."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1",
@@ -2075,7 +2075,7 @@
         "trigger_radius_reasoning": "Expanded to 30m for larger POI footprint",
         "notes": ""
       },
-      "trigger_radius_basis": "The parvis in front of the facade is 80 m deep; Paulo stands on it."
+      "trigger_radius_basis": "The parvis in front of the facade is 80 m deep; a visitor stands on it."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1",
@@ -2234,7 +2234,7 @@
         "trigger_radius_reasoning": "Expanded to 100m for larger POI footprint",
         "notes": ""
       },
-      "trigger_radius_basis": "The garden runs about 900 m gate to gate and the pin sits mid-garden: at the old 100 the Concorde gate stood 325 m outside the circle, so entering there played nothing for a five-minute walk (W7.13, Camille). 300 reaches the central alleys and both terraces — the Luxembourg's 390 is the precedent scale for a royal garden; the gates themselves are the carried polygon row."
+      "trigger_radius_basis": "The garden runs about 900 m gate to gate and the pin sits mid-garden: at the old 100 the Concorde gate stood 325 m outside the circle, so entering there played nothing for a five-minute walk. 430 reaches both terraces AND the Jardin du Carrousel at the east end — the spot the corpus voices, 415 m from the pin, whose reviewed anchor says 'right here' there; a circle cannot follow the gates themselves."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1",
@@ -2908,7 +2908,7 @@
         "trigger_radius_reasoning": "Expanded to 100m for larger POI footprint",
         "notes": ""
       },
-      "trigger_radius_basis": "Forty-four hectares inside walls; the 2026-06-16 area fix sized it at the setting cap and Julien's wall, the columbarium and the memorials are all inside it — kept (the walls themselves are a carried polygon row). The other half of his ask is answered beside this number rather than in it: three reviewed ANCHORS ride the record — the Mur des Fédérés first, then Edith Piaf's grave and Oscar Wilde's tomb — so the 500 m disc says which cemetery you are in and the anchor says where in it you are standing."
+      "trigger_radius_basis": "Forty-four hectares inside walls, sized at the setting cap: the Mur des Fédérés, the columbarium and the memorials are all inside it (a circle cannot follow the walls themselves). Where in it you stand is answered beside this number rather than in it: three reviewed ANCHORS ride the record — the Mur des Fédérés first, then Edith Piaf's grave and Oscar Wilde's tomb — so the 500 m disc says which cemetery you are in and the anchor says where in it you are standing."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1",
@@ -2949,7 +2949,7 @@
         "lng": 2.39722,
         "radius_m": 40.0,
         "indoor": false,
-        "basis": "The Communards' wall is a fifty-metre stretch of the cemetery's own eastern boundary in division 76, reached down a few steps off the avenue Circulaire, and the memorials to the deported stand directly opposite it across that alley — the corpus beat says so and Julien gives the pair twenty unbroken minutes as ONE place (06-resident-novelty-seeker.md). Forty metres from the middle of the wall covers the strip of flowers and wreaths in front of it and the memorials facing it, and stops short of the graves eighty metres north. Placed by hand from the wall's own published position, never derived from the cemetery pin 316 m away."
+        "basis": "The Communards' wall is a fifty-metre stretch of the cemetery's own eastern boundary in division 76, reached down a few steps off the avenue Circulaire, and the memorials to the deported stand directly opposite it across that alley — the corpus beat says so, and a visitor spends twenty unbroken minutes on the pair as ONE place. Forty metres from the middle of the wall covers the strip of flowers and wreaths in front of it and the memorials facing it, and stops short of the graves eighty metres north. Placed by hand from the wall's own published position, never derived from the cemetery pin 316 m away."
       },
       {
         "label": "Edith Piaf's grave",
@@ -2971,7 +2971,7 @@
         "lng": 2.39583,
         "radius_m": 35.0,
         "indoor": false,
-        "basis": "Epstein's winged figure stands alone on the avenue Carette in division 89, a quarter of a kilometre north of the Communards' wall — far enough that nobody at the wall hears it by accident, which is what Julien's ordering asks for. Thirty-five metres covers the avenue in front of the monument, where a person stands back far enough to see the whole of it, and the rows either side."
+        "basis": "Epstein's winged figure stands alone on the avenue Carette in division 89, a quarter of a kilometre north of the Communards' wall — far enough that nobody at the wall hears it by accident. Thirty-five metres covers the avenue in front of the monument, where a person stands back far enough to see the whole of it, and the rows either side."
       },
       {
         "label": "The columbarium",
@@ -3346,7 +3346,7 @@
         "trigger_radius_reasoning": "Default 10m",
         "notes": "Nominatim display: Jardin des Tuileries, Terrasse du Bord de l'Eau, Quartier Saint-Germain-l'Auxerrois, Paris 1er Arron. May need entrance verification for large buildings."
       },
-      "trigger_radius_basis": "A pavilion at the Tuileries' west end: the door on the terrace (Rosemary's day)."
+      "trigger_radius_basis": "A pavilion at the Tuileries' west end: the door on the terrace."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1",
@@ -8428,7 +8428,7 @@
         "reasoning": "Composite 43.5: trends=low; wiki=moderate; gb=RARE",
         "scored_at": "2026-05-01T15:45:48.181108+00:00"
       },
-      "trigger_radius_basis": "A triangular place 120 m long from its apex at the Pont Neuf to the Palais de Justice front, with the pin in the middle: at the old 30 the circle held the central gravel only, and Fiona & Dev spend their first twelve minutes over café menus at the apex end, outside it. Sixty metres is the place's half-length, and is also the own-place radius the wire gives a start square (placement.py), so the square they set out from is ONE circle whichever of the two is read. It overlaps the Pont Neuf's footprint by geometry, not by error: the apex IS the bridge's approach, 125 m pin to pin, so stop one's piece arms over those twelve minutes — the carried edge (W7.13 carry 5)."
+      "trigger_radius_basis": "A triangular place 120 m long from its apex at the Pont Neuf to the Palais de Justice front, with the pin in the middle: at the old 30 the circle held the central gravel only, and two visitors spend their first twelve minutes over café menus at the apex end, outside it. Sixty metres is the place's half-length, and is also the own-place radius the wire gives a start square (placement.py), so the square they set out from is ONE circle whichever of the two is read. It overlaps the Pont Neuf's footprint by geometry, not by error: the apex IS the bridge's approach, 125 m pin to pin, so stop one's piece arms over those twelve minutes."
     },
     "_meta": {
       "prompt_version": "beat_from_book_v1",
@@ -8499,7 +8499,7 @@
         "notes": "Reopened June 2021 after 16-yr closure (LVMH/SANAA); department store + Cheval Blanc hotel. Reported in 2024 to be struggling to attract customers, but open.",
         "source": "https://en.wikipedia.org/wiki/La_Samaritaine"
       },
-      "trigger_radius_basis": "A four-building block about 100 m deep between rue de Rivoli and the quay: at the old 20 the circle sat inside the store, so the piece could only start indoors (W7.1's inverted-threshold list) and leaving the circle happened under the roof (W7.13, Marcus). 60 from the pin covers the street doors on all sides."
+      "trigger_radius_basis": "A four-building block about 100 m deep between rue de Rivoli and the quay: at the old 20 the circle sat inside the store, so the piece could only start indoors and leaving the circle happened under the roof. 60 from the pin covers the street doors on all sides."
     },
     "_meta": {
       "prompt_version": "beat_from_book_v1",
@@ -9137,7 +9137,7 @@
         "placement": "Southern entrance on Boulevard Montmartre",
         "trigger_radius_reasoning": "15m for arcade entrance area"
       },
-      "trigger_radius_basis": "A passage under glass 133 m long: you are in it from either mouth (Aiko's arcades)."
+      "trigger_radius_basis": "A passage under glass 133 m long: you are in it from either mouth."
     },
     "_meta": {
       "prompt_version": "pipeline_chunk_v1",
@@ -9279,7 +9279,7 @@
         "placement": "Centre of Place de la Bourse",
         "trigger_radius_reasoning": "15m for open square"
       },
-      "trigger_radius_basis": "The open square in front of the Palais Brongniart's colonnade (Aiko's day)."
+      "trigger_radius_basis": "The open square in front of the Palais Brongniart's colonnade."
     },
     "_meta": {
       "prompt_version": "pipeline_chunk_v1",
@@ -9859,7 +9859,7 @@
         "placement": "Midpoint of rue de la Paix",
         "trigger_radius_reasoning": "15m for street-level trigger on a major thoroughfare"
       },
-      "trigger_radius_basis": "A 230 m street of jewellers between the Opera and Vendome: half a block (Theo's day)."
+      "trigger_radius_basis": "A 230 m street of jewellers between the Opera and Vendome: half a block."
     },
     "_meta": {
       "prompt_version": "pipeline_chunk_v1",
@@ -17851,7 +17851,8 @@
         "notes": "",
         "geocoded_at": "2026-04-26T14:15:39.767954+00:00",
         "nominatim_importance": 0.053426505683985624
-      }
+      },
+      "trigger_radius_basis": "The park spans from the west-side pin to the Musée Cernuschi's east-edge gate (the corpus's own record calibrates it, ~630 m); 380 reaches the Courcelles rotunda on the north edge, where a person stands at the gate the corpus seats a bench inside — the reviewed anchor, not the footprint edge, says 'right here'."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1_targeted",
@@ -18032,7 +18033,7 @@
         "geocoded_at": "2026-04-26T14:25:25.938847+00:00",
         "phase_5d_review": "approved_distinct_via_address_check"
       },
-      "trigger_radius_basis": "The boulevard du Palais front is 80 m of gilded gates; standing before them is being at the Palais (Fiona & Dev's and Sofia's days)."
+      "trigger_radius_basis": "The boulevard du Palais front is 80 m of gilded gates; standing before them is being at the Palais."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1_targeted",
@@ -18122,7 +18123,7 @@
         "geocoded_at": "2026-04-26T14:25:25.938847+00:00",
         "phase_5d_review": "approved_distinct_via_address_check"
       },
-      "trigger_radius_basis": "The triangular pocket-park at the island's western tip, seven metres below the street: the pin sits mid-square and fifty metres reaches both the staircase down from the bridge and the point itself. Its circle lies WHOLLY inside the Pont Neuf's 120 m one — the pins are 59 m apart and the bridge passes overhead — so a walker on the point is in both footprints at once. They are at the SQUARE: the smaller circle is the more specific place, and the bridge's piece belongs to the people on the deck above (Fiona & Dev's nested-footprint edge, W7.13 carry 5). Pont Neuf's 120 is derived from its 238 m span and stands."
+      "trigger_radius_basis": "The triangular pocket-park at the island's western tip, seven metres below the street: the pin sits mid-square and fifty metres reaches both the staircase down from the bridge and the point itself. Its circle lies WHOLLY inside the Pont Neuf's 120 m one — the pins are 59 m apart and the bridge passes overhead — so a walker on the point is in both footprints at once. They are at the SQUARE: the smaller circle is the more specific place, and the bridge's piece belongs to the people on the deck above. Pont Neuf's 120 is derived from its 238 m span and stands."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1_targeted",
@@ -23227,7 +23228,7 @@
         "notes": "Contemporary-art museum (Pinault Collection); opened 22 May 2021, operating.",
         "source": "https://www.museos.com/en/paris/bourse-de-commerce/"
       },
-      "trigger_radius_basis": "A rotunda 60 m across with its portico and the Medici column on its flank (Aiko's day)."
+      "trigger_radius_basis": "A rotunda 60 m across with its portico and the Medici column on its flank."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1_targeted",
@@ -23317,7 +23318,7 @@
         "geocoded_at": "2026-04-26T14:15:39.767954+00:00",
         "nominatim_importance": 0.4853471968552425
       },
-      "trigger_radius_basis": "A free-standing arch in the open Place du Carrousel: within thirty metres you are at it (Aiko's and Greta's days)."
+      "trigger_radius_basis": "A free-standing arch in the open Place du Carrousel: within thirty metres you are at it."
     },
     "_meta": {
       "prompt_version": "poi_generate_v1_targeted",

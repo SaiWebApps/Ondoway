@@ -387,7 +387,7 @@ void main() {
     // The server plans ONE day, and generate keeps
     // `options` on the wire as a list of exactly one (stored older
     // trips carry multi-option lists, so the field stays a list forever).
-    // The phone no longer parses or exposes it — the model has no options
+    // The phone does not parse or expose it — the model has no options
     // surface at all, and an options key of ANY shape is ignored input.
     test('fromJson accepts the one-option generate payload without reading it',
         () {
@@ -424,7 +424,7 @@ void main() {
       // the phone never looks inside.
       final json = {
         'trip_id': 'trip-old',
-        'trip_name': 'Pre-Phase-4 Trip',
+        'trip_name': 'Multi-option Trip',
         'profile_id': 'profile-1',
         'total_stops': 0,
         'total_duration_min': 0,

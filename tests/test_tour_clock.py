@@ -426,11 +426,11 @@ def test_a_closed_museum_with_an_exterior_becomes_an_outside_only_stop():
     )
     demoted = [e for e in tuesday.clock_exclusions if e.poi_id == museum.id]
     assert len(demoted) == 1, "the outside-only demotion must be disclosed"
-    # The DECISION is a flag, not words in the sentence. The words "seated
-    # outside only" are ruled out; the harness once string-matched the
-    # reason and went blank; and the traveller's sentence ("we will see it from
-    # the outside" vs "not in your day") depends on route membership only the
-    # wire knows. The DISCLOSURE this test defends is unchanged.
+    # The DECISION is a flag, not words in the sentence. The sentence never
+    # carries engine words such as "seated outside only"; a harness that
+    # string-matches the reason goes blank; and the traveller's sentence ("we will
+    # see it from the outside" vs "not in your day") depends on route membership
+    # only the wire knows.
     assert demoted[0].kept_outside is True
     assert "closed" in demoted[0].reason and "Tuesday" in demoted[0].reason
     assert tuesday.planned_visit_seconds[museum.id] == 20 * 60, (
@@ -480,7 +480,8 @@ def test_a_closure_is_disclosed_in_plain_words_and_spoken_by_its_source():
 
     for sentence in (from_map, guessed, sourceless):
         assert sentence is not None and "Wednesday" in sentence, sentence
-        # The ruled-out vocabulary, in one place so a re-introduction is loud.
+        # Engine words a traveller's sentence never carries, in one place so a
+        # re-introduction is loud.
         for banned in ("hours:", "OSM", "AI", "seated", "gated", "err-short"):
             assert banned not in sentence, f"{banned!r} is back in {sentence!r}"
 
@@ -1148,9 +1149,8 @@ def _dated_ab_run(*, dead: bool, pinned=(), start_datetime="2026-08-10T09:30:00"
 
 
 def test_a_pinned_dead_door_is_never_dropped():
-    """An overridden pin is the one outcome worse than a refusal (the pin
-    block's own ruling): a pinned stop stays, demoted and disclosed, however
-    dead its door."""
+    """An overridden pin is the one outcome worse than a refusal: a pinned stop
+    stays, demoted and disclosed, however dead its door."""
     museum, route = _dated_ab_run(dead=True, pinned=["mid-museum"])
 
     assert museum.id in [p.id for p in route.pois], (

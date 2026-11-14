@@ -31,17 +31,18 @@ WHAT IT PRODUCES, per POI in ``data/{slug}/poi-raw.json``:
                           judgeable by someone who has never been to the city.
 
 THE QUEUE IS THE WAIT BEFORE ENTERING — security and ticket line — AND IT IS PRICED
-SEPARATELY FROM VISIT TIME. ``visit_seconds_inside`` currently folds a typical queue
-into the visit (owner ruling 2026-08-06: the basis sentence records the split so a
-later pass "can separate the two without re-pricing the city"); this pass is that
-later pass. The Sainte-Chapelle is the anchor: 28 minutes of line plus 38 under
+SEPARATELY FROM VISIT TIME. ``visit_seconds_inside`` folds a typical queue into the
+visit, and its basis sentence records how much of the number is line, so this pass
+can price the line on its own without re-pricing the city. The Sainte-Chapelle is
+the anchor: 28 minutes of line plus 38 under
 the glass are TWO facts, and folding them
 into one 66 makes the wait permanent — unskippable by someone who only wants the
 outside, unshrinkable at opening time.
 
 REVIEW AT THE STANDARD RATE, WITH NAMED SPOT CHECKS. Unlike the place judgements,
 queues have observable external sources (timed-ticket pages, institutions' own
-"expect security lines" guidance), so the double-rate rule does not apply. The
+"expect security lines" guidance), so a reviewer samples them at the ordinary rate,
+not the doubled rate that judgements without an outside source get. The
 reviewer MUST individually check: the Louvre, Sainte-Chapelle, the Musée d'Orsay,
 and every row classed ``unpredictable`` (the catacombs class) — the marquee lines a
 wrong number would misprice for the most visitors, and the class that changes what a
@@ -139,8 +140,8 @@ time, so use this class only when the variance is the famous fact about the plac
 CALIBRATION, matched to real observed days:
 
 - Sainte-Chapelle: `long`, peak 30, off-peak 10, peak hours [["10:30","16:00"]]. \
-Airport-style security plus a ticket check ahead of a small chapel; the observed \
-day behind this corpus stood 28 minutes in it.
+Airport-style security plus a ticket check ahead of a small chapel; a busy-hour \
+visitor stands about 28 minutes in it.
 - The Louvre (pyramid entrance): `long`, peak 40, off-peak 15, peak hours \
 [["10:00","15:00"]]. Security into the pyramid, then ticket gates; timed tickets \
 shorten but do not remove it.
@@ -306,9 +307,8 @@ def price_batch(client: Any, model: str, batch: list[dict[str, Any]]) -> list[di
 
     The call itself is twice-tried against TRANSPORT trouble (timeout /
     dropped connection), the same discipline the pass already applies to
-    structurally-bad rows — the first full Paris run died on one
-    ``httpx.ReadTimeout`` twenty-odd calls in, taking every batch with it.
-    A second transport failure on the same batch is a real outage: named
+    structurally-bad rows — one ``httpx.ReadTimeout`` deep into a full pass
+    must not take every batch with it. A second transport failure on the same batch is a real outage: named
     and fatal, never silently skipped (a silently unpriced batch reads as
     "reviewed, no queue anywhere").
     """

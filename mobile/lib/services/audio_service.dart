@@ -400,7 +400,8 @@ class AudioService extends ChangeNotifier implements AudioProvider {
 
   /// The session's own voice. The phone carries no text-to-speech
   /// plugin today, so this door is SILENT: every line reaches it only after it
-  /// is on the screen, and "mute beats graceful". Wiring a
+  /// is on the screen, and saying nothing is preferred to a degraded fallback
+  /// voice. Wiring a
   /// voice is one implementation here; the etiquette (when a line may be said)
   /// lives in TourPlaybackService and does not change with it.
   @override
@@ -466,7 +467,7 @@ class AudioService extends ChangeNotifier implements AudioProvider {
   }
 
   /// Check PER-STOP audio status by ItineraryItem id —
-  /// THE status poll (the per-beat one was deleted).
+  /// THE status poll.
   ///
   /// GET /audio/stop-status/{stopId} reads the per-stop narration audio
   /// persisted by /audio/generate-trip-stops, so the itinerary flow polls/plays

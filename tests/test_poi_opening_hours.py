@@ -16,8 +16,9 @@ repo can adjudicate whether a particular museum really closes on Tuesday
 (`tests/test_poi_visit_duration.py` records the same rule). Do not add a test
 asserting a particular POI's real hours.
 
-The PHASE GATE lives here too (the `test_gate_*` block): the sentences the
-phase is judged by, written before anything was built.
+The `test_gate_*` block pins the hours rules themselves: one hours source per
+door, map text the library reads, no verification ladder, and hours parity on
+every target.
 
 Mirrors `tests/test_poi_visit_duration.py`. Runs in milliseconds with no
 database.
@@ -103,11 +104,10 @@ def test_every_poi_explains_its_opening_hours() -> None:
 
 
 # ---------------------------------------------------------------------------
-# THE PHASE GATE: a door carries ONE hours source — map, guess,
+# THE HOURS RULES: a door carries ONE hours source — map, guess,
 # or unknown — as OpenStreetMap text the library can read; no verified badge,
 # no ladder, no review command exists anywhere; parity compares hours on every
-# target and never merely warns. These are the sentences the phase is judged
-# by, written before anything was built.
+# target and never merely warns.
 # ---------------------------------------------------------------------------
 
 #: The heatwave shelter file's own words — a source no hours basis may cite.

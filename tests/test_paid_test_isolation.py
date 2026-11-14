@@ -87,12 +87,9 @@ def test_makefile_live_target_fetches_render_and_enables_live_collection() -> No
 
 
 def test_database_reset_cannot_address_cloud_or_all_compose_volumes() -> None:
-    """A DATA-LOSS guard, kept at the 2026-08-18 test cull (owner ruling: keep the
-    incident guards, drop the shape checks). Re-derived to the CURRENT recipe: the
-    old pin named three volume literals and an Aura sentence the recipe no longer
-    contains, so it went red while the recipe got SAFER. What must hold: db-reset
-    goes through the one-local-DB check, removes exactly the ONE volume it was
-    told, and never runs a compose-wide down or a volume prune."""
+    """A DATA-LOSS guard: db-reset goes through the one-local-DB check, removes
+    exactly the ONE volume it was told, and never runs a compose-wide down or a
+    volume prune."""
     source = (REPO / "Makefile").read_text(encoding="utf-8")
     reset = source.split("\ndb-reset:", 1)[1].split("\n\n", 1)[0]
     assert "$(check_db)" in reset, "db-reset must refuse any DB outside LOCAL_DBS"

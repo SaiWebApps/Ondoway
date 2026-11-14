@@ -8,11 +8,11 @@ import 'package:path_provider/path_provider.dart';
 ///
 /// Both pages drop stops around the tester and walk to them with the phone
 /// locked, and both were building those stops and caching their clip with their
-/// own private copy of the same twenty lines. One copy, here — the two drifted
-/// apart the moment either was touched, which is the whole of CLAUDE.md rule 1.
+/// own private copy of the same twenty lines. One copy, here, so the two pages
+/// cannot drift apart when either is edited.
 ///
 /// These pages exist because a green test suite is not evidence for background
-/// audio: the simulator and a real iPhone disagreed about it once already, and
+/// audio: the simulator and a real iPhone can disagree about it, and
 /// the only proof that counts is a locked phone in a pocket on a pavement.
 
 /// Wider than a real doorway, on purpose.

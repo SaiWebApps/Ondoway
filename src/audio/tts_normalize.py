@@ -150,7 +150,7 @@ def normalize_dashes_for_reading(text: str) -> str:
 
     Shared by TTS normalization AND the workbench preview display so what you
     READ matches what you HEAR: the spoken audio pauses (not the word 'dash')
-    and the printed narration is not dash-riddled (the tourist complaint). Tight
+    and the printed narration is not dash-riddled for the tourist reading it. Tight
     numeric/date ranges (12 to 14) and hyphen compounds keep their stroke.
     """
     text = _EM_DASH_RE.sub(", ", text)

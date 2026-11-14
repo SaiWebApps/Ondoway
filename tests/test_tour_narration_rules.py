@@ -108,7 +108,7 @@ def test_the_locked_voice_puts_the_point_first_and_saves_no_twist_for_the_end():
     sentence — never from a recap of an earlier stop or the walking line; the kicker may
     stay last as colour but the piece may never depend on it; the recaps go.
 
-    MEASURED 2026-08-19: the locked voice instructed the opposite — "BUILD,
+    MEASURED: the locked voice instructed the opposite — "BUILD,
     DON'T FLATTEN … keep raising the stakes … toward a payoff near the end … the twist
     comes LATE" — and every composed stop ended on a kicker, with 150-185 words in its
     last minute and 24-44 s of recap before the place was named. This test reads the
@@ -185,7 +185,7 @@ def test_the_stitch_supplies_one_close_per_stop_and_the_last_is_the_days():
     GLUE_CLOSING at EVERY stop — the fallback that ships when the writer leaves it
     unrewritten (reported as close_not_authored), and the sentence the
     composer is licensed to rewrite (authoring.py's grounding rule: glue keeps a source_id
-    supplied in this stop's stitched script). MEASURED 2026-08-19: only the last
+    supplied in this stop's stitched script). MEASURED: only the last
     stop carried closing lines — two of them, the second the thank-you-and-keep-exploring
     sign-off. UNDO: close only the last stop again -> RED."""
     from src.tour.generation import GLUE_CLOSING
@@ -279,7 +279,7 @@ def _plan_with_closes(*, drop_close_at: int | None = None, template_at: int | No
 def test_a_composed_stop_without_a_close_refuses_at_finalize_and_a_template_is_not_authored():
     """The close is what "wrap it up" plays, so a composed stop that has NO close
     cannot ship — the live finalizer refuses it. A close left as the stitch's TEMPLATE
-    is not authored (the owner's rule: "no template close counted as authored") — it ships,
+    is not authored — it ships,
     because the fallback is better than silence, but it is REPORTED on the degradations
     channel the phone and the workbench read, never counted as the writer's. UNDO: drop
     the close requirement from finalize_premium_tour -> the missing-close day finalizes
@@ -459,7 +459,7 @@ def test_a_skip_adjacency_gets_a_thread_slot_in_the_one_seam_and_threads_ride_th
 def test_threads_are_kept_one_sentence_short_and_entailed_and_ride_the_composition():
     """A thread is ONE sentence, under fifteen words; it is content, fact-gated; it is
     never a recap. The finalizer keeps the writer's threads by stop and predecessor.
-    RE-DERIVED 2026-08-19 (measured): a quality miss — two sentences, over-long,
+    RE-DERIVED (measured): a quality miss — two sentences, over-long,
     unentailed — is DROPPED AND REPORTED (``thread_dropped``), never a refusal: with
     ValueError here, two of three real composes of one test day died whole over an
     optional line (the remedy is "none rather than glue"; refusal is for missing
@@ -597,7 +597,7 @@ def test_threads_ride_the_wire_as_thread_lines_keyed_by_the_predecessors_name():
 def test_the_tight_telling_is_about_three_minutes_at_the_one_emission_choke_point():
     """TIGHT = point-first, about three minutes (~450 words). The measured big stops of
     a couple's day ran 4.5 and 4.9 minutes, past their own four. The ceiling is the ONE
-    emission choke point (C9 governor v4), so the value moves THERE and pricing
+    emission choke point (the per-stop audio governor), so the value moves THERE and pricing
     moves with it (a stop is priced at what it will voice — two truths would drift).
     The density dial keeps its shape: "less" halves (90 s = the never-demote floor),
     "more" gives half again (270 s — exactly the old default). UNDO: restore 270 → RED."""
@@ -688,7 +688,7 @@ def test_a_major_stop_is_a_priced_budget_and_a_second_story_never_a_tier():
 
 def test_the_full_telling_is_authored_through_the_one_seam_from_the_second_story():
     """FULL = a second COMPOSED piece from the same
-    material — never the leftover corpus served raw ("a dump, not a telling") —
+    material — never the leftover corpus served raw —
     written point-first with its own close, repeating nothing of the tight. The seam is
     THE seam: a one-stop plan over the overflow beats through plan_premium_authoring,
     whose request carries the tight telling as ALREADY TOLD. UNDO: drop the
@@ -800,8 +800,8 @@ def test_a_full_telling_is_kept_gated_and_never_kills_the_day():
 def test_the_full_telling_rides_the_wire_and_the_more_tap_never_serves_the_dump():
     """The full telling reaches the phone as its own fields
     (`full_narration`, `full_close_text`) beside the tight ones, and the on-demand
-    audio door serves IT — never the raw keep-exploring stitch — wherever it exists
-    (the uncomposed dump is "a dump, not a telling"). Minor stops
+    audio door serves IT — never the raw keep-exploring stitch — wherever it exists.
+    Minor stops
     keep the extras route unchanged. UNDO: serve extra_narration first -> RED."""
     import inspect
 
@@ -896,9 +896,8 @@ def test_a_route_with_no_door_map_renders_every_prompt_exactly_as_before():
     """The identity default: an empty ``visit_goes_inside`` map (a dateless or
     legacy route) renders byte-identical prompts — the compose seam never
     invents a door nobody priced. The PROMPT is asserted first and alone: it
-    is the behavioural identity, meaningful on any tree (the QA undo test
-    flagged the field read below as API-coupled — it stays, second, as the
-    wiring check)."""
+    is the behavioural identity, meaningful on any tree (the field read below
+    is API-coupled — it stays, second, as the wiring check)."""
     from src.tour.authoring import _certification_compose_requests, _compose_user_prompt
 
     script, seq, route = _stitch_day(2, round_trip=False)
@@ -957,8 +956,7 @@ def test_solo_is_byte_identical_and_warm_and_family_are_deltas_in_the_one_voice(
 
 def test_density_rules_bind_every_register_in_the_locked_voice():
     """The density rules bind EVERY register — one name a sentence,
-    short words, gloss hard English as well as French ("Jesuit"), no idiom. A
-    reviewer counted PDV-base at 1.3-9 names a sentence and ten idioms in 4.5 minutes. These
+    short words, gloss hard English as well as French ("Jesuit"), no idiom. These
     live in the LOCKED VOICE (the system prompt), not in a register delta — the
     sealed policy hash moves and is declared. UNDO: drop the DENSITY rule -> RED."""
     system = _system_text(_envelope(_one_stop_request()))

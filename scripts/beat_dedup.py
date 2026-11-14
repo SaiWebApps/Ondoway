@@ -11,8 +11,8 @@ Public entry points:
     in-memory beats, then call `beats_io.commit` for atomic write. Appends one
     line per applied decision to `_dedup_review/_log.jsonl`.
 
-Report-only vs apply phases are decoupled so the interactive CLI loop (task 7)
-and the pytest harness (task 6) can both drive the same apply logic.
+Report-only vs apply phases are decoupled so the interactive CLI loop
+and the pytest harness can both drive the same apply logic.
 """
 
 from __future__ import annotations
@@ -328,7 +328,7 @@ def apply_decisions(
     }
 
 
-# ---------- Interactive CLI (task 7) ----------
+# ---------- Interactive CLI ----------
 
 _ACTION_BY_KEY = {
     "a": None,  # accept recommendation — resolved per-pair

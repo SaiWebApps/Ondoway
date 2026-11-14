@@ -38,8 +38,8 @@ import UIKit
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     // Register app-level channels on the ENGINE's messenger. NOT via
     // window?.rootViewController: under the UIScene lifecycle the AppDelegate's
-    // `window` is nil, so that path silently registered nothing and every call
-    // failed with MissingPluginException (this also left GeocodingChannel dead).
+    // `window` is nil, so that path registers nothing and every call fails with
+    // MissingPluginException.
     let messenger = engineBridge.applicationRegistrar.messenger()
     GeocodingChannel.register(with: messenger)
     registerAudioSessionChannel(messenger)
@@ -49,16 +49,9 @@ import UIKit
   /// Foreground-only audio-session activation for the tour-playback path.
   /// `prepare` activates the .playback/.duckOthers session while the app is
   /// frontmost; it then survives lock, so a background geofence fire plays
-  /// without re-activating — which returns CannotInterruptOthers (560557684),
-  /// and is exactly what made the walk silent before this existed.
-  ///
-  /// A third channel, `com.ondoway/bg_audio`, stood beside this one until
-  /// 2026-08-31. It was the Slice 0.3 spike's ancestor of these two: the same
-  /// session activation, plus a `play` that took RAW CLIP BYTES from Dart. Its
-  /// job was to find out whether anything could be heard through a locked
-  /// screen. The answer it produced is now permanent — activation lives here,
-  /// file playback lives in the native_audio channel below — so the channel was
-  /// a third way to do what these two already do, and it is gone.
+  /// without re-activating. Re-activating from the background returns
+  /// CannotInterruptOthers (560557684) and the walk goes silent. Activation
+  /// lives here; file playback lives in the native_audio channel below.
   private func registerAudioSessionChannel(_ messenger: FlutterBinaryMessenger) {
     let channel = FlutterMethodChannel(
       name: "com.ondoway/audio_session", binaryMessenger: messenger)
@@ -89,8 +82,8 @@ import UIKit
   }
 
   /// PRODUCTION tour-playback player. just_audio's AVPlayer emits no audible
-  /// output while the screen is locked on iOS 26 (proven on-device — see the
-  /// slice DIAGNOSIS), so cached tour narration plays through an `AVAudioPlayer`
+  /// output while the screen is locked on iOS 26 (measured on a device), so
+  /// cached tour narration plays through an `AVAudioPlayer`
   /// here instead, which DOES play locked on the same `.playback` session that
   /// the `prepare` calls activate. State the Dart side needs is bridged back:
   /// `play` returns the clip duration (seconds), `getPosition` reports the play
@@ -116,8 +109,8 @@ import UIKit
           // URL initializer trusts the file EXTENSION to pick a decoder, so a clip
           // whose bytes are one format under a different extension (the app caches
           // everything as `.mp3`, and the debug proof caches a WAV as `.mp3`)
-          // throws. The Data initializer content-sniffs the header instead — the
-          // path proven to play locked in Slice 0.3.
+          // throws. The Data initializer content-sniffs the header instead, and
+          // this path plays on a locked screen.
           let data = try Data(contentsOf: URL(fileURLWithPath: path))
           let player = try AVAudioPlayer(data: data)
           player.delegate = self

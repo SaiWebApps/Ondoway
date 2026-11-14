@@ -247,16 +247,16 @@ def _leg_line_source(
 
 
 def test_a_corpus_leg_line_untrue_where_it_plays_is_dropped_not_the_day() -> None:
-    """The rule "drop a failing line immediately — silence over wrongness,
-    never refuse the day" reaches FIRST compose, for the one
+    """A failing line is dropped at once and the day still serves: silence over
+    wrongness, never a refused day. At FIRST compose this holds for the one
     class where a drop is safe: a walk-concurrent CORPUS unit (a vignette
     one-liner, a transit-beat line — self-contained, so dropping it orphans
-    no later sentence). The measured shape: the Verrerie hook's "lived on this street"
-    played on a leg, the floor flagged `arrived_word_on_leg:this`, and the
-    whole five-stop day refused with a retry that reproduces identically. Now
-    the line is left unsaid, the day serves, and the degradations channel says
-    so. Writer glue keeps the reroll+refusal path; a stop-piece corpus
-    sentence is never dropped here. UNDO: remove the valve from
+    no later sentence). The shape: a one-liner saying "lived on this street"
+    plays on a leg and the floor flags `arrived_word_on_leg:this`. The line is
+    left unsaid, the day serves, and the degradations channel says so, instead
+    of refusing the whole day with a retry that reproduces identically. Writer
+    glue keeps the reroll+refusal path; a stop-piece corpus sentence is never
+    dropped here. UNDO: remove the valve from
     finalize_certification_composition -> ComposeVerificationError -> RED."""
     from src.tour.compose_gate import ComposeVerificationError
     from src.tour.degradations import degradation_scope

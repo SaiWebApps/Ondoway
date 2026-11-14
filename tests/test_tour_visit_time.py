@@ -72,7 +72,7 @@ def _corpus(poi: POI, *, beat_lens: str):
 
 
 def test_the_same_place_costs_two_visitors_different_amounts_of_time():
-    """The two-visitor experiment, on one interior-capable place.
+    """Two visitors, one interior-capable place.
 
     This is the hardest requirement and the one nothing in the current model can
     express: an interest must change how long you stay, not only where you go. The
@@ -87,16 +87,16 @@ def test_the_same_place_costs_two_visitors_different_amounts_of_time():
     place = _place("cour-carree", outside_min=8, inside_s=2400)
     snapshot = _corpus(place, beat_lens="historic_arch")
 
-    camille = visit_seconds(place, frozenset({"historic_arch"}), snapshot)
-    theo = visit_seconds(place, frozenset({"dark_history"}), snapshot)
+    arch_lover = visit_seconds(place, frozenset({"historic_arch"}), snapshot)
+    dark_walker = visit_seconds(place, frozenset({"dark_history"}), snapshot)
 
-    assert camille > theo, (
-        f"the same place cost both visitors the same time ({camille}s): the "
+    assert arch_lover > dark_walker, (
+        f"the same place cost both visitors the same time ({arch_lover}s): the "
         f"declared interest is not reaching the clock, so the lens is decoration."
     )
     # Not merely different — MATERIALLY different. One goes in; the other does not.
-    assert camille == 2400
-    assert theo == 8 * 60
+    assert arch_lover == 2400
+    assert dark_walker == 8 * 60
 
 
 def test_a_place_with_no_interior_never_exceeds_its_outside_capacity():
@@ -196,8 +196,8 @@ def test_a_ceiling_below_a_minute_is_still_honoured_by_this_function(ceiling: in
 
     Generation floors a stop at `max(planned_visit, planned_audio)`, so a ceiling
     below a stop's narration is overridden there and the tour never truncates
-    speech. That is a product decision — Release 1 never cuts narration short —
-    and the API is what refuses a ceiling under five minutes. This function stays
+    speech. The tour never cuts narration short, and the API is what refuses a
+    ceiling under five minutes. This function stays
     a pure `min`, so the two responsibilities cannot drift into each other.
     """
     from src.tour.visit_time import visit_seconds
@@ -221,8 +221,7 @@ def test_a_party_ceiling_under_five_minutes_is_refused_not_silently_dropped():
     Generation floors every stop at its own narration, and a stop may speak up to
     MAX_DWELL_AUDIO_SECONDS = 270 s. So a ceiling below 300 s could be overridden
     on any beat-rich stop, and accepting one would be promising a bound the tour
-    then breaks. Release 1 never truncates narration; trimming speech to fit a
-    shorter ceiling is Release 2.
+    then breaks. The tour never truncates narration to fit a shorter ceiling.
 
     Enforced on BOTH request models and on the contract. Neither request model
     declares `model_config`, so both inherit pydantic's default `extra="ignore"` —

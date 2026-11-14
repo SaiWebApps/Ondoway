@@ -1,32 +1,18 @@
-"""Regression tests for the audio router's spend/mutate hardening.
+"""The audio router's spend/mutate hardening.
 
-Each test here is red-first against a specific defect:
-
-1. The paid/mutating audio routes (generate-batch, generate/{beat_id}, compare,
-   compare/download, eval) were mounted UNCONDITIONALLY and unauthenticated on
-   the public deployment. generate-batch alone re-voices and overwrites EVERY
-   NarrativeBeat in the connected graph through a paid provider.
-2. /audio/compare/download/{filename} 500'd (leaking the server temp path) on a
-   URL-encoded '..' or '.' because Path(...).name does not strip them and
-   exists() passes for a directory.
-3. /audio/files/{key:path} 500'd (leaking the absolute storage path) on an empty
-   key or a directory key, for the same exists()-vs-is_file() reason.
-4. /audio/preview had no cache, so a replayed identical payload was billed again.
-   (The rate limit this file used to guard was DELETED on 2026-07-31 by owner
-   order, along with its tests; the text cap was DELETED on 2026-08-04 by owner
-   order so the workbench judges the whole narration, and the test that pinned it
-   was replaced by the one that pins the opposite.)
-5. /audio/compare's on-disk cache was bounded only by AGE, so a caller could
-   fill the container's ephemeral disk within the retention window.
-
-TOMBSTONE (the per-beat audio library is deleted): the rows that pinned the
-per-beat routes —
-``test_generate_batch_is_not_reachable_on_prod_profile``, the ``generate-batch``
-and ``generate/{beat_id}`` rows of ``test_spend_routes_404_on_prod_profile``, and
-the whole "silently-dropped stop" section (``TestGenerateTripReportsOrphanPrimary``
-over ``POST /audio/generate-trip``) — were DELETED, not adapted. The gate's
-invariant (the paid admin surface is closed on the public deployment) still
-holds for compare / compare-download / eval below.
+1. The paid/mutating audio routes (compare, compare/download, eval) mount only
+   behind the workbench admin gate; on the public deployment they are absent.
+2. /audio/compare/download/{filename} answers 404, never a 500 leaking the server
+   temp path, on a URL-encoded '..' or '.', because Path(...).name does not strip
+   them and exists() passes for a directory.
+3. /audio/files/{key:path} answers 404, never a 500 leaking the absolute storage
+   path, on an empty key or a directory key, for the same exists()-vs-is_file()
+   reason.
+4. /audio/preview caches identical payloads so a replay is never billed again, and
+   voices the whole narration with no text cap so the workbench judges all of it.
+5. /audio/compare's on-disk cache is bounded by file count and total bytes, not by
+   AGE alone, so a caller cannot fill the container's ephemeral disk within the
+   retention window.
 """
 
 from __future__ import annotations
@@ -96,11 +82,9 @@ class TestAdminGate:
         """An unset or typo'd flag must keep the surface CLOSED, matching
         app._workbench_api_enabled's fail-closed contract.
 
-        The probe used to be ``POST /audio/generate-batch``, a route that is now
-        deleted — against a deleted route a 404 proves nothing about the gate, so the probe is now
-        ``/audio/compare``, a paid route that stays admin-gated. The invariant
-        is unchanged; with the gate ON the same request answers 200
-        (``test_compare_is_reachable_when_admin_gate_is_on``).
+        The probe is ``/audio/compare``, a paid route that stays admin-gated, so a
+        404 here proves the gate and not an absent route: with the gate ON the
+        same request answers 200 (``test_compare_is_reachable_when_admin_gate_is_on``).
         """
         probe = {"text": "hi", "providers": ["mock"]}
         monkeypatch.delenv("WORKBENCH_API_ENABLED", raising=False)
@@ -188,11 +172,9 @@ class TestPreviewSpendBounds:
     def test_preview_voices_the_whole_narration_uncapped(self, prod_client):
         """The preview must voice every character it is given.
 
-        The old cap silently truncated, so the workbench judged a fragment while
-        believing it judged the tour. It was an abuse bound on an anonymous
-        endpoint, not a quality setting, and it was deleted 2026-08-04 by owner
-        order. Equality, not a length bound: a `<=` would pass on any cap above
-        the payload.
+        A cap would silently truncate, so the workbench would judge a fragment
+        while believing it judged the tour. Equality, not a length bound: a `<=`
+        would pass on any cap above the payload.
         """
         narration = ("word " * 4000)[:12000]
         assert len(narration) == 12000, "the payload itself must be long enough to be capped"
@@ -296,8 +278,8 @@ class TestCompareDiskBounds:
         assert total <= 5000, f"{total} bytes survived a cap of 5000"
 
     def test_compare_dedupes_repeated_providers(self, admin_client):
-        """max_length=5 with no uniqueness check let ["openai"]*5 multiply the
-        bill 5x for one text."""
+        """max_length=5 alone would let ["openai"]*5 multiply the bill 5x for one
+        text; repeated providers are voiced once."""
         calls: list[str] = []
 
         class _FakePaid:
@@ -340,11 +322,3 @@ class TestArtifactMissing:
         """Conservative by construction: an unverifiable pointer must never
         trigger a spurious (paid) regeneration."""
         assert audio_routes._artifact_missing(url) is False
-
-
-# ── The silently-dropped stop — TOMBSTONE ────────────────────────────────
-# ``TestGenerateTripReportsOrphanPrimary`` (+ ``_seed_orphan_trip`` and the
-# ORPHAN_* ids) pinned ``POST /audio/generate-trip``'s per-beat orphan report.
-# That route belonged to the per-beat audio library, which is deleted; the
-# per-stop path it is replaced by voices an item's own ``narration`` and has no
-# primary-beat edge to orphan. Deleted, not adapted.

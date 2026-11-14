@@ -13,9 +13,9 @@ a basis sentence each).
 
 This file checks STRUCTURE and the reviewed precedents, for the reason every sibling
 guard records (`tests/test_poi_queues.py`, `tests/test_poi_visit_duration.py`): nobody
-in this repo can pace out every square; the kind table plus the named review is the
-mechanism for wrong-but-well-formed numbers. The precedents pinned below are the places
-a review named in its own words, so a silent re-default of one of them is caught.
+in this repo can pace out every square; the kind table plus the reviewed table is the
+mechanism for wrong-but-well-formed numbers. The precedents pinned below are rows of the
+reviewed table held at their reviewed numbers, so a silent re-default of one is caught.
 
 ALLOW-LIST MECHANICS: per-city checks loop IN-BODY over the tuple (parametrizing over an
 empty tuple skips, and the suite hard-errors on skips). Runs in milliseconds, no database.
@@ -47,19 +47,18 @@ FLOOR_BY_KIND: dict[str, int] = {
 FOOTPRINT_MIN_M = 8
 FOOTPRINT_MAX_M = 500
 
-#: The places a review named, in its own numbers (the reviewed table's basis
-#: sentences). Pinned so a re-run of any pass cannot silently hand
-#: them back to the uploader's default.
-PANEL_PRECEDENTS: dict[str, int] = {
+#: Marquee rows of the reviewed table, at their reviewed numbers. Pinned so a
+#: re-run of any pass cannot silently hand them back to the uploader's default.
+PINNED_PRECEDENTS: dict[str, int] = {
     "Place des Vosges": 70,  # 140 m across, the arcade seventy from the statue
     "Notre-Dame Cathedral": 100,  # the parvis west of the façade; a pin check
     "Louvre Museum": 120,  # the Cour Napoléon and the Cour Carrée
     "Musee d'Orsay": 60,  # the forecourt and a bench
-    # The garden, the columns, no. 177. The pin sits at the palace forecourt and the
-    # garden runs 275 m behind it, so a 100 m footprint never reached the garden; it
-    # is 300. The footprint places arrival; the reviewed anchors carry "right here",
-    # which is earned by standing near the thing, never by crossing the edge of a
-    # five-hundred-metre disc. The Père-Lachaise 500 is the precedent.
+    # The pin sits at the palace forecourt and the garden runs 275 m behind it, so a
+    # 100 m footprint never reached the garden; it is 300. The footprint places
+    # arrival; the reviewed anchors carry "right here", which is earned by standing
+    # near the thing, never by crossing the edge of a five-hundred-metre disc. The
+    # Père-Lachaise 500 is the precedent.
     "Palais-Royal": 300,
     "Place de la Concorde": 120,  # three positions on a 360 m square
     "Pont Neuf": 120,  # the bridge's half-length from the Vert-Galant
@@ -125,14 +124,14 @@ def test_trigger_radius_for_reads_the_kind_first_and_the_name_only_without_one()
 
 def test_the_reviewed_table_argues_every_row_and_holds_the_named_places() -> None:
     """Every reviewed footprint ships with the sentence that argues it (the `*_basis`
-    precedent), sits inside the bounds, and the places a review named are in it."""
+    precedent), sits inside the bounds, and every pinned precedent is in it."""
     from scripts.poi_trigger_radius import REVIEWED
 
     for name, (metres, basis) in REVIEWED.items():
         assert isinstance(metres, int) and FOOTPRINT_MIN_M <= metres <= FOOTPRINT_MAX_M, name
         assert isinstance(basis, str) and len(basis.split()) >= 6, f"{name}: no argument"
-    for name, metres in PANEL_PRECEDENTS.items():
-        assert name in REVIEWED, f"a review named {name!r}; the review does not"
+    for name, metres in PINNED_PRECEDENTS.items():
+        assert name in REVIEWED, f"{name!r} is a pinned precedent; the reviewed table lacks it"
         assert REVIEWED[name][0] == metres, (name, REVIEWED[name][0], metres)
 
 
@@ -185,7 +184,7 @@ def test_a_place_you_are_in_is_never_a_doorway() -> None:
 
 
 def test_the_reviewed_footprints_are_what_the_data_carries() -> None:
-    """The review is the audit trail; the data carries its numbers, by name."""
+    """The reviewed table is the audit trail; the data carries its numbers, by name."""
     from scripts.poi_trigger_radius import REVIEWED
 
     for city in CITIES_WITH_FOOTPRINTS:
@@ -280,8 +279,8 @@ def test_the_upload_carries_the_footprint_in_both_property_lists() -> None:
 
 def test_the_export_sync_carries_the_footprint() -> None:
     """`SYNCED_FIELDS` in `scripts/sync_poi_exports.py` — THE one list of fields that flow
-    poi-raw → export chunks — carries the footprint, so the 19 drifted export entries the
-    TODO in tests/test_export_consistency.py recorded can never come back."""
+    poi-raw → export chunks — carries the footprint, so an export entry can never drift
+    from poi-raw.json on it."""
     from scripts.sync_poi_exports import SYNCED_FIELDS
 
     assert "trigger_radius" in SYNCED_FIELDS

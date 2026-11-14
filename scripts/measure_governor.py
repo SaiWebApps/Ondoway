@@ -1,10 +1,9 @@
-"""Per-stop uncapped-vs-v3-capped emitted audio for a LIVE tour — governor proof.
+"""Per-stop uncapped-vs-capped emitted audio for a LIVE tour — governor proof.
 
 Deterministic (no LLM/render): loads the live corpus, runs select_route, then
 compares build_poi_beat_plans (uncapped) against build_poi_beat_plans_capped
-(the v3 share-of-delivered cap) per stop. Shows exactly which incidental stops
-the governor truncates and by how much — the functional before/after the
-dwell/audio spec requires.
+(the audio governor) per stop. Shows exactly which incidental stops the
+governor truncates and by how much.
 """
 
 from __future__ import annotations
@@ -50,7 +49,7 @@ def main() -> int:
 
     uncapped = build_poi_beat_plans(route, snap, lenses=None)
     capped = build_poi_beat_plans_capped(route, snap, lenses=None, end_is_none=inp.end is None)
-    # Mirror the v4 wrapper's exempt set: the MARQUEE (highest-tier stop, ties ->
+    # Mirror build_poi_beat_plans_capped's exempt set: the MARQUEE (highest-tier stop, ties ->
     # highest audio) + the fixed destination / pulled endpoint.
     u_audio = [planned_audio_seconds(p.beats) for p in uncapped]
     exempt = set()

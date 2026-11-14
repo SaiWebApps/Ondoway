@@ -1,4 +1,4 @@
-"""Step-3 Wikipedia source connector.
+"""Wikipedia source connector.
 
 PURE (no network, no I/O): ``consult_url`` names the MediaWiki
 ``list=geosearch`` GET centred on the city's bbox centre, and ``parse`` maps

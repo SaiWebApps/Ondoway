@@ -1,4 +1,4 @@
-"""The Wikivoyage Step-3 source connector.
+"""The Wikivoyage source connector.
 
 Wikivoyage's POI listings live in the raw WIKITEXT as ``{{listing ...}}``
 templates (``name``/``lat``/``long``/... params), NOT in the plain-text extract

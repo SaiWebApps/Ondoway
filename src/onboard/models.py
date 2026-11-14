@@ -7,7 +7,7 @@ structural walls below are load-bearing:
   cannot be constructed without a ``license`` (the license wall).
 - ``DiscoveryPointer`` is metadata-only BY DESIGN: it has no text field and
   forbids extras, so a shadow-library (Anna's Archive / WeLib) result can never
-  smuggle copyrighted body text into the pipeline (grey-zone wall 1).
+  smuggle copyrighted body text into the pipeline.
 - ``OnboardEvent`` / ``OnboardJob`` are what the live progress stream
   serialises so the user watches sources being consulted in real time.
 """
@@ -52,7 +52,7 @@ class SourceDocument(BaseModel):
 
 
 class DiscoveryPointer(BaseModel):
-    """A shadow-library METADATA pointer (grey-zone wall 1) — e.g. an Anna's
+    """A shadow-library METADATA pointer — e.g. an Anna's
     Archive / WeLib search hit surfaced so the human can acquire the work
     LEGALLY and then feed it through the Manual book-drop flow.
 

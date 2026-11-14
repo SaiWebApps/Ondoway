@@ -1,14 +1,9 @@
 """THE ONE INTERLEAVE — ``build_route_option`` assembles the day's cards. Hermetic.
 
-Moved intact from ``tests/test_tour_flavours.py``: that file was the k-flavours suite
-and died with ``select_k_routes`` and the diversity machinery (a visitor never wants to
-compare routes), but ``build_route_option`` is count-agnostic and SURVIVES as the one place a Route
-becomes user-facing cards (``test_tour_one_engine.py`` pins it as THE ONE INTERLEAVE).
-These are its tests: dwell/leg/vignette card assembly, spotlight and band scoring,
-lens coverage notes, and the contract round-trip.
-
-Deleting the flavour suite wholesale would have deleted this coverage with it; the plan
-said "delete wholesale" before the file had been read end to end.
+``build_route_option`` is the one place a Route becomes user-facing cards
+(``test_tour_one_engine.py`` pins it as THE ONE INTERLEAVE). These are its tests:
+dwell/leg/vignette card assembly, spotlight and band scoring, lens coverage notes, and
+the contract round-trip.
 """
 
 from __future__ import annotations

@@ -1,9 +1,7 @@
 """AUTHORING — the physical authoring primitives shared by every narration caller.
 
-Extracted BYTE-IDENTICALLY out of ``compose.py``.  ``compose.py`` — the whole-tour
-composer — is deleted later; these
-pieces are the parts of it that survive, because they are what the per-stop authoring
-path, the Premium blueprint builder and the certification replay all actually need:
+These are the pieces the per-stop authoring path, the Premium blueprint builder and the
+certification replay all actually need:
 
 * the frozen physical policy (``COMPOSE_MODEL``, the max-token ceiling, ``_COMPOSE_SYSTEM``
   and ``_COMPOSE_OUTPUT_SCHEMA``) that ``premium_authoring_policy_sha256()`` hashes,
@@ -12,10 +10,9 @@ path, the Premium blueprint builder and the certification replay all actually ne
 * ``_certification_compose_requests`` + ``finalize_certification_composition``, the pure
   replay boundary that verifies already-completed per-stop responses.
 
-NOTHING here was edited during the move.  The policy hash is baked into committed
-certification candidate data, so a whitespace change is a data-invalidating change;
-(The one-time extraction proof that pinned it was retired 2026-08-18; the hash is
-still sealed by the certification data itself.)
+The policy hash is baked into committed certification candidate data, so a whitespace
+change to the policy is a data-invalidating change; the certification data itself seals
+the hash.
 """
 
 from __future__ import annotations
@@ -158,15 +155,13 @@ class CompletedCertificationComposeUnit(BaseModel):
 
 
 COMPOSE_MODEL = "claude-opus-4-8"
-# FACT review ran a cheaper-model experiment (claude-sonnet-5) and the
-# frozen calibration REFUSED it, twice-measured 2026-08-28: with a ceiling that
-# let it finish (end_turn, 11,760 of 32,000), Sonnet still judged two
+# FACT review stays on Opus. The frozen calibration refuses the cheaper
+# claude-sonnet-5: even with a ceiling that lets it finish, it judges two
 # human-labeled PASS paraphrase cases FAIL (fact-policy-4, fact-policy-6) — it
 # polices licensed colour as factual defect, which would fail true tours at the
-# release gate. Accuracy outranks the saving (the owner's constraint verbatim:
-# "less money, without sacrificing accuracy"), so FACT stays on Opus. The
-# calibration-fact unit and model-aware pricing remain, so a future cheaper
-# model is one constant away from a measured audition.
+# release gate. Accuracy outranks the saving. The calibration-fact unit and
+# model-aware pricing remain, so a future cheaper model is one constant away
+# from a measured audition.
 FACT_REVIEW_MODEL = COMPOSE_MODEL
 # Streaming ceiling: adaptive-thinking tokens count against max_tokens, and a
 # full tour's rewritten sentence list is large — 16K truncated a real 45-min
@@ -712,7 +707,7 @@ def _sentences_from_json(sentences: list[dict], request: ComposeRequest) -> tupl
     (``_corrected_citation``), so the
     writer's typos stop killing days, and everything else still fails closed.
 
-    The SAME doctrine covers the TYPE field (live 2026-08-29, v3 batch): a
+    The SAME doctrine covers the TYPE field: a
     sentence typed "beat" whose ``source_id`` is one of THIS request's
     authorized derived (glue/reflection) ids is a mistyped label, not an
     invention — the id is authoritative because ids are copied from the prompt
@@ -830,9 +825,8 @@ def _certification_compose_requests(
     for sentence in stitched.script:
         by_stop[sentence.stop_idx].append(sentence)
     stops = sorted(by_stop)
-    # The UPPER bound was deleted 2026-08-04 by owner ruling: duration alone
-    # decides how many stops a route has, and refusing to author one the same
-    # engine had already planned was a limit with no reason behind it. The LOWER
+    # There is no UPPER bound: duration alone decides how many stops a route
+    # has, and the engine authors every stop it planned. The LOWER
     # bound stays: ``requests`` below is keyed by stop index, so an empty stitch
     # would silently yield an empty authoring plan that a caller would then
     # "author" for zero stops and persist as a tour.
@@ -883,7 +877,7 @@ def _certification_compose_requests(
 
 
 def _dedup_composed(sentences: list[Sentence], beat_sequence: BeatSequence) -> list[Sentence]:
-    """The composed-path de-dup, ported byte-for-byte from ``compose.py``:
+    """The composed-path de-dup:
     collapse a fact voiced twice in the ASSEMBLED
     sentence stream — cross-beat claim repeat (the Île de la Cité three-source-book
     case, now most often cross-STOP since each stop is authored independently),
@@ -1182,7 +1176,7 @@ def finalize_certification_composition(
       minutes, each stop's door, the tap-only full-telling stops). Hits land on
       ``forbidden_phrase_hits`` — named, blocking, and carried into the bounded
       retry's failure list. OFF for the certification replay (the sealed
-      candidates predate the rulings).
+      candidates predate the placement floors).
     """
     beats_by_id, stops, requests = _certification_compose_requests(
         stitched,
@@ -1236,13 +1230,12 @@ def finalize_certification_composition(
     # ``composed_by_stop`` STAYS the raw provider payload. It is deliberately NOT
     # rebound to the post-dedup grouping.
     #
-    # An earlier version of this port did rebind it, reasoning that the raw payload
-    # "stays attested regardless" via ``response_sha256``. That was wrong twice over,
-    # and a judge consult caught it:
-    #   1. It made the fail-closed guard in ``finish`` a tautology. ``final_sentences``
-    #      is a stop_idx filter over ``final_script.script``, which IS
-    #      ``composed_sentences``; comparing it to the same filter over the same list
-    #      can never differ, so a real provenance check silently became dead code.
+    # Rebinding it would be wrong twice over, even though ``response_sha256`` still
+    # attests the raw payload:
+    #   1. It would make the fail-closed guard in ``finish`` a tautology.
+    #      ``final_sentences`` is a stop_idx filter over ``final_script.script``, which
+    #      IS ``composed_sentences``; comparing it to the same filter over the same list
+    #      can never differ, so a real provenance check would silently become dead code.
     #   2. ``CompositionTrace.source_sentences`` / ``source_payload_sha256`` are what a
     #      replay reads as "what the provider returned". Recording post-dedup text there
     #      under ``derivation="provider_response"``, while ``response_sha256`` names the

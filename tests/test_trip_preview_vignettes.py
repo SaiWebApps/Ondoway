@@ -119,7 +119,7 @@ def test_vignette_one_liner_does_not_bleed_into_dwell_narration():
     """The vignette's one-liner is voiced by its OWN interleaved card; it must NOT
     also fold into the following dwell stop's narration. Live, _build_transit puts
     the one-liner at the arrival dwell stop's stop_idx as a beat sentence, which
-    stop_narration_text then folds in — the workbench 'bleed' the user reported."""
+    stop_narration_text then folds in."""
     vpoi = _poi("v1")
     one_liner = "A tiny plaque marks the spot."
     beat = BeatRef(id="vb1", poi_id="v1", script_body=f"{one_liner} More detail here.")
@@ -192,7 +192,7 @@ def test_deeper_dive_flag_false_when_no_overflow():
 
 def test_preview_normalizes_display_em_dashes_to_commas():
     """The workbench narration reads the way the audio sounds: a clause em-dash
-    becomes a comma pause, not a dangling stroke (the tourist's em-dash complaint)."""
+    becomes a comma pause, not a dangling stroke."""
     em = chr(0x2014)
     base = _script_two_stops()
     bled = base.model_copy(update={"script": (
@@ -211,19 +211,12 @@ def test_preview_normalizes_display_em_dashes_to_commas():
 # band="leg" — walk-concurrent narration gets its own card
 # ---------------------------------------------------------------------------
 #
-# Product ruling 2026-07-19: "Audio overlaps the walking. It is a part of the tour
-# experience." Navigation lines and reflections are spoken WHILE WALKING the leg
-# INTO stop i, but they carry stop_idx == i, so they were concatenated into that
-# stop's narration. The editor saw one undifferentiated blob: they could not play
-# the walk content on its own, and could not see how much of a long walk was
-# actually filled.
-#
-# MEASURED on the live Paris graph immediately after this change (60-min Ile de la
-# Cite, dark_history):
-#     "Walk to Conciergerie"          4 min walk ->  11 words (4s)
-#     "Walk to Theatre de la Ville"   6 min walk ->  18 words (7s)
-#     whole tour: 54 words = 22s of leg narration against 1650s of walking (1.3%)
-# Surfacing that ratio is the entire point of the card.
+# Audio overlaps the walking; it is part of the tour. Navigation lines and
+# reflections are spoken WHILE WALKING the leg INTO stop i, but they carry
+# stop_idx == i, so without their own card they fold into that stop's narration as
+# one undifferentiated blob: an editor cannot play the walk content on its own, nor
+# see how much of a long walk is actually filled. Surfacing that ratio is the
+# entire point of the card.
 
 
 def _script_with_leg_glue() -> Script:

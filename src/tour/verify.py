@@ -206,9 +206,9 @@ def verify_faithfulness(
     scan): a beat-cited sentence found verbatim in its beat's script_body is
     trivially faithful — no entailment call. Only LLM-REWRITTEN sentences are
     checked, and against the beat's key_claims PLUS its script_body — the
-    claims are a summary subset, and the first live gate run (2026-07-02)
-    showed claims-only entailment flags the corpus's own detail sentences as
-    unfaithful. Invented facts still fail: they are in neither.
+    claims are a summary subset, and claims-only entailment flags the corpus's
+    own detail sentences as unfaithful. Invented facts still fail: they are in
+    neither.
 
     Reflections are FAIL-CLOSED, unlike other glue: a
     ``GLUE_REFLECTION`` sentence must entail from the union of key_claims of
@@ -223,10 +223,10 @@ def verify_faithfulness(
         if sentence.source_type == "glue" and sentence.source_id == GLUE_REFLECTION:
             # The slot holds THE THREAD — one sentence binding THIS stop to the
             # walk through ONE fact of this stop, never a recap. Its support is what
-            # the walker has heard PLUS the arriving stop's own beats: the old
-            # visited-only window was the recap's, and it ruled the thread's
-            # defining fact inadmissible by construction. Still fail-closed on an
-            # empty union: an unverifiable line never ships.
+            # the walker has heard PLUS the arriving stop's own beats: a visited-only
+            # window would rule the thread's defining fact inadmissible by
+            # construction. Still fail-closed on an empty union: an unverifiable
+            # line never ships.
             claims = _visited_claims(script, beats_by_id, sentence.stop_idx)
             own = _own_stop_support(script, beats_by_id, sentence.stop_idx)
             support = (*claims, *(piece for piece in own if piece not in claims))
@@ -308,11 +308,11 @@ def passes_sentence_unit_shortcut(text: str, cited: list[BeatRef]) -> bool:
     CONTIGUOUS run of complete units, of a cited beat's ``script_body``
     (units per ``generation.split_sentences``).
 
-    Ported from the correct-don't-reject branch, where it replaced a plain
-    substring check: a FRAGMENT of a corpus sentence — a negation-truncation
-    ("[never] named his hotel...") or an attribution-strip ("[According to lore,]
-    Orwell worked here") — IS a substring but is not a complete unit run, so the
-    substring check let it ship unverified. Requiring whole units closes that.
+    A plain substring check is not enough: a FRAGMENT of a corpus sentence — a
+    negation-truncation ("[never] named his hotel...") or an attribution-strip
+    ("[According to lore,] Orwell worked here") — IS a substring but is not a
+    complete unit run, so a substring check would let it ship unverified.
+    Requiring whole units closes that.
     """
     norm = _normalize_for_verbatim(text)
     if not norm:

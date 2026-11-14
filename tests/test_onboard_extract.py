@@ -219,7 +219,7 @@ def test_build_live_extracts_reports_coverage_and_misses(monkeypatch) -> None:
 
 
 def test_build_live_extracts_dedups_same_article_twin(monkeypatch) -> None:
-    """FIX 2 RED-FIRST: two DIFFERENT POIs that resolve to the SAME article (a
+    """Two DIFFERENT POIs that resolve to the SAME article (a
     geo-split ``"(2)"`` twin, e.g. "University of London" + "University of London
     (2)") must not both pin the same revision. The FIRST keeps the extract; the twin
     is recorded in ``duplicates`` and gets NO extract — hence no beats — so their

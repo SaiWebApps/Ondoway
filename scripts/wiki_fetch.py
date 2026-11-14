@@ -8,7 +8,7 @@ to `data/{city}/wikipedia/{poi_slug}-rev-{revid}.txt`.
 
 The model MUST extract beats only from the saved file this prints — never from
 a WebFetch summary or memory. (WebFetch returns LLM-summarised page content,
-which is what let the Carousel beats drift from their pinned source.)
+so beats drawn from it drift from their pinned source.)
 
 Prints a JSON summary to stdout. It reports facts (disambiguation, prior
 revisions, whether this exact revision was already logged) but does not make

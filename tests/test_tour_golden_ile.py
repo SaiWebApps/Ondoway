@@ -32,43 +32,21 @@ FIXTURE_PATH = (
 OVERLAP_TARGET = 0.90
 # AN ABSOLUTE HIT COUNT, NOT A RATIO. Read all of this before changing the number.
 #
-# WHY ABSOLUTE: a fractional floor divides by the pinned-set size, so re-keying the
-# fixture moved the bar without anyone deciding to — 42.6% of the old 47 ids demanded 20
-# hits, 42.6% of the 31 durable slugs demands only 14.
+# WHY ABSOLUTE: a fractional floor divides by the pinned-set size, so changing the
+# pinned set would move the bar without anyone deciding to. PINNED_SET_SIZES in
+# test_tour_golden_consistency.py goes red whenever the set's size changes, so the floor
+# is re-derived on purpose, never by drift.
 #
-# STATE IT PLAINLY: THIS FLOOR WENT DOWN, from 20 required hits to 15. An earlier version
-# of this comment called that a tightening by quoting the percentage (48.4% vs 42.6%) —
-# that was unit-shopping, using the ratio it had just declared invalid. By the unit this
-# line now uses, the requirement dropped by five hits. A hostile review caught it.
+# HOW IT IS DERIVED: floor = 85% of a fresh `make golden-probe` measurement of OUTPUT
+# against the current pinned set, rounded down. The pinned set is 17 beats; beats at POIs
+# this 90-minute corridor does not seat under visit-time pricing sit in the fixture's
+# structurally_unreachable with that reason. The measurement is 6 hits (35.3%), so the
+# floor is 0.85 x 6 = 5.1 -> 5.
 #
-# WHY IT IS STILL DEFENSIBLE: 15 = 85% of the FIRST HONEST MEASUREMENT of this gate
-# (2026-07-30: 18 of 31 pinned beats, 58.1%, on the 7-POI routed walk).
-# The old 20 was 42.6% of a 47-id set whose ids were per-database UUIDs; those rotate on
-# any re-seed, which is what took this gate red and kept it red. The two numbers count
-# different things, so neither is a continuation of the other.
-#
-# THE HISTORY, because a previous version of this comment got it wrong: this gate was NOT
-# "always red". It was live and passing — Île 25/47 = 53.2% (2026-06-13) and 16/47 = 34.0%
-# after the pace pin, recorded in tests/test_tour_beat_select.py. Do not repeat the claim
-# that it could never pass.
+# STATE IT PLAINLY when the floor moves: say whether the absolute count went up or down.
+# A percentage quoted against a different pinned set is not a comparison.
 #
 # OVERLAP_TARGET (90%) stays as the unmet aspiration.
-#
-# RE-DERIVED (2026-08-24), 15 -> 5, AND THE DENOMINATOR MOVED WITH IT.
-# The pinned set went 31 -> 17: fifteen beats sit at POIs this 90-minute corridor
-# no longer seats under visit-time pricing and are now recorded in
-# structurally_unreachable with that reason; one (the Pont Neuf vert-galant climax)
-# became reachable and moved back in. Against the NEW 17-id set the fresh
-# `make golden-probe` measurement of OUTPUT is 6 hits (35.3%), so the rule
-# 'floor = 85% of the measurement' gives 0.85 x 6 = 5.1 -> 5.
-#
-# STATE IT PLAINLY: as an absolute count this floor DROPPED from 15 to 5. As a
-# share of what the day can still reach it ROSE, 15/31 (48%) -> 5/17 (29%) of a set
-# that no longer contains places the day does not visit. Both readings are true and
-# the first is the one to argue with.
-#
-# The day shape stays. Two objections remain open: a family visitor wants a
-# six-minute per-stop ceiling, and the golden could be derived from the lens instead.
 OVERLAP_MIN_HITS = 5
 
 

@@ -49,8 +49,8 @@ PDV = (48.8555, 2.3656)
 #:
 #: Every test in this module has ONE subject POI — a snap target, a sentinel, a
 #: far endpoint — that has to end the route, and the background exists only to
-#: give the plan enough stops to fill the requested duration. Since 2026-08-04 a
-#: plan must also land inside the certification TIME band, so the background can
+#: give the plan enough stops to fill the requested duration. A plan must also
+#: land inside the certification TIME band, so the background can
 #: no longer be four POIs sitting on top of the start: four stops cannot fill an
 #: hour and a half. But the default duration-scaled spiral is calibrated to spend
 #: about a third of the request on walking all by itself, which would leave
@@ -319,7 +319,7 @@ def test_round_trip_still_returns_to_start():
 
 
 # ---------------------------------------------------------------------------
-# 2026-07-03 — single-stop regression class guards on the fixed-end (A→B) path.
+# Single-stop regression class guards on the fixed-end (A→B) path.
 #
 # The end != None pipeline composes the corridor gate, the endpoint pull
 # (which still runs BEFORE B-materialization supersedes its fixed_end), the
@@ -380,12 +380,11 @@ def test_fixed_end_corridor_rich_route_keeps_multiple_beat_bearing_stops():
 
 def test_fixed_end_uses_a_nearby_poi_without_collapsing_the_greedy_cluster():
     """A fixed destination may snap to a nearby POI but keeps a rich route."""
-    # RE-DERIVED for the three-minute tight: at 75
-    # minutes the six-background fixture went density-YELLOW (each stop supplies
-    # less capped audio), and backgrounds enough for GREEN out-competed the
-    # north cluster. Swept duration x background against every assertion:
-    # 55 minutes with seven background anchors holds them all, with holding
-    # neighbours on both sides (50-65 min, n 6-8).
+    # Calibrated: at 75 minutes the six-background fixture is density-YELLOW
+    # (each stop supplies less capped audio), and backgrounds enough for GREEN
+    # out-compete the north cluster. Swept duration x background against every
+    # assertion: 55 minutes with seven background anchors holds them all, with
+    # holding neighbours on both sides (50-65 min, n 6-8).
     duration = 55
     n1 = _anchor("n-1", 0.0018, 0.0, tier=5, beats=6)  # ~200m north
     n2 = _anchor("n-2", 0.0027, 0.0, tier=5, beats=6)  # ~300m north
@@ -413,28 +412,20 @@ def test_fixed_end_uses_a_nearby_poi_without_collapsing_the_greedy_cluster():
     route = select_route(inp, snap)
     ids = [p.id for p in route.pois]
 
-    # RE-DERIVED (2026-08-25) — a written decision, not a nursed number. This
-    # assertion used to be `"n-1" in ids and "n-2" in ids`.
+    # WHY ONE OF THE PAIR, NOT BOTH. The walking-worth line is 2.0 walk-seconds per
+    # standing-second, with an 1800 s pure-detour ceiling, both INHERITED from the
+    # product's own illogical-detour invariant so the planner and the gate that judges
+    # it speak one rule. The north cluster sits 200 m and 300 m off a corridor that
+    # runs EAST, so reaching it is pure detour, and the FARTHER of the two does not
+    # earn its walk. Bypassing `stop_earns_its_walk` alone seats both (7 stops), so
+    # the line is the cause and nothing else is. With it, background n in 4-8 and
+    # cluster beats in 6-16 give **no combination that seats both** (n<=5 loses n-1
+    # and goes tourability-YELLOW; n>=6 loses n-2; beats>=14 at n=6 loses n-1 instead).
     #
-    # WHY IT MOVED. A planner change tightened the walking-worth line from 4.5 to 2.0
-    # walk-seconds per standing-second and added the 1800 s pure-detour ceiling, both
-    # INHERITED from the product's own illogical-detour invariant so the planner and the
-    # gate that judges it speak one rule. The north cluster sits 200 m and 300 m off a
-    # corridor that runs EAST, so reaching it is pure detour. Under the new line the
-    # FARTHER of the two no longer earns its walk.
-    #
-    # MEASURED, not assumed, before this was touched: bypassing `stop_earns_its_walk`
-    # alone restores n-2 exactly (7 stops, both cluster anchors) — so the line is the
-    # cause and nothing else is. Swept afterwards against every assertion here:
-    # background n in 4-8 and cluster beats in 6-16, **no combination seats both**
-    # (n<=5 loses n-1 and goes tourability-YELLOW; n>=6 loses n-2; beats>=14 at n=6
-    # loses n-1 instead). The old pair-assertion is unreachable by construction now.
-    #
-    # WHAT THIS TEST IS FOR SURVIVES INTACT: a fixed destination that SNAPS onto a
-    # nearby POI must not collapse the route into a thin one. That is the invariant;
-    # "these two particular ids" was the 4.5-era snapshot of it. The replacement is
-    # STRICTLY STRONGER than the `len(beatful) >= 2` floor it sits beside — the route
-    # must still reach the cluster, still end at B's snap, and still deliver a rich day.
+    # WHAT THIS TEST IS FOR: a fixed destination that SNAPS onto a nearby POI must not
+    # collapse the route into a thin one. These assertions are STRICTLY STRONGER than
+    # the `len(beatful) >= 2` floor — the route must still reach the cluster, still end
+    # at B's snap, and still deliver a rich day.
     assert any(n in ids for n in ("n-1", "n-2")), (
         f"the greedy must still reach the named cluster, not fill the hour next door; got {ids}"
     )
@@ -448,21 +439,19 @@ def test_fixed_end_uses_a_nearby_poi_without_collapsing_the_greedy_cluster():
 def test_one_story_fixed_end_corpus_is_refused_not_padded_with_a_sentinel():
     """A destination with only ONE story to tell on the way is refused outright.
 
-    This is the same worry as before — the destination sentinel carries no beats,
-    so any downstream "the route has two POIs, it must be fine" check would read
-    a one-story tour as a two-stop tour and ship the thin, single-beat-feeling
-    delivery the user complained about. What changed on 2026-08-04 is where that
-    worry is now answered.
+    The destination sentinel carries no beats, so any downstream "the route has
+    two POIs, it must be fine" check would read a one-story tour as a two-stop
+    tour and ship a thin, single-beat-feeling delivery.
 
-    It used to be answered by DISCLOSURE: the route was still built, and a YELLOW
-    tourability assessment rode along on it to say "this is thin". That outcome is
-    no longer reachable at any duration the product offers. A single stop can
+    DISCLOSURE cannot answer that worry here: a built route with a YELLOW
+    tourability assessment riding along to say "this is thin" is not reachable at
+    any duration the product offers. A single stop can
     speak at most ``MAX_DWELL_AUDIO_SECONDS`` (270 s) and walking is capped at
     0.40 of the request, so a one-story tour tops out at 0.40 x duration + 270 s
     of active time, while the certification band demands at least 0.90 x
     duration. The two only overlap below about nine minutes.
 
-    So it is now answered by REFUSAL: the plan cannot reach the band, selection
+    So it is answered by REFUSAL: the plan cannot reach the band, selection
     says so, and no route — padded or otherwise — is produced. Note WHICH refusal.
     The start circle is density RED, but a fixed destination makes the density
     gate defer to the routed checks rather than raise, so what actually stops this

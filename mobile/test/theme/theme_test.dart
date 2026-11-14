@@ -4,7 +4,7 @@ import 'package:ondoway/theme/theme.dart';
 import 'package:ondoway/theme/tokens.dart';
 
 void main() {
-  test('light theme carries the OndowayColors extension with v10 accent', () {
+  test('light theme carries the OndowayColors extension with its accent', () {
     final t = buildOndowayTheme(Brightness.light);
     final c = t.extension<OndowayColors>();
     expect(c, isNotNull);

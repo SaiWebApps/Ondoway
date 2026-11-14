@@ -79,10 +79,9 @@ def test_no_party_and_no_axes_is_todays_behaviour_byte_identical():
 
 
 def test_solo_preset_sets_no_ceiling():
-    """`solo` sets NO per-stop ceiling — a solo history walker's anchor can be
-    65 minutes inside one building, and a preset stop ceiling under 65 minutes
-    cuts the heart out of that day. A per-stop ceiling is never set by
-    mobility.
+    """`solo` sets NO per-stop ceiling — an anchor can hold a visitor 65
+    minutes inside one building, and a preset stop ceiling under that cuts the
+    heart out of the day. A per-stop ceiling is never set by mobility.
     """
     resolved = _resolved(party="solo")
     assert resolved.max_stop_minutes is None
@@ -129,16 +128,15 @@ def test_take_it_easy_slows_the_walking_never_the_talking():
     family: a visitor who needs frequent rests sits on benches.
     """
     resolved = _resolved(party="take_it_easy")
-    # Owner decision, 2026-08-19: 12 produced a one-stop day on a step-free
-    # visitor's own ground; her doctor's measured number is 13, the cap every
-    # good demo day already uses. RE-DERIVED from 12 with that written reason.
+    # 13, not 12: a 12-minute cap produces a one-stop day on step-free ground,
+    # and 13 is the cap every good demo day uses.
     assert resolved.max_leg_minutes == 13
     assert resolved.route_surface == "step_free"
     assert resolved.walking_pace is not None and resolved.walking_pace > 1.0
     assert resolved.rest_cadence_minutes is not None
     assert resolved.narration_register is None, "slow the walking, never the talking"
     assert resolved.max_stop_minutes is None, (
-        "no ceiling: a step-free visitor's centrepiece is a 46-minute sit; "
+        "no ceiling: a step-free day's centrepiece can be a 46-minute sit; "
         "a per-stop ceiling is never set by mobility"
     )
 
@@ -253,8 +251,7 @@ def test_breakdown_prints_one_line_per_stop_with_category_and_minutes(capsys):
     place category, stand/visit minutes, and the walking leg INTO that stop.
 
     The side-by-side table of different days is assembled from these lines
-    verbatim, and the harness printout carries the category labels, not only
-    the review tables.
+    verbatim, so the harness printout itself carries the category labels.
     """
     import importlib
 
@@ -363,10 +360,10 @@ def test_select_route_prices_a_slower_partys_legs_when_seating_stops():
     from src.tour.selection import select_route
     from tests.test_tour_selection import PDV, _density_fillers, _poi, _snap
 
-    # RE-DERIVED for the three-minute tight: six fillers filled an
-    # hour at 270 s a stop; at 180 the same pool is "far short" and the day
-    # refuses before the pace question is even asked. n=None derives the pool
-    # from the planner's own constants (the sweep's fix).
+    # Sized for the 180-second per-stop telling: six fillers fill an hour only
+    # at 270 s a stop; at 180 that pool is "far short" and the day refuses
+    # before the pace question is even asked. n=None derives the pool from the
+    # planner's own constants.
     fillers = _density_fillers(PDV, duration_min=60, round_trip=True, radius_m=60.0)
     edge_lat = PDV[0] + 0.0030  # ~333 m north: inside normal RT reach (444 m),
     # outside halved RT reach (222 m) — envelope_radius_m halves for round trips.
@@ -633,8 +630,8 @@ def test_escape_radius_refuses_a_far_anchor_on_family_but_seats_it_on_solo():
     from src.tour.selection import select_route
     from tests.test_tour_selection import PDV, _density_fillers, _poi, _snap
 
-    # RE-DERIVED for the three-minute tight: eight fillers filled
-    # 90 minutes at 270 s a stop; at 180 the day is "far short" and refuses before
+    # Sized for the 180-second per-stop telling: eight fillers fill 90 minutes
+    # only at 270 s a stop; at 180 the day is "far short" and refuses before
     # the axis is asked. Swept 14-22: 14-18 hold both arms (solo seats the far
     # anchor, the family radius refuses it); 20+ out-competes it even solo. 16 is
     # the middle of the window.
@@ -678,8 +675,8 @@ _LEG_CAP_SECONDS = 12 * 60
 def _leg_cap_corpus(*, with_stones: bool):
     from tests.test_tour_selection import PDV, _density_fillers, _poi, _snap
 
-    # RE-DERIVED for the three-minute tight: 13/15 fillers filled
-    # 120 minutes at 270 s a stop; at 180 the pool starves and every arm refuses,
+    # Sized for the 180-second per-stop telling: 13/15 fillers fill 120 minutes
+    # only at 270 s a stop; at 180 the pool starves and every arm refuses,
     # while the fully-derived pool (32) is so rich the far anchor is out-competed
     # and never seated. Swept 18-30 against every arm: 18-24 hold all of them
     # (uncapped seats the far anchor over an over-cap leg; the capped stoneless
@@ -726,7 +723,7 @@ def test_a_leg_cap_prefers_more_walking_in_shorter_pieces():
     offers stepping stones, and trades it away when it does not.
 
     A walking budget is not one number. A step-free visitor's total can be
-    unremarkable while her *per-leg* limit is the binding constraint, and the
+    unremarkable while the *per-leg* limit is the binding constraint, and the
     request carries it as a cap. A route with one 25-minute leg and one
     5-minute leg has the same total as a gentler one and is unusable.
     """
@@ -773,7 +770,7 @@ def test_a_leg_cap_the_uncapped_day_already_honours_is_already_true():
     It did not. The bounded search's timebox repair can only DROP stops, and
     dropping a middle stop merges two walks into one longer walk that breaks
     the cap — so under a cap the repair could not shrink an over-long day into
-    band. On the live flagship (Tuileries→Notre-Dame, 300 min) whose un-capped
+    band. On a live day (Tuileries→Notre-Dame, 300 min) whose un-capped
     day has an 18-minute longest walk, a 25-MINUTE cap REFUSED with the same
     numbers a 9-minute cap did: loosening a constraint deleted the tour, and a
     limit whose loosening changes not one digit is not in the sum. The fix:
@@ -830,15 +827,15 @@ def test_a_leg_cap_that_starves_the_day_refuses_with_the_cap_named():
     """A dial turn may refuse with a reason, or re-plan a full day; it may
     NEVER quietly hand back a sixth of what was asked for.
 
-    Measured 2026-08-11: the "shorter walks" strawman at 6 minutes collapsed a
+    Measured: a 6-minute "shorter walks" cap collapsed a
     180-minute round trip to ONE stop, zero walking, ~30 minutes of day —
     shipped as "planned 180", tourability GREEN.
 
     The floor stays SOFT for honest near-misses (duration is a ceiling, not a
-    contract to fill — the well-liked base days run 62-68% and ship
+    contract to fill — good base days run 62-68% and ship
     disclosed). What refuses is the EXTREME: a best-possible day under HALF the
     ask. And the refusal must name what binds — the leg cap — not claim the
-    day "overruns" (the wrong-template defect).
+    day "overruns", which is the wrong message template for a day that starved.
     """
     from src.tour.selection import CertificationPlanningInfeasibleError, select_route
     from tests.test_tour_selection import PDV, _density_fillers, _poi, _snap
@@ -882,11 +879,11 @@ def test_a_leg_cap_that_starves_the_day_refuses_with_the_cap_named():
     message = str(caught.value)
     assert "overruns" not in message, (
         "the refusal claims the day OVERRUNS while it starved — the "
-        "wrong-template defect"
+        "wrong message template"
     )
     # Named in the dial's own words — "the N-minute limit on any
-    # single walk" — never "walking-leg cap ... binds", which the language judge
-    # ruled three second meanings of everyday words in one clause.
+    # single walk" — never "walking-leg cap ... binds", which packs three second
+    # meanings of everyday words into one clause.
     assert "limit on any single walk" in message and "6-minute" in message, (
         f"the refusal must name the constraint that binds, plainly: {message}"
     )
@@ -1023,8 +1020,8 @@ def test_the_leg_cap_is_certified_on_the_street_route_not_the_estimate():
     minutes" and whose STREET-ROUTED legs do not must never ship with a head line
     that contradicts the dial the person turned. Measured live:
     Carnavalet -> Place des Vosges est 473 s <= 540 < exact 576 s under a 9-minute
-    cap; a step-free visitor's Tuileries -> Orsay est 11.1 min, 13.8 by the street
-    under her 12. A walking budget is not one number: one long leg makes a route
+    cap; a step-free day's Tuileries -> Orsay est 11.1 min, 13.8 by the street
+    under a 12-minute cap. A walking budget is not one number: one long leg makes a route
     unusable. Every entry is timed on the STREET route.
 
     After ``summarise_route`` has produced the final routed transits, the cap is
@@ -1036,8 +1033,8 @@ def test_the_leg_cap_is_certified_on_the_street_route_not_the_estimate():
     contradiction.
 
     Arm A uses ``tests/routing_doubles.DivergentRoutingClient`` — the only double in
-    the repo whose exact != estimate (Extends: the two deterministic doubles were
-    considered and rejected as the home; both are defined to agree). UNDO: certify
+    the repo whose exact != estimate (the two deterministic doubles are defined to
+    agree, so neither can host this case). UNDO: certify
     on ``t.walk_seconds`` instead of ``leg_walk_seconds(t)`` -> the divergent day
     ships again -> RED. Arm A's control (factor 1.0) proves the certification never
     refuses a day whose street legs honour the cap.
@@ -1091,7 +1088,7 @@ def test_the_leg_cap_is_certified_on_the_street_route_not_the_estimate():
 
 def test_a_fold_that_merges_two_legs_cannot_leave_the_merged_leg_over_the_cap():
     """The second arm — the LIVE mechanism behind a shipped leg over the cap
-    (measured in-process 2026-08-18): on the PdV cap-9 day the
+    (measured in-process): on the PdV cap-9 day the
     repair certified Carnavalet -> Victor Hugo 538 s and Victor Hugo -> Place des
     Vosges 176 s, both under 540; co-located demotion then folded Victor Hugo into
     Place des Vosges and the MERGED leg Carnavalet -> Place des Vosges (576 s) was
@@ -1142,14 +1139,15 @@ def test_a_fold_that_merges_two_legs_cannot_leave_the_merged_leg_over_the_cap():
 
 
 def test_a_cap_retry_that_loses_a_rest_is_the_honest_line_not_a_gutted_day(monkeypatch):
-    """On a step-free visitor's real day: under her preset's 12-minute cap
-    the street-certified retry tightened to 11, dropped the Orangerie AND her
+    """On a real step-free day: under a 12-minute cap
+    the street-certified retry tightened to 11, dropped the Orangerie AND the
     bench, and shipped a one-stop day with 80 unplanned minutes and no rest — while
     the same build says the honest line for a ten-minute leg at Place des Vosges.
     Removing a rest to satisfy a leg cap is backwards: the rest exists because of
     the legs. So the retry may not pay with a rest: a retried day that
     lost a rest the first day had seated is REFUSED with the line that names the
-    street number and her limit, and SHE decides (allow the longer walk, or a
+    street number and the visitor's limit, and the VISITOR decides (allow the
+    longer walk, or a
     shorter day). A retry that keeps every rest still ships. UNDO: return the retry
     regardless of its rests -> RED (the gutted day ships)."""
     from src.tour import selection
@@ -1181,8 +1179,8 @@ def test_a_cap_retry_that_loses_a_rest_is_the_honest_line_not_a_gutted_day(monke
 
     # The first pass breaks the cap on the street (one leg stretched); the retry
     # "lands" under the cap but without the bench. Both are stand-ins for what the
-    # planner produced on a step-free visitor's day (a stretched leg; a retry that paid with
-    # her rest).
+    # planner produced on a real step-free day (a stretched leg; a retry that paid
+    # with the visitor's rest).
     stretched = honest.model_copy(
         update={
             "transits": (
@@ -1228,15 +1226,15 @@ def test_a_cap_retry_that_loses_a_rest_is_the_honest_line_not_a_gutted_day(monke
 
 
 def test_a_walking_cap_that_leaves_a_one_stop_day_says_what_a_longer_walk_would_buy():
-    """A step-free visitor's preset day: under her 12-minute cap the
-    planner's own estimate cannot reach the Orangerie, so she gets ONE stop, no walking,
-    no rest, 90 minutes of 180 — "a museum ticket", served with its shortfall
-    disclosed because the 50 % line stands. She needs the line said to her, with the
-    answer the planner already owns. So a day of one or two story stops under a cap,
+    """A step-free preset day: under a 12-minute cap the planner's own
+    estimate cannot reach the Orangerie, so the visitor gets ONE stop, no walking,
+    no rest, 90 minutes of 180, served with its shortfall disclosed because the
+    50 % line stands. The visitor needs the line said, with the answer the planner
+    already owns. So a day of one or two story stops under a cap,
     below its nominal, is looked at ONCE at a cap one to three minutes longer, and a
     materially fuller day there becomes ONE honest line on the degradations channel
-    (the itinerary shows it): what the longer walk would buy, in her words — she
-    decides. Never a refusal, never on a three-stop day, never on a live tail.
+    (the itinerary shows it): what the longer walk would buy, in plain words — the
+    visitor decides. Never a refusal, never on a three-stop day, never on a live tail.
     UNDO: return before the look -> RED (no row)."""
     from src.tour.degradations import degradation_scope
     from src.tour.selection import WALK_LIMIT_BINDS_DEGRADATION, select_route
@@ -1332,7 +1330,7 @@ def test_a_surface_routed_day_finalizes_under_its_own_routing_identity():
     workbench can author a take-it-easy or family day at all.
 
     A route is never selected under one costing and reported under another.
-    MEASURED 2026-08-19 (the in-process compose of a take-it-easy day):
+    MEASURED (the in-process compose of a take-it-easy day):
     `finalize_premium_tour` stamped the DEFAULT
     `VALHALLA_ROUTING_CONFIG_SHA256` into the fingerprint while every leg receipt
     carried the step-free hash, so `FinalTourBlueprint` raised "Valhalla receipt

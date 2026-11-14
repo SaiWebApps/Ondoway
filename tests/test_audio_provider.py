@@ -41,12 +41,12 @@ class TestProviderRegistry:
         """The real providers ship registered; the silent double is registered
         by tests/conftest.py and by nothing else.
 
-        Owner decision, 2026-07-31: ``_PROVIDERS`` is the workbench's dropdown and
-        the set of values POST /audio/preview honours, so ``MockTTSProvider`` is
-        no longer in it. conftest calls ``register_provider`` at import, which is
-        why "mock" resolves in a pytest interpreter — and does not in any uvicorn
-        one. ``test_workbench_matches_the_app`` proves that second half by
-        probing a real server-shaped subprocess.
+        ``_PROVIDERS`` is the workbench's dropdown and the set of values
+        POST /audio/preview honours, so ``MockTTSProvider`` is not in it. conftest
+        calls ``register_provider`` at import, which is why "mock" resolves in a
+        pytest interpreter — and does not in any uvicorn one.
+        ``test_workbench_matches_the_app`` proves that second half by probing a
+        real server-shaped subprocess.
         """
         names = list_providers()
         assert "openai" in names
@@ -78,10 +78,8 @@ class TestProviderRegistry:
     def test_an_unpinned_process_refuses_to_pick_a_provider(self, monkeypatch):
         """FAIL CLOSED. An unset TTS_PROVIDER must raise, not choose silently.
 
-        This test used to assert the opposite ("the default provider is mock"),
-        which pinned the defect the owner found on 2026-07-31: the workbench
-        server set no TTS_PROVIDER, inherited that "mock" default, and answered
-        every /audio request with a SILENT WAV an editor could mistake for real
+        A "mock" default would let a server with no TTS_PROVIDER answer every
+        /audio request with a SILENT WAV an editor could mistake for real
         narration. A server that is misconfigured must say so.
 
         UNDO TEST: restore a default in ``get_provider`` -> RED.
@@ -130,10 +128,10 @@ class TestMockProvider:
         bytes are then returned as the HTTP body). The mock is not run through
         _split_for_tts, so the WAV size must be capped independent of input.
         A 60s silent WAV (44100 * 2ch * 2B * 60) is ~10.6 MB — a generous ceiling
-        that still fails the unbounded original (~705 MB for 10k words).
+        that still fails an unclamped generator (~705 MB for 10k words).
         """
         max_bytes = 44100 * 2 * 2 * 60 + 4096  # ~10.6 MB + WAV header slack
-        huge = "word " * 10_000  # 10k words -> ~705 MB before the fix
+        huge = "word " * 10_000  # 10k words -> ~705 MB if unclamped
         audio = MockTTSProvider().generate(huge)
         assert len(audio) <= max_bytes, (
             f"mock WAV must be bounded regardless of input length; "
@@ -143,7 +141,7 @@ class TestMockProvider:
     def test_duration_capped_regardless_of_word_count(self):
         """The synthesized duration must not grow unboundedly with word count.
 
-        The pre-fix heuristic (word_count / 2.5) gives 10k words -> 4000s. The
+        The unclamped heuristic (word_count / 2.5) gives 10k words -> 4000s. The
         duration must be clamped to a small ceiling instead.
         """
         audio = MockTTSProvider().generate("word " * 10_000)
@@ -227,7 +225,7 @@ class TestTTSRetry:
 
 
 class TestSplitForTts:
-    """Long narration is chunked under the TTS input cap (Fix: the 422 on long stops)."""
+    """Long narration is chunked under the TTS input cap."""
 
     def test_short_text_is_one_chunk(self):
         assert _split_for_tts("Hello there.") == ["Hello there."]
@@ -276,17 +274,15 @@ class TestTTSChunking:
 
 
 class TestOpenAIModelChoice:
-    """The default model is a BUG FIX, not a preference (measured 2026-08-28).
+    """The default model is chosen for reliability, not preference.
 
-    Against a live key, `tts-1-hd` answered 500 "The server had an error while
-    processing your request" on three of four attempts at this repo's own Café
-    de Flore Occupation beat — and on each of that beat's sentences alone —
-    while the Eiffel beat voiced fine on the same key in the same minute.
-    `gpt-4o-mini-tts` voiced the identical paragraph 3/3. Two live tests in
-    tests/test_audio_functional.py were RED on exactly this.
+    `tts-1-hd` intermittently answers 500 "The server had an error while
+    processing your request" on ordinary WWII history — this repo's own Café de
+    Flore Occupation beat, and each of its sentences alone — while
+    `gpt-4o-mini-tts` voices the identical paragraph. The live Occupation cases
+    in tests/test_audio_functional.py depend on it.
 
-    UNDO TEST: set DEFAULT_MODEL back to "tts-1-hd" -> RED here, and the live
-    Occupation cases go red again.
+    UNDO TEST: set DEFAULT_MODEL to "tts-1-hd" -> RED here.
     """
 
     def test_the_default_model_is_the_one_that_reads_the_occupation_beat(self):
@@ -307,8 +303,8 @@ class TestOpenAIModelChoice:
 class TestFailoverChain:
     """A vendor's outage must cost a DIFFERENT VOICE, never silence.
 
-    OpenAI answered an intermittent 500 ("The server had an error while
-    processing your request") on 2026-08-28. ``_post_with_retry`` re-sends a 500
+    A vendor can answer an intermittent 500 ("The server had an error while
+    processing your request") for minutes. ``_post_with_retry`` re-sends a 500
     three times over ~1.5 seconds, which rides out a blip and nothing longer, so
     with one pinned provider a minutes-long outage is simply no audio for a
     tourist. ``TTS_FALLBACK`` names the understudies; the whole chain is offline
@@ -403,7 +399,7 @@ class TestFailoverChain:
         assert understudy_calls == []
 
     def test_no_fallback_configured_behaves_exactly_as_before(self, monkeypatch):
-        """UNDO TEST: with TTS_FALLBACK unset nothing about today changes."""
+        """UNDO TEST: with TTS_FALLBACK unset the pinned provider is used alone."""
         primary, _ = self._speaks("primary", b"primary-audio")
         monkeypatch.setitem(_PROVIDERS, "primary", primary)
         monkeypatch.setenv("TTS_PROVIDER", "primary")
@@ -437,9 +433,8 @@ class TestFailoverChain:
 
         Production ships two SERVER tiers (openai -> elevenlabs); the third tier
         is each surface's own OS voice and never resolves through this registry
-        (a server-side local model was built and removed on 2026-08-29 — it
-        cannot help a phone with no signal, which is the failure tier 3 exists
-        for). The ordering logic still has to hold for any depth, so it is
+        (a server-side voice cannot help a phone with no signal, which is the
+        failure tier 3 exists for). The ordering logic still has to hold for any depth, so it is
         exercised here at three with a generic last resort.
         """
         primary, primary_calls = self._fails("openai", "500 server had an error")
@@ -472,7 +467,7 @@ class TestFailoverChain:
 
 
 def test_audio_preview_request_accepts_long_narration():
-    # A long stop (6000 chars) was rejected at the old 5000 cap (the 422 bug).
+    # A long stop (6000 chars) is accepted; the provider chunks it under its cap.
     AudioPreviewRequest(text="x" * 6000, provider="mock")  # must not raise
 
 

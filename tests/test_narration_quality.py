@@ -1,6 +1,6 @@
 """The narration quality LINT: it must (a) discriminate obvious stilted prose from
-good spoken narration, (b) NOT fire on the false-positive classes a hostile review
-found, and (c) be HONEST about what it cannot do (it is content-blind). $0.
+good spoken narration, (b) NOT fire on the known false-positive classes, and (c) be
+HONEST about what it cannot do (it is content-blind). $0.
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ def test_good_narration_has_no_penalty_hits():
     assert q.look_prompt_rate > 0  # "Look up." opens a sentence
 
 
-# ---- false-positive regressions (each is a verified hostile-review finding) ----
+# ---- false-positive regressions ----
 
 
 def test_factual_serves_as_is_not_moralizing():
@@ -147,7 +147,7 @@ def test_scorer_is_deterministic():
     assert a.stilted_score == b.stilted_score and a.engagement_score == b.engagement_score
 
 
-# ---- craft_score: the reliability ranker for best-of-N (writing-craft rules) ----
+# ---- craft_score: the reliability ranker for best-of-N ----
 
 def test_craft_score_ranks_wellwritten_above_flat_and_repetitive():
     """The core property best-of-N relies on: among candidate composes of one stop, a
@@ -167,14 +167,14 @@ def test_craft_score_ranks_wellwritten_above_flat_and_repetitive():
 
 
 def test_craft_score_rewards_motivated_transition_over_bare_adjacency():
-    """G2 proxy (motivated transitions): a transition that STATES why the
+    """Motivated-transition proxy: a transition that STATES why the
     next idea follows ("To understand why...") must outrank the same facts joined by
     bare-adjacency filler ("Also,"). The two fixtures are IDENTICAL except for that one
-    connective — isolating the G2 signal from confounds (second-person, percussion,
-    burstiness) rather than relying on a large weight to overcome them (a hostile
-    review found the previous 1.5 weight both double-counted with G3 and swamped
-    unrelated axes; G2/G3 are now bounded per-sentence-fraction terms at weight 0.2 —
-    see craft_score's docstring)."""
+    connective — isolating the motivated-transition signal from confounds
+    (second-person, percussion, burstiness) rather than relying on a large weight to
+    overcome them. The motivated-transition and causal-chain terms are bounded
+    per-sentence-fraction terms at weight 0.2, so neither double-counts the other nor
+    swamps unrelated axes (see craft_score's docstring)."""
     motivated = (
         "Merchants traded here for centuries. To understand why, picture the noble "
         "ladies who shopped nearby. Their patronage drew a loyal following who wanted "
@@ -189,12 +189,11 @@ def test_craft_score_rewards_motivated_transition_over_bare_adjacency():
 
 
 def test_craft_score_rewards_causal_chain_over_flat_list():
-    """G3 proxy (causal chain not list): facts that EARN each other
+    """Causal-chain proxy (a chain, not a list): facts that EARN each other
     ("in turn brought...") must outrank the same facts as a flat list. The two
-    fixtures are IDENTICAL except for the connective — isolating the G3 signal from
-    confounds rather than relying on an oversized weight (see the G2 test above for
-    why: the previous 1.5 weight both double-counted with G2's "however" and had to
-    be that large only to swamp unrelated axes)."""
+    fixtures are IDENTICAL except for the connective — isolating the causal-chain
+    signal from confounds rather than relying on an oversized weight (see the
+    motivated-transition test above)."""
     chain = (
         "Jewellers opened here first. Merchants drawing an English clientele set up "
         "shops nearby. That demand in turn brought the tailors who followed soon "
@@ -208,12 +207,11 @@ def test_craft_score_rewards_causal_chain_over_flat_list():
 
 
 def test_however_is_not_double_counted():
-    """DEFECT (hostile review, 2026-07-19): 'however' appeared in BOTH
-    _MOTIVATED_TRANSITION (sentence-initial) and _CAUSAL_CHAIN, so a single
-    sentence-initial 'However,' was scored twice. MEASURED before the fix: adding one
-    'However,' to a 49-word text moved craft_score by +5.99 (base 0.204 -> 6.2) —
-    a reward-hacking vector where best-of-N would favour whichever candidate sprinkles
-    more connectives. MEASURED after the fix: the swing is +0.196 (0.204 -> 0.4).
+    """'however' lives ONLY in _MOTIVATED_TRANSITION (sentence-initial), never in
+    _CAUSAL_CHAIN, so a single sentence-initial 'However,' is scored once. Scored in
+    both, one 'However,' added to a 49-word text moves craft_score by about +6 instead
+    of about +0.2 — a reward-hacking vector where best-of-N would favour whichever
+    candidate sprinkles more connectives.
     UNDO: reintroduce '|however\\b' into _CAUSAL_CHAIN (double-counting it with
     _MOTIVATED_TRANSITION again) -> this assertion goes RED."""
     text = (
@@ -229,19 +227,18 @@ def test_however_is_not_double_counted():
     # among several) should move the score. A double-counted 'however' swings ~4-6.
     assert swing < 1.0, swing
     # Disjointness itself, independent of the bound: a bare "However," sentence must
-    # match ONLY the G2 pattern, never also the G3 pattern (the actual double-count).
+    # match ONLY the motivated-transition pattern, never also the causal-chain pattern
+    # (the actual double-count).
     # UNDO: add '|however\\b' back into _CAUSAL_CHAIN -> this assertion goes RED.
     assert _MOTIVATED_TRANSITION.search("However, the crowd cheered.")
     assert not _CAUSAL_CHAIN.search("However, the crowd cheered.")
 
 
 def test_cleft_causal_matches_the_gold_sentence():
-    """DEFECT (hostile review, 2026-07-19): the cleft-causal branch of
-    _MOTIVATED_TRANSITION was documented as 'modelled on the standard's own gold
-    example' but capped the gap between 'here' and 'that' at 60 chars, while the gold
-    sentence needs 74:
+    """The cleft-causal branch of _MOTIVATED_TRANSITION must match a hand-written
+    reference sentence with 74 chars between 'here' and 'that':
     'It was here, supplying Empress Eugenie and the other ladies of the Napoleonic
-    court, that French haute couture was born...'. Widened to 90. UNDO: shrink the cap
+    court, that French haute couture was born...'. The cap is 90. UNDO: shrink the cap
     back to 60 -> this assertion goes RED."""
     gold_sentence = (
         "It was here, supplying Empress Eugenie and the other ladies of the "
@@ -252,7 +249,7 @@ def test_cleft_causal_matches_the_gold_sentence():
 
 
 def test_craft_score_penalizes_restatement():
-    """'The same point twice in new words is padding' (writing-craft). Two versions with
+    """The same point twice in new words is padding. Two versions with
     identical facts differ only in whether a fact is restated — the non-repeating one wins."""
     once = ("The Tour Bonbec held the torture chamber. Restorers later found two oubliettes "
             "spiked with iron below it. Say no more about who went in.")

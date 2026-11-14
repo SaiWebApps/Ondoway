@@ -1,4 +1,4 @@
-"""Unit tests for the Gutenberg (public-domain books) Step-3 connector.
+"""Unit tests for the Gutenberg (public-domain books) source connector.
 
 Pure — no Neo4j, no network: the connector's ``parse`` is exercised against a
 saved gutendex fixture, never the live wire. Run with:

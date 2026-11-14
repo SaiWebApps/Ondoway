@@ -116,7 +116,7 @@ void main() {
       final seg = tester.widget<SegmentedButton<String>>(
           find.byKey(const Key('end-hardness')));
       expect(seg.selected, {'firm'},
-          reason: 'skipping the question means a hard deadline (owner ruling)');
+          reason: 'skipping the question means a hard deadline');
       await tester.tap(find.text('Just a guess'));
       await tester.pumpAndSettle();
       final after = tester.widget<SegmentedButton<String>>(

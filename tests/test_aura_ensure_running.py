@@ -1,6 +1,6 @@
 """Hermetic proof for scripts/aura_ensure_running — no live Aura.
 
-Burns in the 2026-07-12 lesson (paused != dead): a paused instance is resumed and
+Paused is not dead: a paused instance is resumed and
 awaited, a serving one is a no-op, and a stuck one times out loudly instead of
 being mistaken for dead.
 
@@ -8,10 +8,10 @@ And the readiness question itself: THE DATABASE ANSWERING is the only green
 light. Aura reports a control-plane lifecycle status and a Bolt endpoint
 independently, and they disagree by design — an instance under a rolling
 `updating` serves queries throughout — so a gate that reads the status string
-refuses a database that works. `updating` is not even in the vocabulary
-``src/aura_resume`` documents, so it was neither accepted nor terminal: it was
-polled to a 300 s timeout while the database answered a full parity check.
-The two tests naming that are exact inverses of each other.
+refuses a database that works. A status outside the vocabulary ``src/aura_resume``
+knows, such as `updating`, is neither accepted nor terminal, so a status gate
+would poll it to a timeout while the database answers. The two tests naming that
+are exact inverses of each other.
 """
 
 from __future__ import annotations
@@ -51,11 +51,9 @@ def _answers(*results):
 def test_an_instance_that_answers_is_ready_whatever_the_status_says():
     """THE readiness question, asked of the database instead of a status string.
 
-    Measured 2026-09-03: the instance reported `updating` while
-    `make db-parity TARGET=cloud` passed against it completely (370 POIs, 1541
-    beats, every city matching the repo). The old gate demanded the literal
-    string `running`, so it polled a working database for 300 s and failed the
-    cloud shard. A status the control plane never documented must not be able to
+    An instance can report `updating` while it serves every query. A gate that
+    demands the literal string `running` would poll a working database to a
+    timeout. A status the control plane never documented must not be able to
     refuse a database that is serving.
 
     UNDO: gate on `status == "running"` again -> this times out -> RED.
@@ -73,8 +71,8 @@ def test_a_status_string_alone_never_certifies_readiness():
 
     `running` is the control plane's opinion; it is not evidence the database
     will answer. A gate that returns on the string alone hands a `-cloud` target
-    a database it cannot query — the silent-success failure this repo's preflight
-    rule bans ("a probe reports evidence it observed itself").
+    a database it cannot query — a silent success. A probe reports only evidence
+    it observed itself.
 
     UNDO: return early on `status == "running"` -> this returns instead of
     timing out -> RED.
@@ -95,7 +93,7 @@ def test_a_status_string_alone_never_certifies_readiness():
 
 def test_paused_is_resumed_and_awaited():
     # A paused instance withdraws its DNS, so the database cannot answer: this is
-    # the case the status/resume path exists for, and it is unchanged.
+    # the case the status/resume path exists for.
     c = _FakeClient(["paused"])
     assert (
         ensure_running(c, answers=_answers(False, True), poll=0, sleep=_noop, echo=_noop)

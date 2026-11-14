@@ -1,4 +1,4 @@
-"""Unit tests for the Step-3 WIKIDATA source connector (wikidata.py).
+"""Unit tests for the WIKIDATA source connector (wikidata.py).
 
 Pure — no Neo4j, no network: the connector's ``parse`` maps a committed WDQS
 SPARQL-JSON fixture to a typed ``ConnectorResult``, so the bar never touches the
@@ -88,7 +88,7 @@ def test_binding_without_placeLabel_is_skipped_not_crash() -> None:  # noqa: N80
     real query returned an unlabelled item.
 
     ``parse`` must NOT crash and must SKIP the nameless binding (a labelless
-    candidate is useless for Step-4 dedup), keeping only the labelled one.
+    candidate is useless for the dedup pass), keeping only the labelled one.
     """
     payload = {
         "results": {

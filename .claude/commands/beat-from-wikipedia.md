@@ -14,7 +14,7 @@ This skill **inherits the entire extraction contract** of `.claude/commands/unif
 
 - The ZERO HALLUCINATION POLICY (every word traces to the source)
 - PHASE 1 chunked reading + multi-granularity (parent / sub_location / address grains)
-- PHASE 2 beat generation: atomicity, the source-span gate (B12), length classes, fabrication self-flagging (B11), the `extractor_state` contract and 40% `imported_context` ceiling
+- PHASE 2 beat generation: atomicity, the source-span gate, length classes, fabrication self-flagging, the `extractor_state` contract and 40% `imported_context` ceiling
 - All ENRICHMENT FIELDS (entities, sensory_anchor, narrative_function, beat_type, emotional_register, subject_tag, physical_cues, sub_location, beat_length_class, inline_foreign_phrases, pronunciation)
 - The `scripts.beat_builder.make_beat` / `scripts.extract_validators.validate_beat` / `scripts.audit_extraction.audit_chunk` helpers — call them, don't hand-roll
 - The atomic `scripts.beats_io.commit` write path and BEAT ID FORMAT
@@ -38,7 +38,7 @@ Before any extraction:
    ```
    make wiki-fetch POI="<canonical POI name>" [TITLE="<explicit Wikipedia title>"]
    ```
-   This is the ONLY way to acquire the source. It hits the MediaWiki API, follows redirects, pins the current `revid`, saves the raw plain-text extract to `data/{city_slug}/wikipedia/{poi_slug}-rev-<revid>.txt`, and prints a JSON summary. Never fetch Wikipedia with `WebFetch` — WebFetch returns an LLM-*summarised* page, and extracting from a summary (or from memory) is what let a prior Carousel run produce beats that did not trace to their pinned source. `make wiki-fetch` is allow-listed, so it runs without a prompt.
+   This is the ONLY way to acquire the source. It hits the MediaWiki API, follows redirects, pins the current `revid`, saves the raw plain-text extract to `data/{city_slug}/wikipedia/{poi_slug}-rev-<revid>.txt`, and prints a JSON summary. Never fetch Wikipedia with `WebFetch` — WebFetch returns an LLM-*summarised* page, and a beat extracted from a summary (or from memory) does not trace to its pinned source. `make wiki-fetch` is allow-listed, so it runs without a prompt.
 
    Read the printed JSON and branch on `status`:
    - `"disambiguation"` → STOP and ask the user for an explicit `--title`, then re-run with `TITLE=`. Never guess past a disambiguation page.
@@ -66,7 +66,7 @@ Rules that bind harder here than for books:
 
 - **A flat fact stays a flat fact.** If the article says "the statue was cast from silverware donated by parishioners and was known as 'Our Lady of the Old Tableware'," you may arrange those facts into a complete beat — but you may NOT add the weight of the silver, the names of donors, the emotional reaction of the congregation, or any detail the article does not state. Narrative *arrangement* of sourced facts is allowed; narrative *invention* is not.
 - **Run `fabrication_probe` on every beat without exception.** Because Wikipedia is so quotable, the probe's false-positive rate is low and its catches are real. Treat every flagged claim as guilty until you can point at the exact sentence in the saved text file.
-- **When the article is thin, the beat is short.** A one-sentence Wikipedia fact is a `seasoning` or `micro` beat, never a `mid` you pad to length. The source-span gate (B12) is not optional.
+- **When the article is thin, the beat is short.** A one-sentence Wikipedia fact is a `seasoning` or `micro` beat, never a `mid` you pad to length. The source-span gate is not optional.
 - **Wikipedia's "Cultural Allusions" / "In popular culture" sections** are legitimate beat material (e.g. Da Vinci Code crowds at Saint-Sulpice, the church's posted refutation) but are prone to trivia-listing. Extract only allusions that carry a self-contained story; skip bare name-drops.
 - **Recency is Wikipedia's edge over the books.** The guidebooks in this corpus predate ~2010. Wikipedia carries recent events (2019 fires, post-2010 restorations, recent archaeology) the books cannot. Prioritise material that the existing corpus genuinely lacks — the pipeline report's `new_coverage` section (from `audit_chunk` with `live_beats`) tells you what is already covered.
 
@@ -121,7 +121,7 @@ Identical to `/unified-beat-extract`:
 
 - Commit beats + updated log atomically via `scripts.beats_io.commit`.
 - Print the PIPELINE REPORT from `scripts.audit_extraction.audit_chunk(beats=new_beats, chunk_text=<saved wiki text>, poi_index=poi_by_name, live_beats=<existing beats.json>)`. The `new_coverage` section against `live_beats` is the headline metric for this skill — it shows how much novel material Wikipedia added beyond the book corpus.
-- Report follow-ups: **always** recommend `/fact-check {city_slug}` on the new beats (Wikipedia claims need the two-source verification the pipeline guardrails require before they are trusted), and `/poi-geocode` / `/poi-dedup` only if sub-POIs were emitted.
+- Report follow-ups: **always** recommend `/fact-check {city_slug}` on the new beats (a Wikipedia claim is not trusted until `/fact-check` has cross-referenced it against at least two independent sources), and `/poi-geocode` / `/poi-dedup` only if sub-POIs were emitted.
 
 ## SELF-VERIFICATION — additions to the inherited checklist
 

@@ -1,9 +1,9 @@
 /// WHERE a stop's piece plays — the place's own footprint, placed by the
 /// server's ONE rule (src/tour/placement.py) and READ here. The phone draws no
-/// circle of its own: before that rule it decided "at the stop" with two
-/// literals (10 m to start a piece, 40 m to be "at" a place) for a 140 m square
-/// and a doorway alike.
-/// `kind` is "circle" this phase; a line or polygon is a carried data row.
+/// circle of its own: one fixed radius cannot fit a 140 m square and a doorway
+/// alike.
+/// `kind` is "circle" by default; any other kind is carried through as data,
+/// and the phone reads the trigger by [radiusM].
 class StopTrigger {
   final String kind;
   final double radiusM;
@@ -115,11 +115,11 @@ class ItineraryStop {
   // Encoded polyline of the walking leg INTO this stop; null when the
   // backend's routing fell back to haversine (Valhalla not running).
   final String? transitPolyline;
-  // KE: ordered ids of this stop's beats the tour did NOT voice — the
+  // Ordered ids of this stop's beats the tour did NOT voice — the
   // "keep exploring here" extras (most-important first). Empty for stops
   // with no overflow and for old trips whose JSON lacks the key.
   final List<String> extraBeatIds;
-  // KE: composed "keep exploring here" narration for [extraBeatIds], voiced
+  // The composed "keep exploring here" narration for [extraBeatIds], voiced
   // on demand off the tour's time budget; null until /compose has run.
   final String? extraNarration;
   // The planner's own visit for this stop, in seconds — what
@@ -127,8 +127,7 @@ class ItineraryStop {
   // at the learned listening rate). Falls back to the rounded minutes.
   final int? dwellSeconds;
   // The stop's composed NARRATION — what its audio says (every word ever
-  // spoken exists as on-screen text). Until now the phone
-  // dropped it and showed the primary beat's raw body as "the transcript".
+  // spoken exists as on-screen text).
   final String? narration;
   // The stop's one-line CLOSE — the last sentence of
   // its narration, the line [Head back now] shows and plays for this stretch —
@@ -236,7 +235,7 @@ class ItineraryStop {
       audioUrl: json['audio_url'] as String?,
       audioDurationSec: (json['audio_duration_sec'] as num?)?.toDouble(),
       transitPolyline: json['transit_polyline'] as String?,
-      // KE: tolerate the key being absent (old trips) — default to empty.
+      // Tolerate the key being absent (old trips) — default to empty.
       extraBeatIds: ((json['extra_beat_ids'] as List<dynamic>?) ?? const [])
           .map((e) => e as String)
           .toList(),
@@ -309,9 +308,8 @@ class ItineraryStop {
     String? legAudioUrl,
     double? legAudioDurationSec,
   }) {
-    // EVERY field rides through (this copy used
-    // to drop narration, the closes, the threads and the full telling — the
-    // demo's stand-in audio then silently stripped the very lines under test).
+    // EVERY field rides through, so swapping in audio never strips the
+    // narration, the closes, the threads or the full telling.
     return ItineraryStop(
       sortOrder: sortOrder,
       stopId: stopId,

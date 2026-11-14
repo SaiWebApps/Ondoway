@@ -40,9 +40,9 @@ _HEX = set("0123456789abcdefABCDEF")
 #
 # The partition invariant below (every document tag is either resolved or queued)
 # is satisfiable by queueing EVERYTHING: a fixture that resolves zero tags still
-# partitions cleanly. Measured 2026-07-30, that hole was live — the gate passed on
-# an Ile fixture with `expected_stable_beat_ids: []` and every tag queued. These
-# floors are the actual coverage achieved at repair time, so a later change cannot
+# partitions cleanly — an Ile fixture with `expected_stable_beat_ids: []` and every
+# tag queued passes it. These
+# floors are the actual coverage achieved, so a later change cannot
 # quietly retreat into the queue. Raise them when resolution improves; never lower
 # them to make a regression pass.
 MIN_RESOLVED_TAGS = {
@@ -161,10 +161,10 @@ def goldens() -> dict[str, dict]:
 #
 # The ratchet above rewards resolving more tags and has no ceiling, while the overlap
 # floors in test_tour_golden_{ile,pdv}.py are absolute hit counts. Growing the pinned set
-# therefore weakens those floors as a FRACTION with nobody deciding to: a hostile review
-# proved that resolving Ile's 19 queued tags onto beats the engine already emits (there
-# are 23 such extras) passes every invariant here, lifts overlap toward 41/50, and leaves
-# the floor at 15 — restoring the very silent drift these pinned sizes exist to kill.
+# therefore weakens those floors as a FRACTION with nobody deciding to: resolving queued
+# tags onto beats the engine already emits passes every invariant here and lifts the
+# overlap while the absolute floor stays put — the very silent drift these pinned sizes
+# exist to kill.
 # Nothing in this module checks that a resolution is the SEMANTICALLY right beat, only
 # that it exists in the corpus, so growth is cheap and unpoliced.
 #
@@ -196,8 +196,8 @@ def test_golden_diff_cli_reads_the_durable_key():
 
     scripts/tour_golden_diff.py cannot import this module (scripts/ ships in the
     Docker image, tests/ is .dockerignore'd), so it repeats the UUID->slug mapping
-    and nothing links the two copies. Measured 2026-07-30: after the re-key the CLI
-    still read the deleted ``expected_beat_ids`` and crashed with a bare KeyError,
+    and nothing links the two copies. After the re-key the CLI
+    once still read the deleted ``expected_beat_ids`` and crashed with a bare KeyError,
     AFTER `make golden-diff` had already started the shared dev graph and Valhalla.
     Neither lint (ruff cannot see a wrong dict key, and the file is outside the lint
     list) nor any test covered it. This is that cover.

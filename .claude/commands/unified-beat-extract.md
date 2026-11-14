@@ -57,7 +57,7 @@ If a different chunk from the same book was processed, continue — this is expe
 
 **Multi-pass requirement:** After the first pass, review your working list against the lens hierarchy. Are there lenses with zero extracted content? Go back and re-scan the relevant sections — you may have missed content that fits those lenses.
 
-**Multi-granularity requirement (B2):** A single source passage often carries beats at multiple spatial grains. Do NOT conflate them. A Rough-Guide-style entry with sub-headings (*Façade → Towers → Interior*) should produce one beat per sub-heading, not one merged beat. A Pariswalks-style passage that circles a square address-by-address (*No. 6 was Hugo's house. No. 8 was Gautier's…*) produces one beat per address, not one summary beat.
+**Multi-granularity requirement:** A single source passage often carries beats at multiple spatial grains. Do NOT conflate them. A Rough-Guide-style entry with sub-headings (*Façade → Towers → Interior*) should produce one beat per sub-heading, not one merged beat. A Pariswalks-style passage that circles a square address-by-address (*No. 6 was Hugo's house. No. 8 was Gautier's…*) produces one beat per address, not one summary beat.
 
 Tag every item on your working list with its grain before writing beats:
 
@@ -122,7 +122,7 @@ Do NOT choose the "best" story and discard others. Do NOT merge multiple stories
 
 ### Beat content rules
 
-**Length discipline matched to source role (B5) — do NOT produce uniform-length beats:**
+**Length discipline matched to source role — do NOT produce uniform-length beats:**
 
 Each beat commits to a `beat_length_class` based on what the source material *is*, then writes to the length the class permits. The prior extractor's 75-word median is a failure mode — anchor stops sound thin, seasoning stops sound bloated.
 
@@ -131,7 +131,7 @@ Each beat commits to a `beat_length_class` based on what the source material *is
 - `seasoning` (20–80w, ~10–30s audio) — an address-level vignette or walk-by callout. Threaded along a walking path.
 - `micro` (<20w, <10s audio) — a walk-by factoid, one sentence max.
 
-**Source-span gate (B12 — applied BEFORE prose-feel calibration):**
+**Source-span gate (applied BEFORE prose-feel calibration):**
 
 Programmatic helper: `scripts.extract_validators.source_span_gate(source_passage)` returns the max allowed class for a given span — call it instead of counting by eye.
 
@@ -163,7 +163,7 @@ The asymmetry matters: demoting an anchor you under-wrote is quiet data loss. Re
 - Do NOT invent sensory details the source doesn't provide.
 - DO use the source text's own vivid language and narrative details.
 
-**Fact-check honesty on emission (B11):**
+**Fact-check honesty on emission:**
 
 Programmatic helper: `scripts.extract_validators.fabrication_probe(...)` extracts concrete claim candidates (years, multi-word proper nouns, red-flag phrases) from `script_body` + `physical_cues` and checks each against the cited source plus the broader chunk text. Run it on every beat before commit. If `has_fabrication` is true, EITHER drop the unsourced clauses from body/cues OR set `extractor_state: "imported_context"` and merge the verdict's `unsourced_claims` into `flagged_claims`. The 40 % ceiling applies to the chunk total (see `extractor_state_summary.over_40pct_ceiling` in `audit_chunk`'s output).
 
@@ -177,7 +177,7 @@ The legacy emission pattern (`status: "unverified"` + `flagged_claims: []` + no 
 
 Failure mode this prevents: 9 of 30 emitted beats carried unsourced concrete claims (Mangin "1957 replacement", Reichstadt "December centenary", Hôtel de Ville "burned by Communards in 1871", Institut "during the Revolution", Vendôme "Communard pulldown") — every one shipped with `flagged_claims: []` and no extractor self-flag. Under the new rule, each of those becomes an `extractor_state: "imported_context"` beat with the unsourced claims listed, which `/fact-check` can then resolve.
 
-**Preserve-don't-paraphrase on inline foreign phrases (B3):**
+**Preserve-don't-paraphrase on inline foreign phrases:**
 
 When the source contains `"foreign-word (inline-gloss)"`, `"foreign-word, meaning X"`, `"foreign-word — X"`, or any equivalent construction, the extractor MUST:
 
@@ -193,7 +193,7 @@ Example — regression (do NOT do this):
 
 The foreign word is an audio-tour asset. Paraphrasing it away is a regression. "You are abroad" register depends on *marais, hôtel, ravalement, pavillon, oeil-de-boeuf, trompe-l'oeil, tricoteuses, bon-bec* landing in the listener's ear as the book wrote them.
 
-**Source-locked, source passage preserved verbatim (B7):**
+**Source-locked, source passage preserved verbatim:**
 - Every fact in the beat must come from the source text.
 - `source_passage` must contain the **full verbatim sentence(s)** from the source that the beat derives from — not a summary, not a 10-word snippet. The minimum span where a neutral reader could map every claim in the beat back to the original.
 - If a beat's body carries three claims from three separate sentences, all three sentences belong in `source_passage`.
@@ -284,7 +284,7 @@ Examples:
 - Conciergerie sub_locations: `"salle-des-gens-darmes"`, `"tour-bonbec"`, `"marie-antoinette-cell-mockup"`, `"prison-chapel"`, `"tour-de-lhorloge"`
 - Place des Vosges sub_locations: `"square-center-park"`, `"pavillon-du-roi"`, `"pavillon-de-la-reine"`, `"ma-bourgogne-corner"`, `"hugo-museum-no-6"`
 
-Use kebab-case, lowercase, descriptive. Within a single POI, two beats may share a `(lens, sub_location)` tuple only if they're genuinely different stories at the same sub-location (disambiguate via `topic_slug` as usual). Per the B1 (lens, sub_location) rule, distinct sub_locations lift the per-lens ceiling for tier-4/5 POIs.
+Use kebab-case, lowercase, descriptive. Within a single POI, two beats may share a `(lens, sub_location)` tuple only if they're genuinely different stories at the same sub-location (disambiguate via `topic_slug` as usual). Distinct sub_locations lift the per-lens ceiling for tier-4/5 POIs.
 
 ### trigger_address (string | null) — NEW in unified_v2
 
@@ -305,11 +305,11 @@ One of `anchor` | `mid` | `seasoning` | `micro`. Declared before writing; word c
 
 ### inline_foreign_phrases (list of `{phrase, gloss}`) — NEW in unified_v2
 
-Structured record of every foreign word + inline gloss preserved from the source per B3. Each entry is `{"phrase": "pailleux", "gloss": "prisoners who couldn't afford to bribe a guard for their own cell and had to sleep on straw"}`.
+Structured record of every foreign word + inline gloss preserved verbatim from the source. Each entry is `{"phrase": "pailleux", "gloss": "prisoners who couldn't afford to bribe a guard for their own cell and had to sleep on straw"}`.
 
 Rules:
 - The foreign word MUST also remain in `script_body` verbatim (this field is a structured companion, not a replacement).
-- One entry per distinct phrase. If the source introduces *pailleux* and its root *paille* in the same sentence, emit two entries (both land in `script_body` per B3).
+- One entry per distinct phrase. If the source introduces *pailleux* and its root *paille* in the same sentence, emit two entries (both stay in `script_body` verbatim).
 - Empty list is fine for beats that don't cite foreign words.
 
 ### pronunciation (string | null) — NEW in unified_v2
@@ -329,7 +329,7 @@ Examples: `"plass-day-voge"` for Place des Vosges, `"luv"` for Louvre, `"bohn-BE
 
 For each beat, match it to a POI in `data/{city_slug}/poi-raw.json`.
 
-### Location-anchored poi_name (B9) — CRITICAL RULE
+### Location-anchored poi_name — CRITICAL RULE
 
 A beat's `poi_name` (plus optional `trigger_address`) must identify the **geographic location where the listener should be standing when this beat plays.** Not the thematic topic. Not the famous figure. Not where the book classifies the anecdote.
 
@@ -340,7 +340,7 @@ The rule:
 - `trigger_address` = a finer GPS trigger if the beat fires at a specific address inside the anchor's area.
 - Thematic association with other people/places/events goes in `entities` and `lens`. Not in `poi_name`.
 
-**Carve-out — `beat_type: transit`.** Transit beats play *while the listener is in motion between stops*; the listener is never standing at a single point when the audio fires. For transit beats only, B9 is replaced by this asymmetric convention:
+**Carve-out — `beat_type: transit`.** Transit beats play *while the listener is in motion between stops*; the listener is never standing at a single point when the audio fires. For transit beats only, the location-anchored rule is replaced by this asymmetric convention:
 - `trigger_address` = **origin** (where the geofence fires the audio — typically the stop the listener just left). Required.
 - `poi_name` = **destination** (the next anchor the listener is walking toward, i.e., the semantic container the directions lead to).
 - This is the only `beat_type` where `poi_name` is NOT "where the listener stands when the audio plays." The runtime treats `trigger_address` as the geofence for transit beats.
@@ -349,7 +349,7 @@ If the Fersen anecdote is thematically about Marie-Antoinette's Conciergerie imp
 
 Test yourself on every beat before emission: "If a listener geofences this `poi_name` (+ `trigger_address`), are they standing where this story happened?" If the answer is no, re-assign.
 
-### Address recognition for seasoning beats (B4)
+### Address recognition for seasoning beats
 
 When a source passage matches patterns like *"At no. X [street/square]"*, *"No. X was..."*, *"At [address]..."*, *"[address] housed..."* AND a micro-narrative follows, emit a **seasoning beat** with:
 
@@ -459,11 +459,11 @@ beat = make_beat(ctx=ctx, poi_name="Palais Garnier", lens="war_conflict",
 
 Three programmatic gates that USED to live in the prompt as honor-system rules:
 
-- `count_source_sentences(source_passage)` — counts factual-sentence units (semicolon-joined clauses count separately per the B12 rule).
+- `count_source_sentences(source_passage)` — counts factual-sentence units (semicolon-joined clauses count separately).
 - `source_span_gate(source_passage)` — returns the maximum allowed `beat_length_class` for the cited span: ≤2 sentences = `"seasoning"`, 3–5 = `"mid"`, 6+ = `"anchor"`.
 - `check_length_class(script_body, beat_length_class)` — `(in_range, suggested_reclass)` for the word-count vs class-range check.
 - `fabrication_probe(script_body, physical_cues, source_passage, chunk_text)` — extracts concrete claim candidates (years, multi-word proper nouns, red-flag phrases like "replica" / "1957 replacement" / "now in") from body and cues, checks each against the cited source AND the broader chunk_text. Returns a `FabricationVerdict` with `unsourced_claims` + `cue_unsourced` lists. **If `has_fabrication` is true, you MUST set `extractor_state: "imported_context"` and merge the verdict's claims into `flagged_claims` — or strip the unsourced clauses from the body/cues and re-run the probe.**
-- `validate_beat(beat, chunk_text)` — orchestrates all three gates and returns a `BeatVerdict` with `errors`, `warnings`, `suggested_class`, and the fabrication finding. **Run this on every beat before commit.** A `BeatVerdict.ok=False` means a B12 violation; warnings are advisory but should be triaged before emission.
+- `validate_beat(beat, chunk_text)` — orchestrates all three gates and returns a `BeatVerdict` with `errors`, `warnings`, `suggested_class`, and the fabrication finding. **Run this on every beat before commit.** A `BeatVerdict.ok=False` means a source-span gate or source-grounding violation; warnings are advisory but should be triaged before emission.
 
 The probe is heuristic — false positives are fine (you can drop the clause) but false negatives are silent fabrication. Trust it.
 
@@ -715,12 +715,12 @@ After writing the output, tell the user what to run next:
 
 ## SELF-VERIFICATION
 
-The mechanical rules below are now backed by `scripts.extract_validators.validate_beat(beat, chunk_text)` — call it on every beat before commit. The `BeatVerdict` it returns covers rules 2 (fabrication probe), 5 (length-class + B12 source-span gate). The list below is what to do when the helper flags a violation, plus the rules the helper can't mechanise (judgment calls).
+The mechanical rules below are now backed by `scripts.extract_validators.validate_beat(beat, chunk_text)` — call it on every beat before commit. The `BeatVerdict` it returns covers rules 2 (fabrication probe) and 5 (length-class + source-span gate). The list below is what to do when the helper flags a violation, plus the rules the helper can't mechanise (judgment calls).
 
 Before writing output:
 
-1. **Every beat has a source_passage** — verbatim sentence(s) from the book, not a snippet (B7).
-2. **No hallucinated content, and self-flagged when present (B11)** — every concrete fact in every beat (every name, date, year, action, quote, place-relation) traces to the cited `source_passage`. When the extractor knowingly imports context the source did not carry — even world-true context — set `fact_check.extractor_state: "imported_context"` and list every unsourced concrete claim in `flagged_claims`. Leave `fact_check.status: "unverified"` (the `/fact-check` skill owns that field; never write `verified`/`corrected`/`disputed` from this skill). Same rule for `physical_cues` text. Emitting a beat with no `extractor_state` field, or with empty `flagged_claims` while body or cues carry unsourced claims, is a silent failure. **Ceiling:** if more than 40 % of a chunk's beats land as `extractor_state: "imported_context"`, the extractor is over-importing — re-run the chunk with tighter source adherence (drop to `seasoning`/`micro` or skip beats outright instead of inflating).
+1. **Every beat has a source_passage** — verbatim sentence(s) from the book, not a snippet.
+2. **No hallucinated content, and self-flagged when present** — every concrete fact in every beat (every name, date, year, action, quote, place-relation) traces to the cited `source_passage`. When the extractor knowingly imports context the source did not carry — even world-true context — set `fact_check.extractor_state: "imported_context"` and list every unsourced concrete claim in `flagged_claims`. Leave `fact_check.status: "unverified"` (the `/fact-check` skill owns that field; never write `verified`/`corrected`/`disputed` from this skill). Same rule for `physical_cues` text. Emitting a beat with no `extractor_state` field, or with empty `flagged_claims` while body or cues carry unsourced claims, is a silent failure. **Ceiling:** if more than 40 % of a chunk's beats land as `extractor_state: "imported_context"`, the extractor is over-importing — re-run the chunk with tighter source adherence (drop to `seasoning`/`micro` or skip beats outright instead of inflating).
 3. **Beat IDs are unique within this run** — no two beats share the same beat_id.
 4. **Every beat has all required fields:**
    - `beat_id`, `city_name`, `poi_name`, `lens`, `topic_slug`, `script_body`
@@ -734,15 +734,15 @@ Before writing output:
    - `beat_length_class` (one of `anchor`, `mid`, `seasoning`, `micro`)
    - `sub_location` (string or null), `trigger_address` (string or null)
    - `inline_foreign_phrases` (list, possibly empty), `pronunciation` (string or null)
-5. **Word count AND source-span gate (B12) both respected** — anchor 200–400w, mid 80–200w, seasoning 20–80w, micro <20w; AND the source-span gate (≤2 source sentences = max `seasoning`; 3–5 = max `mid`; 6+ allows `anchor`) takes precedence over prose feel. If either rule fails, re-class down. Don't re-write up by importing world knowledge — that's the fabrication failure mode the gate exists to prevent.
-6. **Inline foreign phrases are consistent with script_body** — every `inline_foreign_phrases[].phrase` value must literally appear in `script_body`. If the structured entry exists but the word is missing from prose, the extractor paraphrased it away — restore the verbatim form (B3).
-7. **Tier-3+ physical_cues are populated when the source has a visible feature** — if a beat at an `importance_tier >= 3` POI cites plaques, façade details, views, interiors, or adjacent landmarks in its `source_passage`, `physical_cues` must not be empty. **Separate rule (Fix 2):** every beat with a non-null `trigger_address` must have `physical_cues` non-empty — at minimum, a cue pointing to the façade/door/plaque at that address. The listener can always look at the building.
-8. **poi_name is location-anchored (B9)** — for each non-transit beat, ask "if a listener geofences this `poi_name` (+ `trigger_address` if set), will they be standing where this story happened?" If no, re-assign. For `beat_type: transit` beats, verify the carve-out instead: `trigger_address` is the origin (required, non-null), `poi_name` is the destination (next stop), and origin ≠ destination.
+5. **Word count AND source-span gate both respected** — anchor 200–400w, mid 80–200w, seasoning 20–80w, micro <20w; AND the source-span gate (≤2 source sentences = max `seasoning`; 3–5 = max `mid`; 6+ allows `anchor`) takes precedence over prose feel. If either rule fails, re-class down. Don't re-write up by importing world knowledge — that's the fabrication failure mode the gate exists to prevent.
+6. **Inline foreign phrases are consistent with script_body** — every `inline_foreign_phrases[].phrase` value must literally appear in `script_body`. If the structured entry exists but the word is missing from prose, the extractor paraphrased it away — restore the verbatim form.
+7. **Tier-3+ physical_cues are populated when the source has a visible feature** — if a beat at an `importance_tier >= 3` POI cites plaques, façade details, views, interiors, or adjacent landmarks in its `source_passage`, `physical_cues` must not be empty. **Separate rule:** every beat with a non-null `trigger_address` must have `physical_cues` non-empty — at minimum, a cue pointing to the façade/door/plaque at that address. The listener can always look at the building.
+8. **poi_name is location-anchored** — for each non-transit beat, ask "if a listener geofences this `poi_name` (+ `trigger_address` if set), will they be standing where this story happened?" If no, re-assign. For `beat_type: transit` beats, verify the carve-out instead: `trigger_address` is the origin (required, non-null), `poi_name` is the destination (next stop), and origin ≠ destination.
 9. **Seasoning beats use `trigger_address`** — any beat at `beat_length_class: seasoning` that the source tied to a specific address (*"no. X..."*, *"at [address]..."*) must have `trigger_address` populated; `poi_name` is the containing anchor, not the address.
 10. **Transit/sidebar narrative_function** — `beat_type: transit` beats must not carry `narrative_function: establishing`; transit beats bridge stops, they don't introduce a POI's identity. `beat_type: sidebar` beats likewise should not be `narrative_function: establishing` (a digression can't be the anchoring identity).
 11. **Sub-POI and `sub_location` are not double-encoding** — when a beat's spatial zone is distinct enough that you emit a new sub-POI (PHASE 3 Case 3), `sub_location` on that beat is null (the sub-POI *is* the location). When the zone is just a named sub-area within the parent POI (façade, nave, crypt) and you do NOT emit a sub-POI, `sub_location` is populated. Never both.
 12. **No city name hardcoded in extraction logic** — use the `$ARGUMENTS` city parameter consistently.
-13. **Preserve existing data** — `poi-raw.json` unchanged in this scope beyond sub-POI emission and `establishing_not_applicable` flags per Phases 3–4.
+13. **Preserve existing data** — `poi-raw.json` unchanged by this run beyond sub-POI emission and `establishing_not_applicable` flags per Phases 3–4.
 14. **Valid JSON** — output parses without errors.
 
 ---
@@ -798,7 +798,7 @@ After processing, report:
 
 11. **Inline foreign-phrase preservation:**
     - Total distinct phrases captured, and list of the first 20 (phrase → gloss).
-    - Flag any beat whose `inline_foreign_phrases` entry isn't present literally in `script_body` — this is a B3 regression.
+    - Flag any beat whose `inline_foreign_phrases` entry isn't present literally in `script_body` — this is a paraphrase regression.
 
 12. **New structural beat_types:**
     - Count per structural type: `stop_orientation` / `transit` / `sidebar`.

@@ -7,7 +7,7 @@ Two surfaces, one wall between them:
   city bbox, and forces a healthy gravity-tier distribution — returning an
   ``AssembledCity``. It reads ONLY ``result.candidates``; it NEVER touches
   ``result.pointers`` or ``result.documents``, so a shadow-library
-  ``DiscoveryPointer`` has no path into the assembled city (grey-zone wall 3).
+  ``DiscoveryPointer`` has no path into the assembled city.
 - ``write_city`` is the ONLY disk/registry touch: it atomically writes the exact
   ``data/{slug}/`` corpus the uploader consumes and registers the city.
 
@@ -180,7 +180,7 @@ _NAME_PRIORITY: dict[str, int] = {
 # non-null lat/lon wins the merged POI's coordinates.
 _COORD_PRECEDENCE: tuple[str, ...] = ("wikidata", "osm", "wikipedia", "wikivoyage")
 
-# Conservative near-dup thresholds (poi-dedup's ZERO-FALSE-MERGE rule): a pair
+# Conservative near-dup thresholds (zero false merges): a pair
 # auto-merges ONLY when the names are near-identical AND essentially co-located.
 _FUZZ_MIN_RATIO = 94
 _FUZZ_MAX_METERS = 75.0
@@ -246,7 +246,7 @@ class AssembledCity:
     ``slugify(poi_name) -> WikiExtract``. ``cloud_deployed`` is threaded from
     ``assemble`` to the registry entry ``write_city`` writes (a new city defaults
     to local-only, ``False``, until deployed to Aura). There is deliberately NO
-    ``pointers`` field: ``DiscoveryPointer`` never reaches disk (wall 3).
+    ``pointers`` field: ``DiscoveryPointer`` never reaches disk.
     """
 
     slug: str
@@ -686,7 +686,7 @@ def assemble(
     """Merge cross-source candidates into geofenced, gravity-tiered POI dicts.
 
     PURE — no network, no disk, no registry. Reads ONLY ``result.candidates``;
-    ``result.pointers`` / ``result.documents`` are never consulted (wall 3).
+    ``result.pointers`` / ``result.documents`` are never consulted.
 
     The notability pipeline turns a live city's raw firehose into ~``TARGET_POIS``
     real landmarks: STAGE A culls per-candidate junk BEFORE the O(n^2) merge (the

@@ -132,14 +132,12 @@ def _issue_refresh_token(session: Session, user_id: str, session_id: str, token_
 
 # --- Abuse ceiling for magic-link sends -------------------------------------
 #
-# THE PER-IP KEY IS GONE AND IS NOT COMING BACK. Every limiter in this codebase
-# was deleted on 2026-07-31 because they were keyed on the CLIENT IP, and per-IP
-# throttling punishes exactly the wrong people: mobile carriers put thousands of
-# subscribers behind a handful of addresses, a hotel is one address, and the
-# owner's own workbench is one address. That key is the defect, and nothing here
-# reintroduces it.
+# NOTHING IN THIS CODEBASE THROTTLES BY CLIENT IP. Per-IP throttling punishes
+# exactly the wrong people: mobile carriers put thousands of subscribers behind a
+# handful of addresses, a hotel is one address, and the owner's own workbench is
+# one address.
 #
-# What is left is unauthenticated and sends a REAL email through Resend to
+# This endpoint is unauthenticated and sends a REAL email through Resend to
 # whatever address the body names — the endpoint is both login AND signup, since
 # ``/magic-link/verify`` is what MERGEs the user. Uncapped, anyone who finds the
 # URL can bomb one victim's inbox or fan out across strangers, and Resend
@@ -226,7 +224,7 @@ def me(current_user: dict = Depends(get_current_user)):
 
 # ── The workbench's own identity ─────────────────────────────────────────────
 #
-# CLAUDE.md rule 1: the workbench and the app run the EXACT SAME code for everything
+# The workbench and the app run the EXACT SAME code for everything
 # they share. The full telling (`plan_premium_full_telling`) and the keep-exploring
 # extras (`build_poi_extra_beats` / `build_poi_extra_narration`) are written by
 # POST /trips/{id}/compose and voiced by POST /audio/stops/{id}/keep-exploring — the

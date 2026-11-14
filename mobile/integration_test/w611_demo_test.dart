@@ -1,14 +1,13 @@
-// A DEMO, "wrap it up at minute 14", on the iOS Simulator, on the days the
-// planner gives Fiona & Dev TODAY (generated and composed on the app path by
-// w61_trips.py under the three-minute tight, closes, threads, registers and
-// full tellings).
+// A DEMO, "wrap it up at minute 14", on the iOS Simulator, on the couple's day
+// the planner gives TODAY (generated and composed on the app path before the
+// run, with the three-minute tight telling, closes, threads, registers and full
+// tellings; the trip id is passed in as a dart-define).
 //
 // The moments:
 //  1. THE TAP IS THE SEAM: mid-piece at minute 14 they tap
 //     [Head back now] — the close and the way home go ON SCREEN at once, the
 //     sentence finishes, the stretch's AUTHORED close is heard, then nothing.
-//  2. THE THREAD (replaces the dead plant-fallback act — fallbacks were
-//     removed): a skip makes a new pair — the pair's authored bridge line
+//  2. THE THREAD: a skip makes a new pair — the pair's authored bridge line
 //     goes on screen for the leg and is heard once at a standing seam.
 //  3. THE LINGER OFFER: past the tight telling's end the screen OFFERS
 //     the full telling with its cost; nothing auto-plays.
@@ -122,14 +121,14 @@ void main() {
         String tag, String label, {bool pause = true}) async {
       s.tick();
       await tester.pump();
-      lines.add('W611 [$tag] ${hhmm(clock.now)} $label '
+      lines.add('WRAPUP [$tag] ${hhmm(clock.now)} $label '
           '| at=${s.currentStop?.poiName ?? "-"} state=${s.state.name} '
           '| close line: "${s.closeLine ?? ""}" '
           '| thread line: "${s.threadLine ?? ""}" '
           '| full offer: "${s.fullTellingOffer ?? ""}" '
           '| session line: "${s.screenText ?? ""}" '
           '| spoken: ${voice.said.length} played: ${voice.playedKeys.join(",")}');
-      debugPrint('W611 MOMENT $tag ${label.replaceAll(' ', '_')}');
+      debugPrint('WRAPUP MOMENT $tag ${label.replaceAll(' ', '_')}');
       if (pause) await Future<void>.delayed(const Duration(seconds: 6));
     }
 
@@ -137,7 +136,7 @@ void main() {
     {
       final t = await open(15, 0);
       final st = t.stops;
-      lines.add('W611 [ACT1] DAY v${t.session.planVersion}: '
+      lines.add('WRAPUP [ACT1] DAY v${t.session.planVersion}: '
           '${st.map((x) => "${x.poiName} ${x.startTime}").join(" -> ")} '
           '| closes on the wire: ${st.where((x) => (x.closeText ?? "").isNotEmpty).length}/${st.length} '
           '| threads on the wire: ${st.where((x) => x.threadLines != null && x.threadLines!.isNotEmpty).length} '
@@ -155,7 +154,7 @@ void main() {
       t.s.finishSentenceNow();
       await moment(t.s, t.voice, t.clock, 'ACT1',
           'the sentence ended: the stretch\'s AUTHORED close was heard');
-      lines.add('W611 [ACT1] the close heard: '
+      lines.add('WRAPUP [ACT1] the close heard: '
           '"${t.s.closesPlayed.isEmpty ? "" : t.s.closesPlayed.last}" '
           '(spoken=${t.voice.said.length}, played keys=${t.voice.playedKeys.join(",")})');
       // Then nothing: a minute passes, no further speech.
@@ -188,7 +187,7 @@ void main() {
         }
       }
       if (skip == null) {
-        lines.add('W611 [ACT2] no skip pair carries an authored thread on this day '
+        lines.add('WRAPUP [ACT2] no skip pair carries an authored thread on this day '
             '(none rather than glue); the act shows the silent continue');
         skip = t.session.contingencies
             .where((e) => e.kind == 'stop_skipped')
@@ -208,7 +207,7 @@ void main() {
         t.clock.setHhmm(15, 10);
         await moment(t.s, t.voice, t.clock, 'ACT2',
             'standing seam: the thread ${threadText == null ? "stays silent" : "is heard once"}');
-        lines.add('W611 [ACT2] thread="${t.s.threadLine ?? ""}" '
+        lines.add('WRAPUP [ACT2] thread="${t.s.threadLine ?? ""}" '
             'spoken=${t.voice.said.join(" || ")} '
             'played=${t.voice.playedKeys.join(",")}');
       }
@@ -230,7 +229,7 @@ void main() {
       t.clock.setHhmm(15, 6);
       await moment(t.s, t.voice, t.clock, 'ACT3',
           'the tight ended; she lingers — the OFFER appears, silently');
-      lines.add('W611 [ACT3] offer="${t.s.fullTellingOffer ?? "(none — no full authored here)"}" '
+      lines.add('WRAPUP [ACT3] offer="${t.s.fullTellingOffer ?? "(none — no full authored here)"}" '
           'auto-played: ${t.voice.playedKeys.where((k) => k.endsWith("-full")).isEmpty ? "NOTHING (correct)" : "YES (defect!)"}');
       await tester.pumpWidget(const SizedBox());
       t.s.stopTour();

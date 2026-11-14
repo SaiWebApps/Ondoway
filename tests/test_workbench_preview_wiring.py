@@ -1,7 +1,7 @@
 """The workbench preview must send what it means and reject what it cannot honour.
 
-THREE MEASURED DEFECTS (2026-07-19), all of which made "tour preview" look broken
-to a human pressing the button:
+THREE MEASURED DEFECTS, all of which made "tour preview" look broken to a human
+pressing the button:
 
 1. ``city_slug`` was never sent by ``generateTourPreview`` (``frontend/review.html``),
    so ``TripPreviewRequest``'s default of "paris" applied to EVERY preview. A
@@ -17,17 +17,20 @@ to a human pressing the button:
 3. The lens input offered its vocabulary only as a ``placeholder`` — which is not
    a value — so the default request sent NO lenses.
 
-TWO DECISIONS (2026-07-31), both the same principle — the workbench must
-replicate the tourist's app experience as closely as possible:
+TWO RULES, both the same principle — the workbench replicates the tourist's app
+experience as closely as possible:
 
-4. ``generateTourPreview`` opened a ``window.confirm`` spend warning before every
-   preview. A tourist is never asked to approve spend, so the workbench must not
-   ask either. Removed; section 4 below keeps it removed.
+4. ``generateTourPreview`` asks no ``window.confirm`` spend question before a
+   preview. A tourist is never asked to approve spend, so the workbench does not
+   ask either. ``test_no_consent_gate_between_the_click_and_the_tourist_facing_call``
+   in ``tests/test_workbench_matches_the_app.py`` guards this.
 
-5. ``loadTtsProviders`` force-selected the ``mock`` TTS provider after fetching
-   the provider list, silently overriding the ``openai`` default. Every workbench
-   "play" was therefore a silent WAV that an editor could mistake for real
-   narration — the audio twin of the standing never-mock-in-the-workbench rule.
+5. ``loadTtsProviders`` selects the ``openai`` TTS provider production pins, never
+   ``mock``. A mock "play" is a silent WAV that an editor could mistake for real
+   narration, and the workbench never plays a mock provider.
+   ``test_the_audio_selector_defaults_to_the_provider_production_pins`` in
+   ``tests/test_workbench_matches_the_app.py`` guards the selection; this file
+   checks that ``openai`` is really registered.
 
 These tests are cheap, hermetic and $0.
 """
@@ -189,8 +192,9 @@ TOUR_DIALS = [
 def test_openai_is_a_real_registered_tts_provider() -> None:
     """The default the workbench picks must actually exist in the registry.
 
-    Guards the pair: if ``openai`` were ever renamed or dropped from
-    ``src/audio/provider.py``, the test above would still pass while the
+    Guards the pair with the selector test in
+    ``tests/test_workbench_matches_the_app.py``: if ``openai`` were ever renamed or
+    dropped from ``src/audio/provider.py``, that test would still pass while the
     workbench silently fell through to whatever option happened to be first.
     """
     from src.audio.provider import list_providers

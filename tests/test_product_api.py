@@ -62,8 +62,8 @@ class TestLensesEndpoint:
 
         Pinned contract: the parent and child key sets are asserted as
         an EXACT snapshot (``==``), not a floor (``>=``). An undocumented extra
-        key on any parent or child object fails this test, so the client
-        repoint slice has a fixed target. Superset of canonical children is
+        key on any parent or child object fails this test, so the mobile client
+        reads a fixed shape. Superset of canonical children is
         tolerated via the ``in expected`` guard below;
         ``test_superset_extra_city_child_tolerated`` exercises that path with a
         real non-canonical node.
@@ -368,15 +368,15 @@ class TestProfileEndpoint:
     def test_returns_profile_with_display_name_and_lens_set(self, profile_client, clean_driver):
         """One profile + child lenses -> 200 with display_name, profile_id,
         and selected_lens_ids == exactly the profile's child-lens id set."""
-        uid, email = "user-ac6", "ac6@ondoway.app"
+        uid, email = "user-one-profile", "oneprofile@ondoway.app"
         _seed_user(clean_driver, uid, email)
         lenses = ["hidden_history", "dark_history", "street_art"]
-        _seed_profile(clean_driver, uid, profile_id="prof-ac6", display_name="adam",
+        _seed_profile(clean_driver, uid, profile_id="prof-one", display_name="adam",
                       lens_names=lenses, created_at="2026-08-01T00:00:00")
         resp = profile_client.get("/api/v1/profile", headers=_auth(uid, email))
         assert resp.status_code == 200
         body = resp.json()
-        assert body["profile_id"] == "prof-ac6"
+        assert body["profile_id"] == "prof-one"
         assert body["display_name"] == "adam"
         assert set(body["selected_lens_ids"]) == _lens_ids(clean_driver, lenses)
 
@@ -400,7 +400,7 @@ class TestProfileEndpoint:
     def test_multi_profile_returns_latest_created_at(self, profile_client, clean_driver):
         """Two profiles of distinct created_at -> return the later one and
         ITS lens set; the older's lens set must not appear."""
-        uid, email = "user-ac9", "ac9@ondoway.app"
+        uid, email = "user-two-profiles", "twoprofiles@ondoway.app"
         _seed_user(clean_driver, uid, email)
         old_lenses = ["hidden_history"]
         new_lenses = ["street_art", "dark_history"]

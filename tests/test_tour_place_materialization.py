@@ -1,4 +1,4 @@
-"""Adversarial D1 tests for trusted pre-selection place materialization."""
+"""Adversarial tests for trusted pre-selection place materialization."""
 
 from __future__ import annotations
 

@@ -65,9 +65,9 @@ def test_tour_input_carries_the_four_dials():
 
 
 def test_stop_density_more_resolves_to_the_short_stop_ceiling():
-    """The "more" direction is the proven short-stop shape (the
-    measured a-stop20 cell); an explicitly-set ceiling always wins (the
-    resolver's one rule)."""
+    """The "more" direction is the short-stop shape, a 20-minute ceiling on
+    every stop; an explicitly-set ceiling always wins (the resolver's one
+    rule)."""
     resolved = resolve_party_axes(
         TourInput(start=PDV, duration_min=120, city_slug="paris", stop_density="more")
     )
@@ -386,7 +386,7 @@ def test_the_queue_note_names_the_longest_wait_that_remains():
 
 
 def test_a_closure_note_names_only_the_doors_the_day_actually_reaches():
-    """Owner ruling, 2026-09-19: the day's notes answer the day. A
+    """The day's notes answer the day. A
     shut door the route visits is named, with the outside promise when it is
     kept at outside price. A shut door the day never goes near answers a
     question nobody asked — a Tuileries day once trailed a Montmartre cabaret
@@ -420,8 +420,8 @@ def test_a_closure_note_names_only_the_doors_the_day_actually_reaches():
         _wire_day(market, square, clock_exclusions=exclusions), _dial_body()
     )
     assert "Marche Bastille — closed all day Wednesday — we will see it from the outside" in notes
-    # Off the route entirely: true but noisy, and the owner ruled the notes
-    # name only doors the day touches. No sentence for either arm.
+    # Off the route entirely: true but noisy, so the notes name only doors the
+    # day touches. No sentence for either arm.
     assert not any("Lapin Agile" in n for n in notes), (
         "a door the day never reaches was named in its notes"
     )
@@ -562,7 +562,6 @@ def test_the_api_resolves_presets_and_the_more_dial_exactly_as_the_harness_does(
     easy = _build_tour_input(
         start=PDV, duration_min=180, city_slug="paris", round_trip=True, party="take_it_easy"
     )
-    # 13: owner ruling 2026-08-19.
     assert easy.max_leg_minutes == 13 and easy.rest_cadence_minutes == 20, (
         "the take-it-easy preset did not expand into its axes on the API path"
     )
@@ -659,7 +658,7 @@ def test_composed_dials_cannot_duck_under_the_one_underfill_line():
     best-possible day under HALF the ask is "no day, mislabelled": never quietly
     hand back a fraction of what was asked. The floor stays SOFT above that line.
 
-    THE HOLE, read in the code (2026-08-18): the 0.5 check lived
+    THE HOLE, read in the code: the 0.5 check lived
     inside the timebox repair's under-fill fallback and compared against the
     REPAIR budget — which a rest cadence has already shrunk by its rest reserve
     (`selection.py` "RESTS ARE PART OF THE DAY THE REPAIR PLANS"). Under cadence 20
@@ -762,9 +761,9 @@ def _interior_stand(poi: POI, *, outside_min: int, inside_min: int) -> POI:
 
 
 def test_fewer_stops_hands_the_freed_minutes_to_the_survivors_within_their_ceilings():
-    """"Fewer places, longer at each": stop count down "with the freed minutes
-    flowing to the anchors within shape ceilings". Measured: the flagship
-    "fewer" freed 100 minutes (6 → 4 stops) and NOT ONE surviving stop was a
+    """Fewer places, longer at each: the stop count goes down and the freed
+    minutes flow to the anchors, within each stop's shape ceiling. Measured: the
+    "fewer" dial freed 100 minutes (6 → 4 stops) and NOT ONE surviving stop was a
     minute longer — 40/10/38/12 before and after, 129 minutes to slack; PdV
     byte-identical. Read in the code: the concentrate
     pass dropped and never redistributed (`selected = trial_set` and nothing

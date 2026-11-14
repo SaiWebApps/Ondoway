@@ -15,8 +15,8 @@ What it does (and does NOT do):
       * COLLISION CLUSTERS — sets of ≥2 existing POIs that would map to the
         same (name_key, city_name). These are pre-existing casing/whitespace
         duplicates the old (name, city_name) MERGE key never caught. They are
-        SURFACED for manual review under the project's two-source / user-review
-        guardrails — this script NEVER auto-merges or deletes them.
+        SURFACED for manual review — this script NEVER auto-merges or deletes
+        them.
   - ``--apply`` SETs ``n.name_key = canonical_name_key(n.name)`` on every POI
     whose name_key is missing or differs from the canonical form. It is a pure
     property SET: it MERGES nothing and DELETES nothing. Re-running is a no-op
@@ -202,7 +202,7 @@ def _report_dry_run(pois: list[dict], to_set: list[dict], no_name: list[dict],
             f"map to a shared (name_key, city_name)."
         )
         print("  These are pre-existing casing/whitespace duplicates. NOT auto-merged —")
-        print("  surfaced for manual review (two-source / user-review guardrails):")
+        print("  surfaced for manual review:")
         for cluster in clusters:
             key = canonical_name_key(str(cluster[0]["name"]))
             city = cluster[0].get("city_name") or "<none>"

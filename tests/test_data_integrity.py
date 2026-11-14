@@ -1,9 +1,8 @@
-"""Static regression tests for the data integrity bugs found in the
-2026-04-08 audit. Runs against poi-raw.json and beats.json only — no DB.
+"""Static data-integrity tests. Runs against poi-raw.json and beats.json only — no DB.
 
 Catches:
-  - B1: Accent-duplicate POIs (e.g. 'Café de Flore' + 'Cafe de Flore')
-  - B6: Ghost beat stubs (missing beat_id or script_body)
+  - Accent-duplicate POIs (e.g. 'Café de Flore' + 'Cafe de Flore')
+  - Ghost beat stubs (missing beat_id or script_body)
   - Beat→POI orphans in source files
   - POI name / name_variations collisions
 """
@@ -42,8 +41,7 @@ def test_every_data_city_is_fully_registered(city_dir: Path) -> None:
     """Onboarding fail-fast: any city with data/ must ALSO be registered in every
     surface the engine reads, or it silently misbehaves — upload rejects POIs
     outside CITY_BBOX, and the API 422s a city absent from SUPPORTED_CITIES. This
-    catches a half-onboarded city at CI time instead of at deploy/request time, so
-    the tour algorithm truly generalizes to 'any and all cities' we add."""
+    catches a half-onboarded city at CI time instead of at deploy/request time."""
     from scripts.upload_paris import CITY_BBOX
     from src.city_registry import load_registry
     from src.tour.contract import SUPPORTED_CITIES
@@ -91,8 +89,8 @@ def test_every_data_city_is_fully_registered(city_dir: Path) -> None:
 
 @pytest.mark.parametrize("city_dir", _city_dirs(), ids=lambda d: d.name)
 def test_no_accent_or_case_duplicate_pois(city_dir: Path) -> None:
-    """No two POIs should collide after accent stripping + case folding.
-    Would have caught the 'Café de Flore' vs 'Cafe de Flore' duplicate bug."""
+    """No two POIs should collide after accent stripping + case folding:
+    'Café de Flore' and 'Cafe de Flore' are one place."""
     pois = json.loads((city_dir / "poi-raw.json").read_text())
     seen: dict[str, str] = {}
     dupes: list[str] = []
@@ -111,8 +109,8 @@ def test_no_accent_or_case_duplicate_pois(city_dir: Path) -> None:
 
 @pytest.mark.parametrize("city_dir", _city_dirs(), ids=lambda d: d.name)
 def test_no_ghost_beat_stubs(city_dir: Path) -> None:
-    """Every beat in beats.json must have a beat_id and non-empty script_body.
-    Would have caught the 19 metadata-only stubs in the 2026-04-08 audit."""
+    """Every beat in beats.json must have a beat_id and non-empty script_body:
+    a metadata-only stub carries no narration."""
     beats = json.loads((city_dir / "beats.json").read_text())
     missing_id = [i for i, b in enumerate(beats) if not b.get("beat_id")]
     missing_body = [i for i, b in enumerate(beats) if not (b.get("script_body") or "").strip()]
@@ -178,8 +176,8 @@ def test_wikipedia_beat_bodies_are_whole_sentences(city_dir: Path) -> None:
     """PRECISE splitter-fragment guard: a wikipedia beat body must be a WHOLE
     sentence (or run of whole sentences) of its source chunk, per the CURRENT
     ``split_sentences`` — never a truncated HEAD ('They depict the Battle of Cape
-    St.') or an orphaned TAIL ('Woodington, John Ternouth and…') left by the old
-    splitter that broke on name-initials / 'St.'. Word-count alone missed these
+    St.') or an orphaned TAIL ('Woodington, John Ternouth and…') left by a
+    splitter that breaks on name-initials / 'St.'. Word-count alone misses these
     (they are 7-20 words); this catches any body that is a strict prefix/suffix of a
     chunk sentence. The allowlist above holds the handful of complete sentences the
     proxy flags because the current splitter mis-segments the CHUNK, not the beat."""

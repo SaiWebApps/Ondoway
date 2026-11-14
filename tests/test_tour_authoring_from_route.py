@@ -1,10 +1,9 @@
-"""The AUTHOR block (Block 2) never re-plans a route.
+"""The AUTHOR block never re-plans a route.
 
 A persisted trip already HAS its route: /trips/{id}/compose must author that exact
 route, never re-plan one. There is now exactly ONE seam that does this —
 ``plan_premium_authoring`` -> ``execute_premium_plan`` -> ``finalize_premium_composition``
-in ``src/tour/premium_tour.py``. The second implementation that used to live in
-``src/tour/authoring.py`` was deleted on 2026-08-04; these guards moved with the claim.
+in ``src/tour/premium_tour.py``.
 
 The four properties the AUTHOR block is defined by:
 
@@ -12,9 +11,9 @@ The four properties the AUTHOR block is defined by:
   module-level ``from .selection import select_route`` binds at import time and a
   monkeypatch on the ``selection`` module can no longer see it. The structural guard is
   **FUNCTION-SCOPED**: ``premium_tour.py`` as a whole legitimately imports the planner for
-  ``plan_premium_tour`` (which is BLOCK 1, and whose job IS to plan), so a module-scope
-  check here would be vacuously red forever. Only the four Block-2 function bodies are
-  read, and a function-local import inside one of them is exactly the shape that check
+  ``plan_premium_tour`` (the planning step, whose job IS to plan), so a module-scope
+  check here would be vacuously red forever. Only the four AUTHOR-block function bodies
+  are read, and a function-local import inside one of them is exactly the shape that check
   exists to catch;
 * it builds exactly ONE authoring unit per dwell stop — not one per sentence, and
   never zero for a stop the stitched script forgot — so a caller's spend precheck
@@ -22,11 +21,10 @@ The four properties the AUTHOR block is defined by:
 * it tolerates what real persisted trips actually contain — a round-trip transit
   shape (``len(transits) == len(pois) + 1``), 1..15 stops, and receiptless
   haversine-degraded legs, all of which ``plan_premium_tour``'s PLANNING bars refuse
-  outright. Those bars live in Block 1 and are not part of Block 2.
+  outright. Those bars belong to planning and are not part of the AUTHOR block.
 
-``test_the_author_block_never_replans`` is the pinned gate for this step, so it
-carries every one of those clauses itself: reverting ANY of them must turn that one node
-id red.
+``test_the_author_block_never_replans`` carries every one of those clauses itself:
+reverting ANY of them must turn that one node id red.
 """
 
 from __future__ import annotations
@@ -62,11 +60,11 @@ from src.tour.premium_tour import (
 
 _SEAM_PATH = Path(__file__).resolve().parents[1] / "src" / "tour" / "premium_tour.py"
 
-#: The Block-2 functions. Everything the AUTHOR block is allowed to be, by name.
+#: The AUTHOR-block functions. Everything the AUTHOR block is allowed to be, by name.
 #: The module as a whole legitimately imports the planner for ``plan_premium_tour``,
 #: so a module-scope guard here would be vacuously red. The prohibition is therefore
 #: FUNCTION-SCOPED: these bodies, and nothing else.
-_BLOCK_TWO_FUNCTIONS = frozenset(
+_AUTHOR_BLOCK_FUNCTIONS = frozenset(
     {
         "plan_premium_authoring",
         "execute_premium_plan",
@@ -106,12 +104,12 @@ _PLANNING_CALLS = frozenset(
 )
 
 
-def _block_two_import_and_call_graph() -> tuple[set[str], set[str]]:
-    """Every name the Block-2 function BODIES import and call, parsed — not matched.
+def _author_block_import_and_call_graph() -> tuple[set[str], set[str]]:
+    """Every name the AUTHOR-block function BODIES import and call, parsed — not matched.
 
     ``ast`` is used deliberately: a text search over the file would silently return
     an empty match on any shape it did not anticipate and the guard would pass by
-    accident. Nested function definitions inside a Block-2 body (``invoke`` inside
+    accident. Nested function definitions inside an AUTHOR-block body (``invoke`` inside
     ``execute_premium_plan``) are walked too, because that is where a fan-out worker
     would reach a planner from.
     """
@@ -119,10 +117,10 @@ def _block_two_import_and_call_graph() -> tuple[set[str], set[str]]:
     bodies = [
         node
         for node in ast.walk(tree)
-        if isinstance(node, ast.FunctionDef) and node.name in _BLOCK_TWO_FUNCTIONS
+        if isinstance(node, ast.FunctionDef) and node.name in _AUTHOR_BLOCK_FUNCTIONS
     ]
-    assert {node.name for node in bodies} == _BLOCK_TWO_FUNCTIONS, (
-        "a Block-2 function was renamed or removed, so this guard now watches less "
+    assert {node.name for node in bodies} == _AUTHOR_BLOCK_FUNCTIONS, (
+        "an AUTHOR-block function was renamed or removed, so this guard now watches less "
         f"than it claims: found {sorted(node.name for node in bodies)}"
     )
     imported: set[str] = set()
@@ -146,13 +144,13 @@ def _block_two_import_and_call_graph() -> tuple[set[str], set[str]]:
 
 
 def _assert_the_seam_cannot_reach_the_planner() -> None:
-    imported, called = _block_two_import_and_call_graph()
+    imported, called = _author_block_import_and_call_graph()
     assert not imported & _PLANNING_MODULES, (
-        "a Block-2 function imports a route-PLANNING module: "
+        "an AUTHOR-block function imports a route-PLANNING module: "
         f"{sorted(imported & _PLANNING_MODULES)}"
     )
     assert not called & _PLANNING_CALLS, (
-        "a Block-2 function calls a route-PLANNING entry point: "
+        "an AUTHOR-block function calls a route-PLANNING entry point: "
         f"{sorted(called & _PLANNING_CALLS)}"
     )
 
@@ -319,7 +317,7 @@ def _plan(stitched: Script, sequence: BeatSequence, route: Route):
 
 
 def _author(plan, executor) -> Script:
-    """Block 2's execute-then-finalize, returning the Script the old seam returned.
+    """The AUTHOR block's execute-then-finalize, returning the Script the old seam returned.
 
     ``finalize_premium_composition`` rather than ``finalize_premium_tour``: the
     latter builds a certification blueprint and resolves a git build fingerprint,
@@ -341,14 +339,14 @@ def _forbid_planning(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_the_author_block_never_replans(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """End to end — the pinned gate for this step.
+    """End to end — every clause of the AUTHOR block in one test.
 
     Every clause lives here on purpose: reverting the no-replanning boundary, the
-    one-unit-per-dwell-stop rule, the round-trip tolerance, the 15-stop cap or the
+    one-unit-per-dwell-stop rule, the round-trip tolerance, 15-stop authoring or the
     receiptless tolerance each turns THIS node id red.
 
     The structural half is FUNCTION-SCOPED over ``src/tour/premium_tour.py``: the four
-    Block-2 bodies, not the module, because the module also holds Block 1's planner.
+    AUTHOR-block bodies, not the module, because the module also holds the planner.
     """
     _forbid_planning(monkeypatch)
     _assert_the_seam_cannot_reach_the_planner()
@@ -462,14 +460,11 @@ def test_prebuilt_route_refuses_a_gap_in_the_middle_of_the_stitch() -> None:
 
 
 def test_the_author_block_authors_past_the_deleted_fifteen_stop_ceiling() -> None:
-    """INVERTED 2026-08-04 ("no stop limits, period").
+    """No stop cap: duration is the only bound on how many stops a tour has.
 
-    This test used to assert that a 16-stop route was REFUSED with "one to fifteen
-    stops". That ceiling sat behind the planner and rejected routes the same engine
-    had already built, so it was deleted along with every other stop cap; duration
-    is now the only bound on how many stops a tour has. The claim is therefore
-    inverted rather than dropped — 16 stops must author cleanly, one script per
-    dwell stop, all the way through the seam.
+    A ceiling behind the planner would reject routes the same engine had already
+    built, so 16 stops must author cleanly, one script per dwell stop, all the way
+    through the seam.
     """
     stitched, sequence, route = _prebuilt(16)
     plan = _plan(stitched, sequence, route)

@@ -48,7 +48,7 @@ def _bench(poi: POI, minutes: int = 8) -> POI:
 # ---------------------------------------------------------------------------
 
 
-def _carried_three_corpus():
+def _anchor_with_two_stands_corpus():
     """A base day of one big interior anchor and two small stands, with two
     benches beside the path — the shape of a measured day (Place des Vosges:
     Carnavalet 47-inside dropped for Rue des Rosiers 25-outside to fund the rests,
@@ -80,7 +80,7 @@ def test_replan_context_is_an_input_to_the_one_planner_and_holds_what_it_protect
     from src.tour.routing import longest_walk_minutes
     from src.tour.selection import select_route
 
-    anchor, stand_b, stand_c, bench_1, bench_2 = _carried_three_corpus()
+    anchor, stand_b, stand_c, bench_1, bench_2 = _anchor_with_two_stands_corpus()
     snap = _snap([anchor, stand_b, stand_c, bench_1, bench_2])
     base_input = TourInput(start=PDV, duration_min=60, city_slug="paris", round_trip=True)
 
@@ -123,7 +123,7 @@ def test_more_breaks_on_the_wire_is_a_replan_of_the_base_day_not_a_fresh_plan():
     """
     from src.tour.selection import select_route
 
-    anchor, stand_b, stand_c, bench_1, bench_2 = _carried_three_corpus()
+    anchor, stand_b, stand_c, bench_1, bench_2 = _anchor_with_two_stands_corpus()
     snap = _snap([anchor, stand_b, stand_c, bench_1, bench_2])
     base_input = TourInput(start=PDV, duration_min=60, city_slug="paris", round_trip=True)
     base = select_route(base_input, snap)
@@ -336,13 +336,13 @@ def test_the_servers_one_clock_prices_narration_at_the_learned_rate_and_the_fini
     by = lambda clocks: {p.id: (arr, dep) for p, arr, dep in clocks}  # noqa: E731
     plain = by(stop_clocks(route, request))
     heard = by(stop_clocks(route, request, audio_seconds_by_id=audio))
-    paulo = by(stop_clocks(route, request, audio_seconds_by_id=audio, listening_rate=1.5))
+    slow = by(stop_clocks(route, request, audio_seconds_by_id=audio, listening_rate=1.5))
     # rate 1.0: max(840, 900) - 840 = 60 s later at every later stop.
     assert (heard[stand_b.id][0] - plain[stand_b.id][0]).total_seconds() == 60
     # rate 1.5: max(840, 1350) - 900 = 450 s later still — a slow listener's overrun is
     # priced once, here, not rediscovered stop by stop.
-    assert (paulo[stand_b.id][0] - heard[stand_b.id][0]).total_seconds() == 450
-    assert paulo[stand_a.id][0] == plain[stand_a.id][0]  # the arrival AT the stop is unchanged
+    assert (slow[stand_b.id][0] - heard[stand_b.id][0]).total_seconds() == 450
+    assert slow[stand_a.id][0] == plain[stand_a.id][0]  # the arrival AT the stop is unchanged
     # The finish is a VIEW: last departure + whatever walk is not already inside
     # the stops' own legs. A declared finish is MATERIALIZED as the last stop (its
     # sentinel), so here that closing remainder is zero and the finish IS the
@@ -350,13 +350,13 @@ def test_the_servers_one_clock_prices_narration_at_the_learned_rate_and_the_fini
     assert route.pois[-1].id.startswith("__end_b"), [p.id for p in route.pois]
     into = sum(leg_walk_seconds(t) for t in route.transits[: len(route.pois)])
     closing = route.total_walk_seconds - into
-    start = paulo[stand_a.id][0] - __import__("datetime").timedelta(
+    start = slow[stand_a.id][0] - __import__("datetime").timedelta(
         seconds=leg_walk_seconds(route.transits[0])
     )
     fin = finish_clock(
         route, request, clock_start=start, audio_seconds_by_id=audio, listening_rate=1.5
     )
-    last_departure = max(dep for _arr, dep in paulo.values())
+    last_departure = max(dep for _arr, dep in slow.values())
     assert (fin - last_departure).total_seconds() == closing
     fin_plain = finish_clock(route, request, clock_start=start)
     assert (fin - fin_plain).total_seconds() == 510  # 60 + 450, the same shift, once
@@ -397,9 +397,9 @@ def test_a_replan_prices_the_day_at_the_persons_listening_rate():
             replan=ctx,
         )
 
-    normal, paulo = tail(1.0), tail(2.0)
+    normal, doubled = tail(1.0), tail(2.0)
     assert [p.id for p in normal.pois] == list(keep), [p.id for p in normal.pois]
-    assert [p.id for p in paulo.pois] == list(keep), [p.id for p in paulo.pois]
+    assert [p.id for p in doubled.pois] == list(keep), [p.id for p in doubled.pois]
     assert normal.overrun_seconds == 0, normal.overrun_seconds
     # RE-DERIVED when tellings became three minutes: the old band (700-900)
     # hardcoded the 270-era fixture arithmetic (its beats derive their length from
@@ -407,11 +407,11 @@ def test_a_replan_prices_the_day_at_the_persons_listening_rate():
     # The MECHANISM is what this test pins, not the pricing formula: a doubled
     # rate must overrun a day that fits at 1.0, and a tripled rate must overrun
     # more than a doubled one — monotone in the rate, reported never refused.
-    assert paulo.overrun_seconds > 0, "rate 2.0 must overrun the same day"
+    assert doubled.overrun_seconds > 0, "rate 2.0 must overrun the same day"
     heavier = tail(3.0)
-    assert heavier.overrun_seconds > paulo.overrun_seconds, (
+    assert heavier.overrun_seconds > doubled.overrun_seconds, (
         heavier.overrun_seconds,
-        paulo.overrun_seconds,
+        doubled.overrun_seconds,
     )
 
 
@@ -422,8 +422,7 @@ def test_a_replan_prices_the_day_at_the_persons_listening_rate():
 
 def test_the_set_and_the_wire_enforce_the_etiquette_they_can():
     """Two of the hard announcement rules: everything spoken also appears on
-    screen; ONE sentence, maximum ("over a screaming five-year-old, mute beats
-    graceful"). The question is ONE sentence with TWO arms, each naming the place
+    screen; ONE sentence, maximum. The question is ONE sentence with TWO arms, each naming the place
     kept and a clock time; asked once, on screen as two big buttons with the
     DEFAULT named. The wire enforces what it can: `screen_text` non-empty whenever
     `question` is, and a sentence-count validator on the question; the failure it
@@ -744,14 +743,13 @@ def test_a_wrap_up_from_the_place_the_day_ends_at_does_not_send_you_there():
 
 
 def test_skipping_an_uncategorised_stop_spends_no_category():
-    """A demo found the class: a skip marks the skipped stop's
-    place_category SPENT (a visitor who has had enough of one kind of place),
-    but most of the corpus carries the default category 'other', so skipping ONE
-    uncategorised stop marked 'other' spent and the tail replan seated NOTHING —
-    measured on a couple's day: every skip entry after the first shipped stop_ids []
-    while its own screen text promised "Next: Conciergerie". The absence of a
-    category is not a category: 'other' (and None) is never spent. A REAL
-    category still spends. UNDO: spend 'other' again -> RED."""
+    """A skip marks the skipped stop's place_category SPENT (a visitor who has
+    had enough of one kind of place), but most of the corpus carries the default
+    category 'other'. Spending 'other' on ONE uncategorised skip leaves the tail
+    replan seating NOTHING — every later skip entry ships stop_ids [] while its own
+    screen text promises a next stop. The absence of a category is not a category:
+    'other' (and None) is never spent. A REAL category still spends.
+    UNDO: spend 'other' again -> RED."""
     from src.tour.contingency import build_contingency_set
     from src.tour.contract import ReplanContext
     from src.tour.selection import select_route
@@ -794,16 +792,13 @@ def test_skipping_an_uncategorised_stop_spends_no_category():
 
 
 def test_a_keep_constrained_tail_spends_its_whole_walking_budget():
-    """A demo found the second half of the empty-tail class: on an
-    open one-way day the greedy RESERVES a quarter of the walking budget for the
-    endpoint pull — but a replan tail with `keep_to_poi_ids` set can never pull
-    (every non-keep candidate is filtered before the pull ranks them), so the
-    reserve starved tails for nothing. Measured on a couple's day: the skip-of-BHV
-    tail (one keep, Place des Vosges, a 1291 s walk) seated NOTHING below a
-    72-minute remainder because 0.75 x its walking budget fell 157 s short —
-    while the entry's own screen text promised "Next: Place des Vosges". A
-    keep-constrained tail gets the whole allocation. UNDO: reserve again on
-    keep-constrained tails -> RED."""
+    """On an open one-way day the greedy RESERVES a quarter of the walking
+    budget for the endpoint pull — but a replan tail with `keep_to_poi_ids` set can
+    never pull (every non-keep candidate is filtered before the pull ranks them), so
+    a reserve there starves the tail for nothing: a keep whose walk sits between
+    0.75 and 1.0 of the budget is never seated, while the entry's own screen text
+    promises it as the next stop. A keep-constrained tail gets the whole
+    allocation. UNDO: reserve again on keep-constrained tails -> RED."""
     from src.tour.contract import ReplanContext
     from src.tour.routing import walk_budget_seconds
     from src.tour.selection import select_route
@@ -878,9 +873,9 @@ def test_a_guessed_stop_yields_a_door_closed_entry_naming_an_open_map_place():
             "place_category": "museum",
         }
     )
-    bench = _bench(_at(PDV, 460.0, 80.0, "bench-m6"), 10)
+    bench = _bench(_at(PDV, 460.0, 80.0, "bench-door"), 10)
     stand_end = _stand(_at(PDV, 620.0, 90.0, "stand-end", tier=5, beat_count=5), 20)
-    end = _at(PDV, 1500.0, 95.0, "end-m6")
+    end = _at(PDV, 1500.0, 95.0, "end-door")
 
     # A standby candidate: map-sourced, open wide, low-tier and off the base
     # route's bearing so it is NOT picked for the base day.
@@ -925,10 +920,9 @@ def test_a_guessed_stop_yields_a_door_closed_entry_naming_an_open_map_place():
     entry = dc[0]
 
     # THE KEEP ARM IS THE ENTRY'S OWN DAY. The phone routes a `keep` default to
-    # `stop_ids` (mobile/lib/services/tour_playback_service.dart:1707), and
-    # `_reorderRemaining` drops every id it is not handed — so the day WITH the
-    # standby has to be `stop_ids`. Reversed, the keep arm hands the phone an
-    # empty list and TRUNCATES the rest of the walk.
+    # `stop_ids`, and its `_reorderRemaining` drops every id it is not handed — so the
+    # day WITH the standby has to be `stop_ids`. Reversed, the keep arm hands the
+    # phone an empty list and TRUNCATES the rest of the walk.
     planned = {p.id for p in base.pois}
     assert entry.stop_ids, "the keep arm must never ship an empty day"
     assert "standby-open" in entry.stop_ids, (
@@ -992,9 +986,9 @@ def test_a_nearer_shut_standby_is_skipped_for_the_farther_open_one():
             "place_category": "museum",
         }
     )
-    bench = _bench(_at(PDV, 460.0, 80.0, "bench-m6b"), 10)
+    bench = _bench(_at(PDV, 460.0, 80.0, "bench-door-b"), 10)
     stand_end = _stand(_at(PDV, 620.0, 90.0, "stand-end2", tier=5, beat_count=5), 20)
-    end = _at(PDV, 1500.0, 95.0, "end-m6b")
+    end = _at(PDV, 1500.0, 95.0, "end-door-b")
 
     # NEARER candidate — closed at 14:24 (Mo-Su 06:00-09:00), tier 1 so the
     # base planner ignores it but the door_closed chooser still sees it.
@@ -1054,7 +1048,7 @@ def test_a_nearer_shut_standby_is_skipped_for_the_farther_open_one():
     )
 
 
-def _m6_day():
+def _guessed_door_day():
     """The guessed-door corpus: one guessed interior stop on the day and one open map-sourced
     place off it. Returns (base route, request, snapshot, the standby's id)."""
     from src.tour.selection import select_route
@@ -1104,7 +1098,7 @@ def test_the_standby_leaves_the_set_as_a_held_stop_beside_the_day():
     from src.tour.contingency import build_contingency_set
     from src.tour.contract import ReplanContext
 
-    base, request, snap, standby_id, _guess_id = _m6_day()
+    base, request, snap, standby_id, _guess_id = _guessed_door_day()
     assert standby_id not in {p.id for p in base.pois}, "premise: the standby is off the day"
     cset = build_contingency_set(
         base, request, snap, routing_client=None,
@@ -1217,9 +1211,9 @@ def test_a_standby_whose_name_cannot_sit_in_one_sentence_is_skipped_not_raised()
             "place_category": "museum",
         }
     )
-    bench = _bench(_at(PDV, 460.0, 80.0, "bench-m6c"), 10)
+    bench = _bench(_at(PDV, 460.0, 80.0, "bench-door-c"), 10)
     stand_end = _stand(_at(PDV, 620.0, 90.0, "stand-end3", tier=5, beat_count=5), 20)
-    end = _at(PDV, 1500.0, 95.0, "end-m6c")
+    end = _at(PDV, 1500.0, 95.0, "end-door-c")
 
     # The NEARER candidate's name breaks the one-sentence rule; the farther one
     # is clean. Both are open and map-sourced, so only the name separates them.

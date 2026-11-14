@@ -1,5 +1,4 @@
-"""Tests for the name_key backfill migration (defect 3) and the reconciled
-seed/upload write paths.
+"""Tests for the name_key backfill migration and the seed/upload write paths.
 
 Covers:
   - canonical_name_key collapses casing/whitespace to one key;
@@ -8,7 +7,7 @@ Covers:
   - the collision detector flags ≥2 POIs whose names differ only by case/space;
   - apply_backfill SETs name_key on a node that lacks it (against local 7688,
     via the port-guarded clean_driver fixture) and never merges/deletes;
-  - the seed and bulk-upload paths now write name_key.
+  - the seed and bulk-upload paths write name_key.
 """
 
 from __future__ import annotations
@@ -147,7 +146,7 @@ def test_detect_collisions_none_when_all_distinct():
 class TestBackfillAgainstLocalDB:
     def test_apply_sets_name_key_and_is_idempotent(self, clean_driver):
         with clean_driver.session(database=get_database()) as s:
-            # A POI with NO name_key (the pre-defect-3 state).
+            # A POI with NO name_key (written before name_key existed).
             s.run(
                 "CREATE (p:POI {id: 'nk-1', name: 'Notre-Dame ', city_name: 'paris'})"
             )
@@ -196,7 +195,7 @@ class TestBackfillAgainstLocalDB:
             assert rec["nk"] == "panthéon"
 
 
-# ── write-path reconciliation: seed + upload now write name_key ──
+# ── write paths: seed + upload write name_key ──
 
 
 @needs_neo4j

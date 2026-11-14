@@ -1,5 +1,5 @@
-// Interruptions: a call, a photo, another app ("audio overlaps the walking"
-// holds only while the piece plays).
+// Interruptions: a call, a photo, another app. Audio overlaps the walking only
+// while the piece plays.
 //
 // A call, another app's voice, Siri → PAUSE. Resume at the START of the cut
 // sentence ("where it was" hands the listener half a sentence; the piece start
@@ -117,7 +117,7 @@ void main() {
       t.player.simulateInterruption(AudioInterruptionKind.pauseBegin);
       t.player.simulateInterruption(AudioInterruptionKind.ended);
       expect(t.player.isPlaying, isFalse,
-          reason: 'the couple: "we restart when the conversation pauses"');
+          reason: 'a couple resumes by their tap, when their conversation pauses');
       expect(t.service.resumeOffer, 'Stop 0');
       t.service.resumeInterrupted();
       expect(t.player.isPlaying, isTrue);

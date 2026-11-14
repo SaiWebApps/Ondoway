@@ -22,18 +22,17 @@ _DEV_PLACEHOLDER_SECRET: str = "ondoway-insecure-dev-secret-do-not-use-in-produc
 
 # Bounded retry for the PRODUCTION fail-closed path only: if a signing secret
 # reads empty/short at startup, re-read os.getenv a few times with a short
-# backoff before giving up. This is CHEAP INSURANCE + TELEMETRY, not a proven
-# cure for the Render env-injection glitch that motivated it (deploy failure
-# 2026-07-07T01:14). Honest limit: under CPython/POSIX exec semantics os.getenv
-# reads os.environ, a snapshot taken at process start, so a value Render injects
-# into the container AFTER this process started is NOT visible to an in-process
-# re-read — the proven recovery there was a FRESH process (container restart).
-# This loop therefore only rescues a value that becomes observable IN-PROCESS
-# within the budget (e.g. an import-order / dotenv transient); it can never
-# weaken the fail-closed guard below, costs nothing on every healthy path, and —
-# most usefully — logs each attempt so any recurrence is diagnosable (the 01:14
-# event had no such telemetry). The real cure for genuinely-late CONTAINER env
-# is an entrypoint shell wait before `exec uvicorn` (deferred follow-up).
+# backoff before giving up. This is CHEAP INSURANCE + TELEMETRY against a deploy
+# platform injecting env late, not a cure. Honest limit: under CPython/POSIX exec
+# semantics os.getenv reads os.environ, a snapshot taken at process start, so a
+# value Render injects into the container AFTER this process started is NOT
+# visible to an in-process re-read — only a FRESH process (container restart)
+# recovers there. This loop therefore only rescues a value that becomes
+# observable IN-PROCESS within the budget (e.g. an import-order / dotenv
+# transient); it can never weaken the fail-closed guard below, costs nothing on
+# every healthy path, and — most usefully — logs each attempt so any recurrence
+# is diagnosable. Genuinely-late CONTAINER env needs an entrypoint shell wait
+# before `exec uvicorn`, which the Dockerfile does not have.
 _SECRET_RETRY_MAX_ATTEMPTS: int = 6
 # One backoff per gap between attempts (max_attempts - 1 == 5 gaps); the sum is
 # 7.5s, a hard <=10s ceiling far under Render's deploy timeout. Extra gaps (were

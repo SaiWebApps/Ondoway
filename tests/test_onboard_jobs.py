@@ -167,7 +167,7 @@ def test_seq_is_store_assigned_and_equals_position() -> None:
 
 
 def test_snapshot_returns_status_and_event_copy() -> None:
-    """snapshot() is the sanctioned copy-based read path for the Step-5
+    """snapshot() is the sanctioned copy-based read path for the
     SSE/snapshot endpoint: status/error, a FRESH list of events with
     seq > after_seq, and the current max seq — and mutating that list must NOT
     touch the store's live job."""

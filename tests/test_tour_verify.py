@@ -156,10 +156,10 @@ def test_glue_sentences_and_claimless_beats_skip_entailment():
 
 
 def test_keyless_beat_with_body_is_gated_against_its_script_body():
-    """Keyless-corpus faithfulness (round-3 red-team): a beat with key_claims=() but a
-    script_body (the entire London corpus) must be entailed against that BODY — not
-    skipped — so invention on a keyless corpus is caught. UNDO: revert verify.py's
-    skip to key_claims-only -> no entailment call -> RED."""
+    """Keyless-corpus faithfulness: a beat with key_claims=() but a script_body (the
+    entire London corpus) must be entailed against that BODY — not skipped — so
+    invention on a keyless corpus is caught. UNDO: revert verify.py's skip to
+    key_claims-only -> no entailment call -> RED."""
     beat = _beat("b1", key_claims=(), script_body="The Great Fire began in Pudding Lane in 1666.")
     ok = MockFaithfulnessChecker()
     s_ok = Sentence(text="In 1666 the Great Fire started at Pudding Lane.",
@@ -257,11 +257,9 @@ def test_a_thread_with_no_support_anywhere_fails_closed():
 def test_validation_report_passed_gates_on_new_teeth():
     """Provenance BLOCKS; the entailment miss RECORDS.
 
-    Both teeth used to block. The entailment one was demoted to advisory by owner
-    ruling on 2026-08-03 (it fired on ~a fifth of a good tour, so it could not decide
-    whether to ship one) — see ``ValidationReport.passed`` and
-    test_tour_authoring_gates.py::test_faithfulness_and_dropped_facts_are_advisory_not_blocking.
-    The demotion is not a deletion, so the report must still CARRY the finding.
+    The entailment check is advisory: it fires on about a fifth of a good tour, so it
+    cannot decide whether to ship one (``ValidationReport.passed`` ignores it).
+    Advisory is not deleted, so the report must still CARRY the finding.
     """
     base = ValidationReport()
     assert base.passed
@@ -275,7 +273,7 @@ def test_validation_report_passed_gates_on_new_teeth():
 
 
 # ---------------------------------------------------------------------------
-# Corpus-is-canonical faithfulness (live-gate calibration, 2026-07-02)
+# Corpus-is-canonical faithfulness
 # ---------------------------------------------------------------------------
 
 

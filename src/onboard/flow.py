@@ -9,7 +9,7 @@ identical event log. ``consult_source`` is the one seam that branches on the
 network mode:
 
 - ``fetch.HTTP_MODE == "live"`` → go through ``base.run_connector`` (the ingest
-  allowlist door — grey-zone wall 2) which actually fetches; or
+  allowlist door) which actually fetches; or
 - the default ``fixture`` mode → load the connector's committed run fixture from
   ``tests/fixtures/onboard/{slug}/`` and call its PURE ``parse`` directly, while
   emitting the SAME ``source_consult`` + scalar-only ``candidate_batch`` events
@@ -108,7 +108,7 @@ def consult_source(
     In the default ``fixture`` mode it emits a ``source_consult`` event naming the
     concrete URL the connector WOULD GET live, then — instead of fetching, which
     the fixture-mode door forbids — parses the committed fixture and emits a
-    scalar-only ``candidate_batch`` event (wall 3: never body text in ``data``).
+    scalar-only ``candidate_batch`` event (never body text in ``data``).
 
     RESILIENCE: a per-connector RUN failure (an HTTP 403/timeout, a malformed
     payload, any parse error) must NOT abort the whole onboarding — several
@@ -153,9 +153,9 @@ def consult_source(
 
 
 def _log_extract_coverage(slug: str, report: dict) -> None:
-    """Surface a LIVE extract-coverage report LOUDLY (the accounting requirement —
-    never silent thinness): an INFO summary always, WARNINGs for the miss list, any
-    empty-slug skips, and a below-floor coverage."""
+    """Surface a LIVE extract-coverage report LOUDLY (never silent thinness): an
+    INFO summary always, WARNINGs for the miss list, any empty-slug skips, and a
+    below-floor coverage."""
     resolved = report["resolved"]
     missed = report["missed"]
     skipped = report.get("skipped_no_slug", [])

@@ -15,13 +15,13 @@ Nothing here re-implements a check or softens a threshold.
 
 TWO GRANULARITIES — THIS IS THE WHOLE POINT
 -------------------------------------------
-A first version of this loader promoted EVERY narration-owning heading to a stop and
-reported "0 blockers" on both tours. A judge consult killed that commit: the Île
+Promoting EVERY narration-owning heading to a stop reports "0 blockers" on both
+tours, and that zero is an artifact of segmentation, not calibration: the Île
 document declares its stops explicitly (``## STOP — …``, 8 of them, matching the 8
 POIs its golden fixture records), and grouped the document's own way, two stops
-exceed the C8 gorge cap. The zero was an artifact of segmentation, not calibration.
+exceed the C8 gorge cap.
 
-So the loader now models both units, because they answer different questions:
+So the loader models both units, because they answer different questions:
 
 * **stop** — the document's declared unit (a named place; what the rubric's
   ``stop_idx`` means on machine output, where a stop is a POI with one GPS trigger).

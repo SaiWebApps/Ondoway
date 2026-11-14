@@ -1,22 +1,19 @@
 """The magic-link ceiling must stop abuse and NEVER throttle a real person.
 
-CONTEXT. Every rate limiter in this codebase was deleted on 2026-07-31 because
-each was keyed on the CLIENT IP, and per-IP throttling punishes the wrong people:
-mobile carriers put thousands of subscribers behind a handful of addresses, a
-hotel is one address, and the owner's own workbench is one address. He hit
-"Too many tour generations" on his third preview of the day.
+No limit in this codebase is keyed on the CLIENT IP, because per-IP throttling
+punishes the wrong people: mobile carriers put thousands of subscribers behind a
+handful of addresses, a hotel is one address, and a workbench is one address.
 
-This one ceiling came back, on two keys that a legitimate person structurally
-cannot trip — the TARGET EMAIL and a GLOBAL total — because ``/auth/magic-link/
-request`` is unauthenticated and sends a REAL email to whatever address the body
-names, and Resend enforces its abuse policy by suspending the account. That
-failure takes login away from everybody, including him.
+This ceiling uses two keys that a legitimate person structurally cannot trip —
+the TARGET EMAIL and a GLOBAL total — because ``/auth/magic-link/request`` is
+unauthenticated and sends a REAL email to whatever address the body names, and
+Resend enforces its abuse policy by suspending the account. That failure takes
+login away from everybody.
 
-The owner's stated worry when approving it was: *"My concern is that you will end
-up throttling me again."* ``test_a_real_person_is_never_throttled`` and
-``test_one_caller_mailing_many_addresses_is_not_throttled_per_caller`` are that
-worry written as executable checks. If either ever goes red, the ceiling has
-regressed into the thing he deleted.
+``test_a_real_person_is_never_throttled`` and
+``test_one_caller_mailing_many_addresses_is_not_throttled_per_caller`` check
+that the ceiling never throttles a real person. If either goes red, the ceiling
+has turned into a per-person or per-IP quota.
 """
 
 from __future__ import annotations
@@ -53,12 +50,12 @@ def _request(client: TestClient, email: str):
 
 
 def test_a_real_person_is_never_throttled(client) -> None:
-    """THE owner-facing guarantee. Someone who did not get the first email and
+    """THE user-facing guarantee. Someone who did not get the first email and
     keeps pressing "send it again" must never be stopped.
 
     Ten consecutive requests for one's own address is already unusual human
     behaviour; the default ceiling is 30 per hour. If this ever goes red the
-    ceiling has been tightened into a quota, which is the thing that was deleted.
+    ceiling has been tightened into a quota.
     """
     codes = [_request(client, "owner@ondoway.com").status_code for _ in range(10)]
     assert codes == [200] * 10, (
@@ -70,8 +67,8 @@ def test_a_real_person_is_never_throttled(client) -> None:
 def test_one_caller_mailing_many_addresses_is_not_throttled_per_caller(client) -> None:
     """There is NO per-caller key, and this proves it.
 
-    The deleted limiters counted requests per client IP, so everyone behind one
-    carrier or hotel shared a bucket. Here the same caller mails 40 DIFFERENT
+    A per-IP counter would put everyone behind one carrier or hotel in a shared
+    bucket. Here the same caller mails 40 DIFFERENT
     addresses — comfortably past the 30-per-email ceiling — and every one
     succeeds, because the count is per TARGET, not per sender.
 
@@ -143,10 +140,8 @@ def test_rejected_requests_do_not_leak_counter_keys(client) -> None:
 
 
 def test_the_ceiling_can_be_switched_off(client, monkeypatch) -> None:
-    """0 disables it. Documented as a knob — and a knob is not a removal.
-
-    Named explicitly because an earlier attempt in this session set limits to 0
-    and called them "removed". They are different things and the code says so.
+    """0 disables it. It is a knob: a ceiling switched off is still present,
+    which is different from a ceiling removed, and the code keeps them apart.
     """
     monkeypatch.setattr(auth_routes, "_MAGIC_LINK_PER_EMAIL_MAX", 0)
     monkeypatch.setattr(auth_routes, "_MAGIC_LINK_GLOBAL_MAX", 0)

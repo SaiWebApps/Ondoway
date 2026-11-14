@@ -1,12 +1,12 @@
 import 'package:flutter/services.dart';
 
 /// Thin Dart wrapper over the native `com.ondoway/native_audio` channel, which
-/// plays a local file through `AVAudioPlayer(contentsOf:)` on iOS.
+/// plays a local file through `AVAudioPlayer(data:)` on iOS.
 ///
 /// Why this exists: just_audio's `AVPlayer` emits NO audible output while the
 /// app is backgrounded / the screen is locked on iOS 26, even on a correctly
-/// active `.playback`/`.duckOthers` session (proven on-device — see the slice
-/// DIAGNOSIS). A native `AVAudioPlayer` on that same session DOES play locked,
+/// active `.playback`/`.duckOthers` session (measured on a device). A native
+/// `AVAudioPlayer` on that same session DOES play locked,
 /// so tour narration routes through here. State the caller needs — duration,
 /// position, and crucially **completion** (tour auto-advance depends on it) —
 /// is bridged back: duration/position via return values, completion via the

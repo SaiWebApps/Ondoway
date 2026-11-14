@@ -22,7 +22,7 @@ dependencies:
   apple_maps_flutter: ^1.4.0
   just_audio: ^0.9.40
   # The audio session — background spoken playback and
-  # the interruption events; just_audio's own session library, now used directly.
+  # the interruption events; just_audio's own session library, used directly.
   audio_session: ^0.1.25
   # The LOCK SCREEN's transport —
   # what is playing, and a pause button that reaches a pocketed phone. Without it
@@ -40,7 +40,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  # The kill criterion is measured ON the iOS Simulator.
+  # Integration tests run the real app ON the iOS Simulator.
   integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
@@ -52,7 +52,7 @@ flutter:
   assets:
     - assets/images/
     - assets/audio/
-  # The v10 design system's three faces, bundled rather than fetched so the app
+  # The app's three typefaces, bundled rather than fetched so the app
   # renders identically offline and on first launch. Fraunces is the display
   # voice, Space Grotesk the body, Space Mono the numeric/monospace one.
   fonts:

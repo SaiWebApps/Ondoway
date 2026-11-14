@@ -31,8 +31,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 #: The labeled set this bake-off scores against. A fixture the code OPENS, so it
-#: lives under `fixtures/` — the spec tree was deleted 2026-09-02 and is refused by
-#: the junk guard.
+#: lives under `fixtures/`.
 _SET = Path(__file__).resolve().parents[1] / "fixtures" / "tour-craft" / "faithfulness_calibration_set.json"
 
 # Baseline: the CURRENT strict entailment prompt used for the faithfulness direction today

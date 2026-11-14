@@ -60,10 +60,10 @@ def _auto_beat_seconds(beat_count: int) -> int:
     """Per-beat voiced seconds so a POI's WHOLE beat set fits one stop's ceiling.
 
     Selection prices a stop TWICE and the two prices must agree. The greedy
-    credits ``planned_capped_audio_seconds(poi, ..., allowance)`` where the C9
-    governor allowance is ``target_dwell_seconds(d) // min(3, d // 10)`` — 720 s
-    at 60 min, 1440 s at 120 min. Emission then caps every stop at
-    ``MAX_DWELL_AUDIO_SECONDS`` (270 s). A fixture POI carrying more than 270 s
+    credits ``planned_capped_audio_seconds(poi, ..., allowance)`` where the per-stop
+    governor allowance (``governor_allowance_seconds``) is
+    ``target_dwell_seconds(d) // min(3, d // 10)`` — 720 s at 60 min, 1440 s at
+    120 min. Emission then caps every stop at ``MAX_DWELL_AUDIO_SECONDS`` (270 s). A fixture POI carrying more than 270 s
     of beats is therefore CREDITED up to 5x what the tour will ever speak, so
     the greedy believes it has filled the audio target after a third of the
     stops, stops adding them, and hands the certification repair a route that
@@ -345,8 +345,8 @@ def test_low_tier_no_lens_eligible_as_vignette_not_dwell():
     """The hard tier gate is GONE, but spotlight ALLOCATES scarce
     dwell-minutes, it does not stop everywhere.
 
-    Before the model switch a tier-1 POI was hard-EXCLUDED from the anchor pool
-    (ANCHOR_TIERS = {3,4,5}). After the model switch it is ELIGIBLE -- its
+    A tier-1 POI is not hard-EXCLUDED from the anchor pool (there is no
+    ANCHOR_TIERS = {3,4,5} filter). It is ELIGIBLE -- its
     on-path spotlight gravity(1) x 1.0 x 1.0 = 1.0 is a VIGNETTE (a brief
     mention), not silent. But 1.0 is below the calibrated dwell floor
     (BAND_THRESHOLD_SHORT = 3.0 = tier-3 gravity), so it is NOT a dwell stop:
@@ -366,7 +366,7 @@ def test_low_tier_no_lens_eligible_as_vignette_not_dwell():
     # in the dwell route (route.pois are dwell stops).
     route = select_route(TourInput(start=PDV, duration_min=60, city_slug="paris"), snap)
     ids = [p.id for p in route.pois]
-    # C9 governor (budget/3 floor): 5 tier-5 anchors compete (t5 + 4 density
+    # Per-stop governor (budget/3 floor): 5 tier-5 anchors compete (t5 + 4 density
     # fillers) for ~3 dwell slots, so a specific tier-5 (t5) may drop to the
     # closer fillers. The invariant that MUST survive: every dwell stop is a
     # tier-5 anchor — the tier-1 no-lens POI never displaces one into a slot.
@@ -617,9 +617,9 @@ def test_lens_adjacency_ranks_direct_above_one_hop():
 
 
 def test_lens_miss_dims_but_does_not_zero_poi_score():
-    """The model switch made poi_score's lens
-    factor the POSITIVE-floored lens_relevance (miss -> LENS_FLOOR = 0.25), NOT
-    the legacy hard-filter _lens_adjacency (miss -> 0.0).
+    """poi_score's lens factor is the POSITIVE-floored lens_relevance
+    (miss -> LENS_FLOOR = 0.25), NOT the legacy hard-filter _lens_adjacency
+    (miss -> 0.0).
 
     A high-gravity (tier-5) POI that MISSES the requested lens must score a
     strictly positive, DIMMED value -- exactly LENS_FLOOR of its no-lens score,
@@ -637,7 +637,7 @@ def test_lens_miss_dims_but_does_not_zero_poi_score():
     )
     s_miss = poi_score(missed, None, frozenset({"hidden_history"}), snap)
     s_neutral = poi_score(missed, None, frozenset(), snap)
-    assert s_miss > 0.0, "a lens miss must DIM, not zero, the score (model switch)"
+    assert s_miss > 0.0, "a lens miss must DIM, not zero, the score"
     assert math.isclose(s_miss / s_neutral, LENS_FLOOR, rel_tol=1e-9), (
         f"a lens-miss score must be LENS_FLOOR of the no-lens score; "
         f"got ratio {s_miss / s_neutral}"
@@ -975,7 +975,7 @@ def test_zero_beat_poi_excluded_from_anchor_pool():
     assert "rich" in ids
     assert "empty" not in ids, (
         "Zero-beat POI must be excluded from the candidate pool — "
-        "this was the Petit Palais bug"
+        "a stop with no active beats has nothing to say"
     )
 
 
@@ -1791,8 +1791,8 @@ def test_fill_pass_under_floor_rescue_adds_nearby_stop():
     would not do it — is unchanged and still proven by both arms below. What
     changed is that the stop it reaches for now EARNS its walk: B is a
     fifteen-minute stop (900 s), so the trade is 1420:900 = 1.58 — inside the
-    dearest trade a visitor defends (1.8, sixteen minutes' walk for nine silent
-    minutes at the deportation memorial) and under the locked 2.0 cap. The
+    1.8 memorial trade (sixteen minutes' walk for nine silent minutes at the
+    deportation memorial) and under the 2.0 cap. The
     geometry is untouched; only the claim about what is worth walking to moved.
     """
     from src.tour.routing import walk_budget_seconds
@@ -2006,8 +2006,8 @@ def test_no_demotion_when_smaller_is_pause_tier():
     Mirrors the Île case: Square du Vert-Galant (tier 3) sits ~80m from
     Pont Neuf (tier 5) and Pont Neuf carries beats referencing
     'vert-galant'. The pause-tier guard skips this pair because Vert-
-    Galant is an empirical Pariswalks pause stop, not a sub-feature
-    of Pont Neuf.
+    Galant is a pause stop in its own right, where real walking tours
+    stop, not a sub-feature of Pont Neuf.
     """
     from src.tour.selection import apply_co_located_demotion
 
@@ -2106,46 +2106,6 @@ _FROZEN_BACKGROUND_RADIUS_M: float = 90.0
 
 
 
-# FROZEN literals — captured from a green run; see the docstring above.
-# These are the byte-for-byte expected ordered POI ids for end=None.
-#
-# Model-switch re-baseline: gate removal WIDENS the eligible pool (the
-# hard tier gate, the walk_by_only exclusion, and the lens-miss exclusion are
-# gone). This snapshot was DELIBERATELY re-verified under the model switch and
-# the ordered ids are UNCHANGED -- by construction: every POI here is a tier-5
-# 'stop' with active beats and NO lens is requested, so (a) the removed tier
-# gate excluded nothing (all tier 5), (b) there are no walk_by_only POIs, and
-# (c) with no lenses, lens_relevance == _lens_adjacency == 1.0, so poi_score is
-# byte-identical to its pre-switch value. The widened eligibility therefore admits
-# the same six POIs in the same order; the ends are still correct (open walk
-# closes on the far 'baseline-medium' via endpoint-pull) and no crash. The new
-# eligibility is exercised separately by the tier-1 / lens-miss tests above.
-# C9 governor (end=None, budget/3 floor): the earlier byte-identity is
-# DELIBERATELY superseded (the goldens are the new gate). Re-captured
-# 2026-07-03 from the green C9 run: this beat-rich synthetic corpus caps at
-# the ~3-stop floor (the exempt anchor's audio clears the fill
-# floor, so no fill-added 4th-6th stop). The real end=None gate (Ile golden) is
-# BYTE-IDENTICAL to pre-C9 (16/47), so this re-baseline moves only the fixture.
-# 2026-08-05 re-baseline: the FIXTURE changed, so the captured ids had to be
-# recaptured with it. A tour now has to fill the duration it was asked for, and
-# the old fixture — four POIs sitting on top of the start — could not fill an
-# hour at all, so every run of this baseline refused before it produced any
-# ordering to compare. The background is now a duration-scaled cluster and the
-# medium anchor sits far enough out for the endpoint pull to see it. What the
-# baseline GUARDS is unchanged: both cost paths must agree, and the open walk
-# must still close on the medium anchor.
-# 2026-08-06 re-baseline: the requested duration became a hard CEILING
-# rather than the middle of a two-sided band. An open walk that used to be allowed
-# to run 10% long now gets repaired back under the request, so it can afford
-# different places — this fixture picks up filler-6 and filler-13 and no longer
-# closes on the medium anchor. That is the rule working, not drift: the tour is
-# shorter than the one this list captured, and it is shorter on purpose.
-#
-# What the baseline GUARDS is unchanged and is the reason it is still here: the
-# two cost paths must produce the SAME ordering, and the ordering must be
-# deterministic run to run.
-
-
 # The two cost paths are REQUIRED to agree on this fixture — the deterministic
 # routing client returns exactly the pace-corrected haversine the no-client path
 # computes — so the routed baseline is the same list by construction. A run where
@@ -2155,12 +2115,12 @@ _FROZEN_BACKGROUND_RADIUS_M: float = 90.0
 
 
 def test_domination_caps():
-    """Governor v4 core: caps a DOMINATING OUTLIER to ~1/3 of delivered, but leaves
-    a BALANCED tour untouched (the v3 always-on cap over-trimmed balanced
+    """The domination governor caps a DOMINATING OUTLIER to ~1/3 of delivered, but
+    leaves a BALANCED tour untouched (an always-on cap over-trims balanced
     tours)."""
     from src.tour.selection import _domination_caps
 
-    # UC5 (exempt marquee 396; Ile 363 dominates its 74/56/42 peers).
+    # An exempt marquee (396) and one stop (363) that dominates its 74/56/42 peers.
     caps = _domination_caps([True, False, False, False, False], [396, 56, 74, 363, 42])
     assert caps[0] is None, "exempt marquee uncapped"
     total = 396 + caps[1] + caps[2] + caps[3] + caps[4]
@@ -2183,8 +2143,8 @@ def test_domination_caps():
     assert (co[2], co[3], co[4]) == (100, 80, 60), "the drowned small peers are untouched"
 
 
-def test_governor_v4_marquee_exempt_domination_gated():
-    """Governor v4 wrapper: exempts the MARQUEE (highest-tier stop, not a proximity
+def test_governor_marquee_exempt_domination_gated():
+    """The domination governor's wrapper: exempts the MARQUEE (highest-tier stop, not a proximity
     seed), caps only a dominating outlier (overflow returned, kept+overflow==full),
     leaves a balanced tour whole, and A→B stays uncapped. Explicit beats (select_
     poi_beats caps tier-3 to 3 beats, so we use tier-4/5 with controlled audio)."""
@@ -2255,7 +2215,7 @@ def test_governor_v4_marquee_exempt_domination_gated():
 
 
 def test_absolute_ceiling_caps_every_stop_including_the_marquee():
-    """C9h: no stop — the MARQUEE included — may voice more than
+    """No stop — the MARQUEE included — may voice more than
     MAX_DWELL_AUDIO_SECONDS, on BOTH open-walk and A→B routes (kill the 10-minute
     monologue). Whole-beat cap: kept + overflow == the full plan (no fact lost); a
     stop always speaks at least once. UNDO: revert the ceiling in
@@ -2296,7 +2256,7 @@ def test_absolute_ceiling_caps_every_stop_including_the_marquee():
 
 
 def test_keep_final_closing_beat_splices_a_trimmed_callback():
-    """C9h regression (red-team): if the per-stop cap trimmed the terminal stop's
+    """Regression: if the per-stop cap trimmed the terminal stop's
     closing-friendly beat (callback) into overflow, _keep_final_closing_beat must
     splice it back — else reorder_final_stop_for_closing (which runs later and can
     only reorder KEPT beats) can't recover it and the tour ends mid-fact. Unit-tested
@@ -2542,8 +2502,7 @@ def test_open_walk_bstar_equals_endpoint_pull():
 # above is unchanged for every route that IS delivered.
 #
 # These pin CURRENT contracts (tier-dwell audio proxy, YELLOW-only
-# tourability attach). The delivered-audio invariant is deferred design;
-# do not import it here.
+# tourability attach).
 # ---------------------------------------------------------------------------
 
 
@@ -2704,7 +2663,7 @@ def test_tier_dwell_audio_break_cannot_fire_after_single_anchor():
     no longer the deleted per-tier dwell proxy (removed 2026-08-06 with
     DWELL_SECONDS_BY_TIER; a stop's length now comes from
     src/tour/visit_time.py and rides on Route.planned_visit_seconds).
-    The delivered-audio reconciliation is deferred design — when it lands, the
+    If the greedy is ever changed to count delivered beat audio, the
     plausible bad implementation is ``consumed_audio += sum(beat seconds)``,
     under which one anchor's 1200s of real beat audio exceeds the 896s target
     at 30 min and the greedy breaks after ONE pick, emitting a GREEN 1-stop
@@ -2843,12 +2802,11 @@ def test_three_way_name_twins_lose_no_beats():
 
 
 # ---------------------------------------------------------------------------
-# C12 enforcement: MIN_STOP_SEPARATION_M guard in select_route's greedy loop.
-# 17m (Palais de Justice / Conciergerie, a MEASURED defect) must never seat
-# both; 86m (Conciergerie / Sainte-Chapelle, a MEASURED legitimate pair) must
-# seat both. Fillers are spaced >50m apart from each other and from the pair
-# so this test isolates the guard itself, not the fill-pass/density-gate
-# interaction (a separate, larger finding).
+# Close stops: select_route has NO minimum stop-separation filter. A 17m pair
+# (the Palais de Justice / Conciergerie spacing) and an 86m pair (Conciergerie /
+# Sainte-Chapelle) both seat both stops; the rubric's C12 only warns. Fillers
+# are spaced >50m apart from each other and from the pair so these tests isolate
+# selection's treatment of the pair, not the fill-pass/density-gate interaction.
 # ---------------------------------------------------------------------------
 
 _SEP_START = (48.8555, 2.3656)
@@ -2894,10 +2852,9 @@ def test_selection_does_not_filter_close_but_distinct_pois():
     (14.9 m), Concorde/Jeu de Paume (14.3 m), and -- decisively -- Hotel Le Meurice /
     Angelina (8.4 m) and Galignani / Angelina (11.8 m).
 
-    Le Meurice and Galignani are the POIs in the product owner's OWN gold text,
-    which narrates "At number 224, the English bookshop Galignani..." with Le Meurice
-    at 228. A 50 m
-    filter makes the gold-standard stop structurally unbuildable.
+    Le Meurice and Galignani sit side by side on rue de Rivoli (Galignani at number
+    224, Le Meurice at 228), and a good tour stops at both. A 50 m filter makes that
+    tour structurally unbuildable.
 
     Two further defects were proven when the guard was live: it is first-come-wins, so it
     drops the BEST stop rather than the redundant one (a tier-5 POI with 20 beats lost to
@@ -2905,7 +2862,7 @@ def test_selection_does_not_filter_close_but_distinct_pois():
     ``_apply_endpoint_pull`` unguarded, so it did not even prevent the defect it targeted.
 
     The real defect it was written for -- Conciergerie narration describing the Palais de
-    Justice the listener just left -- is SEMANTIC REPETITION (check G4), not proximity.
+    Justice the listener just left -- is SEMANTIC REPETITION, not proximity.
     Distance cannot distinguish "one building told twice" from "two institutions on one
     street".
     """
@@ -3056,9 +3013,9 @@ def test_an_under_filled_day_is_the_most_storied_one_never_the_longest_walk():
     # category are the case that breaks a naive answer — the diversity dimmer
     # fires when a category covers half a set, so ranking by the dimmed score made
     # a two-museum day score BELOW a one-museum day and the planner dropped a
-    # stop to "improve" the day. Measured live on a visitor's own request: her day
-    # collapsed from [Musee de l'Orangerie, Musee d'Orsay] to [Musee d'Orsay], and
-    # with the walking went the cadence crossing that seats her BENCH.
+    # stop to "improve" the day. Measured live: a day collapsed from
+    # [Musee de l'Orangerie, Musee d'Orsay] to [Musee d'Orsay], losing the walk
+    # between them.
     #
     # UNDO: rank the under-fill choice by `_diversity_weighted_score` instead of
     # the plain sum -> the single stop wins -> RED.
@@ -3103,14 +3060,13 @@ def test_a_stop_is_never_admitted_past_the_walking_worth_line():
     (1800 s — the same 30-minute line the illogical-detour invariant enforces,
     tests/test_tour_invariants_live.py). The measured case: the
     Panthéon 120 loop walked 43 minutes to a bookshop because 4.5:1 admitted it.
-    The dearest trade a visitor defends — 16 minutes' walk for a 9-minute stand
-    at the memorial, 1.8:1 — stays admissible: the cap is the loosest line no
-    defended trade breaks.
+    A 1.8:1 trade — 16 minutes' walk for a 9-minute stand at the deportation
+    memorial — stays admissible: 2.0 is the loosest line that still refuses the
+    slogs and admits that trade.
 
     EACH BOUND IS ISOLATED BY ITS OWN CANDIDATE, so each mutation has something
-    to break — the first version of this test used one candidate that tripped
-    BOTH bounds, so neither mutation flipped it and it proved nothing (caught by
-    its own UNDO pass, sabotage mode 5). Every candidate is offered alone, since
+    to break — one candidate that tripped BOTH bounds would let neither mutation
+    flip it, and the test would prove nothing. Every candidate is offered alone, since
     admitting one would move the next one's marginal walk.
 
     UNDO: return RESCUE_MAX_WALK_PER_DWELL_SECOND to 4.5 -> `ratio-slog` seats
@@ -3131,7 +3087,7 @@ def test_a_stop_is_never_admitted_past_the_walking_worth_line():
     detour_slog = _priced_poi("detour-slog", tier=5, lng_offset_deg=0.008420,
                               visit_min=20, beat_count=8)
     # 500 m out: marginal 1618 s for a 15-minute stop — 1.8:1, exactly the
-    # dearest trade a visitor defends (sixteen minutes' walk for nine silent minutes at the
+    # memorial trade (sixteen minutes' walk for nine silent minutes at the
     # deportation memorial), and inside both bounds. It must still seat, or the
     # line has stopped being a worth test and become a distance cap.
     worth_it = _priced_poi("worth-it", tier=4, lng_offset_deg=-0.006828,
@@ -3485,19 +3441,18 @@ def test_a_replanned_remainder_reports_its_overrun_instead_of_stepping_outside()
     material of the ONE question the person answers ("keep your full rest and
     be at the Orsay about 17:02, or sit six minutes and be back by 17:00" —
     `contingency.question_text`). A repair that steps a stop outside
-    on this path answers the question FOR her and hands back a quietly thinner
-    day instead. Measured 2026-08-25 on a visitor's own day, forty-six minutes
-    late out of the Orangerie: the remainder priced 100 s over her clock, the
-    move shed an interior to absorb them, the overrun came back 0, and the live
+    on this path answers the question FOR the person and hands back a quietly
+    thinner day instead. Measured live on a day running forty-six minutes late
+    out of the Orangerie: the remainder priced 100 s over its clock, the move
+    shed an interior to absorb them, the overrun came back 0, and the live
     reply carried NO question at all.
 
     Same request and same corpus as
     `test_a_destination_too_big_for_the_hour_is_served_from_the_outside`, which
     is the deliberate contrast: a FRESH plan of this hour steps the cathedral
     outside, because there the alternative really is a refusal. Both stops are
-    the person's own here — the bridge held, the cathedral her declared finish —
-    so no drop or exchange can shorten the day either, exactly as that
-    visitor's Orsay and her bench cannot.
+    the person's own here — the bridge held, the cathedral the declared finish —
+    so no drop or exchange can shorten the day either.
 
     UNDO: try the fourth move before the `report_overrun` return -> the
     cathedral's interior is traded away and the overrun comes back 0 -> RED.

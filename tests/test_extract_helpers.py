@@ -1,11 +1,10 @@
-"""Tests for the three extraction helpers landed alongside the
-B11/B12 prompt patch (2026-05-01).
+"""Tests for the three extraction helpers.
 
 Covers:
 - scripts/beat_builder.py: deterministic construction, hash + duration_sec
   + beat_id derivation, default fills.
-- scripts/extract_validators.py: source-span gate (B12),
-  length-class enforcement, fabrication probe (B11).
+- scripts/extract_validators.py: source-span gate,
+  length-class enforcement, fabrication probe.
 - scripts/audit_extraction.py: pipeline-report sections + fabrication
   re-probe + new-coverage analysis.
 
@@ -147,7 +146,7 @@ def test_make_beat_imported_context_path():
     assert beat["fact_check"]["notes"] == "Communard reference imported by extractor"
 
 
-# ─── source-span gate (B12) ───────────────────────────────────────────
+# ─── source-span gate ─────────────────────────────────────────────────
 
 
 def test_count_source_sentences_two_periods():
@@ -156,8 +155,8 @@ def test_count_source_sentences_two_periods():
 
 
 def test_count_source_sentences_semicolon_clauses_count_separately():
-    """Per the patch: 'a semicolon-joined clause carrying an independent
-    factual claim counts as a sentence for this gate.'"""
+    """A semicolon-joined clause carrying an independent factual claim
+    counts as a sentence for this gate."""
     src = "The dome is grey; the windows were blacked out; sandbags lined the floor."
     assert count_source_sentences(src) == 3
 
@@ -247,7 +246,7 @@ def test_check_length_class_anchor_under_floor_suggests_mid():
     assert suggested == "mid"
 
 
-# ─── fabrication probe (B11) ───────────────────────────────────────────
+# ─── fabrication probe ─────────────────────────────────────────────────
 
 
 def test_fabrication_probe_clean_body_returns_no_findings():
@@ -434,7 +433,7 @@ def test_validate_beat_passes_clean_mid():
     assert not verdict.errors
 
 
-def test_validate_beat_b12_violation_when_class_exceeds_span():
+def test_validate_beat_span_violation_when_class_exceeds_span():
     """Source span = 1 sentence → seasoning ceiling, but declared anchor."""
     beat = _minimal_beat(
         source_passage="Just one sentence with enough real words to count.",
@@ -443,7 +442,7 @@ def test_validate_beat_b12_violation_when_class_exceeds_span():
     )
     verdict = validate_beat(beat, chunk_text=beat["source_passage"])
     assert not verdict.ok
-    assert any("B12 violation" in e for e in verdict.errors)
+    assert any("exceeds source-span ceiling" in e for e in verdict.errors)
 
 
 def test_validate_beat_warns_on_length_drift():

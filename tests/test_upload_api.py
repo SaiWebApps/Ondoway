@@ -1,7 +1,8 @@
-"""Integration tests for upload-related API changes.
+"""Integration tests for the upload-related API.
 
-Test 13: MERGE idempotency for POI creation.
-Test 14: Beat traversal endpoint GET /graph/poi/{name}/beats.
+Covers MERGE idempotency for POI creation, the beat traversal endpoint
+GET /graph/poi/{name}/beats, force_create, coordinate validation and
+name_variations on POI creation.
 """
 
 from __future__ import annotations
@@ -33,7 +34,7 @@ def clean_driver():
     d.close()
 
 
-# ── Test 13: MERGE idempotency ──
+# ── MERGE idempotency ──
 
 
 @needs_neo4j
@@ -107,7 +108,7 @@ class TestMergeIdempotency:
         assert eid1 == eid2, "MERGE should return the same edge ID on duplicate HAS_BEAT"
 
 
-# ── Test 14: Beat traversal endpoint ──
+# ── Beat traversal endpoint ──
 
 
 @needs_neo4j
@@ -306,7 +307,7 @@ class TestBeatTraversal:
 
 @needs_neo4j
 class TestForceCreate:
-    """AC 5, AC 8: force_create=true creates a new POI even when name matches."""
+    """force_create=true creates a new POI even when the name matches."""
 
     def test_force_create_makes_new_node(self, client):
         """Two POIs with same name but force_create=true → two distinct nodes."""
@@ -361,7 +362,7 @@ class TestForceCreate:
 
 @needs_neo4j
 class TestCoordinateValidation:
-    """AC 7: Backend rejects invalid coordinates."""
+    """The backend rejects invalid coordinates."""
 
     def test_rejects_latitude_out_of_range(self, client):
         resp = client.post(
@@ -416,7 +417,7 @@ class TestCoordinateValidation:
         assert resp.status_code == 422
 
 
-# ── Test 15: name_variations on POI creation ──
+# ── name_variations on POI creation ──
 
 
 @needs_neo4j

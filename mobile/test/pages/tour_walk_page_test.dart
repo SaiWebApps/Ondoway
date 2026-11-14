@@ -39,19 +39,10 @@ Widget _harness({
 // ---------------------------------------------------------------------------
 // THE SESSION SURFACE — the question, the offers, the way home.
 //
-// These four came from mobile/test/pages/session_page_test.dart, which was
-// deleted on 2026-08-31 along with the screen it tested. SessionPage rendered
-// this whole surface and NOTHING NAVIGATED TO IT; TourWalkPage is the screen the
-// itinerary actually pushes, so the surface moved here and its coverage had to
-// come with it. Every `Key('session-…')` survived the move verbatim, which is
-// what makes three of these a faithful port rather than a rewrite.
-//
-// The fourth is a rewrite, deliberately. SessionPage answered an unstarted walk
-// with 'No walk is running.' and no controls; this screen answers with
-// 'Preparing your walk…' and STILL carries the way home, because [Head back now]
-// belongs on every screen of the walk. The old
-// assertion contradicts the new design, so it is not ported — the test derives
-// from the design that shipped.
+// TourWalkPage is the screen the itinerary pushes, and it renders the whole
+// session surface; each control carries a `Key('session-…')`. With no walk
+// started the screen says 'Preparing your walk…' and STILL carries the way home,
+// because [Head back now] belongs on every screen of the walk.
 
 const double _degPerMeterLat = 1.0 / 111320.0;
 const double _base = 48.85;
@@ -593,8 +584,8 @@ void main() {
     expect(audio.isPlaying, isFalse,
         reason: 'under a roof nothing starts itself');
     // The single stop's piece ended, so the itinerary is finished — and the
-    // chapter under the roof is STILL unheard. This is the case that used to
-    // vanish behind the completion panel.
+    // chapter under the roof is STILL unheard. Its offer shows over the
+    // completion panel.
     expect(service.state, TourState.completed);
 
     await tester.pumpWidget(
@@ -610,9 +601,8 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  // NOT a port. SessionPage said 'No walk is running.' and offered nothing; this
-  // screen says it is getting ready AND still carries the way home, because that
-  // control belongs on every screen of the walk.
+  // With no walk running the screen says it is getting ready AND still carries
+  // the way home, because that control belongs on every screen of the walk.
   testWidgets('with no walk running the screen says so and still offers the way home',
       (tester) async {
     final gps = MockLocationService();

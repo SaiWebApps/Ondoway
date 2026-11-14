@@ -35,7 +35,7 @@ What this does:
 
 Surface the report to the user. They read each pair and decide per-pair action.
 
-Threshold tuning: start with defaults. If the MinHash under-retrieves known paraphrased overlaps, lower the threshold (e.g., `--threshold 0.15 --shingle-size 3`) and re-run. This is expected — the default 0.5 is a starting point tuned empirically on the Val-de-Grace run.
+Threshold tuning: start with defaults. If the MinHash under-retrieves known paraphrased overlaps, lower the threshold (e.g., `--threshold 0.15 --shingle-size 3`) and re-run. This is expected — the default 0.5 is only a starting point.
 
 ### Phase 2 — Apply (interactive, TTY-only)
 
@@ -72,7 +72,7 @@ Apply flow:
 | `COMBINE` | Remove both; insert one new beat with user-supplied merged text, fresh hash, and `merged_from: [id_a, id_b]`. |
 | `KEEP_BOTH` | Set `dedup_reviewed: true` on both beats. |
 
-## COMBINE source-integrity rules (pipeline guardrails #1, #4)
+## COMBINE source-integrity rules
 
 - **Every sentence in the merged text must be traceable to one of the two beats' source passages.** Do not introduce facts from outside the two beats, and do not resolve factual conflicts by LLM world-knowledge.
 - **When the two beats disagree on a verifiable fact** (name, date, number, attribution), COMBINE is not appropriate — fall back to `KEEP_BOTH` and flag the conflict. A human decides which source is canonical before any merge.
@@ -80,7 +80,7 @@ Apply flow:
 
 ## Verification
 
-After apply, confirm that no unreviewed near-duplicates remain on the scope's target POI (e.g., Val-de-Grace):
+After apply, confirm that no unreviewed near-duplicates remain on the run's target POI (e.g., Val-de-Grace):
 
 ```bash
 .venv/bin/python scripts/verify_vdg_ac8.py

@@ -8,7 +8,6 @@ import 'package:ondoway/theme/tokens.dart';
 import 'package:provider/provider.dart';
 
 /// Home / Explore — editorial: photographic hero, resume card, plan card.
-/// (Wireframe screen 03.)
 class ExplorePage extends StatelessWidget {
   const ExplorePage({super.key});
 

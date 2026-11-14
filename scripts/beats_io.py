@@ -9,7 +9,7 @@ On validator fail, staging files are removed and both target paths
 remain byte-identical to their pre-call state — that is the rollback
 guarantee proved by `tests/test_atomic_commit.py::test_rollback_byte_identical`.
 
-No CLI surface, no test-only flags (BP-10). Production callers import
+No CLI surface, no test-only flags. Production callers import
 this helper; the rollback proof lives in pytest.
 """
 

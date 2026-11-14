@@ -1,6 +1,6 @@
-"""Phase: multi-city API. The trip endpoints used to hardcode city_slug="paris";
-they now carry a validated city_slug from the request so New York (and future
-cities) can be toured. DB-free — pure request-model validation.
+"""Multi-city API. The trip endpoints carry a validated city_slug from the request
+so New York (and future cities) can be toured. DB-free — pure request-model
+validation.
 """
 
 from __future__ import annotations

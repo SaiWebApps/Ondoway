@@ -39,7 +39,7 @@ from src.audio.tts_normalize import normalize_for_tts
         # ── initials joined by a hyphen (incl. chains) ──
         ("The architect J.-B. Colbert.", "The architect J. B. Colbert."),
         ("Read W.-E.-B. Du Bois.", "Read W. E. B. Du Bois."),
-        # ── newly covered pope / emperor stems (skeptic-C corpus misses) ──
+        # ── pope / emperor stems ──
         ("Pope Boniface VIII issued the bull.", "Pope Boniface the eighth issued the bull."),
         ("Baldwin II sold the relics.", "Baldwin the second sold the relics."),
         # ── FALSE-POSITIVE GUARDS (must be left byte-identical) ──
@@ -62,7 +62,7 @@ def test_idempotent() -> None:
 
 
 def test_chained_initials_idempotent() -> None:
-    # Skeptic-A finding: a chain must fully resolve AND be idempotent.
+    # A chain must fully resolve AND be idempotent.
     once = normalize_for_tts("A.-B.-C. Smith wrote it.")
     assert once == "A. B. C. Smith wrote it."
     assert normalize_for_tts(once) == once

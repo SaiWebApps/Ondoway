@@ -13,8 +13,8 @@ variants); the cheap path lands within a MEASURED small ratio of that same prove
 optimum; and one ordering call stays inside a per-call CPU budget at every n the
 corpus can produce.
 
-COST CEILINGS. Measured 2026-08-05, BEFORE any change, so a regression shows up as
-a number rather than as a feeling:
+COST CEILINGS of the exact solver, measured so a regression shows up as a number
+rather than as a feeling:
 
     exact solver, n=10    3.6 ms      n=13   46.6 ms
     exact solver, n=16  556.2 ms      n=17    1.27 s
@@ -151,12 +151,10 @@ def test_exactness_against_brute_force(n: int):
 #:
 #: 1.0, matching the module's OWN documented guarantee — ordering.py's
 #: ORDERING_EXACT_MAX comment measures n=16 at 0.55 s and calls n=17's 1.22 s
-#: "past the sub-second guarantee tests/test_tour_ordering.py pins". The 0.05
-#: this constant was born with (c8a35a75) contradicted that same commit's
-#: docstring and the solver's real cost (re-measured 2026-08-11: bare
-#: held_karp_open at n=16 is 719 ms CPU, no tracer, no monitoring tools), so
-#: at 0.05 the two n=16 pins were red against unchanged code. The repair
-#: pass's aggregate exposure has its own pin
+#: "past the sub-second guarantee tests/test_tour_ordering.py pins". Bare
+#: held_karp_open at n=16 costs ~719 ms CPU (no tracer, no monitoring tools),
+#: so a much tighter ceiling turns the two n=16 pins red against correct code.
+#: The repair pass's aggregate exposure has its own pin
 #: (test_a_realistic_request_worth_of_ordering_calls_fits_in_two_seconds):
 #: above the threshold the cheapest-insertion fallback runs, so the 500x
 #: multiplier never multiplies THIS ceiling.
@@ -176,8 +174,8 @@ def _cpu_seconds(fn, *args, **kwargs) -> float:
 
 @pytest.mark.parametrize("n", [12, 16, 20, 25, 30, 40])
 def test_one_ordering_call_stays_under_the_per_call_budget(n: int):
-    """n must stop driving cost exponentially. n=25 is the case this plan exists
-    to make possible at all: under the exact solver alone it is roughly 12
+    """n must stop driving cost exponentially. n=25 must be possible at all:
+    under the exact solver alone it is roughly 12
     minutes and 33 GB, which is an unkillable test rather than a slow one.
     """
     pts = _random_points(n, seed=200 + n)
@@ -189,7 +187,7 @@ def test_one_ordering_call_stays_under_the_per_call_budget(n: int):
 
 
 def test_a_realistic_request_worth_of_ordering_calls_fits_in_two_seconds():
-    """495 calls at n=17 is what ONE 120-minute request measured on 2026-08-05.
+    """495 calls at n=17 is what ONE 120-minute request was measured to make.
     Priced at the exact solver that is 191 s. A per-call budget alone can still
     be multiplied into minutes by the repair pass, so pin the aggregate too.
     """
@@ -230,7 +228,7 @@ def test_edge_cases_and_contract_errors():
 # The heuristic is never worse than a feasible given order.
 # ---------------------------------------------------------------------------
 
-#: MEASURED 2026-08-19: the repair's 20-stop pinned incumbent on the
+#: MEASURED: the repair's 20-stop pinned incumbent on the
 #: 120-minute one-way sweep. In its OWN order this chain walks 2734 s; the pin-blind
 #: cheapest-insertion reorder walked 3358 s (+624). The repair priced its incumbent
 #: off that inflated number, admitted a worse trial against it, and the shipped day
@@ -255,8 +253,8 @@ def test_a_heuristic_order_is_never_worse_than_the_feasible_order_given():
 
     Above ORDERING_EXACT_MAX the dispatcher falls back to cheapest-insertion, which
     builds its open chain BLIND to the pin and appends ``fixed_end`` afterwards — a
-    chain whose tail wandered from the pin buys a huge closing leg. The three-minute
-    tight made >16-stop days routine, so this regime is newly hot: on the
+    chain whose tail wandered from the pin buys a huge closing leg. Three-minute stop
+    tellings make >16-stop days routine, so this regime is hot: on the
     measured chain below the reorder walked 624 s more than the caller's own order.
     ``order_stops`` must return whichever of (heuristic, given-as-is) walks less when
     the given order already satisfies the same pin. UNDO: return the heuristic

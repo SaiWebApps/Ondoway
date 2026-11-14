@@ -1,30 +1,25 @@
 #!/usr/bin/env python3
 """The shared tracker. One source of truth every agent reads and writes.
 
-THE PROBLEM THIS EXISTS FOR. Every record of what an agent did was written by
-that same agent, in prose, into a file it could reformat at will: the `scribe`
-in `.claude/team-engine.js` spawns a haiku agent and asks it to edit
-`state.json`. Nothing checked whether the status it wrote was true, and there
-was no place the owner could look that an agent had not authored.
+An agent never records its own status in prose. Every row here is written by
+this command, so the owner has one place to look that no agent authored.
 
-WHAT MAKES THIS DIFFERENT FROM A PRETTIER state.json. `step-status --status
-completed` does not accept the claim. It runs the issue's own test command
-itself, reads the exit code with its own eyes, and refuses the row unless that
-code is 0. An agent's word never becomes a row.
+`step-status --status completed` does not accept the claim. It runs the
+issue's own test command itself, reads the exit code with its own eyes, and
+refuses the row unless that code is 0. An agent's word never becomes a row.
 
-WHAT CANNOT BE ENFORCED, STATED PLAINLY. `.claude/team-engine.js:65-66` records
-a measured fact: PreToolUse hooks do NOT fire inside the Workflow runtime. No
-hook can stop a workflow-spawned agent writing to this file with sqlite3
-directly. Three layers, strongest first: (1) this command re-derives instead of
+WHAT CANNOT BE ENFORCED, STATED PLAINLY. PreToolUse hooks do NOT fire inside
+the Workflow runtime. No hook can stop a workflow-spawned agent writing to this
+file with sqlite3 directly. Three layers, strongest first: (1) this command re-derives instead of
 trusting, which is what makes lying useless; (2) a main-session hook blocks
 direct writes, which covers the interactive session only; (3) prompts ask agents
 to use it, which is persuasion. Layer 3 refuses to pay attention; it never
 refuses to run.
 
-WHY THE STORY IS THE UNIT. Owner ruling, 2026-09-01: "Organize in state machines
-and divide by feature / story, to clarify the connection to bigger picture." A
-feature holds stories, a story holds criteria and issues, and the dashboard is
-organised by story at every level. A step id tells the owner nothing about what
+THE STORY IS THE UNIT. Work is organised as state machines, divided by feature
+and story, so every step connects to what it is for. A feature holds stories,
+a story holds criteria and issues, and the dashboard is organised by story at
+every level. A step id tells the owner nothing about what
 is being built or why.
 
 Stdlib only, on purpose: this is agent tooling under `.claude/`, and it must
@@ -211,8 +206,8 @@ def record(conn: sqlite3.Connection, kind: str, *, who: str,
 
 
 def derived_story_state(conn: sqlite3.Connection, story_id: str, persisted: str) -> str:
-    """The box is ARITHMETIC over the step rows — never a hand-set label
-    (owner ruling, option B, 2026-09-03). The rows themselves are already
+    """The box is ARITHMETIC over the step rows — never a hand-set label.
+    The rows themselves are already
     machine-verified: a step is `completed` only because this command re-ran
     its test and saw the exit code, so no agent's word is anywhere in the
     chain from a passing test to a moved box. The one exception is "Done",
@@ -233,8 +228,8 @@ def derived_story_state(conn: sqlite3.Connection, story_id: str, persisted: str)
 
 def state_of(conn: sqlite3.Connection) -> dict:
     """The full current picture. Printed by EVERY write, so no caller ever needs
-    to keep its own copy — the engine's in-memory mirror went stale against the
-    file and stranded 8 of 10 steps on a real run. Story states are DERIVED
+    to keep its own copy, and no caller's copy can drift from the database.
+    Story states are DERIVED
     (see `derived_story_state`), so every reader of this payload — the JSON api
     and the page alike — sees the arithmetic, never a stale hand label."""
     features = [dict(r) for r in conn.execute(
@@ -260,9 +255,9 @@ def emit(conn: sqlite3.Connection, extra: dict | None = None) -> None:
 
 # ----------------------------------------------------------------- the seal
 #
-# Approval freezes a feature's shape. 16 approved milestones became 44 built
-# because nothing refused the 28 additions; now the tracker itself does. The
-# seal is a hash over the feature's stories, criteria and issues. It cannot
+# Approval freezes a feature's shape: the tracker refuses any story, criterion
+# or issue added after approval unless the owner records a change. The seal
+# is a hash over the feature's stories, criteria and issues. It cannot
 # stop a direct sqlite3 write (nothing here can), but `seal-check` recomputes
 # it, so tampering is visible the next time anything is claimed.
 
@@ -428,8 +423,8 @@ def cmd_issue_add(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
     # step with no story is a step the owner cannot see.
     if not conn.execute("SELECT 1 FROM stories WHERE id=?", (args.story,)).fetchone():
         raise Refused(
-            f"no story {args.story!r}. Every issue belongs to a story — the owner ruled "
-            "the story is the unit at every level, and an issue without one is invisible "
+            f"no story {args.story!r}. Every issue belongs to a story — the story is "
+            "the unit at every level, and an issue without one is invisible "
             "on the dashboard."
         )
     feature = feature_of_story(conn, args.story)
@@ -599,11 +594,10 @@ def cmd_story_state(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
 
 
 def cmd_note(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
-    """A sprint note: attributed commentary beside the facts (option B, owner
-    ruling 2026-09-03). It lands in the append-only event log and renders in
-    the page's notes strip. By construction it can move nothing: the boxes are
-    arithmetic over step rows and the percentage over issue counts, and this
-    writes to neither table."""
+    """A sprint note: attributed commentary beside the facts. It lands in the
+    append-only event log and renders in the page's notes strip. By
+    construction it can move nothing: the boxes are arithmetic over step rows
+    and the percentage over issue counts, and this writes to neither table."""
     if args.story and not conn.execute(
         "SELECT 1 FROM stories WHERE id=?", (args.story,)
     ).fetchone():
@@ -678,8 +672,7 @@ def health_of(conn: sqlite3.Connection, feature: str | None = None) -> dict:
     a run is in trouble.
 
     ``feature`` scopes everything to one feature's stories. The page passes the
-    NEWEST feature, so a dead run's unproved steps stop diluting the number —
-    the owner read "50% proved" over a feature that was 4-for-4 (2026-09-03).
+    NEWEST feature, so a dead run's unproved steps never dilute its number.
     None keeps the global view for the JSON api.
     """
     scope_sql = (

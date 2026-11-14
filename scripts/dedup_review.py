@@ -1,19 +1,17 @@
 """Does this codebase answer the same question in two places?
 
-WHY THIS IS A REVIEWER AND NOT A LINT RULE. The duplication that has actually cost
-this project was SEMANTIC, not textual. The tour algorithm existed once for the
-phone and once for the workbench; the two shared no lines, no names and no
-structure, and reuniting them became its own project (``c8a35a75``). No pattern
-scan can see that. A regex, a substring search, even an AST shape hash all answer
-"does this text appear twice" — and for the expensive duplicate the answer is no.
+WHY THIS IS A REVIEWER AND NOT A LINT RULE. The costly duplication is SEMANTIC, not
+textual: one algorithm written once for the phone and once for the workbench, the
+two sharing no lines, no names and no structure. No pattern scan can see that. A
+regex, a substring search, even an AST shape hash all answer "does this text appear
+twice" — and for the expensive duplicate the answer is no.
 
 The question that finds it is "what is this code FOR?", and answering that needs
 reading. So this reads.
 
 WHY IT IS IN THE BUILD AND NOT AN AGENT SOMEONE INVOKES. The thing that keeps
 producing this defect is a coding model, and a rule a model has to remember is the
-same as no rule. The precedent: prose caps were tried and
-died when ``/dev``'s loop counters called a hook that did not exist.
+same as no rule.
 
 TWO MODES, because one guard cannot be both fast enough to run after every edit and
 thorough enough to be believed at the end.
@@ -21,11 +19,9 @@ thorough enough to be believed at the end.
 ``--changed`` runs after edits. It asks ONE question — does this new or changed
 code answer a question the codebase already answers? — against a cached inventory
 of what everything else is for. It is advisory ON PURPOSE. A multi-file change is
-legitimately incoherent in the middle: this repo's own plan has a step where the
-app must raise until the next step lands. A guard that blocks there gets switched
-off, and a guard that is off catches nothing. The precedent:
-a regex command guard blocked 16 of 20 harmless commands, caught 0 of 70 real
-ones, and was deleted.
+legitimately incoherent in the middle: one step can leave the code failing until
+the next step lands. A guard that blocks there gets switched off, and a guard that
+is off catches nothing.
 
 ``--full`` runs at close and BLOCKS. Three passes over everything, and it is what
 the pre-commit bar reads. Ignoring the advisory one in the moment is fine.
@@ -68,9 +64,8 @@ from src.tour.anthropic_client import judge_client
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-#: The surfaces that have forked before, or would hurt most if they did. The tour
-#: engine is the whole reason this exists; the API layer is where a private preview
-#: builder once duplicated the option builder (deleted 2026-08-04).
+#: The surfaces where a fork would hurt most: the tour engine, and the API layer
+#: that builds what both surfaces show.
 DEFAULT_ROOTS = ("src/tour", "src/api")
 
 #: What every function is FOR, keyed by module, with the module's hash so an

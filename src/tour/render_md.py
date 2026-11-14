@@ -32,7 +32,7 @@ def render_markdown(
     beat_sequence: BeatSequence | None = None,
     tourability=None,
 ) -> str:
-    """Render a Script + telemetry into the empirical-walks markdown format.
+    """Render a Script + telemetry as the review markdown described above.
 
     The optional ``tourability`` arg: when a YELLOW
     assessment is passed, a warning banner is prepended at the top so
@@ -479,7 +479,7 @@ def _quality_hints(
         hints.append(
             "Cold open used SYNTHESIZED_OPENER — the first stop has no "
             "canonical `stop_orientation` beat in the corpus. Expect a "
-            "flatter cold-open feel than the Pariswalks gold standard."
+            "flatter cold open than at a stop that has one."
         )
 
     # Forbidden / untraceable already surfaced in the validation summary;

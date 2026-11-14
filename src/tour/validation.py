@@ -20,8 +20,7 @@ Two independent checks:
    beat's ``script_body`` from the same Script.
 
 Beat-cited sentences are NOT scanned for forbidden words — the corpus
-itself is canonical, and editorial review caught those at extraction
-time. Validation guards against runtime invention only.
+itself is canonical. Validation guards against runtime invention only.
 """
 
 from __future__ import annotations
@@ -213,10 +212,10 @@ def _forbidden_phrase_hits(
     #
     # Without this, the synthesized opener fails whenever the spine area's name
     # happens not to appear inside a cited beat's body — "You're starting in
-    # Opéra-Garnier" was flagged on the 300-minute Rue Royale tour purely because
-    # the beats about its stops never spell the neighbourhood out. That is a
-    # validation FAILURE on a correct tour, which is worse than no check: it
-    # teaches whoever reads the report to ignore it.
+    # Opéra-Garnier" would be flagged on a Rue Royale tour purely because the beats
+    # about its stops never spell the neighbourhood out. That is a validation
+    # FAILURE on a correct tour, which is worse than no check: it teaches whoever
+    # reads the report to ignore it.
     for stop in script.selected_pois:
         cited_proper_nouns |= _proper_nouns_in(stop.name)
         if stop.area:
@@ -228,10 +227,9 @@ def _forbidden_phrase_hits(
     # engine's own choice from the corpus rather than anything glue made up.
     if spine_area:
         cited_proper_nouns |= _proper_nouns_in(spine_area)
-    # THE CITY'S OWN NAME AND DEMONYM ARE THE WALK'S VOCABULARY (measured:
-    # "the height of Parisian luxury" in an authored close was refused as
-    # new_proper_noun:Parisian, three attempts, the day dead). The tour's own city
-    # can never be an invention.
+    # THE CITY'S OWN NAME AND DEMONYM ARE THE WALK'S VOCABULARY ("the height of
+    # Parisian luxury" in an authored close would otherwise read as
+    # new_proper_noun:Parisian). The tour's own city can never be an invention.
     cited_proper_nouns |= _city_vocabulary(script.city_slug)
     cited_years = set(_YEAR_RE.findall(cited_text))
 
@@ -282,15 +280,15 @@ def _forbidden_phrase_hits(
                     out.append((sentence, f"forward_promise:{phrase}"))
 
         # Proper-noun + year leakage in glue. GLUE_NAV is exempt from the
-        # proper-noun half (measured: the nav line naming the
-        # Seine was refused as new_proper_noun:Seine): the nav line is the MAP
+        # proper-noun half (a nav line naming the Seine would otherwise read as
+        # new_proper_noun:Seine): the nav line is the MAP
         # speaking — its nouns are places by nature, exactly as the
         # forward-promise scan already treats it. Years and the phrase list
         # still apply to it; story glue keeps the full scan. What the nav voice
         # may NOT do is speak compass: a leg line
         # names direction only as left/right/straight-ahead or a visible
-        # landmark — "Walk northwest along the Seine" pointed a walker the
-        # wrong way because the words never knew the route's own bearing.
+        # landmark — "Walk northwest along the Seine" can point a walker the
+        # wrong way because the words never know the route's own bearing.
         if sentence.source_id == GLUE_NAV:
             for match in _COMPASS_RE.finditer(sentence.text):
                 out.append((sentence, f"leg_voice_compass:{match.group(0).lower()}"))
@@ -349,11 +347,9 @@ def _name_is_licensed(token: str, licensed: set[str]) -> bool:
     An INFLECTED or RE-ACCENTED form of a licensed name is the same name, not a new
     one: the tokenizer (``_CAP_TOKEN_RE``) keeps an apostrophe-s inside the token, so
     "Ravaillac's" was compared against a set holding "Ravaillac" and refused as an
-    invention; "André" was refused against a corpus that spells "Andre". Measured
-    2026-08-19: a couple's compose was refused over the wire, every
-    attempt, for "…died under Francis Ravaillac's knife" and "André Maurois ranks
-    him…" — reflections drawing on a voiced beat's own key claims. Fold diacritics,
-    strip the possessive/plural endings, compare again; a genuinely different name
+    invention; "André" was refused against a corpus that spells "Andre". A
+    reflection drawing on a voiced beat's own key claims uses these forms. Fold
+    diacritics, strip the possessive/plural endings, compare again; a genuinely different name
     ("François" for a corpus that says "Francis") still fails — that is a rename, and
     the prompt's own rule is to use the name the beats give.
     """
@@ -368,9 +364,9 @@ def _name_is_licensed(token: str, licensed: set[str]) -> bool:
             if ending in ("s'", "s\u2019"):
                 candidates.append(f"{bare}s")
     # A HYPHENATED COMPOUND whose capitalised head is licensed is that name in
-    # adjectival dress, not a new one (measured:
-    # "From a Roman-style arch for Napoleon…" was refused as
-    # new_proper_noun:Roman-style against a corpus that says "Roman" freely).
+    # adjectival dress, not a new one ("From a Roman-style arch for Napoleon…"
+    # must not read as new_proper_noun:Roman-style against a corpus that says
+    # "Roman" freely).
     if "-" in token:
         candidates.extend(part for part in token.split("-") if part and part[0].isupper())
     return any(c in licensed or _fold(c) in folded for c in candidates)

@@ -289,7 +289,7 @@ def govern_poi_beats(
     overflow. Otherwise keep a PREFIX of the ordered beats whose cumulative
     voiced seconds (``routing.beat_spoken_seconds``) stay within the allowance;
     the FIRST beat is always kept (a stop must speak at least once, even if
-    ``beats[0]`` alone exceeds the allowance — the ratified bounded one-beat
+    ``beats[0]`` alone exceeds the allowance — a bounded one-beat
     overshoot). The remaining ordered beats are the keep-exploring overflow.
     Pure; does not re-order (preserves the cold-open -> body -> closer arc up to
     the cut).
@@ -314,7 +314,7 @@ def govern_poi_beats(
     # and the prefix keeps none of the family the plan holds, swap ONE in for
     # the last kept beat — the cold-open never moves, and the seconds move by
     # at most one beat, the same bounded overshoot the first-beat rule already
-    # ratifies. No interest, or the family already kept: the plain prefix,
+    # allows. No interest, or the family already kept: the plain prefix,
     # byte-identical.
     if interest:
         def on_family(beat: BeatRef) -> bool:
@@ -446,9 +446,9 @@ def _min_year(beat: BeatRef) -> int:
 def _order_body_chronologically(ordered: list[BeatRef]) -> list[BeatRef]:
     """Reorder a flat stop's beats so dated facts flow oldest→newest.
 
-    The workbench "the facts are not flowing logically into one another" /
-    "chronological jumble" complaint: narrative-function bucketing emitted a
-    stop's beats 1983, 2003, 1190, 2026… A hoisted ``stop_orientation`` head is
+    Narrative-function bucketing alone can emit a stop's beats 1983, 2003, 1190,
+    2026…, a chronological jumble where the facts do not flow into one another.
+    A hoisted ``stop_orientation`` head is
     kept in place (the cold-open lookup depends on it); the remaining body is
     STABLE-sorted by earliest year, so undated beats (year 9999) keep their
     relative order and trail the dated ones. Pure reorder — no beat is dropped,
@@ -604,12 +604,10 @@ def _address_sort_key(addr: str) -> tuple:
 def reorder_final_stop_for_closing(beat_sequence: BeatSequence) -> BeatSequence:
     """Move a closing-friendly beat to the last position at the final stop.
 
-    2026-04-29: the closing glue ("End the walk here, or carry
-    on…") fires after the last beat of the last stop regardless of what
-    that beat is. Earlier outputs ended mid-Tour-de-France-jersey
-    (Tour 4) and mid-Mme-de-Motteville-zinger (Tour 1) because the
-    closing glue followed whichever beat happened to land last in the
-    spatial / narrative ordering.
+    The closing glue ("End the walk here, or carry on…") fires after the
+    last beat of the last stop regardless of what that beat is, so without
+    this move a tour ends mid-anecdote on whichever beat happened to land
+    last in the spatial / narrative ordering.
 
     Preference: ``narrative_function='callback'`` > ``'climax'`` >
     longest beat by ``script_body`` length. The first match becomes the
@@ -783,18 +781,17 @@ def find_area_orientation_beat(
 ) -> BeatRef | None:
     """Search the Route for a stop_orientation beat that can hoist to cold-open.
 
-    2026-04-29: the per-POI hoist in ``select_poi_beats`` only surfaces an
+    The per-POI hoist in ``select_poi_beats`` only surfaces an
     orientation beat when one exists at the start POI. Most tier-5 anchors
-    lack one, so the cold-open falls back to the SYNTHESIZED_OPENER even when
-    a sibling POI in the same Area carries the canonical Pariswalks-format opener.
+    lack one, so the cold-open would fall back to the SYNTHESIZED_OPENER even
+    when a sibling POI in the same Area carries the canonical Pariswalks-format
+    opener.
 
-    A geographic-honesty guard (2026-04-29) limits that. The unguarded
-    hoist promoted any orientation beat from the same Area as
-    the start stop, which produced Tour 1 stop 1 emitting the Pariswalks
-    "find a bench in the garden, near the children's play area" beat at
-    Hotel de Sully — those features exist at Place des Vosges (the
-    sibling POI), not at the start. The refined rule accepts a
-    candidate only when:
+    A geographic-honesty guard limits that. An unguarded hoist would promote
+    any orientation beat from the same Area as the start stop — e.g. the
+    Pariswalks "find a bench in the garden, near the children's play area"
+    beat at Hotel de Sully, whose features exist at Place des Vosges (the
+    sibling POI), not at the start. The rule accepts a candidate only when:
 
     - (a) the beat's POI matches the start POI (the original
       behaviour; preferred), OR

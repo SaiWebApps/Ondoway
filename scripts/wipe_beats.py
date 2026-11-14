@@ -17,7 +17,7 @@ Example (apply):
 Semantics:
 - Selects beats where `book_slug == {book_slug}` AND
   `source_chunk_slug == {chunk_slug}` AND
-  `source_chunk_slug != "legacy_ambiguous"` (BP-8 — legacy_ambiguous
+  `source_chunk_slug != "legacy_ambiguous"` (legacy_ambiguous
   beats are never deleted by /beat-wipe).
 - Removes the matching entry from the book's `chunks_processed` list
   in `book-log.json`.
@@ -139,7 +139,7 @@ def main(argv: list[str]) -> int:
     chunk_slug = args.chunk
     city = derive_city(args.book_slug)
 
-    # BP-8 — the sentinel is never a valid wipe target. The beat-side
+    # The sentinel is never a valid wipe target. The beat-side
     # filter already refuses to remove beats carrying this source_chunk,
     # but we also refuse to touch any book-log entry that happens to
     # carry the literal string. This makes the guard symmetric on both
@@ -177,7 +177,7 @@ def main(argv: list[str]) -> int:
     kept, removed_beats = find_matching_beats(beats, book_slug, chunk_slug)
     updated_log, removed_log_entry = remove_chunk_from_log(log, book_slug, chunk_slug)
 
-    # BP-8 audit — sanity-check the selection filter really skipped
+    # Sanity-check the selection filter really skipped
     # legacy_ambiguous beats for this book_slug + chunk pair.
     ambiguous_survivors = [
         b for b in kept

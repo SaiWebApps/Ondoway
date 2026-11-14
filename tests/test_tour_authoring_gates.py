@@ -16,9 +16,8 @@ Parity with the pre-cutover endpoint ONLY: no new checks, and the certification 
 keeps its own (unchanged) defaults, which is why the three arrive as injectable
 parameters rather than as a new default.
 
-``test_unfaithful_output_is_refused_and_trip_untouched`` is the pinned gate for
-this path, so every clause lives inside that one node id: unwiring ANY of the three in
-``src/tour/authoring.py`` or ``src/api/routes/trips.py`` must turn it red.
+Each of the three gates has its own test below. The one that still BLOCKS (invented
+glue) also proves the trip is untouched after a refusal.
 
 The endpoint is driven for real (live Paris dev graph, a disposable profile and trip)
 because the claim under test is not "the finalizer can refuse" but "the PERSISTED path
@@ -362,10 +361,9 @@ def _refusal_detail(resp, caplog) -> dict:
     at zero" would be satisfied by a crash that never ran a gate at all.
     """
     assert resp.status_code == 422, resp.text
-    # RE-DERIVED 2026-08-19: the VERIFY branch now NAMES itself in the
-    # log ("Compose refused by VERIFY …" plus one line per blocking sentence — the
-    # author path's precedent), so the two branches are told apart POSITIVELY rather
-    # than by the absence of any error record, which was the only signal before.
+    # The VERIFY branch NAMES itself in the log ("Compose refused by VERIFY …" plus
+    # one line per blocking sentence, as the author path does), so the two branches
+    # are told apart POSITIVELY rather than by the absence of any error record.
     messages = [r.getMessage() for r in caplog.records if r.levelno >= logging.ERROR]
     assert not any(m.startswith("Per-stop authoring could not run") for m in messages), (
         "the endpoint logged the seam's ValueError branch, so this 422 is not a VERIFY "
@@ -389,7 +387,7 @@ def test_invented_glue_is_refused_and_the_trip_is_untouched(client, live_neo4j, 
 
     Glue carrying a proper noun and a year that no cited beat has is runtime invention
     that structural traceability cannot see, and this is the check that catches it. It
-    remains blocking after the 2026-08-03 demotion because it NAMES its subject exactly:
+    blocks, unlike the advisory checks, because it NAMES its subject exactly:
     a specific token, absent from a specific source set. That is the standing rule —
     a check may block only when it can name the specific thing that is wrong.
 
@@ -397,8 +395,7 @@ def test_invented_glue_is_refused_and_the_trip_is_untouched(client, live_neo4j, 
     uncomposed, so the client can offer another flavour. A gate that ran
     after the write would look identical at the seam and lose the trip.
 
-    This was one clause of ``test_unfaithful_output_is_refused_and_trip_untouched``. It
-    is now its own node id because its two siblings became ADVISORY and therefore
+    It is its own node id because its two sibling gates are ADVISORY and therefore
     COMPOSE — which marks the trip composed and would 409 every later clause sharing the
     fixture.
     """
@@ -433,16 +430,14 @@ def test_the_endpoint_consults_the_real_checker_even_though_entailment_only_advi
 ):
     """The endpoint must WIRE the real faithfulness checker, whether or not it blocks.
 
-    Entailment became advisory on 2026-08-03 (it fired on ~a fifth of a good tour), so a
-    REFUSAL can no longer be used as the proof that the checker is wired — which is what
-    the previous version of this test relied on. The durable proof is the checker's own
+    Entailment is advisory (it fires on about a fifth of a good tour), so a REFUSAL
+    cannot prove that the checker is wired. The durable proof is the checker's own
     call log: a checker that is built-but-ignored fails this, and so does one the
-    endpoint never asks for. A demotion to advisory must not quietly hide that
-    distinction.
+    endpoint never asks for. Being advisory must not quietly hide that distinction.
 
-    The tour now COMPOSES despite entailing nothing, and that is the intended behaviour:
+    The tour COMPOSES despite entailing nothing, and that is the intended behaviour:
     the failures are recorded on the report and logged per sentence by the route, so a
-    human sees strictly more than the old bare count.
+    human sees each failing sentence, not a bare count.
     """
     trip_id = fresh_trip["trip_id"]
     before = _persisted(live_neo4j, trip_id)
@@ -459,8 +454,8 @@ def test_the_endpoint_consults_the_real_checker_even_though_entailment_only_advi
             "the per-stop finalizer is still verifying with the trusting offline stub"
         )
         assert resp.status_code == 200, (
-            "a tour that entails NOTHING was refused: entailment is ADVISORY since "
-            f"2026-08-03 and must not gate serving. {resp.text[:400]}"
+            "a tour that entails NOTHING was refused: entailment is ADVISORY "
+            f"and must not gate serving. {resp.text[:400]}"
         )
     finally:
         _clear_dep(client, checker_target)
@@ -474,22 +469,21 @@ def test_a_tour_with_deleted_facts_composes_because_coverage_only_advises(
     """Dropped-fact detection is ADVISORY: it counts shared WORDS, so it cannot block.
 
     ``verify_claim_coverage`` reports a claim as deleted when no composed sentence
-    shares enough tokens with it. MEASURED 2026-08-03 on a real Paris tour: it reported
-    "Square named for Henri IV" as dropped from a tour that says precisely that in
-    different words. A paraphrase is indistinguishable from a deletion under word
-    counting, so this check can only ever say "I don't know" and therefore RECORDS.
+    shares enough tokens with it. On a real Paris tour it reports "Square named for
+    Henri IV" as dropped from a tour that says precisely that in different words. A
+    paraphrase is indistinguishable from a deletion under word counting, so this
+    check can only ever say "I don't know" and therefore RECORDS.
 
     It is replaced, not abandoned: the scored fact-check runs the same judge in reverse
     ("is this source claim still present?"), which distinguishes a reworded fact from a
     missing one.
 
-    RE-DERIVED: a claim-blurred day now DOES refuse —
-    but on the QUALITY FLOOR, never on coverage. Every beat sentence collapsed to
-    "That much is written down." is a rich corpus STARVED to a line (C1) and a
-    silent walk (C3) — the exact defects the rubric names — so the refusal must be
-    ``tour_quality_blocked`` with those checks, while the VERIFY layer's coverage
-    stays advisory (the old 200-assertion's whole point, now proven by the refusal
-    REASON rather than by serving a starved day)."""
+    A claim-blurred day DOES refuse — but on the QUALITY FLOOR, never on coverage. Every
+    beat sentence collapsed to "That much is written down." is a rich corpus STARVED to
+    a line (C1) and a silent walk (C3) — the exact defects the rubric names — so the
+    refusal must be ``tour_quality_blocked`` with those checks, while the VERIFY layer's
+    coverage stays advisory, proven by the refusal REASON rather than by serving a
+    starved day."""
     trip_id = fresh_trip["trip_id"]
     executor_target = _override_dep(
         client, "get_premium_compose_executor", _ClaimBlurringExecutor()
@@ -538,8 +532,6 @@ def test_a_faithful_tour_still_composes(client, live_neo4j, fresh_trip):
     assert resp.status_code == 200, resp.text
     # The frozen trip is deleted: nothing writes
     # `composed_route_id` any more — a compose is version 1 of the living session.
-    # (This line pinned the deleted writer and was red until it was re-derived; an
-    # audit had not classified this file.)
     assert resp.json()["plan_version"] == 1
     assert _persisted(live_neo4j, trip_id)["composed_route_id"] is None
 
@@ -788,13 +780,12 @@ def test_the_correction_never_guesses_between_two_close_ids():
 
 
 def test_a_glue_sentence_the_writer_mistyped_as_beat_is_coerced_not_refused():
-    """The copy-error correction, extended to the TYPE field (live 2026-08-29,
-    v3 batch, nyc-lower-manhattan-90): the writer emitted its requested
-    reflection with ``source_id: GLUE_REFLECTION`` but ``source_type: "beat"``
-    — the id is authoritative (ids are copied from the prompt; no beat carries
-    a glue id), so the mistyped label is corrected deterministically and every
-    downstream gate still judges the sentence. A "beat"-typed sentence whose id
-    is NOT an authorized derived id stays refused — fail-closed is untouched.
+    """The copy-error correction, extended to the TYPE field: when the writer emits its
+    requested reflection with ``source_id: GLUE_REFLECTION`` but ``source_type:
+    "beat"``, the id is authoritative (ids are copied from the prompt; no beat carries a
+    glue id), so the mistyped label is corrected deterministically and every downstream
+    gate still judges the sentence. A "beat"-typed sentence whose id is NOT an
+    authorized derived id stays refused — fail-closed is untouched.
     UNDO: drop the coercion in ``_sentences_from_json`` -> the 1-untraceable
     refusal returns -> RED."""
     from src.tour.compose_gate import ComposeVerificationError
@@ -822,12 +813,11 @@ def test_a_glue_sentence_the_writer_mistyped_as_beat_is_coerced_not_refused():
 
 
 def test_a_fusion_across_playback_contexts_is_refused_by_name():
-    """Live on 2026-08-23 (trip 45819603, twice): the
-    writer fused a stop STORY sentence with a walk-past VIGNETTE beat and the
-    day died on a bare ValueError from ``partition_final_script`` — surfaced as
-    `compose_verification_failed` with every count 0, an unnamed refusal.
-    With the floors ON, the SAME defect is a NAMED verification
-    finding, so the bounded retry can tell the writer which sentence to unfuse.
+    """A writer that fuses a stop STORY sentence with a walk-past VIGNETTE beat
+    must not kill the day on a bare ValueError from ``partition_final_script`` —
+    surfaced as `compose_verification_failed` with every count 0, an unnamed refusal.
+    With the floors ON, the defect is a NAMED verification finding, so the bounded
+    retry can tell the writer which sentence to unfuse.
     UNDO: drop the fused-context floor -> the bare ValueError returns -> RED."""
     from src.tour.compose_gate import ComposeVerificationError
 
@@ -1021,11 +1011,10 @@ def test_a_sentence_outside_the_authored_stops_is_refused_not_shipped_unattested
 
     That is reachable, not theoretical. ``_sentences_from_json`` coerces a BEAT
     sentence's ``stop_idx`` back to the stitch's true stop, but a glue or reflection
-    line keeps whatever index the provider echoed, so a mis-echoed one migrates. The
-    judge consult on this step named it the single most likely failure.
+    line keeps whatever index the provider echoed, so a mis-echoed one migrates.
 
     UNDO: delete the ``attested != set(range(...))`` check in ``finish`` and this goes
-    GREEN — which is exactly what a mutation run proved before this test existed.
+    GREEN.
     """
     stitched, sequence, route = _cross_stop_echo_fixture()
     plan = plan_premium_authoring(
@@ -1075,7 +1064,7 @@ def test_a_sentence_outside_the_authored_stops_is_refused_not_shipped_unattested
 
 
 def test_cross_stop_echo_is_suppressed() -> None:
-    """The pinned gate for the cross-stop echo dedup.
+    """Pins the cross-stop echo dedup.
 
     ``compose.py``'s whole-tour composer ran ``_dedup_composed`` (claim-repeat +
     exact-repeat + same-beat near-dup suppression) over the ASSEMBLED sentence
@@ -1102,21 +1091,18 @@ def test_cross_stop_echo_is_suppressed() -> None:
     finalizer.
 
     The last block pins the composition trace, because suppression and
-    attestation pull against each other — and an earlier version of this test got
-    that relationship BACKWARDS, which is what produced the defect a judge consult
-    later caught. It asserted ``trace.source_sentences == shipped`` and justified it
-    as "FinalTourBlueprint requires a trace's cited source sentences to equal the
-    stop's FINAL sentences". That is not what the blueprint requires. Read
-    ``artifact.py:763-769``: it indexes INTO ``source_sentences`` using
+    attestation pull against each other. FinalTourBlueprint does NOT require a
+    trace's cited source sentences to equal the stop's FINAL sentences: in
+    ``artifact.py`` it indexes INTO ``source_sentences`` using
     ``source_sentence_indexes`` and compares THAT to the final stop text. The model
     is built for a SUBSEQUENCE — ``source_sentence_indexes`` is constrained
     monotonic, unique and in-range, one per final sentence.
 
-    So the honest shape, which the finalizer now produces and this test now pins, is:
+    So the honest shape, which the finalizer produces and this test pins, is:
     ``source_sentences`` = the RAW provider payload, ``source_sentence_indexes`` =
-    which of them survived de-dup. Re-grouping the bundle post-dedup instead made the
-    finalizer's fail-closed provenance guard a tautology (comparing the deduped
-    stream against itself) AND recorded text the provider never sent under
+    which of them survived de-dup. Re-grouping the bundle post-dedup instead would make
+    the finalizer's fail-closed provenance guard a tautology (comparing the deduped
+    stream against itself) AND record text the provider never sent under
     ``derivation="provider_response"``, while ``response_sha256`` still named the
     untouched body.
     """
@@ -1195,12 +1181,10 @@ def test_cross_stop_echo_is_suppressed() -> None:
         # THAT to the final stop text. So the trace must carry the RAW provider payload
         # plus the indexes of the sentences that survived de-dup — not the deduped text.
         #
-        # An earlier version of this test asserted `source_sentences == shipped` and
-        # justified it as "FinalTourBlueprint would reject this tour at build time".
-        # That justification is false, and it forced the finalizer to rebind
-        # composed_by_stop to the post-dedup grouping, which (a) made the fail-closed
-        # provenance guard a tautology and (b) recorded text the provider never sent
-        # under derivation="provider_response". A judge consult caught both.
+        # Asserting `source_sentences == shipped` instead would force the finalizer to
+        # rebind composed_by_stop to the post-dedup grouping, which (a) makes the
+        # fail-closed provenance guard a tautology and (b) records text the provider
+        # never sent under derivation="provider_response".
         traced = tuple(trace.source_sentences[k] for k in trace.source_sentence_indexes)
         assert traced == shipped, (
             f"stop {stop_index}: indexing the trace's source by its surviving indexes "
@@ -1305,14 +1289,16 @@ def test_every_live_surface_runs_the_same_three_gates() -> None:
 
 
 def test_faithfulness_and_dropped_facts_are_advisory_not_blocking() -> None:
-    """The owner ruled on 2026-08-03: the entailment and dropped-fact checks RECORD, they do
-    not BLOCK. Structural checks still block.
+    """The entailment and dropped-fact checks RECORD, they do not BLOCK. Structural
+    checks still block.
 
-    MEASURED that day on a real Paris tour, with the gates newly wired to the workbench:
+    A check may BLOCK only when it can NAME the specific thing that is wrong; a check
+    that can only say "I don't know" RECORDS. Both of these are in the second category.
+    On a real Paris tour they report
     ``0 untraceable, 1 forbidden, 0 provenance, 28 faithfulness, 6 coverage`` — and of
-    the 28, exactly ONE was a verified invention (two source books disagree, 1867 vs
+    the 28, exactly ONE is a verified invention (two source books disagree, 1867 vs
     1870, and the model synthesised a reconciliation neither states). Sampled false
-    alarms included
+    alarms include
 
         "Look hard at the façade, because it's a manifesto of Art Nouveau."
 
@@ -1320,18 +1306,14 @@ def test_faithfulness_and_dropped_facts_are_advisory_not_blocking() -> None:
     for "Square named for Henri IV" on a tour that says exactly that in different words
     (the coverage check counts shared WORDS, so a paraphrase reads as a deletion).
 
-    A check that fires on ~a fifth of a good tour cannot decide whether to ship it. The
-    rule the owner set: a check may BLOCK only when it can NAME the specific thing that
-    is wrong; a check that can only say "I don't know" RECORDS. Both of these are in the
-    second category until the scored replacement lands (per-claim scores with an
-    unsupported SPAN, bands not averages, repair before cut).
+    A check that fires on about a fifth of a good tour cannot decide whether to ship it.
 
-    They stay ON, stay on the report, and stay in the logs — this is a demotion from
-    blocking to advisory, NOT a removal. ``faithfulness_checked`` still records whether
+    They stay ON, stay on the report, and stay in the logs — they are advisory, NOT
+    removed. ``faithfulness_checked`` still records whether
     the pass ran, so "checked and clean" is still distinguishable from "never checked".
 
     UNDO: put ``faithfulness_failures`` or ``coverage_failures`` back into ``passed``
-    and this goes RED — which is the state that blocked every tour on 2026-08-03.
+    and this goes RED, because that state blocks almost every good tour.
     """
     sentence = Sentence(
         text="Look hard at the façade, because it's a manifesto of Art Nouveau.",

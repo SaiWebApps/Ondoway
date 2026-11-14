@@ -304,7 +304,7 @@ class TestTourContext:
 
 
 class TestRateLimit:
-    """Defect #1: the unauthenticated endpoint must not let one caller loop it
+    """The unauthenticated endpoint must not let one caller loop it
     to burn Anthropic credits / flood the issue tracker."""
 
 
@@ -312,11 +312,11 @@ class TestRateLimit:
 
 
 class TestMalformedLLMOutput:
-    """Defects #2 and #4: untrusted LLM output must never surface as a 500."""
+    """Untrusted LLM output must never surface as a 500."""
 
     @patch("src.api.routes.feedback._create_github_issue")
     def test_prose_wrapped_response_still_creates_issue(self, mock_github, client):
-        """Defect #2: the LLM returns prose around an unclosed fence -> the report
+        """The LLM returns prose around an unclosed fence -> the report
         must still land as a 201 issue (deterministic fallback), not a 500."""
         mock_github.return_value = {
             "issue_url": "https://github.com/SaiWebApps/Ondoway/issues/3",
@@ -362,7 +362,7 @@ class TestMalformedLLMOutput:
     @patch("src.api.routes.feedback._create_github_issue")
     @patch("src.api.routes.feedback._structure_feedback")
     def test_labels_non_list_does_not_500(self, mock_structure, mock_github, client):
-        """Defect #4: labels returned as a bare string must not AttributeError -> 500."""
+        """Labels returned as a bare string must not AttributeError -> 500."""
         mock_structure.return_value = {"title": "t", "body": "b", "labels": "bug"}
         mock_github.return_value = {"issue_url": "u", "issue_number": 5, "title": "t"}
 
@@ -376,7 +376,7 @@ class TestMalformedLLMOutput:
     def test_labels_list_of_non_strings_are_filtered(
         self, mock_structure, mock_github, client
     ):
-        """Defect #4: non-str label items are filtered so they never reach GitHub."""
+        """Non-str label items are filtered so they never reach GitHub."""
         mock_structure.return_value = {
             "title": "t",
             "body": "b",
@@ -391,7 +391,7 @@ class TestMalformedLLMOutput:
 
     @patch("src.api.routes.feedback._create_github_issue")
     def test_empty_content_list_falls_back_to_transcript(self, mock_github, client):
-        """Defect #1: an empty LLM content list (content=[]) must not IndexError -> 500.
+        """An empty LLM content list (content=[]) must not IndexError -> 500.
         It should degrade to the deterministic transcript fallback (201)."""
         mock_github.return_value = {
             "issue_url": "u",
@@ -412,7 +412,7 @@ class TestMalformedLLMOutput:
 
     @patch("src.api.routes.feedback._create_github_issue")
     def test_non_text_first_block_falls_back_to_transcript(self, mock_github, client):
-        """Defect #1: a first content block with no `.text` attribute (e.g. a
+        """A first content block with no `.text` attribute (e.g. a
         tool_use block) must not AttributeError -> 500; it degrades to the
         deterministic transcript fallback (201)."""
         mock_github.return_value = {
@@ -441,7 +441,7 @@ class TestMalformedLLMOutput:
     @patch("src.api.routes.feedback._create_github_issue")
     @patch("src.api.routes.feedback._structure_feedback")
     def test_top_level_non_dict_does_not_500(self, mock_structure, mock_github, client):
-        """Defect #4: a top-level JSON list (not an object) must not crash the route."""
+        """A top-level JSON list (not an object) must not crash the route."""
         mock_structure.return_value = ["not", "a", "dict"]
         mock_github.return_value = {"issue_url": "u", "issue_number": 7, "title": "t"}
 
@@ -454,7 +454,7 @@ class TestMalformedLLMOutput:
 
 
 class TestProviderErrors:
-    """Defect #3: upstream Anthropic failures must return 502/503, not 500."""
+    """Upstream Anthropic failures must return 502/503, not 500."""
 
     @patch("src.tour.anthropic_client.judge_client")
     def test_connection_error_returns_502(self, mock_judge_client, client):
@@ -482,7 +482,7 @@ class TestProviderErrors:
 
 
 class TestGitHubTransportErrors:
-    """Defect #2: httpx transport errors from client.post() must return 502/503
+    """Transport errors from httpx's client.post() must return 502/503
     with a Retry-After hint, not an opaque 500 stack trace that loses the report."""
 
     @staticmethod

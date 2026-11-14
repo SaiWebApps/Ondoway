@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 
 /// Category tile fill colors, keyed by lens `name`. These are the secondary
-/// category codes v10 keeps beneath the accent — moved out of `LensTile` so
+/// category colors that sit beneath the accent, kept out of `LensTile` so
 /// they can be retuned in one file without touching widget code.
 ///
-/// Retuned 2026-08-09 (taste pass): the originals were the raw Material palette
-/// (90-100% saturation), which read louder than the cobalt brand accent and
-/// violated the "one accent, harmonized secondary set" rule. Each hue is
-/// preserved for wayfinding but pulled to <=46% saturation and a tight
-/// lightness band, so the 21 categories now read as one muted family that sits
-/// BENEATH cobalt rather than competing with it.
+/// The app has one accent, cobalt, and a harmonized secondary set beneath it.
+/// Each hue here is kept for wayfinding but held to <=46% saturation and a
+/// tight lightness band, so the 21 categories read as one muted family that
+/// sits BENEATH cobalt rather than competing with it.
 const Map<String, Color> kLensCategoryColors = <String, Color>{
   'hidden_history': Color(0xFF4A4F86),
   'war_conflict': Color(0xFFA74C4C),

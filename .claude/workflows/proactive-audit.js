@@ -45,7 +45,7 @@ const FIXRESULT = { type: 'object', additionalProperties: false, required: ['fix
       properties: { title: { type: 'string' }, why: { type: 'string' } } } } } }
 
 const REPO = '/Users/sairambkrishnan/git/ondoway'
-const KNOWN = `Already fixed (do NOT re-report these): the 17 red-team defects (node id/merge-key overwrite protection; POI name_key canonical merge; beat merges on id; partial-coord 422; workbench CRUD gated off public via WORKBENCH_API_ENABLED; unknown-TTS-provider soft-fail; keep-exploring TTS caching; extra_narration 20k cap; worklist beat accumulate; executeMerge response.ok; case-insensitive dup check; edge-POST ok checks; escHtml popup XSS; Set-City lockout); the localhost-only destructive guards (src/main._assert_local_target, upload_paris --allow-cloud, backfill_name_key); the Aura auto-resume (src/aura_resume.py). ` + (args?.known || '')
+const KNOWN = `Already fixed (do NOT re-report these): node id/merge-key overwrite protection; POI name_key canonical merge; beat merges on id; partial-coord 422; workbench CRUD gated off public via WORKBENCH_API_ENABLED; unknown-TTS-provider soft-fail; keep-exploring TTS caching; extra_narration 20k cap; worklist beat accumulate; executeMerge response.ok; case-insensitive dup check; edge-POST ok checks; escHtml popup XSS; Set-City lockout; the localhost-only destructive guards (src/main._assert_local_target, upload_paris --allow-cloud, backfill_name_key); the Aura auto-resume (src/aura_resume.py). ` + (args?.known || '')
 
 const surfaces = (args?.surfaces && args.surfaces.length)
   ? ALL_SURFACES.filter((s) => args.surfaces.includes(s.key)) : ALL_SURFACES

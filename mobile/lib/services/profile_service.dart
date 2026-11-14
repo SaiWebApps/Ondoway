@@ -32,9 +32,9 @@ class ProfileService extends ChangeNotifier {
   ///
   /// The endpoint resolves the user from the token and returns the profile in
   /// one call — `{profile_id, display_name, selected_lens_ids, theme_preference}`
-  /// — replacing the old `/edges/HAS_PROFILE` + `/nodes/Profile` +
-  /// `/edges/PREFERS_LENS` trio, which is workbench-gated and 404s in prod
-  /// (project_mobile_prod_api_gap). 404 = no profile yet (first-time). 401/403 =
+  /// — rather than reading through the `/edges/HAS_PROFILE` + `/nodes/Profile` +
+  /// `/edges/PREFERS_LENS` trio, which is workbench-gated and answers 404 in
+  /// production. 404 = no profile yet (first-time). 401/403 =
   /// auth failure — left unloaded so the auth layer can refresh and retry.
   Future<void> fetchProfile(String accessToken) async {
     final resp = await _httpClient.get(

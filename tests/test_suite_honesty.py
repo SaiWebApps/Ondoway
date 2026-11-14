@@ -1,29 +1,22 @@
 """Checks about the TEST SUITE, not the product.
 
 Every other file here asks "does the code work?". This one asks "does the suite
-actually measure what its names claim?" — because on 2026-07-31 the answer was
-no, in four independent places at once, and the product looked fine the whole
-time:
+actually measure what its names claim?" The failure takes shapes like these, and
+the product looks fine through all of them:
 
-1. Every tour test in the Playwright suite stubbed ``/trips/preview``. Fourteen
-   tests named for generating a tour, none of which generated one. Its own
-   docstring said why: "the test DB's tier-1 fixture POIs can't produce a tour".
-2. ``test_workbench_defaults_to_the_real_tts_provider_not_mock`` passed in 0.03s
-   while every Play button in the workbench sent ``provider: 'mock'``. It read
-   the dropdown builder; the defect was in the request.
-3. ``test_preview_does_not_rate_limit_the_free_mock_provider`` asserted the HOLE
-   as if it were a property, so closing the hole broke the test.
-4. the bar's python shard reported 2382 passing while ``pyproject.toml``'s
-   ``--ignore`` list excluded the six shards that measure tour OUTPUT.
+1. Browser tests named for generating a tour stub ``/trips/preview``, so none of
+   them generates one.
+2. A test of the workbench's default voice reads the dropdown builder while the
+   request it sends carries ``provider: 'mock'``.
+3. A test asserts a hole as if it were a property, so closing the hole breaks
+   the test.
+4. A shard reports thousands of passes while ``pyproject.toml``'s ``--ignore``
+   list excludes the shards that measure tour OUTPUT.
 
 One name for all four: **the thing named is not the thing measured.** A missing
 test is visibly missing; a lying test occupies the slot, so nobody writes the
 real one. That is why these live in ``tests/`` and run in ``make test`` rather
-than in ``.claude/``. Agent-facing rules have failed here three times by
-measurement — ``guard.sh`` blocked 0 of 70 destructive commands, a
-lint-enforcer hook was documented for months and never existed, and CLAUDE.md's
-rules were read and violated the same day. A rule only works if something
-executes it. These execute.
+than in ``.claude/``: a rule only works if something executes it. These execute.
 
 No regex: function bodies come from ``ast``, and every check asserts it FOUND
 its subject before asserting anything about it, so a broken derivation fails

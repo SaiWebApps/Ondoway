@@ -11,7 +11,7 @@ from src.api.models.nodes import canonical_name_key
 from src.connection import get_database
 
 # MERGE stays on (name, city_name) to match nodes seeded before name_key existed,
-# but we ALSO SET the canonical name_key (defect 3) so seeded POIs carry the same
+# but we ALSO SET the canonical name_key so seeded POIs carry the same
 # dedup key as create_node writes — a later create_node/upload MERGEs onto them
 # instead of forking a duplicate. name_key is derived from name via the single
 # source of truth (canonical_name_key), not stored in the row.

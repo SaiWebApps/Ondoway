@@ -1,4 +1,4 @@
-"""Real-browser regression guards for the 2026-07-19 workbench defect batch.
+"""Real-browser regression guards for workbench data-loss and false-success defects.
 
 Every case here drives the REAL frontend/review.html in headless Chromium with
 the API stubbed at the network layer (``page.route``), so each test reproduces a
@@ -304,7 +304,7 @@ def test_defect4_beats_fetch_error_aborts_merge_preview_without_deleting(page):
     """A transient error on the beats fetch must never delete the source POI.
 
     The preview used ``.then(r => r.json())`` with no status check, so an error
-    produced ``sourceBeats = []`` and the EC4 branch told the editor "Source POI
+    produced ``sourceBeats = []`` and the zero-beat branch told the editor "Source POI
     X has no beats. Merge will delete it." — about a POI that may hold dozens.
     On OK, executeMerge ran with an empty beat list and DELETEd the POI,
     orphaning every beat, then showed a green success toast.

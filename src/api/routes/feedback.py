@@ -17,10 +17,9 @@ router = APIRouter(tags=["feedback"])
 _GITHUB_REPO = "SaiWebApps/Ondoway"
 _GITHUB_API = "https://api.github.com"
 
-# RATE LIMITING REMOVED 2026-07-31 (owner order: all limiters). /feedback is
-# unauthenticated and each call spends an Anthropic Haiku completion AND opens a
-# real GitHub issue, so nothing now bounds either the spend or the volume of
-# issues an anonymous caller can create. Deleted, not disabled.
+# NO RATE LIMIT. /feedback is unauthenticated and each call spends an Anthropic
+# Haiku completion AND opens a real GitHub issue, so nothing bounds either the
+# spend or the volume of issues an anonymous caller can create.
 
 
 _SYSTEM_PROMPT = (

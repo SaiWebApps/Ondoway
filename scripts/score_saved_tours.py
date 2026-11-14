@@ -28,22 +28,16 @@ health.
 
 The C7 time ceiling IS reconstructed, and exactly: ``routing.planned_total_seconds`` is
 CALLED here, not re-derived, so the ceiling cannot drift from the engine's.
-``duration_min`` comes from the persisted ``inputs``.
-
-That helper was named ``err_short_total_seconds`` and returned a flat 0.83 of the
-requested duration until 2026-08-04, when the legacy planning policy was deleted and the
-nominal fraction became 1.00. THE CONSEQUENCE IS DELIBERATE AND MUST NOT BE MISREAD AS A
-NO-OP RENAME: every saved tour this script scores is now judged against a 60-minute
-ceiling for a 60-minute request instead of a 49.8-minute one, so C7 is about 20 percent
-more permissive across the whole historical corpus. Leaving the old helper in place
-would have been worse — the scorer would have kept a ceiling the engine no longer plans
-to, and the "cannot drift" claim above would have become false.
+``duration_min`` comes from the persisted ``inputs``. The ceiling is the full requested
+duration, so every saved tour, however old, is judged against a 60-minute ceiling for a
+60-minute request — the ceiling the engine plans to, not the one it planned to when the
+tour was built.
 
 THE AUDIO-CLOCK CAVEAT
 ----------------------
-``total_audio_seconds`` did not measure audio before commit c987848 (2026-07-19): it
-credited every glue sentence a flat 4s and capped beat credit at the corpus estimate. Any
-artifact generated before that date carries a meaningless audio number, so C3-thin and
+``total_audio_seconds`` in an artifact generated before 2026-07-19 does not measure
+audio: it credited every glue sentence a flat 4s and capped beat credit at the corpus
+estimate. Any artifact generated before that date carries a meaningless audio number, so C3-thin and
 C7-time-budget are untrustworthy on it. Artifacts are split by ``generated_at`` and the
 two cohorts are reported separately. Do not average across them.
 """
@@ -62,14 +56,14 @@ from src.tour.routing import planned_total_seconds
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-#: c987848 rewrote _sum_audio to measure spoken words. Before this, total_audio_seconds
-#: measured seating volume, not audio.
+#: Tours generated before this instant carry a total_audio_seconds that measured seating
+#: volume, not spoken words.
 AUDIO_CLOCK_FIXED = datetime.fromisoformat("2026-07-19T00:00:00+00:00")
 
 #: Checks that CANNOT fire given the inputs above. Reported as NOT RUN, never as PASS.
 #: Getting this list WRONG is the defect this script is most prone to: an undeclared inert
-#: check reads as "ran and passed". Two have already been caught here — audit it whenever
-#: the reconstruction in ``_route_from_script`` changes.
+#: check reads as "ran and passed". Audit it whenever the reconstruction in
+#: ``_route_from_script`` changes.
 INERT_CHECKS = {
     "C1-starved": "needs the live corpus map (beats available per POI)",
     "C7b-leg-audio-overruns-walk": "needs per-leg transit segments, not persisted",
@@ -197,9 +191,9 @@ def main() -> int:
     for check, why in INERT_CHECKS.items():
         print(f"    {check:34} {why}")
     print(
-        "\nNot covered by this rubric at all: the eight semantic checks G1-G8 of the "
-        "quality standard.\nOnly G8 (fabrication) and a non-gating G4 (semantic "
-        "repetition) exist in the codebase.\n"
+        "\nNot covered by this rubric at all: checks that judge what the narration "
+        "means.\nOnly a fabrication check and a non-gating semantic-repetition check "
+        "exist in the codebase.\n"
     )
     return 0
 

@@ -16,7 +16,7 @@ HEALTH="http://localhost:${PORT}/api/v1/healthz"
 PAGE="file://${ROOT}/frontend/review.html?apiPort=${PORT}"
 LOG="/tmp/ondoway-workbench-api-${PORT}.log"
 
-# Same NO_PROXY prefix as `make api` — hard-won fix, keep in sync.
+# Same NO_PROXY prefix as `make api` — keep in sync.
 NP="api.resend.com,resend.com,www.googleapis.com,googleapis.com,api.anthropic.com,anthropic.com,api.github.com,github.com"
 
 echo "==> Workbench: starting graph API on the DEV graph (port ${PORT})..."
@@ -29,9 +29,8 @@ else
   # Free the port in case a stale uvicorn is lingering (matches make flutter-ios).
   # LISTEN-scoped only: bare `lsof -i:PORT` also matches CLIENT sockets
   # (ESTABLISHED/CLOSED/TIME_WAIT) belonging to unrelated processes merely
-  # talking to this port from the other side (measured: the user's Claude
-  # desktop app held two CLOSED client sockets to :8000 and was getting
-  # killed by this line). Only a LISTEN-state socket is a stale server.
+  # talking to this port from the other side, such as a desktop app holding a
+  # CLOSED client socket to it. Only a LISTEN-state socket is a stale server.
   PORT_KILL_PIDS=$(lsof -tiTCP:${PORT} -sTCP:LISTEN 2>/dev/null || true)
   if [ -n "$PORT_KILL_PIDS" ]; then
     for pid in $PORT_KILL_PIDS; do
@@ -45,28 +44,18 @@ else
   # empty/short secret. A direct `bash scripts/workbench.sh` (not via `make
   # workbench`, which exports this) has no real secret and no pytest, so opt
   # into the dev placeholder — a local workbench server is never production.
-  # WORKBENCH_API_ENABLED=true: the graph-CRUD gate is now fail-closed (app.py),
+  # WORKBENCH_API_ENABLED=true: the graph-CRUD gate is fail-closed (app.py),
   # so the workbench routers this page needs must be opted in explicitly.
-  # (ONDOWAY_ALLOW_DIRTY_LOCAL_BUILD used to be set here. A dirty local tree is
-  # no longer a refusal anywhere — resolve_build_identity() stamps HEAD tagged
-  # dirty and warns, with no flag to remember — so the line is gone, 2026-08-18.)
-  # TTS_PROVIDER=openai: the workbench must resolve the
-  # SAME real implementations production resolves. Without this line the server
-  # inherited get_provider()'s "mock" fallback (src/audio/provider.py), so any
-  # /audio request that omitted an explicit provider was answered with a SILENT
-  # WAV that an editor could mistake for real narration. render.yaml pins
-  # TTS_PROVIDER=openai for production; this keeps the two in parity, which
-  # tests/test_workbench_matches_the_app.py now verifies by derivation.
-  # ONBOARD_PROVIDER=anthropic: OWNER DECISION 2026-07-31 — the same rule, applied
-  # to the editorial side. get_drafter() (src/onboard/beat_draft.py) used to return
-  # the free MockBeatDrafter for an unset value, and this script pinned nothing, so
-  # the workbench's Draft Beats button showed a human beats a fake had written. The
-  # drafter now fails closed, and this is the pin that makes the button real. It
-  # SPENDS: one Opus call per drafted beat, and the owner removed the cost dialog
+  # TTS_PROVIDER=openai: the workbench must resolve the SAME real implementations
+  # production resolves. get_provider() (src/audio/provider.py) has no default,
+  # so without this pin an /audio request that omits a provider fails.
+  # render.yaml pins TTS_PROVIDER=openai for production; this keeps the two in
+  # parity, which tests/test_workbench_matches_the_app.py verifies by derivation.
+  # ONBOARD_PROVIDER=anthropic: the same rule, applied to the editorial side.
+  # get_drafter() (src/onboard/beat_draft.py) fails closed on an unset value, and
+  # this is the pin that makes the workbench's Draft Beats button real. It
+  # SPENDS: one Opus call per drafted beat, and there is no cost dialog
   # (frontend/onboard.html), so a click drafts a whole city's beats immediately.
-  # (Rate limiters used to be disabled here with five env vars. The limiters
-  # themselves were DELETED from src/api/routes/{trips,audio}.py on 2026-07-31,
-  # so there is nothing left to switch off.)
   # TTS_FALLBACK: the SAME rule again. render.yaml gives production an understudy
   # for the tourist's audio, so the workbench must resolve the same chain —
   # otherwise an editor judging a tour during an OpenAI outage sees the stop

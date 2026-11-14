@@ -1,4 +1,4 @@
-"""Pins the mechanical FLOOR of the tour quality standard.
+"""Pins the mechanical FLOOR of tour quality: the $0 checks a tour must clear.
 
 Module under test: ``src/tour/quality_rubric.py``.
 
@@ -214,7 +214,7 @@ def test_c1_starved_fires_on_the_measured_sainte_chapelle_case() -> None:
     assert starved[0].severity is Severity.BLOCKER
     assert starved[0].poi_name == "Sainte-Chapelle"
     assert starved[0].stop_idx == 0
-    # The floor it was measured against is the standard's, not an ad-hoc number.
+    # The message names STARVE_MIN_WORDS_PER_BEAT x beats as the floor, not an ad-hoc number.
     assert f"{STARVE_MIN_WORDS_PER_BEAT * 12:.0f}" in starved[0].message
     assert not report.passed
 
@@ -350,13 +350,12 @@ def test_c2_does_not_fire_when_the_vignette_is_also_an_anchor() -> None:
 
 
 def test_c12_close_stops_is_a_warn_not_a_blocker() -> None:
-    """GUARDS: the C12 severity demotion. MEASURED, 2026-07-19,
-    across the full real Paris/New York corpora: distance alone cannot separate a
-    true duplicate (0.0-1.7 m, a corpus geocoding defect) from a genuinely distinct,
-    adjacent landmark — the product owner's OWN gold-text stops, Hotel Le Meurice
-    and Angelina, sit **8.4 m** apart. A BLOCKER at 50 m would refuse
-    to serve the gold-standard tour, which is worse than the defect C12 was written
-    to catch (see tests/test_tour_selection.py::
+    """GUARDS: C12 is a WARN, never a BLOCKER. MEASURED across the full real
+    Paris/New York corpora: distance alone cannot separate a true duplicate
+    (0.0-1.7 m, a corpus geocoding defect) from a genuinely distinct, adjacent
+    landmark — Hotel Le Meurice and Angelina, two stops a good tour makes side by
+    side, sit **8.4 m** apart. A BLOCKER at 50 m would refuse to serve that tour,
+    which is worse than the defect C12 catches (see tests/test_tour_selection.py::
     test_selection_does_not_filter_close_but_distinct_pois for the corpus
     measurement). This fixture places two distinct anchors 20 m apart -- inside
     MIN_STOP_SEPARATION_M (50 m) -- and asserts the finding surfaces but never
@@ -713,7 +712,7 @@ def test_c7_fires_when_walk_plus_listening_exceeds_the_err_short_total() -> None
     """GUARDS: the tour exceeding the ENGINE'S OWN err-short planning ceiling —
     ``duration_min * ERR_SHORT`` (83% of the request), a deliberately-short PLAN,
     not the tourist's promised duration. The check and the number
-    are correct (they mirror the engine's own move ceiling, commit 6f6bc39); only
+    are correct (they mirror the engine's own move ceiling); only
     the message must not claim the tourist "runs over the time they asked for" —
     a 41.7-min tour against this ceiling can still be comfortably UNDER a 60-min
     promise. INHERITED, not invented: routing.py:94-95 defines
@@ -742,7 +741,7 @@ def test_c7_fires_when_walk_plus_listening_exceeds_the_err_short_total() -> None
     assert len(overruns) == 1, _checks(report)
     assert overruns[0].severity is Severity.BLOCKER
     assert "2500" in overruns[0].message
-    # ARITHMETICALLY FALSE claim a hostile review caught: the ceiling is the
+    # The message must stay arithmetically true: the ceiling is the
     # engine's own err-short PLAN (duration * ERR_SHORT), not the tourist's
     # promised duration, so the message must not claim the tourist "runs over
     # the time they asked for". UNDO: put that phrase back in the C7 message and
@@ -789,7 +788,7 @@ def test_c7_skips_when_the_route_carries_no_budget() -> None:
 
 
 # ---------------------------------------------------------------------------
-# C9 — sentence length for the ear (WARN). CITED (Nubart).
+# C9 — sentence length for the ear (WARN).
 # ---------------------------------------------------------------------------
 
 
@@ -801,8 +800,7 @@ def test_c9_long_mean_sentence_length_is_a_warn() -> None:
     UNDO: delete the ``if nq.mean_sentence_words > MAX_SENTENCE_WORDS`` block and
     this goes RED.
 
-    The cap was 15.0, CITED to Nubart's museum-station range, until 2026-07-27. It is
-    now 20.0, a JUDGEMENT anchored on the gold text's measured 19.11 — see
+    The cap is 20.0, a JUDGEMENT anchored on the gold text's measured 19.11 — see
     ``test_c9_cap_admits_the_owners_own_gold_text`` for why, and the constant's own
     docstring for the measurement.
     """
@@ -824,12 +822,12 @@ def test_c9_long_mean_sentence_length_is_a_warn() -> None:
 
 
 def test_c9_cap_admits_the_owners_own_gold_text() -> None:
-    """THE CALIBRATION, made executable: the north star must pass its own bar.
+    """THE CALIBRATION, made executable: the gold text must pass the cap.
 
-    The gold text is the passage the owner hand-wrote and from which the standard's
-    rules were derived. At the old cap of 15 it FAILED C9 —
-    the standard's own gold text could not pass the standard's own check, and neither
-    could any of 191 real tours.
+    The gold text is a hand-written reference passage, the voice every tour aims at,
+    read by ``scripts.score_gold_text.extract_gold_text``. At the old cap of 15 it
+    FAILED C9 — the target voice could not pass the check meant to protect it, and
+    neither could any of 191 real tours.
 
     This is the guard against re-tightening the cap on cited authority that describes
     something other than a narrative walking tour. If it goes RED, either the cap moved
@@ -877,8 +875,8 @@ def test_c9_cap_admits_the_owners_own_gold_text() -> None:
     )
 
     assert "C9-long-sentences" not in _checks(report), (
-        "the owner's gold text now FAILS the sentence-length cap "
-        f"(MAX_SENTENCE_WORDS={MAX_SENTENCE_WORDS}). A bar the north star cannot clear "
+        "the gold text now FAILS the sentence-length cap "
+        f"(MAX_SENTENCE_WORDS={MAX_SENTENCE_WORDS}). A bar the gold text cannot clear "
         "measures nothing — it fired on 100% of 191 real tours when this last happened. "
         "Do not lower the gold to fit; re-derive the cap from it."
     )
@@ -902,7 +900,7 @@ def test_c9_does_not_fire_on_short_punchy_sentences() -> None:
 
 
 # ---------------------------------------------------------------------------
-# OPENERS — UNCHECKED. C10 was deleted 2026-07-27; G1 was never built.
+# OPENERS — UNCHECKED. The rubric has no opener check.
 # ---------------------------------------------------------------------------
 
 
@@ -911,19 +909,18 @@ def test_openers_are_unchecked_since_c10_was_deleted() -> None:
     judges how a stop opens.
 
     C10 asked a MEANING question with a word list. ``narration_quality._LOOK_INITIAL``
-    is a regex over 18 sentence-initial verbs, and the owner's own gold text — "Here, at
+    is a regex over 18 sentence-initial verbs, and the gold text's opener — "Here, at
     the corner of rue de Castiglione and rue de Rivoli, stands the Hotel Le Meurice",
-    the clearest orientation-before-history line in the standard and the sentence S1 was
-    derived FROM — was rated "a bare fact, not a look-cue". It fired on 100% of 191 saved
-    tours and on the north star itself, so it separated nothing. Extending the word list
-    is the same shortcut with more words; the standard's answer is G1, judged
-    semantically, and G1 does not exist.
+    a model line that places the listener before any history — was rated "a bare fact,
+    not a look-cue". It fired on 100% of 191 saved tours and on the gold text itself, so
+    it separated nothing. Extending the word list is the same shortcut with more words;
+    judging an opener takes a semantic reading, and the rubric has none.
 
     HOW THIS TEST WORKS. It scores two stops that differ ONLY in their opener — one bare
     fact, one look-cue — and asserts the rubric returns the SAME findings for both. That
     is precisely the statement "the rubric cannot tell them apart".
 
-    WHEN G1 IS BUILT THIS TEST FAILS, because the bare-fact stop will pick up a finding
+    WHEN AN OPENER CHECK IS BUILT THIS TEST FAILS, because the bare-fact stop will pick up a finding
     the oriented one does not. That failure is the alarm and the whole point. Delete this
     test then — do not weaken the comparison to keep it green.
     """
@@ -945,8 +942,8 @@ def test_openers_are_unchecked_since_c10_was_deleted() -> None:
 
     assert bare_fact == look_cue, (
         "the rubric now distinguishes a bare-fact opener from an oriented one — "
-        f"bare-only findings: {sorted(set(bare_fact) - set(look_cue))}. If G1 (or any "
-        "successor opener check) has been built, the gap this test pins is CLOSED: "
+        f"bare-only findings: {sorted(set(bare_fact) - set(look_cue))}. If an opener "
+        "check has been built, the gap this test pins is CLOSED: "
         "delete this test rather than relaxing it."
     )
     assert "C10-no-look-cue" not in bare_fact, "C10 was deleted; it must not return"
@@ -958,7 +955,7 @@ def test_openers_are_unchecked_since_c10_was_deleted() -> None:
 
 
 def test_c11_reports_a_stat_but_emits_no_finding() -> None:
-    """C11 IS REPORT-ONLY, ruled 2026-07-30. It records outliers; it accuses nobody.
+    """C11 IS REPORT-ONLY. It records outliers; it accuses nobody.
 
     The detector still works and this test still proves it: stop 2 packs four years
     into 18 words (~22.2/100w) while stops 0/1 have none, so the tour mean is
@@ -969,7 +966,7 @@ def test_c11_reports_a_stat_but_emits_no_finding() -> None:
     Place des Vosges positions, 6 of 29 Ile) and on only 8-11% of machine tours. The
     multiple needed to admit the human references is 3.82/4.19, above the machine
     maximum of 3.11 — so no threshold clears the humans and still bites. A check that
-    accuses this project's own north-star text while passing the output it polices is
+    accuses the human reference tours while passing the machine output it polices is
     pointing the wrong way. Kept as a stat because the signal is real when you are
     diagnosing one stop; demoted because as a WARN it was pure noise.
 
@@ -1039,16 +1036,15 @@ def test_c11_does_not_fire_when_date_density_is_even_across_stops() -> None:
     )
 
 
-def test_c8_cannot_fire_on_engine_output_and_the_unit_ruling_is_recorded() -> None:
+def test_c8_cannot_fire_on_engine_output_and_the_unit_is_the_standing_position() -> None:
     """C8's cap stays 850, and the reason a clean C8 proves nothing is pinned here.
 
-    THE UNIT RULING (owner, 2026-07-30). C8's calibration unit is the STANDING
-    POSITION, not the declared stop. Measured on the two human-vetted reference
-    tours: no single position exceeds 367 words, so 850 is generous and every human
-    position passes. The declared-stop aggregates that DO exceed it — Conciergerie
-    901, Notre-Dame 1595 — are eye-prose spans covering many positions with walking
-    in between, which is not a stop this engine builds. That closes the open
-    C8-unit question; the cap does not move and the engine is not changed.
+    THE UNIT. C8's calibration unit is the STANDING POSITION, not the declared stop.
+    Measured on the two human-vetted reference tours: no single position exceeds 367
+    words, so 850 is generous and every human position passes. The declared-stop
+    aggregates that DO exceed it — Conciergerie 901, Notre-Dame 1595 — are eye-prose
+    spans covering many positions with walking in between, which is not a stop this
+    engine builds. So the cap does not move and the engine is not changed.
 
     THE TRAP THIS PINS. ``selection.MAX_DWELL_AUDIO_SECONDS`` caps one stop's audio,
     so at ``SPOKEN_WPM`` the widest stop the engine can render is far below 850 —
@@ -1065,12 +1061,12 @@ def test_c8_cannot_fire_on_engine_output_and_the_unit_ruling_is_recorded() -> No
     from src.tour.selection import MAX_DWELL_AUDIO_SECONDS
 
     assert GORGE_MAX_WORDS_PER_STOP == 850, (
-        "the C8 cap was ruled UNCHANGED at 850 on 2026-07-30; 750 was rejected on "
+        "the C8 cap stays at 850; 750 was rejected on "
         "measurement because the certified-good corpus carries stops at 757/761/808"
     )
 
-    # The most words a single stop's dwell audio can carry, plus the documented
-    # ~75-word glue reserve that rides along with it.
+    # The most words a single stop's dwell audio can carry, plus the ~75-word glue
+    # reserve (selection.py's measured figure) that rides along with it.
     renderable_words = MAX_DWELL_AUDIO_SECONDS * SPOKEN_WPM / 60
     widest_possible_stop = renderable_words + 75
 
@@ -1220,24 +1216,17 @@ def test_unknown_check_id_fails_closed() -> None:
 
 
 # ---------------------------------------------------------------------------
-# C7 / C7b — audio spoken WHILE WALKING is free (product ruling 2026-07-19)
+# C7 / C7b — audio spoken WHILE WALKING is free
 # ---------------------------------------------------------------------------
 #
-# "Audio overlaps the walking. It is a part of the tour experience." — the owner.
+# Audio overlaps the walking: it is part of the tour, so it costs the tourist no
+# extra minutes, and C7 never adds walked audio to walking time. Adding ALL audio
+# to ALL walking would model a tourist who walks in silence and then stands in
+# silence to listen; under that model, filling a walk with narration APPEARS to
+# consume the time budget, so leg content could never be scored fairly.
 #
-# Before this ruling C7 added ALL audio to ALL walking, modelling a tourist who
-# walks in silence and then stands in silence to listen. Under that model, filling
-# a walk with narration APPEARS to consume the time budget even though it costs the
-# tourist no extra minutes, so leg content can never be scored fairly.
-#
-# CORRECTION: an earlier revision of this comment claimed the old model produced a
-# real deadlock on the founding tour ("1650s walk + 1434s audio = 3084s against a
-# 2988s ceiling — BLOCKER for BLOCKER"). THAT WAS WRONG. The 1650s came from a route
-# state produced by a since-reverted selection experiment; the real walk is 1087s,
-# giving 2521s against 2988s — 467s of HEADROOM. No measured tour deadlocked. An
-# adversarial review caught it, not the author.
-#
-# The fixtures below use DELIBERATELY EXTREME synthetic values to exercise the
+# No measured tour has hit a walk-plus-audio deadlock under the old model. The
+# fixtures below use DELIBERATELY EXTREME synthetic values to exercise the
 # boundary; they are not measurements of any real tour and must not be read as such.
 
 
@@ -1256,12 +1245,12 @@ def _transit(walk_seconds: int, i: int) -> TransitSegment:
 
 
 def test_c7_excludes_reflection_audio_spoken_while_walking() -> None:
-    """GUARDS the ruling: a reflection narrated on a leg costs NO elapsed time.
+    """GUARDS: a reflection narrated on a leg costs NO elapsed time.
 
     UNDO TEST: revert C7 to ``route.total_walk_seconds + script.total_audio_seconds``
     and this goes RED — the tour trips C7 purely because its walking was filled.
 
-    REWRITTEN 2026-08-06. The ruling it guards is unchanged and so is the shape of
+    REWRITTEN 2026-08-06. The rule it guards is unchanged and so is the shape of
     the proof; what moved is that the tour's non-walking time is now each stop's
     DWELL rather than its stationary audio. A reflection spoken on a leg still costs
     nothing, and now it costs nothing BY CONSTRUCTION — it is not a stop, so it has
@@ -1299,10 +1288,9 @@ def test_c7_passes_when_the_deficit_is_closed_on_the_legs() -> None:
 
     SYNTHETIC, not a measurement: 1650s of walking is chosen so that walk + audio
     (1650 + 1434 = 3084) exceeds the 2988s err-short ceiling, which is the condition
-    this check must handle. No real measured tour hit that condition — see the
-    correction in the section comment above. The point here is the SEMANTICS: put
-    the audio on the legs and the tourist's elapsed time is unchanged, so C7 passes
-    however much narration the legs carry.
+    this check must handle. No real measured tour hit that condition. The point here
+    is the SEMANTICS: put the audio on the legs and the tourist's elapsed time is
+    unchanged, so C7 passes however much narration the legs carry.
     """
     # 1434s of audio at 150 wpm = 3585 words, ALL on walking legs.
     leg_audio = _leg_sentence(" ".join(f"w{i}" for i in range(3585)), 1, GLUE_REFLECTION)
@@ -1357,7 +1345,7 @@ def test_c7b_silent_when_leg_narration_fits_the_walk() -> None:
 
 
 def test_stop_audio_still_counts_against_the_time_budget() -> None:
-    """The ruling frees LEG audio only. Standing at a stop listening still costs
+    """Only LEG audio is free. Standing at a stop listening still costs
     the tourist minutes, and C7 must keep saying so.
 
     REWRITTEN 2026-08-06 against the new currency. A stop's length is now
@@ -1408,8 +1396,7 @@ def test_c7b_uses_the_smaller_of_the_two_disagreeing_walk_measures() -> None:
     leg_seconds carries routed road-network values while total_walk_seconds is the
     pace-corrected haversine the budget math uses. C7 is denominated in
     total_walk_seconds; C7b is a BLOCKER about whether narration FITS, so it takes
-    the conservative minimum. An adversarial review caught the two checks silently
-    reasoning about different walks.
+    the conservative minimum, so the two checks never reason about different walks.
 
     UNDO TEST: change C7b back to the bare sum of leg_seconds and this goes RED —
     narration that overruns the shorter (real budget) walk would be waved through.
@@ -1471,14 +1458,11 @@ _EXPECTED_AUDIO_MIN: dict[str, float] = {
     "paris-west-axis-90": 3.0,
 }
 
-#: The corpus's own negative poles, and they are the SAME two days a blind
-#: enjoyment judging scored below the old batch (both iterations):
-#: west-axis at audio/walking 0.057 and grand-central at 0.081, against C3's 0.12
-#: floor — thin starts whose corpus holds one or two content stops, so most of the
-#: day is silent pavement. The rubric and the blind judge agree about which days
-#: are thin, which is the calibration working. A thinness floor that passes these
-#: is broken in the other direction. (The batch lane never runs score_tour — the
-#: serving gate would refuse these two days live.)
+#: The corpus's own negative poles: west-axis at audio/walking 0.057 and
+#: grand-central at 0.081, against C3's 0.12 floor — thin starts whose corpus
+#: holds one or two content stops, so most of the day is silent pavement. A
+#: thinness floor that passes these is broken in the other direction. (The batch
+#: lane never runs score_tour — the serving gate would refuse these two days live.)
 _STARVED_CASES = frozenset({"paris-west-axis-90", "nyc-grand-central-times-square-60"})
 
 
@@ -1874,18 +1858,17 @@ def test_c8_contradicts_the_human_reference_at_declared_stop_granularity() -> No
     the human reference shows a POI legitimately carrying 1595 words ACROSS
     spots.
 
-    RULED 2026-07-30 (owner): the calibration unit is the STANDING POSITION. These
-    two declared-stop hits are therefore EXPECTED and correct — a declared stop in a
-    guidebook walk is an eye-prose span over many positions, not a thing the engine
-    builds — and the cap stays 850. This test no longer forces a decision; it pins
-    the measurement the decision rests on, and still goes RED if C8 stops firing
-    here, which would mean the loader is shredding stops again or the cap drifted.
-    See test_c8_cannot_fire_on_engine_output_and_the_unit_ruling_is_recorded for the
-    other half: on ENGINE output the cap is unreachable anyway.
+    The calibration unit is the STANDING POSITION. These two declared-stop hits
+    are therefore EXPECTED and correct — a declared stop in a guidebook walk is an
+    eye-prose span over many positions, not a thing the engine builds — and the cap
+    stays 850. This test pins the measurement behind that unit, and still goes RED
+    if C8 stops firing here, which would mean the loader is shredding stops again
+    or the cap drifted. See
+    test_c8_cannot_fire_on_engine_output_and_the_unit_is_the_standing_position for
+    the other half: on ENGINE output the cap is unreachable anyway.
 
     This is also the LOADER's regression guard: a parser that shreds stops back
-    into positions (the first version's defect, caught by a judge consult)
-    produces zero C8 findings here and goes RED.
+    into positions produces zero C8 findings here and goes RED.
 
     UNDO: raise ``GORGE_MAX_WORDS_PER_STOP`` above 1595 and this goes RED.
     """
@@ -1903,7 +1886,7 @@ def test_c8_contradicts_the_human_reference_at_declared_stop_granularity() -> No
     assert len(gorged) == 2 and "Conciergerie" in gorged[0] and "Notre-Dame" in gorged[1], (
         f"C8 fired on {gorged or 'nothing'} at declared-stop granularity; "
         "measured 2026-07-29 it fires on exactly Conciergerie (901 words) and "
-        "Notre-Dame (1595), and the 2026-07-30 ruling keeps that expected (the unit "
+        "Notre-Dame (1595), and that is expected (the unit "
         "is the standing position; a declared stop is an eye-prose span). So this "
         "means the loader is shredding stops again, or the cap drifted."
     )
@@ -1976,21 +1959,18 @@ def test_the_blocking_floor_still_fires_when_a_reference_tour_is_degraded() -> N
 
 
 def test_c9_fires_on_most_stops_of_the_human_authored_reference_tours() -> None:
-    """PINS WHY C9 FIRES ON THE HUMAN REFERENCES **BY DESIGN**, ruled 2026-07-30.
+    """PINS WHY C9 FIRES ON THE HUMAN REFERENCES **BY DESIGN**.
 
     C9 is a WARN, so it blocks nothing — and at position granularity it fires on 24
     of 25 positions (96%) of one human-approved tour and 19 of 29 (66%) of the other.
     That reads like a miscalibration and was very nearly "fixed" as one. It is not.
 
-    THE RULING (owner, 2026-07-30): C9 stays exactly as it is, cap 20, unchanged.
-    Two measurements decide it. First, C9 ORDERS CORRECTLY on the thing this project
-    actually calls its north star: the owner's hand-written gold measures 19.11
-    words/sentence and PASSES, against a machine median of 23.2 that does not — the
-    gold reads shorter than 34 of 38 machine stops. Second, the cap matches the
-    external ear-prose guidance (12-18 words) that the online reference set
-    contributes. The two empirical walk documents fire it because they are
-    transcribed GUIDEBOOK prose — text for the EYE, medians 25.7 and 23.2 — while
-    C9 measures fitness for the EAR. Firing on eye-prose is the check working.
+    C9 stays exactly as it is, cap 20. C9 ORDERS CORRECTLY on the hand-written gold
+    text: it measures 19.11 words/sentence and PASSES, against a machine median of
+    23.2 that does not — the gold reads shorter than 34 of 38 machine stops. The two
+    human reference tours fire it because they are transcribed GUIDEBOOK prose — text
+    for the EYE, medians 25.7 and 23.2 — while C9 measures fitness for the EAR.
+    Firing on eye-prose is the check working.
 
     So this test is no longer a decision forcer; it records a settled reading. It
     still goes RED on any recalibration, which is what keeps the reading honest:
@@ -2091,8 +2071,8 @@ def _c13_stop(
 
 
 def test_c13_point_first_warns_when_the_story_starts_late_or_the_primary_beat_lands_late():
-    """A stop that opens with a 60-word recap (a measured couple's day, stop 4: 44 s
-    of "think back over where we've walked") WARNs on its preamble; a stop
+    """A stop that opens with a 60-word recap (measured live: 44 s of "think back
+    over where we've walked" before stop 4's story) WARNs on its preamble; a stop
     whose primary beat is first cited 150 words into the story WARNs on its point; a
     stop that places the listener in one sentence and lands its primary beat inside the
     first hundred words is silent. UNDO: drop C13 from score_tour -> RED."""

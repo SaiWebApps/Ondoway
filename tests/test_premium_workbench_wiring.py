@@ -246,9 +246,7 @@ def test_launchers_kill_only_listening_sockets(tmp_path) -> None:
 
 # --- A persisted-trip-shaped fixture, deliberately local to this file. -------------
 # It is NOT imported from tests/test_tour_authoring_from_route.py even though that
-# module has an equivalent one today: that module exists to exercise
-# ``author_prebuilt_route``/``plan_prebuilt_route_authoring``, which are due for deletion, so
-# importing across would tie this pin's life to a module scheduled for removal.
+# module has an equivalent one, so this pin does not depend on that module staying.
 
 
 def _prebuilt(
@@ -394,10 +392,10 @@ def _plan_kwargs() -> dict[str, object]:
 
 
 # --------------------------------------------------------------------------
-# BLOCK 1 plans ONE day, and planning is genuinely free
+# Planning plans ONE day, and planning is genuinely free
 # --------------------------------------------------------------------------
 
-_BLOCK_ONE_BASE = (48.8568, 2.3414)
+_DAY_BASE = (48.8568, 2.3414)
 
 
 class _Poison:
@@ -405,7 +403,7 @@ class _Poison:
 
     def __init__(self, *args, **kwargs):
         raise AssertionError(
-            "Block 1 constructed a paid provider client. Planning shows places, order "
+            "Planning constructed a paid provider client. Planning shows places, order "
             "and walking times only; every word arrives in AUTHOR, "
             "after the traveller has picked one option."
         )
@@ -448,12 +446,12 @@ def _one_route():
     pois = tuple(
         _poi(
             f"day-p{i}",
-            lat=_BLOCK_ONE_BASE[0] + 0.0006,
-            lng=_BLOCK_ONE_BASE[1] + 0.0008 * (i + 1),
+            lat=_DAY_BASE[0] + 0.0006,
+            lng=_DAY_BASE[1] + 0.0008 * (i + 1),
         )
         for i in range(3)
     )
-    prev = _BLOCK_ONE_BASE
+    prev = _DAY_BASE
     transits = []
     for poi in pois:
         transits.append(_receipted_transit(None, poi.id, prev[0], prev[1], poi.lat, poi.lng))
@@ -489,12 +487,12 @@ def _snapshot_for(routes):
     )
 
 
-def test_block_one_plans_one_priced_free_day(monkeypatch) -> None:
+def test_planning_plans_one_priced_free_day(monkeypatch) -> None:
     """ONE day, no provider, no prose.
 
     The product stops offering three routes: no visitor wants to compare
     routes. The product plans THE day, and the dials on the
-    request are how a person changes it. Block 1 is therefore ``plan_premium_tour``
+    request are how a person changes it. Planning is therefore ``plan_premium_tour``
     itself: ONE ``select_route`` call, the container-identity refusal kept, and
     no K-flavour machinery anywhere in the module.
 
@@ -526,7 +524,7 @@ def test_block_one_plans_one_priced_free_day(monkeypatch) -> None:
 
     route = _one_route()
     snapshot = _snapshot_for([route])
-    tour_input = TourInput(start=_BLOCK_ONE_BASE, duration_min=60, city_slug="paris")
+    tour_input = TourInput(start=_DAY_BASE, duration_min=60, city_slug="paris")
     monkeypatch.setattr(premium_tour, "select_route", lambda *a, **k: route)
     # THE PROVIDER THAT RAISES ON ANY CALL, on both doors it could come through.
     monkeypatch.setattr("src.tour.generation.HaikuGlueClient", _Poison)
@@ -577,10 +575,9 @@ def test_block_one_plans_one_priced_free_day(monkeypatch) -> None:
     # 5. A start with no end plans through without a 4xx-shaped failure.
     assert tour_input.end is None
 
-    # 6. A ROUND TRIP plans through the premium gate (a live finding:
-    #    the leg-per-stop sanity check refused every round trip, because the
-    #    loop-home leg makes legs == stops + 1 — the shape _prebuilt in this
-    #    very file has always declared).
+    # 6. A ROUND TRIP plans through the premium gate. Its loop-home leg makes
+    #    legs == stops + 1 (the shape _prebuilt in this very file declares), and
+    #    the leg-per-stop sanity check accepts that shape.
     loop = route.model_copy(
         update={
             "transits": (
@@ -590,8 +587,8 @@ def test_block_one_plans_one_priced_free_day(monkeypatch) -> None:
                     None,
                     route.pois[-1].lat,
                     route.pois[-1].lng,
-                    _BLOCK_ONE_BASE[0],
-                    _BLOCK_ONE_BASE[1],
+                    _DAY_BASE[0],
+                    _DAY_BASE[1],
                 ),
             )
         }
@@ -599,7 +596,7 @@ def test_block_one_plans_one_priced_free_day(monkeypatch) -> None:
     monkeypatch.setattr(premium_tour, "select_route", lambda *a, **k: loop)
     round_trip_plan = plan_premium_tour(
         TourInput(
-            start=_BLOCK_ONE_BASE, duration_min=60, city_slug="paris", round_trip=True
+            start=_DAY_BASE, duration_min=60, city_slug="paris", round_trip=True
         ),
         snapshot,
         routing_client=_FakeRoutingClient(),

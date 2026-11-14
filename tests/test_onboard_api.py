@@ -325,7 +325,7 @@ def test_unknown_job_is_404_everywhere(client):
 
 
 # ---------------------------------------------------------------------------
-# FIX 1 (SECURITY): a path-traversal slug + re-onboarding an existing city are
+# SECURITY: a path-traversal slug + re-onboarding an existing city are
 # both refused at job creation (422), BEFORE any disk write can escape data_root.
 # ---------------------------------------------------------------------------
 def test_traversal_slug_is_rejected_and_writes_nothing(client, tmp_path, monkeypatch):
@@ -385,7 +385,7 @@ def test_onboarding_an_existing_city_is_rejected(client):
 
 
 # ---------------------------------------------------------------------------
-# FIX 2 (robustness): a deploy that RAISES (spawn failure) must mark the job
+# A deploy that RAISES (spawn failure) must mark the job
 # 'error' and 500 — never leave it stuck at 'assembled'. A non-zero returncode
 # also 500s + marks error + tails stderr.
 # ---------------------------------------------------------------------------
@@ -442,7 +442,7 @@ def test_upload_deploy_nonzero_returns_500(client, monkeypatch, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# FIX 3 (coverage): negative request/lifecycle paths.
+# Negative request/lifecycle paths.
 # ---------------------------------------------------------------------------
 def test_create_job_empty_modes_is_422(client):
     r = client.post(

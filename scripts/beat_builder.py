@@ -66,12 +66,13 @@ def word_count(s: str) -> int:
 
 
 def duration_sec(body: str) -> int:
-    """Computed duration at 2.5 words/sec (150 wpm). Spec rule, not AI-set."""
+    """Computed duration at 2.5 words/sec (150 wpm). Always derived from the
+    body, never set by the model."""
     return round(word_count(body) / 2.5)
 
 
 def beat_id(*, ctx: BookContext, poi_name: str, lens: str, topic_slug: str) -> str:
-    """`{city}_{poi}_{lens}_{book}_{topic}` per the spec."""
+    """The beat id: `{city}_{poi}_{lens}_{book}_{topic}`."""
     return f"{ctx.city_name}_{slugify(poi_name)}_{lens}_{ctx.book_slug}_{topic_slug}"
 
 
@@ -101,14 +102,14 @@ def make_beat(
     key_claims: list[str] | None = None,
     kid_friendly: str = "yes",
     new_poi: bool = False,
-    # honesty fields (B11)
+    # honesty fields: what the extractor admits it did not take from the source
     extractor_state: str = "clean",
     flagged_claims: list[str] | None = None,
     fact_check_notes: str = "",
 ) -> dict[str, Any]:
     """Construct a single Beat dict, auto-filling all mechanical fields.
 
-    Required fields cover the spec's "every beat must include..." list. The
+    The required keyword arguments are the fields every beat must carry. The
     caller decides content-level meaning; this function fills the rest.
     """
     body = script_body.strip()

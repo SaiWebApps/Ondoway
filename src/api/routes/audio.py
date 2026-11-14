@@ -52,9 +52,8 @@ router = APIRouter(tags=["audio"])
 #   GET  /audio/compare/download-> serves those files
 #   POST /audio/eval            -> up to 3 paid TTS + 9 paid Whisper calls
 #
-# (The per-beat library — POST /audio/generate-batch, /audio/generate/{id},
-# /audio/generate-trip, GET /audio/status/{id} — was DELETED: the per-stop path and
-# the keep-exploring door are the only voicing doors.) None of these has a product
+# (The per-stop path and the keep-exploring door are the only voicing doors.)
+# None of these has a product
 # caller (mobile uses generate-trip-stops / keep-exploring; the web preview uses
 # /audio/preview) — they are operator tools. Gate
 # them behind the SAME fail-closed flag that already protects the workbench CRUD
@@ -91,16 +90,14 @@ def require_audio_admin() -> None:
         raise HTTPException(404, "Not Found")
 
 
-# RATE LIMITING REMOVED 2026-07-31 (owner order, twice stated). The audio routes
-# used to carry a per-IP + global fixed-window guard. It is deleted, not disabled:
-# no constants, no counters, no env knobs, nothing to re-enable by accident.
+# NO RATE LIMIT. The audio routes carry no per-IP or global guard: no constants,
+# no counters, no env knobs, nothing to re-enable by accident.
 #
-# What that means, stated once: /audio/preview is anonymous, so nothing now
-# bounds how much an unauthenticated caller can spend against the configured TTS
-# key. If a bound is wanted later it should key on the AUTHENTICATED user, not
-# the client IP — mobile carriers put thousands of users behind one address, so
-# the old per-IP cap throttled real tourists in groups while barely slowing a
-# determined caller.
+# What that means, stated once: /audio/preview is anonymous, so nothing bounds how
+# much an unauthenticated caller can spend against the configured TTS key. A bound,
+# if one is added, keys on the AUTHENTICATED user, never the client IP — mobile
+# carriers put thousands of users behind one address, so a per-IP cap throttles
+# real tourists in groups while barely slowing a determined caller.
 
 # Bounded in-memory cache of preview audio keyed by (provider, voice, text) so a
 # replayed identical payload is never re-billed. Mirrors the narration_hash
@@ -293,14 +290,12 @@ def preview_audio(body: AudioPreviewRequest, request: Request):
     """Generate a TTS audio preview from raw text. Returns audio/mpeg bytes.
 
     This route is deliberately anonymous — the editorial workbench calls it with
-    no credentials. Its rate limit was DELETED on 2026-07-31 by owner order,
-    and its text cap was deleted on 2026-08-04 by owner order so the workbench
-    judges the whole narration rather than a truncation. The only thing now
-    bounding what an anonymous caller can spend is the content-hash cache that
-    stops a replayed payload being re-billed, plus the request model's own
-    20000-character ceiling. A real bound belongs on the AUTHENTICATED user; the
-    workbench moves onto that path later. This docstring ships in the
-    OpenAPI schema; keep it honest.
+    no credentials. It has no rate limit and no text cap of its own, so the
+    workbench judges the whole narration rather than a truncation. The only
+    things bounding what an anonymous caller can spend are the content-hash cache
+    that stops a replayed payload being re-billed, plus the request model's own
+    20000-character ceiling. A real bound belongs on the AUTHENTICATED user. This
+    docstring ships in the OpenAPI schema; keep it honest.
     """
     try:
         provider = get_provider(body.provider)
@@ -343,7 +338,7 @@ def compare_providers(body: CompareRequest, request: Request):
     Use GET /audio/compare/download/{filename} to fetch individual files.
 
     Operator/workbench tool: gated by require_audio_admin (404 on the public
-    deployment), rate-limited, and bounded on disk.
+    deployment) and bounded on disk.
     """
     # Clean up stale comparison files (older than 1 hour)
     _cleanup_old_comparisons()
@@ -458,7 +453,7 @@ def eval_audio(body: EvalRequest, request: Request):
         raise HTTPException(400, str(e)) from None
 
     # One eval request costs up to 3 paid TTS syntheses AND 3 paid Whisper
-    # transcriptions, so it is limited even though it is admin-gated.
+    # transcriptions; the admin gate is what keeps it off the public deployment.
 
     # Steps 1-2: Generate audio then transcribe + evaluate, retrying past a
     # transient degraded generation (see _EVAL_DEGRADED_WER above).
@@ -712,7 +707,7 @@ def generate_stop_audio_for_trip(
     Iterates the trip's ItineraryItems, voices each stop's stitched ``narration``
     via ``generate_stop_audio``, and stores the result ON THE ITEM
     (``audio_url``/``audio_duration_sec``), keyed by the item id. THE voicing door
-    for a trip (the per-beat ``/audio/generate-trip`` was deleted).
+    for a trip.
     Items with no narration are skipped; existing audio is skipped unless force.
 
     READER-SCOPED: voicing spends real provider money per stop, so the caller
@@ -834,7 +829,7 @@ def generate_stop_audio_for_trip(
             StopAudioResultItem(stop_id=stop_id, status="generated", audio_url=gen.audio_url)
         )
 
-    # (Owner ruling 2026-08-19: the tour's own voice, never the robot.) The
+    # The tour speaks in its own recorded voice, never the device's plain one: the
     # AUTHORED SESSION LINES ride the same voicing pass as their own small
     # artifacts — each stop's close, its thread lines, the full telling's close —
     # hash-guarded exactly like the narration, so a line is billed once. The
@@ -864,8 +859,8 @@ def get_stop_audio_status(stop_id: str, session: Session = Depends(get_session))
     """Per-stop audio status by ItineraryItem id.
 
     Reads the per-stop audio persisted by /audio/generate-trip-stops so
-    mobile can poll/play per stop — the ONLY status poll since the per-beat one
-    was deleted. 404 if the stop doesn't exist.
+    mobile can poll/play per stop — the ONLY status poll. 404 if the stop
+    doesn't exist.
     """
     rec = session.run(
         "MATCH (i:ItineraryItem {id: $sid}) "
@@ -950,10 +945,8 @@ def keep_exploring_stop_audio(
     # with the ORIGINAL voice. Mix provider_name and voice_id into the hash so a
     # voice/provider change yields a mismatch and regenerates.
     narration_hash = _stop_narration_hash(narration, provider_name, voice_id)
-    # Mobile calls this anonymously, so a cache MISS spends real TTS money
-    # for an anonymous caller: bound the paid path the same way /audio/preview
-    # is bounded. Checked after the cache lookup below would be too late, but
-    # before it would rate-limit free cache hits — so limit only on the miss.
+    # Mobile calls this anonymously, so a cache MISS spends real TTS money for an
+    # anonymous caller; a cache hit spends nothing.
     if not force and rec["ke_url"] and rec["ke_hash"] == narration_hash:
         return KeepExploringAudioResponse(
             stop_id=stop_id,
@@ -984,10 +977,8 @@ def keep_exploring_stop_audio(
             duration_sec=recorded.audio_duration_sec,
         )
 
-    # (A provider-name resolution used to sit here purely to tell the rate
-    # limiter whether this was a billed path. The limiter is gone, so it is too.
-    # An unknown provider still keeps its soft-fail contract below: 200 with
-    # status='failed' from generate_stop_audio, never a 400 from here.)
+    # An unknown provider keeps its soft-fail contract: 200 with status='failed'
+    # from generate_stop_audio, never a 400 from here.
     try:
         gen = generate_stop_audio(
             narration,

@@ -118,12 +118,9 @@ def build_route_option(
 ) -> RouteOption:
     """Assemble one flavour's RouteOption from its Route + Script + BeatSequence.
 
-    THE ONE INTERLEAVE. This absorbed the fourth copy, the private preview builder
-    that lived in the API layer (``src/api/routes/trips.py``, deleted 2026-08-04):
-    the preview and the flavour cards were two implementations of the same ordering,
-    and they had already drifted — the preview split walk-concurrent narration onto
-    its own card and the option builder did not, so the workbench and the phone
-    disagreed about what a "stop" is.
+    THE ONE INTERLEAVE. The preview and the flavour cards are both built here, so
+    walk-concurrent narration lands on the same card everywhere and the workbench and
+    the phone agree about what a "stop" is.
 
     THREE KINDS OF CARD, in walking order:
       leg      — what the tourist hears WHILE WALKING into the next dwell stop. Emitted
@@ -360,8 +357,8 @@ def _vignette_stop(
 def _leg_stop(sp, *, narration: str, walk_seconds: int) -> RouteOptionStop:
     """The walk INTO ``sp``, as its own card.
 
-    Product ruling 2026-07-19: "Audio overlaps the walking. It is a part of the tour
-    experience." ``minutes`` is the WALK's duration, not the narration's, so a
+    Narration on a leg plays while the traveller walks, as part of the tour.
+    ``minutes`` is the WALK's duration, not the narration's, so a
     six-minute walk carrying seven seconds of narration shows the gap instead of
     averaging it away. The card borrows the arrival stop's identity and coordinates
     rather than inventing a POI id, so a consumer matching POI ids must filter to

@@ -8,7 +8,7 @@ puffery, AI-vocab, empty transitions, negative parallelism, em-dash spam, unifor
 sentence rhythm) and the good-spoken-narration surface features (second-person,
 sentence-initial look/move prompts, sentence-length variation).
 
-WHAT THIS IS NOT (verified by a hostile review, 2026-07): it is NOT a quality
+WHAT THIS IS NOT: it is NOT a quality
 oracle and NOT a precise comparator. It reads only SURFACE features, so:
   - Content-free but "you"-stuffed, length-varied drivel can score well.
   - A single legitimate factual construction can dominate a short text.
@@ -35,7 +35,7 @@ from rapidfuzz import fuzz
 
 from .generation import split_sentences
 
-# --- lexicons (each traceable to the research; FP-hardened per hostile review) ---
+# --- lexicons (each hardened against the false positives noted beside it) ---
 
 # Significance / moralizing closers — telling the listener what to think. Requires a
 # SIGNIFICANCE noun after "as a/an/the" so plain factual "serves as a museum / the
@@ -110,20 +110,19 @@ _WORD = re.compile(r"[A-Za-z0-9']+")
 # Minimum words for the COMPOSITE scores to be meaningful (short texts saturate).
 _RELIABLE_MIN_WORDS = 150
 
-# --- G2/G3 proxies (craft_score ranking terms only — see docstring on craft_score) ---
+# --- transition and causal-chain proxies (craft_score ranking terms only) ---
 
-# G2 proxy — MOTIVATED TRANSITION openers/connectives: phrasing that states WHY the
-# next idea follows (purpose, consequence, or a stated contrast), not mere sequence.
-# Modelled on the standard's own gold example: "To understand how a hotel like this
-# came to belong here, we have to imagine..." Also covers the cleft-causal "It was
-# here ... that X happened" and contrastive "However,". "However" lives ONLY here
-# (never in _CAUSAL_CHAIN below — see that pattern's note) so the two G2/G3 proxies
-# stay disjoint and a single "However," is never counted twice.
-# The cleft-causal gap is 90 chars, sized to the standard's OWN gold sentence: "It was
-# here, supplying Empress Eugenie and the other ladies of the Napoleonic court, that
-# French haute couture was born" — measured at 74 chars between "here" and "that"
-# (a hostile review found the original 60-char cap did NOT match this gold sentence;
-# pinned by test_cleft_causal_matches_the_gold_sentence).
+# MOTIVATED TRANSITION openers/connectives: phrasing that states WHY the next idea
+# follows (purpose, consequence, or a stated contrast), not mere sequence. It catches
+# a hand-written opener like "To understand how a hotel like this came to belong here,
+# we have to imagine..." Also covers the cleft-causal "It was here ... that X happened"
+# and contrastive "However,". "However" lives ONLY here (never in _CAUSAL_CHAIN below —
+# see that pattern's note) so the two proxies stay disjoint and a single "However," is
+# never counted twice.
+# The cleft-causal gap is 90 chars, wide enough for a hand-written sentence with 74
+# chars between "here" and "that": "It was here, supplying Empress Eugenie and the other
+# ladies of the Napoleonic court, that French haute couture was born" (pinned by
+# test_cleft_causal_matches_the_gold_sentence).
 # KNOWN FALSE NEGATIVE: this is a small, closed phrase list — a causal transition
 # phrased any other way (most of them) scores zero. It is a floor, not a detector.
 _MOTIVATED_TRANSITION = re.compile(
@@ -134,28 +133,26 @@ _MOTIVATED_TRANSITION = re.compile(
     re.IGNORECASE,
 )
 
-# G2 proxy negative — BARE ADJACENCY: a sentence-initial filler that moves to the next
-# fact without saying why ("Also," / "Nearby," / "Similarly,"). NOTE: "Additionally" /
-# "In addition" / "Furthermore" etc. are already covered by _EMPTY_TRANSITION above —
-# not repeated here to avoid double-counting the same tell.
-# KNOWN FALSE POSITIVE (caught during validation): the standard's OWN gold text opens
-# a sentence with "Nearby," used as a legitimate SPATIAL cue ("Nearby, the jewellery
-# and clothing shops..."), not an empty filler — so "Nearby" is deliberately EXCLUDED
+# BARE ADJACENCY (the motivated transition's negative): a sentence-initial filler that
+# moves to the next fact without saying why ("Also," / "Nearby," / "Similarly,").
+# NOTE: "Additionally" / "In addition" / "Furthermore" etc. are already covered by
+# _EMPTY_TRANSITION above — not repeated here to avoid double-counting the same tell.
+# KNOWN FALSE POSITIVE: good hand-written narration opens sentences with "Nearby,"
+# used as a legitimate SPATIAL cue ("Nearby, the jewellery and clothing shops..."),
+# not an empty filler — so "Nearby" is deliberately EXCLUDED
 # here even though it can be a bare-adjacency filler. A lexical proxy cannot tell
 # spatial "nearby" from logical "nearby" apart; only "Also"/"Similarly" are unambiguous
 # enough to keep.
 _BARE_ADJACENCY = re.compile(r"(^|[.!?]\s+)(Also|Similarly|Elsewhere)\b,?", re.IGNORECASE)
 
-# G3 proxy — CAUSAL CHAIN: mid-sentence connectives where one fact is stated as the
-# CAUSE of the next, rather than facts merely listed side by side. Modelled on the
-# gold's "helped make this stretch ... fashionable, drawing an English clientele".
+# CAUSAL CHAIN: mid-sentence connectives where one fact is stated as the CAUSE of the
+# next, rather than facts merely listed side by side. It catches a hand-written chain
+# like "helped make this stretch ... fashionable, drawing an English clientele".
 # NOTE: 'however' is deliberately NOT in this list — it is already scored by
-# _MOTIVATED_TRANSITION's sentence-initial branch above. A hostile review measured
-# what having it in BOTH patterns did: one sentence-initial "However," on a 74-word
-# text moved craft_score by +3.99 (double-counted at 1.5 weight each side, 2.7x the
-# entire percussion term) — a reward-hacking vector, since best-of-N would then favour
-# whichever candidate sprinkles more connectives, the opposite of the goal. Fixed by
-# making the two term sets disjoint (see test_however_is_not_double_counted).
+# _MOTIVATED_TRANSITION's sentence-initial branch above. Scoring it in BOTH patterns
+# would count one connective twice, a reward-hacking vector: best-of-N would then
+# favour whichever candidate sprinkles more connectives, the opposite of the goal. The
+# two term sets stay disjoint (pinned by test_however_is_not_double_counted).
 # KNOWN FALSE POSITIVE: "in turn" occasionally appears in a text that is otherwise
 # still a list (this only samples one connective, not the whole chain).
 # KNOWN FALSE NEGATIVE: a causal chain built from plain "and" + verb tense with no
@@ -271,8 +268,8 @@ def score_narration(text: str) -> NarrationQuality:
 
 
 # --- craft_score: a deterministic "well-written" ranker for best-of-N SELECTION ---
-# Built from the checkable rules in the user's writing-craft skill (sentence-variety
-# percussion, anti-redundancy = "the same point twice is padding", crutch-word control)
+# Built from checkable writing rules (sentence-variety percussion, anti-redundancy =
+# "the same point twice is padding", crutch-word control)
 # plus the AI-tell lint. NOT a quality ORACLE — a RELATIVE ranker among candidate
 # composes of the SAME stop: among fact-safe candidates, pick the highest craft_score so
 # a flat/repetitive/choppy sample loses to a well-written one. This is the reliability
@@ -292,8 +289,7 @@ _STOPWORDS = frozenset(_STOPWORD_STR.split())
 
 def _near_dup_pairs(sents: list[str]) -> int:
     """Sentence pairs that RESTATE each other (rapidfuzz token_set_ratio >= 85) — the
-    'same point twice in new words' redundancy writing-craft calls padding (and the
-    Conciergerie 'screams told twice' wart)."""
+    'same point twice in new words' redundancy that pads a stop."""
     n = 0
     for i in range(len(sents)):
         for j in range(i + 1, len(sents)):
@@ -314,71 +310,50 @@ def craft_score(text: str) -> float:
     burstiness, second-person and look-cues; penalizes redundant restatement, crutch-word
     over-repetition, and the measured AI tells.
 
-    G2/G3 (motivated_transition / causal_chain terms below): a LEXICAL PROXY for the
-    tour-quality standard's semantic checks G2 (motivated transitions) and G3
-    (causal chain not list).
-    This module is already an explicitly lexical/statistical heuristic (see module
-    docstring). See _MOTIVATED_TRANSITION / _BARE_ADJACENCY / _CAUSAL_CHAIN above for
-    the documented false-positive/false-negative shapes of this proxy.
+    The motivated_transition / causal_chain terms below are a LEXICAL PROXY for two
+    semantic checks: does each transition say why the next idea follows, and are facts
+    chained by cause rather than listed. This module is already an explicitly
+    lexical/statistical heuristic (see module docstring). See _MOTIVATED_TRANSITION /
+    _BARE_ADJACENCY / _CAUSAL_CHAIN above for the false-positive/false-negative shapes
+    of this proxy.
 
-    ⚠️ **MEASURED 2026-07-19: THE G2/G3 TERMS ARE CURRENTLY INERT IN PRODUCTION.**
-    Do not cite them as a shipped quality improvement. Measured over 303 real composed
-    stops from ``data/paris/tours/``, comparing this function against its pre-change
-    revision:
+    THESE TERMS ALMOST NEVER CHANGE A RANKING. Do not cite them as a quality
+    improvement. Over 303 real composed stops from ``data/paris/tours/``, adding them
+    changes 0 of 303 scores and flips 0 of 45,753 pairwise winners, while an engineered
+    probe does move (+0.2000, 3 pattern matches). The terms DO separate hand-written
+    reference narration (combined rate 0.781/100w) from machine output
+    (0-0.186/100w), but a best-of-N tie-break compares TWO MACHINE CANDIDATES, and both
+    score ~0 on these patterns. A metric whose discriminating power sits at the
+    hand-written end cannot break ties at the machine end.
 
-        scores changed:        0 / 303   (0.0%)
-        pairwise winner flips: 0 / 45753 (0.00%)
+    To make these terms steer output, either widen the patterns until they register
+    the variation that EXISTS between machine candidates (and re-measure the flip
+    rate), or move the effort to the compose PROMPT (what gets written) or beat
+    SELECTION (what gets seated).
 
-    The instrument was validated — an engineered probe does move (+0.2000, 3 pattern
-    matches) — so this is a real result, not a broken experiment.
+    WHERE THIS FUNCTION IS USED: no production code calls it; only its tests do. It is
+    a RANKER, not a gate: its intended use is a best-of-N tie-break among candidates
+    that already tied on fact-safety, where losing means an equally fact-safe candidate
+    ships instead and no content is deleted.
 
-    WHY, and it is the useful part: the terms genuinely DO separate the owner's gold
-    text (combined G2/G3 rate 0.781/100w) from machine output (0-0.186/100w). But
-    ``craft_score`` is a TIE-BREAKER between TWO MACHINE CANDIDATES (see below), and
-    both score ~0 on these patterns. **A metric whose discriminating power sits at the
-    gold end is useless as a tie-break at the machine end.** Separating gold from
-    machine and re-ranking machine-vs-machine are different jobs; only the second one
-    changes what a tourist hears.
-
-    To make these terms actually steer output, either widen the patterns until they
-    register the variation that EXISTS between machine candidates (re-run the flip-rate
-    measurement to confirm), or abandon the proxy and move the effort to a higher rung:
-    the compose PROMPT (what gets written) or beat SELECTION (what gets seated).
-    This change passed a gold-vs-machine validation
-    and a full adversarial review while being a production no-op, because nobody
-    measured the flip rate, which is the number that decides whether it does anything.
-
-    WHERE THIS FUNCTION IS USED — it is NOT "never a gate" (a hostile review correctly
-    refuted an earlier draft of this claim; corrected here):
-      - compose.py:~1067 — a RANKER only: best-of-N tie-break among candidates that
-        already tied on fact-safety (``_local_penalty``). Losing here means a
-        differently-drafted-but-equally-fact-safe candidate ships instead; no content
-        is deleted. This is craft_score's ONLY surviving caller as of 2026-07-30: the
-        never-shipped author-engine track — including the
-        ``author.py:416`` COMPARATIVE GATE this docstring used to also describe — was
-        deleted, and ``compose.py`` itself is scheduled for deletion, after
-        which this function has zero production callers.
-    BOUNDING THE GATE RISK: the G2/G3 terms below are deliberately kept small relative
-    to the rest of the score so they cannot flip a close comparison on their own. Each of
+    BOUNDING THE TIE-BREAK RISK: the transition and causal-chain terms below are
+    deliberately kept small relative to the rest of the score so they cannot flip a
+    close comparison on their own. Each of
     motivated_rate/causal_chain_rate/bare_adjacency_rate is a per-SENTENCE fraction
     (0..1, same shape as ``look_prompt_rate``, not an unbounded per-100-words rate), and
-    each is weighted at 0.2 — so the combined best-case G2+G3 swing from one sentence
+    each is weighted at 0.2 — so the combined best-case swing from one sentence
     (+0.2 motivated, +0.2 causal, both firing on the same sentence) is at most 0.4,
-    below the 0.5 ceiling of the smallest pre-existing bounded positive term
+    below the 0.5 ceiling of the smallest other bounded positive term
     (``look_prompt_rate``, weight 0.5 x max rate 1.0) and far below percussion (1.5) or
     the redundancy penalty (-1.5/pair). This bounds, but does not eliminate, the risk on
     a near-tie best-of-N comparison: a 0.2-0.4 swing from phrasing alone COULD still be
-    the deciding factor — that is inherent to any composite score used to break ties, and
-    is called out here rather than hidden. (The larger "remainder vs. stitch_fallback"
-    hard-gate risk this section originally bounded belonged to the author-engine track's
-    ``_excise``, since deleted — see the caller note above; only the lower-
-    stakes best-of-N ranker in compose.py remains.) See test_however_is_not_double_counted
-    for the measured before/after swing.
+    the deciding factor — that is inherent to any composite score used to break ties.
+    test_however_is_not_double_counted pins the bound for a single "However,".
     """
     q = score_narration(text)
     sents = [s for s in (p.strip() for p in split_sentences(text)) if s]
     lengths = [len(_words(s)) for s in sents]
-    # writing-craft: a stop needs a sentence under 8 words (percussion) AND one over 20
+    # A stop needs a sentence under 8 words (percussion) AND one over 20
     percussion = 1.0 if (any(x < 8 for x in lengths) and any(x > 20 for x in lengths)) else 0.0
     redundancy = _near_dup_pairs(sents)
     crutch = _max_content_repeat(_words(text))
@@ -388,10 +363,11 @@ def craft_score(text: str) -> float:
                   "negative_parallelism")
     )
     n_sents = len(sents)
-    # G2/G3 rates are a per-SENTENCE fraction (0..1), the same bounded shape as
-    # ``look_prompt_rate`` above — deliberately NOT the unbounded per-100-words rate
-    # used for the AI-tell lint terms, whose rate spikes on short texts. See the
-    # docstring's BOUNDING THE GATE RISK note for why this shape + these weights.
+    # The transition and causal-chain rates are a per-SENTENCE fraction (0..1), the
+    # same bounded shape as ``look_prompt_rate`` above — deliberately NOT the unbounded
+    # per-100-words rate used for the AI-tell lint terms, whose rate spikes on short
+    # texts. See the docstring's BOUNDING THE TIE-BREAK RISK note for why this shape +
+    # these weights.
     motivated_rate = (
         round(sum(1 for s in sents if _MOTIVATED_TRANSITION.search(s)) / n_sents, 3)
         if n_sents else 0.0
@@ -409,9 +385,9 @@ def craft_score(text: str) -> float:
         + 1.2 * min(q.burstiness, 0.6)
         + 0.10 * q.second_person_rate
         + 0.5 * q.look_prompt_rate
-        + 0.2 * motivated_rate  # G2 proxy: stated-reason transitions (bounded, see docstring)
-        + 0.2 * causal_chain_rate  # G3 proxy: facts chained by cause (bounded, see docstring)
-        - 0.2 * bare_adjacency_rate  # G2 proxy: bare-adjacency filler (bounded, see docstring)
+        + 0.2 * motivated_rate  # stated-reason transitions (bounded, see docstring)
+        + 0.2 * causal_chain_rate  # facts chained by cause (bounded, see docstring)
+        - 0.2 * bare_adjacency_rate  # bare-adjacency filler (bounded, see docstring)
         - 1.5 * redundancy  # the same fact restated is the top wart — penalise hard
         - 0.4 * max(0, crutch - 3)  # a content word repeated >3x is a crutch
         - 1.0 * tells

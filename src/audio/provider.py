@@ -18,8 +18,8 @@ That single fact is what makes the workbench honest. The editorial workbench
 builds its provider dropdown from ``GET /audio/providers`` -> ``list_providers()``
 (``frontend/review.html``'s ``loadTtsProviders`` wipes the static markup and
 repopulates it), so anything in this registry is one click away from a human who
-is trying to judge what a TOURIST will hear. A silent WAV offered there is the
-exact lie the never-mock-in-the-workbench rule exists to prevent — and hiding it
+is trying to judge what a TOURIST will hear. The workbench never offers a fake:
+a silent WAV there passes for narration in front of that human — and hiding it
 in the page instead of here would leave ``POST /audio/preview {"provider":
 "mock"}`` answering with canned bytes anyway.
 
@@ -193,21 +193,19 @@ class OpenAITTSProvider:
     Requires OPENAI_API_KEY env var.
     Default voice: "nova". 13 voices are available on the default model.
 
-    WHY NOT ``tts-1-hd`` (measured 2026-08-28, and this is a BUG FIX)
-    ----------------------------------------------------------------
-    The owner reported intermittent 500s — "The server had an error while
-    processing your request. Sorry about that!" — and it looked like an OpenAI
-    outage. It was not. The trigger is the SCRIPT, not the server, and it is
-    reproducible on demand: against a live key, in one minute, ``tts-1-hd``
-    answered 500 on three of four attempts at this repo's own Café de Flore
-    Occupation beat (``src/seed/narratives.py``) and 500 on each of that beat's
-    sentences alone, while the Eiffel Tower beat voiced fine on the same key and
-    network. Ordinary WWII history for a Paris walk — the Occupation, the Nazis,
-    the resistance — and the model reports a SERVER error rather than saying it
-    will not read it, which is exactly why it read as an outage.
+    WHY NOT ``tts-1-hd``
+    --------------------
+    ``tts-1-hd`` answers some ordinary scripts with HTTP 500 — "The server had an
+    error while processing your request" — which reads as an OpenAI outage but is
+    not one. The trigger is the SCRIPT, not the server, and it is reproducible:
+    this repo's own Café de Flore Occupation beat (``src/seed/narratives.py``)
+    fails on most attempts and on each of its sentences alone, while the Eiffel
+    Tower beat voices fine on the same key and network. Ordinary WWII history for
+    a Paris walk — the Occupation, the Nazis, the resistance — and the model
+    reports a SERVER error rather than saying it will not read it.
 
     ``_post_with_retry`` can never fix that: it is not a blip, it is the same
-    wall three times. ``gpt-4o-mini-tts`` voiced the identical paragraph 3/3.
+    wall every time. ``gpt-4o-mini-tts`` voices the identical paragraph.
 
     So the default is the 2025 model, which is also the cheaper one ($12 vs $30
     per million characters) and carries an ``instructions`` field for directing
@@ -310,12 +308,9 @@ class ElevenLabsTTSProvider:
 class FailoverTTSProvider:
     """Speaks through the FIRST provider in ``providers`` that answers.
 
-    A vendor that will not speak is ours to survive, whatever the reason. The
-    2026-08-28 case that prompted this was first read as an OpenAI outage and was
-    not one: ``tts-1-hd`` answered 500 on a PARTICULAR script three times out of
-    four while another script voiced fine on the same key in the same minute (see
-    ``OpenAITTSProvider``). That instance is fixed by the model default; the class
-    is not. A vendor can refuse a legitimate script, and ``_post_with_retry``'s
+    A vendor that will not speak is ours to survive, whatever the reason. A
+    vendor can refuse a legitimate script with what looks like an outage (see
+    ``OpenAITTSProvider``), and ``_post_with_retry``'s
     three attempts over ~1.5 seconds cannot help when all three hit one wall —
     only a DIFFERENT voice can.
 
@@ -365,12 +360,11 @@ class FailoverTTSProvider:
 # /audio/preview will honour, so a fake in here is a fake in front of a human.
 # MockTTSProvider is deliberately absent.
 #
-# There is deliberately NO local model here. A server-side local voice was built
-# and removed on 2026-08-29: the third tier belongs on the SURFACES, not on this
-# server. The failure it must survive is a phone with no signal, and no amount of
-# server-side capacity helps there — the phone and the workbench each speak the
-# stop's text through the OS voice they already have, driven by one shared rule
-# (a stop with narration but no audio file). See render.yaml's TTS_FALLBACK note.
+# There is deliberately NO local model here: the third tier belongs on the
+# SURFACES, not on this server. The failure it must survive is a phone with no
+# signal, and no amount of server-side capacity helps there — the phone and the
+# workbench each speak the stop's text through the OS voice they already have,
+# driven by one shared rule (a stop with narration but no audio file).
 _PROVIDERS: dict[str, type] = {
     "openai": OpenAITTSProvider,
     "elevenlabs": ElevenLabsTTSProvider,
@@ -394,11 +388,10 @@ def get_provider(name: str | None = None) -> TTSProvider:
     """Return an instantiated provider by name, else by the TTS_PROVIDER pin.
 
     FAILS CLOSED. There is deliberately no default provider: an unset
-    TTS_PROVIDER raises instead of quietly selecting something. The old default
-    was ``"mock"``, which is how the workbench server spent months answering
-    every unpinned /audio request with a SILENT WAV that an editor could mistake
-    for real narration (owner-found, 2026-07-31). A misconfigured server must
-    now say so loudly rather than sound fine and be fake.
+    TTS_PROVIDER raises instead of quietly selecting something. A misconfigured
+    server must say so loudly rather than sound fine and be fake: a silent
+    fallback answers an unpinned /audio request with audio an editor can mistake
+    for real narration.
     """
     provider_name = name or os.getenv("TTS_PROVIDER")
     available = ", ".join(sorted(_PROVIDERS))
@@ -406,7 +399,7 @@ def get_provider(name: str | None = None) -> TTSProvider:
         raise ValueError(
             "No TTS provider selected: pass a name or set TTS_PROVIDER. "
             f"Available: {available}. (There is no default — a silent fallback "
-            f"provider is exactly the defect this fail-closed check replaces.)"
+            f"provider would pass for real narration.)"
         )
     cls = _PROVIDERS.get(provider_name)
     if cls is None:

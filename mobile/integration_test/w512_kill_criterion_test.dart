@@ -1,19 +1,21 @@
-// THE KILL CRITERION, measured ON the iOS Simulator, on both of the phone's
-// paths. Two bars: (a) SELECT <= 1 s — from a position update
+// Two speed bars, measured ON the iOS Simulator, on both of the phone's
+// paths: (a) SELECT <= 1 s — from a position update
 // (or the person's own tap) that crosses a trigger to the question on screen /
-// the silent re-time applied and RENDERED, ten samples per persona trace, the
+// the silent re-time applied and RENDERED, ten samples per trace, the
 // worst case reported; (b) LIVE REPLAN <= 8 s — from the phone firing the replan
 // to the new day held and rendered, phone-to-local-API from the simulator.
 //
-// The two persona days are real: generated and composed over the wire by
-// w512_setup.py (FD — Fiona & Dev, Place Dauphine, open 180 min; RO — Rosemary,
-// Orsay round trip, take-it-easy). The traces are scripted position streams
-// through the same LocationProvider door the app uses (a test double), the clock
-// is a fake so a band can be crossed on demand, and the walk screen renders each
-// result. Run:
+// The two days are real: generated and composed over the wire before the run,
+// their trip ids passed in as dart-defines (couple — Place Dauphine, open
+// 180 min; easy — Orsay round trip, take-it-easy). The traces are scripted
+// position streams through the same LocationProvider door the app uses (a test
+// double), the clock is a fake so a band can be crossed on demand, and the walk
+// screen renders each result. Run:
 //   cd mobile && flutter test integration_test/w512_kill_criterion_test.dart \
-//     -d <simulator udid> $(python w512_setup.py)   # the dart-defines
-// Results are printed as lines starting "W512 ".
+//     -d <simulator udid> --dart-define=W512_TOKEN=<token> \
+//     --dart-define=W512_PROFILE=<profile id> \
+//     --dart-define=W512_TRIP_FD=<couple trip id> --dart-define=W512_TRIP_RO=<easy trip id>
+// Results are printed as lines starting "TIMING ".
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -79,12 +81,12 @@ void main() {
 
   testWidgets('SELECT and LIVE REPLAN on the simulator', (tester) async {
     expect(_token.isNotEmpty && _tripFd.isNotEmpty && _tripRo.isNotEmpty, isTrue,
-        reason: 'run with the dart-defines w512_setup.py prints');
+        reason: 'run with the token, profile and trip dart-defines');
     final tripService = TripService();
     final saved = await tripService.fetchSavedTrips(_profile, _token);
     final report = <String>[];
 
-    for (final (name, tripId) in [('FD', _tripFd), ('RO', _tripRo)]) {
+    for (final (name, tripId) in [('couple', _tripFd), ('easy', _tripRo)]) {
       final trip = saved.firstWhere((t) => t.tripId == tripId);
       final session = await tripService.fetchSession(tripId, _token);
       // The day the person walks is the session's current day (its stops carry
@@ -92,7 +94,7 @@ void main() {
       final stops = session.stops;
       expect(stops, isNotEmpty, reason: '$name has a day');
       final dayStart = _secondsOfDay(session.dayStartHhmm);
-      report.add('W512 $name day: ${stops.length} stops, '
+      report.add('TIMING $name day: ${stops.length} stops, '
           '${session.contingencies.length} contingencies, day start '
           '${session.dayStartHhmm}, planned end ${session.plannedEndHhmm}');
 
@@ -188,7 +190,7 @@ void main() {
           n++;
         }
       }
-      // A short day has fewer distinct stimuli than ten (the RO one-stop
+      // A short day has fewer distinct stimuli than ten (the easy one-stop
       // day has one): repeat the person's own tap until ten timings exist.
       var again = 0;
       while (n < 10) {
@@ -198,11 +200,11 @@ void main() {
         });
         n++;
       }
-      report.add('W512 $name SELECT samples: ${selectMs.join(", ")}');
+      report.add('TIMING $name SELECT samples: ${selectMs.join(", ")}');
       final worst = selectMs
           .map((s) => int.parse(RegExp(r'=(\d+)ms').firstMatch(s)!.group(1)!))
           .fold<int>(0, (a, b) => a > b ? a : b);
-      report.add('W512 $name SELECT worst: ${worst}ms (bar 1000ms) '
+      report.add('TIMING $name SELECT worst: ${worst}ms (bar 1000ms) '
           '${worst <= 1000 ? "UNDER" : "OVER"}');
 
       // ---- (b) LIVE REPLAN: three samples, phone-fire to new-day-rendered ---
@@ -238,7 +240,7 @@ void main() {
         await tester.pump();
         sw.stop();
         replanMs.add(sw.elapsedMilliseconds);
-        report.add('W512 $name REPLAN sample ${i + 1}: ${sw.elapsedMilliseconds}ms '
+        report.add('TIMING $name REPLAN sample ${i + 1}: ${sw.elapsedMilliseconds}ms '
             '-> v${next.planVersion}, ${next.stops.length} stops, '
             '${next.contingencies.length} carried entries, notices '
             '${service.clockNotices.length}');
@@ -249,7 +251,7 @@ void main() {
         await Future<void>.delayed(const Duration(seconds: 12));
       }
       final worstReplan = replanMs.fold<int>(0, (a, b) => a > b ? a : b);
-      report.add('W512 $name REPLAN worst: ${worstReplan}ms (bar 8000ms) '
+      report.add('TIMING $name REPLAN worst: ${worstReplan}ms (bar 8000ms) '
           '${worstReplan <= 8000 ? "UNDER" : "OVER"}');
       // Keep the analyzer honest about the trip we fetched.
       expect(trip.tripId, tripId);

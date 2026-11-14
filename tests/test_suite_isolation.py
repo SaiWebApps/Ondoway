@@ -1,4 +1,4 @@
-"""No two test workers ever share a graph (SI-S1).
+"""No two test workers ever share a graph.
 
 The pure track runs eight workers and the database track three, and worker
 numbers fold onto three graphs. A test that opens a driver without carrying
@@ -59,6 +59,6 @@ def test_every_driver_opening_fixture_is_in_the_auto_tag_set():
 
 
 def test_the_known_seeded_driver_files_are_tagged():
-    """The three files that escaped in the 2026-09-19 audit stay tagged."""
+    """The ``seeded_driver`` fixture stays in the auto-tag set."""
     tagged = _tagged_fixture_names()
     assert "seeded_driver" in tagged

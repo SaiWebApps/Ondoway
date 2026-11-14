@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:ondoway/theme/dims.dart';
 import 'package:ondoway/theme/tokens.dart';
 
-/// App shell with the floating cobalt pill nav (wireframe): Explore · Trips ·
-/// Profile — shell branch indices 0, 1, 2. The lens editor is a pushed
+/// App shell with the floating cobalt pill nav: Explore · Trips · Profile —
+/// shell branch indices 0, 1, 2. The lens editor is a pushed
 /// top-level route (reached from Profile / onboarding), not a tab. Feedback
 /// moved to Profile.
 class AppShell extends StatelessWidget {

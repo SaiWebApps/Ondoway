@@ -57,7 +57,7 @@ pytestmark = pytest.mark.timeout(900)
 #: when aiko's day began serving — her compose was refused over one forbidden
 #: corpus walking line, reworded at its source, and the hours work made her
 #: Tuesday real (`test_aikos_rainy_tuesday_serves` is her own pin). The rest are
-#: refused by the placement floors or the C3 audio floor — each named, each pinned by
+#: refused by the placement floors or the audio floor — each named, each pinned by
 #: `test_every_persona_day_either_serves_or_refuses_by_name`. A FLOOR, not an
 #: equality: a day that starts serving is never a failure; a day that stops
 #: serving is.
@@ -109,7 +109,7 @@ def trace_identity(live_neo4j):
             email=TRACE_USER_EMAIL,
         )
         s.run(
-            "MERGE (p:Profile {id: $pid}) SET p.display_name = 'S8.5 persona trace' "
+            "MERGE (p:Profile {id: $pid}) SET p.display_name = 'persona trace' "
             "WITH p MATCH (u:User {id: $uid}) MERGE (u)-[:HAS_PROFILE]->(p)",
             pid=TRACE_PROFILE_ID,
             uid=TRACE_USER_ID,
@@ -246,7 +246,7 @@ def test_no_promise_is_ever_silently_dropped(served):
     the days that currently serve, a protected item can never be at risk.** What
     would prove it is a served day carrying a
     protected item that is NOT the finish — a rest or a pin. Rosemary's bench day
-    is exactly that day, and it cannot serve today (the C3 audio floor). The test
+    is exactly that day, and it cannot serve today (the audio floor). The test
     stays because it asserts the right rule and bites the moment such a day serves.
     """
     checked = 0
@@ -307,9 +307,8 @@ def test_every_drop_rechecks_the_longest_leg_cap(served):
     had) plus the base ceiling, then serves whichever day has the shorter
     longest leg. It is a preference with honest fallbacks — a retry that
     refuses, or improves nothing, ships the lesser evil — so this test is the
-    behavioural bar it must clear on every served day, and QA's undo proved
-    it discriminating (the helper stubbed to a pass-through goes RED here on
-    paulo's day).
+    behavioural bar it must clear on every served day, and it discriminates:
+    the helper stubbed to a pass-through goes RED here on paulo's day.
     """
     drops_checked = 0
     days_with_legs = 0
