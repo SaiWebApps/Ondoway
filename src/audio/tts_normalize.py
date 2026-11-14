@@ -1,4 +1,4 @@
-"""Pronunciation normalization for TTS-consumed text (backlog #23).
+"""Pronunciation normalization for TTS-consumed text.
 
 Neural TTS engines voice some corpus tokens as letters/symbols rather than the
 words a listener expects: ``Louis XIV`` becomes "Louis ex-eye-vee" instead of

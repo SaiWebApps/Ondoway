@@ -3,9 +3,8 @@
 EXTENDS, by the rule that the third manual copy becomes the template. This same
 block was performed by hand three times before it became a script:
 
-  1. the hand-sync `.claude/commands/poi-visit-duration.md` mandates under
-     "MANDATORY — SYNC THE EXPORT FILES" ("the step that gets skipped, and skipping
-     it makes the whole pass invisible");
+  1. the mandatory hand-sync after the visit-duration pass, the step that gets
+     skipped, and skipping it makes the whole pass invisible;
   2. the scratch script written to push the opening-hours trio and
      ``place_category`` into the 48 Paris chunks (1,384 fields), deleted with its
      spec folder;

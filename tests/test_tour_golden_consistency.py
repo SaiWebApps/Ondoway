@@ -164,9 +164,9 @@ def goldens() -> dict[str, dict]:
 # therefore weakens those floors as a FRACTION with nobody deciding to: a hostile review
 # proved that resolving Ile's 19 queued tags onto beats the engine already emits (there
 # are 23 such extras) passes every invariant here, lifts overlap toward 41/50, and leaves
-# the floor at 15 — restoring the very silent drift decision D6 exists to kill. Nothing in
-# this module checks that a resolution is the SEMANTICALLY right beat, only that it exists
-# in the corpus, so growth is cheap and unpoliced.
+# the floor at 15 — restoring the very silent drift these pinned sizes exist to kill.
+# Nothing in this module checks that a resolution is the SEMANTICALLY right beat, only
+# that it exists in the corpus, so growth is cheap and unpoliced.
 #
 # So the sizes are pinned. Growing a pinned set is allowed, but not silently: it turns
 # this RED and the same change must re-derive the overlap floor from a fresh measurement.
@@ -178,7 +178,7 @@ def test_pinned_set_growth_forces_the_overlap_floor_to_be_rederived():
 
     See PINNED_SET_SIZES. If you resolved more tags: good — update this count AND
     re-derive OVERLAP_MIN_HITS in the two golden modules from a fresh `make
-    golden-probe`, in the same commit, per decision D6.
+    golden-probe`, in the same commit.
     """
     actual = {}
     for name in GOLDEN_DOCUMENTS:

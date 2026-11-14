@@ -3,7 +3,7 @@
 // w61_trips.py under the three-minute tight, closes, threads, registers and
 // full tellings).
 //
-// The moments, per the rulings that re-planned this demo:
+// The moments:
 //  1. THE TAP IS THE SEAM: mid-piece at minute 14 they tap
 //     [Head back now] — the close and the way home go ON SCREEN at once, the
 //     sentence finishes, the stretch's AUTHORED close is heard, then nothing.

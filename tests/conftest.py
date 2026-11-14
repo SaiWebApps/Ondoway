@@ -11,8 +11,7 @@ Hardening (2026-04-29): _wipe() hard-asserts the connected URI's
 port belongs to _TEST_PORT_ALLOWLIST before running DETACH DELETE. Stops a
 recurrence of the incident where load_dotenv(override=True) inside
 a test mutated NEO4J_URI to the dev port and the conftest fixture wiped
-the production corpus. See data/paris/.pipeline-state.json →
-backlog.conftest_test_isolation for context.
+the production corpus.
 """
 
 from __future__ import annotations

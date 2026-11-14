@@ -564,8 +564,8 @@ def test_preflight_runs_on_the_system_interpreter():
 
 
 # The reusable sets are the declaration for dozens of targets at once. Gutting
-# `PRE_FULL_SUITE := uv` passed every guard, including the claim in CLAUDE.md
-# that `make test` checks the whole union up front.
+# `PRE_FULL_SUITE := uv` passed every guard, although `make test` must check the
+# whole union up front.
 REQUIRED_IN_SETS = {
     "PRE_PY": {"uv", "python-deps"},
     "PRE_LOCAL_GRAPH": {"uv", "python-deps", "db-dev", "dev-data"},
@@ -804,9 +804,9 @@ def test_a_worktree_refuses_to_run_without_a_lane(guard_probe):
 
 
 def test_the_definitive_bar_refuses_to_run_from_a_worktree(guard_probe):
-    """team.md's multi-track rule, enforced rather than remembered: only the
-    main checkout runs `make test`/`make audit` — from a worktree the bar
-    would run the canonical shards against the canonical graphs."""
+    """Only the main checkout runs `make test`/`make audit`, enforced rather
+    than remembered — from a worktree the bar would run the canonical shards
+    against the canonical graphs."""
     _main, worktree = guard_probe
     (worktree / ".ondoway-lane").write_text("4\n", encoding="utf-8")
     for goal in ("test", "audit"):
@@ -989,7 +989,7 @@ def test_a_repair_that_claims_success_without_fixing_anything_is_caught(isolated
     assert "still broken" in output, "the probe's real verdict was not shown"
 
 
-# ── 5. false greens a second panel found ────────────────────────────────────
+# ── 5. false greens ─────────────────────────────────────────────────────────
 # All three were the SAME family as the bug this module exists to kill, just
 # relocated: an unanswerable query read as "nothing there".
 

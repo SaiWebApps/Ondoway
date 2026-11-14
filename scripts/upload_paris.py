@@ -176,8 +176,8 @@ def _upload_pois(session, pois: list[dict], city_name: str, bbox: tuple) -> dict
             # Visit capacity: how long a visitor usefully spends AT the place.
             # `typical_duration_min` is MINUTES outside, `visit_seconds_inside`
             # is SECONDS inside (None where there is no interior), `visit_basis`
-            # is the sentence that argues for both. Produced by the capacity pass
-            # (.claude/commands/poi-visit-duration.md).
+            # is the sentence that argues for both. Produced by the visit-duration
+            # capacity pass.
             #
             # NO DEFAULTS HERE, deliberately, and note this differs from
             # POICreate.typical_duration_min = 30 in src/api/models/nodes.py.
@@ -450,8 +450,8 @@ def _backfill_beat_texts(session, beats: list[dict], city_name: str) -> dict[str
     clear audio for exactly the word changes, and move a re-homed beat's link.
 
     A beat whose graph text differs from the repo's is a beat whose recorded
-    audio says the OLD words — serving that file under the new text is the
-    stale-line class S1 exists to kill — so ``audio_url`` is cleared for the
+    audio says the OLD words — serving that file under the new text plays
+    words the beat no longer says — so ``audio_url`` is cleared for the
     word-changed beats alone; a placement-only change keeps its paid audio.
     The link pass below touches ONLY beats whose graph home differs from the
     repo's ``poi_name`` (its WHERE), and refuses a ``poi_name`` matching more

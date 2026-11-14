@@ -596,7 +596,7 @@ def test_threads_ride_the_wire_as_thread_lines_keyed_by_the_predecessors_name():
 
 def test_the_tight_telling_is_about_three_minutes_at_the_one_emission_choke_point():
     """TIGHT = point-first, about three minutes (~450 words). The measured big stops of
-    a family's day ran 4.5 and 4.9 minutes, past their own four. The ceiling is the ONE
+    a couple's day ran 4.5 and 4.9 minutes, past their own four. The ceiling is the ONE
     emission choke point (C9 governor v4), so the value moves THERE and pricing
     moves with it (a stop is priced at what it will voice — two truths would drift).
     The density dial keeps its shape: "less" halves (90 s = the never-demote floor),

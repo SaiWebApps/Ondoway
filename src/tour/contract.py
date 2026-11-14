@@ -257,31 +257,29 @@ class TourInput(BaseModel):
         return self
 
 
-# THE PRESET TABLE, TRANSCRIBED — the one place the
-# preset→axes mapping lives. Numbers with no design pin carry their basis here:
-#  - family pace 2.0: "~half, variable".
+# THE PRESET TABLE: the one place the preset->axes mapping lives. The basis of
+# each number:
+#  - family pace 2.0: a family walks at about half speed, and that speed varies.
 #  - rest cadence 20: a family's toilet stop lands after ~19 accumulated walking
-#    minutes; the table gives the cadence to take-it-easy too (benches for a
-#    visitor who needs frequent rests).
-#  - escape radius 800 m: the design's failure case is "a meltdown 25 minutes
-#    from the exit"; 800 m is ~16 min back at the corpus pace, inside it with
+#    minutes; take-it-easy gets the same cadence (benches for a visitor who
+#    needs frequent rests).
+#  - escape radius 800 m: a family must never be 25 minutes from the exit when a
+#    child melts down; 800 m is ~16 min back at the corpus pace, inside that with
 #    margin, and matches a real family day (never further than ~700 m from
 #    Place des Vosges).
-#  - take-it-easy pace 1.2 / with-luggage 1.25: the table says "slow" for
-#    both with no number anywhere. take-it-easy was FIRST set to 1.5 (scaled
-#    against family's pinned 2.0, "half") and CORRECTED to 1.2 after a
+#  - take-it-easy pace 1.2 / with-luggage 1.25: both walk slowly, and no
+#    measured number exists for either. take-it-easy was FIRST set to 1.5
+#    (scaled against family's 2.0, "half") and CORRECTED to 1.2 after a
 #    review: three independent reviewers caught the
 #    same real defect on the real corpus — 1.5x pace combined with the
-#    locked 12-minute leg cap made every nearby leg exceed the cap on the
+#    then 12-minute leg cap made every nearby leg exceed the cap on the
 #    FIRST hop, collapsing the day to one stop and 30 of 180 minutes. 1.2x
 #    was verified empirically on the same real request (Place des Vosges,
 #    180 min): four real stops including a seated rest bench, longest leg 9
-#    min, comfortably under the cap. The 12-minute cap
-#    itself is a measured visitor's own number and stays untouched; only the
-#    interpolated pace moved.
-#  - the table's family "short" longest-walk cell and with-luggage's "medium"
-#    cell carry NO number anywhere — deliberately not wired rather than
-#    invented.
+#    min, comfortably under the cap. The leg cap is a measured visitor's own
+#    number; only the interpolated pace moved.
+#  - family and with-luggage set no leg cap: no measured longest-walk number
+#    exists for either, so none is invented.
 _PARTY_AXES: dict[str, dict[str, object]] = {
     # No ceiling for solo: a party-preset stop ceiling under 65 min cuts the
     # heart out of a solo history walker's day.
@@ -299,7 +297,7 @@ _PARTY_AXES: dict[str, dict[str, object]] = {
     # A mobility preset never sets a per-stop ceiling: a step-free day may hold one long sit.
     "take_it_easy": {
         "walking_pace": 1.2,
-        # The table's one numbered leg cap. 12 produced a ONE-STOP day on
+        # The only preset with a leg cap. 12 produced a ONE-STOP day on
         # a step-free visitor's own ground; her doctor's measured number is 13,
         # and the 13-minute day (Orangerie -> bench -> Orsay) is the one every
         # demo uses. The owner ruled on 2026-08-19: raise to 13.

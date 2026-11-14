@@ -748,7 +748,7 @@ def test_skipping_an_uncategorised_stop_spends_no_category():
     place_category SPENT (a visitor who has had enough of one kind of place),
     but most of the corpus carries the default category 'other', so skipping ONE
     uncategorised stop marked 'other' spent and the tail replan seated NOTHING —
-    measured on a family day: every skip entry after the first shipped stop_ids []
+    measured on a couple's day: every skip entry after the first shipped stop_ids []
     while its own screen text promised "Next: Conciergerie". The absence of a
     category is not a category: 'other' (and None) is never spent. A REAL
     category still spends. UNDO: spend 'other' again -> RED."""
@@ -798,7 +798,7 @@ def test_a_keep_constrained_tail_spends_its_whole_walking_budget():
     open one-way day the greedy RESERVES a quarter of the walking budget for the
     endpoint pull — but a replan tail with `keep_to_poi_ids` set can never pull
     (every non-keep candidate is filtered before the pull ranks them), so the
-    reserve starved tails for nothing. Measured on a family day: the skip-of-BHV
+    reserve starved tails for nothing. Measured on a couple's day: the skip-of-BHV
     tail (one keep, Place des Vosges, a 1291 s walk) seated NOTHING below a
     72-minute remainder because 0.75 x its walking budget fell 157 s short —
     while the entry's own screen text promised "Next: Place des Vosges". A

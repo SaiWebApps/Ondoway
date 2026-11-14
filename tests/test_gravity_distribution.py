@@ -10,10 +10,9 @@ This catches two failure modes that bit us:
      (was: T5 at 3%, T3 ~45%) — guarded by `test_tier_distribution_healthy_shape`.
 
 WHY SHAPE, NOT BANDS (changed 2026-06-16): the original test froze five
-per-tier percentage bands. But `.claude/commands/poi-gravity.md` is explicit
-that those percentages are "guidelines, not hard rules" whose purpose is to
-avoid mid-tier clustering and starved top tiers — NOT to mandate an exact
-curve. Rigid bands gave false positives on legitimately bottom-heavy corpora
+per-tier percentage bands. But those percentages are guidelines, not hard
+rules: their purpose is to avoid mid-tier clustering and starved top tiers —
+NOT to mandate an exact curve. Rigid bands gave false positives on legitimately bottom-heavy corpora
 (e.g. ingesting a "walks" guidebook full of real tier-1/2 local spots pushed
 T1/T2 a few points over the cap even though nothing was clustered). Worse, the
 "fix" — a forced `--rescore` — reshapes honest tiers to hit quotas, making them
@@ -210,7 +209,8 @@ def test_distribution_guard_catches_historical_bug() -> None:
     assert any("T5 anchors" in f for f in bug_fail), "must flag starved T5"
     assert any("T3 clustering" in f for f in bug_fail), "must flag T3 clustering"
 
-    # Skill's ideal pyramid (midpoints of poi-gravity.md targets): peaks at T3.
+    # Skill's ideal pyramid, inside the scoring pass's target bands (T5 ~10-15%,
+    # T4 ~15-20%, T3 ~25-30%, T2 ~20-25%, T1 ~15-20%): peaks at T3.
     ideal = Counter({5: 25, 4: 35, 3: 55, 2: 45, 1: 40})  # 12.5/17.5/27.5/22.5/20%
     assert not _distribution_failures(ideal, n), "skill's ideal pyramid must pass"
 

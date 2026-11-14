@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 _WIKI_API = api_url("en.wikipedia.org")
 
 # A resolved article's own coordinates must sit within this of the POI, or the
-# title is treated as a wrong (name-ambiguous) match and dropped. ~500 m per spec.
+# title is treated as a wrong (name-ambiguous) match and dropped.
 _COORD_TOLERANCE_M = 500.0
 
 # Below this live-coverage floor, ``build_live_extracts`` flags the run as thin so

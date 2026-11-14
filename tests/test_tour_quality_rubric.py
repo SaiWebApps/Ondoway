@@ -2091,7 +2091,7 @@ def _c13_stop(
 
 
 def test_c13_point_first_warns_when_the_story_starts_late_or_the_primary_beat_lands_late():
-    """A stop that opens with a 60-word recap (a measured family day's stop 4: 44 s
+    """A stop that opens with a 60-word recap (a measured couple's day, stop 4: 44 s
     of "think back over where we've walked") WARNs on its preamble; a stop
     whose primary beat is first cited 150 words into the story WARNs on its point; a
     stop that places the listener in one sentence and lands its primary beat inside the

@@ -1,4 +1,4 @@
-"""Route-level claim-repetition suppression (backlog #22).
+"""Route-level claim-repetition suppression.
 
 A route can seat several beats — often from DIFFERENT source books — that restate
 the same historical fact. The canonical case: the Île de la Cité seats three
@@ -27,7 +27,7 @@ by an EARLIER, DIFFERENT beat anywhere in the route. It is deliberately surgical
 - It only touches ``source_type == "beat"`` sentences; glue, synthesized openers
   and reflections are never removed.
 
-Reported-audio honesty (#8): ``_sum_audio`` now scales each cited beat by its
+Reported-audio honesty: ``_sum_audio`` now scales each cited beat by its
 SURVIVING-sentence fraction, so a trimmed beat reports only what it voiced (a
 non-deduped beat keeps all sentences -> no change). ``verify._visited_claims``
 keys off the whole beat's ``key_claims``, but that is NOT a dedup leftover: this
@@ -157,7 +157,7 @@ def suppress_repeated_claims(
     # Vignette (walk-past) beats are voiced as real beat sentences too, so they must
     # participate in cross-beat dedup — a walk-past one-liner that merely restates an
     # earlier stop's claim would otherwise be voiced verbatim (the tourist hears the
-    # fact twice), exactly the repetition #22 exists to suppress.
+    # fact twice), exactly the cross-beat repetition this pass suppresses.
     vignette_ids = {b.id for beats in beat_sequence.vignette_beats.values() for b in beats}
     for beats in beat_sequence.vignette_beats.values():
         for b in beats:

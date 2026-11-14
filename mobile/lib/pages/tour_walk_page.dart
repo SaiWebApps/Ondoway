@@ -229,7 +229,7 @@ class _TourWalkPageState extends State<TourWalkPage> {
                               ),
                             ),
                           ),
-                          // R4: the day-long switch to a screen-only voice, and
+                          // The day-long switch to a screen-only voice, and
                           // the one touch that restores it.
                           if (engine.screenOnly)
                             Align(
@@ -867,8 +867,8 @@ class _WalkExitButton extends StatelessWidget {
 }
 
 /// The real map behind the guide: a basic Apple Map centered on the current
-/// stop, with a pin per stop. Dark map styling + the route polyline +
-/// camera-follow are tracked in live-guide-backlog.md (the MapView seam).
+/// stop, with a pin per stop. Dark map styling, the route polyline and
+/// camera-follow are not built yet (the MapView seam).
 class _MapBackdrop extends StatelessWidget {
   final List<ItineraryStop> stops;
   final int currentIndex;

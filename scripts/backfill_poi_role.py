@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Backfill poi_role for the POIs that have a null role in poi-raw.json.
 
-The roles were re-classified from each POI's own source text/beats (the pipeline
-rule now in .claude/commands/unified-beat-extract.md), independently reviewed, reconciled, and
+The roles were re-classified from each POI's own source text/beats, independently
+reviewed, reconciled, and
 recorded in a committed artifact (data/paris/poi_role_backfill.json). This script
 APPLIES that reviewed artifact to the canonical poi-raw.json (and, with --neo4j,
 to the dev graph). It never invents a role and never touches a POI that already

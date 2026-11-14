@@ -1,4 +1,4 @@
-"""Unit tests for route-level claim-repetition suppression (backlog #22).
+"""Unit tests for route-level claim-repetition suppression.
 
 Fixtures mirror the live Île de la Cité case: three beats from three source books
 each narrate the Parisii founding; a fourth (the Nanterre debate) merely mentions
@@ -324,7 +324,7 @@ def test_date_canonicalization_unifies_bc_forms() -> None:
 
 
 def test_vignette_pure_restatement_is_dropped():
-    """Audit-found #22 gap: a walk-past VIGNETTE one-liner that only restates an
+    """A walk-past VIGNETTE one-liner that only restates an
     earlier dwell beat's claim must be dropped (not voiced verbatim). Vignettes are
     additive annotations, so a pure repeat drops whole — exempt from the
     never-empty-a-beat guard that (correctly) protects seated dwell beats."""

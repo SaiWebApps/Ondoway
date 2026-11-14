@@ -98,8 +98,7 @@ def _fail(city: str, headline: str, offenders: list[str], remedy: str) -> None:
 
 
 REMEDY = (
-    "Run the capacity pass: `make poi-visit-duration SLUG=<city>` "
-    "(see .claude/commands/poi-visit-duration.md)."
+    "Run the capacity pass: `make poi-visit-duration SLUG=<city>`."
 )
 
 

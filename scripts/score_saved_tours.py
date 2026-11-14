@@ -63,7 +63,7 @@ from src.tour.routing import planned_total_seconds
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 #: c987848 rewrote _sum_audio to measure spoken words. Before this, total_audio_seconds
-#: measured seating volume, not audio. See memory `audio-clock-was-broken`.
+#: measured seating volume, not audio.
 AUDIO_CLOCK_FIXED = datetime.fromisoformat("2026-07-19T00:00:00+00:00")
 
 #: Checks that CANNOT fire given the inputs above. Reported as NOT RUN, never as PASS.

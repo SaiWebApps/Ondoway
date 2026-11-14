@@ -1,4 +1,4 @@
-"""Unit tests for TTS pronunciation normalization (backlog #23).
+"""Unit tests for TTS pronunciation normalization.
 
 The normalizer runs ONLY on TTS-consumed text (inside the real providers'
 ``generate``), never on the stored corpus. It rewrites tokens a neural TTS voices

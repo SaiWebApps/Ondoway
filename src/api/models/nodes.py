@@ -297,7 +297,7 @@ class NarrativeBeatCreate(BaseModel):
     @classmethod
     def subject_tag_shape(cls, v: str) -> str:
         if v == "":
-            return v  # optional until Scope 4 re-extraction; empty allowed on legacy beats
+            return v  # optional: empty allowed on legacy beats
         if not 1 <= len(v) <= 32:
             raise ValueError("subject_tag must be between 1 and 32 characters")
         words = v.split()

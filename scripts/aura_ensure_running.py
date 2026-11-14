@@ -3,7 +3,7 @@
 The free prod Aura auto-pauses after ~3 days; while paused its DNS is withdrawn
 (connections fail with NXDOMAIN). Every `-cloud` make target runs this FIRST so a
 paused instance is resumed and awaited instead of being mistaken for a dead one
-(the 2026-07-12 incident — see feedback-paused-aura-is-not-dead). Unlike the
+(the 2026-07-12 incident). Unlike the
 request-path ResumeCoordinator (fire-and-forget), a deploy MUST wait, so this
 polls to completion.
 
@@ -20,8 +20,8 @@ so it was neither accepted nor terminal — just unrecognised, and fatal.
 
 So the status is consulted for exactly one thing: deciding whether to fire a
 resume and whether it is still worth waiting. What ENDS the wait is a real
-read-only query coming back, which is the same evidence `healthz` reports and
-what `.claude/rules/testing.md` requires of any probe.
+read-only query coming back, which is the same evidence `healthz` reports. A
+probe trusts only evidence it observed itself, never another system's report.
 
 Safe NO-OP when AURA_CLIENT_ID/SECRET are unset (local dev / CI / a self-hosted
 graph): prints a note and exits 0, so it never blocks a non-Aura target.

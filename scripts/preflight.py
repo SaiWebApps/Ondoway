@@ -1031,8 +1031,8 @@ def _repair_port(
         # Ours is not the same as idle. A server that still answers is a server
         # somebody is using -- a sibling session's `make test-workbench` on :8001,
         # or a workbench the owner has open. Killing it because the command line
-        # matches is the incident family CLAUDE.md records (a live container
-        # destroyed by a checkout that merely had the right to). Only a server
+        # matches would stop a live server that this checkout merely has the
+        # right to stop. Only a server
         # that has stopped answering is stale enough to stop.
         if _responding(port):
             return Probe(
@@ -1346,7 +1346,7 @@ def _build_registry() -> dict:
             summary="Render CLI",
             probe=_probe_render_cli,
             repair=_repair_render_cli,
-            instruction="brew install render        -- or see https://render.com/docs/cli",
+            instruction="brew install render",
         )
     )
     add(

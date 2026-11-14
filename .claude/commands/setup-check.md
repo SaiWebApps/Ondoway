@@ -61,5 +61,5 @@ suite. Both additionally need `render-key`.
 ## Rules
 
 - Never suggest `pip install`, a bare `pytest`, or any other direct tool invocation.
-  Every command goes through a Make target (see CLAUDE.md). If no target exists, add one.
+  Every command goes through a Make target. If no target exists, add one.
 - Never tell the user to put a secret in `.env`. Nothing in the Make flow reads it.

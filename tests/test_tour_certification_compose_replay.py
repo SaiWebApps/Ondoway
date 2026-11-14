@@ -250,8 +250,8 @@ def test_a_corpus_leg_line_untrue_where_it_plays_is_dropped_not_the_day() -> Non
     """The rule "drop a failing line immediately — silence over wrongness,
     never refuse the day" reaches FIRST compose, for the one
     class where a drop is safe: a walk-concurrent CORPUS unit (a vignette
-    one-liner, a transit-beat line — self-contained, LEARNINGS 23's safe
-    class). The measured shape: the Verrerie hook's "lived on this street"
+    one-liner, a transit-beat line — self-contained, so dropping it orphans
+    no later sentence). The measured shape: the Verrerie hook's "lived on this street"
     played on a leg, the floor flagged `arrived_word_on_leg:this`, and the
     whole five-stop day refused with a retry that reproduces identically. Now
     the line is left unsaid, the day serves, and the degradations channel says
@@ -285,7 +285,8 @@ def test_a_corpus_leg_line_untrue_where_it_plays_is_dropped_not_the_day() -> Non
 def test_a_true_leg_line_is_untouched_and_a_stop_piece_fault_still_refuses() -> None:
     """The valve's edges: a leg one-liner with no arrived words ships as
     written, and a placement fault inside a STOP piece (continuous corpus
-    prose — LEARNINGS 23's unsafe class) still refuses the compose."""
+    prose, where a dropped sentence orphans the ones after it) still refuses
+    the compose."""
     from src.tour.compose_gate import ComposeVerificationError
 
     stitched, route, beats, request = _leg_line_source(

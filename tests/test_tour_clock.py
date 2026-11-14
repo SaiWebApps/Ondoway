@@ -850,8 +850,8 @@ def test_a_door_shut_at_the_stops_own_arrival_prices_the_stop_outside_only():
     whole window (09:30-11:10) overlaps that, so the pool rule keeps the full
     interior — but the walk reaches the door ~10:00, fifteen minutes after it
     shut. Pricing the interior and licensing "step inside" there is the exact
-    fault the roadmap names: the plan knows the door is shut; the voice says
-    go inside. The arrival-window check prices the stop through the same
+    fault this guards: the plan knows the door is shut; the voice says go
+    inside. The arrival-window check prices the stop through the same
     exterior collapse a whole-window closure uses, at the same one site."""
     bridge, cathedral, route = _dated_pont_neuf_run("06:00-09:45")
 

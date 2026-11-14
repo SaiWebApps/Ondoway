@@ -1235,7 +1235,7 @@ def compose_trip(
         # route past the anchor cap) and a provider payload it cannot parse by
         # raising ValueError. On THIS path that is still a refusal, not a server
         # fault: the trip is untouched either way, and a 500 would strand the phone
-        # instead of letting it offer another flavour (D2). Logged in full, because
+        # instead of letting it offer another flavour. Logged in full, because
         # the wire deliberately keeps the stable non-leaking shape below.
         logging.getLogger("ondoway.api").exception(
             "Per-stop authoring could not run for trip=%s route=%s stops=%s",

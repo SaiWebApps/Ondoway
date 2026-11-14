@@ -222,8 +222,8 @@ MIN_DWELL_AUDIO_SECONDS: int = 90
 # WORD cap were written independently and silently drifted: at 420 s, and with
 # routing.beat_spoken_seconds converting at 150 wpm, this permitted 420*150/60 = 1050
 # words in a single stop -- 40% above the published 750-word cap
-# (src/tour/quality_rubric.py GORGE_MAX_WORDS_PER_STOP, sourced in
-# fixtures/tour-quality-standard/01-standard.md from museum-sector practice).
+# (src/tour/quality_rubric.py GORGE_MAX_WORDS_PER_STOP, set from museum-sector
+# practice).
 # Notre-Dame's MEASURED 1038-word stop was therefore the ceiling WORKING AS CONFIGURED,
 # not a cap failure. Tied to the word cap so the two can no longer drift:
 #     750 words / 150 wpm = 5.0 min = 300 s
@@ -234,11 +234,11 @@ MIN_DWELL_AUDIO_SECONDS: int = 90
 # "can no longer drift" above is therefore false as written. Re-derived against 850 it
 # would be 850/150*60 - 30 = 310 s.
 #
-# LEFT AT 270 DELIBERATELY, PENDING AN OWNER DECISION (2026-07-27) — and the owner's
-# panel answered (2026-08-19): "TIGHT = point-first,
-# about three minutes (~450 words)". The measured big stops on a couple's day ran 4.5 and 4.9 min at
-# this 270 — past the panel's own four. 180 s at 150 wpm = 450 beat words, the panel's
-# number; the ~75-word glue reserve rides on top as before (a rendered stop ~525 words,
+# LEFT AT 270 DELIBERATELY, PENDING AN OWNER DECISION (2026-07-27), then decided
+# (2026-08-19): a tight stop is point-first, about three minutes (~450 words), and
+# never past four. The measured big stops on a couple's day ran 4.5 and 4.9 min at
+# this 270. 180 s at 150 wpm = 450 beat words; the ~75-word glue reserve rides on
+# top as before (a rendered stop ~525 words,
 # ~3.5 min spoken). The ceiling is ALSO the price of a stop's dwell in the budget
 # (planned_capped_audio_seconds), so tighter tellings seat more stops per day — one
 # constant, one truth; a compose-time-only trim would fork priced from voiced, the
@@ -347,7 +347,7 @@ DEMOTION_PROXIMITY_M: float = 100.0
 # walk treats Square du Vert-Galant (tier 3, ~80 m from Pont Neuf) as
 # its own pause stop; merging tier-3 pauses into nearby tier-5 anchors
 # would drop deliberate Pariswalks-style stops. Pavillon du Roi /
-# Hôtel de Coulanges-style cases cited by the spec are all anchor-tier
+# Hôtel de Coulanges-style co-located cases are all anchor-tier
 # POIs, so this guard preserves the headline behaviour while
 # protecting empirical pause-stop semantics.
 DEMOTION_MIN_TIER: int = 4
@@ -411,7 +411,7 @@ _NAME_TOKEN_MIN_LEN: int = 4
 # matters more than route efficiency at that point.
 FILL_PASS_DWELL_FLOOR_FRAC: float = 0.8
 FILL_PASS_WALK_BUDGET_FRAC: float = 0.95
-# #21 under-fill rescue: while below the stop floor, admit a further stop whose
+# Under-fill rescue: while below the stop floor, admit a further stop whose
 # MARGINAL walk cost is proportional to the time it EARNS the visitor —
 # walk-seconds per standing-still second. A rich nearby stop the greedy couldn't
 # fit is worth the detour; a far, thin stop is a walk-slog (25 min walking for 3
@@ -501,8 +501,8 @@ GREEN_THIN_DELIVERY_FRAC: float = 0.5
 # exceeds GOVERNOR_DOMINATION_FACTOR x the MEAN of the OTHER non-exempt stops (so
 # it is drowning its peers, e.g. the UC5 'Ile de la Cite' encyclopedia-dump; the
 # mean-of-others gate means two co-dominators can't shield each other). Balanced
-# tours (every stop near its fair share) are NEVER capped — the panel proved an
-# always-on share cap over-trims them. EXEMPT (may dominate): the marquee (the
+# tours (every stop near its fair share) are NEVER capped — an always-on share
+# cap over-trims them. EXEMPT (may dominate): the marquee (the
 # highest-tier delivered stop, ties -> highest-audio) and the fixed destination /
 # pulled endpoint. Importance-based exemption fixes the v3 bug where the greedy's
 # nearest proximity-seed (often a thin courtyard) held the exemption while the
@@ -1698,7 +1698,7 @@ def _domination_caps(is_exempt: list[bool], audio: list[int]) -> list[int | None
     # Cap the largest current dominator to the ceiling, then re-evaluate. A
     # "dominator" is over the ⅓ ceiling AND exceeds the factor x the MEAN of the
     # OTHER non-exempt stops — compared to the peers it is drowning, not to the
-    # next-largest (so two co-dominators can't shield each other, the panel gap).
+    # next-largest (so two co-dominators can't shield each other).
     # Terminates: each cap strictly lowers the (integer) delivered total, which is
     # bounded below by 0, so the loop runs a finite number of passes.
     while True:
@@ -3666,7 +3666,7 @@ def _select_route_once(
             set(held_ids) | ({pulled_endpoint_id} if pulled_endpoint_id is not None else set())
         )
         or None,
-        # Queues are BUDGETED, never credited (the panel's convergent ruling):
+        # Queues are BUDGETED, never credited:
         # the rank's fit term reads elapsed minus these seconds.
         queue_visit=lambda cand, hour: shape_visit(cand, hour).queue_seconds,
         report_overrun=replan is not None and replan.floor_zero,
@@ -4655,7 +4655,7 @@ def _apply_fill_pass(
     routes) is preserved by clamping insertion idx to interior positions
     when the route already has ≥2 stops on a one-way path.
 
-    #21 UNDER-FILL RESCUE: in a thin area the greedy can seat only one stop
+    UNDER-FILL RESCUE: in a thin area the greedy can seat only one stop
     because a second stop's round-trip detour busts ``walk_budget`` — even
     though the tour massively under-fills the visitor's TIME (e.g. a 60-min Latin
     Quarter loop seating only Sorbonne: 6 min audio, 15 min walk). While the route
@@ -4767,7 +4767,7 @@ def _apply_fill_pass(
             consumed_walk += extra
             consumed_dwell += stop_cost_fn(cand, exempt=False)
 
-    # Phase 2 — #21 under-fill rescue: ONLY if Phase 1 could not reach the stop
+    # Phase 2 — under-fill rescue: ONLY if Phase 1 could not reach the stop
     # floor (a thin area where every next stop's detour busts walk_cap). Lift to
     # RESCUE_STOP_FLOOR by seating a stop whose MARGINAL walk is proportional to
     # the audio it delivers (rich nearby stop in, far/thin walk-slog out). Runs on

@@ -141,7 +141,7 @@ _MOTIVATED_TRANSITION = re.compile(
 # KNOWN FALSE POSITIVE (caught during validation): the standard's OWN gold text opens
 # a sentence with "Nearby," used as a legitimate SPATIAL cue ("Nearby, the jewellery
 # and clothing shops..."), not an empty filler — so "Nearby" is deliberately EXCLUDED
-# here even though the spec names it as a failure shape. A lexical proxy cannot tell
+# here even though it can be a bare-adjacency filler. A lexical proxy cannot tell
 # spatial "nearby" from logical "nearby" apart; only "Also"/"Similarly" are unambiguous
 # enough to keep.
 _BARE_ADJACENCY = re.compile(r"(^|[.!?]\s+)(Also|Similarly|Elsewhere)\b,?", re.IGNORECASE)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Chunk-level pipeline-report builder for `/unified-beat-extract`.
 
-The skill spec lists ~12 report sections at the end (lens distribution,
+The extraction report has ~12 sections (lens distribution,
 length-class shape, sub_location coverage, foreign-phrase preservation,
 extractor_state summary, etc.). Until now those were hand-computed in
 ad-hoc Python after each extraction. This module turns them into a
@@ -50,7 +50,7 @@ def audit_chunk(
             already in the live corpus. Skip if you're auditing in
             isolation.
 
-    Returns a dict with these top-level keys (all sections in the spec):
+    Returns a dict with these top-level keys, one per report section:
         - extraction_summary
         - poi_matching
         - collision_check
