@@ -35,11 +35,11 @@ Pure functions. No Neo4j. The Neo4j loader lives in selection.py.
 from __future__ import annotations
 
 import re
-import unicodedata
 from collections import defaultdict
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 
 from .contract import POI, BeatRef, BeatSequence, OrderingStrategy, POIBeats, Route
+from .corpus_places import strip_diacritics
 from .fixtures import sub_location_order_for
 from .routing import beat_spoken_seconds
 
@@ -550,7 +550,7 @@ def _top_by_score(pool: list[BeatRef], interest: frozenset[str], n: int) -> list
     return sorted(pool, key=lambda b: _beat_score(b, interest), reverse=True)[:n]
 
 
-def _beat_score(beat: BeatRef, interest: frozenset[str]) -> tuple:
+def _beat_score(beat: BeatRef, interest: frozenset[str]) -> tuple[int, int, int, str]:
     """Stable, deterministic beat score for tie-breaking.
 
     Returns a tuple sorted high→low: lens-match, length-class quality,
@@ -570,7 +570,7 @@ def _length_class_rank(value: str | None) -> int:
     }.get((value or "").lower(), 0)
 
 
-def _address_sort_key(addr: str) -> tuple:
+def _address_sort_key(addr: str) -> tuple[int, str]:
     """Sort 'no. 1', 'no. 2', 'no. 13' numerically when prefix matches.
 
     Falls back to alphabetic for free-form addresses (e.g. '62 rue Saint-Antoine').
@@ -650,7 +650,6 @@ def _find_closing_friendly_index(beats: tuple[BeatRef, ...]) -> int | None:
         i
         for i, b in enumerate(beats)
         if (b.beat_type or "").lower() != "stop_orientation"
-        and (b.narrative_function or "").lower() != "stop_orientation"
     ]
     if not eligible_indices:
         return None
@@ -707,7 +706,7 @@ def _vignette_beat_names_poi(body: str | None, poi_name: str) -> bool:
 
 def select_vignette_beats(
     vignettes: dict[int, tuple[POI, ...]],
-    beats_by_poi_id: dict[str, tuple[BeatRef, ...]],
+    beats_by_poi_id: Mapping[str, tuple[BeatRef, ...]],
     *,
     lenses: Iterable[str] | None = None,
 ) -> dict[int, tuple[BeatRef, ...]]:
@@ -815,10 +814,7 @@ def find_area_orientation_beat(
             continue
         peer_distance_m = haversine_m(start_poi.lat, start_poi.lng, peer.lat, peer.lng)
         for beat in plan.beats:
-            is_orientation = (beat.beat_type or "").lower() == "stop_orientation" or (
-                beat.narrative_function or ""
-            ).lower() == "stop_orientation"
-            if not is_orientation:
+            if (beat.beat_type or "").lower() != "stop_orientation":
                 continue
             if not _hoist_geographically_honest(
                 beat,
@@ -1012,7 +1008,8 @@ def _canonical_entities(beat: BeatRef) -> set[str]:
 def _canonicalise_entity(s: str | None) -> str | None:
     if not s:
         return None
-    folded = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
+    # The ASCII encode also drops letters with no decomposition ("œ", "ß").
+    folded = strip_diacritics(s).encode("ascii", "ignore").decode("ascii")
     folded = folded.lower().strip(" .,;:\"'")
     if not folded:
         return None

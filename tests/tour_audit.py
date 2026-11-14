@@ -1,5 +1,5 @@
-"""Audit gate — does the flagship route swim the Seine,
-and is its ETA honest?
+"""Route audit used by the grade test shard: does the flagship route swim
+the Seine, and is its ETA honest?
 
 Two independent geometric/temporal checks over a finished Route:
 
@@ -12,8 +12,8 @@ Two independent geometric/temporal checks over a finished Route:
    ``seine_bridges.geojson``), validated against ground-truth points.
 
 2. **ETA error** — |routed_eta - reference| / reference. ``routed_eta`` is the
-   honest sum of routed leg seconds + per-stop dwell; the reference is the
-   caller's (see SEINE/ETA notes in tests). Pure arithmetic.
+   honest sum of routed leg seconds + per-stop dwell; the caller supplies the
+   reference. Pure arithmetic.
 
 Lengths are computed with a local equirectangular metres approximation
 (constant scale at Paris latitude) — fine for the sub-kilometre legs here.

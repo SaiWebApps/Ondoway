@@ -170,4 +170,3 @@ def test_retry_counts_bound_worst_case_wall_clock() -> None:
     assert anthropic_client.COMPOSE_MAX_RETRIES == 0, (
         "compose retries must be explicit full-candidate retries, not hidden SDK calls"
     )
-    assert 0 < anthropic_client.COMPOSE_ABSOLUTE_DEADLINE_S <= 600

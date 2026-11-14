@@ -34,6 +34,7 @@ from __future__ import annotations
 import hashlib
 import json
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -232,7 +233,7 @@ class _ColdStartingRoutingClient(_FakeRoutingClient):
         return seconds, haversine_m(from_lat, from_lng, to_lat, to_lng), None, None
 
     def routing_version(self) -> str:
-        raise ConnectionError("valhalla is cold-starting")
+        raise httpx.ConnectError("valhalla is cold-starting")
 
 
 # ---------------------------------------------------------------------------
@@ -766,7 +767,7 @@ def test_estimated_legs_are_labelled_not_silently_shipped(make_client):
     #    fact from the one above, so it gets its own row.
     assert "routing_version_unavailable" in rows, body["degradations"]
     version_row = rows["routing_version_unavailable"]
-    assert version_row["error_type"] == "ConnectionError"
+    assert version_row["error_type"] == "ConnectError"
     assert "cold-starting" in version_row["error_message"]
     for token in ("valhalla", "/status", "_", "()"):
         assert token not in version_row["human"].lower(), version_row["human"]

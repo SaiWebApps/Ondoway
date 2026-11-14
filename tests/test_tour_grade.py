@@ -11,12 +11,12 @@ from pathlib import Path
 
 import pytest
 
-from src.tour.grade import GRADE_BASELINE, grade_tour
+from tests.tour_grade import GRADE_BASELINE, grade_tour
 
 pytestmark = pytest.mark.grade
 
 # ---------------------------------------------------------------------------
-# Pure rubric (runs in the default bar)
+# Pure rubric
 # ---------------------------------------------------------------------------
 
 _FIXTURE = {
@@ -68,13 +68,8 @@ def test_lost_pois_and_beats_fail_baseline():
 
 
 def test_wrong_spine_and_failed_validation_dock_their_weights():
-    """The axis ARITHMETIC is unchanged — validation still reports its 0.10
-    weight in the breakdown — but a failed validation FAILS the grade outright,
-    never a 0.10 dock. The measured contradiction: a fabricating tour
-    (validation=0) could score 0.90 and clear the 0.65 baseline, so the gate
-    blessed exactly the tour the validation gate refuses to serve.
-    UNDO: return `passed = score >= baseline`
-    alone -> a failed-validation 0.70 passes again -> RED."""
+    """Validation still reports its 0.10 weight in the score, but a failed
+    validation fails the grade outright, whatever the score."""
     g = grade_tour(
         generated_poi_names=["A", "B", "C", "D"],
         generated_beat_ids=["b1", "b2", "b3", "b4", "b5"],
@@ -92,10 +87,9 @@ def test_wrong_spine_and_failed_validation_dock_their_weights():
 
 
 def test_a_fabricating_tour_cannot_buy_its_way_past_the_baseline():
-    """The exact measured case: perfect recall/overlap/spine with a
-    FAILED validation scores 0.90 — above the 0.65 baseline — and must still
-    fail. The same axes with validation TRUE pass, so the hard zero bites on
-    validation alone."""
+    """Perfect recall, overlap and spine with a failed validation scores
+    0.90, above the baseline, and still fails. The same axes with a passing
+    validation pass, so validation alone decides the failure."""
     failed = grade_tour(
         generated_poi_names=["A", "B", "C", "D"],
         generated_beat_ids=["b1", "b2", "b3", "b4", "b5"],
@@ -119,18 +113,15 @@ def test_a_fabricating_tour_cannot_buy_its_way_past_the_baseline():
 def test_an_empty_expectation_is_refused_not_scored_perfect():
     """A fixture that expects nothing is broken, and must never grade 1.0.
 
-    Regression guard, measured 2026-07-30: grade_tour read ``expected_beat_ids``
-    after the fixtures were re-keyed to ``expected_stable_beat_ids``, so the set
-    came back empty and ``_recall`` returned 1.0 — the re-keyed Ile fixture
-    scored beat_overlap=1.00 with ZERO generated beats and PASSED the baseline.
+    An empty expectation would give ``_recall`` a perfect 1.0 for a tour that
+    reproduced nothing, so ``grade_tour`` refuses it.
     """
     for broken in (
         {"expected_pois": [], "expected_stable_beat_ids": ["b1"], "expected_spine_area": "X"},
         {"expected_pois": ["A"], "expected_stable_beat_ids": [], "expected_spine_area": "X"},
-        # the exact shape of the defect: the durable key absent entirely
+        # the durable beat key absent entirely
         {"expected_pois": ["A"], "expected_beat_ids": ["b1"], "expected_spine_area": "X"},
-        # the SPINE axis had the same hole two lines below the first repair: a null
-        # expectation matched a null result for a free 0.20 of the baseline.
+        # a null spine expectation would match a null result for a free 0.20
         {"expected_pois": ["A"], "expected_stable_beat_ids": ["b1"], "expected_spine_area": None},
         {"expected_pois": ["A"], "expected_stable_beat_ids": ["b1"]},
     ):

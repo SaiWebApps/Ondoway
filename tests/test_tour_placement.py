@@ -67,7 +67,10 @@ def test_the_finish_sentinel_takes_the_own_place_radius_and_it_is_defined_once()
     contingency set reads rather than restates."""
     sentinel = _poi(f"{END_B_SENTINEL_PREFIX}48.85_2.35")
     assert place_stop(sentinel).radius_m == OWN_PLACE_RADIUS_M == 60.0
-    assert contingency.OWN_PLACE_RADIUS_M is placement.OWN_PLACE_RADIUS_M
+    assert contingency.is_own_place is placement.is_own_place
+    near, far = _poi("near"), _poi("far")
+    assert placement.is_own_place((near.lat, near.lng), near)
+    assert not placement.is_own_place((far.lat + 0.01, far.lng), far)
 
 
 def test_place_stops_places_every_stop_of_the_route_once():

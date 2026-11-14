@@ -33,26 +33,27 @@ import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from typing import Literal, NotRequired, TypedDict
 
 from src.city_registry import country_code
 
-from .contract import POI, ReplanContext, Route, TourInput
-
-# A story stop this close to where the person said the day begins or ends IS that
-# place (a day that starts and ends at the same museum). ONE definition, in the audio
-# placement rule (the finish and the start square take the same radius on the phone):
-# read here, never restated.
-from .placement import OWN_PLACE_RADIUS_M
-from .premium_tour import plan_premium_tour
+from .contract import END_B_SENTINEL_PREFIX, POI, ReplanContext, Route, TourInput
+from .density import TourabilityRefusedError
+from .placement import is_own_place
+from .premium_tour import PremiumRouteInfeasibleError, plan_premium_tour
 from .routing import haversine_m, leg_walk_seconds
+from .routing_client import RoutingClient
 from .selection import (
     HOURS_SOURCE_MAP,
+    CertificationPlanningInfeasibleError,
+    CorpusSnapshot,
+    PlanningRefusedError,
     _clock_exclusion_reason,
     _walk_arrivals,
     grant_freed_seconds,
     hours_are_guessed,
 )
-from .visit_time import listened_seconds, stop_seconds, visit_ceiling_seconds
+from .visit_time import hhmm_to_minutes, listened_seconds, stop_seconds, visit_ceiling_seconds
 
 #: Words that fail plain language ON SCREEN AND ALOUD. A question or screen line
 #: carrying one is a defect.
@@ -105,12 +106,30 @@ OPEN_WALK_DAY_LINE: str = "That's the walk — the rest of the day is yours from
 DAY_DONE_LINE: str = "That's the walk."
 
 
+class ContingencyTrigger(TypedDict):
+    """What divergence an entry answers, at which stop. ``band_minutes`` is the
+    ``[lo, hi]`` band of the late, early and minutes-left kinds only."""
+
+    kind: Literal[
+        "wrap_up_from",
+        "stop_skipped",
+        "running_late",
+        "running_early",
+        "minutes_left",
+        "promise_at_risk",
+        "door_closed",
+        "live",
+    ]
+    stop_id: str
+    band_minutes: NotRequired[list[int]]
+
+
 @dataclass(frozen=True)
 class Contingency:
     """One precomputed answer. `trigger` is a MATCHER, never a policy."""
 
     contingency_id: str
-    trigger: dict
+    trigger: ContingencyTrigger
     from_stop_index: int
     stop_ids: tuple[str, ...]
     route: Route | None
@@ -262,9 +281,7 @@ SESSION_CLOCK_DIVERGENCE = "session_clock_divergence"
 def clock_divergence_seconds(phone_hhmm: str, server_hhmm: str) -> int:
     """Signed seconds the PHONE's clock runs ahead (+) or behind (-) the SERVER's for
     the same stop, both as HH:MM on the same day, wrapped to the nearer half-day."""
-    ph, pm = (int(x) for x in phone_hhmm.split(":"))
-    sh, sm = (int(x) for x in server_hhmm.split(":"))
-    diff = (ph * 60 + pm) - (sh * 60 + sm)
+    diff = hhmm_to_minutes(phone_hhmm) - hhmm_to_minutes(server_hhmm)
     if diff > 12 * 60:
         diff -= 24 * 60
     elif diff < -12 * 60:
@@ -272,11 +289,15 @@ def clock_divergence_seconds(phone_hhmm: str, server_hhmm: str) -> int:
     return diff * 60
 
 
-def _is_story_stop(poi: POI) -> bool:
-    return poi.poi_role != "body" and not poi.id.startswith("__end_b")
+def is_story_stop(poi: POI) -> bool:
+    """A stop that tells a story: neither a rest (a body stop) nor the A→B finish
+    sentinel."""
+    return poi.poi_role != "body" and not poi.id.startswith(END_B_SENTINEL_PREFIX)
 
 
-def _finish_of(tour_input: TourInput) -> tuple[float, float] | None:
+def finish_of(tour_input: TourInput) -> tuple[float, float] | None:
+    """Where the day ends: the declared end, else the start on a round trip. An open
+    one-way walk has no finish."""
     if tour_input.end is not None:
         return tour_input.end
     if tour_input.round_trip:
@@ -299,7 +320,7 @@ def _tail_input(
 ) -> TourInput:
     """The remainder as a request: from HERE, to the day's finish, with the minutes
     left — every other axis (party, pace, cap, lenses, weather, hardness) as asked."""
-    finish = _finish_of(tour_input)
+    finish = finish_of(tour_input)
     return tour_input.model_copy(
         update={
             "start": position,
@@ -325,12 +346,8 @@ def own_place_ids(route: Route, tour_input: TourInput) -> tuple[str, ...]:
         anchors.append(tour_input.end)
     out: list[str] = []
     for poi in route.pois:
-        if poi.poi_role == "body" or poi.id.startswith("__end_b"):
-            continue
-        for lat, lng in anchors:
-            if haversine_m(lat, lng, poi.lat, poi.lng) <= OWN_PLACE_RADIUS_M:
-                out.append(poi.id)
-                break
+        if is_story_stop(poi) and any(is_own_place(anchor, poi) for anchor in anchors):
+            out.append(poi.id)
     return tuple(out)
 
 
@@ -407,9 +424,9 @@ def question_text(
 def build_contingency_set(
     route: Route,
     tour_input: TourInput,
-    snapshot,
+    snapshot: CorpusSnapshot,
     *,
-    routing_client,
+    routing_client: RoutingClient | None,
     person: ReplanContext,
     plan_version: int = 1,
     finish_name: str = "your finish",
@@ -446,7 +463,7 @@ def build_contingency_set(
         listening_rate=person.listening_rate,
         audio_seconds_by_id=audio_seconds_by_id,
     )
-    story = [(i, poi, arr, dep) for i, (poi, arr, dep) in enumerate(clocks) if _is_story_stop(poi)]
+    story = [(i, poi, arr, dep) for i, (poi, arr, dep) in enumerate(clocks) if is_story_stop(poi)]
     planned_ids = [p.id for p in route.pois]
     start_clock = (
         clocks[0][1] - timedelta(seconds=leg_walk_seconds(route.transits[0]))
@@ -474,7 +491,13 @@ def build_contingency_set(
     notes: list[str] = []
     new_stop_ids: set[str] = set()
 
-    def ctx_from(k_pos: int, *, keep: tuple[str, ...], visited: tuple[str, ...], grants=None):
+    def ctx_from(
+        k_pos: int,
+        *,
+        keep: tuple[str, ...],
+        visited: tuple[str, ...],
+        grants: Mapping[str, int] | None = None,
+    ) -> ReplanContext:
         return ReplanContext(
             protected_poi_ids=tuple(pid for pid in protected_all if pid in keep),
             longest_leg_ceiling_seconds=longest,
@@ -487,28 +510,36 @@ def build_contingency_set(
         )
 
     def replan(inp: TourInput, ctx: ReplanContext) -> Route | None:
+        # The planner refuses a tail it cannot plan with one of these four; that entry
+        # is recorded as a note and the set goes on. Any other exception is a bug and
+        # raises.
         try:
             return plan(inp, ctx)
-        except Exception as exc:  # an entry that cannot be planned is recorded, never a crash
+        except (
+            CertificationPlanningInfeasibleError,
+            TourabilityRefusedError,
+            PlanningRefusedError,
+            PremiumRouteInfeasibleError,
+        ) as exc:
             notes.append(f"{type(exc).__name__}: {exc}")
             return None
 
     def add(
-        trigger: dict,
+        trigger: ContingencyTrigger,
         k: int,
         tail: Route | None,
         *,
-        question=None,
+        question: str | None = None,
         screen_text: str,
-        default_arm=None,
+        default_arm: str | None = None,
         alt: Route | None = None,
         at_risk: str | None = None,
         clock: datetime | None = None,
-    ):
+    ) -> None:
         ids = tuple(p.id for p in tail.pois) if tail is not None else ()
         alt_ids = tuple(p.id for p in alt.pois) if alt is not None else ()
         for pid in ids + alt_ids:
-            if pid not in planned_ids and not pid.startswith("__end_b"):
+            if pid not in planned_ids and not pid.startswith(END_B_SENTINEL_PREFIX):
                 new_stop_ids.add(pid)
         entries.append(
             Contingency(
@@ -538,8 +569,13 @@ def build_contingency_set(
         )
 
     def question_for(
-        k: int, position, clock, minutes: int, tail: Route | None, keep: tuple[str, ...]
-    ):
+        k: int,
+        position: tuple[float, float],
+        clock: datetime | None,
+        minutes: int,
+        tail: Route | None,
+        keep: tuple[str, ...],
+    ) -> tuple[str | None, str | None, Route | None, str | None]:
         """When the protected remainder overruns, the ONE question (see
         `question_text`). Returns (question, default_arm, alternate, at_risk)."""
         if tail is None or tail.overrun_seconds <= 0 or clock is None:
@@ -582,16 +618,16 @@ def build_contingency_set(
         # ("Straight to your start" is a direction to nowhere — a couple may end
         # at dinner, wherever that is): the day is handed back, where they stand.
         # With a finish, the place.
-        if _finish_of(tour_input) is None:
+        if finish_of(tour_input) is None:
             return OPEN_WALK_DAY_LINE
         return "Straight to " + finish_name
 
     # WRAP-UP FROM HERE, from EVERY stop the person can be at — rests included (a
     # rest is where a tired walker most often decides to go home, so the button
     # works there too): one leg home, no stop, floor zero.
-    finish = _finish_of(tour_input)
+    finish = finish_of(tour_input)
     for k, (poi, _arrival, departure) in enumerate(clocks):
-        if poi.id.startswith("__end_b"):
+        if poi.id.startswith(END_B_SENTINEL_PREFIX):
             continue
         left = _minutes_left(planned_end, departure) or 15
         tail = replan(
@@ -601,10 +637,7 @@ def build_contingency_set(
         # Standing at the place the day ends at, a wrap-up has nowhere to send you
         # (never point a walker at the museum they already stand in): the walk is
         # done — the phone plays the day's close.
-        at_finish = (
-            finish is not None
-            and haversine_m(finish[0], finish[1], poi.lat, poi.lng) <= OWN_PLACE_RADIUS_M
-        )
+        at_finish = finish is not None and is_own_place(finish, poi)
         add(
             {"kind": "wrap_up_from", "stop_id": poi.id},
             k,
@@ -618,7 +651,7 @@ def build_contingency_set(
     for k, poi, arrival, departure in story:
         position = (poi.lat, poi.lng)
         after = tuple(planned_ids[k + 1 :])
-        after_story = [p for p in route.pois[k + 1 :] if _is_story_stop(p)]
+        after_story = [p for p in route.pois[k + 1 :] if is_story_stop(p)]
         next_name = after_story[0].name if after_story else None
 
         # STOP SKIPPED: the remainder from this stop's DOOR, its minutes granted to
@@ -794,7 +827,7 @@ def build_contingency_set(
                 for c in snapshot.pois
                 if c.id not in planned_set
                 and c.opening_hours_source == HOURS_SOURCE_MAP
-                and _is_story_stop(c)
+                and is_story_stop(c)
                 and _clock_exclusion_reason(
                     c.opening_hours, c.opening_hours_source, arrival, left, country=country
                 )

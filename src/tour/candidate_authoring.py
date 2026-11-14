@@ -9,19 +9,12 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from .corpus_places import SHA256_PATTERN
+
 
 def _identity_digest(values: dict[str, str]) -> str:
     payload = json.dumps(values, separators=(",", ":"), sort_keys=True).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
-
-
-def _require_sha256(name: str, value: str) -> None:
-    try:
-        parsed = bytes.fromhex(value)
-    except ValueError as exc:
-        raise ValueError(f"{name} is not a lowercase SHA-256") from exc
-    if len(parsed) != 32 or value != value.lower():
-        raise ValueError(f"{name} is not a lowercase SHA-256")
 
 
 class AuthoringCandidateIdentity(BaseModel):
@@ -30,12 +23,12 @@ class AuthoringCandidateIdentity(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     candidate_slot: Literal["A", "B", "C"]
-    contract_sha256: str = Field(..., min_length=64, max_length=64)
-    reference_manifest_sha256: str = Field(..., min_length=64, max_length=64)
-    calibration_manifest_sha256: str = Field(..., min_length=64, max_length=64)
-    grounded_source_sha256: str = Field(..., min_length=64, max_length=64)
-    route_sha256: str = Field(..., min_length=64, max_length=64)
-    authoring_policy_sha256: str = Field(..., min_length=64, max_length=64)
+    contract_sha256: str = Field(..., pattern=SHA256_PATTERN)
+    reference_manifest_sha256: str = Field(..., pattern=SHA256_PATTERN)
+    calibration_manifest_sha256: str = Field(..., pattern=SHA256_PATTERN)
+    grounded_source_sha256: str = Field(..., pattern=SHA256_PATTERN)
+    route_sha256: str = Field(..., pattern=SHA256_PATTERN)
+    authoring_policy_sha256: str = Field(..., pattern=SHA256_PATTERN)
     candidate_id: str = Field(..., min_length=74, max_length=74)
 
     @classmethod
@@ -64,10 +57,6 @@ class AuthoringCandidateIdentity(BaseModel):
     @model_validator(mode="after")
     def _identity_is_canonical(self) -> AuthoringCandidateIdentity:
         values = self.model_dump(mode="json", exclude={"candidate_id"})
-        for name, value in values.items():
-            if name == "candidate_slot":
-                continue
-            _require_sha256(name, value)
         expected = "candidate-" + _identity_digest(values)
         if self.candidate_id != expected:
             raise ValueError("candidate id differs from its frozen authoring inputs")
@@ -81,7 +70,7 @@ class AuthoringStopRequest(BaseModel):
 
     candidate: AuthoringCandidateIdentity
     stop_index: int = Field(..., ge=0)
-    compose_input_sha256: str = Field(..., min_length=64, max_length=64)
+    compose_input_sha256: str = Field(..., pattern=SHA256_PATTERN)
     request_id: str = Field(..., min_length=72, max_length=72)
 
     @classmethod
@@ -106,7 +95,6 @@ class AuthoringStopRequest(BaseModel):
 
     @model_validator(mode="after")
     def _request_is_canonical(self) -> AuthoringStopRequest:
-        _require_sha256("compose_input_sha256", self.compose_input_sha256)
         values = {
             "candidate_id": self.candidate.candidate_id,
             "stop_index": str(self.stop_index),
@@ -124,14 +112,12 @@ class AuthoringStopResponse(BaseModel):
 
     request: AuthoringStopRequest
     raw_response: bytes = Field(..., min_length=1)
-    raw_response_sha256: str = Field(..., min_length=64, max_length=64)
-    parsed_payload_sha256: str = Field(..., min_length=64, max_length=64)
+    raw_response_sha256: str = Field(..., pattern=SHA256_PATTERN)
+    parsed_payload_sha256: str = Field(..., pattern=SHA256_PATTERN)
     provider_request_id: str | None = None
 
     @model_validator(mode="after")
     def _response_bytes_are_exact(self) -> AuthoringStopResponse:
-        _require_sha256("parsed_payload_sha256", self.parsed_payload_sha256)
-        _require_sha256("raw_response_sha256", self.raw_response_sha256)
         if hashlib.sha256(self.raw_response).hexdigest() != self.raw_response_sha256:
             raise ValueError("raw response hash differs from exact provider bytes")
         return self

@@ -62,14 +62,15 @@ def _auto_beat_seconds(beat_count: int) -> int:
     Selection prices a stop TWICE and the two prices must agree. The greedy
     credits ``planned_capped_audio_seconds(poi, ..., allowance)`` where the per-stop
     governor allowance (``governor_allowance_seconds``) is
-    ``target_dwell_seconds(d) // min(3, d // 10)`` — 720 s at 60 min, 1440 s at
-    120 min. Emission then caps every stop at ``MAX_DWELL_AUDIO_SECONDS`` (270 s). A fixture POI carrying more than 270 s
-    of beats is therefore CREDITED up to 5x what the tour will ever speak, so
-    the greedy believes it has filled the audio target after a third of the
-    stops, stops adding them, and hands the certification repair a route that
-    is far short of the requested duration. Sizing the whole beat set to the
-    per-stop ceiling makes credit == delivery, which is the only regime where a
-    synthetic fixture behaves like the planner's own arithmetic says it should.
+    the standing-still budget ``// min(3, d // 10)`` — 720 s at 60 min, 1440 s at
+    120 min. Emission then caps every stop at ``MAX_DWELL_AUDIO_SECONDS`` (270 s).
+    A fixture POI carrying more than 270 s of beats is therefore CREDITED up to
+    5x what the tour will ever speak, so the greedy believes it has filled the
+    audio target after a third of the stops, stops adding them, and hands the
+    certification repair a route that is far short of the requested duration.
+    Sizing the whole beat set to the per-stop ceiling makes credit == delivery,
+    which is the only regime where a synthetic fixture behaves like the
+    planner's own arithmetic says it should.
 
     Kept at >= 1 s so a zero-beat POI stays representable.
     """
@@ -570,7 +571,7 @@ _HOP_MAP = {
 }
 
 
-def test_lens_adjacency_direct_hit_is_full_weight():
+def test_lens_relevance_direct_hit_is_full_weight():
     """A direct beat-lens hit scores 1.0 — identical to the no-lens run."""
     p = _poi("p", lat=48.85, lng=2.35)
     snap = _snap([p], beats_by_poi={"p": _lensed_beats("p", ("hidden_history",))})
@@ -580,7 +581,7 @@ def test_lens_adjacency_direct_hit_is_full_weight():
     assert math.isclose(s_direct, s_neutral, rel_tol=1e-9)
 
 
-def test_lens_adjacency_one_hop_is_point_six_both_directions():
+def test_lens_relevance_one_hop_is_point_six_both_directions():
     """One IS_PARENT_OF hop scores 0.6 — parent requested reaching a
     child-lensed beat, and child requested reaching a parent-lensed beat."""
     p = _poi("p", lat=48.85, lng=2.35)
@@ -600,7 +601,7 @@ def test_lens_adjacency_one_hop_is_point_six_both_directions():
         assert math.isclose(s_hop / s_neutral, 0.6, rel_tol=1e-9)
 
 
-def test_lens_adjacency_ranks_direct_above_one_hop():
+def test_lens_relevance_ranks_direct_above_one_hop():
     direct = _poi("direct", lat=48.8556, lng=2.3658)
     hop = _poi("hop", lat=48.8557, lng=2.3659)
     snap = _snap(
@@ -618,8 +619,7 @@ def test_lens_adjacency_ranks_direct_above_one_hop():
 
 def test_lens_miss_dims_but_does_not_zero_poi_score():
     """poi_score's lens factor is the POSITIVE-floored lens_relevance
-    (miss -> LENS_FLOOR = 0.25), NOT the legacy hard-filter _lens_adjacency
-    (miss -> 0.0).
+    (miss -> LENS_FLOOR = 0.25).
 
     A high-gravity (tier-5) POI that MISSES the requested lens must score a
     strictly positive, DIMMED value -- exactly LENS_FLOOR of its no-lens score,
@@ -2548,8 +2548,8 @@ def test_rich_corpus_duration_sweep_never_collapses_to_single_stop(
     dwell proxy >= target at small d, a walk-envelope change) would ship
     unseen. This fails in at least one of the 28 cells. The round-trip arm
     covers the pull-free path; the one-way arm covers greedy + pull + fill
-    jointly; the lensed arm catches any reintroduction of the legacy hard lens
-    filter (LENS_ADJACENCY_MISS = 0.0) into the dwell pool.
+    jointly; the lensed arm catches any hard lens filter (a miss scored 0.0)
+    entering the dwell pool.
     """
     from src.tour.routing import walk_budget_seconds
 

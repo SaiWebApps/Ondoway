@@ -1,15 +1,14 @@
-"""GRADE — exemplar-calibrated tour rubric.
+"""Tour grade rubric used by the grade test shard.
 
 A pure, weighted multi-axis score of a generated tour against a golden
-fixture. This is a CI REGRESSION gate, not the ≥90% golden-overlap ideal:
-the baseline is set so the current corpus passes with margin and a genuine
+fixture. It is a regression gate, not the ≥90% golden-overlap ideal: the
+baseline is set so the current corpus passes with margin and a genuine
 regression (POIs lost, spine wrong, beats dropped, validation broken) drops
-below it. Never self-tunes — changing a weight or the baseline is a
+below it. It never self-tunes; a weight or the baseline changes only by a
 deliberate, reviewed edit.
 
-The scoring function is pure (no DB, no engine) so it is unit-tested in the
-default bar; the live grading harness (``tests/test_tour_grade.py``, marked
-``grade``) runs the real pipeline against the dev graph and grades it.
+The scoring function is pure (no database, no engine). The grade tests call
+it with the output of the real pipeline run against the dev graph.
 """
 
 from __future__ import annotations
@@ -24,10 +23,9 @@ W_BEAT_OVERLAP = 0.30
 W_SPINE_MATCH = 0.20
 W_VALIDATION = 0.10
 
-# A generated tour must grade at or above this to pass. Calibrated to
-# measure the SHIPPED path (build_poi_beat_plans_capped, 9 beats
-# on Île) rather than the raw uncapped path (23 beats). Measured:
-# Île 0.506, PdV 0.743. The floor is 85% of the lower score = 0.43.
+# A generated tour must grade at or above this to pass. The baseline grades
+# the shipped capped path (build_poi_beat_plans_capped), not the raw uncapped
+# path, and sits at 85% of the lower golden score (Île 0.506, PdV 0.743).
 GRADE_BASELINE = 0.43
 
 
@@ -69,10 +67,9 @@ def grade_tour(
     ``expected_spine_area``; the engine output is passed in (the caller runs
     the pipeline), so this stays pure and unit-testable.
 
-    Beats are keyed by the DURABLE corpus slug (``expected_stable_beat_ids``).
-    The old ``expected_beat_ids`` held the per-database UUIDs Neo4j mints at
-    upload, which rotate on every re-seed; a fixture keyed that way can never
-    match real output.
+    Beats are keyed by the durable corpus slug (``expected_stable_beat_ids``),
+    never by the per-database UUIDs Neo4j mints at upload, which change on
+    every re-seed.
 
     An empty expectation is a BROKEN FIXTURE, not a perfect tour: it would score
     ``beat_overlap=1.00`` for a tour that reproduced nothing and pass the baseline.
@@ -122,10 +119,8 @@ def grade_tour(
         spine_match=spine_match,
         validation=validation,
         score=score,
-        # A failed validation FAILS the grade outright — never a 0.10 dock. The axis
-        # keeps its weight in the breakdown (the score still reports it), but a
-        # fabricating tour scoring 0.90 must not clear a 0.65 baseline while the
-        # validation gate refuses to serve it. The weight test is re-derived as
-        # a written decision (tests/test_tour_grade.py).
+        # A failed validation fails the grade outright, whatever the score. The
+        # axis keeps its weight in the score and breakdown, but a tour the
+        # validation gate refuses to serve never passes the grade.
         passed=score >= baseline and validation_passed,
     )

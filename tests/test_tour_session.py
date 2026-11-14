@@ -611,6 +611,9 @@ def test_the_finish_is_named_as_the_place_when_the_person_named_one():
         update={"start": (PDV[0] + 0.01, PDV[1] + 0.01), "round_trip": False}
     )
     assert _finish_name(away, route) == "your start"
+    # An open walk FROM the museum has no finish, so it names no place.
+    open_from_museum = round_trip.model_copy(update={"round_trip": False})
+    assert _finish_name(open_from_museum, route) == "your start"
     declared = round_trip.model_copy(update={"round_trip": False, "end": (PDV[0] + 0.01, PDV[1])})
     assert _finish_name(declared, route) == "your finish"
 

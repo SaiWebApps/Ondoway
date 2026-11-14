@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from src import city_registry
 from src.tour.contract import RouteOption, normalized_lens_list
 from src.tour.placement import PlacementPolicy, StopSegment, StopTrigger
+from src.tour.visit_time import hhmm_parts
 
 #: The party vocabulary, wire-form tolerant: the workbench (and any URL-ish
 #: caller) spells presets with hyphens; the engine's TourInput spells them with
@@ -36,8 +37,8 @@ def _validate_city_slug(v: str) -> str:
     """Reject an unknown city at the edge (clear 422) instead of loading an
     empty corpus and emitting a broken/thin tour.
 
-    Validates against ``servable_cities()`` (evaluated per-request, not the
-    import-time ``SUPPORTED_CITIES``) so the prod cloud-filter takes effect: a
+    Validates against ``servable_cities()``, evaluated per request, so the prod
+    cloud-filter takes effect: a
     locally-onboarded but not-yet-deployed city is rejected by the public prod
     /trips API while still being tourable by the local workbench."""
     slug = (v or "").strip().lower()
@@ -153,11 +154,8 @@ class TripGenerateRequest(BaseModel):
     @classmethod
     def validate_start_time(cls, v: str) -> str:
         """Validate HH:MM format."""
-        parts = v.split(":")
-        if len(parts) != 2:
-            raise ValueError("start_time must be in HH:MM format")
         try:
-            hour, minute = int(parts[0]), int(parts[1])
+            hour, minute = hhmm_parts(v)
         except ValueError:
             raise ValueError("start_time must be in HH:MM format") from None
         if not (0 <= hour <= 23 and 0 <= minute <= 59):

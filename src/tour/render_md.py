@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from .contract import Anchor, BeatSequence, Script, Sentence
+from .contract import Anchor, BeatSequence, Script, Sentence, TourabilityAssessment
 from .density import (
     EMPIRICAL_FILL_BAR,
     GREEN_ANCHOR_CANDIDATES_MIN,
@@ -30,7 +30,7 @@ def render_markdown(
     haiku_output_tokens: int | None = None,
     wall_clock_seconds: float | None = None,
     beat_sequence: BeatSequence | None = None,
-    tourability=None,
+    tourability: TourabilityAssessment | None = None,
 ) -> str:
     """Render a Script + telemetry as the review markdown described above.
 
@@ -325,7 +325,7 @@ def _build_sub_lookup(
     return out
 
 
-def _yellow_banner(tourability, lenses: list[str] | None = None) -> str:
+def _yellow_banner(tourability: TourabilityAssessment, lenses: list[str] | None = None) -> str:
     """Top-of-tour warning when density.assess returned YELLOW.
 
     YELLOW fires for several distinct reasons (density.py's
@@ -373,7 +373,7 @@ def _yellow_banner(tourability, lenses: list[str] | None = None) -> str:
     return "\n".join(lines)
 
 
-def _yellow_non_fill_reason(tourability) -> str:
+def _yellow_non_fill_reason(tourability: TourabilityAssessment) -> str:
     """Honest reason for a YELLOW tour whose fill is NOT the limiting factor.
 
     Only called when ``fill_ratio >= GREEN_FILL_RATIO_MIN`` — there's enough

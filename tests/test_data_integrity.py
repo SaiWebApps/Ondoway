@@ -40,18 +40,19 @@ def _city_dirs() -> list[Path]:
 def test_every_data_city_is_fully_registered(city_dir: Path) -> None:
     """Onboarding fail-fast: any city with data/ must ALSO be registered in every
     surface the engine reads, or it silently misbehaves — upload rejects POIs
-    outside CITY_BBOX, and the API 422s a city absent from SUPPORTED_CITIES. This
+    outside CITY_BBOX, and the API 422s a city absent from the registry. This
     catches a half-onboarded city at CI time instead of at deploy/request time."""
     from scripts.upload_paris import CITY_BBOX
-    from src.city_registry import load_registry
-    from src.tour.contract import SUPPORTED_CITIES
+    from src.city_registry import load_registry, supported_cities
 
     city = city_dir.name
     problems: list[str] = []
     if city not in CITY_BBOX:
         problems.append("missing from CITY_BBOX (upload_paris.py) — every POI skipped on upload")
-    if city not in SUPPORTED_CITIES:
-        problems.append("missing from SUPPORTED_CITIES (contract.py) — the API 422s every request")
+    if city not in supported_cities():
+        problems.append(
+            "missing from supported_cities() (city_registry.py) — the API 422s every request"
+        )
     if not (city_dir / "beats.json").exists():
         problems.append("has poi-raw.json but no beats.json — POIs would seat with zero narration")
 

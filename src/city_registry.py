@@ -1,10 +1,9 @@
 """Data-driven city registry — the single writable surface for city registration.
 
-Historically a city was registered by editing hardcoded Python literals
-(``CITY_BBOX`` in ``scripts/upload_paris.py``, ``SUPPORTED_CITIES`` in
-``src/tour/contract.py``) plus dropping a ``data/{slug}/`` corpus. The new-city
-onboarding panel registers a city at RUNTIME, so those literals now derive from
-this module, which is backed by the writable ``src/cities.json``.
+A city is registered in the writable ``src/cities.json`` plus a ``data/{slug}/``
+corpus. The new-city onboarding panel registers a city at RUNTIME, so every
+city list (such as ``CITY_BBOX`` in ``scripts/upload_paris.py``) derives from
+this module.
 
 Why ``src/cities.json`` (not ``data/``): the production Dockerfile ships ``src/``
 and ``frontend/`` only — never ``data/`` — so the registry file must live under
@@ -132,8 +131,8 @@ def country_code(slug: str) -> str:
 
 
 def supported_cities() -> frozenset[str]:
-    """ALL registered slugs. Backs ``SUPPORTED_CITIES`` + the onboarding
-    data-integrity guard; the local workbench serves every registered city."""
+    """ALL registered slugs. Backs the onboarding data-integrity guard; the local
+    workbench serves every registered city."""
     return frozenset(load_registry())
 
 

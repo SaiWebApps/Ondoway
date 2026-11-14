@@ -26,10 +26,10 @@ itself is canonical. Validation guards against runtime invention only.
 from __future__ import annotations
 
 import re
-import unicodedata
 from collections.abc import Mapping
 
 from .contract import BeatSequence, Script, Sentence, ValidationReport
+from .corpus_places import strip_diacritics
 from .generation import (
     _COMPASS_RE,
     FORBIDDEN_PHRASES,
@@ -219,9 +219,9 @@ def _forbidden_phrase_hits(
     stop_names = [poi.name for poi in script.selected_pois]
 
     def _names_a_later_stop(text: str, stop_idx: int) -> bool:
-        folded = _fold(text).lower()
+        folded = strip_diacritics(text).lower()
         return any(
-            _fold(name).lower() in folded
+            strip_diacritics(name).lower() in folded
             for name in stop_names[stop_idx + 1 :]
             if name
         )
@@ -315,13 +315,6 @@ def _city_vocabulary(city_slug: str | None) -> set[str]:
 _POSSESSIVE_ENDINGS: tuple[str, ...] = ("'s", "\u2019s", "s'", "s\u2019", "s", "'", "\u2019")
 
 
-def _fold(name: str) -> str:
-    """A name without its diacritics — "André" and "Andre" are one name."""
-    return "".join(
-        ch for ch in unicodedata.normalize("NFKD", name) if not unicodedata.combining(ch)
-    )
-
-
 def _name_is_licensed(token: str, licensed: set[str]) -> bool:
     """Is ``token`` a name the cited corpus carries — in ANY orthographic form?
 
@@ -336,7 +329,7 @@ def _name_is_licensed(token: str, licensed: set[str]) -> bool:
     """
     if token in licensed:
         return True
-    folded = {_fold(name) for name in licensed}
+    folded = {strip_diacritics(name) for name in licensed}
     candidates = [token]
     for ending in _POSSESSIVE_ENDINGS:
         if token.endswith(ending) and len(token) > len(ending) + 2:
@@ -350,7 +343,7 @@ def _name_is_licensed(token: str, licensed: set[str]) -> bool:
     # "Roman" freely).
     if "-" in token:
         candidates.extend(part for part in token.split("-") if part and part[0].isupper())
-    return any(c in licensed or _fold(c) in folded for c in candidates)
+    return any(c in licensed or strip_diacritics(c) in folded for c in candidates)
 
 
 def _cited_beat_corpus_text(script: Script, beat_sequence: BeatSequence) -> str:

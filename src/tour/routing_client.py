@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+from typing import TypedDict
 
 import httpx
 
@@ -55,7 +56,14 @@ _ROUTING_CONFIG = {
 #: `use_hills` were ALSO probed on the same pair and recorded INERT; they are
 #: deliberately absent here. "any" carries no override — today's requests,
 #: byte-identical.
-ROUTE_SURFACE_COSTING_OVERRIDES: dict[str, dict | None] = {
+class CostingOptionsOverride(TypedDict, total=False):
+    """The pedestrian costing keys a route-surface axis value may set."""
+
+    step_penalty: int
+    type: str
+
+
+ROUTE_SURFACE_COSTING_OVERRIDES: dict[str, CostingOptionsOverride | None] = {
     "any": None,
     "no_stairs": {"step_penalty": 3600},
     "step_free": {"step_penalty": 3600, "type": "wheelchair"},
@@ -146,7 +154,7 @@ class RoutingClient:
         to_lat: float,
         to_lng: float,
         *,
-        costing_options_override: dict | None = None,
+        costing_options_override: CostingOptionsOverride | None = None,
     ) -> int:
         """Walking seconds for one leg (routed, else pace-corrected haversine)."""
         seconds, _meters, _shape = self.route(
@@ -161,7 +169,7 @@ class RoutingClient:
         to_lat: float,
         to_lng: float,
         *,
-        costing_options_override: dict | None = None,
+        costing_options_override: CostingOptionsOverride | None = None,
     ) -> tuple[int, float, str | None]:
         """(walk_seconds, distance_m, encoded_polyline6 | None) for one leg.
 
@@ -185,7 +193,7 @@ class RoutingClient:
         to_lat: float,
         to_lng: float,
         *,
-        costing_options_override: dict | None = None,
+        costing_options_override: CostingOptionsOverride | None = None,
     ) -> tuple[int, float, str | None, ValhallaLegReceipt | None]:
         """Route one leg and retain replayable evidence when Valhalla succeeds.
 

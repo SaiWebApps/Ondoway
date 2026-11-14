@@ -8,12 +8,16 @@ from collections.abc import Mapping
 from contextlib import suppress
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from .anthropic_client import (
     certification_compose_client,
     certification_judge_client,
 )
+
+if TYPE_CHECKING:
+    import anthropic
+    from anthropic.types import Message
 
 
 class CallPurpose(StrEnum):
@@ -75,7 +79,7 @@ class ProviderCancellationScope:
                 stream.close()
 
 
-def _response_text(response: object) -> str:
+def _response_text(response: Message) -> str:
     blocks = getattr(response, "content", None)
     if not isinstance(blocks, list):
         raise ValueError("Anthropic response omitted its content blocks")
@@ -90,7 +94,7 @@ def _response_text(response: object) -> str:
     return text
 
 
-def _usage(response: object) -> tuple[int, int, int, int]:
+def _usage(response: Message) -> tuple[int, int, int, int]:
     usage = getattr(response, "usage", None)
     if usage is None:
         raise ValueError("Anthropic response omitted provider usage")
@@ -116,8 +120,8 @@ class AnthropicCertificationProvider:
     def __init__(
         self,
         *,
-        compose_client: object | None = None,
-        judge_client: object | None = None,
+        compose_client: anthropic.Anthropic | None = None,
+        judge_client: anthropic.Anthropic | None = None,
         cancellation_scope: ProviderCancellationScope | None = None,
     ) -> None:
         # Product dependencies may be resolved before provider-free planning and
@@ -130,7 +134,7 @@ class AnthropicCertificationProvider:
         self._client_lock = threading.Lock()
         self._cancellation_scope = cancellation_scope
 
-    def _client_for(self, purpose: CallPurpose) -> object:
+    def _client_for(self, purpose: CallPurpose) -> anthropic.Anthropic:
         with self._client_lock:
             if purpose is CallPurpose.COMPOSE:
                 if self._compose is None:
@@ -159,11 +163,11 @@ class AnthropicCertificationProvider:
         client = self._client_for(purpose)
         started = time.monotonic()
         if self._cancellation_scope is None:
-            response = client.messages.create(**dict(request))  # type: ignore[attr-defined]
+            response = client.messages.create(**dict(request))
         else:
             if self._cancellation_scope.cancelled:
                 raise RuntimeError("certification provider call was cancelled before start")
-            manager = client.messages.stream(**dict(request))  # type: ignore[attr-defined]
+            manager = client.messages.stream(**dict(request))
             with manager as stream:
                 self._cancellation_scope.register(stream)
                 response = stream.get_final_message()

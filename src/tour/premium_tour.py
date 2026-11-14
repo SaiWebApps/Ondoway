@@ -20,7 +20,9 @@ from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, TypedDict
+
+import httpx
 
 from src.audio.provider import OpenAITTSProvider
 from src.tour.degradations import in_current_context, record
@@ -96,7 +98,6 @@ from .routing_client import (
 )
 from .selection import (
     CorpusSnapshot,
-    MaterializedCorpusSnapshot,
     build_poi_beat_plans_capped,
     choose_discrete_route,
     select_route,
@@ -122,10 +123,9 @@ def premium_authoring_policy_sha256() -> str:
 
 
 def exact_snapshot_sha256(snapshot: CorpusSnapshot) -> str:
-    """Bind the exact selection input, using the materializer hash when present."""
+    """Bind the exact selection input: every POI and beat, the area types and
+    adjacency, and the lens hierarchy, in one canonical order."""
 
-    if isinstance(snapshot, MaterializedCorpusSnapshot):
-        return snapshot.snapshot_sha256
     payload = {
         "pois": sorted(
             (poi.model_dump(mode="json") for poi in snapshot.pois),
@@ -152,7 +152,33 @@ def exact_snapshot_sha256(snapshot: CorpusSnapshot) -> str:
     return canonical_sha256(payload)
 
 
-def route_summary(route: Route) -> dict[str, object]:
+class RouteSummaryStop(TypedDict):
+    id: str
+    name: str
+    lat: float
+    lng: float
+
+
+class RouteSummaryLeg(TypedDict):
+    index: int
+    seconds: int | None
+    distance_m: float | None
+    request_sha256: str
+    response_sha256: str
+
+
+class RouteSummary(TypedDict):
+    """The canonical public route record (``route_summary``)."""
+
+    route_sha256: str
+    routed: bool
+    total_walk_seconds: int
+    total_walk_distance_m: float
+    pois: list[RouteSummaryStop]
+    legs: list[RouteSummaryLeg]
+
+
+def route_summary(route: Route) -> RouteSummary:
     """Canonical public route record used by Premium plan identities."""
 
     return {
@@ -209,7 +235,7 @@ class PremiumTourPlan:
     snapshot: CorpusSnapshot
     snapshot_sha256: str
     route: Route
-    route_record: dict[str, object]
+    route_record: RouteSummary
     sequence: BeatSequence
     source: Script
     candidate: AuthoringCandidateIdentity
@@ -306,7 +332,7 @@ def plan_premium_authoring(
         reference_manifest_sha256=authorities.reference_manifest_sha256,
         calibration_manifest_sha256=authorities.calibration_manifest_sha256,
         grounded_source_sha256=sentences_payload_sha256(source.script),
-        route_sha256=str(summary["route_sha256"]),
+        route_sha256=summary["route_sha256"],
         authoring_policy_sha256=premium_authoring_policy_sha256(),
     )
     authoring = AuthoringCandidatePlan(
@@ -528,9 +554,12 @@ def resolve_routing_version(routing_client: RoutingClient) -> str:
     than in a log file nobody opens.
     """
 
+    # The status read fails in three ways: the transport or HTTP status fails
+    # (httpx.HTTPError), the body is not JSON or names no version (ValueError), or the
+    # body is JSON but not an object (AttributeError). Anything else is a bug and raises.
     try:
         return routing_client.routing_version()
-    except Exception as exc:
+    except (httpx.HTTPError, ValueError, AttributeError) as exc:
         record(
             kind=ROUTING_VERSION_DEGRADATION,
             human=(
@@ -1129,7 +1158,7 @@ def resolve_build_identity() -> PremiumBuildIdentity:
     never consulted.
     """
 
-    deployed = os.getenv("RENDER_GIT_COMMIT") or os.getenv("GIT_COMMIT_SHA")
+    deployed = os.getenv("RENDER_GIT_COMMIT")
     if deployed:
         if not re.fullmatch(r"[0-9a-f]{40}", deployed):
             raise ValueError("deployment commit fingerprint is not a full lowercase SHA")

@@ -20,14 +20,12 @@ from __future__ import annotations
 import json
 import math
 import re
-import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import InitVar, dataclass, replace
+from dataclasses import dataclass, replace
 from dataclasses import field as dataclass_field
 from datetime import datetime, time, timedelta
-from types import MappingProxyType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, Required, TypedDict
 
 from opening_hours import OpeningHours, ParserError
 from shapely.errors import ShapelyError as _ShapelyError
@@ -62,7 +60,7 @@ from .contract import (
     closure_doubt,
     opening_doubt,
 )
-from .corpus_places import CorpusMaterializationPlan, CorpusPlaceManifest
+from .corpus_places import strip_diacritics
 from .degradations import record
 from .density import FeasibilityAlternative, TourabilityRefusedError
 from .density import assess_snapshot as assess_tourability
@@ -79,6 +77,7 @@ from .routing import (
     civil_dusk_local,
     default_leg_seconds,
     envelope_radius_m,
+    governor_allowance_seconds,
     haversine_m,
     insertion_cost_seconds,
     insertion_extra_at_index,
@@ -94,7 +93,7 @@ from .routing import (
 from .routing import (
     target_dwell_seconds as target_dwell_seconds,
 )
-from .routing_client import ROUTE_SURFACE_COSTING_OVERRIDES
+from .routing_client import ROUTE_SURFACE_COSTING_OVERRIDES, CostingOptionsOverride
 from .visit_time import (
     RAIN_DWELL_FRACTION,
     listened_seconds,
@@ -107,34 +106,17 @@ from .visit_time import (
 )
 
 if TYPE_CHECKING:
+    from neo4j import Driver
+
     from .routing_client import RoutingClient
-
-
-# Capability token held by the one validating converter.  It is not a security
-# boundary against malicious Python code; it prevents ordinary constructors,
-# fixtures, and future refactors from accidentally blessing a raw snapshot as
-# materialized merely because its fields have the right shape.
-_MATERIALIZED_SNAPSHOT_TOKEN = object()
-
-# The lens_adjacency hop model: a requested lens scores
-# a POI 1.0 on a direct beat-lens hit, 0.6 when a beat lens is one
-# IS_PARENT_OF hop away (parent OR child), and 0.0 on a miss — a thematic
-# FILTER, not a bias. With no lenses requested the
-# factor is uniform 1.0 and selection degrades to importance x richness x
-# alignment x role.
-LENS_ADJACENCY_DIRECT: float = 1.0
-LENS_ADJACENCY_ONE_HOP: float = 0.6
-LENS_ADJACENCY_MISS: float = 0.0
 
 # The spotlight model. Lens is genre/tone, not a
 # gate: every corridor POI is eligible and a continuous spotlight score
 # allocates dwell. spotlight = gravity(tier) x lens_relevance x proximity.
 #
-# Crucially distinct from the legacy _lens_adjacency above, whose MISS=0.0
-# makes lens a HARD FILTER (the current select_route gate). lens_relevance
-# below shares the SAME direct/1-hop/miss CLASSIFICATION but maps a miss to a
-# POSITIVE FLOOR (LENS_FLOOR) — a miss DIMS, it never zeroes. select_route
-# bands its dwell pool by this score.
+# lens_relevance shares the direct/1-hop/miss classification of _lens_relation
+# but maps a miss to a POSITIVE FLOOR (LENS_FLOOR): a miss dims, it never zeroes.
+# select_route bands its dwell pool by this score.
 #
 # LENS_FLOOR (=0.25): lens_relevance on a thematic miss. A landmark on the
 # user's path still clears the floor on gravity → at least a brief mention;
@@ -494,6 +476,13 @@ def _band_alternatives(
     return alternatives, gap_minutes
 
 
+class PlanningRefusedError(ValueError):
+    """The planner refuses the step it was asked to take: dropping a protected stop,
+    or choosing among bounded candidates none of whose stops are findable places.
+
+    A ``ValueError`` so a caller that catches ``ValueError`` still catches it."""
+
+
 class CertificationPlanningInfeasibleError(Exception):
     """No eligible bounded stop set can satisfy a frozen certification band."""
 
@@ -578,69 +567,17 @@ class CorpusSnapshot:
     beats_by_poi: Mapping[str, tuple[BeatRef, ...]]
     area_types: Mapping[str, str]  # area_name → area_type (district/neighborhood/...)
     adjacent_areas: Mapping[str, frozenset[str]]  # area_name → directly-adjacent area names
-    # Lens hierarchy for the lens_adjacency hop model. Lowercased lens
+    # Lens hierarchy for the lens hop model. Lowercased lens
     # name → its IS_PARENT_OF neighbors one hop away, BOTH directions (parent
     # and children). Empty when a fixture doesn't care about lens hops.
     lens_neighbors: Mapping[str, frozenset[str]] = dataclass_field(default_factory=dict)
-    place_manifest: CorpusPlaceManifest | None = None
 
     def beats_for(self, poi_id: str) -> tuple[BeatRef, ...]:
-        if self.place_manifest is not None and not isinstance(self, MaterializedCorpusSnapshot):
-            raise ValueError("typed corpus place evidence has not been materialized")
         return self.beats_by_poi.get(poi_id, ())
 
 
-@dataclass(frozen=True)
-class MaterializedCorpusSnapshot(CorpusSnapshot):
-    """Deep-immutable, manifest-validated input admitted to typed selection.
-
-    The distinct type is intentional: carrying a manifest is not sufficient.
-    Only :func:`place_materialization.materialize_corpus_snapshot` may convert
-    source rows into this selection-ready form after sentence coverage,
-    provenance, canonical identities, and playback contexts have been checked.
-    """
-
-    materialization_plan: CorpusMaterializationPlan | None = None
-    snapshot_sha256: str = ""
-    _validation_token: InitVar[object | None] = None
-
-    def __post_init__(self, _validation_token: object | None) -> None:
-        mappings = (
-            self.beats_by_poi,
-            self.area_types,
-            self.adjacent_areas,
-            self.lens_neighbors,
-        )
-        if any(not isinstance(value, MappingProxyType) for value in mappings):
-            raise ValueError("materialized corpus mappings must be deep-immutable")
-        if self.place_manifest is None or self.materialization_plan is None:
-            raise ValueError("materialized corpus requires its manifest and decision plan")
-        if _validation_token is not _MATERIALIZED_SNAPSHOT_TOKEN:
-            raise ValueError("only the validated materializer may construct this snapshot")
-        if self.materialization_plan.source_manifest_sha256 != self.place_manifest.manifest_sha256:
-            raise ValueError("materialization plan is bound to a different manifest")
-        if not re.fullmatch(r"[0-9a-f]{64}", self.snapshot_sha256):
-            raise ValueError("materialized corpus requires a canonical snapshot hash")
-
-
-def require_materialized_snapshot(snapshot: CorpusSnapshot, *, operation: str) -> None:
-    """Validate one typed snapshot at a public post-selection boundary."""
-
-    if snapshot.place_manifest is None:
-        return
-    if not isinstance(snapshot, MaterializedCorpusSnapshot):
-        raise ValueError(f"typed corpus must be materialized before {operation}")
-    from .place_materialization import validate_materialized_corpus_snapshot
-
-    validate_materialized_corpus_snapshot(snapshot)
-
-
 def _place_identity_key(value: str) -> str:
-    return "".join(
-        character
-        for character in unicodedata.normalize("NFKD", value)
-        if not unicodedata.combining(character)
-    ).casefold()
+    return strip_diacritics(value).casefold()
 
 
 def is_container_identity_poi(poi: POI) -> bool:
@@ -668,7 +605,7 @@ def choose_discrete_route(routes: list[Route]) -> Route:
     for route in routes:
         if not route_has_container_identity_stop(route):
             return route
-    raise ValueError("bounded candidates contain no route with all-discrete stops")
+    raise PlanningRefusedError("bounded candidates contain no route with all-discrete stops")
 
 
 # Neo4j loader
@@ -764,7 +701,7 @@ WITH a1, a2 WHERE a1 < a2
 RETURN a1, a2, count(*) AS shared_pois
 """
 
-# Lens hierarchy for the lens_adjacency hop model. Lens nodes are global
+# Lens hierarchy for the lens hop model. Lens nodes are global
 # (not city-scoped) by design — the taxonomy is shared across cities.
 LOAD_LENS_HIERARCHY_CYPHER = """
 MATCH (parent:Lens)-[:IS_PARENT_OF]->(child:Lens)
@@ -772,7 +709,94 @@ RETURN parent.name AS parent, child.name AS child
 """
 
 
-def load_paris_corpus(driver, *, city_slug: str = "paris") -> CorpusSnapshot:
+class PoiRecord(TypedDict, total=False):
+    """One row of ``LOAD_PARIS_POIS_CYPHER``. Hermetic callers may omit any key but
+    the four the loader indexes directly."""
+
+    id: Required[str]
+    name: Required[str]
+    lat: Required[float]
+    lng: Required[float]
+    canonical_place_id: str | None
+    aliases: list[str] | None
+    coordinate_provenance: str | dict[str, object] | None
+    tier: int | None
+    poi_role: str | None
+    typical_duration_min: int | None
+    visit_seconds_inside: int | None
+    visit_basis: str | None
+    opening_hours: str | None
+    opening_hours_source: str | None
+    opening_hours_basis: str | None
+    gated: bool | None
+    hours_closed_reports: int | None
+    place_category: str | None
+    children_can_run: bool | None
+    sit_and_talk: bool | None
+    good_after_dark: bool | None
+    judgement_basis: str | None
+    queue_class: str | None
+    queue_minutes_peak: int | None
+    queue_minutes_offpeak: int | None
+    queue_peak_hours: str | None
+    queue_basis: str | None
+    trigger_radius: float | None
+    anchors: str | list[dict[str, object]] | None
+    areas: list[str] | None
+
+
+class BeatRecord(TypedDict, total=False):
+    """One row of ``LOAD_PARIS_BEATS_CYPHER``. Hermetic callers may omit any key but
+    the two the loader indexes directly."""
+
+    id: Required[str]
+    poi_id: Required[str]
+    stable_beat_id: str | None
+    place_plan_id: str | None
+    sub_location: str | None
+    trigger_address: str | None
+    narrative_function: str | None
+    beat_type: str | None
+    emotional_register: str | None
+    beat_length_class: str | None
+    est_spoken_seconds: int | None
+    script_body: str | None
+    audio_url: str | None
+    entities: list[str] | None
+    subject_tag: str | None
+    active_status: str | None
+    physical_cues: str | list[dict[str, object] | str] | None
+    pronunciation: str | None
+    source_passage: str | None
+    source_chunk_slug: str | None
+    key_claims: list[str] | None
+    lenses: list[str] | None
+
+
+class AreaRecord(TypedDict, total=False):
+    """One row of ``LOAD_AREA_TYPES_CYPHER``."""
+
+    name: Required[str]
+    area_type: str | None
+    city_name: str | None
+
+
+class AdjacencyRecord(TypedDict, total=False):
+    """One row of ``LOAD_AREA_ADJACENCY_CYPHER``."""
+
+    a1: Required[str | None]
+    a2: Required[str | None]
+    shared_pois: int
+
+
+class LensRecord(TypedDict, total=False):
+    """One row of ``LOAD_LENS_HIERARCHY_CYPHER``."""
+
+    parent: str | None
+    child: str | None
+
+
+def load_paris_corpus(driver: Driver, *, city_slug: str = "paris") -> CorpusSnapshot:
     """Pull a CorpusSnapshot for one city from Neo4j."""
     with driver.session() as session:
         poi_records = session.run(LOAD_PARIS_POIS_CYPHER, city_slug=city_slug).data()
@@ -786,7 +810,7 @@ def load_paris_corpus(driver, *, city_slug: str = "paris") -> CorpusSnapshot:
     )
 
 
-def _lens_neighbor_map(lens_records: list[dict]) -> dict[str, frozenset[str]]:
+def _lens_neighbor_map(lens_records: list[LensRecord]) -> dict[str, frozenset[str]]:
     """Symmetric 1-hop IS_PARENT_OF neighborhood, lowercased both ways."""
     acc: dict[str, set[str]] = {}
     for r in lens_records:
@@ -1025,7 +1049,7 @@ def _at_walk_start(poi: POI, start_lat: float, start_lng: float) -> bool:
     )
 
 
-def _is_unadopted_placeholder_beat(record: dict) -> bool:
+def _is_unadopted_placeholder_beat(record: BeatRecord) -> bool:
     """True for a seed-artifact beat: no stable beat_id AND placeholder audio.
 
     The conjunction is deliberate. Real corpus beats awaiting TTS still point
@@ -1039,12 +1063,11 @@ def _is_unadopted_placeholder_beat(record: dict) -> bool:
 
 
 def _snapshot_from_records(
-    poi_records: list[dict],
-    beat_records: list[dict],
-    area_records: list[dict],
-    adj_records: list[dict],
-    lens_records: list[dict] | None = None,
-    place_manifest: CorpusPlaceManifest | None = None,
+    poi_records: list[PoiRecord],
+    beat_records: list[BeatRecord],
+    area_records: list[AreaRecord],
+    adj_records: list[AdjacencyRecord],
+    lens_records: list[LensRecord] | None = None,
 ) -> CorpusSnapshot:
     pois: list[POI] = []
     beats_by_poi_acc: dict[str, list[BeatRef]] = {}
@@ -1083,7 +1106,7 @@ def _snapshot_from_records(
         pid = r["id"]
         beats = beats_by_poi_acc.get(pid, [])
         beat_count = len(beats)
-        # matching_lens_beat_count is legacy: the lens_adjacency hop model
+        # matching_lens_beat_count is legacy: the lens hop model
         # scans beat lenses directly, so nothing computes it any more. The
         # contract field stays (every existing field is preserved).
         pois.append(
@@ -1185,7 +1208,6 @@ def _snapshot_from_records(
         area_types=area_types,
         adjacent_areas=adjacent_areas,
         lens_neighbors=_lens_neighbor_map(lens_records or []),
-        place_manifest=place_manifest,
     )
 
 
@@ -1526,7 +1548,6 @@ def build_poi_beat_plans(
     at the call sites (they differ per surface). The golden harnesses call it too,
     so they measure the shipped pipeline.
     """
-    require_materialized_snapshot(snapshot, operation="beat planning")
     family = expanded_interest_lenses(lenses, snapshot)
     plans: list[POIBeats] = []
     for poi in route.pois:
@@ -1549,7 +1570,6 @@ def build_poi_extra_beats(
     :func:`build_poi_beat_plans`, so the extras are exactly the uncapped plan minus
     what the tour voiced, in priority order. POIs with no extras are omitted.
     """
-    require_materialized_snapshot(snapshot, operation="extra-beat planning")
     family = expanded_interest_lenses(lenses, snapshot)
     out: dict[str, tuple[str, ...]] = {}
     for poi in route.pois:
@@ -1580,7 +1600,6 @@ def build_poi_extra_narration(
     resolvable extras with empty/absent bodies contribute nothing; a POI whose
     extras yield no text at all is omitted (no empty-string narration is stored).
     """
-    require_materialized_snapshot(snapshot, operation="extra narration")
     from .generation import split_sentences  # local import: avoid a module cycle
 
     beats_by_id = {
@@ -2141,9 +2160,9 @@ def _say_when_the_walk_limit_binds(
     input: TourInput,
     snapshot: CorpusSnapshot,
     *,
-    routing_client,
-    score_penalty,
-    planning_policy,
+    routing_client: RoutingClient | None,
+    score_penalty: dict[str, float] | None,
+    planning_policy: RoutePlanningPolicy,
     replan: ReplanContext | None,
 ) -> None:
     """One honest line when the person's walking cap is what made the day thin:
@@ -2300,11 +2319,6 @@ def _select_route_once(
        Petit Palais bug: a tier-4 POI with 0 beats was selected
        as an anchor purely because it sat on the route corridor.
     """
-    if snapshot.place_manifest is not None and not isinstance(snapshot, MaterializedCorpusSnapshot):
-        raise ValueError(
-            "typed corpus must be validated by materialize_corpus_snapshot "
-            "before density or selection"
-        )
     # "ALREADY TRUE" — the leg cap's first answer. A cap that the un-capped day
     # already satisfies cannot bind, and the rule is that it then says so and changes
     # nothing. It did not: the capped path plans by a bounded search whose
@@ -2746,7 +2760,7 @@ def _select_route_once(
         # whole tour, silently dropping a major landmark. band_for_spotlight never
         # takes a landmark below vignette, so this catches exactly the dimmed case.
         lens_dimmed_landmark = poi.tier >= BAND_LANDMARK_TIER and on_path_band == BAND_VIGNETTE
-        if not is_dwell_band(on_path_band) and not lens_dimmed_landmark and not poi.requires_dwell:
+        if not is_dwell_band(on_path_band) and not lens_dimmed_landmark:
             # silent -> excluded entirely; a NON-landmark vignette -> a walk-by, not
             # a dwell stop. Either way it does not enter the greedy's dwell pool.
             continue
@@ -2893,7 +2907,7 @@ def _select_route_once(
             # real disclosures.
             continue
         if (
-            not poi.requires_dwell and _is_filler_stub(poi, snapshot, interest or None)
+            _is_filler_stub(poi, snapshot, interest or None)
             # A PLACE STILL HAS TO HAVE SOMETHING TO SAY.
             #
             # This briefly also exempted anything WORTH VISITING regardless of what
@@ -3077,10 +3091,10 @@ def _select_route_once(
     # to one stop.
     # STILL AN AUDIO CAP, deliberately: it bounds how long one ordinary stop may
     # TALK, which is a fairness rule about narration share and has nothing to do
-    # with how long the visitor stands there. Only its base moved, and the number
-    # is unchanged at every duration (routing.governor_allowance_seconds says the
-    # same thing at the same arithmetic).
-    allowance = dwell_budget // max(1, min(3, input.duration_min // 10))
+    # with how long the visitor stands there.
+    allowance = governor_allowance_seconds(
+        input.duration_min, planning_policy, end_hardness=input.end_hardness
+    )
     count_floor = min(3, input.duration_min // 10)
     exempt_anchor_id: str | None = None
     _capped_memo: dict[tuple[str, bool], int] = {}
@@ -4159,11 +4173,7 @@ def _select_route_once(
     # Attach walk-past vignettes AFTER ordering — the leg
     # geometry is final only now. Additive metadata: ``pois``/``transits`` are
     # untouched (the identity baseline holds bit-for-bit).
-    # The snapshot-aware density boundary already performed the one full
-    # manifest/materialization validation for this route.  Use the private
-    # implementation here so vignette selection stays O(corpus), not another
-    # full replay validation.  External callers use the guarded public wrapper.
-    vignettes = _select_vignettes_validated(route, snapshot, lenses=interest or None)
+    vignettes = select_vignettes(route, snapshot, lenses=interest or None)
     if vignettes:
         route = route.model_copy(update={"vignettes": vignettes})
     # A GREEN-density pool can still DELIVER thin — audio far under the
@@ -4245,11 +4255,6 @@ def apply_co_located_demotion(
         for j in range(i + 1, len(selected)):
             b = selected[j]
             if b.id in demoted_to_host or a.id in demoted_to_host:
-                continue
-            # A materialized off-site story is valid only at its canonical
-            # destination.  Post-selection demotion must never move it back to
-            # an address/name-derived host.
-            if a.requires_dwell or b.requires_dwell:
                 continue
             if (
                 a.canonical_place_id is not None
@@ -4412,8 +4417,6 @@ def collapse_name_twins(
             b = selected[j]
             if b.id in dropped_to_host:
                 continue
-            if a.requires_dwell or b.requires_dwell:
-                continue
             # A shared display name is not identity.  Once both records carry
             # canonical IDs, only equal IDs may collapse; nearby distinct
             # places remain separate.
@@ -4453,6 +4456,13 @@ def collapse_name_twins(
     return new_selected, merged
 
 
+class StopCostFn(Protocol):
+    """What seating one candidate costs the standing-still budget; ``exempt`` marks
+    the start anchor the per-stop audio governor does not cap."""
+
+    def __call__(self, cand: POI, *, exempt: bool) -> int: ...
+
+
 def _apply_fill_pass(
     selected: list[POI],
     candidates: list[POI],
@@ -4465,7 +4475,7 @@ def _apply_fill_pass(
     round_trip: bool,
     walk_budget: int,
     dwell_budget: int,
-    stop_cost_fn: Callable[..., int],
+    stop_cost_fn: StopCostFn,
     exempt_anchor_id: str | None,
     rescue_floor: int = 0,
     leg_seconds_fn: LegSecondsFn | None = None,
@@ -4730,7 +4740,7 @@ def _reach_predicate(
     routing_client: RoutingClient | None,
     *,
     pace_multiplier: float = 1.0,
-):
+) -> tuple[Callable[[float, float], bool], bool]:
     """(contains(lat, lng), degraded) — the REACH membership test.
 
     Primary: point-in-polygon against the Valhalla walking isochrone
@@ -4867,7 +4877,7 @@ def _seat_body_stops(
 
 
 def _memoized_leg_fn(
-    client: RoutingClient, *, costing_options_override: dict | None = None
+    client: RoutingClient, *, costing_options_override: CostingOptionsOverride | None = None
 ) -> LegSecondsFn:
     """Memoized routed leg times for the walk-cost divisor.
 
@@ -5013,8 +5023,8 @@ def _drop_dead_doors(
     *,
     undroppable: set[str],
     arrival_door_reason: Callable[[POI, int | None, datetime | None], str | None],
-    shape_visit: Callable[..., PromiseShape],
-    price_visit: Callable[..., int],
+    shape_visit: Callable[[POI, int | None, datetime | None], PromiseShape],
+    price_visit: Callable[[POI, int | None, datetime | None], int],
     leg_seconds_fn: LegSecondsFn | None,
     start_lat: float,
     start_lng: float,
@@ -5600,15 +5610,16 @@ def grant_freed_seconds(
     visit_of: Callable[[POI], int],
     ceiling_of: Callable[[POI], int],
     protected_ids: set[str] | frozenset[str],
-    receive_first: Callable[[POI], object] | None = None,
 ) -> dict[str, int]:
     """THE grant rule: freed visitor-time flows to the
     survivors PROTECTED FIRST, then the strongest (tier, current visit, id), each
     up to its shape ceiling, never more than was freed. One spelling, read by the
     drop primitive and by the contingency set's skip/early entries (a skip and an
     early band free minutes without the planner dropping anything)."""
-    order = receive_first or (lambda p: (-p.tier, -visit_of(p), p.id))
-    ranked = sorted(survivors, key=lambda p: (0 if p.id in protected_ids else 1, order(p)))
+    ranked = sorted(
+        survivors,
+        key=lambda p: (0 if p.id in protected_ids else 1, -p.tier, -visit_of(p), p.id),
+    )
     granted: dict[str, int] = {}
     pool = max(0, freed_seconds)
     for survivor in ranked:
@@ -5633,7 +5644,6 @@ def drop_stop(
     visit_of: Callable[[POI], int],
     ceiling_of: Callable[[POI], int],
     protected_ids: set[str] | frozenset[str],
-    receive_first: Callable[[POI], object] | None = None,
 ) -> StopDrop:
     """THE ONE DROP PRIMITIVE: drop a stop, MERGE its two legs,
     re-check the per-leg cap on the merged leg, and hand the freed minutes to
@@ -5646,22 +5656,22 @@ def drop_stop(
     and nowhere else:
 
     - A PROTECTED stop (a rest, meal, toilet, pin, the finish) is never
-      dropped by arithmetic; it triggers the question. Asking to drop one is a
-      programming error here, not a policy: ``ValueError``.
+      dropped by arithmetic; it triggers the question. Asking to drop one is
+      refused with ``PlanningRefusedError``.
     - Dropping a stop MERGES its two legs (a 12-minute and a 9-minute leg
       fuse into 21): the merged leg is priced with the SAME leg function selection uses
       and reported against the cap; a caller must not take a drop whose
       ``merged_leg_fits`` is False (folding Victor Hugo into Place des Vosges
       merges into a 576 s leg, over a 540 s cap).
     - The freed minutes flow to the SURVIVORS, protected
-      first and then the strongest (``receive_first`` orders them; the default is
-      tier, then current visit length, then id), each up to its shape ceiling
+      first and then the strongest (tier, then current visit length, then id),
+      each up to its shape ceiling
       (``visit_time.visit_ceiling_seconds``) — never to the weakest because it has
       the most headroom, never past a ceiling, and never
       more than was freed, so a day is never lengthened by a drop.
     """
     if drop.id in protected_ids:
-        raise ValueError(
+        raise PlanningRefusedError(
             f"{drop.id!r} is a protected stop: a rest, meal, toilet, pin "
             "or the finish is never auto-cut — it triggers the question, not a drop"
         )
@@ -5677,7 +5687,6 @@ def drop_stop(
         visit_of=visit_of,
         ceiling_of=ceiling_of,
         protected_ids=protected_ids,
-        receive_first=receive_first,
     )
     return StopDrop(
         remaining=remaining,
@@ -6610,7 +6619,9 @@ def _type_rank(area: str, snapshot: CorpusSnapshot) -> int:
     )
 
 
-def _spine_tiebreak_key(area: str, votes: Counter[str], snapshot: CorpusSnapshot) -> tuple:
+def _spine_tiebreak_key(
+    area: str, votes: Counter[str], snapshot: CorpusSnapshot
+) -> tuple[int, int, int, str]:
     """Smaller is better: (-vote_count, type_rank, vote_count, name).
 
     Used only when the 2x district lift hasn't already chosen a winner —
@@ -6679,16 +6690,12 @@ def poi_score(
     producers are the rain pricing and the skip-the-queues dial. Born as
     the k-flavours diversity knob; the flavours were removed.
 
-    Since the model switch, the lens factor is the POSITIVE-floored
-    ``lens_relevance`` (miss -> LENS_FLOOR = 0.25), NOT the legacy hard-filter
-    ``_lens_adjacency`` (miss -> 0.0). This is the second half of the model
-    switch: with the candidate-pool lens gate removed, a lens-miss POI is
-    eligible, so its score must DIM rather than ZERO -- otherwise the greedy
-    would still never pick it and a tier-5 off-genre landmark would silently
-    drop out, and lens alone must never silence a landmark. The
-    objective stays strictly multiplicative; only the lens factor's
-    miss value changed from 0.0 to a positive floor. With no lenses requested
-    both functions return 1.0, so the unlensed objective is byte-identical.
+    The lens factor is the POSITIVE-floored ``lens_relevance`` (miss ->
+    LENS_FLOOR = 0.25). A lens-miss POI is eligible, so its score DIMS rather
+    than ZEROES: otherwise the greedy would never pick it and a tier-5 off-genre
+    landmark would silently drop out, and lens alone must never silence a
+    landmark. The objective is strictly multiplicative. With no lenses requested
+    the lens factor is 1.0.
     """
     # DELIBERATE OVERLAP WITH `spotlight`, not a fork:
     # both multiply a tier-derived weight by the ONE `lens_relevance` definition,
@@ -6708,22 +6715,6 @@ def poi_score(
     return importance * richness * relevance * alignment * role_mult * diversity * affordance
 
 
-def _lens_adjacency(poi: POI, interest: frozenset[str], snapshot: CorpusSnapshot) -> float:
-    """Hop model over the POI's active beat lenses (replaces _interest_bias).
-
-    1.0 when any beat lens directly matches a requested lens; 0.6 when any
-    beat lens is one IS_PARENT_OF hop from a requested lens (parent or
-    child); 0.0 otherwise. No requested lenses → uniform 1.0 so selection
-    degrades gracefully to importance x richness x alignment x role.
-    """
-    relation = _lens_relation(poi, interest, snapshot)
-    if relation == "no_lens" or relation == "direct":
-        return LENS_ADJACENCY_DIRECT
-    if relation == "one_hop":
-        return LENS_ADJACENCY_ONE_HOP
-    return LENS_ADJACENCY_MISS
-
-
 def _lens_relation(poi: POI, interest: frozenset[str], snapshot: CorpusSnapshot) -> str:
     """Classify a POI's relation to the requested lenses (shared logic).
 
@@ -6731,10 +6722,9 @@ def _lens_relation(poi: POI, interest: frozenset[str], snapshot: CorpusSnapshot)
     lens directly matches a requested lens), ``"one_hop"`` (a beat lens is one
     IS_PARENT_OF hop — parent OR child — from a requested lens), or
     ``"miss"`` (neither). This is the single source of truth for the
-    direct/1-hop/miss decision: both the legacy ``_lens_adjacency`` (hard
-    filter, miss → 0.0) and the new ``lens_relevance`` (spotlight floor,
-    miss → LENS_FLOOR) map these labels onto their own weights, so the two
-    can never drift apart on classification.
+    direct/1-hop/miss decision: ``lens_relevance`` and visit_time map these
+    labels onto their own weights, so they can never drift apart on
+    classification.
     """
     if not interest:
         return "no_lens"
@@ -6775,9 +6765,8 @@ def lens_relevance(poi: POI, *, lenses: frozenset[str] | None, snapshot: CorpusS
     - LENS_FLOOR (0.25) on a miss — a miss DIMS, it never zeroes,
     - 1.0 (uniform) when ``lenses`` is None/empty.
 
-    Shares its direct/1-hop/miss classification with ``_lens_adjacency`` via
-    ``_lens_relation`` — the ONLY difference is the miss maps to LENS_FLOOR
-    here instead of 0.0. Because the floor is strictly positive, lens alone
+    Takes its direct/1-hop/miss classification via ``_lens_relation``.
+    Because the floor is strictly positive, lens alone
     can never silence a POI; only the combined spotlight (low gravity AND a
     miss) can drop one below an output band.
     """
@@ -6914,17 +6903,6 @@ def select_vignettes(
     snapshot: CorpusSnapshot,
     lenses: frozenset[str] | None = None,
 ) -> dict[int, tuple[POI, ...]]:
-    """Guarded external boundary for walk-past vignette selection."""
-
-    require_materialized_snapshot(snapshot, operation="vignette selection")
-    return _select_vignettes_validated(route, snapshot, lenses)
-
-
-def _select_vignettes_validated(
-    route: Route,
-    snapshot: CorpusSnapshot,
-    lenses: frozenset[str] | None = None,
-) -> dict[int, tuple[POI, ...]]:
     """Pure walk-past vignette selection along the legs.
 
     Returns ``leg_idx → vignette POIs`` where leg ``i`` is the walk INTO stop
@@ -6959,8 +6937,6 @@ def _select_vignettes_validated(
     scored: list[tuple[float, POI]] = []
     for poi in snapshot.pois:
         if poi.id in dwell_ids:
-            continue
-        if not poi.vignette_eligible or poi.requires_dwell:
             continue
         if not _has_active_beats(poi, snapshot):
             continue
@@ -7038,7 +7014,7 @@ __all__ = [
     "VIGNETTE_MAX_DETOUR_M",
     "VIGNETTE_MAX_PER_LEG",
     "CorpusSnapshot",
-    "MaterializedCorpusSnapshot",
+    "PlanningRefusedError",
     "bearing",
     "gravity",
     "in_wedge",
@@ -7047,7 +7023,6 @@ __all__ = [
     "pick_spine_area",
     "poi_score",
     "proximity",
-    "require_materialized_snapshot",
     "select_route",
     "select_vignettes",
     "spotlight",

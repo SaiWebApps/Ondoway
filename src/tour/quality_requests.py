@@ -11,6 +11,7 @@ import json
 from typing import Literal
 
 import anthropic
+from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
 from pydantic import BaseModel, ConfigDict, Field
 
 from .corpus_places import text_sha256
@@ -283,8 +284,8 @@ def _request_envelope(
     system: str,
     schema: dict[str, object],
     user: str,
-) -> tuple[str, dict[str, object]]:
-    sdk_request: dict[str, object] = {
+) -> tuple[str, MessageCreateParamsNonStreaming]:
+    sdk_request: MessageCreateParamsNonStreaming = {
         "model": model,
         "max_tokens": max_tokens,
         "thinking": {"type": "adaptive"},
@@ -307,7 +308,7 @@ def _request_envelope(
 
 def batch_fact_request_envelope(
     request: FactReviewInput, *, model: str
-) -> tuple[str, dict[str, object]]:
+) -> tuple[str, MessageCreateParamsNonStreaming]:
     user = BATCH_FACT_TASK + "\n\nFACT BATCH:\n" + request.model_dump_json()
     return _request_envelope(
         model=model,
@@ -323,7 +324,7 @@ def calibration_request_envelope(
     enjoyment_anchors: tuple[EnjoymentCalibrationAnchor, ...],
     *,
     model: str,
-) -> tuple[str, dict[str, object]]:
+) -> tuple[str, MessageCreateParamsNonStreaming]:
     payload = {
         "fact_policy_cases": [
             {
@@ -358,7 +359,7 @@ def enjoyment_request_envelope(
     anchors: tuple[EnjoymentCalibrationAnchor, ...],
     *,
     model: str,
-) -> tuple[str, dict[str, object]]:
+) -> tuple[str, MessageCreateParamsNonStreaming]:
     neutral_items = tuple(sorted(
         (*tuple(anchor.item for anchor in anchors), *items),
         key=lambda item: item.item_id,

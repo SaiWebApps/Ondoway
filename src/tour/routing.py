@@ -38,7 +38,7 @@ from .contract import (
 
 if TYPE_CHECKING:
     # routing_client imports from this module; type-only import avoids the cycle.
-    from .routing_client import RoutingClient
+    from .routing_client import CostingOptionsOverride, RoutingClient
 
 # Walking seconds for one leg, (from_lat, from_lng, to_lat, to_lng) -> int.
 # The default is the pace-corrected haversine; selection builds a memoized
@@ -419,6 +419,8 @@ def target_dwell_seconds(
 def governor_allowance_seconds(
     duration_min: int,
     policy: RoutePlanningPolicy = DEFAULT_ROUTE_PLANNING_POLICY,
+    *,
+    end_hardness: str = "firm",
 ) -> int:
     """Per-stop audio allowance for the audio governor (``beat_select.govern_poi_beats``).
 
@@ -426,18 +428,20 @@ def governor_allowance_seconds(
     seconds; the ordered overflow beats become the keep-exploring extras. The
     start-anchor and the fixed-end-B / pulled endpoint are EXEMPT (no cap).
 
-    = ``target_dwell_seconds(d) // min(3, d // 10)`` — i.e. budget / 3 for
-    d>=30 (~5 min @30min, ~15 min @90min): an incidental may speak for up to
+    = the request's standing-still budget ``// min(3, d // 10)`` — i.e. budget / 3
+    for d>=30 (~5 min @30min, ~15 min @90min): an incidental may speak for up to
     ~1/3 of the tour's standing-still time. The divisor floors at 1 so very
-    short tours (which seat ~1 stop) impose no cap.
+    short tours (which seat ~1 stop) impose no cap. ``end_hardness`` bends the
+    standing-still budget exactly as ``route_planning_budget`` bends it, so the
+    allowance is a share of the same budget the planner fills.
 
-    THIS IS STILL AN AUDIO CAP and deliberately so: it bounds how long one
-    ordinary stop may TALK. What moved under it is the base it takes a share
-    of, which is now the whole standing-still budget rather than a budget that
-    pretended narration was the only way to spend it. The number is unchanged
-    at every duration, because the two budgets were always the same seconds.
+    This is an audio cap: it bounds how long one ordinary stop may TALK, as a
+    share of the whole standing-still budget.
     """
-    return target_dwell_seconds(duration_min, policy) // max(1, min(3, duration_min // 10))
+    dwell = route_planning_budget(
+        duration_min, policy, end_hardness=end_hardness
+    ).dwell_target_seconds
+    return dwell // max(1, min(3, duration_min // 10))
 
 
 def walk_budget_seconds(
@@ -624,31 +628,14 @@ def insertion_cost_seconds(
     return (best_extra if best_extra is not None else 0, best_idx)
 
 
-def path_walk_seconds(
-    coords: list[tuple[float, float]], leg_seconds_fn: LegSecondsFn | None = None
-) -> int:
-    """How long is it to walk this chain of points? THE ONE SUM.
-
-    Every route measurement in the planner is this: build a list of coordinates
-    — start, the stops in order, sometimes a fixed end or a return to the start —
-    and add up the legs between them.
-
-    Every caller keeps only how its coords list is BUILT, the part that genuinely
-    differs; swapping the estimator, or handling a leg the router cannot answer, is
-    one edit here.
-    """
-    return sum(path_leg_seconds(coords, leg_seconds_fn))
-
-
 def path_leg_seconds(
     coords: list[tuple[float, float]], leg_seconds_fn: LegSecondsFn | None = None
 ) -> list[int]:
     """Each leg of this chain, separately.
 
-    ``path_walk_seconds`` is the sum of this. They are one function split in two
-    because a route's TOTAL walk and its LONGEST single walk are different
-    questions with different answers, and both are needed: a walking budget is not
-    one number. For a step-free visitor, a 54-minute total is unremarkable while a
+    A route's TOTAL walk and its LONGEST single walk are different questions with
+    different answers, and both are needed: a walking budget is not one number.
+    For a step-free visitor, a 54-minute total is unremarkable while a
     twelve-minute per-leg limit is the binding constraint, so a route with one
     25-minute leg and one 5-minute leg has the same total and is unusable.
     """
@@ -668,7 +655,7 @@ def _transit(
     to_lng: float,
     routing_client: RoutingClient | None,
     *,
-    costing_options_override: dict | None = None,
+    costing_options_override: CostingOptionsOverride | None = None,
 ) -> TransitSegment:
     """Build one leg while retaining planning and routed measurements.
 
@@ -722,7 +709,7 @@ def summarise_route(
     fixed_end_poi_id: str | None = None,
     planned_visit_seconds: Mapping[str, int] | None = None,
     elapsed_shortfall_seconds: int = 0,
-    costing_options_override: dict | None = None,
+    costing_options_override: CostingOptionsOverride | None = None,
     planned_queue_seconds: Mapping[str, int] | None = None,
     visit_goes_inside: Mapping[str, bool] | None = None,
     planned_outside_seconds: Mapping[str, int] | None = None,

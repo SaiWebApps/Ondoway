@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from shapely.geometry import LineString, shape
 
-from src.tour.audit import (
+from tests.tour_audit import (
     decode_polyline6,
     eta_error,
     seine_crossing_metres,

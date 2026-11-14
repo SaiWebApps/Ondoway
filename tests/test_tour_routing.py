@@ -22,9 +22,10 @@ from src.tour.routing import (
     insertion_cost_seconds,
     insertion_extra_at_index,
     pace_corrected_walk_seconds,
-    path_walk_seconds,
+    path_leg_seconds,
     planned_audio_seconds,
     planned_total_seconds,
+    route_planning_budget,
     summarise_route,
     target_dwell_seconds,
     walk_budget_seconds,
@@ -362,8 +363,8 @@ def test_insertion_extra_local_delta_equals_the_whole_path_splice_difference():
                     elif shape["round_trip"]:
                         base_coords.append(start)
                         new_coords.append(start)
-                    reference = path_walk_seconds(new_coords, fn) - path_walk_seconds(
-                        base_coords, fn
+                    reference = sum(path_leg_seconds(new_coords, fn)) - sum(
+                        path_leg_seconds(base_coords, fn)
                     )
                     got = insertion_extra_at_index(
                         cand,
@@ -459,6 +460,15 @@ def test_governor_allowance_divisor_floors_for_short_durations():
     assert governor_allowance_seconds(5) == target_dwell_seconds(5)
     # d in [20,29] -> d//10=2 -> budget/2.
     assert governor_allowance_seconds(25) == target_dwell_seconds(25) // 2
+
+
+def test_governor_allowance_is_a_share_of_the_end_hardness_budget():
+    # A wall end shrinks the standing-still budget, and the allowance is a share
+    # of that same budget, so the cap the planner applies follows it.
+    wall = route_planning_budget(90, end_hardness="wall").dwell_target_seconds
+    assert governor_allowance_seconds(90, end_hardness="wall") == wall // 3
+    assert governor_allowance_seconds(90, end_hardness="wall") < governor_allowance_seconds(90)
+    assert governor_allowance_seconds(90, end_hardness="open") == governor_allowance_seconds(90)
 
 
 # ---------------------------------------------------------------------------

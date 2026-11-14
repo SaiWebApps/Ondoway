@@ -17,6 +17,7 @@ import json
 from dataclasses import dataclass
 from typing import Literal
 
+from .certification_provider import PhysicalProviderResponse
 from .contract import POI, BeatSequence, Sentence, TourInput
 from .generation import GLUE_CLOSING, generate
 from .premium_tour import (
@@ -228,7 +229,7 @@ def full_telling_pieces(full: FullTelling, *, first_order: int) -> tuple[RecipeP
 
 def finalize_place_recipe(
     recipe: PlaceRecipePlan,
-    responses: tuple,
+    responses: tuple[PhysicalProviderResponse, ...],
     *,
     faithfulness_checker: FaithfulnessChecker,
 ) -> tuple[Sentence, ...]:

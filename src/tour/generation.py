@@ -235,12 +235,6 @@ def spoken_minute_counts(text: str) -> set[int]:
 
 # Sentence splitting
 
-# Corpus place assessments bind the exact splitter semantics that produced
-# their sentence indexes/hashes.  Any behavior-changing splitter edit must
-# increment this value and migrate/review the manifest; old evidence may not be
-# silently reinterpreted.
-SENTENCE_SPLITTER_VERSION: str = "ondoway-sentence-splitter-v1"
-
 # Split on .?! followed by whitespace, but never inside common abbreviations.
 # Best-effort — corpus is well-edited prose. Validation catches invention.
 _ABBREVIATIONS: frozenset[str] = frozenset(
@@ -894,14 +888,10 @@ def _synth_pick_cue(beats: list[BeatRef]):
 def _find_orientation_beat(stop: POIBeats) -> BeatRef | None:
     """Return the first beat keyed as ``beat_type='stop_orientation'``.
 
-    The field is ``beat_type`` (not ``narrative_function``). The lookup checks
-    both for resilience — older corpus dumps used ``narrative_function`` for
-    the same role.
+    The orientation role lives in ``beat_type``.
     """
     for beat in stop.beats:
         if (beat.beat_type or "").lower() == "stop_orientation":
-            return beat
-        if (beat.narrative_function or "").lower() == "stop_orientation":
             return beat
     return None
 
@@ -972,9 +962,9 @@ def _template_nav(
     connective tissue between points, never a flat "Walk to the next stop."
     For a pinned beatless endpoint, a graceful arrival (never routes the
     walker to a placeholder literally named "Destination"). ``leg_seconds`` is
-    the same figure the engine budgets this leg at elsewhere (options.py's
-    eta_seconds, reflection.py, audit.py) so the announced walk time and the
-    displayed tour total never disagree.
+    the leg's ``routing.leg_walk_seconds``, the one per-leg figure every reader of
+    this leg uses, so the announced walk time and the displayed tour total never
+    disagree.
     """
     if is_final_destination:
         return "From here, make your way to your final destination."

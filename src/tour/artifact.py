@@ -215,9 +215,8 @@ class PlaceReferenceEvidence(BaseModel):
 
     @model_validator(mode="after")
     def _reference_lane_is_consistent(self) -> PlaceReferenceEvidence:
-        # The shared lane core lives in corpus_places; the artifact layer's
-        # own extras — directional
-        # semantics and exact coordinate identity — follow it.
+        # The lane rules come first; this model's own extras — directional
+        # semantics and exact coordinate identity — follow them.
         check_reference_lane(
             self.reference_kind,
             self.relation,
@@ -269,9 +268,8 @@ class SentencePlaceAssessment(BaseModel):
 
     @model_validator(mode="after")
     def _assessment_is_complete(self) -> SentencePlaceAssessment:
-        # The shared three-rule core lives in corpus_places; the artifact
-        # layer's own guard — every reference bound
-        # to THIS exact sentence — follows it.
+        # The three-rule core comes first; this model's own guard — every
+        # reference bound to THIS exact sentence — follows it.
         check_place_assessment_references(
             self.assessment,
             tuple(reference.reference_id for reference in self.references),

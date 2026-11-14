@@ -71,6 +71,7 @@ def _beat(
     *,
     body: str = "",
     nf: str | None = None,
+    bt: str | None = None,
     sub: str | None = None,
     addr: str | None = None,
     lenses: tuple[str, ...] = (),
@@ -82,6 +83,7 @@ def _beat(
         sub_location=sub,
         trigger_address=addr,
         narrative_function=nf,
+        beat_type=bt,
         word_count=word_count if word_count is not None else len(body.split()),
         lenses=lenses,
         script_body=body or None,
@@ -377,7 +379,7 @@ def test_cold_open_uses_stop_orientation_when_present():
         "orient-1",
         poi.id,
         body="Find a bench. Pronounced plass-day-voge.",
-        nf="stop_orientation",
+        bt="stop_orientation",
     )
     body = _beat("body-1", poi.id, body="Henri IV built the square.", nf="establishing")
 
@@ -438,7 +440,7 @@ def test_cold_open_synthesizes_when_no_orientation():
 
 def test_orientation_beat_not_emitted_twice():
     poi = _poi("p1", "Place des Vosges")
-    orient = _beat("orient-1", poi.id, body="Find a bench.", nf="stop_orientation")
+    orient = _beat("orient-1", poi.id, body="Find a bench.", bt="stop_orientation")
     body = _beat("body-1", poi.id, body="Henri IV.", nf="establishing")
     seq = BeatSequence(
         poi_beats=(
@@ -464,7 +466,7 @@ def test_orientation_beat_not_emitted_twice():
 def test_transit_uses_corpus_beat_when_present():
     p1 = _poi("p1", "Pont Neuf")
     p2 = _poi("p2", "Conciergerie")
-    orient = _beat("orient-1", p1.id, body="Stand on the bridge.", nf="stop_orientation")
+    orient = _beat("orient-1", p1.id, body="Stand on the bridge.", bt="stop_orientation")
     p1_body = _beat("p1-body", p1.id, body="The Pont Neuf is the oldest stone bridge.")
     # The transit beat must reference the previous stop (Pont Neuf)
     # so the direction-awareness check accepts it.
@@ -513,7 +515,7 @@ def test_transit_rejects_wrong_direction_beat():
     """
     p1 = _poi("p1", "Pont de la Concorde")
     p2 = _poi("p2", "Pont Alexandre III")
-    orient = _beat("orient-1", p1.id, body="Stand at the parapet.", nf="stop_orientation")
+    orient = _beat("orient-1", p1.id, body="Stand at the parapet.", bt="stop_orientation")
     p1_body = _beat("p1-body", p1.id, body="The bridge dates to 1791.")
     # Wrong-direction transit: origin is Invalides Metro, not Pont de la Concorde.
     p2_transit = _beat(
@@ -562,7 +564,7 @@ def test_transit_accepts_directionally_consistent_beat():
     """
     p1 = _poi("p1", "Place du Tertre")
     p2 = _poi("p2", "Saint-Pierre")
-    orient = _beat("orient-1", p1.id, body="Stand by the easels.", nf="stop_orientation")
+    orient = _beat("orient-1", p1.id, body="Stand by the easels.", bt="stop_orientation")
     # Direction-consistent: body explicitly mentions Place du Tertre.
     p2_transit = _beat(
         "p2-transit",
@@ -635,7 +637,7 @@ def test_transit_falls_back_when_origin_mismatch():
 def test_transit_falls_back_to_glue_when_no_corpus_beat():
     p1 = _poi("p1", "Place des Vosges")
     p2 = _poi("p2", "Hôtel de Sully")
-    p1_orient = _beat("p1-orient", p1.id, body="Find a bench.", nf="stop_orientation")
+    p1_orient = _beat("p1-orient", p1.id, body="Find a bench.", bt="stop_orientation")
     p1_body = _beat("p1-body", p1.id, body="Henri IV built the square.")
     p2_body = _beat("p2-body", p2.id, body="The Hôtel de Sully sits just south.")
     seq = BeatSequence(
@@ -676,7 +678,7 @@ def test_transit_falls_back_to_glue_when_no_corpus_beat():
 def test_nav_glue_request_carries_the_routed_minutes_and_the_leg_voice_rules():
     p1 = _poi("p1", "Place des Vosges")
     p2 = _poi("p2", "Hôtel de Sully")
-    o = _beat("o", p1.id, body="Find a bench.", nf="stop_orientation")
+    o = _beat("o", p1.id, body="Find a bench.", bt="stop_orientation")
     a = _beat("a", p1.id, body="A fact.")
     b = _beat("b", p2.id, body="Another fact.")
     seq = BeatSequence(
@@ -733,7 +735,7 @@ def test_coerce_glue_output_rejects_compass_and_wrong_minutes():
 def test_transit_glue_falls_back_to_default_on_no_glue_sentinel():
     p1 = _poi("p1", "Stop A")
     p2 = _poi("p2", "Stop B")
-    o = _beat("o", p1.id, body="Settle in.", nf="stop_orientation")
+    o = _beat("o", p1.id, body="Settle in.", bt="stop_orientation")
     a = _beat("a", p1.id, body="A history beat.")
     b = _beat("b", p2.id, body="A second history beat.")
     seq = BeatSequence(
@@ -775,7 +777,7 @@ def test_glue_label_set_matches_the_whitelist():
 
 def test_every_glue_sentence_has_whitelisted_source_id():
     poi = _poi("p1", "Place des Vosges")
-    orient = _beat("o", poi.id, body="Find a bench.", nf="stop_orientation")
+    orient = _beat("o", poi.id, body="Find a bench.", bt="stop_orientation")
     body = _beat("b", poi.id, body="Henri IV built the square.")
     seq = BeatSequence(
         poi_beats=(
@@ -798,7 +800,7 @@ def test_haiku_invented_forbidden_phrase_is_replaced_with_default():
     # output and use the default safe glue.
     p1 = _poi("p1", "A")
     p2 = _poi("p2", "B")
-    o = _beat("o", p1.id, body="Find a bench.", nf="stop_orientation")
+    o = _beat("o", p1.id, body="Find a bench.", bt="stop_orientation")
     a = _beat("a", p1.id, body="A fact.")
     b = _beat("b", p2.id, body="Another fact.")
     seq = BeatSequence(
@@ -825,7 +827,7 @@ def test_haiku_invented_forbidden_phrase_is_replaced_with_default():
 
 def test_generation_is_deterministic_under_mock():
     poi = _poi("p1", "Place des Vosges")
-    orient = _beat("o", poi.id, body="Find a bench.", nf="stop_orientation")
+    orient = _beat("o", poi.id, body="Find a bench.", bt="stop_orientation")
     body = _beat("b", poi.id, body="Henri IV built the square.")
     seq = BeatSequence(
         poi_beats=(
@@ -851,7 +853,7 @@ def test_generation_is_deterministic_under_mock():
 
 def test_every_beat_sentence_carries_beat_id():
     poi = _poi("p1", "Place des Vosges")
-    orient = _beat("o", poi.id, body="Find a bench.", nf="stop_orientation")
+    orient = _beat("o", poi.id, body="Find a bench.", bt="stop_orientation")
     body = _beat("b", poi.id, body="Henri IV built it. Crowds came.")
     seq = BeatSequence(
         poi_beats=(
@@ -877,7 +879,7 @@ def test_every_beat_sentence_carries_beat_id():
 def test_lens_coverage_counts_beats_per_lens():
     poi = _poi("p1", "Place des Vosges")
     o = _beat(
-        "o", poi.id, body="Find a bench.", nf="stop_orientation", lenses=("famous_residents",)
+        "o", poi.id, body="Find a bench.", bt="stop_orientation", lenses=("famous_residents",)
     )
     a = _beat("a", poi.id, body="A fact.", lenses=("famous_residents", "literary_heritage"))
     b = _beat("b", poi.id, body="Another fact.", lenses=("famous_residents",))
@@ -898,7 +900,7 @@ def test_lens_coverage_counts_beats_per_lens():
 
 def test_selected_pois_carry_beat_ids_in_order():
     poi = _poi("p1", "Place des Vosges")
-    o = _beat("o", poi.id, body="x.", nf="stop_orientation")
+    o = _beat("o", poi.id, body="x.", bt="stop_orientation")
     a = _beat("a", poi.id, body="y.")
     seq = BeatSequence(
         poi_beats=(
@@ -1158,7 +1160,7 @@ def test_every_stop_with_dwellworthy_pool_emits_own_beat_sentence(n_stops: int):
         _poi_beats(
             pois[0],
             (
-                _beat("p0-orient", "p0", body="Find the corner bench.", nf="stop_orientation"),
+                _beat("p0-orient", "p0", body="Find the corner bench.", bt="stop_orientation"),
                 _beat(
                     "p0-body-a",
                     "p0",
@@ -1224,7 +1226,7 @@ def test_transit_only_stop_dropped_beat_is_not_reported_as_voiced():
 
     p1 = _poi("p1", "Place des Vosges")
     p2 = _poi("p2", "Saint-Pierre")
-    p1_orient = _beat("p1-orient", "p1", body="Find the corner bench.", nf="stop_orientation")
+    p1_orient = _beat("p1-orient", "p1", body="Find the corner bench.", bt="stop_orientation")
     p1_body = _beat("p1-body", "p1", body="Henri IV built the square in 1612.", nf="establishing")
     # Transit-class AND directionally rejected: neither the trigger_address
     # nor the body mentions p1's name, so _build_transit's direction
@@ -1310,7 +1312,7 @@ def test_cold_open_area_hoist_strips_donor_stop_current_contract_pin():
     p1_est_b = _beat("p1-est-b", "p1", body="Sully bought it in 1634.", nf="establishing")
     # p1 has NO stop_orientation beat — forces the Area-fallback search.
     p2_orient = _beat(
-        "p2-orient", "p2", body="Stand where the two lanes meet.", nf="stop_orientation"
+        "p2-orient", "p2", body="Stand where the two lanes meet.", bt="stop_orientation"
     )
 
     seq = BeatSequence(poi_beats=(_poi_beats(p1, (p1_est_a, p1_est_b)),
@@ -1605,8 +1607,8 @@ def test_template_nav_minutes_from_leg_seconds_when_routed():
 
 def test_template_nav_minutes_fall_back_to_walk_seconds_when_unrouted():
     """When a leg has no routed leg_seconds (Valhalla unavailable), minutes
-    fall back to walk_seconds — the same fallback options.py's eta_seconds,
-    reflection.py, and audit.py already use for this leg."""
+    fall back to walk_seconds — the fallback ``routing.leg_walk_seconds`` gives
+    every reader of this leg."""
     route = Route(
         pois=(_poi("p", "B Place"),),
         transits=(TransitSegment(from_poi_id=None, to_poi_id="p", distance_m=100.0,
@@ -1909,7 +1911,7 @@ def test_a_closed_stop_says_so_before_any_of_its_story():
     content with the word never spoken -> RED."""
     p1 = _poi("p1", "Pantheon")
     p2 = _poi("p2", "Musee de Cluny")
-    p1_orient = _beat("p1-orient", "p1", body="Find the dome.", nf="stop_orientation")
+    p1_orient = _beat("p1-orient", "p1", body="Find the dome.", bt="stop_orientation")
     p1_body = _beat("p1-body", "p1", body="Soufflot designed it.", nf="establishing")
     p2_body = _beat(
         "p2-body", "p2", body="The tapestries are in room 13 on the first floor.",
@@ -1942,7 +1944,7 @@ def test_a_closed_first_stop_says_so_right_after_settle_in():
     """Stop 0's acknowledgment lands after the 'Settle in.' pacing breath and
     before any orientation or story content — first thing said ABOUT the place."""
     poi = _poi("p1", "Pantheon")
-    orient = _beat("o", poi.id, body="Find the dome.", nf="stop_orientation")
+    orient = _beat("o", poi.id, body="Find the dome.", bt="stop_orientation")
     seq = BeatSequence(poi_beats=(_poi_beats(poi, (orient,)),))
     route = _closed_route((poi,), closed_ids={poi.id})
     script = generate(seq, route, _input(), glue_client=MockGlueClient())

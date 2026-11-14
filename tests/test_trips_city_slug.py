@@ -9,7 +9,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.api.models.trips import TripGenerateRequest, TripPreviewRequest
-from src.tour.contract import SUPPORTED_CITIES
+from src.city_registry import supported_cities
 
 
 def _gen(**kw) -> dict:
@@ -22,7 +22,7 @@ def _gen(**kw) -> dict:
 
 
 def test_new_york_is_supported():
-    assert {"paris", "new_york"} <= SUPPORTED_CITIES
+    assert {"paris", "new_york"} <= supported_cities()
 
 
 def test_preview_defaults_to_paris_for_backcompat():

@@ -20,10 +20,14 @@ import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, TypedDict
 
 from .certification_provider import PhysicalProviderResponse, _response_text, _usage
 from .corpus_places import canonical_bytes, canonical_sha256
+
+if TYPE_CHECKING:
+    import anthropic
+    from anthropic.types.messages import MessageBatch
 
 
 @dataclass(frozen=True)
@@ -36,7 +40,7 @@ class BatchUnitResult:
     error_message: str | None = None
 
 
-def batch_client(*, max_retries: int = 0) -> Any:
+def batch_client(*, max_retries: int = 0) -> anthropic.Anthropic:
     """Every client here comes from the bounded factory, never built bare.
 
     max_retries=0 is a SUBMISSION client (a hidden SDK retry could double-submit
@@ -62,8 +66,8 @@ _CUSTOM_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 def submit_batch(
     requests: list[tuple[str, Mapping[str, object]]],
     *,
-    client: object | None = None,
-) -> Any:
+    client: anthropic.Anthropic | None = None,
+) -> MessageBatch:
     from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
     from anthropic.types.messages.batch_create_params import Request
 
@@ -88,10 +92,10 @@ def submit_batch(
 def poll_batch(
     batch_id: str,
     *,
-    client: object | None = None,
+    client: anthropic.Anthropic | None = None,
     poll_interval_s: float = 10,
     max_poll_s: float = 3600,
-) -> Any:
+) -> MessageBatch:
     if client is None:
         client = batch_client(max_retries=2)
     deadline = time.monotonic() + max_poll_s
@@ -110,7 +114,7 @@ def poll_batch(
 def collect_results(
     batch_id: str,
     *,
-    client: object | None = None,
+    client: anthropic.Anthropic | None = None,
 ) -> dict[str, BatchUnitResult]:
     if client is None:
         client = batch_client(max_retries=2)
@@ -153,6 +157,26 @@ def collect_results(
     return collected
 
 
+class BatchStopReceipt(TypedDict):
+    """One stop's receipt from a batch result, sealed by ``receipt_sha256``."""
+
+    schema_version: str
+    stop_index: int
+    poi_name: str
+    request_id: str
+    request_sha256: str
+    response_sha256: str
+    parsed_payload_sha256: str
+    provider_request_id: str | None
+    model: str
+    input_tokens: int
+    output_tokens: int
+    raw_response: str
+    batch_id: str
+    result_type: str
+    receipt_sha256: str
+
+
 def build_batch_receipt(
     *,
     unit_result: BatchUnitResult,
@@ -163,7 +187,7 @@ def build_batch_receipt(
     poi_name: str,
     stop_index: int,
     raw_response: str,
-) -> dict[str, object]:
+) -> BatchStopReceipt:
     response = unit_result.response
     if response is None:
         raise ValueError("batch receipt requires a physical provider response")
@@ -233,7 +257,7 @@ def execute_batch_pipeline(
     *,
     submission_path: Path,
     plan_sha256: str,
-    client: object | None = None,
+    client: anthropic.Anthropic | None = None,
     poll_interval_s: float = 10,
     max_poll_s: float = 3600,
     on_progress: Callable[[str], None] | None = None,

@@ -21,6 +21,7 @@ import inspect
 import json
 import threading
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -640,7 +641,7 @@ class _ColdStartingRoutingClient:
         return False
 
     def routing_version(self) -> str:
-        raise RuntimeError("valhalla is cold-starting")
+        raise httpx.ConnectError("valhalla is cold-starting")
 
     def route_with_receipt(
         self, from_lat, from_lng, to_lat, to_lng, *, costing_options_override=None
@@ -769,7 +770,6 @@ def test_a_dirty_local_tree_is_stamped_and_warned_never_refused(monkeypatch, cap
     import logging
 
     monkeypatch.delenv("RENDER_GIT_COMMIT", raising=False)
-    monkeypatch.delenv("GIT_COMMIT_SHA", raising=False)
     monkeypatch.delenv("ONDOWAY_ALLOW_DIRTY_LOCAL_BUILD", raising=False)
     with caplog.at_level(logging.WARNING, logger="ondoway.api"):
         identity = resolve_build_identity()  # never raises, whatever the tree

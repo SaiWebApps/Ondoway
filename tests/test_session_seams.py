@@ -278,14 +278,16 @@ def test_the_audio_placement_rule_has_one_definition():
     assert [p for p, t in py.items() if "class PlacementPolicy(" in t] == [placement]
     constructors = [p for p, t in py.items() if re.search(r"\bStopTrigger\(", t)]
     assert constructors == [placement], f"a second construction site: {constructors}"
-    # The own-place radius is defined ONCE (in the rule) and READ by the contingency set.
+    # The own-place radius is defined ONCE (in the rule) and READ by the contingency set
+    # through the rule's one predicate.
     assert py[placement].count("OWN_PLACE_RADIUS_M: float = 60.0") == 1
+    assert [p for p, t in py.items() if "def is_own_place(" in t] == [placement]
     assert re.search(r"^OWN_PLACE_RADIUS_M\s*[:=]", py[contingency], re.M) is None, (
         "contingency.py defines the own-place radius again"
     )
     assert re.search(
-        r"from (?:src\.tour\.|\.)placement import[^\n]*OWN_PLACE_RADIUS_M", py[contingency]
-    ), "contingency.py does not read the one own-place radius from the rule"
+        r"from (?:src\.tour\.|\.)placement import[^\n]*is_own_place", py[contingency]
+    ), "contingency.py does not read the own place through the rule"
 
     # EVERY wire construction site carries the placed geometry; the item stores it; the
     # saved-trips reader hands it back; every session version carries the day's policy.

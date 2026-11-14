@@ -152,7 +152,7 @@ def test_the_party_ceiling_clamps_even_a_perfect_interest_match():
 def test_declaring_no_interest_does_not_hand_over_the_maximum_interior():
     """Someone who chose nothing is not someone who chose everything.
 
-    This is the one deliberate divergence from `_lens_adjacency`, which scores an
+    This is the one deliberate divergence from `lens_relevance`, which scores an
     empty interest as a uniform 1.0 so that nobody is penalised for not choosing.
     That is right for SELECTION and wrong for DWELL: handing a visitor who declared
     nothing the maximum interior at every place is what puts a family with a
@@ -169,7 +169,7 @@ def test_declaring_no_interest_does_not_hand_over_the_maximum_interior():
     direct_hit = visit_seconds(cathedral, frozenset({"historic_arch"}), snapshot)
 
     assert declared_nothing < direct_hit
-    # 60% of the gap between outside and inside, mirroring LENS_ADJACENCY_ONE_HOP
+    # 60% of the gap between outside and inside, mirroring LENS_RELEVANCE_ONE_HOP
     # rather than inventing a second scale.
     assert declared_nothing == round(600 + (2700 - 600) * 0.6)
 

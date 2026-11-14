@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from .selection import CorpusSnapshot
 
 #: A one-hop lens match unlocks this fraction of the gap between the outside and
-#: inside capacities. Mirrors LENS_ADJACENCY_ONE_HOP = 0.6 rather than inventing
+#: inside capacities. Mirrors LENS_RELEVANCE_ONE_HOP = 0.6 rather than inventing
 #: a second scale.
 ONE_HOP_VISIT_FRACTION: float = 0.6
 
@@ -56,10 +56,21 @@ def place_is_covered(poi: POI) -> bool:
     return poi.place_category in _COVERED_CATEGORIES
 
 
-def _hh_mm_to_hours(text: str) -> float:
-    """"10:30" -> 10.5. Raises ValueError on anything else; callers fail open."""
+def hhmm_parts(text: str) -> tuple[int, int]:
+    """"10:30" -> (10, 30): an HH:MM clock's hours and minutes. THE one parser.
+
+    Raises ValueError unless the text is two integers joined by one colon; a
+    caller that fails open catches it. The parts are not range-checked, so a
+    caller that needs a real clock time checks the range itself.
+    """
     hours, minutes = text.split(":")
-    return int(hours) + int(minutes) / 60
+    return int(hours), int(minutes)
+
+
+def hhmm_to_minutes(text: str) -> int:
+    """"10:30" -> 630: an HH:MM clock as minutes since midnight (``hhmm_parts``)."""
+    hours, minutes = hhmm_parts(text)
+    return hours * 60 + minutes
 
 
 def _hour_in_peak_band(bands_json: str, clock_hour: int) -> bool:
@@ -108,7 +119,7 @@ def _parse_peak_bands(bands_json: str) -> tuple[tuple[float, float], ...] | None
         ):
             return None  # malformed window → no peak data → off-peak
         try:
-            start, end = (_hh_mm_to_hours(t) for t in window)
+            start, end = (hhmm_to_minutes(t) / 60 for t in window)
         except ValueError:
             return None
         parsed.append((start, end))
@@ -193,8 +204,8 @@ def visit_shape(
         relation = _lens_relation(poi, interest, snapshot)
         if relation == "direct":
             blend = inside
-        # "no_lens" is DELIBERATELY not "direct" here, unlike _lens_adjacency at
-        # selection.py:3405-3418. Uniform 1.0 is right for SELECTION — do not
+        # "no_lens" is DELIBERATELY not "direct" here. Uniform 1.0 is right for
+        # SELECTION — do not
         # penalise someone for not choosing. Giving them the maximum interior at
         # every place is wrong for DWELL: it hands a family with a five-year-old
         # a 45-minute cathedral. Same classifier, two questions, two answers.

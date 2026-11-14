@@ -26,8 +26,7 @@ this preview actually uses emits ONE stop of roughly 700 words (~1500 tokens).
 Retries: judges get 2 (they are cheap, and transient 429/529 is the common
 failure); compose gets zero hidden SDK retries. A fresh complete-tour candidate
 is the only meaningful compose retry because it is visible, bounded, and can be
-re-evaluated as a unit. Compose streams also have a 600 s absolute deadline, so
-periodic streaming bytes cannot evade the SDK's read timeout.
+re-evaluated as a unit.
 
 Both are overridable from the environment so an operator can widen them for a
 slow link without a code change; the defaults are what the bar and the workbench
@@ -37,7 +36,10 @@ run with.
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import anthropic
 
 #: Haiku judge/verify calls (entailment, coverage, redundancy). See module docstring.
 JUDGE_TIMEOUT_S: float = float(os.getenv("ONDOWAY_JUDGE_TIMEOUT_S", "45"))
@@ -46,10 +48,6 @@ JUDGE_MAX_RETRIES: int = int(os.getenv("ONDOWAY_JUDGE_MAX_RETRIES", "2"))
 #: Opus compose/correction calls (streaming, adaptive thinking). See module docstring.
 COMPOSE_TIMEOUT_S: float = float(os.getenv("ONDOWAY_COMPOSE_TIMEOUT_S", "180"))
 COMPOSE_MAX_RETRIES: int = int(os.getenv("ONDOWAY_COMPOSE_MAX_RETRIES", "0"))
-# An SDK read timeout is not an elapsed-time bound for streaming: periodic bytes
-# can keep a paid stream alive indefinitely. Compose adapters close the physical
-# stream when this absolute deadline expires.
-COMPOSE_ABSOLUTE_DEADLINE_S: float = float(os.getenv("ONDOWAY_COMPOSE_ABSOLUTE_DEADLINE_S", "600"))
 
 # Certification calls are physical-attempt-budgeted before they reach the SDK.
 # An SDK retry would evade that ledger, so the certification path always uses zero.
@@ -62,7 +60,7 @@ CERTIFICATION_MAX_RETRIES: int = 0
 # what will be spent and on what.
 
 
-def _build(timeout_s: float | None, max_retries: int) -> Any:
+def _build(timeout_s: float | None, max_retries: int) -> anthropic.Anthropic:
     """Construct a real ``anthropic.Anthropic`` with an explicit ceiling.
 
     Imported INSIDE the function, matching the lazy-import idiom every call site
@@ -75,27 +73,27 @@ def _build(timeout_s: float | None, max_retries: int) -> Any:
     return anthropic.Anthropic(timeout=timeout_s, max_retries=max_retries)
 
 
-def judge_client() -> Any:
+def judge_client() -> anthropic.Anthropic:
     """A bounded client for Haiku judge/verify calls."""
     return _build(JUDGE_TIMEOUT_S, JUDGE_MAX_RETRIES)
 
 
-def compose_client() -> Any:
+def compose_client() -> anthropic.Anthropic:
     """A bounded client for Opus compose/correction calls."""
     return _build(COMPOSE_TIMEOUT_S, COMPOSE_MAX_RETRIES)
 
 
-def certification_judge_client() -> Any:
+def certification_judge_client() -> anthropic.Anthropic:
     """Bounded review client whose single physical attempt cannot hide SDK retries."""
     return _build(JUDGE_TIMEOUT_S, CERTIFICATION_MAX_RETRIES)
 
 
-def certification_compose_client() -> Any:
+def certification_compose_client() -> anthropic.Anthropic:
     """Bounded compose client whose single physical attempt cannot hide SDK retries."""
     return _build(COMPOSE_TIMEOUT_S, CERTIFICATION_MAX_RETRIES)
 
 
-def certification_batch_compose_client() -> Any:
+def certification_batch_compose_client() -> anthropic.Anthropic:
     """Zero-retry compose client for the explicitly polled batch experiment.
 
     Unlike an interactive preview, the batch is not attached to a UI latency
@@ -107,7 +105,7 @@ def certification_batch_compose_client() -> Any:
     return _build(None, CERTIFICATION_MAX_RETRIES)
 
 
-def certification_batch_read_client() -> Any:
+def certification_batch_read_client() -> anthropic.Anthropic:
     """Bounded client for batch status polls and result collection.
 
     Reads are idempotent — a hidden SDK retry cannot double-submit or
@@ -122,7 +120,6 @@ def certification_batch_read_client() -> Any:
 
 __all__ = [
     "CERTIFICATION_MAX_RETRIES",
-    "COMPOSE_ABSOLUTE_DEADLINE_S",
     "COMPOSE_MAX_RETRIES",
     "COMPOSE_TIMEOUT_S",
     "JUDGE_MAX_RETRIES",

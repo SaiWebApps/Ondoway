@@ -52,16 +52,16 @@ from src.city_registry import country_code
 from src.tour.beat_select import select_vignette_beats
 from src.tour.compose_gate import ComposeVerificationError
 from src.tour.contingency import (
-    OWN_PLACE_RADIUS_M,
     RETIME_TOLERANCE_SECONDS,
     SESSION_CLOCK_DIVERGENCE,
     ContingencySet,
-    _finish_of,
     at_risk_choice,
     build_contingency_set,
     clock_divergence_seconds,
     finish_clock,
+    finish_of,
     hhmm,
+    is_story_stop,
     own_place_ids,
     question_text,
     stop_clocks,
@@ -80,7 +80,13 @@ from src.tour.degradations import degradation_scope, record, summarize
 from src.tour.density import TourabilityRefusedError
 from src.tour.generation import _template_nav, generate
 from src.tour.options import build_route_option, option_eta_seconds
-from src.tour.placement import StopSegment, place_anchors, place_day, place_stops
+from src.tour.placement import (
+    StopSegment,
+    is_own_place,
+    place_anchors,
+    place_day,
+    place_stops,
+)
 from src.tour.premium_tour import (
     FULL_TELLING_DROPPED_DEGRADATION,
     PREMIUM_MODULE_VERSION,
@@ -108,7 +114,6 @@ from src.tour.recipe_store import link_stops_to_recipes, served_recipes
 from src.tour.render_md import stop_close_text, stop_narration_text
 from src.tour.routing import (
     PACE_KMH,
-    haversine_m,
     leg_walk_seconds,
     longest_walk_minutes,
     summarise_route,
@@ -129,6 +134,7 @@ from src.tour.selection import (
     select_route,
 )
 from src.tour.verify import FaithfulnessChecker
+from src.tour.visit_time import hhmm_parts, hhmm_to_minutes
 
 router = APIRouter(tags=["trips"])
 
@@ -342,8 +348,9 @@ def _refusal_detail(
     includes its target poi_id/lat/lng).
 
     BOTH refusals share this shape, so a traveller whose request simply does not fit
-    the time band gets alternatives, never a 500. ``cause`` lets a surface tell the two apart — "there is not enough to see near here" versus
-    "this cannot be walked in the time you asked for" — without parsing prose.
+    the time band gets alternatives, never a 500. ``cause`` lets a surface tell the two
+    apart — "there is not enough to see near here" versus "this cannot be walked in the
+    time you asked for" — without parsing prose.
     """
     return {
         "cause": (
@@ -1520,15 +1527,13 @@ def compose_trip(
 
 
 def _finish_name(tour_input: TourInput, route=None) -> str:
-    """What the finish is called in a line or an arm. The PLACE when the day ends at
-    one the person named, by its own name;
-    else "your finish" / "your start"."""
-    if route is not None:
-        finish = tour_input.end if tour_input.end is not None else tour_input.start
+    """What the finish is called in a line or an arm. The PLACE when the day's finish
+    (`finish_of`) is a story stop of the route, by its own name; else "your finish" /
+    "your start". An open one-way walk has no finish, so it names no place."""
+    finish = finish_of(tour_input)
+    if route is not None and finish is not None:
         for poi in route.pois:
-            if poi.poi_role == "body" or poi.id.startswith(END_B_SENTINEL_PREFIX):
-                continue
-            if haversine_m(finish[0], finish[1], poi.lat, poi.lng) <= OWN_PLACE_RADIUS_M:
+            if is_story_stop(poi) and is_own_place(finish, poi):
                 return poi.name
     return "your finish" if tour_input.end is not None else "your start"
 
@@ -1555,7 +1560,7 @@ def _day_start(tour_input: TourInput, start_hhmm: str | None) -> datetime | None
     if tour_input.start_datetime is not None:
         return datetime.fromisoformat(tour_input.start_datetime)
     if start_hhmm:
-        hh, mm = (int(x) for x in start_hhmm.split(":"))
+        hh, mm = hhmm_parts(start_hhmm)
         return datetime.combine(date.today(), time(hh, mm))
     return None
 
@@ -1694,7 +1699,7 @@ def _session_plan(
     planned_end = (
         hhmm(clock_start + timedelta(minutes=tour_input.duration_min)) if clock_start else ""
     )
-    finish = _finish_of(tour_input)
+    finish = finish_of(tour_input)
     finish_fields = {
         "finish_lat": finish[0] if finish else None,
         "finish_lng": finish[1] if finish else None,
@@ -1813,7 +1818,7 @@ def _standby_stops(cset: ContingencySet, stops_out: list[GeneratedStop]) -> list
         for poi in entry.route.pois:
             if poi.id in planned or poi.id in seen:
                 continue
-            if poi.id.startswith(END_B_SENTINEL_PREFIX) or poi.poi_role == "body":
+            if not is_story_stop(poi):
                 continue
             seen.add(poi.id)
             out.append(
@@ -2445,11 +2450,7 @@ def replan_trip_session(
     remaining, visited = current.stops[k:], current.stops[:k]
     remaining, visited = _without_the_shut_door(body.closed_stop_id, remaining, visited)
     remaining, seated_standbys = _kept_by_the_walker(body.kept_stop_ids, current, remaining)
-    finish = (
-        tour_input.end
-        if tour_input.end is not None
-        else (tour_input.start if tour_input.round_trip else None)
-    )
+    finish = finish_of(tour_input)
     start_clock = _day_start(tour_input, inputs["tour_input"].get("start_time"))
     now = (
         start_clock + timedelta(seconds=body.wall_elapsed_seconds)
@@ -2997,15 +2998,11 @@ def _coarse_window(arrives_hhmm: str, departs_hhmm: str) -> tuple[str, str]:
         return arrives_hhmm, departs_hhmm
     grain = PROMISE_WINDOW_GRAIN_MINUTES
 
-    def _mins(hhmm: str) -> int:
-        h, m = hhmm.split(":")
-        return int(h) * 60 + int(m)
-
     def _fmt(total: int) -> str:
         total %= 24 * 60
         return f"{total // 60:02d}:{total % 60:02d}"
 
-    a, d = _mins(arrives_hhmm), _mins(departs_hhmm)
+    a, d = hhmm_to_minutes(arrives_hhmm), hhmm_to_minutes(departs_hhmm)
     a_r = (a // grain) * grain
     d_r = a_r if d == a else -(-d // grain) * grain
     return _fmt(a_r), _fmt(d_r)

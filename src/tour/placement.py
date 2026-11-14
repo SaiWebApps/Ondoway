@@ -45,6 +45,7 @@ from src.tour.contract import (
     TourInput,
 )
 from src.tour.render_md import stop_segment_text
+from src.tour.routing import haversine_m
 
 #: The footprint of a place whose record was never measured: a DOOR, a plaque, a bench —
 #: ten metres, the value the corpus uploader writes when a record carries none. The
@@ -53,11 +54,18 @@ from src.tour.render_md import stop_segment_text
 FOOTPRINT_DEFAULT_M: float = 10.0
 
 #: The radius of the person's OWN place — the start they set out from and the finish they
-#: named. ONE definition, read by the contingency set (which promises the day visits
-#: the named place, `own_place_ids`), by the finish name on the wire, and by the phone for
-#: the start square and the finish. Sixty metres: a square's width, the
-#: distance at which a person says "I am at the Orsay" of its forecourt.
+#: named. ONE definition, read through `is_own_place` by the contingency set and the
+#: finish name on the wire, and by the phone for the start square and the finish. Sixty
+#: metres: a square's width, the distance at which a person says "I am at the Orsay" of
+#: its forecourt.
 OWN_PLACE_RADIUS_M: float = 60.0
+
+
+def is_own_place(point: tuple[float, float], poi: POI) -> bool:
+    """True when ``poi`` stands at ``point``, a start or finish the person named: within
+    the own-place radius of it. A day that starts and ends at the same museum visits
+    the person's own place."""
+    return haversine_m(point[0], point[1], poi.lat, poi.lng) <= OWN_PLACE_RADIUS_M
 
 #: Place kinds you are IN rather than ENTER (decided by place kind, never by a phone
 #: signal): an arcade, a passage, a courtyard gate, a garden, a park, a square,

@@ -22,10 +22,19 @@ The two failures this exists to catch, both measured on the live Paris graph:
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import TypedDict
 
-from src.tour.contract import END_B_SENTINEL_PREFIX, BeatSequence, Route, Script, Sentence
+from src.tour.contract import (
+    END_B_SENTINEL_PREFIX,
+    BeatRef,
+    BeatSequence,
+    Route,
+    Script,
+    Sentence,
+)
 from src.tour.generation import (
     _word_count,
     is_walk_concurrent,
@@ -188,6 +197,31 @@ class Severity(StrEnum):
     WARN = "warn"
 
 
+class FindingContext(TypedDict, total=False):
+    """The numbers a check records beside its message: C1 its floor, C13 its counts."""
+
+    floor: float
+    preamble_words: int
+    primary_first_cited_words: int | None
+
+
+class RubricStats(TypedDict, total=False):
+    """The measurements ``score_tour`` reports whatever the verdict."""
+
+    total_words: int
+    n_stops: int
+    audio_minutes: float
+    words_by_stop: dict[int, int]
+    audio_floor_min: float
+    audio_concurrent_s: int
+    audio_stationary_s: int
+    time_budget_actual_s: int
+    time_budget_ceiling_s: int
+    leg_walk_capacity_s: int
+    year_density_by_stop: dict[int, float]
+    year_density_outliers: dict[int, float]
+
+
 @dataclass(frozen=True)
 class Finding:
     check: str
@@ -199,13 +233,13 @@ class Finding:
     #: consumer (``compose_fixable``) needs again — e.g. C1's per-POI floor. Kept
     #: separate from ``message`` (prose for a human) so downstream code never has to
     #: parse a sentence to recover a number score_tour already computed exactly.
-    context: dict | None = None
+    context: FindingContext | None = None
 
 
 @dataclass
 class RubricReport:
     findings: list[Finding] = field(default_factory=list)
-    stats: dict = field(default_factory=dict)
+    stats: RubricStats = field(default_factory=RubricStats)
 
     @property
     def blockers(self) -> list[Finding]:
@@ -303,7 +337,7 @@ def _concurrent_audio_seconds(script: Script, beat_sequence: BeatSequence | None
 def score_tour(
     script: Script,
     route: Route,
-    beats_by_poi: dict[str, list],
+    beats_by_poi: Mapping[str, Sequence[BeatRef]],
     *,
     beat_sequence: BeatSequence | None = None,
 ) -> RubricReport:

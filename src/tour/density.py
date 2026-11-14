@@ -25,7 +25,7 @@ roster (303 POIs in Paris) — well under 50 ms.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import TYPE_CHECKING, NamedTuple
 
 from .contract import POI, BeatRef, TourabilityAssessment, TourInput
@@ -156,16 +156,14 @@ class TourabilityRefusedError(Exception):
 def assess(
     tour_input: TourInput,
     pois: Iterable[POI],
-    beats_by_poi: dict[str, tuple[BeatRef, ...]],
+    beats_by_poi: Mapping[str, tuple[BeatRef, ...]],
     *,
     planning_policy: RoutePlanningPolicy = DEFAULT_ROUTE_PLANNING_POLICY,
     snapshot: CorpusSnapshot | None = None,
 ) -> TourabilityAssessment:
     """Low-level component assessment retained for legacy diagnostics/tests.
 
-    Product selection must call :func:`assess_snapshot`, which refuses typed
-    place evidence until the validating materializer has relocated or omitted
-    every beat.  This detached-components form cannot carry that proof.
+    Product selection calls :func:`assess_snapshot`.
 
     ``snapshot`` is optional and exists only so the capacity measure can price a
     place against the requested lenses. Without it the pool is priced as if no
@@ -315,16 +313,9 @@ def assess_snapshot(
     *,
     planning_policy: RoutePlanningPolicy = DEFAULT_ROUTE_PLANNING_POLICY,
 ) -> TourabilityAssessment:
-    """Manifest-aware density boundary used by the product algorithm."""
+    """The density gate over a whole corpus snapshot, as the product algorithm calls it."""
 
-    if snapshot.place_manifest is not None:
-        from .place_materialization import validate_materialized_corpus_snapshot
-        from .selection import MaterializedCorpusSnapshot
-
-        if not isinstance(snapshot, MaterializedCorpusSnapshot):
-            raise ValueError("typed corpus must be materialized before density")
-        validate_materialized_corpus_snapshot(snapshot)
-    return assess(  # type: ignore[arg-type]
+    return assess(
         tour_input,
         snapshot.pois,
         snapshot.beats_by_poi,
@@ -440,7 +431,7 @@ def _suggest_one_way_destination(
     start_lng: float,
     duration_min: int,
     pois: list[POI],
-    beats_by_poi: dict[str, tuple[BeatRef, ...]],
+    beats_by_poi: Mapping[str, tuple[BeatRef, ...]],
     planning_policy: RoutePlanningPolicy = DEFAULT_ROUTE_PLANNING_POLICY,
 ) -> str | None:
     """Highest-density tier-5 POI inside the equivalent one-way envelope.

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from typing import TypedDict
 
 from neo4j import ManagedTransaction, Session
 
@@ -30,6 +31,37 @@ class VoicedPiece:
     """A recipe piece with the audio file made from its text."""
 
     piece: RecipePiece
+    audio_url: str
+    audio_duration_sec: float
+    audio_provider: str
+
+
+class RecipeProps(TypedDict):
+    """The properties a ``PlaceRecipe`` node is written with."""
+
+    id: str
+    poi_id: str
+    lens: str | None
+    register: str
+    door: str
+    input_sha256: str
+    sentences_json: str
+    words: int
+    full_sentences_json: str
+    audio_duration_sec: float
+    built_at: str
+    commit_sha: str
+    compose_model: str
+
+
+class RecipePieceProps(TypedDict):
+    """The properties a ``RecipePiece`` node is written with."""
+
+    id: str
+    order: int
+    kind: str
+    text: str
+    beat_ids: list[str]
     audio_url: str
     audio_duration_sec: float
     audio_provider: str
@@ -109,7 +141,12 @@ def save_recipe(
 
 
 def _write_recipe(
-    tx: ManagedTransaction, *, recipe_id: str, poi_id: str, props: dict, pieces: list[dict]
+    tx: ManagedTransaction,
+    *,
+    recipe_id: str,
+    poi_id: str,
+    props: RecipeProps,
+    pieces: list[RecipePieceProps],
 ) -> None:
     tx.run(
         """

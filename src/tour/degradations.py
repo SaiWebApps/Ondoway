@@ -26,10 +26,31 @@ import contextvars
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from typing import ParamSpec, TypedDict, TypeVar
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
 _ACTIVE: contextvars.ContextVar[list[Degradation] | None] = contextvars.ContextVar(
     "ondoway_degradations", default=None
 )
+
+
+class DegradationFields(TypedDict):
+    """One degradation as a plain record (``Degradation.as_dict``)."""
+
+    kind: str
+    human: str
+    component: str
+    error_type: str
+    error_message: str
+    context: dict[str, str]
+
+
+class DegradationRow(DegradationFields):
+    """One ``summarize`` row: a degradation and how many times its kind happened."""
+
+    count: int
 
 
 @dataclass(frozen=True)
@@ -49,7 +70,7 @@ class Degradation:
     #: Anything else worth pasting (category, stop index...).
     context: dict[str, str] = field(default_factory=dict)
 
-    def as_dict(self) -> dict[str, object]:
+    def as_dict(self) -> DegradationFields:
         return {
             "kind": self.kind,
             "human": self.human,
@@ -76,7 +97,7 @@ def degradation_scope() -> Iterator[list[Degradation]]:
         _ACTIVE.reset(token)
 
 
-def in_current_context(fn: Callable[..., object]) -> Callable[..., object]:
+def in_current_context(fn: Callable[_P, _R]) -> Callable[_P, _R]:
     """Wrap ``fn`` so a worker thread still sees the caller's collection scope.
 
     MEASURED, and this is why the wrapper is not optional: ``contextvars`` do NOT
@@ -108,7 +129,7 @@ def in_current_context(fn: Callable[..., object]) -> Callable[..., object]:
     """
     snapshot = contextvars.copy_context()
 
-    def _run(*args: object, **kwargs: object) -> object:
+    def _run(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         return snapshot.copy().run(fn, *args, **kwargs)
 
     return _run
@@ -142,20 +163,20 @@ def record(
     )
 
 
-def summarize(degradations: list[Degradation]) -> list[dict[str, object]]:
+def summarize(degradations: list[Degradation]) -> list[DegradationRow]:
     """Collapse repeats into one row each, carrying a count and one example.
 
     A five-stop tour whose narrator is unreachable produces four identical glue
     failures. Showing them four times buries the signal; showing one with
     "happened 4 times" is the same information a person can act on.
     """
-    grouped: dict[str, dict[str, object]] = {}
+    grouped: dict[str, DegradationRow] = {}
     for item in degradations:
         row = grouped.get(item.kind)
         if row is None:
             grouped[item.kind] = {**item.as_dict(), "count": 1}
         else:
-            row["count"] = int(row["count"]) + 1  # type: ignore[arg-type]
+            row["count"] += 1
     return list(grouped.values())
 
 

@@ -2,19 +2,25 @@
 
 from __future__ import annotations
 
-from .authoring import COMPOSE_MODEL
+from typing import TYPE_CHECKING
+
+from .authoring import COMPOSE_MODEL, ComposeRequest
 from .contract import Sentence
 from .corpus_places import bytes_sha256, canonical_json, canonical_sha256
 from .quality_certification import (
+    EnjoymentCalibrationAnchor,
     EnjoymentItem,
     EnjoymentScoredReviewBatch,
     EnjoymentSegment,
     FactDerivedEvidence,
+    FactPolicyCalibrationCase,
     FactReviewBatch,
     FactReviewInput,
     FactSentenceInput,
     FactSentenceVerdict,
     QualityCalibrationBatch,
+    QualityCalibrationInputs,
+    QualityCalibrationReport,
     ReviewUsage,
     _fact_batch_error,
     _validate_scored_enjoyment_batch,
@@ -31,11 +37,15 @@ from .quality_requests import (
     materialize_provider_enjoyment_assessments,
 )
 
+if TYPE_CHECKING:
+    from .premium_tour import RouteSummary
+
+# US dollars per million input and output tokens. Every model a stored review receipt
+# names has a price here; a receipt naming any other model is refused.
 _MODEL_PRICING: dict[str, tuple[int, int]] = {
     "claude-opus-4-8": (5, 25),
     "claude-sonnet-5": (3, 15),
 }
-_DEFAULT_PRICING = (5, 25)
 
 
 def candidate_narration_sha256(
@@ -54,8 +64,8 @@ def evidence_for_sentence(
     *,
     stop_index: int,
     sentence: Sentence,
-    request: object,
-    route_summary: dict[str, object],
+    request: ComposeRequest,
+    route_summary: RouteSummary,
     candidate_sha256: str,
 ) -> tuple[FactDerivedEvidence, ...]:
     if sentence.source_type == "beat":
@@ -110,8 +120,8 @@ def build_fact_input(
     *,
     stop_index: int,
     sentences: tuple[Sentence, ...],
-    request: object,
-    route_summary: dict[str, object],
+    request: ComposeRequest,
+    route_summary: RouteSummary,
     candidate_sha256: str,
 ) -> FactReviewInput:
     table: dict[str, FactDerivedEvidence] = {}
@@ -178,15 +188,22 @@ class _CalibrationReplay:
     def __init__(self, batch: QualityCalibrationBatch) -> None:
         self.batch = batch
 
-    def calibrate(self, fact_cases, enjoyment_anchors) -> QualityCalibrationBatch:
+    def calibrate(
+        self,
+        fact_cases: tuple[FactPolicyCalibrationCase, ...],
+        enjoyment_anchors: tuple[EnjoymentCalibrationAnchor, ...],
+    ) -> QualityCalibrationBatch:
         return self.batch
 
 
 def review_usage(receipt: dict[str, object]) -> ReviewUsage:
     input_tokens = int(receipt["input_tokens"])
     output_tokens = int(receipt["output_tokens"])
-    model = str(receipt.get("model", ""))
-    input_rate, output_rate = _MODEL_PRICING.get(model, _DEFAULT_PRICING)
+    model = str(receipt["model"])
+    try:
+        input_rate, output_rate = _MODEL_PRICING[model]
+    except KeyError:
+        raise ValueError(f"no price for model {model!r}") from None
     return ReviewUsage(
         calls=1,
         input_tokens=input_tokens,
@@ -201,11 +218,11 @@ def review_usage(receipt: dict[str, object]) -> ReviewUsage:
 def validate_calibration(
     receipt: dict[str, object],
     payload: ProviderCalibrationPayload,
-    inputs: object,
+    inputs: QualityCalibrationInputs,
     *,
     model: str = COMPOSE_MODEL,
     fact_only: bool = False,
-) -> object:
+) -> QualityCalibrationReport:
     normalized_enjoyment = materialize_provider_enjoyment_assessments(
         payload.enjoyment_assessments,
         items=tuple(anchor.item for anchor in inputs.enjoyment_anchors),
@@ -305,7 +322,7 @@ def validate_enjoyment(
     receipt: dict[str, object],
     payload: ProviderEnjoyPayload,
     candidates: tuple[EnjoymentItem, ...],
-    anchors: tuple,
+    anchors: tuple[EnjoymentCalibrationAnchor, ...],
 ) -> EnjoymentScoredReviewBatch:
     normalized_assessments = materialize_provider_enjoyment_assessments(
         payload.assessments,

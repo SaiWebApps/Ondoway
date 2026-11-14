@@ -11,11 +11,10 @@ from __future__ import annotations
 import json
 import math
 from collections.abc import Mapping
-from typing import Literal
+from typing import Literal, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from src import city_registry
 from src.tour.corpus_places import (
     SHA256_PATTERN,
     CoordinateProvenance,
@@ -23,13 +22,6 @@ from src.tour.corpus_places import (
     text_sha256,
     valid_coordinates,
 )
-
-# Cities with a loaded corpus (data/{slug}/ + graph nodes scoped by city_name).
-# The API validates request city_slug against this so an unknown city is a clear
-# 422 rather than a silent empty-corpus tour. Now DERIVED from the city registry
-# (src/cities.json) so runtime onboarding has one writable registration surface;
-# equals the former {"paris", "new_york"} literal exactly today.
-SUPPORTED_CITIES: frozenset[str] = frozenset(city_registry.supported_cities())
 
 GENERIC_OPEN_TOUR_CLOSING = "And that brings our walk to a close."
 
@@ -248,7 +240,19 @@ class TourInput(BaseModel):
 #    the pace is interpolated.
 #  - family and with-luggage set no leg cap: no measured longest-walk number
 #    exists for either, so none is invented.
-_PARTY_AXES: dict[str, dict[str, object]] = {
+class PartyAxes(TypedDict, total=False):
+    """The ``TourInput`` axes a party preset may set, each with that field's type."""
+
+    walking_pace: float
+    max_leg_minutes: int
+    rest_cadence_minutes: int
+    escape_radius_m: int
+    max_stop_minutes: int
+    route_surface: Literal["any", "no_stairs", "step_free"]
+    narration_register: Literal["solo", "warm", "family"]
+
+
+_PARTY_AXES: dict[str, PartyAxes] = {
     # No ceiling for solo: a party-preset stop ceiling under 65 min cuts the
     # heart out of a solo history walker's day.
     "solo": {"narration_register": "solo"},
@@ -347,12 +351,13 @@ class POI(BaseModel):
     areas: tuple[str, ...] = ()
     beat_count: int = 0
     matching_lens_beat_count: int = 0
-    # Place semantics are additive so legacy corpora remain loadable.  A
-    # typed corpus may enter selection only after place_materialization has
-    # validated these identities against its frozen manifest.
+    # Place semantics are additive so legacy corpora remain loadable.
     canonical_place_id: str | None = Field(default=None, min_length=1)
     aliases: tuple[str, ...] = ()
     coordinate_provenance: CoordinateProvenance | None = None
+    # Nothing sets or reads these two. They stay on the record because every
+    # snapshot hash (`premium_tour.exact_snapshot_sha256`) and route hash dumps the
+    # whole model, so removing them would change every stored hash.
     requires_dwell: bool = False
     vignette_eligible: bool = True
     # HOW LONG A VISITOR SPENDS AT THIS PLACE — the third hand on the tour clock.
@@ -455,12 +460,6 @@ class POI(BaseModel):
     # places only, Notre-Dame first. Empty = no chapters, the story is told whole.
     anchors: tuple[Anchor, ...] = ()
 
-    @model_validator(mode="after")
-    def _playback_flags_are_consistent(self) -> POI:
-        if self.requires_dwell and self.vignette_eligible:
-            raise ValueError("a dwell-required POI cannot be vignette eligible")
-        return self
-
 
 class PhysicalCue(BaseModel):
     """One physical_cue entry from a beat — cue + feature_type compose
@@ -521,14 +520,10 @@ class BeatRef(BaseModel):
     # legacy fixtures or persisted trip payloads.
     stable_beat_id: str | None = Field(default=None, min_length=1)
     place_plan_id: str | None = Field(default=None, min_length=1)
+    # Nothing sets or reads these two; they stay for the same stored-hash reason
+    # as on `POI`.
     requires_dwell: bool = False
     vignette_eligible: bool = True
-
-    @model_validator(mode="after")
-    def _playback_flags_are_consistent(self) -> BeatRef:
-        if self.requires_dwell and self.vignette_eligible:
-            raise ValueError("a dwell-required beat cannot be vignette eligible")
-        return self
 
 
 class ValhallaLegReceipt(BaseModel):
@@ -1184,7 +1179,8 @@ class RouteOption(BaseModel):
     backtrack_ratio: float = Field(default=0.0, ge=0)
     degraded: bool = False
     profiles: tuple[str, ...] = ()
-    offline_package: dict | None = None
+    # Always None: nothing fills it. The key stays on the stored and wire form.
+    offline_package: None = None
     # The spotlight model: per-corridor lens density surfaced to
     # the user. None until REACH measures and fills it, so
     # the default preserves today's behavior.
