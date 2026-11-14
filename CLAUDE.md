@@ -53,9 +53,17 @@ These are coding rules, not a process. They bind every file under `src/`, `mobil
 9. **Comments and rules are written in the present tense.** A comment, rule file, or agent
    definition states the constraint that holds now — never the incident that motivated it.
    No dates, no owner quotes, no session stories, no "this exists because X once did Y".
-   Incidents belong in git history and `.claude/LEARNINGS.md`; a constraint that cannot be
-   justified without its origin story points at the LEARNINGS entry instead of retelling it.
-   The same applies when cleaning up: removing a thing means removing every reference to it
-   — registrations, ignore rules, docs, agent prompts — in the same change, so nothing keeps
-   describing a world that no longer exists. `/cleanup` (`.claude/commands/cleanup.md`) is
-   the procedure that makes this mechanical; every removal runs it.
+   Incidents belong in git history and `.claude/LEARNINGS.md`, never in the code: a comment
+   states the constraint in a form that stands without its origin story, and cites no entry
+   (rule 10). The same applies when cleaning up: removing a thing means removing every
+   reference to it — registrations, ignore rules, docs, agent prompts — in the same change, so
+   nothing keeps describing a world that no longer exists. `/cleanup`
+   (`.claude/commands/cleanup.md`) is the procedure that makes this mechanical; every removal
+   runs it.
+
+10. **Code, tests and process files never cite documents.** Documents are for people. They
+   move, get rewritten and go stale, and a pointer into one breaks without any test noticing.
+   A rule the code enforces is stated once, in plain words, in a comment beside the code that
+   enforces it. Never give a document path, a section number, a decision-record number, a
+   persona or a plan codename as the reason. Write `# A refund never exceeds the amount paid.`
+   beside the check, not `# see the refunds design, section 4.2`.
