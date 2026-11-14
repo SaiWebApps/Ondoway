@@ -1,17 +1,18 @@
 """Deploy a city's repo data to the active Neo4j graph, then verify parity.
 
 The repo files are the single source of truth; this is the ONE 'repo -> graph'
-path, so no graph is ever hand-maintained (and drifts) again. It is:
-  - additive + idempotent (all MERGE-based),
+path, so no graph is ever hand-maintained. It is:
+  - additive + idempotent (all MERGE-based), and sends only what differs,
   - audio-safe (beat.audio_url is stamped ON CREATE only — a re-deploy never
     wipes generated TTS), and
   - self-verifying (fails non-zero if parity drifts afterward).
 
 Steps:
   1. POIs + beats   <- scripts.upload_paris   (bbox-guarded MERGE)
-  2. Areas + WITHIN <- scripts.upload_areas   (via a TRANSIENT local API this
-                                               script starts and always stops)
+  2. Areas + WITHIN <- scripts.upload_areas   (skipped for a city with no areas)
   3. Parity         <- scripts.db_parity      (repo vs graph; non-zero on drift)
+
+Every step prints as it runs, then its elapsed seconds; the total closes the run.
 
 Target selection is owned by Make:
   make deploy CITY=x
@@ -23,11 +24,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import signal
 import subprocess
 import sys
 import time
-import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -35,71 +34,16 @@ sys.path.insert(0, str(ROOT))
 
 from src.city_registry import onboard_data_root
 
-_DEFAULT_DEPLOY_API_PORT = 8000
+
+def child_env() -> dict[str, str]:
+    """The environment of every step: this one, with Python output unbuffered so
+    each step's lines reach the terminal as they are printed."""
+    return {**os.environ, "PYTHONUNBUFFERED": "1"}
 
 
 def _run(cmd: list[str]) -> None:
     print(f"\n$ {' '.join(cmd)}", flush=True)
-    subprocess.run(cmd, check=True, cwd=str(ROOT))
-
-
-def deploy_api_port() -> int:
-    """Port for the transient areas-upload API. ``$ONBOARD_DEPLOY_API_PORT`` when
-    set (non-empty), else 8000 — so a hermetic deploy can dodge a busy :8000.
-
-    PUBLIC, and imported by ``scripts/upload_areas.py``, because this knob has to
-    move BOTH halves or it moves neither. Measured 2026-08-25: this function sent
-    the transient server to :8123 while ``upload_areas`` still called :8000 from a
-    hardcoded constant, so the areas step died on connection-refused AFTER step 1
-    had written every POI and beat — the partial deploy this file's own comment at
-    ``_port_busy`` warns about, caused by the mitigation for it."""
-    raw = (os.environ.get("ONBOARD_DEPLOY_API_PORT") or "").strip()
-    return int(raw) if raw else _DEFAULT_DEPLOY_API_PORT
-
-
-def _api_probe(port: int) -> str:
-    return f"http://localhost:{port}/api/v1/nodes/Area?skip=0&limit=1"
-
-
-def _api_healthy(probe: str) -> bool:
-    try:
-        urllib.request.urlopen(probe, timeout=2)  # localhost probe only
-        return True
-    except Exception:
-        return False
-
-
-def _transient_api_env() -> dict[str, str]:
-    """Env for the deploy's own short-lived localhost uvicorn.
-
-    WORKBENCH_API_ENABLED is fail-closed (app.py mounts the /nodes CRUD routers
-    only on an explicit truthy value); the areas upload talks to /nodes/Area, so
-    the transient server must opt in — it binds 127.0.0.1 and dies with the
-    deploy, so the unauthenticated surface never faces the network.
-    """
-    return {
-        **os.environ,
-        "WORKBENCH_API_ENABLED": "1",
-        # Never proxy the localhost API round-trip (matches `make api`).
-        "NO_PROXY": "localhost,127.0.0.1,::1",
-        "no_proxy": "localhost,127.0.0.1,::1",
-    }
-
-
-def _port_busy(port: int) -> bool:
-    """Whether a real SERVER is listening on ``port``.
-
-    LISTEN-scoped deliberately. A bare ``lsof -ti:PORT`` also matches CLIENT sockets
-    -- any process merely talking TO this port from the other side, including ones
-    already in ESTABLISHED/CLOSED/TIME_WAIT. Measured 2026-07-26: the user's Claude
-    desktop app held two CLOSED client sockets to :8000, so this returned True with
-    nothing listening, and ``_upload_areas_step`` hard-exited ("':8000 is already in
-    use'") *after* the POI/beat upload had already written -- a partial deploy, and
-    the first of two shields that kept ``make workbench`` from ever starting.
-    """
-    return subprocess.run(
-        ["lsof", f"-tiTCP:{port}", "-sTCP:LISTEN"], capture_output=True, text=True
-    ).stdout.strip() != ""
+    subprocess.run(cmd, check=True, cwd=str(ROOT), env=child_env())
 
 
 def _areas_for(slug: str) -> list:
@@ -116,45 +60,23 @@ def _areas_for(slug: str) -> list:
     return data if isinstance(data, list) else []
 
 
-def _upload_areas_step(slug: str, py: str) -> None:
-    """Step 2: Areas + WITHIN edges via a TRANSIENT local API (upload_areas POSTs
-    to it).
-
-    ROBUSTNESS FIX: SKIP the whole step — and DO NOT spawn any transient API —
-    when the city has no areas (``areas.json == []``/absent, e.g. a fresh
-    onboarded city). Only spawn the uvicorn when there are Area nodes to create,
-    so a hermetic deploy never hard-fails on a busy port for a city with nothing
-    to upload. Honors ``$ONBOARD_DEPLOY_API_PORT`` (default 8000)."""
+def _upload_areas_step(slug: str, py: str, allow_cloud: bool) -> None:
+    """Step 2: Areas + WITHIN edges, skipped when the city has no areas."""
     if not _areas_for(slug):
         print(f"  [2/3] {slug}: no areas (areas.json empty/absent) — skipping areas upload")
         return
+    cmd = [py, "scripts/upload_areas.py", "--slug", slug]
+    if allow_cloud:
+        cmd.append("--allow-cloud")
+    _run(cmd)
 
-    port = deploy_api_port()
-    if _port_busy(port):
-        sys.exit(f"ERROR: :{port} is already in use — deploy manages its own API; free it first.")
-    env = _transient_api_env()
-    probe = _api_probe(port)
-    api = subprocess.Popen(
-        [py, "-m", "uvicorn", "src.api.app:app", "--host", "127.0.0.1", "--port", str(port)],
-        cwd=str(ROOT),
-        env=env,
-    )
-    try:
-        for _ in range(25):
-            if _api_healthy(probe):
-                break
-            if api.poll() is not None:
-                sys.exit("ERROR: transient API exited before becoming healthy.")
-            time.sleep(1)
-        else:
-            sys.exit(f"ERROR: transient API never became healthy on :{port}.")
-        _run([py, "scripts/upload_areas.py", "--slug", slug])
-    finally:
-        api.send_signal(signal.SIGTERM)
-        try:
-            api.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            api.kill()
+
+def _timed(label: str, step, timings: list[tuple[str, float]]) -> None:
+    t0 = time.time()
+    step()
+    seconds = time.time() - t0
+    timings.append((label, seconds))
+    print(f"  -- {label}: {seconds:.1f}s", flush=True)
 
 
 def main() -> int:
@@ -163,23 +85,35 @@ def main() -> int:
     ap.add_argument("--allow-cloud", action="store_true", help="permit a non-local target")
     args = ap.parse_args()
     py = sys.executable
+    started = time.time()
+    timings: list[tuple[str, float]] = []
 
-    print(f"\n{'='*66}\n  DEPLOY {args.slug} -> active graph (repo = source of truth)\n{'='*66}")
+    print(
+        f"\n{'='*66}\n  DEPLOY {args.slug} -> active graph (repo = source of truth)\n{'='*66}",
+        flush=True,
+    )
 
     # 1. POIs + beats (upload_paris enforces the localhost/--allow-cloud guard itself).
     upload = [py, "-m", "scripts.upload_paris", args.slug]
     if args.allow_cloud:
         upload.append("--allow-cloud")
-    _run(upload)
+    _timed("step 1 POIs + beats", lambda: _run(upload), timings)
 
-    # 2. Areas + WITHIN edges via a transient local API — SKIPPED entirely for a
-    #    city with no areas (no transient server spawned; see _upload_areas_step).
-    _upload_areas_step(args.slug, py)
+    # 2. Areas + WITHIN edges (upload_areas enforces the same guard).
+    _timed(
+        "step 2 areas",
+        lambda: _upload_areas_step(args.slug, py, args.allow_cloud),
+        timings,
+    )
 
     # 3. Verify parity — the deploy is not 'done' until the graph matches the repo.
-    _run([py, "-m", "scripts.db_parity", args.slug])
+    _timed("step 3 parity", lambda: _run([py, "-m", "scripts.db_parity", args.slug]), timings)
+
     bar = "=" * 66
-    print(f"\n{bar}\n  ✓ DEPLOY COMPLETE — {args.slug} matches repo (parity clean)\n{bar}")
+    print(f"\n{bar}\n  ✓ DEPLOY COMPLETE — {args.slug} matches repo (parity clean)")
+    for label, seconds in timings:
+        print(f"    {label:<22} {seconds:6.1f}s")
+    print(f"    {'total':<22} {time.time() - started:6.1f}s\n{bar}")
     return 0
 
 

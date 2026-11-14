@@ -991,14 +991,9 @@ def api_server():
             # tmp dir so the London upload->deploy round-trip is HERMETIC — it writes
             # data/london/ + cities.json under the tmp root and NEVER touches the
             # committed data/ or src/cities.json. Harmless to the review.html tests,
-            # which never onboard. ONBOARD_DEPLOY_API_PORT keeps the deploy's transient
-            # areas-upload API off :8001/:8000 (London has no areas, so it is skipped).
+            # which never onboard.
             "ONBOARD_DATA_ROOT": str(_ONBOARD_TMP / "data"),
             "ONBOARD_REGISTRY_PATH": str(_ONBOARD_TMP / "cities.json"),
-            # Also OS-assigned. It was 8002 — the shared Valhalla container's port,
-            # which this shard now starts — and moving it to another fixed guess
-            # would only relocate the collision.
-            "ONBOARD_DEPLOY_API_PORT": str(_pick_free_port()),
         },
     )
 

@@ -61,6 +61,14 @@ INDEXES: list[Index] = [
     Index("User", ("apple_sub",)),
     # Written only by the place-recipe build job, which looks each recipe up by id.
     Index("PlaceRecipe", ("id",)),
+    # The deploy and the parity check find nodes by these natural keys, once per
+    # row across tens of thousands of rows; without an index each lookup scans
+    # every node of the label.
+    Index("POI", ("name_key", "city_name")),
+    Index("POI", ("name", "city_name")),
+    Index("POI", ("city_name",)),
+    Index("NarrativeBeat", ("beat_id",)),
+    Index("Area", ("name", "city_name")),
 ]
 
 # ---------------------------------------------------------------------------

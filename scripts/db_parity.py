@@ -32,6 +32,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -156,101 +157,70 @@ def _expected(slug: str) -> dict:
     }
 
 
-def _actual(session, slug: str) -> dict:
-    q = lambda c, **kw: session.run(c, city=slug, **kw)  # noqa: E731
-    # Body places (toilets/benches) are uploaded
-    # as poi_role="body" :POI nodes — deliberately, so they flow through the
-    # SAME planner loader — but they come from data/{slug}/body-places.json,
-    # never poi-raw.json, so they are NOT part of the repo-vs-db POI
-    # comparison below. Same shape as the blocked/unlinkable beat exclusion
-    # a few lines down: a real, named, non-drift category, not a fold-in.
-    poi_keys = {
-        r["k"]
-        for r in q(
-            "MATCH (p:POI {city_name:$city}) "
-            "WHERE p.poi_role IS NULL OR p.poi_role <> 'body' "
-            "RETURN p.name_key AS k"
-        )
-        if r["k"]
-    }
-    beat_ids = {
-        r["b"]
-        for r in q(
-            "MATCH (:POI {city_name:$city})-[:HAS_BEAT]->(b:NarrativeBeat) "
-            "WHERE b.beat_id IS NOT NULL RETURN DISTINCT b.beat_id AS b"
-        )
-    }
-    footprints = {
-        (r["k"], r["r"], r["role"])
-        for r in q(
-            "MATCH (p:POI {city_name:$city}) "
-            "WHERE p.poi_role IS NULL OR p.poi_role <> 'body' "
-            "RETURN p.name_key AS k, p.trigger_radius AS r, p.poi_role AS role"
-        )
-        if r["k"]
-    }
-    def _canon_anchors_str(raw) -> str | None:
-        if not raw:
-            return None
-        return json.dumps(json.loads(raw), ensure_ascii=False, sort_keys=True)
+_NON_BODY_POI = "MATCH (p:POI {city_name:$city}) WHERE p.poi_role IS NULL OR p.poi_role <> 'body' "
+_LINKED_BEAT = (
+    "MATCH (:POI {city_name:$city})-[:HAS_BEAT]->(b:NarrativeBeat) WHERE b.beat_id IS NOT NULL "
+)
 
-    anchors = {
-        (r["k"], _canon_anchors_str(r["a"]))
-        for r in q(
-            "MATCH (p:POI {city_name:$city}) "
-            "WHERE p.poi_role IS NULL OR p.poi_role <> 'body' "
-            "RETURN p.name_key AS k, p.anchors AS a"
-        )
-        if r["k"]
-    }
-    def _text(raw) -> str | None:
-        return raw.strip() if isinstance(raw, str) and raw.strip() else None
+# Body places (toilets/benches) are uploaded as poi_role="body" :POI nodes —
+# deliberately, so they flow through the SAME planner loader — but they come from
+# data/{slug}/body-places.json, never poi-raw.json, so they are NOT part of the
+# repo-vs-db POI comparison. Same shape as the blocked/unlinkable beat exclusion:
+# a real, named, non-drift category, not a fold-in.
+_ACTUAL_QUERIES = {
+    "poi_keys": _NON_BODY_POI + "RETURN p.name_key AS k",
+    "beat_ids": _LINKED_BEAT + "RETURN DISTINCT b.beat_id AS b",
+    "footprints": _NON_BODY_POI
+    + "RETURN p.name_key AS k, p.trigger_radius AS r, p.poi_role AS role",
+    "anchors": _NON_BODY_POI + "RETURN p.name_key AS k, p.anchors AS a",
+    "hours": _NON_BODY_POI
+    + "RETURN p.name_key AS k, p.gated AS g, p.opening_hours_source AS s, p.opening_hours AS t",
+    "body_hashes": _LINKED_BEAT + "RETURN DISTINCT b.beat_id AS b, b.script_body AS body",
+    "placement": _LINKED_BEAT
+    + "RETURN DISTINCT b.beat_id AS b, b.sub_location AS sub, b.trigger_address AS trig",
+    "area_names": "MATCH (a:Area {city_name:$city}) RETURN a.name AS n",
+    "p2a": "MATCH (p:POI {city_name:$city})-[:WITHIN]->(a:Area {city_name:$city}) "
+    "RETURN p.name AS p, a.name AS a",
+}
 
-    hours = {
-        (r["k"], r["g"], r["s"], _text(r["t"]))
-        for r in q(
-            "MATCH (p:POI {city_name:$city}) "
-            "WHERE p.poi_role IS NULL OR p.poi_role <> 'body' "
-            "RETURN p.name_key AS k, p.gated AS g, p.opening_hours_source AS s, "
-            "p.opening_hours AS t"
-        )
-        if r["k"]
-    }
-    body_hashes = {
-        (r["b"], _normalized_script_body_hash(r["body"] or ""))
-        for r in q(
-            "MATCH (:POI {city_name:$city})-[:HAS_BEAT]->(b:NarrativeBeat) "
-            "WHERE b.beat_id IS NOT NULL "
-            "RETURN DISTINCT b.beat_id AS b, b.script_body AS body"
-        )
-    }
-    placement = {
-        (r["b"], r["sub"], r["trig"])
-        for r in q(
-            "MATCH (:POI {city_name:$city})-[:HAS_BEAT]->(b:NarrativeBeat) "
-            "WHERE b.beat_id IS NOT NULL "
-            "RETURN DISTINCT b.beat_id AS b, b.sub_location AS sub, "
-            "b.trigger_address AS trig"
-        )
-    }
-    area_names = {r["n"] for r in q("MATCH (a:Area {city_name:$city}) RETURN a.name AS n")}
-    p2a = {
-        (r["p"], r["a"])
-        for r in q(
-            "MATCH (p:POI {city_name:$city})-[:WITHIN]->(a:Area {city_name:$city}) "
-            "RETURN p.name AS p, a.name AS a"
-        )
-    }
+# How many cities are checked at once; each runs all of its queries at once.
+_CITY_WORKERS = 4
+
+
+def _canon_anchors_str(raw) -> str | None:
+    if not raw:
+        return None
+    return json.dumps(json.loads(raw), ensure_ascii=False, sort_keys=True)
+
+
+def _text(raw) -> str | None:
+    return raw.strip() if isinstance(raw, str) and raw.strip() else None
+
+
+def _actual(driver, slug: str, session_kwargs: dict) -> dict:
+    """The graph-side sets for one city. Every query runs concurrently in its own
+    read session opened with ``session_kwargs``."""
+
+    def _records(cypher: str) -> list:
+        with driver.session(**session_kwargs) as session:
+            return list(session.run(cypher, city=slug))
+
+    with ThreadPoolExecutor(max_workers=len(_ACTUAL_QUERIES)) as pool:
+        futures = {name: pool.submit(_records, c) for name, c in _ACTUAL_QUERIES.items()}
+        rows = {name: f.result() for name, f in futures.items()}
+
     return {
-        "poi_keys": poi_keys,
-        "footprints": footprints,
-        "anchors": anchors,
-        "hours": hours,
-        "beat_ids": beat_ids,
-        "body_hashes": body_hashes,
-        "placement": placement,
-        "area_names": area_names,
-        "p2a": p2a,
+        "poi_keys": {r["k"] for r in rows["poi_keys"] if r["k"]},
+        "footprints": {(r["k"], r["r"], r["role"]) for r in rows["footprints"] if r["k"]},
+        "anchors": {(r["k"], _canon_anchors_str(r["a"])) for r in rows["anchors"] if r["k"]},
+        "hours": {(r["k"], r["g"], r["s"], _text(r["t"])) for r in rows["hours"] if r["k"]},
+        "beat_ids": {r["b"] for r in rows["beat_ids"]},
+        "body_hashes": {
+            (r["b"], _normalized_script_body_hash(r["body"] or "")) for r in rows["body_hashes"]
+        },
+        "placement": {(r["b"], r["sub"], r["trig"]) for r in rows["placement"]},
+        "area_names": {r["n"] for r in rows["area_names"]},
+        "p2a": {(r["p"], r["a"]) for r in rows["p2a"]},
     }
 
 
@@ -284,23 +254,31 @@ def main() -> int:
     print(f"\n{'=' * 66}\n  DB PARITY — repo (source of truth) vs [{label}]\n{'=' * 66}")
     registry = load_registry()
     total_drift: dict[str, list] = {}
-    session_kwargs = {"database": db}
-    if not is_local:
-        # Aura parity is structurally read-only even if the configured service
-        # account has broader privileges. No pytest fixture ever receives Aura
-        # credentials, and this session is routed in READ mode.
-        session_kwargs["default_access_mode"] = READ_ACCESS
-    with d.session(**session_kwargs) as s:
+    # Parity is structurally read-only, on Aura too, even if the configured
+    # service account has broader privileges. No pytest fixture ever receives
+    # Aura credentials, and every session is routed in READ mode.
+    session_kwargs = {"database": db, "default_access_mode": READ_ACCESS}
+    # On a CLOUD target, a city onboarded + uploaded LOCALLY but not yet deployed
+    # to Aura (cloud_deployed:false) is legitimately absent from the cloud graph —
+    # skip it so it does not read as drift and turn cloud parity RED. Local
+    # targets check every city.
+    checked = [
+        slug
+        for slug in cities
+        if is_local or registry.get(slug, {}).get("cloud_deployed", True)
+    ]
+    # Cities are compared concurrently and reported in order.
+    with ThreadPoolExecutor(max_workers=_CITY_WORKERS) as pool:
+        results = {
+            slug: pool.submit(lambda s=slug: (_expected(s), _actual(d, s, session_kwargs)))
+            for slug in checked
+        }
         for slug in cities:
-            # On a CLOUD target, a city onboarded + uploaded LOCALLY but not yet
-            # deployed to Aura (cloud_deployed:false) is legitimately absent from
-            # the cloud graph — skip it so it does not read as drift and turn
-            # cloud parity RED. Local targets check every city as before.
-            if not is_local and not registry.get(slug, {}).get("cloud_deployed", True):
+            if slug not in results:
                 print(f"\n  {slug}:")
                 print("    [N/A ] local-only (cloud_deployed:false)—outside the Aura contract")
                 continue
-            exp, act = _expected(slug), _actual(s, slug)
+            exp, act = results[slug].result()
             print(f"\n  {slug}:")
             drift: list = []
             _cmp("POIs (name_key)", exp["poi_keys"], act["poi_keys"], drift)

@@ -224,9 +224,9 @@ class TestWritePathsSetNameKey:
                 "poi_role": "stop",
             }
         ]
+        stats = _upload_pois(clean_driver, pois, "paris", PARIS_BBOX)
+        assert stats["created"] == 1
         with clean_driver.session(database=get_database()) as s:
-            stats = _upload_pois(s, pois, "paris", PARIS_BBOX)
-            assert stats["created"] == 1
             rec = s.run(
                 "MATCH (p:POI {name: 'Île de la Cité'}) RETURN p.name_key AS nk"
             ).single()

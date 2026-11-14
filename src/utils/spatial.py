@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 
 import requests
 from shapely import wkt
 from shapely.geometry import MultiPolygon, Point, Polygon
+
+# Overpass is a shared public service: after each request that reaches it, the
+# next one waits this long.
+_OVERPASS_PAUSE_SECONDS = 1.0
 
 
 def _boundary_cache_dir(city_slug: str) -> Path:
@@ -20,8 +25,9 @@ def fetch_osm_boundary(
 ) -> list[tuple[float, float]]:
     """Fetch polygon coordinates from OSM Overpass API for a relation.
 
-    Caches under ``data/{city_slug}/boundaries/`` to avoid repeated API calls.
-    Returns list of (lat, lng) tuples.
+    Caches under ``data/{city_slug}/boundaries/`` to avoid repeated API calls;
+    a cached boundary returns at once, and only a network fetch pauses
+    afterwards for Overpass. Returns list of (lat, lng) tuples.
     """
     cache_dir = _boundary_cache_dir(city_slug)
     cache_file = cache_dir / f"{osm_relation_id}.json"
@@ -45,8 +51,6 @@ def fetch_osm_boundary(
         if resp.status_code == 429 or resp.status_code == 504:
             wait = 10 * (2**attempt)
             print(f"  Overpass {resp.status_code}, retrying in {wait}s...")
-            import time
-
             time.sleep(wait)
             continue
         resp.raise_for_status()
@@ -64,6 +68,7 @@ def fetch_osm_boundary(
     with open(cache_file, "w") as f:
         json.dump(coords, f)
 
+    time.sleep(_OVERPASS_PAUSE_SECONDS)
     return [tuple(c) for c in coords]
 
 

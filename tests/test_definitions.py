@@ -29,26 +29,34 @@ class TestUniqueConstraints:
 
 
 class TestIndexes:
-    def test_poi_spatial_index_exists(self):
-        poi_indexes = [i for i in INDEXES if i.label == "POI"]
-        assert len(poi_indexes) == 1
-        assert poi_indexes[0].index_type == "POINT"
-        assert poi_indexes[0].properties == ("location",)
+    def _of(self, label):
+        return {i.properties: i.index_type for i in INDEXES if i.label == label}
 
-    def test_area_spatial_index_exists(self):
-        area_indexes = [i for i in INDEXES if i.label == "Area"]
-        assert len(area_indexes) == 1
-        assert area_indexes[0].index_type == "POINT"
-        assert area_indexes[0].properties == ("centroid",)
+    def test_poi_indexes(self):
+        """The spatial index, plus the natural keys the deploy looks POIs up by."""
+        assert self._of("POI") == {
+            ("location",): "POINT",
+            ("name_key", "city_name"): "RANGE",
+            ("name", "city_name"): "RANGE",
+            ("city_name",): "RANGE",
+        }
+
+    def test_area_indexes(self):
+        assert self._of("Area") == {("centroid",): "POINT", ("name", "city_name"): "RANGE"}
 
     def test_place_recipes_are_looked_up_by_id(self):
         recipe_indexes = [i for i in INDEXES if i.label == "PlaceRecipe"]
         assert [i.properties for i in recipe_indexes] == [("id",)]
 
-    def test_narrative_beat_composite_index(self):
-        nb_indexes = [i for i in INDEXES if i.label == "NarrativeBeat"]
-        assert len(nb_indexes) == 1
-        assert nb_indexes[0].properties == ("active_status", "version")
+    def test_narrative_beat_indexes(self):
+        assert self._of("NarrativeBeat") == {
+            ("active_status", "version"): "RANGE",
+            ("beat_id",): "RANGE",
+        }
+
+    def test_index_names_are_unique(self):
+        names = [i.name for i in INDEXES]
+        assert len(names) == len(set(names))
 
 
 class TestRelationships:

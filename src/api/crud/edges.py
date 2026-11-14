@@ -89,18 +89,34 @@ def create_edge(
 
     Returns the created edge, or None if source/target not found.
     """
+    edges = create_edges(
+        session,
+        rel_type,
+        source_label,
+        target_label,
+        [{"source_id": source_id, "target_id": target_id, "properties": properties}],
+    )
+    return edges[0] if edges else None
+
+
+def create_edges(
+    session: Session,
+    rel_type: str,
+    source_label: str,
+    target_label: str,
+    rows: list[dict[str, Any]],
+) -> list[dict]:
+    """Create one relationship per row in a single query and return the edges made.
+
+    Each row is ``{"source_id", "target_id", "properties"}``. A row whose source or
+    target does not exist creates nothing and returns nothing. MERGE-keyed types
+    keep an existing edge's id and created_at; the others always create a new edge.
+    """
     _validate_rel_type(rel_type)
     _validate_label(source_label)
     _validate_label(target_label)
-    _validate_property_keys(properties)
-
-    params: dict[str, Any] = {
-        "source_id": source_id,
-        "target_id": target_id,
-    }
-
-    for key, val in properties.items():
-        params[key] = val
+    for row in rows:
+        _validate_property_keys(row["properties"])
 
     use_merge = rel_type in ("HAS_BEAT", "TAGGED_WITH", "WITHIN", "HAS_PROFILE", "PREFERS_LENS")
 
@@ -115,22 +131,18 @@ def create_edge(
             "r.created_at = datetime()",
         ]
 
-    for key in properties:
-        set_parts.append(f"r.{key} = ${key}")
-
     verb = "MERGE" if use_merge else "CREATE"
     query = (
-        f"MATCH (a:{source_label} {{id: $source_id}}) "
-        f"MATCH (b:{target_label} {{id: $target_id}}) "
+        f"UNWIND $rows AS row "
+        f"MATCH (a:{source_label} {{id: row.source_id}}) "
+        f"MATCH (b:{target_label} {{id: row.target_id}}) "
         f"{verb} (a)-[r:{rel_type}]->(b) "
         f"SET {', '.join(set_parts)} "
+        f"SET r += row.properties "
         f"RETURN r.id AS id, type(r) AS type, "
         f"a.id AS source_id, b.id AS target_id, properties(r) AS props"
     )
-    result = session.run(query, **params).single()
-    if result is None:
-        return None
-    return _record_to_edge(result)
+    return [_record_to_edge(record) for record in session.run(query, rows=rows)]
 
 
 def update_edge(

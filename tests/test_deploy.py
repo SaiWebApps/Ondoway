@@ -2,16 +2,16 @@
 
 Covers the parts of the ``repo -> graph`` deploy path that a hermetic onboard
 must connect to:
-  - ``scripts.deploy._upload_areas_step`` SKIPS the transient :8000 areas server
-    when the city has no areas (a fresh onboarded city writes ``areas.json == []``);
+  - ``scripts.deploy._upload_areas_step`` SKIPS the areas upload when the city
+    has no areas (a fresh onboarded city writes ``areas.json == []``);
   - ``scripts.upload_areas._city_data_dir`` and ``scripts.db_parity._data_root``
     resolve the corpus root via the shared ``onboard_data_root()`` helper.
 
 Every assertion checks BOTH: env set → the tmp/hermetic path; env unset → the
 committed ``<repo>/data`` default (real paris/new_york deploys unchanged).
 
-Pure — no Neo4j, no real deploy: the skip test patches the subprocess/health
-seams so nothing is spawned or POSTed.
+Pure — no Neo4j, no real deploy: the step tests record the commands instead of
+running them.
 """
 
 from __future__ import annotations
@@ -76,91 +76,51 @@ def test_areas_for_present_returns_list(monkeypatch, tmp_path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# deploy._upload_areas_step — SKIP-EMPTY-AREAS: no transient :8000 server spawned
-# for a city with no areas; still spawns exactly one when there ARE areas.
+# deploy._upload_areas_step — no areas, no upload; areas present, one upload that
+# carries the cloud opt-in through.
 # ---------------------------------------------------------------------------
-class _FakeProc:
-    """A stand-in for the transient uvicorn Popen handle (records nothing; just
-    satisfies the try/finally lifecycle the step drives)."""
-
-    def poll(self):
-        return None
-
-    def send_signal(self, sig):
-        pass
-
-    def wait(self, timeout=None):
-        return 0
-
-    def kill(self):
-        pass
+def _record_runs(monkeypatch) -> list:
+    runs: list = []
+    monkeypatch.setattr(deploy, "_run", lambda cmd: runs.append(cmd))
+    return runs
 
 
-def _patch_spawn_seams(monkeypatch) -> list:
-    """Patch every seam the areas step would touch so it neither spawns a real
-    server nor POSTs; return the list that records Popen spawn attempts."""
-    spawns: list = []
-
-    def _fake_popen(*args, **kwargs):
-        spawns.append((args, kwargs))
-        return _FakeProc()
-
-    monkeypatch.setattr(deploy.subprocess, "Popen", _fake_popen)
-    monkeypatch.setattr(deploy, "_api_healthy", lambda *a, **k: True)
-    monkeypatch.setattr(deploy, "_run", lambda *a, **k: None)
-    monkeypatch.setattr(deploy, "_port_busy", lambda *a, **k: False)
-    return spawns
-
-
-def test_deploy_skips_area_server_when_no_areas(monkeypatch, tmp_path) -> None:
-    """A city whose areas.json == [] must NOT spawn a transient areas-upload
-    server — no :8000 uvicorn, so a hermetic deploy never hard-fails on a busy
-    port for a city with nothing to upload.
-    UNDO: drop the ``if not _areas_for(slug): return`` guard in _upload_areas_step
-    → Popen fires → ``spawns`` is non-empty → RED."""
+def test_deploy_skips_areas_upload_when_no_areas(monkeypatch, tmp_path) -> None:
     (tmp_path / "london").mkdir()
     (tmp_path / "london" / "areas.json").write_text("[]\n")
     monkeypatch.setenv("ONBOARD_DATA_ROOT", str(tmp_path))
-    spawns = _patch_spawn_seams(monkeypatch)
+    runs = _record_runs(monkeypatch)
 
-    deploy._upload_areas_step("london", sys.executable)
+    deploy._upload_areas_step("london", sys.executable, allow_cloud=False)
 
-    assert spawns == [], "a city with no areas must NOT spawn a transient area-upload server"
+    assert runs == []
 
 
-def test_deploy_spawns_area_server_when_areas_present(monkeypatch, tmp_path) -> None:
-    """The skip is CONDITIONAL: a city WITH areas still spawns exactly one
-    transient API (so real cities with areas keep deploying as before)."""
+def _paris_with_areas(monkeypatch, tmp_path) -> None:
     (tmp_path / "paris").mkdir()
     (tmp_path / "paris" / "areas.json").write_text(
         json.dumps([{"name": "Le Marais", "area_type": "neighborhood", "city_name": "paris"}])
     )
     monkeypatch.setenv("ONBOARD_DATA_ROOT", str(tmp_path))
-    spawns = _patch_spawn_seams(monkeypatch)
-
-    deploy._upload_areas_step("paris", sys.executable)
-
-    assert len(spawns) == 1, "a city WITH areas must spawn exactly one transient API"
 
 
-# ---------------------------------------------------------------------------
-# deploy.deploy_api_port — default 8000, overridable via ONBOARD_DEPLOY_API_PORT.
-# PUBLIC on purpose: scripts/upload_areas.py imports it, so the server the deploy
-# starts and the client that POSTs to it read ONE value (see its docstring).
-# ---------------------------------------------------------------------------
-def test_deploy_api_port_default_and_override(monkeypatch) -> None:
-    monkeypatch.delenv("ONBOARD_DEPLOY_API_PORT", raising=False)
-    assert deploy.deploy_api_port() == 8000
-    monkeypatch.setenv("ONBOARD_DEPLOY_API_PORT", "8123")
-    assert deploy.deploy_api_port() == 8123
-    monkeypatch.setenv("ONBOARD_DEPLOY_API_PORT", "")  # empty → default
-    assert deploy.deploy_api_port() == 8000
+def test_deploy_uploads_areas_when_present(monkeypatch, tmp_path) -> None:
+    _paris_with_areas(monkeypatch, tmp_path)
+    runs = _record_runs(monkeypatch)
+
+    deploy._upload_areas_step("paris", sys.executable, allow_cloud=False)
+
+    assert runs == [[sys.executable, "scripts/upload_areas.py", "--slug", "paris"]]
 
 
-def test_transient_api_env_opts_into_workbench_routes() -> None:
-    """The areas upload talks to /nodes/Area, which app.py mounts fail-closed
-    behind WORKBENCH_API_ENABLED — the deploy's own localhost uvicorn must opt
-    in explicitly or the health probe 404s forever."""
-    env = deploy._transient_api_env()
-    assert env["WORKBENCH_API_ENABLED"] == "1"
-    assert "localhost" in env["NO_PROXY"]
+def test_deploy_passes_the_cloud_opt_in_to_the_areas_upload(monkeypatch, tmp_path) -> None:
+    _paris_with_areas(monkeypatch, tmp_path)
+    runs = _record_runs(monkeypatch)
+
+    deploy._upload_areas_step("paris", sys.executable, allow_cloud=True)
+
+    assert runs[0][-1] == "--allow-cloud"
+
+
+def test_every_step_runs_with_unbuffered_output() -> None:
+    assert deploy.child_env()["PYTHONUNBUFFERED"] == "1"

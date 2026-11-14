@@ -38,10 +38,15 @@ def apply_constraints(driver: Driver) -> int:
 
 
 def apply_indexes(driver: Driver) -> int:
-    """Create all indexes. Returns count created."""
+    """Create all indexes and wait until every one is online. Returns count created.
+
+    A new index populates in the background; a query planned before it is online
+    scans the whole label instead, so callers only get the index once this returns.
+    """
     with driver.session(database=get_database()) as session:
         for index in INDEXES:
             session.execute_write(_create_index, index)
+        session.run("CALL db.awaitIndexes(600)").consume()
     return len(INDEXES)
 
 

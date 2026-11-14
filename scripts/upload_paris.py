@@ -15,6 +15,10 @@ Creates:
   - HAS_BEAT relationships (POI → Beat)
   - TAGGED_WITH relationships (Beat → Lens)
 
+The full path reads the city's graph state first and sends only the rows whose
+written fields, home link or lens tag differ from the repo, in parallel chunks;
+a row equal to the graph is never written.
+
 Usage:
     make deploy CITY=paris            # any city in CITY_BBOX
     # or directly:
@@ -28,7 +32,11 @@ import os
 import subprocess
 import sys
 import time
+from collections.abc import Callable, Iterable
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 from src import city_registry
@@ -43,8 +51,9 @@ _LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 def _assert_upload_target_allowed(allow_cloud: bool) -> None:
     """Refuse an upload against a non-local (Aura) target unless --allow-cloud.
 
-    The upload path plain-SETs live fields (e.g. ``beat.audio_url = ''``), so an
-    accidental run while ``.env`` is in cloud mode overwrites production. This
+    The upload path rewrites every live field that differs from the repo (and
+    removes one the repo lacks), so an accidental run while ``.env`` is in cloud
+    mode overwrites production. This
     fires BEFORE any driver is created, so it protects even when Aura is
     unreachable/paused. A deliberate cloud upload is still possible by typing
     ``--allow-cloud`` explicitly.
@@ -56,7 +65,7 @@ def _assert_upload_target_allowed(allow_cloud: bool) -> None:
     if host not in _LOCAL_HOSTS:
         raise SystemExit(
             f"REFUSING to upload against non-local NEO4J_URI={uri!r} (host={host!r}). "
-            f"This path overwrites live fields (audio_url='' etc.). Point NEO4J_URI at "
+            f"This path overwrites live fields from the repo. Point NEO4J_URI at "
             f"the local database first (the local Make targets do), or pass "
             f"--allow-cloud to deliberately target Aura."
         )
@@ -116,6 +125,116 @@ def _assert_beats_valid(beats_path: Path) -> None:
         )
 
 
+CHUNK_SIZE = 500
+WRITE_WORKERS = 4
+
+
+def write_in_chunks(
+    driver,
+    rows: list[dict],
+    work: Callable[[Any, list[dict]], int],
+    workers: int = WRITE_WORKERS,
+) -> int:
+    """Send ``rows`` in chunks of ``CHUNK_SIZE``, ``workers`` chunks at a time, and
+    return the sum of what ``work(tx, chunk)`` returns.
+
+    Each worker opens its own session and sends each chunk through
+    ``execute_write``, so a transient error or a deadlock between two chunks is
+    retried rather than fatal. ``rows`` must hold each key once (``last_per_key``):
+    two chunks merging the same key at once could each create the node.
+    """
+    chunks = [rows[i : i + CHUNK_SIZE] for i in range(0, len(rows), CHUNK_SIZE)]
+    if not chunks:
+        return 0
+    groups = [chunks[w::workers] for w in range(min(workers, len(chunks)))]
+
+    def _send(group: list[list[dict]]) -> int:
+        with driver.session(database=get_database()) as session:
+            return sum(session.execute_write(work, chunk) for chunk in group)
+
+    with ThreadPoolExecutor(max_workers=len(groups)) as pool:
+        return sum(pool.map(_send, groups))
+
+
+def last_per_key(rows: Iterable[dict], key: Callable[[dict], Any]) -> list[dict]:
+    """One row per key, the last one winning — what one UNWIND over all the rows
+    leaves in the graph when a key repeats."""
+    return list({key(row): row for row in rows}.values())
+
+
+def same_value(graph: Any, repo: Any) -> bool:
+    """Whether the graph already holds exactly the value a SET would write.
+
+    A missing property reads as None, the value whose SET removes it. The types
+    must match as well as the values: ``True == 1`` and ``10 == 10.0`` in Python,
+    yet writing either changes what the graph stores.
+    """
+    if isinstance(graph, list) and isinstance(repo, list):
+        return len(graph) == len(repo) and all(map(same_value, graph, repo))
+    return type(graph) is type(repo) and graph == repo
+
+
+def _same_location(props: dict, lat: float, lon: float) -> bool:
+    loc = props.get("location")
+    return loc is not None and (loc.latitude, loc.longitude) == (lat, lon)
+
+
+def _changed(nodes: list[dict], row: dict, skip: set[str]) -> bool:
+    """Whether writing ``row`` would change any of the graph ``nodes`` it MERGEs
+    onto: a new key, or any written field that differs. ``skip`` names the row
+    keys the SET list does not copy onto the node under their own name."""
+    if not nodes:
+        return True
+    return any(
+        any(not same_value(props.get(k), v) for k, v in row.items() if k not in skip)
+        for props in nodes
+    )
+
+
+# The POI row keys the SET lists do not copy onto the node under their own name:
+# the MERGE key, and the coordinates that become `p.location`.
+_POI_ROW_NOT_WRITTEN = {"name_key", "city_name", "lat", "lon"}
+
+
+def _graph_pois_by_key(
+    session, keys: list[str], city_name: str, fields: list[str]
+) -> dict[str, list[dict]]:
+    """``fields`` of every POI node each ``(name_key, city_name)`` MERGEs onto.
+
+    Only the compared fields travel: reading whole nodes for every body place
+    costs several times as long. ``fields`` are this module's own row keys.
+    """
+    projection = ", ".join(f".{f}" for f in fields)
+    by_key: dict[str, list[dict]] = {}
+    for rec in session.run(
+        f"""
+        UNWIND $keys AS k
+        MATCH (p:POI {{name_key: k, city_name: $city}})
+        RETURN k, p {{{projection}}} AS props
+        """,
+        keys=keys,
+        city=city_name,
+    ):
+        by_key.setdefault(rec["k"], []).append(dict(rec["props"]))
+    return by_key
+
+
+def _changed_pois(driver, rows: list[dict], city_name: str) -> list[dict]:
+    """The POI rows whose write would change the graph, compared field for field."""
+    fields = [*sorted({k for row in rows for k in row} - _POI_ROW_NOT_WRITTEN), "location"]
+    with driver.session(database=get_database()) as session:
+        graph = _graph_pois_by_key(session, [r["name_key"] for r in rows], city_name, fields)
+    return [
+        row
+        for row in rows
+        if _changed(graph.get(row["name_key"], []), row, _POI_ROW_NOT_WRITTEN)
+        or not all(
+            _same_location(props, row["lat"], row["lon"])
+            for props in graph.get(row["name_key"], [])
+        )
+    ]
+
+
 def _ensure_lenses(session, lens_slugs: set[str]) -> int:
     """Create any lens nodes that don't already exist. Returns count created."""
     params = [
@@ -137,8 +256,52 @@ def _ensure_lenses(session, lens_slugs: set[str]) -> int:
     return result.single()["total"]
 
 
-def _upload_pois(session, pois: list[dict], city_name: str, bbox: tuple) -> dict[str, int]:
-    """Upload POI nodes with spatial points via batched UNWIND. Returns stats."""
+_POI_WRITE = """
+UNWIND $pois AS poi
+MERGE (p:POI {name_key: poi.name_key, city_name: poi.city_name})
+ON CREATE SET p.id = randomUUID()
+SET p.name                = poi.name,
+    p.short_description   = poi.short_description,
+    p.location            = point({latitude: poi.lat, longitude: poi.lon, srid: 4326}),
+    p.importance_tier     = poi.importance_tier,
+    p.trigger_radius      = poi.trigger_radius,
+    p.kid_friendly        = poi.kid_friendly,
+    p.name_variations     = poi.name_variations,
+    p.poi_role            = poi.poi_role,
+    // Every key of the row dict except the MERGE key and the coordinates is
+    // SET here from the row key of the same name, and the change check
+    // compares exactly those keys. A key added to the row and not here is
+    // never written; one added here and not to the row is cleared.
+    p.typical_duration_min = poi.typical_duration_min,
+    p.visit_seconds_inside = poi.visit_seconds_inside,
+    p.visit_basis          = poi.visit_basis,
+    p.opening_hours        = poi.opening_hours,
+    p.opening_hours_source = poi.opening_hours_source,
+    p.opening_hours_basis  = poi.opening_hours_basis,
+    p.gated                = poi.gated,
+    p.place_category       = poi.place_category,
+    p.children_can_run     = poi.children_can_run,
+    p.sit_and_talk         = poi.sit_and_talk,
+    p.good_after_dark      = poi.good_after_dark,
+    p.judgement_basis      = poi.judgement_basis,
+    p.queue_class          = poi.queue_class,
+    p.queue_minutes_peak   = poi.queue_minutes_peak,
+    p.queue_minutes_offpeak = poi.queue_minutes_offpeak,
+    p.queue_peak_hours     = poi.queue_peak_hours,
+    p.queue_basis          = poi.queue_basis,
+    p.anchors              = poi.anchors
+RETURN count(p) AS total
+"""
+
+
+def _write_poi_chunk(tx, chunk: list[dict]) -> int:
+    return tx.run(_POI_WRITE, pois=chunk).single()["total"]
+
+
+def _upload_pois(driver, pois: list[dict], city_name: str, bbox: tuple) -> dict[str, int]:
+    """Upload the POIs whose graph record differs from the repo. Returns stats:
+    ``created`` counts every in-bounds POI the graph now holds, ``changed`` the
+    ones this run wrote."""
     params = []
     skipped = 0
     out_of_bounds = 0
@@ -244,50 +407,39 @@ def _upload_pois(session, pois: list[dict], city_name: str, bbox: tuple) -> dict
             ),
         })
 
-    result = session.run(
-        """
-        UNWIND $pois AS poi
-        MERGE (p:POI {name_key: poi.name_key, city_name: poi.city_name})
-        ON CREATE SET p.id = randomUUID()
-        SET p.name                = poi.name,
-            p.short_description   = poi.short_description,
-            p.location            = point({latitude: poi.lat, longitude: poi.lon, srid: 4326}),
-            p.importance_tier     = poi.importance_tier,
-            p.trigger_radius      = poi.trigger_radius,
-            p.kid_friendly        = poi.kid_friendly,
-            p.name_variations     = poi.name_variations,
-            p.poi_role            = poi.poi_role,
-            // Visit capacity. This SET list and the param dict above are TWO
-            // hardcoded property lists that must agree: a key added to one and
-            // not the other reaches the graph as nothing, with no error. If you
-            // add a property, add it in both places.
-            p.typical_duration_min = poi.typical_duration_min,
-            p.visit_seconds_inside = poi.visit_seconds_inside,
-            p.visit_basis          = poi.visit_basis,
-            p.opening_hours        = poi.opening_hours,
-            p.opening_hours_source = poi.opening_hours_source,
-            p.opening_hours_basis  = poi.opening_hours_basis,
-            p.gated                = poi.gated,
-            p.place_category       = poi.place_category,
-            p.children_can_run     = poi.children_can_run,
-            p.sit_and_talk         = poi.sit_and_talk,
-            p.good_after_dark      = poi.good_after_dark,
-            p.judgement_basis      = poi.judgement_basis,
-            p.queue_class          = poi.queue_class,
-            p.queue_minutes_peak   = poi.queue_minutes_peak,
-            p.queue_minutes_offpeak = poi.queue_minutes_offpeak,
-            p.queue_peak_hours     = poi.queue_peak_hours,
-            p.queue_basis          = poi.queue_basis,
-            p.anchors              = poi.anchors
-        RETURN count(p) AS total
-        """,
-        pois=params,
-    )
-    created = result.single()["total"]
-    return {"created": created, "skipped": skipped, "out_of_bounds": out_of_bounds}
+    rows = last_per_key(params, lambda r: r["name_key"])
+    changed = _changed_pois(driver, rows, city_name)
+    write_in_chunks(driver, changed, _write_poi_chunk)
+    return {
+        "created": len(rows),
+        "changed": len(changed),
+        "skipped": skipped,
+        "out_of_bounds": out_of_bounds,
+    }
 
 
-def _upload_body_places(session, city_slug: str, bbox: tuple) -> dict[str, int]:
+_BODY_PLACE_WRITE = """
+UNWIND $places AS place
+MERGE (p:POI {name_key: place.name_key, city_name: place.city_name})
+ON CREATE SET p.id = randomUUID()
+SET p.name                 = place.name,
+    p.short_description    = place.short_description,
+    p.location             = point({latitude: place.lat, longitude: place.lon, srid: 4326}),
+    p.importance_tier      = place.importance_tier,
+    p.trigger_radius       = place.trigger_radius,
+    p.kid_friendly         = place.kid_friendly,
+    p.name_variations      = place.name_variations,
+    p.poi_role             = place.poi_role,
+    p.typical_duration_min = place.typical_duration_min
+RETURN count(p) AS total
+"""
+
+
+def _write_body_place_chunk(tx, chunk: list[dict]) -> int:
+    return tx.run(_BODY_PLACE_WRITE, places=chunk).single()["total"]
+
+
+def _upload_body_places(driver, city_slug: str, bbox: tuple) -> dict[str, int]:
     """Upload toilets/benches from ``data/{slug}/body-places.json`` as
     ``poi_role="body"`` POI nodes — the OSM pass
     (``scripts/poi_body_places.py``). Absent file = this city has not run the
@@ -305,7 +457,7 @@ def _upload_body_places(session, city_slug: str, bbox: tuple) -> dict[str, int]:
     """
     path = city_registry.onboard_data_root() / city_slug / "body-places.json"
     if not path.exists():
-        return {"created": 0, "skipped": 0, "out_of_bounds": 0}
+        return {"created": 0, "changed": 0, "skipped": 0, "out_of_bounds": 0}
     records = _load_json(path)
 
     params = []
@@ -322,8 +474,13 @@ def _upload_body_places(session, city_slug: str, bbox: tuple) -> dict[str, int]:
             "name_key": rec["id"],
             "city_name": city_slug,
             "name": "Public toilet" if kind == "toilet" else "Bench",
+            "short_description": "",
             "lat": float(lat),
             "lon": float(lng),
+            "importance_tier": 1,
+            "trigger_radius": 10,
+            "kid_friendly": "yes",
+            "name_variations": [],
             "poi_role": "body",
             # A body stop carries ZERO NARRATION but real minutes (it is
             # seated as a zero-narration stop — narration, not duration).
@@ -333,27 +490,16 @@ def _upload_body_places(session, city_slug: str, bbox: tuple) -> dict[str, int]:
             "typical_duration_min": 5 if kind == "toilet" else 8,
         })
 
-    result = session.run(
-        """
-        UNWIND $places AS place
-        MERGE (p:POI {name_key: place.name_key, city_name: place.city_name})
-        ON CREATE SET p.id = randomUUID()
-        SET p.name              = place.name,
-            p.short_description = "",
-            p.location           = point({latitude: place.lat, longitude: place.lon, srid: 4326}),
-            p.importance_tier    = 1,
-            p.trigger_radius     = 10,
-            p.kid_friendly       = "yes",
-            p.name_variations    = [],
-            p.poi_role           = place.poi_role,
-            p.typical_duration_min = place.typical_duration_min
-        RETURN count(p) AS total
-        """,
-        places=params,
-    )
-    created = result.single()["total"]
+    rows = last_per_key(params, lambda r: r["name_key"])
+    changed = _changed_pois(driver, rows, city_slug)
+    write_in_chunks(driver, changed, _write_body_place_chunk)
     skipped = len(records) - len(params) - out_of_bounds
-    return {"created": created, "skipped": skipped, "out_of_bounds": out_of_bounds}
+    return {
+        "created": len(rows),
+        "changed": len(changed),
+        "skipped": skipped,
+        "out_of_bounds": out_of_bounds,
+    }
 
 
 def _provenance_fields(beat: dict) -> dict:
@@ -375,9 +521,8 @@ def _provenance_fields(beat: dict) -> dict:
 def _backfill_provenance(session, beats: list[dict]) -> dict[str, int]:
     """Set ONLY the three provenance fields on existing beats (match by beat_id).
 
-    The full upload path plain-SETs fields like ``beat.audio_url = ''``, so
-    re-running it against a live graph is destructive. Backfilling provenance
-    onto an already-uploaded graph must therefore never go through it.
+    The full upload path rewrites every beat field that differs from the repo, so
+    backfilling provenance onto an already-uploaded graph never goes through it.
     """
     params = []
     for beat in beats:
@@ -409,10 +554,9 @@ def _backfill_anchors(session, pois: list[dict], city_name: str) -> dict[str, in
     The reviewed anchors are what cuts a big place's story into chapters told where a
     person placed them; a POI whose graph record carries none is silently uncut, and
     every sentence written for a named spot inside it plays at the edge of the whole
-    footprint instead. The full upload path re-syncs the whole corpus and plain-SETs
-    live fields (``beat.audio_url = ''``), so bringing reviewed anchors to an
-    already-uploaded graph must never go through it — the ``--provenance-only``
-    precedent, applied to POI data.
+    footprint instead. The full upload path rewrites every field that differs from
+    the repo, so bringing reviewed anchors to an already-uploaded graph never goes
+    through it — the ``--provenance-only`` precedent, applied to POI data.
     """
     params = [
         {
@@ -455,8 +599,8 @@ def _backfill_beat_texts(session, beats: list[dict], city_name: str) -> dict[str
     word-changed beats alone; a placement-only change keeps its paid audio.
     The link pass below touches ONLY beats whose graph home differs from the
     repo's ``poi_name`` (its WHERE), and refuses a ``poi_name`` matching more
-    than one POI rather than double-linking. The full upload path re-syncs the
-    whole corpus; a targeted fix must never go through it — the
+    than one POI rather than double-linking. The full upload path rewrites every
+    field that differs from the repo; a targeted fix never goes through it — the
     ``--provenance-only`` / ``--anchors-only`` precedent.
     """
     params = []
@@ -557,8 +701,117 @@ def _backfill_footprints(session, pois: list[dict], city_name: str, bbox: tuple)
     return {"updated": result.single()["updated"], "candidates": len(params)}
 
 
-def _upload_beats(session, beats: list[dict], city_name: str) -> dict[str, int]:
-    """Upload NarrativeBeat nodes and link to POIs + Lenses via batched UNWIND.
+_BEAT_WRITE = """
+UNWIND $beats AS b
+OPTIONAL MATCH (p:POI {name: b.poi_name, city_name: $city})
+// The same two guards as the re-home pass: a beat never homes on a
+// body place (they legitimately share names), and a poi_name matching
+// more than one POI is refused rather than fanned out.
+WHERE p IS NULL OR p.poi_role IS NULL OR p.poi_role <> 'body'
+WITH b, collect(p) AS homes
+WITH b, [h IN homes WHERE h IS NOT NULL] AS homes
+WITH b, homes WHERE size(homes) = 1
+WITH b, homes[0] AS p
+MERGE (beat:NarrativeBeat {beat_id: b.beat_id})
+// audio_url is stamped ONCE on create; a re-deploy must never wipe live
+// audio (expensive TTS output). All other fields re-sync from the repo.
+ON CREATE SET beat.id = randomUUID(), beat.audio_url = ''
+// Every row key except beat_id, poi_name and lens is SET here from the row
+// key of the same name, and the change check compares exactly those keys.
+SET beat.script_body        = b.script_body,
+    beat.duration_sec       = b.duration_sec,
+    beat.kid_friendly       = b.kid_friendly,
+    beat.confidence         = b.confidence,
+    beat.fact_status        = b.fact_status,
+    beat.version            = b.version,
+    beat.active_status      = b.active_status,
+    beat.sub_location       = b.sub_location,
+    beat.trigger_address    = b.trigger_address,
+    beat.narrative_function = b.narrative_function,
+    beat.beat_type          = b.beat_type,
+    beat.emotional_register = b.emotional_register,
+    beat.beat_length_class  = b.beat_length_class,
+    beat.est_spoken_seconds = b.est_spoken_seconds,
+    beat.entities           = b.entities,
+    beat.subject_tag        = b.subject_tag,
+    beat.physical_cues      = b.physical_cues,
+    beat.pronunciation      = b.pronunciation,
+    beat.source_passage     = b.source_passage,
+    beat.source_chunk_slug  = b.source_chunk_slug,
+    beat.key_claims         = b.key_claims
+MERGE (p)-[:HAS_BEAT]->(beat)
+RETURN count(beat) AS linked
+"""
+
+_TAG_WRITE = """
+UNWIND $beats AS b
+MATCH (beat:NarrativeBeat {beat_id: b.beat_id})
+MATCH (l:Lens {name: b.lens})
+MERGE (beat)-[:TAGGED_WITH]->(l)
+RETURN count(*) AS tagged
+"""
+
+# The beat row keys _BEAT_WRITE does not copy onto the node: the MERGE key, the
+# home it links from and the lens it is tagged with.
+_BEAT_ROW_NOT_WRITTEN = {"beat_id", "poi_name", "lens"}
+
+
+def _write_beat_chunk(tx, chunk: list[dict], city_name: str) -> int:
+    return tx.run(_BEAT_WRITE, beats=chunk, city=city_name).single()["linked"]
+
+
+def _write_tag_chunk(tx, chunk: list[dict]) -> int:
+    return tx.run(_TAG_WRITE, beats=chunk).single()["tagged"]
+
+
+def _graph_homes(session, city_name: str) -> dict[str, list[str]]:
+    """Every name a beat can home on in this city: name -> ids of the non-body
+    POIs that carry it, read the way _BEAT_WRITE resolves ``poi_name``."""
+    homes: dict[str, list[str]] = {}
+    for rec in session.run(
+        """
+        MATCH (p:POI {city_name: $city})
+        WHERE p.poi_role IS NULL OR p.poi_role <> 'body'
+        RETURN p.name AS name, p.id AS id
+        """,
+        city=city_name,
+    ):
+        homes.setdefault(rec["name"], []).append(rec["id"])
+    return homes
+
+
+def _graph_beats(session, beat_ids: list[str]) -> dict[str, list[dict]]:
+    """beat_id -> each graph node with that id: its properties, the ids of the
+    POIs it hangs from, and the lenses it is tagged with."""
+    beats: dict[str, list[dict]] = {}
+    for rec in session.run(
+        """
+        UNWIND $ids AS id
+        MATCH (b:NarrativeBeat {beat_id: id})
+        OPTIONAL MATCH (home:POI)-[:HAS_BEAT]->(b)
+        WITH id, b, collect(DISTINCT home.id) AS homes
+        OPTIONAL MATCH (b)-[:TAGGED_WITH]->(l:Lens)
+        RETURN id, properties(b) AS props, homes, collect(DISTINCT l.name) AS lenses
+        """,
+        ids=beat_ids,
+    ):
+        beats.setdefault(rec["id"], []).append(
+            {"props": dict(rec["props"]), "homes": set(rec["homes"]), "lenses": set(rec["lenses"])}
+        )
+    return beats
+
+
+def _beat_changed(row: dict, nodes: list[dict], home_id: str) -> bool:
+    """Whether writing ``row`` would change the graph: a new beat, a written field
+    that differs, or a beat not yet hanging from the POI it resolves to."""
+    return _changed([n["props"] for n in nodes], row, _BEAT_ROW_NOT_WRITTEN) or not all(
+        home_id in n["homes"] for n in nodes
+    )
+
+
+def _upload_beats(driver, beats: list[dict], city_name: str) -> dict[str, int]:
+    """Upload the NarrativeBeats whose graph record, home link or lens tag differs
+    from the repo, in parallel chunks.
 
     ``city_name`` is the slug of the city being deployed (POI ``city_name`` in the
     graph). The beat→POI link is scoped to it so a beat only ever attaches to a
@@ -631,77 +884,55 @@ def _upload_beats(session, beats: list[dict], city_name: str) -> dict[str, int]:
             "subject_tag": beat.get("subject_tag"),
             "physical_cues": physical_cues,
             "pronunciation": beat.get("pronunciation"),
+            "version": 1,
+            "active_status": "active",
             **_provenance_fields(beat),
         })
 
-    result = session.run(
-        """
-        UNWIND $beats AS b
-        OPTIONAL MATCH (p:POI {name: b.poi_name, city_name: $city})
-        // The same two guards as the re-home pass: a beat never homes on a
-        // body place (they legitimately share names), and a poi_name matching
-        // more than one POI is refused rather than fanned out.
-        WHERE p IS NULL OR p.poi_role IS NULL OR p.poi_role <> 'body'
-        WITH b, collect(p) AS homes
-        WITH b, [h IN homes WHERE h IS NOT NULL] AS homes
-        WITH b, homes WHERE size(homes) = 1
-        WITH b, homes[0] AS p
-        MERGE (beat:NarrativeBeat {beat_id: b.beat_id})
-        // audio_url is stamped ONCE on create; a re-deploy must never wipe live
-        // audio (expensive TTS output). All other fields re-sync from the repo.
-        ON CREATE SET beat.id = randomUUID(), beat.audio_url = ''
-        SET beat.script_body    = b.script_body,
-            beat.duration_sec   = b.duration_sec,
-            beat.kid_friendly   = b.kid_friendly,
-            beat.confidence     = b.confidence,
-            beat.fact_status    = b.fact_status,
-            beat.version        = 1,
-            beat.active_status  = 'active',
-            beat.sub_location       = b.sub_location,
-            beat.trigger_address    = b.trigger_address,
-            beat.narrative_function = b.narrative_function,
-            beat.beat_type          = b.beat_type,
-            beat.emotional_register = b.emotional_register,
-            beat.beat_length_class  = b.beat_length_class,
-            beat.est_spoken_seconds = b.est_spoken_seconds,
-            beat.entities           = b.entities,
-            beat.subject_tag        = b.subject_tag,
-            beat.physical_cues      = b.physical_cues,
-            beat.pronunciation      = b.pronunciation,
-            beat.source_passage     = b.source_passage,
-            beat.source_chunk_slug  = b.source_chunk_slug,
-            beat.key_claims         = b.key_claims
-        MERGE (p)-[:HAS_BEAT]->(beat)
-        RETURN count(beat) AS linked
-        """,
-        beats=params,
-        city=city_name,
-    )
-    linked = result.single()["linked"]
-    orphaned = len(params) - linked + pre_skipped
+    rows = sorted(last_per_key(params, lambda r: r["beat_id"]), key=lambda r: r["poi_name"])
+    with driver.session(database=get_database()) as session:
+        homes = _graph_homes(session, city_name)
+        graph = _graph_beats(session, [r["beat_id"] for r in rows])
 
-    taggable = [b for b in params if b["lens"]]
-    if taggable:
-        tag_result = session.run(
-            """
-            UNWIND $beats AS b
-            MATCH (beat:NarrativeBeat {beat_id: b.beat_id})
-            MATCH (l:Lens {name: b.lens})
-            MERGE (beat)-[:TAGGED_WITH]->(l)
-            RETURN count(*) AS tagged
-            """,
-            beats=taggable,
-        )
-        tagged = tag_result.single()["tagged"]
-    else:
-        tagged = 0
+    # A beat is written only where the guards in _BEAT_WRITE would link it: its
+    # poi_name names exactly one non-body POI of this city in the graph.
+    linkable = [r for r in rows if len(homes.get(r["poi_name"], [])) == 1]
+    changed = [
+        r
+        for r in linkable
+        if _beat_changed(r, graph.get(r["beat_id"], []), homes[r["poi_name"]][0])
+    ]
+    t0 = time.time()
+    write_in_chunks(driver, changed, partial(_write_beat_chunk, city_name=city_name))
+    beats_seconds = time.time() - t0
+
+    # The tag pass reaches every beat node that exists once the beats are
+    # written, linked this run or not, and sends only the missing tags.
+    linked_ids = {r["beat_id"] for r in linkable}
+    taggable = [
+        r for r in rows if r["lens"] and (r["beat_id"] in graph or r["beat_id"] in linked_ids)
+    ]
+    untagged = [
+        r
+        for r in taggable
+        if not all(r["lens"] in n["lenses"] for n in graph.get(r["beat_id"], [{"lenses": ()}]))
+    ]
+    t0 = time.time()
+    # Every tag chunk links onto the same few Lens nodes, so chunks sent at once
+    # only wait on each other's locks; they go one at a time.
+    write_in_chunks(driver, untagged, _write_tag_chunk, workers=1)
+    tags_seconds = time.time() - t0
 
     return {
-        "linked": linked,
-        "orphaned": orphaned,
-        "tagged": tagged,
+        "linked": len(linkable),
+        "changed": len(changed),
+        "orphaned": len(params) - len(linkable) + pre_skipped,
+        "tagged": len(taggable),
+        "tags_changed": len(untagged),
         "blocked": blocked,
         "no_beat_id": no_beat_id,
+        "beats_seconds": beats_seconds,
+        "tags_seconds": tags_seconds,
     }
 
 
@@ -804,7 +1035,7 @@ def main() -> None:
 
     if provenance_only:
         # Provenance backfill: ONLY the three provenance fields, matched by
-        # beat_id. Never the full upload path (it plain-SETs audio_url='').
+        # beat_id. Never the full upload path (it rewrites every differing field).
         beats = _load_json(beats_file)
         driver = create_driver()
         try:
@@ -835,48 +1066,53 @@ def main() -> None:
 
     driver = create_driver()
     try:
-        with driver.session(database=db) as session:
-            # 1. Schema
-            print("\n  [1/5] Applying schema constraints & indexes...")
-            t0 = time.time()
+        # 1. Schema
+        print("\n  [1/5] Applying schema constraints & indexes...")
+        t0 = time.time()
         apply_all(driver)
         print(f"         Done ({time.time()-t0:.1f}s)")
 
+        # 2. Lenses
+        print("  [2/5] Seeding lenses...")
+        t0 = time.time()
+        seed_lenses(driver)
         with driver.session(database=db) as session:
-            # 2. Lenses
-            print("  [2/5] Seeding lenses...")
-            t0 = time.time()
-            seed_lenses(driver)
             lens_count = _ensure_lenses(session, beat_lenses)
-            print(f"         {lens_count} lenses ensured ({time.time()-t0:.1f}s)")
+        print(f"         {lens_count} lenses ensured ({time.time()-t0:.1f}s)")
 
-            # 3. POIs
-            print(f"  [3/5] Uploading {len(pois)} POIs...")
-            t0 = time.time()
-            poi_stats = _upload_pois(session, pois, city_slug, bbox)
-            print(
-                f"         {poi_stats['created']} created, {poi_stats['skipped']} skipped "
-                f"(null coords), {poi_stats['out_of_bounds']} skipped (out of bounds) "
-                f"({time.time()-t0:.1f}s)"
-            )
-            body_stats = _upload_body_places(session, city_slug, bbox)
-            if body_stats["created"] or body_stats["out_of_bounds"]:
-                print(
-                    f"         + {body_stats['created']} body places (toilets/benches) "
-                    f"created, {body_stats['out_of_bounds']} skipped (out of bounds)"
-                )
+        # 3. POIs, then body places
+        print(f"  [3/5] Uploading {len(pois)} POIs...")
+        t0 = time.time()
+        poi_stats = _upload_pois(driver, pois, city_slug, bbox)
+        print(
+            f"         {poi_stats['changed']} of {poi_stats['created']} POIs changed, "
+            f"{poi_stats['skipped']} skipped (null coords), {poi_stats['out_of_bounds']} "
+            f"skipped (out of bounds) ({time.time()-t0:.1f}s)"
+        )
+        t0 = time.time()
+        body_stats = _upload_body_places(driver, city_slug, bbox)
+        print(
+            f"         {body_stats['changed']} of {body_stats['created']} body places "
+            f"(toilets/benches) changed, {body_stats['out_of_bounds']} skipped "
+            f"(out of bounds) ({time.time()-t0:.1f}s)"
+        )
 
-            # 4. Beats + relationships
-            print(f"  [4/5] Uploading {len(beats)} beats + linking...")
-            t0 = time.time()
-            beat_stats = _upload_beats(session, beats, city_slug)
-            print(
-                f"         {beat_stats['linked']} linked, {beat_stats['orphaned']} orphaned, "
-                f"{beat_stats['tagged']} tagged, {beat_stats['blocked']} blocked (disputed), "
-                f"{beat_stats['no_beat_id']} skipped (no beat_id) "
-                f"({time.time()-t0:.1f}s)"
-            )
+        # 4. Beats + relationships
+        print(f"  [4/5] Uploading {len(beats)} beats + linking...")
+        t0 = time.time()
+        beat_stats = _upload_beats(driver, beats, city_slug)
+        print(
+            f"         {beat_stats['changed']} of {beat_stats['linked']} linked beats changed, "
+            f"{beat_stats['orphaned']} orphaned, {beat_stats['blocked']} blocked (disputed), "
+            f"{beat_stats['no_beat_id']} skipped (no beat_id) "
+            f"(write {beat_stats['beats_seconds']:.1f}s)"
+        )
+        print(
+            f"         {beat_stats['tags_changed']} of {beat_stats['tagged']} lens tags changed "
+            f"({beat_stats['tags_seconds']:.1f}s); beats step {time.time()-t0:.1f}s"
+        )
 
+        with driver.session(database=db) as session:
             # 5. Summary
             print("  [5/5] Verifying counts...")
             nodes = session.run("MATCH (n) RETURN count(n) AS c").single()["c"]

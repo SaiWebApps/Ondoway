@@ -308,9 +308,9 @@ def price_batch(client: Any, model: str, batch: list[dict[str, Any]]) -> list[di
     The call itself is twice-tried against TRANSPORT trouble (timeout /
     dropped connection), the same discipline the pass already applies to
     structurally-bad rows — one ``httpx.ReadTimeout`` deep into a full pass
-    must not take every batch with it. A second transport failure on the same batch is a real outage: named
-    and fatal, never silently skipped (a silently unpriced batch reads as
-    "reviewed, no queue anywhere").
+    must not take every batch with it. A second transport failure on the same
+    batch is a real outage: named and fatal, never silently skipped (a silently
+    unpriced batch reads as "reviewed, no queue anywhere").
     """
     from anthropic import APIConnectionError, APITimeoutError
 

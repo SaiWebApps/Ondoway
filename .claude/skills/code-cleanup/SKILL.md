@@ -86,11 +86,14 @@ Your concern: <LENS BRIEF>
    longer / was replaced by". Propose the present-tense rewrite that keeps
    the constraint, or deletion. A file named after a codename is a finding.
 2. **`theatre`** — hashes, seals, fingerprints, receipts, checksums, frozen
-   snapshots and validators. Find where each value is written and every place
-   it is read. Keep it when a real consumer depends on it: a cache key, an
-   idempotency or dedup key, a stored build identity, a download integrity
-   check, a provider request id. Report it when its only reader is its own
-   guard or its own tests.
+   snapshots and validators. Follow each value to its final reader. Keep it
+   only when that reader does something a user, the app or an outside
+   service needs: a cache key, an idempotency or dedup key, a download
+   integrity check, a provider request id. Report it when the final reader is
+   another check: its own guard, its own tests, or a script that verifies
+   stored files against hashes of themselves. A seal checked by a seal is
+   still theatre, and "changing it would change stored hashes" is not a
+   reason to keep it.
 3. **`dead-code`** — symbols and modules nothing in production calls.
    Separate "no reference anywhere" from "only tests reference it".
 4. **`legacy`** — compatibility shims, deprecated aliases, fallbacks for old
