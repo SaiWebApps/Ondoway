@@ -148,9 +148,7 @@ def validate_source_traceability(
     )
 
 
-# ---------------------------------------------------------------------------
 # Source-traceability
-# ---------------------------------------------------------------------------
 
 
 def _untraceable_sentences(
@@ -184,9 +182,7 @@ def _untraceable_sentences(
     return out
 
 
-# ---------------------------------------------------------------------------
 # Forbidden-phrase scan
-# ---------------------------------------------------------------------------
 
 
 def _forbidden_phrase_hits(
@@ -204,27 +200,12 @@ def _forbidden_phrase_hits(
     # the closed-start line speaks one such name at a place on no stop list.
     for name in disclosed_place_names:
         cited_proper_nouns |= _proper_nouns_in(name)
-    # THE TOUR'S OWN PLACE VOCABULARY IS NOT AN INVENTION. This scan exists to
-    # catch glue asserting a fact the corpus never gave it — a name, a date, a
-    # claim the walker cannot check. The names of the stops the engine SEATED, and
-    # of the areas they sit in, are corpus records the engine chose the route from;
-    # they are the one vocabulary glue is entitled to use.
-    #
-    # Without this, the synthesized opener fails whenever the spine area's name
-    # happens not to appear inside a cited beat's body — "You're starting in
-    # Opéra-Garnier" would be flagged on a Rue Royale tour purely because the beats
-    # about its stops never spell the neighbourhood out. That is a validation
-    # FAILURE on a correct tour, which is worse than no check: it teaches whoever
-    # reads the report to ignore it.
+    # Seated stop names and their areas are corpus records the engine chose, so glue may name them.
     for stop in script.selected_pois:
         cited_proper_nouns |= _proper_nouns_in(stop.name)
         if stop.area:
             cited_proper_nouns |= _proper_nouns_in(stop.area)
-    # The SPINE is the neighbourhood the walk starts in, and it is not always one
-    # any stop belongs to — a Rue Royale tour starts in Opéra-Garnier and its first
-    # stop is already in the 1st. The opener's whole job is to say where the walker
-    # is standing, so it has to be allowed to name that, and the name is the
-    # engine's own choice from the corpus rather than anything glue made up.
+    # The spine area may belong to no stop, and the opener names it.
     if spine_area:
         cited_proper_nouns |= _proper_nouns_in(spine_area)
     # THE CITY'S OWN NAME AND DEMONYM ARE THE WALK'S VOCABULARY ("the height of
@@ -412,13 +393,11 @@ def _cited_beat_corpus_text(script: Script, beat_sequence: BeatSequence) -> str:
     return "\n".join(chunks)
 
 
-# ---------------------------------------------------------------------------
 # The placement floors: a sentence is true where it PLAYS.
 # Pure text checks over the composed script; the ROUTE-aware inputs (the legs'
 # routed minutes, each stop's door, which stops are tap-only) arrive as plain
 # mappings built by the authoring finalizer's closure, so this module stays
 # route-free and there is ONE definition of every floor.
-# ---------------------------------------------------------------------------
 
 #: Arrived deixis — words only true standing AT the place (here, this,
 #: you're standing, look up). "From here" is the leg's START and is true

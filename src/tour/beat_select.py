@@ -3,7 +3,7 @@
 Given a POI and its active beats, pick an ordering strategy and emit a
 deterministic ordered list.
 
-A 2026-04-29 change tightened the Area cold-open hoist
+The Area cold-open hoist
 (`find_area_orientation_beat`): a sibling-POI orientation beat may only
 hoist when (a) it is the start POI's own beat, (b) the beat carries no
 physical_cues at all, or (c) the beat's source POI is within
@@ -53,30 +53,23 @@ NARRATIVE_FUNCTION_ORDER: tuple[str, ...] = (
 
 SUB_LOCATION_THRESHOLD: int = 3  # ≥3 distinct values → building walk
 TRIGGER_ADDRESS_THRESHOLD: int = 5  # ≥5 distinct values → square circumnav
-# Calibration (2026-04-29): bumped from 6 to 8. The empirical Île
-# walk's Sainte-Chapelle (5 beats) + Île de la Cité (4 beats) lost
-# fixture deepens to the 6-beat trim. 8 keeps all empirical anchor-flat
-# beats while staying under the audio budget for 90-min tours
-# (Île 8 anchors x ~4 extra-beat seconds is well within the 44-min budget).
+# Flat-strategy beat cap per stop. It keeps every anchor beat of the reference Île
+# walk (Sainte-Chapelle 5, Île de la Cité 4) while a 90-minute tour stays inside
+# its audio budget.
 DEFAULT_FLAT_MAX: int = 12
 # Spatial stops need a small non-addressed lane for the general context or
 # closing beat that legitimately belongs to the POI as a whole.  This is a
 # minimum, not a separate unlimited quota: additional unlocated beats may win
 # the ordinary score-based remainder, and the overall tier cap still applies.
 SPATIAL_NO_KEY_RESERVE: int = 1
-# Calibration (2026-04-29): bumped from 2 to 3. The empirical
-# Vert-Galant pause stop carries 3 beats (establishing + view + tarnished);
-# the prior cap dropped the 'tarnished' deepen.
+# A tier-3 pause stop keeps all of the reference Vert-Galant pause's 3 beats
+# (establishing, view, tarnished).
 PAUSE_BEATS_MAX: int = 4  # tier-3 stop
 
-# Calibration (2026-04-29): when both sub_location and
-# trigger_address meet their thresholds, pick the dominant primitive.
-# The two threshold tests alone prescribe no tie-break; the empirical
-# Place des Vosges walk (6 sub_locs, 23 trigger_addresses) demonstrated
-# trigger should win when the address pool is much richer. Without this
-# rule, sub_loc fires first and PdV emits ~8 beats instead of ~25.
-# Conciergerie (6 sub_locs, 0 triggers) still uses sub_location because
-# triggers don't meet threshold.
+# When both sub_location and trigger_address meet their thresholds, the richer
+# primitive wins: Place des Vosges (6 sub_locations, 23 trigger addresses) is walked
+# by address, ~25 beats rather than ~8. Conciergerie (6 sub_locations, 0 triggers)
+# stays a building walk because triggers miss the threshold.
 
 # Claim-level dedup. Runs after the per-strategy ordering and before
 # tone-variety. Only beats that share at least one lens (or both have none)
@@ -84,17 +77,11 @@ PAUSE_BEATS_MAX: int = 4  # tier-3 stop
 # entity sets or of their subject-tag word sets, reaches this value.
 B8_JACCARD_THRESHOLD: float = 0.8
 
-# Recall recalibration (2026-04-29). Three known duplicate pairs from an
-# earlier rerun all evaded the 0.8 entities/subject_tag thresholds:
-#   Mesme Gallet  (de1377b4 / bf668074): entities J=0.500, subject_tag empty
-#   Hugo affair   (b41d4c77 / a1833622): entities J=0.667, subject_tag empty
-#   Pantheon-vow  (ee115ca8 / 142060a7): entities J=0.125 (Saint vs St.),
-#                                        subject_tag empty
-# Mesme/Hugo are paraphrases — caught by char-5-gram body Jaccard at 0.30.
-# Pantheon entities don't canonicalize to a high Jaccard (the supporting
-# casts diverge: Soufflot/Chateauroux vs Voltaire/Rousseau) but both leads
-# carry the same year + lead-entity signature — caught by year-overlap +
-# canonical-entity-overlap ≥ 2.
+# Body and year+entity signals catch duplicates the entity/subject-tag Jaccard
+# misses. Paraphrases whose entity lists diverge (J 0.5-0.67, empty subject tags)
+# share a char-5-gram body Jaccard >= 0.30. Leads whose supporting casts differ but
+# carry the same year and lead entity are caught by year overlap plus at least two
+# canonical entities in common.
 B8_CHAR_NGRAM_N: int = 5
 B8_CHAR_NGRAM_THRESHOLD: float = 0.30
 B8_CANONICAL_ENTITY_PAIR_MIN: int = 2  # min canonical-entity overlap for the year+entity signal
@@ -905,9 +892,6 @@ def _apply_b8_lite_dedup(
 
     Survives in original order; this is paraphrase removal, not
     re-ordering.
-
-    Logs a debug line via ``_DEDUP_TRACE`` when a drop fires so the
-    smoke harness can audit which beats lost.
     """
     if len(beats) < 2:
         return beats
@@ -928,30 +912,8 @@ def _apply_b8_lite_dedup(
                 # The cold-open head must survive — drop the other beat instead.
                 loser = b if loser is a else a
             drop_ids.add(loser.id)
-            _DEDUP_TRACE.append(
-                {
-                    "kept": (a.id if loser is b else b.id),
-                    "dropped": loser.id,
-                    "entities_jaccard": _entities_jaccard(a, b),
-                    "subject_tag_jaccard": _subject_tag_jaccard(a, b),
-                }
-            )
 
     return [b for b in beats if b.id not in drop_ids]
-
-
-# Optional debug trace (per-process, cleared by ``reset_dedup_trace``).
-# The smoke harness reads this so the user can see which paraphrase
-# pairs collapsed without parsing logs.
-_DEDUP_TRACE: list[dict] = []
-
-
-def reset_dedup_trace() -> None:
-    _DEDUP_TRACE.clear()
-
-
-def get_dedup_trace() -> list[dict]:
-    return list(_DEDUP_TRACE)
 
 
 def _share_lens(a: BeatRef, b: BeatRef) -> bool:
@@ -1040,7 +1002,7 @@ _SAINT_TOKEN_NORMALISATION: dict[str, str] = {"st": "saint", "st.": "saint"}
 
 def _canonical_entities(beat: BeatRef) -> set[str]:
     out: set[str] = set()
-    for entity in beat.entities or ():
+    for entity in beat.entities:
         canon = _canonicalise_entity(entity)
         if canon:
             out.add(canon)
@@ -1141,7 +1103,7 @@ def _enforce_tone_variety(
     break every run — unlike a local-swap heuristic, it cannot ping-pong
     between a leading and a trailing run.
 
-    ``group_of`` (2026-07-19) confines the interleave to one contiguous spatial
+    ``group_of`` confines the interleave to one contiguous spatial
     group at a time. A sub_location / trigger_address plan is sequenced address
     by address, and the whole-stop interleave reordered beats ACROSS those
     groups: at the Conciergerie it emitted sub-anchor ``rue-de-paris-cells``

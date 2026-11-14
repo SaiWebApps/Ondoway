@@ -542,11 +542,10 @@ def test_on_lens_fill_differs_by_interest_at_same_start():
 def test_the_gate_prices_both_halves_of_its_ratio_in_standing_still_seconds():
     """Capacity and target must be the same currency or the gate judges nothing.
 
-    This module's own history is the argument. Its ``_target_dwell_seconds``
-    docstring records the last time the two halves drifted: the gate judged a
-    pool against 1793 s while the planner aimed at 2160 s, and served a thin
-    tour as healthy. The target is in standing-still seconds, not narration
-    seconds, so the capacity has to be in the same currency.
+    The gate's target is the planner's own ``routing.target_dwell_seconds``, so
+    the gate and the planner judge a pool against the same number. The target is
+    in standing-still seconds, not narration seconds, so the capacity has to be
+    in the same currency.
 
     THE MUTATION THIS CATCHES. Leave the numerator summing beat seconds and the
     ratio silently becomes narration-over-visits. A place with a big interior

@@ -1,4 +1,4 @@
-"""Offline checks for the v2 batch receipt schema and cross-version validation."""
+"""Offline checks for the v2 batch receipt schema and batch submission records."""
 
 from __future__ import annotations
 
@@ -13,7 +13,6 @@ from src.tour.batch_transport import (
     load_batch_submission,
     persist_batch_submission,
     submit_batch,
-    validate_receipt,
 )
 from src.tour.certification_provider import PhysicalProviderResponse
 
@@ -71,46 +70,6 @@ def test_build_batch_receipt_produces_valid_v2() -> None:
     assert "latency_ms" not in receipt
     core = {key: value for key, value in receipt.items() if key != "receipt_sha256"}
     assert receipt["receipt_sha256"] == _canonical_sha256(core)
-
-
-def test_validate_receipt_accepts_v1() -> None:
-    core = {
-        "schema_version": "ondoway-text-candidate-stop-v1",
-        "stop_index": 0,
-        "poi_name": "Louvre",
-        "request_id": "req-0",
-        "request_sha256": "a" * 64,
-        "response_sha256": "b" * 64,
-        "parsed_payload_sha256": "c" * 64,
-        "provider_request_id": "msg-one",
-        "model": "frozen-model",
-        "input_tokens": 11,
-        "output_tokens": 7,
-        "latency_ms": 842,
-        "raw_response": '{"sentences":[]}',
-    }
-    receipt = {**core, "receipt_sha256": _canonical_sha256(core)}
-
-    validate_receipt(receipt)
-
-
-def test_validate_receipt_accepts_v2() -> None:
-    validate_receipt(_receipt())
-
-
-def test_validate_receipt_rejects_tampered_hash() -> None:
-    tampered = {**_receipt(), "poi_name": "Eiffel Tower"}
-
-    with pytest.raises(ValueError, match="receipt_sha256"):
-        validate_receipt(tampered)
-
-
-def test_validate_receipt_rejects_unknown_schema() -> None:
-    core = {"schema_version": "ondoway-text-candidate-stop-v99", "stop_index": 0}
-    receipt = {**core, "receipt_sha256": _canonical_sha256(core)}
-
-    with pytest.raises(ValueError, match="schema_version"):
-        validate_receipt(receipt)
 
 
 def test_persist_and_load_batch_submission(tmp_path) -> None:

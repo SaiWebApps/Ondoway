@@ -26,6 +26,7 @@ from src.tour.contract import (
     TourInput,
     ValidationReport,
 )
+from src.tour.corpus_places import canonical_bytes
 
 
 def _case(case_id: str = "paris-test") -> FrozenTourCase:
@@ -178,7 +179,7 @@ def _receipt(item: dict[str, object], text: str) -> dict[str, object]:
         "latency_ms": 30,
         "raw_response": raw,
     }
-    return {**core, "receipt_sha256": runner._sha256(runner._canonical_bytes(core))}
+    return {**core, "receipt_sha256": runner._sha256(canonical_bytes(core))}
 
 
 class _StubBatchClient:

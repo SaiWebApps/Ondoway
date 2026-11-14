@@ -642,20 +642,21 @@ class _ColdStartingRoutingClient:
     def routing_version(self) -> str:
         raise RuntimeError("valhalla is cold-starting")
 
-    def route_with_receipt(self, from_lat, from_lng, to_lat, to_lng):
-        seconds, distance_m, shape = self.route(from_lat, from_lng, to_lat, to_lng)
-        return seconds, distance_m, shape, None
-
-    def route(self, from_lat, from_lng, to_lat, to_lng):
+    def route_with_receipt(
+        self, from_lat, from_lng, to_lat, to_lng, *, costing_options_override=None
+    ):
         d = haversine_m(from_lat, from_lng, to_lat, to_lng)
-        return int(pace_corrected_walk_seconds(d)), d, None
+        return int(pace_corrected_walk_seconds(d)), d, None, None
 
-    def leg_seconds(self, from_lat, from_lng, to_lat, to_lng) -> int:
-        return self.route(from_lat, from_lng, to_lat, to_lng)[0]
+    def leg_seconds(
+        self, from_lat, from_lng, to_lat, to_lng, *, costing_options_override=None
+    ) -> int:
+        return self.route_with_receipt(from_lat, from_lng, to_lat, to_lng)[0]
 
-    def isochrone(self, lat: float, lng: float, minutes: int, **_kw) -> None:
-        # (`**_kw`: the pace-aware reach passes `walking_speed_kmh` —
-        # a cold engine answers no isochrone whatever it is asked.)
+    def isochrone(
+        self, lat: float, lng: float, minutes: int, *, walking_speed_kmh: float | None = None
+    ) -> None:
+        # A cold engine answers no isochrone whatever it is asked.
         return None
 
     def close(self) -> None:

@@ -4,9 +4,9 @@ Take this measurement before changing the dwell/audio accounting: for each
 candidate anchor, what would selection consume under honest accounting,
 max(dwell, planned_audio), versus the dwell alone?
 
-Planned audio mirrors generation._sum_audio's per-beat rule exactly
-(est_spoken_seconds override, else word_count @ 150 wpm) applied to the plan
-select_poi_beats emits for the POI under the requested lenses — glue/vignette
+Planned audio is routing.planned_audio_seconds — the engine's own per-beat rule
+(est_spoken_seconds override, else word_count at routing.SPOKEN_WPM) — applied to the
+plan select_poi_beats emits for the POI under the requested lenses — glue/vignette
 seconds are excluded because selection never sees them.
 
 Run via `make measure-planned-audio` (dev Neo4j from .env). Options:
@@ -19,19 +19,8 @@ import argparse
 
 from src.connection import create_driver
 from src.tour.beat_select import select_poi_beats
-from src.tour.routing import target_dwell_seconds
+from src.tour.routing import planned_audio_seconds, target_dwell_seconds
 from src.tour.selection import CorpusSnapshot, load_paris_corpus
-
-
-def planned_audio_seconds(plan_beats) -> int:
-    """Sum spoken seconds over a plan's beats, per generation.py's _sum_audio rule."""
-    total = 0
-    for beat in plan_beats:
-        if beat.est_spoken_seconds:
-            total += beat.est_spoken_seconds
-        elif beat.word_count:
-            total += round(beat.word_count / 150 * 60)  # 150 wpm
-    return total
 
 
 def measure(

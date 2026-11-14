@@ -40,6 +40,7 @@ from src.tour.candidate_authoring import (
 )
 from src.tour.certification_provider import AnthropicCertificationProvider, CallPurpose
 from src.tour.contract import BeatSequence, TourInput
+from src.tour.corpus_places import canonical_bytes
 from src.tour.generation import generate
 from src.tour.premium_authorities import PREMIUM_AUTHORITIES
 from src.tour.premium_tour import premium_authoring_policy_sha256
@@ -63,16 +64,6 @@ def _sha256(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
-def _canonical_bytes(value: object) -> bytes:
-    return json.dumps(
-        value,
-        ensure_ascii=False,
-        allow_nan=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
-
-
 def _private_write_new(path: Path, value: object) -> None:
     if not path.parent.is_dir() or path.parent.is_symlink():
         raise ValueError("receipt parent must be an existing ordinary directory")
@@ -84,7 +75,7 @@ def _private_write_new(path: Path, value: object) -> None:
         flags |= os.O_NOFOLLOW
     descriptor = os.open(temporary, flags, 0o600)
     try:
-        data = _canonical_bytes(value)
+        data = canonical_bytes(value)
         view = memoryview(data)
         while view:
             written = os.write(descriptor, view)
@@ -184,7 +175,7 @@ def _plan(slot: Literal["A", "B", "C"]) -> tuple[dict[str, object], dict[int, ob
         reference_manifest_sha256=PREMIUM_AUTHORITIES.reference_manifest_sha256,
         calibration_manifest_sha256=PREMIUM_AUTHORITIES.calibration_manifest_sha256,
         grounded_source_sha256=sentences_payload_sha256(source.script),
-        route_sha256=_sha256(_canonical_bytes(route.model_dump(mode="json"))),
+        route_sha256=_sha256(canonical_bytes(route.model_dump(mode="json"))),
         authoring_policy_sha256=_authoring_policy_sha256(),
     )
     authoring = AuthoringCandidatePlan(
@@ -232,7 +223,7 @@ def _plan(slot: Literal["A", "B", "C"]) -> tuple[dict[str, object], dict[int, ob
         ),
         "units": public_units,
     }
-    plan = {**plan_core, "plan_sha256": _sha256(_canonical_bytes(plan_core))}
+    plan = {**plan_core, "plan_sha256": _sha256(canonical_bytes(plan_core))}
     return plan, {
         unit["stop_index"]: {
             "unit": unit,
@@ -353,7 +344,7 @@ def _live_unit(
             "failure_type": type(exc).__name__,
             "failure_message_sha256": _sha256(str(exc).encode("utf-8")),
         }
-        return {**core, "receipt_sha256": _sha256(_canonical_bytes(core))}
+        return {**core, "receipt_sha256": _sha256(canonical_bytes(core))}
     core = {
         "schema_version": "ondoway-text-candidate-stop-v1",
         "stop_index": unit["stop_index"],
@@ -369,7 +360,7 @@ def _live_unit(
         "latency_ms": response.latency_ms,
         "raw_response": response.body.decode("utf-8"),
     }
-    return {**core, "receipt_sha256": _sha256(_canonical_bytes(core))}
+    return {**core, "receipt_sha256": _sha256(canonical_bytes(core))}
 
 
 def _load_completed_receipt(
@@ -399,7 +390,7 @@ def _load_completed_receipt(
         or receipt.get("request_id") != unit["request_id"]
         or receipt.get("request_sha256") != unit["request_sha256"]
         or receipt.get("model") != COMPOSE_MODEL
-        or receipt.get("receipt_sha256") != _sha256(_canonical_bytes(core))
+        or receipt.get("receipt_sha256") != _sha256(canonical_bytes(core))
     ):
         raise ValueError("completed stop receipt differs from the frozen plan")
     raw = receipt.get("raw_response")
@@ -492,7 +483,7 @@ def main(argv: list[str] | None = None) -> int:
         }
         marker = {
             **marker_core,
-            "marker_sha256": _sha256(_canonical_bytes(marker_core)),
+            "marker_sha256": _sha256(canonical_bytes(marker_core)),
         }
         _private_write_new(output_dir / f"attempt-{stop_index}.json", marker)
     failures: list[BaseException] = []

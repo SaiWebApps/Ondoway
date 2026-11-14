@@ -52,7 +52,6 @@ from src.tour.contract import (
     ValidationReport,
 )
 from src.tour.premium_tour import (
-    EphemeralReceiptSink,
     execute_premium_plan,
     finalize_premium_composition,
     plan_premium_authoring,
@@ -323,7 +322,7 @@ def _author(plan, executor) -> Script:
     latter builds a certification blueprint and resolves a git build fingerprint,
     neither of which this file's claim (the AUTHOR block never re-plans) involves.
     """
-    responses = execute_premium_plan(plan, executor=executor, receipt_sink=EphemeralReceiptSink())
+    responses = execute_premium_plan(plan, executor=executor)
     return finalize_premium_composition(plan, responses).script
 
 

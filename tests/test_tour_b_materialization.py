@@ -126,19 +126,36 @@ class _DeterministicRoutingClient:
     """Hermetic fake: routed leg times equal int(pace-corrected haversine).
 
     Mirrors the identity-baseline client. isochrone() returns None so REACH
-    falls back to the analytic envelope; route() returns a None polyline.
+    falls back to the analytic envelope; route_with_receipt() returns a None
+    polyline and no receipt.
     """
 
-    def leg_seconds(self, from_lat: float, from_lng: float, to_lat: float, to_lng: float) -> int:
+    def leg_seconds(
+        self,
+        from_lat: float,
+        from_lng: float,
+        to_lat: float,
+        to_lng: float,
+        *,
+        costing_options_override: dict | None = None,
+    ) -> int:
         return int(pace_corrected_walk_seconds(haversine_m(from_lat, from_lng, to_lat, to_lng)))
 
-    def route(
-        self, from_lat: float, from_lng: float, to_lat: float, to_lng: float
-    ) -> tuple[int, float, None]:
+    def route_with_receipt(
+        self,
+        from_lat: float,
+        from_lng: float,
+        to_lat: float,
+        to_lng: float,
+        *,
+        costing_options_override: dict | None = None,
+    ) -> tuple[int, float, None, None]:
         d = haversine_m(from_lat, from_lng, to_lat, to_lng)
-        return (int(pace_corrected_walk_seconds(d)), d, None)
+        return (int(pace_corrected_walk_seconds(d)), d, None, None)
 
-    def isochrone(self, lat: float, lng: float, minutes: int) -> None:
+    def isochrone(
+        self, lat: float, lng: float, minutes: int, *, walking_speed_kmh: float | None = None
+    ) -> None:
         return None
 
     def close(self) -> None:

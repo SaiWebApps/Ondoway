@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -77,8 +78,15 @@ class OnboardError(Exception):
     non-zero exit; the API converts it into an ``error`` event + status)."""
 
 
-def _load_json(path: Path) -> dict:
+def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
+
+
+def env_path(name: str) -> Path | None:
+    """The ``Path`` in env var ``name``, or ``None`` when unset or empty, so
+    ``write_city`` falls back to the real ``data/`` and ``src/cities.json``."""
+    value = os.getenv(name)
+    return Path(value) if value else None
 
 
 def resolve_connectors(modes: list[str]) -> list[str]:
@@ -132,7 +140,7 @@ def consult_source(
         full = f"{url}?{urlencode(params)}" if params else url
         store.append_event(job_id, "source_consult", f"Consulting {slug}", source=slug, url=full)
 
-        result = connector.parse(_load_json(fixture), ctx)
+        result = connector.parse(load_json(fixture), ctx)
         store.append_event(
             job_id,
             "candidate_batch",
@@ -218,7 +226,7 @@ def build_extracts(slug: str, pois: list[dict]) -> list[WikiExtract]:
         _log_extract_coverage(slug, report)
         return extracts
 
-    raw = _load_json(FIXTURES_ROOT / slug / "run" / "wikipedia_extracts.json")
+    raw = load_json(FIXTURES_ROOT / slug / "run" / "wikipedia_extracts.json")
     return [
         WikiExtract(
             poi_name=title,

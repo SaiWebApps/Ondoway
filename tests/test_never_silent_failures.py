@@ -74,7 +74,6 @@ from src.tour.contract import (
 )
 from src.tour.degradations import degradation_scope, record
 from src.tour.premium_tour import (
-    EphemeralReceiptSink,
     execute_premium_plan,
     plan_premium_authoring,
 )
@@ -313,7 +312,6 @@ def test_both_fan_outs_run_units_concurrently_without_context_error() -> None:
             premium_responses = execute_premium_plan(
                 premium_plan,
                 executor=premium_executor,
-                receipt_sink=EphemeralReceiptSink(),
             )
         except RuntimeError as exc:  # pragma: no cover - failure path, not the fix
             raise AssertionError(
@@ -353,7 +351,6 @@ def test_both_fan_outs_run_units_concurrently_without_context_error() -> None:
             executor=_OverlapForcingExecutor(
                 unit_count=1, site="execute_premium_plan", records=False
             ),
-            receipt_sink=EphemeralReceiptSink(),
         )
     assert len(solo_premium_responses) == 1
     assert solo_premium_collected == [], (
@@ -434,7 +431,6 @@ def test_a_unit_failure_inside_a_fan_out_reaches_the_caller() -> None:
         execute_premium_plan(
             premium_plan,
             executor=_FailingUnitExecutor(fail_stop_index=1),
-            receipt_sink=EphemeralReceiptSink(),
         )
     assert len(premium_collected) == 1, (
         f"execute_premium_plan: expected exactly one degradation for the failed "

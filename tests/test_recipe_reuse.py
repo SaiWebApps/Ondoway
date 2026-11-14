@@ -30,7 +30,6 @@ from src.tour.place_recipes import (
     split_pieces,
 )
 from src.tour.premium_tour import (
-    EphemeralReceiptSink,
     PremiumBuildIdentity,
     SilentGlueClient,
     execute_premium_plan,
@@ -170,7 +169,7 @@ def _stored(snapshot: CorpusSnapshot, poi_index: int, lens=None) -> StoredRecipe
         voice_identity=VOICE,
     )
     responses = execute_premium_plan(
-        recipe.plan, executor=_Writer(), receipt_sink=EphemeralReceiptSink()
+        recipe.plan, executor=_Writer()
     )
     sentences = finalize_place_recipe(
         recipe, responses, faithfulness_checker=MockFaithfulnessChecker()
@@ -280,7 +279,7 @@ def test_a_tour_told_from_recipes_passes_the_tour_gates_and_calls_the_writer_les
     uses = plan_recipe_reuse(plan, stored, voice_identity=VOICE)
     writer = _Writer()
     responses = execute_premium_plan(
-        plan, executor=RecipeFirstExecutor(writer, uses), receipt_sink=EphemeralReceiptSink()
+        plan, executor=RecipeFirstExecutor(writer, uses)
     )
     assert writer.calls == 1, "only the last stop was written"
     result = finalize_premium_tour(
@@ -531,7 +530,7 @@ def _stored_with_full(snapshot: CorpusSnapshot, poi_index: int) -> StoredRecipe:
     checker = MockFaithfulnessChecker()
     sentences = finalize_place_recipe(
         recipe,
-        execute_premium_plan(recipe.plan, executor=_Writer(), receipt_sink=EphemeralReceiptSink()),
+        execute_premium_plan(recipe.plan, executor=_Writer()),
         faithfulness_checker=checker,
     )
     planned = plan_place_full_telling(recipe, sentences)
@@ -539,7 +538,7 @@ def _stored_with_full(snapshot: CorpusSnapshot, poi_index: int) -> StoredRecipe:
     full_plan, budget = planned
     full = finalize_premium_full_telling(
         full_plan,
-        execute_premium_plan(full_plan, executor=_Writer(), receipt_sink=EphemeralReceiptSink()),
+        execute_premium_plan(full_plan, executor=_Writer()),
         budget=budget,
         faithfulness_checker=checker,
     )
@@ -557,7 +556,7 @@ def _composed_tour(snapshot: CorpusSnapshot, stored: dict[str, StoredRecipe]):
     plan = _tour(snapshot)
     uses = plan_recipe_reuse(plan, stored, voice_identity=VOICE)
     responses = execute_premium_plan(
-        plan, executor=RecipeFirstExecutor(_Writer(), uses), receipt_sink=EphemeralReceiptSink()
+        plan, executor=RecipeFirstExecutor(_Writer(), uses)
     )
     composed = finalize_premium_tour(
         plan,

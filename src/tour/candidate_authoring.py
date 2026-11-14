@@ -144,7 +144,7 @@ class AuthoringCandidatePlan(BaseModel):
 
     candidate: AuthoringCandidateIdentity
     # No upper bound: a plan must be able to hold every stop the planner seated,
-    # and since 2026-08-04 duration alone decides how many that is. ``min_length=1``
+    # and duration alone decides how many that is. ``min_length=1``
     # stays — a zero-stop plan is a bug, not a short tour.
     stop_requests: tuple[AuthoringStopRequest, ...] = Field(..., min_length=1)
 

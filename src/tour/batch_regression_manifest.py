@@ -6,8 +6,6 @@ hashes identify inputs; they do not claim that an output is good.
 
 from __future__ import annotations
 
-import hashlib
-import json
 from collections import Counter
 from pathlib import Path
 from typing import Literal
@@ -15,20 +13,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from .contract import TourInput
-
-
-def _canonical_bytes(value: object) -> bytes:
-    return json.dumps(
-        value,
-        ensure_ascii=False,
-        allow_nan=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
-
-
-def _sha256(value: object) -> str:
-    return hashlib.sha256(_canonical_bytes(value)).hexdigest()
+from .corpus_places import canonical_sha256
 
 
 class FrozenTourCase(BaseModel):
@@ -43,7 +28,7 @@ class FrozenTourCase(BaseModel):
     @computed_field
     @property
     def request_sha256(self) -> str:
-        return _sha256(
+        return canonical_sha256(
             {
                 "case_id": self.case_id,
                 "archetype": self.archetype,
@@ -94,7 +79,7 @@ class FrozenTourBatchManifest(BaseModel):
     @computed_field
     @property
     def manifest_sha256(self) -> str:
-        return _sha256(
+        return canonical_sha256(
             {
                 "schema_version": self.schema_version,
                 "requests": [case.request_sha256 for case in self.cases],

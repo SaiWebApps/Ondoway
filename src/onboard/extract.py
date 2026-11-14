@@ -29,7 +29,6 @@ MediaWiki query SHAPE.
 from __future__ import annotations
 
 import logging
-import math
 import re
 from urllib.parse import unquote, urlparse
 
@@ -37,6 +36,7 @@ from scripts.beat_builder import slugify
 from src.onboard import fetch
 from src.onboard.assemble import WikiExtract
 from src.onboard.sources.mediawiki import api_url
+from src.tour.routing import haversine_m
 
 logger = logging.getLogger(__name__)
 
@@ -50,16 +50,6 @@ _COORD_TOLERANCE_M = 500.0
 # Below this live-coverage floor, ``build_live_extracts`` flags the run as thin so
 # the caller can shout about it (a human reviews the output — never ship silently).
 _COVERAGE_FLOOR_PCT = 50.0
-
-
-def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Great-circle distance between two lat/lon points, in metres."""
-    r = 6371000.0  # mean Earth radius (m)
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    dphi = math.radians(lat2 - lat1)
-    dlmb = math.radians(lon2 - lon1)
-    h = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlmb / 2) ** 2
-    return 2 * r * math.asin(math.sqrt(h))
 
 
 def _enwiki_title_from_url(url: str) -> str | None:
@@ -182,7 +172,7 @@ def _fetch_and_verify(
         for coord in page.get("coordinates") or []:
             clat, clon = coord.get("lat"), coord.get("lon")
             if clat is not None and clon is not None:
-                if _haversine_m(poi_lat, poi_lon, clat, clon) > _COORD_TOLERANCE_M:
+                if haversine_m(poi_lat, poi_lon, clat, clon) > _COORD_TOLERANCE_M:
                     return None
                 break  # verified against the primary coordinate
 

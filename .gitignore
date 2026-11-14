@@ -263,6 +263,9 @@ temp/
 !.claude/hooks/
 !.claude/workflows/
 !.claude/settings.json
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/code-cleanup/
 # The tracker's database. Binary, rewritten on every agent write, and its
 # WAL/shm siblings churn constantly. The SCHEMA is version-controlled in
 # .claude/ledger/track.py; the rows are this machine's run, not history.

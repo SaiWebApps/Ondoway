@@ -270,8 +270,8 @@ def test_summarise_route_carries_the_queue_map_a_rebuild_hands_back():
 
 def test_summarise_route_totals_use_routed_time_and_distance_when_available():
     class _Routed:
-        def route(self, *_coords):
-            return (321, 456.5, "encoded-shape")
+        def route_with_receipt(self, *_coords, costing_options_override=None):
+            return (321, 456.5, "encoded-shape", None)
 
     r = summarise_route(
         [_poi("a", 48.86, 2.35)],

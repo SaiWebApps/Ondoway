@@ -65,24 +65,21 @@ LegSecondsFn = Callable[[float, float, float, float], int]
 PACE_KMH: float = 3.0
 #: HOW FAR TO SEND SOMEONE, which is not the same question as how fast they walk.
 #:
-#: The same number as `PACE_KMH` today, and NOT the same constant, deliberately. The
+#: The same number as `PACE_KMH`, and NOT the same constant, deliberately. The
 #: reach radius is a product choice about how far a tour may range; the pace is a
-#: measurement. While they were one constant, raising the pace would have scaled the
-#: search region by 1.5x — at a 300-minute request, 4,444 m becomes 6,667 m, and
-#: Parc de la Villette sits 5,614 m from Rue Royale, so it would have re-entered the
-#: circle the reach radius was shrunk to exclude it. That shrink undone through a
-#: constant that has nothing to do with it.
+#: measurement. Raising the pace must not scale the search region: at a 300-minute
+#: request 1.5x the pace would take the radius from 4,444 m to 6,667 m and bring Parc
+#: de la Villette (5,614 m from Rue Royale) back inside it.
 #:
 #: Two equal numbers with one name is a coincidence waiting to be mistaken for a
 #: rule. `test_pace_constants_lock` proves the radius does not follow the pace.
 REACH_PACE_KMH: float = 3.0
 HAVERSINE_CORRECTION: float = 1.35
 WALK_FRACTION: float = 0.40  # of err-short total
-# Was AUDIO_FRACTION until 2026-08-06. The split is between WALKING and STANDING
-# STILL, and the standing-still half is not narration: a visitor can stand twenty
-# minutes at Concorde for four minutes of audio. Naming this half "audio" made the
-# planner budget in narration seconds while the tourist spent visit seconds, so a
-# 120-minute request served 157 minutes and reported 120. See src/tour/visit_time.py.
+# The split is between WALKING and STANDING STILL, and the standing-still half is
+# not narration: a visitor can stand twenty minutes at Concorde for four minutes of
+# audio. Budgeting this half in narration seconds would serve a tour longer than it
+# reports.
 DWELL_FRACTION: float = 0.60  # of err-short total
 EARTH_RADIUS_M: float = 6_371_000.0
 MIN_REQUESTED_FRACTION: float = 0.90
@@ -98,11 +95,10 @@ TIMEBOX_MATERIALITY_TOLERANCE_SECONDS: int = 60
 class RoutePlanningPolicy:
     """One immutable time currency for every route-selection phase.
 
-    There is exactly ONE band since 2026-08-04: certification's 0.90-1.10, nominal
-    1.00 (``DEFAULT_ROUTE_PLANNING_POLICY``). The flat 0.83 "err-short" policy that
-    used to be the default was DELETED, not made optional, because two currencies
-    meant the same request produced tours of different declared length depending on
-    which surface asked. A certification caller still constructs its policy from its
+    There is exactly ONE band: certification's 0.90-1.10, nominal 1.00
+    (``DEFAULT_ROUTE_PLANNING_POLICY``). A second policy would let the same request
+    produce tours of different declared length depending on which surface asked. A
+    certification caller still constructs its policy from its
     already-frozen contract and provider-call authorization; selection deliberately
     does not import or duplicate those authorities.
     """
@@ -159,10 +155,8 @@ class RoutePlanningBudget:
 
 
 #: THE planning policy. Nominal fraction (0.90 + 1.10) / 2 = exactly 1.00, so a
-#: 60-minute request is planned to 60 minutes of active time. It replaced
-#: LEGACY_ROUTE_PLANNING_POLICY (flat 0.83) as the default of every helper on
-#: 2026-08-04; the legacy object is deleted rather than deprecated so no caller can
-#: reach the old currency by omitting an argument.
+#: 60-minute request is planned to 60 minutes of active time. It is the only policy,
+#: so no caller can reach another currency by omitting an argument.
 DEFAULT_ROUTE_PLANNING_POLICY = RoutePlanningPolicy(
     policy_id="certification-nominal-v1",
     minimum_requested_fraction=MIN_REQUESTED_FRACTION,
@@ -325,18 +319,6 @@ def civil_dusk_local(when: date, lat: float, lng: float) -> datetime | None:
     )
     return dusk_utc.astimezone(zone).replace(tzinfo=None)
 
-# DELETED 2026-08-06: DWELL_SECONDS_BY_TIER / compute_dwell_seconds.
-#
-# A flat per-tier dwell said a stop's length is a property of how FAMOUS a place
-# is. It is not: it is what the place absorbs, what this visitor's interest
-# justifies, and what the party will sit still for. All three now live in
-# src/tour/visit_time.py and ride on Route.planned_visit_seconds.
-#
-# The table also could not be right. Every tier-5 anchor got the same 300 s,
-# which is simultaneously far too little for the Louvre and far too much for a
-# bridge, and nothing in it could express two visitors with different interests
-# spending 33 and 8 minutes at the same courtyard.
-
 
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """Great-circle distance in metres."""
@@ -385,8 +367,7 @@ def envelope_radius_m(
     Derivation: walk_min = duration x the policy's nominal fraction x WALK_FRACTION
     (0.40). Effective straight-line distance is walk_min x REACH_PACE_KMH / 1.35.
     Halve for round trips. At the default policy the nominal fraction is 1.00, so a
-    60-minute one-way request reaches 888.9 m; it was 737.8 m under the deleted flat
-    0.83.
+    60-minute one-way request reaches 888.9 m.
 
     USES `REACH_PACE_KMH`, NOT `PACE_KMH`, and the two are different numbers on
     purpose — see the constant. This radius is how far a tour may range, and it must
@@ -417,9 +398,8 @@ def planned_total_seconds(
 ) -> int:
     """Total active seconds the planner aims at.
 
-    Was ``err_short_total_seconds``; renamed because it is no longer err-SHORT — the
-    nominal fraction is 1.00. It now DELEGATES to the budget rather than restating an
-    arithmetic of its own, so no caller can obtain a fraction the policy does not have.
+    It DELEGATES to the budget rather than restating an arithmetic of its own, so no
+    caller can obtain a fraction the policy does not have.
     """
     return route_planning_budget(duration_min, policy).nominal_elapsed_seconds
 
@@ -467,21 +447,29 @@ def walk_budget_seconds(
     return route_planning_budget(duration_min, policy).walk_budget_seconds
 
 
+#: The speaking rate of the tour's voice, in words per minute. Every
+#: words-to-seconds conversion in the engine reads this one number.
+SPOKEN_WPM: int = 150
+
+
+def spoken_seconds_for_words(words: int) -> int:
+    """Seconds the voice takes to speak ``words`` words at ``SPOKEN_WPM``."""
+    return round(words / SPOKEN_WPM * 60)
+
+
 def beat_spoken_seconds(beat: BeatRef) -> int:
     """Voiced seconds for one beat — the single source of truth for the tour's
     audio clock.
 
-    ``est_spoken_seconds`` when populated (> 0), else ``word_count`` at 150 wpm.
-    Generation, reflection, and density all defer here so selection's dwell/audio
-    accounting and the density gate speak in the same units. A non-positive
-    ``est_spoken_seconds`` falls through to ``word_count`` (the live corpus has
-    none; the ``> 0`` guard matches density's historical rule). The 150 wpm
-    fallback is exactly density's ``word_count / 2.5`` (both are ``2·wc/5``).
+    ``est_spoken_seconds`` when populated (> 0), else ``word_count`` at
+    ``SPOKEN_WPM``. Generation, reflection, and density all defer here so
+    selection's dwell/audio accounting and the density gate speak in the same
+    units. A non-positive ``est_spoken_seconds`` falls through to ``word_count``.
     """
     if beat.est_spoken_seconds and beat.est_spoken_seconds > 0:
         return int(beat.est_spoken_seconds)
     if beat.word_count and beat.word_count > 0:
-        return round(beat.word_count / 150 * 60)
+        return spoken_seconds_for_words(beat.word_count)
     return 0
 
 
@@ -500,12 +488,10 @@ def leg_walk_seconds(transit: TransitSegment) -> int:
     not route that leg, and its number must not outrank the honest fallback the
     leg already carries.
 
-    Four sites spelled this independently until 2026-08-06 — the route total,
-    the served clock, the announced leg in generation, and reflection's per-leg
-    walk — and three of the four asked whether ``leg_seconds`` was set. They
-    agreed only because the client's fallback and ``_transit`` both compute
-    ``pace_corrected_walk_seconds`` of the same haversine distance, so the two
-    readings land on the same number by coincidence rather than by construction.
+    The route total, the served clock, the announced leg in generation and
+    reflection's per-leg walk all call this. Asking whether ``leg_seconds`` is set
+    instead would agree only by coincidence, because the client's fallback and
+    ``_transit`` both compute ``pace_corrected_walk_seconds`` of the same distance.
     """
     return int(
         transit.leg_seconds
@@ -517,10 +503,8 @@ def leg_walk_seconds(transit: TransitSegment) -> int:
 def total_walk_seconds(transits: Iterable[TransitSegment]) -> int:
     """How long a route's walking takes — THE ONE EXPRESSION.
 
-    Two spellings of this existed until 2026-08-06, and they were different
-    expressions rather than different formattings: ``summarise_route`` branched on
-    ``source == "valhalla"`` and the served clock in options.py branched on
-    ``leg_seconds is not None``. They agreed numerically only by coincidence — a
+    Branching on ``leg_seconds is not None`` instead of ``source == "valhalla"`` would
+    agree only by coincidence — a
     leg carrying a non-None ``leg_seconds`` with ``source == "haversine"`` lands on
     the same number solely because the routing client's fallback and ``_transit``
     both compute ``pace_corrected_walk_seconds`` of the same haversine distance.
@@ -577,8 +561,7 @@ def insertion_extra_at_index(
     rounding), so the difference algebraically reduces to these three directed
     legs. The whole-path spelling made the certification repair's candidate
     enumeration cubic in stops: 28.8M haversine calls in 70 s on one 400-minute
-    request (profiled 2026-08-28), which is what turned two planner tests into
-    five-minute stragglers and, under a worker-killing timeout, into "hangs".
+    request, so the whole-path spelling cannot stay.
     """
     fn = leg_seconds_fn or default_leg_seconds
     prev: tuple[float, float] = (
@@ -650,12 +633,9 @@ def path_walk_seconds(
     — start, the stops in order, sometimes a fixed end or a return to the start —
     and add up the legs between them.
 
-    THAT SUM WAS WRITTEN FIVE TIMES until 2026-08-06: here, in the greedy's
-    insertion cost twice, and in two route-total helpers. All five paired the same
-    way and defaulted to the same estimator, so what varied was only how the coords
-    list was BUILT — which is the part that genuinely differs per caller and the
-    part they should each keep. Swapping the estimator, or handling a leg the
-    router cannot answer, is one edit here rather than five.
+    Every caller keeps only how its coords list is BUILT, the part that genuinely
+    differs; swapping the estimator, or handling a leg the router cannot answer, is
+    one edit here.
     """
     return sum(path_leg_seconds(coords, leg_seconds_fn))
 
@@ -703,30 +683,13 @@ def _transit(
     receipt: ValhallaLegReceipt | None = None
     source = "haversine"
     if routing_client is not None:
-        route_with_receipt = getattr(routing_client, "route_with_receipt", None)
-        if callable(route_with_receipt):
-            # The kwarg rides ONLY when a real surface override is set — the same
-            # explicit legacy-injected-client compatibility contract leg_seconds and
-            # isochrone honour: at the identity default every
-            # existing test double works unmodified, and a client actually asked
-            # for a surface MUST accept the keyword.
-            surface_kwargs = (
-                {"costing_options_override": costing_options_override}
-                if costing_options_override is not None
-                else {}
-            )
-            leg_seconds, routed_m, polyline, receipt = route_with_receipt(
-                from_lat,
-                from_lng,
-                to_lat,
-                to_lng,
-                **surface_kwargs,
-            )
-        else:
-            # Explicit route-only compatibility for injected legacy clients.
-            leg_seconds, routed_m, polyline = routing_client.route(
-                from_lat, from_lng, to_lat, to_lng
-            )
+        leg_seconds, routed_m, polyline, receipt = routing_client.route_with_receipt(
+            from_lat,
+            from_lng,
+            to_lat,
+            to_lng,
+            costing_options_override=costing_options_override,
+        )
         source = "valhalla" if polyline is not None else "haversine"
         if source == "valhalla":
             leg_distance_m = routed_m

@@ -49,7 +49,6 @@ from .authoring import (
     compose_input_sha256,
     finalize_certification_composition,
 )
-from .batch_regression_manifest import _canonical_bytes
 from .beat_select import select_vignette_beats
 from .candidate_authoring import (
     AuthoringCandidateIdentity,
@@ -74,7 +73,7 @@ from .contract import (
     Sentence,
     TourInput,
 )
-from .corpus_places import bytes_sha256
+from .corpus_places import bytes_sha256, canonical_sha256
 from .generation import (
     CONCURRENT_GLUE_LABELS,
     generate,
@@ -83,7 +82,13 @@ from .generation import (
 )
 from .glue_client import NO_GLUE_SENTINEL, GlueClient
 from .premium_authorities import PREMIUM_AUTHORITIES, PremiumAuthorityHashes
-from .routing import MAX_REQUESTED_FRACTION, MIN_REQUESTED_FRACTION, RoutePlanningPolicy
+from .routing import (
+    MAX_REQUESTED_FRACTION,
+    MIN_REQUESTED_FRACTION,
+    SPOKEN_WPM,
+    RoutePlanningPolicy,
+    spoken_seconds_for_words,
+)
 from .routing_client import (
     THIS_BUILDS_ROUTING_CONFIG_SHA256S,
     VALHALLA_ROUTING_CONFIG_SHA256_BY_SURFACE,
@@ -105,16 +110,14 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 def premium_authoring_policy_sha256() -> str:
     """Hash the exact physical authoring policy shared by every caller."""
 
-    return bytes_sha256(
-        _canonical_bytes(
-            {
-                "model": COMPOSE_MODEL,
-                "max_tokens": CERTIFICATION_COMPOSE_MAX_OUTPUT_TOKENS,
-                "thinking": {"type": "adaptive"},
-                "system": _COMPOSE_SYSTEM,
-                "output_schema": _COMPOSE_OUTPUT_SCHEMA,
-            }
-        )
+    return canonical_sha256(
+        {
+            "model": COMPOSE_MODEL,
+            "max_tokens": CERTIFICATION_COMPOSE_MAX_OUTPUT_TOKENS,
+            "thinking": {"type": "adaptive"},
+            "system": _COMPOSE_SYSTEM,
+            "output_schema": _COMPOSE_OUTPUT_SCHEMA,
+        }
     )
 
 
@@ -146,14 +149,14 @@ def exact_snapshot_sha256(snapshot: CorpusSnapshot) -> str:
             for k, values in snapshot.lens_neighbors.items()
         ),
     }
-    return bytes_sha256(_canonical_bytes(payload))
+    return canonical_sha256(payload)
 
 
 def route_summary(route: Route) -> dict[str, object]:
     """Canonical public route record used by Premium plan identities."""
 
     return {
-        "route_sha256": bytes_sha256(_canonical_bytes(route.model_dump(mode="json"))),
+        "route_sha256": canonical_sha256(route.model_dump(mode="json")),
         "routed": route.routed,
         "total_walk_seconds": route.total_walk_seconds,
         "total_walk_distance_m": route.total_walk_distance_m,
@@ -237,7 +240,7 @@ class PremiumTourPlan:
             "application_deadline_seconds": None,
             "units": [unit.public_payload() for unit in self.units],
         }
-        return {**core, "tour_plan_sha256": bytes_sha256(_canonical_bytes(core))}
+        return {**core, "tour_plan_sha256": canonical_sha256(core)}
 
 
 def plan_premium_authoring(
@@ -665,22 +668,6 @@ class PremiumComposeExecutor(Protocol):
     def execute(self, unit: PremiumComposeUnit) -> PhysicalProviderResponse: ...
 
 
-class PremiumReceiptSink(Protocol):
-    def before_call(self, unit: PremiumComposeUnit) -> None: ...
-
-    def after_call(self, unit: PremiumComposeUnit, response: PhysicalProviderResponse) -> None: ...
-
-
-class EphemeralReceiptSink:
-    """Explicit workbench policy: retain receipts only for this response."""
-
-    def before_call(self, unit: PremiumComposeUnit) -> None:
-        del unit
-
-    def after_call(self, unit: PremiumComposeUnit, response: PhysicalProviderResponse) -> None:
-        del unit, response
-
-
 class AnthropicPremiumExecutor:
     cost_bearing = True
     provider_name = "anthropic"
@@ -696,45 +683,16 @@ class AnthropicPremiumExecutor:
         )
 
 
-class OfflinePremiumExecutor:
-    """Explicit $0 adapter for hermetic tests; never selected by product code."""
-
-    cost_bearing = False
-    provider_name = "offline"
-
-    def execute(self, unit: PremiumComposeUnit) -> PhysicalProviderResponse:
-        body = _canonical_bytes(
-            {
-                "sentences": [
-                    sentence.model_dump(mode="json")
-                    for sentence in unit.authorized_request.stitched.script
-                ]
-            }
-        )
-        return PhysicalProviderResponse(
-            body=body,
-            input_tokens=0,
-            output_tokens=0,
-            latency_ms=0,
-            model=COMPOSE_MODEL,
-            provider_request_id=f"offline-{unit.stop_index}",
-            stop_reason="end_turn",
-        )
-
-
 def execute_premium_plan(
     plan: PremiumTourPlan,
     *,
     executor: PremiumComposeExecutor,
-    receipt_sink: PremiumReceiptSink,
     max_workers: int = 6,
 ) -> tuple[PhysicalProviderResponse, ...]:
-    """Execute each immutable stop request once around an injected receipt sink."""
+    """Execute each immutable stop request once."""
 
     if not 1 <= max_workers <= 8:
         raise ValueError("Premium execution supports one to eight workers")
-    for unit in plan.units:
-        receipt_sink.before_call(unit)
 
     def invoke(unit: PremiumComposeUnit) -> PhysicalProviderResponse:
         # A unit that fails inside the fan-out must be recorded — exception
@@ -755,7 +713,6 @@ def execute_premium_plan(
                 stop_index=str(unit.stop_index),
             )
             raise
-        receipt_sink.after_call(unit, response)
         return response
 
     # in_current_context: contextvars do NOT cross into pool workers, so without
@@ -765,11 +722,9 @@ def execute_premium_plan(
 
 
 #: The full telling's HARD length cap — twelve minutes, and at most three times
-#: the tight telling — and the words-per-second the
-#: engine's own clock arithmetic uses (150 wpm).
+#: the tight telling. Words convert to seconds at the engine's one speaking rate.
 FULL_TELLING_CAP_SECONDS: int = 720
 FULL_TELLING_MAX_RATIO: int = 3
-_WORDS_PER_SECOND: float = 2.5
 FULL_TELLING_DROPPED_DEGRADATION = "full_telling_dropped"
 
 
@@ -795,7 +750,7 @@ def full_telling_budget(tight_words: int) -> FullTellingBudget:
     """A stop's two lengths from its tight telling's word count: the full telling may
     run three times the tight one, never past the hard cap."""
 
-    tight_seconds = round(tight_words / _WORDS_PER_SECOND)
+    tight_seconds = spoken_seconds_for_words(tight_words)
     return FullTellingBudget(
         tight_seconds=tight_seconds,
         full_budget_seconds=min(FULL_TELLING_MAX_RATIO * tight_seconds, FULL_TELLING_CAP_SECONDS),
@@ -1011,7 +966,7 @@ def finalize_premium_full_telling(
     close = ordered[-1]
     body = [s for s in ordered[:-1]]
     words = sum(len(s.text.split()) for s in ordered)
-    budget_words = round(budget.full_budget_seconds * _WORDS_PER_SECOND)
+    budget_words = round(budget.full_budget_seconds * SPOKEN_WPM / 60)
     if words > budget_words:
         drop(
             f"it runs {words} words against a budget of {budget_words} "
@@ -1143,11 +1098,9 @@ def finalize_live_composition(
         faithfulness_checker=faithfulness_checker,
         enforce_claim_coverage=True,
         scan_glue_for_invention=True,
-        # Every stop ends on its close; the certification replay's
-        # default stays OFF — the sealed candidates predate it.
+        # Every stop ends on its close.
         require_closes=True,
-        # Every sentence must be true WHERE IT PLAYS; the certification replay's
-        # default stays OFF — the sealed candidates predate this check.
+        # Every sentence must be true where it plays.
         enforce_placement_floors=True,
     )
 
@@ -1158,15 +1111,8 @@ class PremiumBuildIdentity:
     tts_provider: str = "openai"
     tts_model: str = OpenAITTSProvider.DEFAULT_MODEL
     tts_voice: str = OpenAITTSProvider.DEFAULT_VOICE
-    # True for a LOCAL build authored off a dirty tree. commit_sha then names HEAD,
-    # which the working tree does NOT match, so this build is reproducible only by
-    # whoever ran it. WHAT READS THIS: the server's WARNING log line, and nothing
-    # else — the BuildFingerprint on the blueprint carries only commit_sha, so a
-    # reader of the blueprint cannot tell. Certification builds its own candidates through
-    # scripts/tour_batch_candidate.py and never comes through this door; stamping
-    # this flag onto the fingerprint would change the sealed blueprint hash of every
-    # committed certification record, so whether it bites there is for
-    # the re-seal to decide.
+    # True for a local build authored off a dirty tree; commit_sha then names HEAD,
+    # which the working tree does not match. Only the server warning log reads this flag.
     local_dirty_tree: bool = False
 
 
@@ -1176,13 +1122,9 @@ def resolve_build_identity() -> PremiumBuildIdentity:
     uncommitted changes, and said out loud in the server log (the blueprint's
     fingerprint carries only the commit — see `PremiumBuildIdentity`).
 
-    A dirty tree is NEVER a refusal and needs no opt-in (2026-08-18). Until then a
-    dirty local tree raised unless ``ONDOWAY_ALLOW_DIRTY_LOCAL_BUILD=1`` was set, and
-    every entry point had to remember the flag — the workbench script and the test
-    conftest did, ``make api`` and ``make flutter-ios`` did not — so a normal local
-    run composed a 503 that read as a product fault. The class of that error is an
-    environment condition disguised as a product failure; the fix is that the code
-    decides from where it runs, not from a flag each caller must repeat. The deploy
+    A dirty tree is NEVER a refusal and needs no opt-in: the code decides from
+    where it runs, not from a flag every entry point must repeat, so a normal local
+    run never fails with an environment condition disguised as a product fault. The deploy
     stays strict by construction: on Render the commit is the deployment's and git is
     never consulted.
     """
@@ -1291,10 +1233,9 @@ def finalize_premium_tour(
         # THE ROUTING IDENTITY THE LEGS WERE ROUTED UNDER. A day with a
         # route-surface axis (take-it-easy step-free, family no-stairs)
         # is routed under that surface's costing and every leg receipt
-        # carries THAT config hash; stamping the default here made
-        # `FinalTourBlueprint` refuse every such day ("Valhalla receipt routing
-        # configuration differs from build fingerprint" — measured 2026-08-19 on
-        # a step-free day, three attempts). "any" is the default hash, byte-identical.
+        # carries THAT config hash; stamping the default would make
+        # `FinalTourBlueprint` refuse every such day. "any" is the default hash,
+        # byte-identical.
         routing_config_sha256=VALHALLA_ROUTING_CONFIG_SHA256_BY_SURFACE[
             plan.tour_input.route_surface
         ],
@@ -1333,12 +1274,9 @@ __all__ = [
     "ROUTING_VERSION_DEGRADATION",
     "ROUTING_VERSION_UNAVAILABLE",
     "AnthropicPremiumExecutor",
-    "EphemeralReceiptSink",
-    "OfflinePremiumExecutor",
     "PremiumBuildIdentity",
     "PremiumComposeExecutor",
     "PremiumComposeUnit",
-    "PremiumReceiptSink",
     "PremiumRouteInfeasibleError",
     "PremiumTourPlan",
     "PremiumTourResult",

@@ -45,9 +45,7 @@ class GlueClient(Protocol):
     def stitch(self, category: str, context: str, request: str) -> str: ...
 
 
-# ---------------------------------------------------------------------------
 # Mock — deterministic, no network
-# ---------------------------------------------------------------------------
 
 
 _DEFAULT_MOCK_RESPONSES: dict[str, str] = {
@@ -83,9 +81,7 @@ class MockGlueClient:
         return _DEFAULT_MOCK_RESPONSES.get(category, NO_GLUE_SENTINEL)
 
 
-# ---------------------------------------------------------------------------
 # Haiku — real Anthropic call
-# ---------------------------------------------------------------------------
 
 
 @dataclass

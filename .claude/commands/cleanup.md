@@ -1,5 +1,5 @@
 ---
-description: Remove a thing completely — enumerate every reference, registration, and description of it, sweep until two full passes find nothing, and prove the absence with a receipt. Invoke as `/cleanup <what was, or is being, removed>` — a feature name, a file list, a commit range, or "the deletion in this diff".
+description: Remove a thing completely — enumerate every reference, registration, and description of it, sweep until two full passes find nothing, and prove the absence with a receipt. Invoke as `/cleanup <what was, or is being, removed>` — a feature name, a file list, a commit range, or "the deletion in this diff". To find what needs cleaning in the first place, use `/code-cleanup`.
 argument-hint: "<the thing being removed>"
 ---
 

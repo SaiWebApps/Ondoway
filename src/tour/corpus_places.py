@@ -50,10 +50,22 @@ def canonical_json(value: object) -> str:
     )
 
 
-def canonical_sha256(value: object) -> str:
-    """SHA-256 of :func:`canonical_json`."""
+def canonical_bytes(value: object) -> bytes:
+    """UTF-8 bytes of :func:`canonical_json`: the one byte form every tour hash reads."""
 
-    return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
+    return canonical_json(value).encode("utf-8")
+
+
+def canonical_sha256(value: object) -> str:
+    """SHA-256 of :func:`canonical_bytes`."""
+
+    return bytes_sha256(canonical_bytes(value))
+
+
+def model_sha256(value: BaseModel, **dump_kwargs: object) -> str:
+    """SHA-256 of a model's JSON-mode dump in the canonical byte form."""
+
+    return canonical_sha256(value.model_dump(mode="json", **dump_kwargs))
 
 
 def text_sha256(value: str) -> str:
@@ -67,17 +79,11 @@ def bytes_sha256(value: bytes) -> str:
 def valid_coordinates(value: tuple[float, float]) -> tuple[float, float]:
     """Is this a real point on Earth? THE ONE ANSWER.
 
-    Lives in this module because it is the lowest layer in the tour package —
-    ``contract`` imports it, ``artifact`` imports ``contract``, and
-    ``quality_certification`` imports ``artifact`` — so every caller can reach it
-    without a cycle.
+    Lives in this module because this module imports no other tour module, so
+    every tour module can import it without a cycle.
 
-    IT WAS DEFINED FOUR TIMES until 2026-08-06: here, twice in ``contract`` and
-    once in ``artifact``. All four agreed, which is what made it survive — four
-    correct copies read as four careful authors rather than one decision made four
-    times. The cost is that tightening the rule (a city-scoped bound, a
-    coordinate-precision floor, rejecting the null island) means finding all four,
-    and the one that gets missed then admits a point the others refuse.
+    It is the one definition, so tightening the rule (a city-scoped bound, a
+    coordinate-precision floor, rejecting the null island) is one edit.
 
     Non-finite values are rejected by the range comparison alone — ``-90 <= nan``
     is False — so ``isfinite`` is belt-and-braces, kept because a reader should not
@@ -105,10 +111,8 @@ def canonical_payload_bound_to_hash(
     byte by anybody holding the hash, which is the whole basis on which evidence
     in this system is trusted.
 
-    IT WAS DEFINED THREE TIMES until 2026-08-06 — twice in ``artifact`` and once
-    in ``quality_certification`` — differing only in their error strings and in
-    whether the payload had to be an object. Both of those are now arguments,
-    because they are the only things that ever genuinely varied.
+    Whether the payload must be an object, and the error label, are arguments,
+    because they are the only things callers vary.
 
     ``label`` names the evidence in the error the way each caller already did, so
     a failure still says which kind of payload was wrong.
@@ -705,8 +709,10 @@ __all__ = [
     "PlaceResolutionState",
     "StableBeatIdentity",
     "bytes_sha256",
+    "canonical_bytes",
     "canonical_json",
     "canonical_sha256",
     "check_place_assessment_references",
+    "model_sha256",
     "text_sha256",
 ]

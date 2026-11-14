@@ -56,12 +56,10 @@ from .contract import (
     closure_doubt,
 )
 from .glue_client import NO_GLUE_SENTINEL, GlueClient, HaikuGlueClient
-from .routing import leg_walk_seconds, planned_audio_seconds
+from .routing import leg_walk_seconds, planned_audio_seconds, spoken_seconds_for_words
 from .visit_time import stop_seconds
 
-# ---------------------------------------------------------------------------
 # The audio clock
-# ---------------------------------------------------------------------------
 
 #: Glue labels spoken WHILE WALKING rather than standing at a stop. GLUE_NAV is a
 #: leg's navigation line; GLUE_REFLECTION is placed by ``reflection.py`` on a long
@@ -111,17 +109,7 @@ def transit_class_beat_ids(beats: Iterable[BeatRef]) -> frozenset[str]:
     )
 
 
-#: Words per minute of narrated speech — the ONE rate the tour's audio clock uses.
-#: NOT a new constant: ``routing.beat_spoken_seconds`` already falls back to
-#: ``word_count / 150 * 60`` and density's ``word_count / 2.5`` is the same figure.
-#: The live Paris corpus's populated ``est_spoken_seconds`` implies it tightly
-#: (486 beats: p10 147, median 150, p90 153). Audio guides speak at 130-150 wpm;
-#: 150 is the end this corpus was built at.
-SPOKEN_WPM: int = 150
-
-# ---------------------------------------------------------------------------
 # Whitelisted glue labels
-# ---------------------------------------------------------------------------
 
 GLUE_NAV: str = "GLUE_NAV"
 GLUE_STAGING: str = "GLUE_STAGING"
@@ -245,9 +233,7 @@ def spoken_minute_counts(text: str) -> set[int]:
     return out
 
 
-# ---------------------------------------------------------------------------
 # Sentence splitting
-# ---------------------------------------------------------------------------
 
 # Corpus place assessments bind the exact splitter semantics that produced
 # their sentence indexes/hashes.  Any behavior-changing splitter edit must
@@ -413,9 +399,7 @@ def vignette_one_liner_text(body: str | None, poi_name: str) -> str:
     return first
 
 
-# ---------------------------------------------------------------------------
 # Top-level entrypoint
-# ---------------------------------------------------------------------------
 
 
 def generate(
@@ -538,14 +522,9 @@ def generate(
             beat for plan in beat_sequence.poi_beats for beat in plan.beats
         ),
     )
-    # NOTE: same-beat NEAR-verbatim de-dup (suppress_same_beat_near_duplicates) is
-    # deliberately NOT run here. It is token-similarity only (not claim-aware), and
-    # rapidfuzz.token_set_ratio scores a SUPERSET sentence >= 90 against its subset —
-    # so at the stitch root, BEFORE the coverage baseline is computed, it could
-    # silently drop a sentence that adds a distinct fact, with nothing downstream to
-    # catch it. That pass runs only where it is coverage-checked: inside _assemble
-    # and on each repair candidate via _prefer_deduped (both AFTER expected_claim_ids
-    # is fixed, so a drop that loses a fact fails verify and is undone).
+    # suppress_same_beat_near_duplicates runs only where coverage is checked
+    # (_assemble, _prefer_deduped): it scores a superset sentence as a duplicate of its
+    # subset, so here it could drop a distinct fact unseen.
 
     # A beat is "voiced" only if at least one of its sentences actually survived
     # the full stitch (cold-open/anchor/transit) AND claim-dedup. A
@@ -587,9 +566,7 @@ def generate(
     return script.model_copy(update={"validation": report})
 
 
-# ---------------------------------------------------------------------------
 # Stage 1 — cold open
-# ---------------------------------------------------------------------------
 
 
 def _build_cold_open(
@@ -602,7 +579,7 @@ def _build_cold_open(
 ) -> tuple[list[Sentence], set[str]]:
     """Cold open: prefer a stop_orientation beat; otherwise synthesize.
 
-    Area-level fallback (2026-04-29): when the start POI
+    Area-level fallback: when the start POI
     has no stop_orientation beat, search the rest of the Route for a
     sibling POI that shares an Area with the start POI and carries one.
     The found beat is hoisted to the cold-open and added to
@@ -761,16 +738,13 @@ def _build_synthesized_opener(
                 Sentence(text=text, source_id=GLUE_STAGING, source_type="glue", stop_idx=stop_idx)
             )
 
-    # 4. Sensory invitation when there's a view to take in. (The old generic
-    # "we're going to walk for N minutes" primer is dropped — step 1b now grounds
-    # the walk concretely with the first stop and its distance.)
+    # 4. Sensory invitation when there's a view to take in. Step 1b grounds the walk
+    # with the first stop and its distance.
     #
-    # Suppressed when the cold-open already said it (2026-07-19). ``_synth_first_leg``
-    # ends with this exact invitation on the you-are-already-here branch (leg < 20s), so
-    # a first stop that ALSO has a view cue said it twice, four sentences apart. Seen in
-    # the workbench on a real Île de la Cité preview: "You're starting right at Pont Neuf.
-    # Take a moment to take it in. Look up at the Seine quais... Take a moment to take it
-    # in." Both emitters now share SENSORY_INVITATION so this cannot silently re-diverge.
+    # Suppressed when the cold-open already said it: ``_synth_first_leg`` ends with
+    # this exact invitation on the you-are-already-here branch (leg < 20s), and a
+    # first stop with a view cue must not say it twice. Both emitters share
+    # SENSORY_INVITATION so they cannot diverge.
     already_invited = any(SENSORY_INVITATION in (s.text or "") for s in out)
     if has_view_cue and not already_invited:
         out.append(
@@ -932,12 +906,7 @@ def _find_orientation_beat(stop: POIBeats) -> BeatRef | None:
     return None
 
 
-# ---------------------------------------------------------------------------
 # Stages 2-3 — anchor essay + circumnavigation
-# ---------------------------------------------------------------------------
-
-
-_TRANSIT_NARRATIVE_FUNCTIONS: frozenset[str] = frozenset({"transition", "transit", "navigation"})
 
 
 def _build_anchor_block(
@@ -960,21 +929,14 @@ def _build_anchor_block(
     for beat in stop.beats:
         if beat.id in skip:
             continue
-        if (beat.narrative_function or "").lower() in _TRANSIT_NARRATIVE_FUNCTIONS:
+        if (beat.narrative_function or "").lower() in TRANSIT_NARRATIVE_FUNCTIONS:
             continue
         out.extend(_beat_to_sentences(beat, stop_idx))
     return out
 
 
-# ---------------------------------------------------------------------------
 # Stage 4 — transit
-# ---------------------------------------------------------------------------
 
-
-# The fixed-end sentinel id prefix (selection._materialize_fixed_end_b): a pinned
-# endpoint with no POI of its own is materialized as "__end_b__<lat>_<lng>". ONE
-# definition, in the contract; this name is kept for its importers.
-_END_B_SENTINEL_PREFIX: str = END_B_SENTINEL_PREFIX
 
 # Varied deterministic connective-tissue templates, cycled by leg so the tour
 # never reads the identical nav line twice in a row. No em-dashes (TTS-clean).
@@ -1007,8 +969,8 @@ def _template_nav(
     """Deterministic connective-tissue nav sentence for a leg (no LLM).
 
     Names the destination and gives a sense of the walk, varied by leg — the
-    connective tissue between points, replacing the old flat "Walk to the next
-    stop." For a pinned beatless endpoint, a graceful arrival (never routes the
+    connective tissue between points, never a flat "Walk to the next stop."
+    For a pinned beatless endpoint, a graceful arrival (never routes the
     walker to a placeholder literally named "Destination"). ``leg_seconds`` is
     the same figure the engine budgets this leg at elsewhere (options.py's
     eta_seconds, reflection.py, audit.py) so the announced walk time and the
@@ -1084,7 +1046,7 @@ def _build_transit(
     else:
         distance_m = _segment_distance_m(route, stop_idx)
         leg_seconds = _segment_leg_seconds(route, stop_idx)
-        is_final_dest = current.poi_id.startswith(_END_B_SENTINEL_PREFIX)
+        is_final_dest = current.poi_id.startswith(END_B_SENTINEL_PREFIX)
         template_nav = _template_nav(
             previous.poi_name, current.poi_name, leg_seconds, stop_idx,
             is_final_destination=is_final_dest,
@@ -1178,10 +1140,7 @@ def _segment_leg_seconds(route: Route, stop_idx: int) -> int:
 
     Delegates to ``routing.leg_walk_seconds`` — the one per-leg expression the
     route total, the served clock and reflection all use — so the leg this
-    announces to the walker is the leg the tour was budgeted with. It used to
-    restate the rule here (and so did the other three), and the restatements
-    read nullness where the total read provenance. (The fourth copy it named,
-    audit.py's ``route_eta_seconds``, was dead and is gone.)
+    announces to the walker is the leg the tour was budgeted with.
     """
     if 0 <= stop_idx < len(route.transits):
         return leg_walk_seconds(route.transits[stop_idx])
@@ -1268,9 +1227,7 @@ def _is_verified_origin(prev_name: str, beat: BeatRef) -> bool:
     return bool(_ORIGIN_CLAUSE_RE.match(opening)) and prev in opening.lower()
 
 
-# ---------------------------------------------------------------------------
 # Stage 5 — closing
-# ---------------------------------------------------------------------------
 
 
 #: The one-line fallback close for a REST (a bench seated by the party or the dial —
@@ -1541,9 +1498,7 @@ def _drop_door_lines_at_doorless_stops(
     return out
 
 
-# ---------------------------------------------------------------------------
 # Beat → sentences
-# ---------------------------------------------------------------------------
 
 
 def _beat_to_sentences(beat: BeatRef, stop_idx: int) -> list[Sentence]:
@@ -1555,9 +1510,7 @@ def _beat_to_sentences(beat: BeatRef, stop_idx: int) -> list[Sentence]:
     ]
 
 
-# ---------------------------------------------------------------------------
 # Glue helpers
-# ---------------------------------------------------------------------------
 
 
 def _format_glue_context(previous: POIBeats, current: POIBeats) -> str:
@@ -1619,9 +1572,7 @@ def _coerce_glue_output(raw: str, *, default: str, leg_minutes: int | None = Non
     return candidate
 
 
-# ---------------------------------------------------------------------------
 # Output rollup
-# ---------------------------------------------------------------------------
 
 
 def _flatten_pois(
@@ -1696,7 +1647,7 @@ def _word_count(text: str) -> int:
 
 
 def _sum_audio(sentences: Iterable[Sentence], beat_sequence: BeatSequence) -> int:
-    """Spoken seconds of the tour: the WORDS ACTUALLY VOICED, at ``SPOKEN_WPM``.
+    """Spoken seconds of the tour: the WORDS ACTUALLY VOICED, at ``routing.SPOKEN_WPM``.
 
     Two models are wrong, and either one would make ``total_audio_seconds``
     measure SEATING VOLUME rather than audio:
@@ -1719,13 +1670,11 @@ def _sum_audio(sentences: Iterable[Sentence], beat_sequence: BeatSequence) -> in
     more is credited more. Dedup honesty falls out for free, because suppressed
     sentences contribute no words.
 
-    ``SPOKEN_WPM`` is 150 — this engine's one rate:
-    ``routing.beat_spoken_seconds`` falls back to ``word_count / 150 * 60``,
-    density's ``word_count / 2.5`` is the same figure, and the live Paris corpus's
-    own populated ``est_spoken_seconds`` implies it tightly (486 beats: p10 147,
-    median 150, p90 153). Audio guides speak at 130-150 wpm; 150 is the fast end
-    of that range and the end this corpus was built at, so it agrees with every
-    existing estimate.
+    The rate is ``routing.SPOKEN_WPM`` through ``routing.spoken_seconds_for_words``,
+    the same conversion ``routing.beat_spoken_seconds`` uses for a beat's word
+    count, so the script's clock and the planner's clock agree. The live Paris
+    corpus's populated ``est_spoken_seconds`` implies the same rate (486 beats:
+    p10 147, median 150, p90 153).
 
     ``beat_sequence`` is retained in the signature: callers pass it, and the
     per-beat identity it carries is still what the CALLERS use for their own
@@ -1733,7 +1682,7 @@ def _sum_audio(sentences: Iterable[Sentence], beat_sequence: BeatSequence) -> in
     audio clock is now a property of the SCRIPT, not of the seating plan.
     """
     voiced_words = sum(_word_count(s.text) for s in sentences)
-    return round(voiced_words / SPOKEN_WPM * 60)
+    return spoken_seconds_for_words(voiced_words)
 
 
 __all__ = [

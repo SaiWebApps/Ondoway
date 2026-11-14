@@ -91,15 +91,11 @@ def option_eta_seconds(route: Route, script: Script) -> int:
     during a walk this sum already counts.
 
     The walking half is ``routing.total_walk_seconds``, the same expression the Route
-    was built with. This line used to spell it differently — branching on whether
-    ``leg_seconds`` was set rather than on whether Valhalla produced it — and the two
-    agreed only because the fallback path happens to compute the same number. A leg
-    with a routed duration but a haversine provenance would have made the served
-    clock and the planned clock disagree, silently.
+    was built with, so the served clock and the planned clock cannot disagree.
 
-    The COMBINING (walk + dwell) delegates to ``served_elapsed_seconds``
-    (2026-08-07) — the one rule every elapsed-time caller in the engine now
-    shares; this function's own job is only supplying the two honest terms.
+    The COMBINING (walk + dwell) delegates to ``served_elapsed_seconds`` — the one
+    rule every elapsed-time caller in the engine shares; this function's own job is
+    only supplying the two honest terms.
     """
     return served_elapsed_seconds(
         total_walk_seconds(route.transits),

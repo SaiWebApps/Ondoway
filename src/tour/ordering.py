@@ -172,15 +172,13 @@ def order_stops(
 ) -> list[POI]:
     """Order ``points`` exactly when tractable, by cheapest insertion above it.
 
-    ``len(points) <= ORDERING_EXACT_MAX`` -> ``held_karp_open``, byte-identical to
-    every input the engine could previously produce, so no existing golden tour
-    moves. Above it -> ``cheapest_insertion_open``. The tour KEEPS every stop the
+    ``len(points) <= ORDERING_EXACT_MAX`` -> ``held_karp_open``. Above it ->
+    ``cheapest_insertion_open``. The tour KEEPS every stop the
     time budget earned; only the optimality guarantee is traded away.
 
     THIS IS THE ENTRY POINT. Calling ``held_karp_open`` directly from a planning
-    path re-arms the hang this dispatcher exists to prevent: with the stop
-    ceilings removed on 2026-08-04, duration alone decides n, and the exact DP
-    does not return at n=25.
+    path re-arms the hang this dispatcher exists to prevent: duration alone decides
+    n, and the exact DP does not return at n=25.
     """
     if fixed_end is not None and round_trip:
         raise ValueError("fixed_end and round_trip are mutually exclusive")
@@ -199,16 +197,10 @@ def order_stops(
         round_trip=round_trip,
         routed_cost_fn=routed_cost_fn,
     )
-    # NEVER WORSE THAN THE ORDER GIVEN. The heuristic builds its
-    # open chain blind to the pin and appends ``fixed_end`` after the fact, so a
-    # chain whose tail wandered away from the pin buys a huge closing leg: on the
-    # 120-minute one-way sweep (21 stops — heuristic territory only since the
-    # three-minute tight seats more stops) it returned an order 624 s of walking
-    # WORSE than the caller's own incoming order, the repair priced its incumbent
-    # off that inflated number, and the shipped day walked past its budget. An
-    # optimizer may trade away optimality, never feasibility: when the caller's
-    # input order already satisfies the same constraints, return whichever of the
-    # two walks less. (Exact Held-Karp needs no guard — it cannot be beaten.)
+    # Never worse than the order given. The heuristic builds its chain blind to the
+    # pin and appends ``fixed_end`` afterwards, which can cost a long closing leg, so
+    # when the caller's order already satisfies the same constraints, return
+    # whichever of the two walks less. Exact Held-Karp needs no guard.
     given = list(points)
     given_feasible = fixed_end is None or (given and given[-1].id == fixed_end.id)
     if given_feasible and _chain_seconds(

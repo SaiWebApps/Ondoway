@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import json
-
 from .authoring import COMPOSE_MODEL
 from .contract import Sentence
-from .corpus_places import bytes_sha256
+from .corpus_places import bytes_sha256, canonical_json, canonical_sha256
 from .quality_certification import (
     EnjoymentItem,
     EnjoymentScoredReviewBatch,
@@ -23,7 +21,6 @@ from .quality_certification import (
     calibrate_quality,
 )
 from .quality_requests import (
-    ADJUDICATION_PROMPT_SHA256,
     BATCH_FACT_PROMPT_SHA256,
     ENJOY_PROMPT_SHA256,
     FACT_PROMPT_SHA256,
@@ -41,22 +38,10 @@ _MODEL_PRICING: dict[str, tuple[int, int]] = {
 _DEFAULT_PRICING = (5, 25)
 
 
-def _canonical_hash(value: object) -> str:
-    return bytes_sha256(
-        json.dumps(
-            value,
-            ensure_ascii=False,
-            allow_nan=False,
-            separators=(",", ":"),
-            sort_keys=True,
-        ).encode("utf-8")
-    )
-
-
 def candidate_narration_sha256(
     sentences_by_stop: dict[int, tuple[Sentence, ...]],
 ) -> str:
-    return _canonical_hash(
+    return canonical_sha256(
         [
             sentence.model_dump(mode="json")
             for stop_index in sorted(sentences_by_stop)
@@ -86,9 +71,7 @@ def evidence_for_sentence(
                 "script_body": beat.script_body,
                 "source_passage": beat.source_passage,
             }
-            payload_json = json.dumps(
-                payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True
-            )
+            payload_json = canonical_json(payload)
             result.append(
                 FactDerivedEvidence(
                     evidence_id=f"beat:{beat_id}",
@@ -108,9 +91,7 @@ def evidence_for_sentence(
         "stop_index": stop_index,
         "visited_claims_before_stop": list(request.visited_claims_by_slot.get(stop_index, ())),
     }
-    payload_json = json.dumps(
-        route_payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True
-    )
+    payload_json = canonical_json(route_payload)
     return (
         FactDerivedEvidence(
             evidence_id=f"derived:{stop_index}:{sentence.source_id}",
@@ -234,15 +215,6 @@ def validate_calibration(
         policy_sha256=QUALITY_POLICY_SHA256,
         approved_fact_prompt_sha256=FACT_PROMPT_SHA256,
         approved_enjoy_prompt_sha256=ENJOY_PROMPT_SHA256,
-        approved_adjudication_prompt_sha256=ADJUDICATION_PROMPT_SHA256,
-        input_sha256=_canonical_hash(
-            {
-                "fact_cases": [case.model_dump(mode="json") for case in inputs.fact_cases],
-                "enjoyment_anchors": [
-                    anchor.model_dump(mode="json") for anchor in inputs.enjoyment_anchors
-                ],
-            }
-        ),
         provider_response_sha256=receipt["response_sha256"],
         fact_verdicts=payload.fact_verdicts,
         enjoyment_assessments=normalized_enjoyment,
@@ -319,7 +291,6 @@ def validate_fact(
         reviewer_model=COMPOSE_MODEL,
         policy_sha256=QUALITY_POLICY_SHA256,
         prompt_sha256=BATCH_FACT_PROMPT_SHA256,
-        input_sha256=request.fingerprint(),
         provider_response_sha256=receipt["response_sha256"],
         verdicts=tuple(verdicts),
         usage=review_usage(receipt),
@@ -345,17 +316,6 @@ def validate_enjoyment(
         reviewer_model=COMPOSE_MODEL,
         policy_sha256=QUALITY_POLICY_SHA256,
         prompt_sha256=ENJOY_PROMPT_SHA256,
-        input_sha256=_canonical_hash(
-            {
-                "items": [
-                    value.model_dump(mode="json")
-                    for value in sorted(
-                        (*tuple(anchor.item for anchor in anchors), *candidates),
-                        key=lambda value: value.item_id,
-                    )
-                ]
-            }
-        ),
         provider_response_sha256=receipt["response_sha256"],
         assessments=normalized_assessments,
         usage=review_usage(receipt),

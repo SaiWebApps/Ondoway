@@ -402,7 +402,7 @@ def test_write_city_writes_utf8_and_roundtrips_nonascii(
     """Every corpus file write_city produces passes encoding='utf-8', so an
     accented POI/extract (Café/Zürich) round-trips byte-exact — matching
     validate_beats' utf-8 read.
-    UNDO: drop encoding='utf-8' from assemble._atomic_write_text -> a corpus file
+    UNDO: drop encoding='utf-8' from assemble.atomic_write_text -> a corpus file
     is written with encoding=None -> RED."""
     captured: list[tuple[Path, object]] = []
     real_write_text = Path.write_text
@@ -443,10 +443,11 @@ def test_write_city_writes_utf8_and_roundtrips_nonascii(
 def test_cli_atomic_write_text_uses_utf8(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The CLI's beats.json writer also passes encoding='utf-8', so accented beats
-    round-trip on a non-utf-8-locale runner (validate_beats reads utf-8).
-    UNDO: drop encoding='utf-8' from cli._atomic_write_text -> RED."""
-    from src.onboard.cli import _atomic_write_text as _cli_atomic_write_text
+    """The CLI writes beats.json through the corpus writer, so accented beats
+    round-trip on a non-utf-8-locale runner (validate_beats reads utf-8)."""
+    from src.onboard import cli
+
+    _cli_atomic_write_text = cli.atomic_write_text
 
     captured: list[object] = []
     real_write_text = Path.write_text

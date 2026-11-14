@@ -133,12 +133,13 @@ def _money_guard_no_live_compose(request, monkeypatch):
     # construction is replaced by the explicit $0 adapter; injected fake
     # providers still exercise the real executor in unit tests.
     import src.tour.premium_tour as _premium_mod
+    from tests.premium_doubles import OfflinePremiumExecutor
 
     _real_premium = _premium_mod.AnthropicPremiumExecutor
 
     def _guard_premium(provider=None):
         if provider is None:
-            return _premium_mod.OfflinePremiumExecutor()
+            return OfflinePremiumExecutor()
         return _real_premium(provider)
 
     monkeypatch.setattr(_premium_mod, "AnthropicPremiumExecutor", _guard_premium)

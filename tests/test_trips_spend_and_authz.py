@@ -32,10 +32,8 @@ from src.api.dependencies import (
     get_session,
 )
 from src.api.routes import trips as trips_route
-from src.tour.premium_tour import (
-    AnthropicPremiumExecutor,
-    OfflinePremiumExecutor,
-)
+from src.tour.premium_tour import AnthropicPremiumExecutor
+from tests.premium_doubles import OfflinePremiumExecutor
 
 # Reuse the proven hermetic corpus fakes rather than re-deriving them.
 from tests.test_trip_preview_contract import (

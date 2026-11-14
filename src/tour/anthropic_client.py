@@ -14,14 +14,14 @@ THRESHOLD PROVENANCE — measured or reasoned, none invented:
 ``JUDGE_TIMEOUT_S`` = 45 s. Judge/verify calls are Haiku with ``max_tokens``
 between 5 (``factcheck.py:213``, a single-token verdict) and 2048
 (``factcheck.py:117``). A round trip on this machine measured **1.2 s**
-(2026-07-19, direct SDK call). 45 s is ~37x that — generous headroom for a slow
+(direct SDK call). 45 s is ~37x that — generous headroom for a slow
 or contended call, while still bounding a stall.
 
 ``COMPOSE_TIMEOUT_S`` = 180 s. Compose is Opus, STREAMING, with
-``thinking={"type": "adaptive"}`` and ``max_tokens=COMPOSE_MAX_OUTPUT_TOKENS``
-(64 000). That ceiling is sized so a whole tour's output never truncates
-mid-JSON; the per-chapter composer this preview actually uses emits ONE stop of
-roughly 700 words (~1500 tokens). 180 s is therefore already several times a healthy per-stop call.
+``thinking={"type": "adaptive"}`` and
+``max_tokens=CERTIFICATION_COMPOSE_MAX_OUTPUT_TOKENS``. The per-chapter composer
+this preview actually uses emits ONE stop of roughly 700 words (~1500 tokens).
+180 s is therefore already several times a healthy per-stop call.
 
 Retries: judges get 2 (they are cheap, and transient 429/529 is the common
 failure); compose gets zero hidden SDK retries. A fresh complete-tour candidate

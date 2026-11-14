@@ -25,6 +25,7 @@ from src.tour.certification_provider import (
     PhysicalProviderResponse,
 )
 from src.tour.contract import Sentence
+from src.tour.corpus_places import canonical_bytes
 from src.tour.provider_text_review import (
     build_enjoyment_item,
     build_fact_input,
@@ -60,16 +61,6 @@ FACT_CANARY_UNIT_ID = "fact:paris-west-axis-90"
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REVIEW_ROOT = ROOT / "data" / "certification" / "tour-batch-review-v2"
 LEGACY_REVIEW_ROOT = ROOT / "data" / "certification" / "tour-batch-review-v1"
-
-
-def _canonical_bytes(value: object) -> bytes:
-    return json.dumps(
-        value,
-        ensure_ascii=False,
-        allow_nan=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
 
 
 def _sha256(value: bytes) -> str:
@@ -243,7 +234,7 @@ class BatchReviewPlan(TypedDict):
 def _require_self_hash(document: dict[str, object], hash_field: str) -> None:
     expected = document.get(hash_field)
     core = {key: value for key, value in document.items() if key != hash_field}
-    if not isinstance(expected, str) or expected != _sha256(_canonical_bytes(core)):
+    if not isinstance(expected, str) or expected != _sha256(canonical_bytes(core)):
         raise ValueError(f"invalid {hash_field}")
 
 
@@ -347,7 +338,7 @@ def load_batch_review_inputs(
                 or receipt.get("request_id") != unit.get("request_id")
                 or receipt.get("request_sha256") != unit.get("request_sha256")
                 or receipt.get("model") != tour_plan.get("model")
-                or receipt.get("receipt_sha256") != _sha256(_canonical_bytes(receipt_core))
+                or receipt.get("receipt_sha256") != _sha256(canonical_bytes(receipt_core))
                 or not isinstance(raw_response, str)
                 or receipt.get("response_sha256") != _sha256(raw_response.encode("utf-8"))
             ):
@@ -368,7 +359,7 @@ def load_batch_review_inputs(
                 raise ValueError("tour artifact narration is malformed")
             ordered_text.extend(sentences)
             receipts.append(receipt)
-        if artifact.get("customer_text_sha256") != _sha256(_canonical_bytes(ordered_text)):
+        if artifact.get("customer_text_sha256") != _sha256(canonical_bytes(ordered_text)):
             raise ValueError("tour artifact customer text hash is invalid")
         result.append(
             BatchReviewTourInputs(
@@ -588,13 +579,13 @@ def _attempt_record(unit: ReviewRuntimeUnit) -> dict[str, object]:
         "unit_id": unit.unit_id,
         "request_sha256": request_envelope_sha256(unit.envelope),
     }
-    return {**core, "marker_sha256": _sha256(_canonical_bytes(core))}
+    return {**core, "marker_sha256": _sha256(canonical_bytes(core))}
 
 
 def _validate_attempt(unit: ReviewRuntimeUnit, value: dict[str, object]) -> None:
     core = {key: item for key, item in value.items() if key != "marker_sha256"}
     if value != _attempt_record(unit) or value.get("marker_sha256") != _sha256(
-        _canonical_bytes(core)
+        canonical_bytes(core)
     ):
         raise ValueError("altered or plan-mismatched batch review attempt")
 
@@ -619,7 +610,7 @@ def _response_record(
     }
     if response.stop_reason is not None:
         core["stop_reason"] = response.stop_reason
-    return {**core, "receipt_sha256": _sha256(_canonical_bytes(core))}
+    return {**core, "receipt_sha256": _sha256(canonical_bytes(core))}
 
 
 def _validate_response(unit: ReviewRuntimeUnit, value: dict[str, object]) -> None:
@@ -634,7 +625,7 @@ def _validate_response(unit: ReviewRuntimeUnit, value: dict[str, object]) -> Non
         or not (value.get("stop_reason") is None or isinstance(value.get("stop_reason"), str))
         or not isinstance(raw_response, str)
         or value.get("response_sha256") != _sha256(raw_response.encode("utf-8"))
-        or value.get("receipt_sha256") != _sha256(_canonical_bytes(core))
+        or value.get("receipt_sha256") != _sha256(canonical_bytes(core))
     ):
         raise ValueError("altered or plan-mismatched batch review response")
 
@@ -647,7 +638,7 @@ def _failure_record(unit: ReviewRuntimeUnit, exc: Exception) -> dict[str, object
         "failure_type": type(exc).__name__,
         "failure_message_sha256": _sha256(str(exc).encode("utf-8")),
     }
-    return {**core, "failure_sha256": _sha256(_canonical_bytes(core))}
+    return {**core, "failure_sha256": _sha256(canonical_bytes(core))}
 
 
 def _parse_review_response(unit: ReviewRuntimeUnit, receipt: dict[str, object]) -> object:
@@ -903,7 +894,7 @@ def build_batch_review_plan(
     }
     return {
         **core,
-        "review_plan_sha256": _sha256(_canonical_bytes(core)),
+        "review_plan_sha256": _sha256(canonical_bytes(core)),
     }
 
 
@@ -963,7 +954,7 @@ def gate_batch_review_execution(
         key: value for key, value in review_plan.items() if key != "review_plan_sha256"
     }
     sealed_hash = review_plan.get("review_plan_sha256")
-    if not isinstance(sealed_hash, str) or sealed_hash != _sha256(_canonical_bytes(review_core)):
+    if not isinstance(sealed_hash, str) or sealed_hash != _sha256(canonical_bytes(review_core)):
         raise ValueError("review plan self-hash is invalid")
 
     if not live:
@@ -1120,7 +1111,7 @@ def main(argv: list[str] | None = None) -> int:
         archival_root=args.archival_root,
     )
     if not args.live:
-        print(_canonical_bytes(context.review_plan).decode("utf-8"))
+        print(canonical_bytes(context.review_plan).decode("utf-8"))
         return 0
 
     holder: dict[str, AnthropicCertificationProvider] = {}
@@ -1181,7 +1172,7 @@ def main(argv: list[str] | None = None) -> int:
         },
         "infrastructure_error_unit_ids": sorted(result.infrastructure_errors),
     }
-    print(_canonical_bytes(summary).decode("utf-8"))
+    print(canonical_bytes(summary).decode("utf-8"))
     return 0
 
 

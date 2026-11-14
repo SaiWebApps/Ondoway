@@ -135,24 +135,15 @@ _MOTIVATED_TRANSITION = re.compile(
 
 # BARE ADJACENCY (the motivated transition's negative): a sentence-initial filler that
 # moves to the next fact without saying why ("Also," / "Nearby," / "Similarly,").
-# NOTE: "Additionally" / "In addition" / "Furthermore" etc. are already covered by
-# _EMPTY_TRANSITION above — not repeated here to avoid double-counting the same tell.
-# KNOWN FALSE POSITIVE: good hand-written narration opens sentences with "Nearby,"
-# used as a legitimate SPATIAL cue ("Nearby, the jewellery and clothing shops..."),
-# not an empty filler — so "Nearby" is deliberately EXCLUDED
-# here even though it can be a bare-adjacency filler. A lexical proxy cannot tell
-# spatial "nearby" from logical "nearby" apart; only "Also"/"Similarly" are unambiguous
-# enough to keep.
+# 'Additionally'-class words belong to _EMPTY_TRANSITION. 'Nearby,' is excluded because
+# it is often a spatial cue.
 _BARE_ADJACENCY = re.compile(r"(^|[.!?]\s+)(Also|Similarly|Elsewhere)\b,?", re.IGNORECASE)
 
 # CAUSAL CHAIN: mid-sentence connectives where one fact is stated as the CAUSE of the
 # next, rather than facts merely listed side by side. It catches a hand-written chain
 # like "helped make this stretch ... fashionable, drawing an English clientele".
-# NOTE: 'however' is deliberately NOT in this list — it is already scored by
-# _MOTIVATED_TRANSITION's sentence-initial branch above. Scoring it in BOTH patterns
-# would count one connective twice, a reward-hacking vector: best-of-N would then
-# favour whichever candidate sprinkles more connectives, the opposite of the goal. The
-# two term sets stay disjoint (pinned by test_however_is_not_double_counted).
+# 'however' is scored only by _MOTIVATED_TRANSITION; the two term sets stay disjoint so
+# one connective never counts twice.
 # KNOWN FALSE POSITIVE: "in turn" occasionally appears in a text that is otherwise
 # still a list (this only samples one connective, not the whole chain).
 # KNOWN FALSE NEGATIVE: a causal chain built from plain "and" + verb tense with no

@@ -288,7 +288,6 @@ def test_a_composed_stop_without_a_close_refuses_at_finalize_and_a_template_is_n
 
     from src.tour.degradations import degradation_scope, summarize
     from src.tour.premium_tour import (
-        EphemeralReceiptSink,
         PremiumBuildIdentity,
         execute_premium_plan,
         finalize_premium_tour,
@@ -297,7 +296,7 @@ def test_a_composed_stop_without_a_close_refuses_at_finalize_and_a_template_is_n
 
     def finalize(plan, executor):
         responses = execute_premium_plan(
-            plan, executor=executor, receipt_sink=EphemeralReceiptSink()
+            plan, executor=executor
         )
         return finalize_premium_tour(
             plan, responses, faithfulness_checker=MockFaithfulnessChecker(),
@@ -469,7 +468,6 @@ def test_threads_are_kept_one_sentence_short_and_entailed_and_ride_the_compositi
 
     from src.tour.degradations import degradation_scope, summarize
     from src.tour.premium_tour import (
-        EphemeralReceiptSink,
         execute_premium_plan,
         finalize_premium_composition,
         plan_premium_authoring,
@@ -499,7 +497,7 @@ def test_threads_are_kept_one_sentence_short_and_entailed_and_ride_the_compositi
 
     good = "Something happened at stop 2 in 1600 — the same year as at Stop 0."
     responses = execute_premium_plan(
-        plan, executor=executor_with(good), receipt_sink=EphemeralReceiptSink()
+        plan, executor=executor_with(good)
     )
     composition = finalize_premium_composition(plan, responses)
     assert composition.threads_by_stop == {2: {"Stop 0": good}}
@@ -513,7 +511,7 @@ def test_threads_are_kept_one_sentence_short_and_entailed_and_ride_the_compositi
         ),
     ):
         responses = execute_premium_plan(
-            plan, executor=executor_with(bad), receipt_sink=EphemeralReceiptSink()
+            plan, executor=executor_with(bad)
         )
         with degradation_scope() as rows:
             composition = finalize_premium_composition(plan, responses)
@@ -533,7 +531,7 @@ def test_threads_are_kept_one_sentence_short_and_entailed_and_ride_the_compositi
             return good not in text
 
     responses = execute_premium_plan(
-        plan, executor=executor_with(good), receipt_sink=EphemeralReceiptSink()
+        plan, executor=executor_with(good)
     )
     checker = _RefusesThreads()
     with degradation_scope() as rows:
@@ -559,7 +557,7 @@ def test_threads_are_kept_one_sentence_short_and_entailed_and_ride_the_compositi
             return _offline_response(unit, sentences, extra=payload)
 
     responses = execute_premium_plan(
-        plan, executor=_UnaskedExecutor(), receipt_sink=EphemeralReceiptSink()
+        plan, executor=_UnaskedExecutor()
     )
     with pytest.raises(ValueError, match=r"was not asked for"):
         finalize_premium_composition(plan, responses)
@@ -725,7 +723,6 @@ def test_a_full_telling_is_kept_gated_and_never_kills_the_day():
     RED."""
     from src.tour.degradations import degradation_scope, summarize
     from src.tour.premium_tour import (
-        EphemeralReceiptSink,
         execute_premium_plan,
         finalize_premium_full_telling,
         full_telling_majors,
@@ -763,7 +760,7 @@ def test_a_full_telling_is_kept_gated_and_never_kills_the_day():
             return _offline_response(unit, sentences)
 
     # Clean: the full telling ships with its close.
-    responses = execute_premium_plan(plan, executor=_Echo(), receipt_sink=EphemeralReceiptSink())
+    responses = execute_premium_plan(plan, executor=_Echo())
     with degradation_scope() as rows:
         full = finalize_premium_full_telling(plan, responses, budget=majors[1])
     assert full is not None
@@ -775,7 +772,6 @@ def test_a_full_telling_is_kept_gated_and_never_kills_the_day():
     tight_sentence = next(s.text for s in script.script if s.stop_idx == 1)
     responses = execute_premium_plan(
         plan, executor=_Echo(extra_sentences=(tight_sentence,)),
-        receipt_sink=EphemeralReceiptSink(),
     )
     with degradation_scope() as rows:
         full = finalize_premium_full_telling(plan, responses, budget=majors[1])
@@ -788,7 +784,7 @@ def test_a_full_telling_is_kept_gated_and_never_kills_the_day():
     budget_words = round(majors[1].full_budget_seconds * 2.5)
     over = (" ".join(["word"] * (budget_words + 50)) + ".",)
     responses = execute_premium_plan(
-        plan, executor=_Echo(extra_sentences=over), receipt_sink=EphemeralReceiptSink()
+        plan, executor=_Echo(extra_sentences=over)
     )
     with degradation_scope() as rows:
         full = finalize_premium_full_telling(plan, responses, budget=majors[1])

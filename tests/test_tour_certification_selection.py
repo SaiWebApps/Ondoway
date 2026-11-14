@@ -27,6 +27,8 @@ from src.tour.selection import (
     reach_envelope_searched,
     select_route,
 )
+from src.tour.visit_time import visit_seconds
+from tests.test_tour_selection import _visit_pricing
 
 
 def _poi(
@@ -97,7 +99,7 @@ def test_certification_fixed_end_rescue_reaches_exact_repair_once(monkeypatch):
         def __init__(self, seconds: int):
             self.seconds = seconds
 
-        def leg_seconds(self, *_args):
+        def leg_seconds(self, *_args, costing_options_override=None):
             return self.seconds
 
     policy = _policy()
@@ -206,6 +208,7 @@ def test_timebox_drop_never_removes_the_materialized_fixed_destination():
             interest=frozenset(),
             leg_seconds_fn=_routed,
             planning_budget=budget,
+            **_visit_pricing(snap, tour_input),
         )
         assert trial is not None
         return trial.elapsed_seconds
@@ -239,6 +242,7 @@ def test_timebox_drop_never_removes_the_materialized_fixed_destination():
         leg_seconds_fn=_routed,
         planning_policy=policy,
         planning_budget=budget,
+        **_visit_pricing(snap, tour_input),
     )
 
     assert [poi.id for poi in repaired] == [destination.id]
@@ -287,6 +291,7 @@ def test_repair_never_trades_an_in_band_route_for_a_materially_longer_walk():
             interest=frozenset(),
             leg_seconds_fn=_routed,
             planning_budget=budget,
+            **_visit_pricing(snap, tour_input),
         )
         assert priced is not None
         return priced
@@ -317,6 +322,7 @@ def test_repair_never_trades_an_in_band_route_for_a_materially_longer_walk():
         leg_seconds_fn=_routed,
         planning_policy=policy,
         planning_budget=budget,
+        **_visit_pricing(snap, tour_input),
     )
 
     assert sorted(poi.id for poi in repaired) == sorted(poi.id for poi in incumbent)
@@ -369,6 +375,7 @@ def test_repair_prices_the_route_with_the_pulled_endpoint_actually_pinned():
             leg_seconds_fn=_routed,
             planning_budget=budget,
             pulled_endpoint_id=pinned,
+            **_visit_pricing(snap, tour_input),
         )
         assert trial is not None
         return trial
@@ -401,6 +408,7 @@ def test_repair_prices_the_route_with_the_pulled_endpoint_actually_pinned():
         planning_policy=policy,
         planning_budget=budget,
         pulled_endpoint_id=endpoint.id,
+        **_visit_pricing(snap, tour_input),
     )
 
     assert sorted(poi.id for poi in repaired) == sorted(
@@ -470,11 +478,13 @@ def test_select_route_off_corridor_rescue_reaches_exact_certification_repair_onc
 
     class _Client:
         @staticmethod
-        def isochrone(lat: float, lng: float, minutes: int):
+        def isochrone(lat: float, lng: float, minutes: int, *, walking_speed_kmh=None):
             return None
 
         @staticmethod
-        def leg_seconds(lat1: float, lng1: float, lat2: float, lng2: float) -> int:
+        def leg_seconds(
+            lat1: float, lng1: float, lat2: float, lng2: float, *, costing_options_override=None
+        ) -> int:
             return round(math.hypot(lat2 - lat1, lng2 - lng1) * 100_000)
 
     class _ProbeCompleteError(Exception):
@@ -753,13 +763,13 @@ def test_the_repair_and_the_final_gate_price_the_same_stop_set_identically():
         interest=frozenset(),
         leg_seconds_fn=_routed,
         planning_budget=budget,
+        **_visit_pricing(snap, tour_input),
     )
     assert trial is not None
 
     # Rebuild what the gate sees for the SAME ordered set and price it the way
     # the gate does. The two numbers must be the same number.
     from src.tour.contract import Route
-    from src.tour.visit_time import visit_seconds
 
     gate_route = Route(
         pois=trial.ordered,
@@ -832,6 +842,7 @@ def test_a_place_worth_standing_in_is_a_preferred_add_not_a_walk_slog():
         leg_seconds_fn=_routed,
         planning_policy=policy,
         planning_budget=budget,
+        **_visit_pricing(snap, tour_input),
     )
     seated = {poi.id for poi in repaired}
     assert museum.id in seated, (
@@ -1055,6 +1066,7 @@ def test_the_repair_prefers_a_different_kind_of_place_on_a_near_tie():
         leg_seconds_fn=_routed,
         planning_policy=policy,
         planning_budget=budget,
+        **_visit_pricing(snap, tour_input),
     )
     repaired_ids = {poi.id for poi in repaired}
     assert "b-church" in repaired_ids, (
@@ -1097,6 +1109,7 @@ def test_variety_never_beats_a_landmark():
         leg_seconds_fn=_routed,
         planning_policy=policy,
         planning_budget=budget,
+        **_visit_pricing(snap, tour_input),
     )
     repaired_ids = {poi.id for poi in repaired}
     assert "a-third-museum" in repaired_ids, (
@@ -1150,6 +1163,7 @@ def test_a_drop_that_merges_two_legs_past_the_cap_is_refused():
             leg_seconds_fn=_routed,
             planning_budget=budget,
             interest=frozenset(),
+            **_visit_pricing(snap, tour_input),
         )
         assert trial is not None
         return trial.elapsed_seconds
@@ -1175,6 +1189,7 @@ def test_a_drop_that_merges_two_legs_past_the_cap_is_refused():
             leg_seconds_fn=_routed,
             planning_policy=policy,
             planning_budget=budget,
+            **_visit_pricing(snap, tour_input),
         )
 
 
@@ -1207,7 +1222,7 @@ def test_a_queue_never_earns_the_rank():
 
     queue_table = {"a-queued-anchor": 600}
 
-    def price(poi: POI, hour: int | None) -> int:
+    def price(poi: POI, hour: int | None, clock=None) -> int:
         return poi.typical_duration_min * 60 + queue_table.get(poi.id, 0)
 
     def queue(poi: POI, hour: int | None) -> int:

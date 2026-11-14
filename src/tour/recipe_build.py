@@ -33,7 +33,6 @@ from .place_recipes import (
     split_pieces,
 )
 from .premium_tour import (
-    EphemeralReceiptSink,
     FullTelling,
     PremiumBuildIdentity,
     PremiumComposeExecutor,
@@ -300,9 +299,7 @@ def _write(
     reason = ""
     for attempt in range(1, WRITING_ATTEMPTS + 1):
         try:
-            responses = execute_premium_plan(
-                plan, executor=executor, receipt_sink=EphemeralReceiptSink()
-            )
+            responses = execute_premium_plan(plan, executor=executor)
         except Exception as exc:  # provider weather: recorded, the job moves on
             reason = f"writer call failed: {type(exc).__name__}: {exc}"
             continue

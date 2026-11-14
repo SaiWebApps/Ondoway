@@ -32,21 +32,13 @@ from .contract import ValhallaLegReceipt
 from .corpus_places import canonical_json
 from .routing import PACE_KMH, REACH_PACE_KMH, haversine_m, pace_corrected_walk_seconds
 
-# Pace pin (2026-07-02): Valhalla defaults pedestrians to
-# ~5.1 km/h, and every leg time the engine reports must come from the same walker
-# its budgets assume, or a routed leg and its haversine fallback describe two
-# different people. `PACE_KMH` was 3.0 until 2026-08-06 and is now 4.5, which is
-# what people actually walk; the reach contour deliberately did NOT follow it (see
-# `_REACH_COSTING_OPTIONS`).
+# Every leg time the engine reports comes from the walker its budgets assume, so a
+# routed leg and its haversine fallback describe the same person. Valhalla's
+# pedestrian default (~5.1 km/h) is overridden with `PACE_KMH`. The reach contour
+# uses its own pace and does not follow this one (see `_REACH_COSTING_OPTIONS`).
 _PEDESTRIAN_COSTING_OPTIONS = {"pedestrian": {"walking_speed": PACE_KMH}}
-#: THE ISOCHRONE IS THE REACH TEST, and it must not widen when the pace does.
-#:
-#: `_reach_predicate` uses the Valhalla polygon as PRIMARY and the analytic circle
-#: only as a fallback, so pinning the circle to `REACH_PACE_KMH` and leaving the
-#: contour on `PACE_KMH` would report a fixed radius while the region actually
-#: admitted grew by half — the change reading green while doing the opposite of what
-#: it claims. At a 120-minute contour that is roughly 6 km of path at 3.0 km/h and
-#: roughly 9 km at 4.5.
+#: The isochrone is the primary reach test, so it uses `REACH_PACE_KMH`, not
+#: `PACE_KMH`: the admitted region must not grow with walking pace.
 _REACH_COSTING_OPTIONS = {"pedestrian": {"walking_speed": REACH_PACE_KMH}}
 _ROUTING_CONFIG = {
     "costing": "pedestrian",

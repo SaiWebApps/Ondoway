@@ -121,16 +121,26 @@ class _FakeRoutingClient:
     def __exit__(self, *exc) -> None:
         return None
 
-    def leg_seconds(self, from_lat: float, from_lng: float, to_lat: float, to_lng: float) -> int:
+    def leg_seconds(
+        self,
+        from_lat: float,
+        from_lng: float,
+        to_lat: float,
+        to_lng: float,
+        *,
+        costing_options_override: dict | None = None,
+    ) -> int:
         return int(pace_corrected_walk_seconds(haversine_m(from_lat, from_lng, to_lat, to_lng)))
 
-    def route(
-        self, from_lat: float, from_lng: float, to_lat: float, to_lng: float
-    ) -> tuple[int, float, None]:
-        d = haversine_m(from_lat, from_lng, to_lat, to_lng)
-        return (int(pace_corrected_walk_seconds(d)), d, None)
-
-    def route_with_receipt(self, from_lat: float, from_lng: float, to_lat: float, to_lng: float):
+    def route_with_receipt(
+        self,
+        from_lat: float,
+        from_lng: float,
+        to_lat: float,
+        to_lng: float,
+        *,
+        costing_options_override: dict | None = None,
+    ):
         seconds = self.leg_seconds(from_lat, from_lng, to_lat, to_lng)
         distance_m = haversine_m(from_lat, from_lng, to_lat, to_lng)
         config = json.loads(VALHALLA_ROUTING_CONFIG_JSON)
@@ -178,7 +188,9 @@ class _FakeRoutingClient:
     def routing_version(self) -> str:
         return "test-valhalla"
 
-    def isochrone(self, lat: float, lng: float, minutes: int) -> None:
+    def isochrone(
+        self, lat: float, lng: float, minutes: int, *, walking_speed_kmh: float | None = None
+    ) -> None:
         return None
 
     def close(self) -> None:
@@ -207,7 +219,15 @@ class _ColdStartingRoutingClient(_FakeRoutingClient):
     Nothing here stops or touches the shared Valhalla container.
     """
 
-    def route_with_receipt(self, from_lat: float, from_lng: float, to_lat: float, to_lng: float):
+    def route_with_receipt(
+        self,
+        from_lat: float,
+        from_lng: float,
+        to_lat: float,
+        to_lng: float,
+        *,
+        costing_options_override: dict | None = None,
+    ):
         seconds = self.leg_seconds(from_lat, from_lng, to_lat, to_lng)
         return seconds, haversine_m(from_lat, from_lng, to_lat, to_lng), None, None
 

@@ -25,19 +25,22 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import StrEnum
 
-from src.tour.contract import BeatSequence, Route, Script, Sentence
+from src.tour.contract import END_B_SENTINEL_PREFIX, BeatSequence, Route, Script, Sentence
 from src.tour.generation import (
-    _END_B_SENTINEL_PREFIX,
-    SPOKEN_WPM,
     _word_count,
     is_walk_concurrent,
     transit_class_beat_ids,
 )
 from src.tour.narration_quality import score_narration
-from src.tour.routing import haversine_m, total_walk_seconds
+from src.tour.routing import (
+    SPOKEN_WPM,
+    haversine_m,
+    spoken_seconds_for_words,
+    total_walk_seconds,
+)
 from src.tour.visit_time import served_elapsed_seconds
 
-# ── thresholds ──────────────────────────────────────────────────────────────
+# Thresholds.
 # Each value's comment states its KIND and the data behind it:
 #   MEASURED  — derived from a real $0 engine run on the live Paris graph
 #   INHERITED — already a constant elsewhere in the engine; not a new number
@@ -53,91 +56,47 @@ STARVE_MIN_BEATS: int = 5
 #: Deliberately permissive: this catches 9-words-for-12-beats (0.75), not terseness.
 STARVE_MIN_WORDS_PER_BEAT: float = 12.0
 
-#: MEASURED 2026-07-26, superseding the earlier CITED-adapted 750. Museum practice caps
-#: a station at 250 words (~2 min); a walking-tour anchor with a 5-min dwell is not a
-#: museum station, so the number was adapted rather than cited — but it was adapted by
-#: reasoning, not measurement, and it was WRONG. Widest-stop population across the eight
-#: authored tours in data/certification/tour-batch-v1/:
+#: MEASURED. The widest stop in each of the eight authored certification tours runs
 #:     661 / 662 / 664 / 673 / 679 / 757 / 761 / 808
-#: At 750 this check BLOCKED three tours this project itself certified
-#: (nyc-lower-manhattan-90, paris-marais-loop-60, paris-ile-open-90). 850 clears the
-#: real ceiling (808) at 1.05x while still catching the defect it exists for — the
-#: measured Notre-Dame wall of 1022-1038 words — at 1.20x.
+#: words. 850 clears that ceiling (808) at 1.05x and still catches the defect it exists
+#: for — a Notre-Dame wall of 1022-1038 words — at 1.20x. Museum practice caps a station
+#: at 250 words; a walking-tour anchor with a long dwell is not a museum station, so that
+#: figure does not apply.
 #: Guarded by test_c8_clears_the_widest_stop_in_the_certification_corpus.
 GORGE_MAX_WORDS_PER_STOP: int = 850
 
 #: JUDGEMENT, anchored on a MEASUREMENT of the gold text — the hand-written reference
-#: passage that ``scripts/score_gold_text.extract_gold_text`` reads and measures. Was
-#: 15.0, CITED to Nubart / Musa Guide ("keep sentences to 10-15 words for the ear").
-#: That citation describes MUSEUM STATION copy, and the gold text measures
-#: `mean_sentence_words` **19.11**, so it FAILED a bar of 15, as did every one of 191
-#: saved tours.
+#: passage that ``scripts/score_gold_text.extract_gold_text`` reads — whose
+#: `mean_sentence_words` is 19.11. The 10-15 word museum-copy range describes station
+#: copy; the gold text and every saved tour exceed it, so it is not the anchor.
 #:
-#: WHAT THIS RETUNE DID AND DID NOT FIX. It moved the STOP-level pass rate from 0/38 to
-#: 6/38, and it admits the gold. At TOUR level the rate barely moves — 9/9 tours of one
-#: measured set and 176/182 of another still trip C9 — because one over-long stop flags
-#: a whole tour.
-#: So "a check that never passes discriminates nothing" is only half-answered here: the
-#: cap is no longer unreachable, but most real tours genuinely do ramble. Do not read a
-#: 100% tour-level rate in the scorer output as evidence the retune failed.
+#: C9 fires per stop, so one long stop flags a whole tour. Per stop the gold reads
+#: shorter than 34 of 38 machine stops (min 16.9 / median 23.2 / max 34.3), so the check
+#: ranks hand-written text above machine output.
 #:
-#: The check itself is SOUND and was nearly deleted by mistake. C9 fires PER STOP;
-#: aggregating whole-tour compresses machine figures toward the gold and hides the
-#: ordering. Measured per stop: gold 19.11 against 38
-#: machine stops at min 16.9 / median 23.2 / max 34.3. The gold reads shorter than 34 of
-#: 38 — C9 ranks the hand-written text above machine output correctly. Only the constant
-#: was wrong.
-#:
-#: THE RULE FOR THE NUMBER: the smallest round number strictly above the anchor. Not
-#: 19.11 itself — `score_narration` rounds to 2dp, so `19.11 > 19.11` is False by nothing
-#: at all, and one word added to a 509-word passage flips it. Margin is needed for a
-#: second reason too: the gold's mean is taken over 27 sentences while a real stop's is
-#: taken over 5-6, so the cap judges a noisier statistic than the one it was calibrated
-#: on. Nothing hinges on the exact choice — 19.5 fails 33 of 38 machine stops, 20 fails
-#: 32, 21 fails 31 — so the rule matters more than the value.
-#: Guarded by test_c9_cap_admits_the_owners_own_gold_text — the calibration, executable.
+#: The cap is the smallest round number strictly above the gold mean of 19.11: scores
+#: round to 2 dp, and a stop's mean is taken over far fewer sentences than the gold's.
+#: Guarded by test_c9_cap_admits_the_owners_own_gold_text.
 MAX_SENTENCE_WORDS: float = 20.0
-
-#: CITED. 130-150 words per minute of spoken narration.
-WORDS_PER_MINUTE: float = 150.0
 
 #: JUDGEMENT. No single stop should hold more than this share of the tour's words.
 BALANCE_MAX_SHARE: float = 0.60
 
-#: JUDGEMENT, from a MEASURED absurdity, and demoted to WARN by a SECOND measurement.
-#: A real Île de la Cité tour seated Palais de Justice and
-#: Conciergerie as SEPARATE stops **17 metres apart** — the same building
-#: complex — where the second stop opens by saying "the Conciergerie is one of the
-#: few remaining vestiges of the old medieval Palais de Justice", i.e. describing the
-#: spot the listener stood on seconds earlier. That is a real defect this constant
-#: was written to catch.
+#: JUDGEMENT, WARN only. It catches one building told as two stops — e.g. Palais de
+#: Justice and Conciergerie seated 17 m apart, the second opening by describing the
+#: spot the listener just stood on. 50 m, not 100 m: Sainte-Chapelle sits 86 m from
+#: the Conciergerie and is a genuinely distinct attraction.
 #:
-#: RECALIBRATED from 100 m to 50 m on evidence: at 100 m this also flagged
-#: Sainte-Chapelle at 86 m from the Conciergerie, and that is a FALSE POSITIVE —
-#: Sainte-Chapelle is a genuinely distinct attraction, and 86 m is a real (if short)
-#: walk in a dense historic quarter.
-#:
-#: THEN, at 50 m, MEASURED across the full real corpora (2026-07-19,
-#: ``tests/test_tour_selection.py::test_selection_does_not_filter_close_but_distinct_pois``):
-#: Paris' 370 POIs give 48 pairs under 50 m, New York's 402 give 46. They are NOT one
-#: population. True duplicates (corpus geocoding defects — the same place entered
-#: twice, e.g. NYSE/Wall Street, Place/Square des Abbesses, Flatiron
-#: District/Building) cluster at 0.0-1.7 m. Genuinely distinct, walkable landmarks
-#: start at ~8 m: Panthéon <-> Bibliothèque Sainte-Geneviève (14.9 m), Place de la
-#: Concorde <-> Jeu de Paume (14.3 m), Galignani <-> Angelina (11.8 m), and — the
-#: decisive case — Hôtel Le Meurice <-> Angelina at **8.4 m**. Le Meurice and
-#: Galignani are the two POIs the gold text (see MAX_SENTENCE_WORDS) narrates as
-#: consecutive stops. No distance threshold separates "one
-#: building told twice" from "two neighbours on one street" — 8.4 m (a real
-#: distinction) sits well inside the 17 m defect case this constant was calibrated
-#: on. A companion guard that filtered ``select_route`` on this same distance was
-#: tried and REVERTED for exactly this reason (see the refutation test above);
-#: this check is demoted from BLOCKER to WARN
-#: for the identical reason — refusing to SERVE a tour containing a gold-text
-#: stop is a worse defect than the one this constant was built to catch. "The same
-#: place told twice" is a semantic question — the same FACT repeated anywhere in the
-#: tour — and no distance can answer it. C12 stays as a WARN surfaced to
-#: the editor — a short gap is still worth a human glance — but never blocks serving.
+#: No distance separates 'one building told twice' from 'two neighbours on one
+#: street'. Across the real corpora (Paris 370 POIs, 48 pairs under 50 m; New York
+#: 402, 46 pairs) true duplicates cluster at 0.0-1.7 m, while distinct walkable
+#: landmarks start at ~8 m — Hôtel Le Meurice <-> Angelina at 8.4 m, and Le Meurice
+#: and Galignani are consecutive stops of the gold text (see MAX_SENTENCE_WORDS), so a
+#: blocker here would refuse the gold text's own tour. So this check never
+#: blocks serving and ``select_route`` does not filter on this distance
+#: (test_selection_does_not_filter_close_but_distinct_pois). Whether the same place is
+#: told twice is a semantic question about repeated facts; C12 is a WARN surfaced to
+#: the editor.
 MIN_STOP_SEPARATION_M: float = 50.0
 
 #: JUDGEMENT. Ceiling on the C1 starvation floor, as a share of the gorge cap, so C1
@@ -145,24 +104,15 @@ MIN_STOP_SEPARATION_M: float = 50.0
 #: at the C1 check for the Notre-Dame arithmetic that forced this.
 STARVE_FLOOR_MAX_SHARE_OF_CAP: float = 0.5
 
-#: RE-MEASURED 2026-08-06. Seconds of spoken audio required per second of WALKING.
+#: MEASURED. Seconds of spoken audio required per second of WALKING.
 #:
-#: THE DENOMINATOR IS WALKING TIME, and that is the whole point.
-#: This was a share of the REQUESTED duration, which asked "does this tour talk for a
-#: fifth of its length?". That question only made sense while a tour's length was
-#: walking plus talking. Now that a stop lasts as long as the place and the visitor
-#: jointly justify, a five-hour tour can spend three and a half hours standing still —
-#: and the old form demanded 57 minutes of continuous narration to approve it, which
-#: refuses exactly the long, stop-heavy day the planner produces. Re-measuring the old
-#: fraction would have been a no-op: neither of its terms moves under the new time
-#: model.
+#: The denominator is walking time: silence while standing is the product working,
+#: silence while walking is the defect. A stop lasts as long as the place and the
+#: visitor justify, so a five-hour tour can spend three and a half hours standing still;
+#: a share of the requested duration would demand nearly an hour of continuous narration
+#: and refuse exactly the long, stop-heavy day the planner produces.
 #:
-#: Silence while you STAND somewhere is the product working; silence while you WALK for
-#: an hour is the defect. Walking time is the denominator that asks that directly.
-#:
-#: RE-MEASURED on the SAME eight tracked tours the previous value was derived from
-#: (``data/certification/tour-batch-v1``), by the same method, against the new
-#: denominator:
+#: MEASURED on the eight authored certification tours:
 #:
 #:     0.738 paris-pont-neuf-notre-dame-60
 #:     0.541 paris-ile-open-90
@@ -175,12 +125,10 @@ STARVE_FLOOR_MAX_SHARE_OF_CAP: float = 0.5
 #:     0.059 paris-west-axis-90            <- genuinely starved: 5.0 min of audio
 #:                                            across 85.3 min of walking
 #:
-#: The gap between the two poles is far wider under this denominator than it was
-#: under the old one (5.5x, against 1.5x before), which is itself evidence that
-#: walking is the quantity the check was always reaching for.
+#: The two poles sit 5.5x apart under this denominator.
 #:
-#: AND ONE INTERIOR-HEAVY TOUR ADDED to the derivation set, because all eight above
-#: predate visit time and a threshold calibrated on exterior-only tours alone is
+#: AND ONE INTERIOR-HEAVY TOUR ADDED to the derivation set, because the eight above
+#: are exterior-only and a threshold calibrated on exterior-only tours alone is
 #: off-distribution for what the planner produces: the 300-minute Rue Royale ->
 #: Notre-Dame flagship, 22.6 min of audio across 85.8 min of walking, 7 stops —
 #: **0.263**, and the worst tour that must PASS.
@@ -198,14 +146,11 @@ STARVE_FLOOR_MAX_SHARE_OF_CAP: float = 0.5
 #: between 0.055 and 0.124 blocks the identical thirteen, so this value is not
 #: balanced on a knife edge.
 #:
-#: The previous value was 0.19 of the REQUESTED duration. It cannot be compared to
-#: this one: different question, different denominator.
-#:
 #: It is NOT a target. Guarded from both sides by
 #: test_c3_clears_the_certification_corpus_and_still_blocks_the_starved_tour.
 MIN_AUDIO_FRAC_OF_WALKING: float = 0.12
 
-#: MEASURED, 2026-07-19, over every real composed tour in ``data/*/tours/`` — 195 tour
+#: MEASURED over every real composed tour in ``data/*/tours/`` — 195 tour
 #: files: **paris 191, london 4. ``data/new_york/tours/`` DOES NOT EXIST** and
 #: contributed nothing, so this is a Paris-dominated sample (paris 485 of 501
 #: stop/tour samples with a nonzero tour mean), not a three-city one. No measured or
@@ -288,12 +233,11 @@ class RubricReport:
 def c3_audio_floor_seconds(walk_seconds: int) -> float:
     """The C3 thinness floor, in seconds of spoken audio, for a route's WALKING time.
 
-    THE QUESTION IS "ARE THE WALKS SILENT?". It used to be
-    "does this tour talk for a fifth of its length?", which was the right question only
-    while a tour's length was walking plus talking. Since a stop now lasts as long as
-    the place and the visitor jointly justify, a five-hour tour can spend three and a
-    half hours standing in and around buildings — and the old form demanded 57 minutes
-    of continuous narration to approve it. That refuses a good day: about 35 minutes of
+    THE QUESTION IS 'ARE THE WALKS SILENT?', not 'does this tour talk for a fifth of
+    its length?'. A stop lasts as long as the place and the visitor jointly justify,
+    so a five-hour tour can spend three and a half hours standing in and around
+    buildings, and a fraction of total length would demand 57 minutes of continuous
+    narration to approve it. That refuses a good day: about 35 minutes of
     audio across five hours, where a visitor stands twenty minutes at Concorde for four
     minutes of talking and does not feel short-changed.
 
@@ -353,7 +297,7 @@ def _concurrent_audio_seconds(script: Script, beat_sequence: BeatSequence | None
         for s in script.script
         if is_walk_concurrent(s, vignette_ids, transit_ids)
     )
-    return round(words / SPOKEN_WPM * 60)
+    return spoken_seconds_for_words(words)
 
 
 def score_tour(
@@ -391,7 +335,7 @@ def score_tour(
         "words_by_stop": dict(sorted(words_by_stop.items())),
     }
 
-    # ── C3: ARE THE WALKS SILENT? ───────────────────────────────────────────
+    # C3: are the walks silent?
     # Delivered audio against the tour's own WALKING time, not against the requested
     # duration. A stop the traveller stands at for twenty
     # minutes and hears four minutes about is the product working; an hour of walking
@@ -401,7 +345,7 @@ def score_tour(
     # 210-tour measurement behind the number.
     #
     # Without C3 the rubric BLESSES a starved tour, which it did on a 2-stop/9.4-min run.
-    duration_min = getattr(script.inputs, "duration_min", 0) or 0
+    duration_min = script.inputs.duration_min
     walk_s = route.total_walk_seconds
     if walk_s > 0:
         floor_s = c3_audio_floor_seconds(walk_s)
@@ -419,13 +363,12 @@ def score_tour(
                 )
             )
 
-    # ── C7: time-budget overrun — walk + STATIONARY listening vs the engine's total ─
+    # C7: time-budget overrun, walk plus stationary listening against the engine's total.
     # INHERITED ceiling, nothing new computed. ``Route.err_short_total_seconds`` is a
-    # POLICY-STAMPED field, not a 0.83 derivation: ``summarise_route`` writes the
-    # planning budget's own ``nominal_elapsed_seconds`` onto it, so this reads the
-    # ceiling the route was actually planned to straight off ``route``. (The field name
-    # is historical — the nominal fraction has been 1.00 since 2026-08-04, when the flat
-    # 0.83 policy was deleted.) Skipped when the Route carries no total
+    # POLICY-STAMPED field: ``summarise_route`` writes the planning budget's own
+    # ``nominal_elapsed_seconds`` onto it, so this reads the ceiling the route was
+    # actually planned to straight off ``route``. (The field name says err-short; it
+    # holds the policy's nominal elapsed seconds.) Skipped when the Route carries no total
     # (the field's own unset sentinel, 0 — e.g. a Route built directly in a test).
     #
     # AUDIO SPOKEN WHILE WALKING IS FREE: narration heard while walking is part of
@@ -455,43 +398,23 @@ def score_tour(
     report.stats["audio_stationary_s"] = stationary_s
 
     if route.err_short_total_seconds > 0:
-        # THE THIRD KIND OF TIME. The two above are both about LISTENING, and
-        # listening is not the only way to spend a minute you are not walking: a
-        # visitor can stand twenty minutes at Concorde for four minutes of audio and be
-        # content. Counting only stationary AUDIO would say that stop cost four
-        # minutes; the visitor spent twenty.
-        #
-        # THE SAME TWO TERMS THE PLANNER'S FINAL GATE USES, deliberately. That gate
-        # computes `route.total_walk_seconds + served dwell`, so C7 must compose the
-        # same pair or the rubric and the planner disagree about the same tour.
-        # Reading the
-        # route's own declared walk total (rather than re-summing its legs) is what
-        # keeps them identical on a route somebody CONSTRUCTED as well as on one
-        # `summarise_route` built.
-        #
-        # Stationary audio is already inside each stop's dwell
-        # (`stop_seconds(visit, narration)`), and concurrent audio is inside its
-        # leg's walk, so audio spoken while walking stays free by construction rather
-        # than by subtraction. The two audio numbers above stay as REPORTED STATS: they
-        # are what C7b judges and what a reader needs to see, but they no longer
-        # decide C7.
+        # C7 counts dwell, not only listening: a visitor can stand twenty minutes at
+        # Concorde for four minutes of audio. It uses the planner's final-gate terms,
+        # the route's declared walk total plus served dwell, so the rubric and the
+        # planner agree on the same tour, constructed or built by `summarise_route`.
+        # Stationary audio sits inside dwell and concurrent audio inside the walk, so
+        # the audio stats above are reported for C7b and do not decide C7.
         actual_total_s = served_elapsed_seconds(
             route.total_walk_seconds,
             sum(sp.dwell_seconds for sp in script.selected_pois),
         )
         report.stats["time_budget_actual_s"] = actual_total_s
         report.stats["time_budget_ceiling_s"] = route.err_short_total_seconds
-        # The ceiling percentage is DERIVED FROM THE ROUTE, never from a planning
-        # constant. This message used to interpolate the flat 0.83 as a literal, but
-        # the premium/certification lane plans at a nominal fraction of 1.00, so on
-        # every premium tour the sentence said "83% of the requested duration" while
-        # the arithmetic above correctly used the route's own stamped total. The number
-        # a reader is shown must be the one the check actually measured against.
+        # The ceiling percentage comes from the route, never from a planning constant,
+        # so the number a reader is shown is the one the check measured against.
         ceiling_note = (
             f" ({route.err_short_total_seconds / (duration_min * 60):.0%} of the "
             f"requested duration)"
-            if duration_min
-            else ""
         )
         if actual_total_s > route.err_short_total_seconds:
             report.findings.append(
@@ -510,27 +433,16 @@ def score_tour(
                 )
             )
 
-    # ── C7b: leg audio may not outrun the leg ──────────────────────────────────
+    # C7b: leg audio may not outrun the leg.
     # Concurrent audio is free only while the tourist is still walking. Narration
     # that outlasts its leg either cuts off on arrival or holds the tourist on the
     # pavement — so the free-airtime budget is the walk itself.
     #
-    # THE MIN IS STILL HERE AND IT IS STILL LOAD-BEARING — but not for the reason
-    # it used to be, and the difference matters enough to write down.
-    #
-    # It was a hedge between two DIFFERENT FORMULAS: this line summed the legs one
-    # way and ``summarise_route`` totalled them another, and across six real Paris
-    # tours they differed by -119s to +499s (ile_arch_60: 736 vs 1115). Now there
-    # is one expression — ``routing.total_walk_seconds`` — so on any route
-    # ``summarise_route`` built,
-    # the two sides of this min are provably equal and it is a no-op.
-    #
-    # It is NOT a no-op on a route somebody CONSTRUCTED: the timebox repair's
-    # trials and the scoring harnesses set ``total_walk_seconds`` directly while
-    # passing ``transits=()``. C7b is a BLOCKER about whether narration fits a
-    # walk, so it must never overstate the airtime available, and the min is what
-    # keeps a declared total from outranking the legs actually present. Do not
-    # collapse it into the tautology it now looks like on the happy path.
+    # On a route ``summarise_route`` built, both sides of the min equal
+    # ``routing.total_walk_seconds``. On a constructed route they differ: the timebox
+    # repair's trials and the scoring harnesses set ``total_walk_seconds`` directly
+    # while passing ``transits=()``. C7b is a BLOCKER about whether narration fits a
+    # walk, so a declared total must never outrank the legs actually present.
     leg_seconds_total = total_walk_seconds(route.transits)
     total_leg_walk_s = (
         min(leg_seconds_total, route.total_walk_seconds)
@@ -551,7 +463,7 @@ def score_tour(
             )
         )
 
-    # ── C6: no empty stop ───────────────────────────────────────────────────
+    # C6: no empty stop.
     # DRIVEN FROM THE STOP ROSTER, not from the rendered sentences. Iterating
     # ``words_by_stop`` made this check UNREACHABLE for the exact condition it
     # names: a stop that rendered NO Sentence at all has no key in that dict, so
@@ -567,9 +479,9 @@ def score_tour(
     # the same ordered Route. It is NOT keyed on beat_sequence.poi_beats, which is a
     # lookup BY POI ID inside that walk and may legitimately not cover every POI.
     #
-    # The pinned-endpoint sentinel (``_END_B_SENTINEL_PREFIX``, generation.py:891)
-    # is skipped: it is a materialised destination with no POI of its own and is
-    # content-free BY DESIGN, so silence there is not a defect.
+    # The pinned-endpoint sentinel (``END_B_SENTINEL_PREFIX``) is skipped: it is a
+    # materialised destination with no POI of its own and is content-free BY
+    # DESIGN, so silence there is not a defect.
     #
     # A roster entry with NO SEATED PLAN (``beat_sequence.poi_beats`` has no entry
     # for it, so ``ScriptPOI.beat_ids`` is empty) is deliberately NOT skipped. It is
@@ -580,7 +492,7 @@ def score_tour(
     # at ITS stop_idx by ``generation._build_transit``) and so never reaches zero
     # words. Only a genuinely silent stop fires.
     for stop_idx, poi in enumerate(script.selected_pois):
-        if poi.id.startswith(_END_B_SENTINEL_PREFIX):
+        if poi.id.startswith(END_B_SENTINEL_PREFIX):
             continue
         if words_by_stop.get(stop_idx, 0) == 0:
             report.findings.append(
@@ -593,7 +505,7 @@ def score_tour(
                 )
             )
 
-    # ── C1 starvation / C8 gorging, per anchor ──────────────────────────────
+    # C1 starvation and C8 gorging, per anchor.
     # ScriptPOI carries the POI roster in stop order; stop_idx indexes it.
     for stop_idx, poi in enumerate(script.selected_pois):
         words = words_by_stop.get(stop_idx, 0)
@@ -636,16 +548,16 @@ def score_tour(
                     severity=Severity.BLOCKER,
                     message=(
                         f"{words} words in one stop (cap {GORGE_MAX_WORDS_PER_STOP}, "
-                        f"~{words / WORDS_PER_MINUTE:.1f} min of unbroken narration)"
+                        f"~{words / SPOKEN_WPM:.1f} min of unbroken narration)"
                     ),
                     stop_idx=stop_idx,
                     poi_name=poi.name,
                 )
             )
 
-    # ── C2: tier inversion — a tier-5 POI reduced to a walk-past one-liner ──
+    # C2: tier inversion, a tier-5 POI reduced to a walk-past one-liner.
     anchor_ids = {p.id for p in script.selected_pois}
-    vignette_pois = [v for group in (route.vignettes or {}).values() for v in group]
+    vignette_pois = [v for group in route.vignettes.values() for v in group]
     anchor_tiers = [p.tier for p in script.selected_pois]
     lowest_anchor_tier = min(anchor_tiers) if anchor_tiers else 5
     for vig in vignette_pois:
@@ -665,7 +577,7 @@ def score_tour(
                 )
             )
 
-    # ── C4: stop balance ────────────────────────────────────────────────────
+    # C4: stop balance.
     if total_words and words_by_stop:
         top_idx, top_words = max(words_by_stop.items(), key=lambda kv: kv[1])
         share = top_words / total_words
@@ -679,7 +591,7 @@ def score_tour(
                 )
             )
 
-    # ── C12: two adjacent anchors close enough to deserve a human glance ────
+    # C12: two adjacent anchors close enough to deserve a human glance.
     # WARN, not BLOCKER — see MIN_STOP_SEPARATION_M's provenance comment above.
     # Consecutive anchors only: a tour legitimately revisits an area. Distance ALONE
     # cannot tell "the same place told twice" (17 m Palais de Justice/Conciergerie,
@@ -709,7 +621,7 @@ def score_tour(
                 )
             )
 
-    # ── C5: verbatim repetition ─────────────────────────────────────────────
+    # C5: verbatim repetition.
     seen: dict[str, int] = {}
     for sentence in script.script:
         key = " ".join(sentence.text.lower().split())
@@ -727,7 +639,7 @@ def score_tour(
         else:
             seen[key] = sentence.stop_idx
 
-    # ── C9/C11: narration-quality reuse, per stop (C10 deleted 2026-07-27) ──
+    # C9/C11: narration-quality reuse, per stop.
     # REUSE narration_quality.score_narration — the rubric reads those metrics
     # rather than computing its own. No new lexical logic is added below; only
     # score_narration's own numbers are read.
@@ -740,8 +652,8 @@ def score_tour(
 
         # C9: sentence length for the ear. The cap is a JUDGEMENT anchored on the
         # measured 19.11 of the hand-written gold text that MAX_SENTENCE_WORDS
-        # describes, NOT on the Nubart 10-15
-        # museum-copy range it used to cite — the gold fails that range. WARN — a long
+        # describes; the gold fails the 10-15 museum-copy range, so that range is not
+        # the anchor. WARN — a long
         # mean is a craft smell surfaced to the editor, not grounds to refuse serving.
         if nq.mean_sentence_words > MAX_SENTENCE_WORDS:
             report.findings.append(
@@ -756,22 +668,10 @@ def score_tour(
                 )
             )
 
-        # C10 (opens with a look-cue) WAS HERE. DELETED 2026-07-27, and NOT replaced —
-        # opener quality is currently UNCHECKED. See
-        # tests/...::test_openers_are_unchecked_since_c10_was_deleted, which pins the gap.
-        #
-        # It asked a MEANING question with a word list. narration_quality._LOOK_INITIAL
-        # is a regex matching 18 sentence-initial verbs (look|notice|spot|glance|watch|
-        # turn|cross|walk|stop|pause|head|carry on|step|face|find). The gold text
-        # (see MAX_SENTENCE_WORDS) opens "Here, at the corner of rue de Castiglione and
-        # rue de Rivoli, stands the Hotel Le Meurice" — a clear instance of
-        # orientation before history — and C10 rated it "a bare fact, not a
-        # look-cue". It fired on 100% of 191 saved tours and on the gold text itself,
-        # so it separated nothing.
-        #
-        # It cannot be fixed by extending the word list; that is the same shortcut with
-        # more words. The replacement is a semantic judgement of the opener, and no
-        # such check exists yet.
+        # Opener quality is not checked. Whether a stop opens by orienting the
+        # listener is a meaning question; a word list of sentence-initial verbs
+        # cannot answer it, and no semantic opener check exists.
+        # test_openers_are_unchecked_since_c10_was_deleted pins the gap.
 
         stop_year_densities[stop_idx] = nq.per_100w["year_density"]
 
@@ -803,7 +703,7 @@ def score_tour(
                 if density > outlier_threshold
             }
 
-    # ── C13: POINT FIRST (WARN) ──────────────────────────────────────────────
+    # C13: point first (warn).
     # Two things a $0 check can see of "the point lands in the first minute": the
     # STORY starts early (the glue before the stop's first beat sentence — the recap,
     # the walking line — stays under POINT_FIRST_PREAMBLE_MAX_WORDS), and the stop's
@@ -815,7 +715,7 @@ def score_tour(
     for sentence in script.script:
         sentences_by_stop.setdefault(sentence.stop_idx, []).append(sentence)
     for stop_idx, poi in enumerate(script.selected_pois):
-        if poi.id.startswith(_END_B_SENTINEL_PREFIX) or not poi.beat_ids:
+        if poi.id.startswith(END_B_SENTINEL_PREFIX) or not poi.beat_ids:
             continue
         sents = sentences_by_stop.get(stop_idx, [])
         if not any(s.source_type == "beat" for s in sents):
@@ -867,7 +767,7 @@ def score_tour(
                 )
             )
 
-    # ── Spatial claim geometry — NOT PART OF THIS FLOOR ─────────────────────
+    # Spatial claim geometry is not part of this floor.
     # No check here tests whether a directional cue is geometrically true. A
     # spatial-claim checker was built, measured on real data, and removed.
     #
@@ -899,7 +799,7 @@ def score_tour(
     return report
 
 
-# ── compose_fixable: is a BLOCKER worth another compose pass? ───────────────
+# compose_fixable: is a BLOCKER worth another compose pass?
 #
 # Reading BLOCKER as "a BLOCKER regenerates the script" treats it as one
 # predicate. It is two: (a) may this tour be SERVED (score_tour's

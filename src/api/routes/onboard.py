@@ -37,7 +37,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ValidationError
 
 from src import city_registry
-from src.onboard.assemble import AssembledCity, assemble, write_city
+from src.onboard.assemble import AssembledCity, assemble, atomic_write_text, write_city
 from src.onboard.beat_draft import (
     CostNotConfirmed,
     draft_all,
@@ -48,6 +48,7 @@ from src.onboard.flow import (
     MODE_CONNECTORS,
     build_extract_index,
     consult_source,
+    env_path,
     resolve_connectors,
 )
 from src.onboard.jobs import get_store
@@ -107,13 +108,6 @@ def _run_deploy(cmd: list[str], env: dict) -> subprocess.CompletedProcess:
     return subprocess.run(
         cmd, cwd=str(REPO_ROOT), capture_output=True, text=True, check=False, env=env
     )
-
-
-def _env_path(name: str) -> Path | None:
-    """The ``Path`` in env var ``name``, or ``None`` when unset/empty (so
-    ``write_city`` falls back to the real ``data/`` + ``src/cities.json``)."""
-    value = os.getenv(name)
-    return Path(value) if value else None
 
 
 # ---------------------------------------------------------------------------
@@ -365,13 +359,12 @@ def upload_job(job_id: str, body: UploadRequest) -> dict:
     city_dir = write_city(
         assembled,
         ctx,
-        data_root=_env_path("ONBOARD_DATA_ROOT"),
-        registry_path=_env_path("ONBOARD_REGISTRY_PATH"),
+        data_root=env_path("ONBOARD_DATA_ROOT"),
+        registry_path=env_path("ONBOARD_REGISTRY_PATH"),
     )
-    beats_path = city_dir / "beats.json"
-    tmp = beats_path.with_name(beats_path.name + ".tmp")
-    tmp.write_text(json.dumps(art.beats, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    os.replace(tmp, beats_path)
+    atomic_write_text(
+        city_dir / "beats.json", json.dumps(art.beats, indent=2, ensure_ascii=False) + "\n"
+    )
 
     cmd = [sys.executable, "-m", "scripts.deploy", "--slug", ctx.slug]
     env = {**os.environ}  # inherit the API's OWN NEO4J_* etc.

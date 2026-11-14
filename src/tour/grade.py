@@ -26,7 +26,7 @@ W_VALIDATION = 0.10
 
 # A generated tour must grade at or above this to pass. Calibrated to
 # measure the SHIPPED path (build_poi_beat_plans_capped, 9 beats
-# on Île) rather than the raw uncapped path (23 beats). Measured 2026-08-27:
+# on Île) rather than the raw uncapped path (23 beats). Measured:
 # Île 0.506, PdV 0.743. The floor is 85% of the lower score = 0.43.
 GRADE_BASELINE = 0.43
 
@@ -74,11 +74,10 @@ def grade_tour(
     upload, which rotate on every re-seed; a fixture keyed that way can never
     match real output.
 
-    An empty expectation is a BROKEN FIXTURE, not a perfect tour. This used to
-    read a key the re-key had deleted and fall through to a 1.0 recall, so a
-    tour that reproduced NOTHING scored ``beat_overlap=1.00`` and passed the
-    baseline. Refuse loudly instead: a silent 1.0 launders exactly the
-    regression this gate exists to catch.
+    An empty expectation is a BROKEN FIXTURE, not a perfect tour: it would score
+    ``beat_overlap=1.00`` for a tour that reproduced nothing and pass the baseline.
+    Refuse loudly instead; a silent 1.0 launders exactly the regression this gate
+    exists to catch.
     """
     expected_pois = set(fixture.get("expected_pois") or ())
     expected_beats = set(fixture.get("expected_stable_beat_ids") or ())
@@ -101,11 +100,7 @@ def grade_tour(
     poi_recall = _recall(expected_pois, set(generated_poi_names))
     beat_overlap = _recall(expected_beats, set(generated_beat_ids))
 
-    # SAME FAIL-OPEN CLASS AS THE BEATS AXIS ABOVE, and it survived the first repair of
-    # it: a fixture with no `expected_spine_area` and an engine that produced no spine
-    # compared None == None and scored a free 1.0 — 0.20 of a 0.65 baseline for declaring
-    # nothing. An absent expectation is a broken
-    # fixture on every axis, not just the one that happened to be reported.
+    # A fixture without expected_spine_area is broken: None == None would score a free 0.20.
     expected_spine = fixture.get("expected_spine_area")
     if not expected_spine:
         raise ValueError(

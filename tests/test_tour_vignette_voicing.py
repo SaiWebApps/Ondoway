@@ -28,10 +28,11 @@ from src.tour.contract import (
     TransitSegment,
     ValidationReport,
 )
-from src.tour.generation import GLUE_NAV, GLUE_REFLECTION, SPOKEN_WPM, generate
+from src.tour.generation import GLUE_NAV, GLUE_REFLECTION, generate
 from src.tour.glue_client import MockGlueClient
 from src.tour.reflection import reflection_slots
 from src.tour.render_md import stop_narration_text
+from src.tour.routing import SPOKEN_WPM
 from src.tour.validation import validate_script
 
 _NOW = dt.datetime(2026, 7, 2, tzinfo=dt.UTC)

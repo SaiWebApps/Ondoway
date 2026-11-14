@@ -41,18 +41,19 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from collections import Counter
 from pathlib import Path
 
 from scripts import validate_beats
-from src.onboard.assemble import assemble, write_city
+from src.onboard.assemble import assemble, atomic_write_text, write_city
 from src.onboard.flow import (
     FIXTURES_ROOT,
     OnboardError,
     build_extract_index,
     consult_source,
+    env_path,
+    load_json,
     resolve_connectors,
 )
 from src.onboard.jobs import get_store
@@ -65,17 +66,6 @@ from src.onboard.models import CityContext
 _DRY_RUN_BEATS_PER_POI = 3
 
 
-def _load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
-
-
-def _atomic_write_text(path: Path, text: str) -> None:
-    """Write ``text`` to ``path`` atomically (tmp sibling + ``os.replace``)."""
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(text, encoding="utf-8")
-    os.replace(tmp, path)
-
-
 def _geocode(city: str) -> CityContext:
     """Fixture-mode geocode: read ``run/city.json`` into a ``CityContext``.
 
@@ -85,7 +75,7 @@ def _geocode(city: str) -> CityContext:
     city_json = FIXTURES_ROOT / city / "run" / "city.json"
     if not city_json.exists():
         raise OnboardError(f"no city fixture for {city!r}: {city_json} not found")
-    data = _load_json(city_json)
+    data = load_json(city_json)
     return CityContext(
         slug=data["slug"],
         display_name=data["display_name"],
@@ -113,12 +103,6 @@ def _load_beat_drafter():
         )
         raise SystemExit(3) from exc
     return draft_all, CostNotConfirmed
-
-
-def _env_path(name: str) -> Path | None:
-    """The ``Path`` in env var ``name``, or ``None`` if unset/empty."""
-    value = os.getenv(name)
-    return Path(value) if value else None
 
 
 def run(city: str, modes: list[str], *, confirm_cost: bool, dry_run: bool = False) -> int:
@@ -164,15 +148,15 @@ def run(city: str, modes: list[str], *, confirm_cost: bool, dry_run: bool = Fals
     city_dir = write_city(
         assembled,
         ctx,
-        data_root=_env_path("ONBOARD_DATA_ROOT"),
-        registry_path=_env_path("ONBOARD_REGISTRY_PATH"),
+        data_root=env_path("ONBOARD_DATA_ROOT"),
+        registry_path=env_path("ONBOARD_REGISTRY_PATH"),
     )
 
     beats_path = city_dir / "beats.json"
-    _atomic_write_text(beats_path, json.dumps(beats, indent=2, ensure_ascii=False) + "\n")
+    atomic_write_text(beats_path, json.dumps(beats, indent=2, ensure_ascii=False) + "\n")
 
     errors = validate_beats.validate(beats_path)
-    registry_path = _env_path("ONBOARD_REGISTRY_PATH")
+    registry_path = env_path("ONBOARD_REGISTRY_PATH")
 
     _print_summary(ctx, assembled, beats, city_dir, registry_path, errors)
     return 1 if errors else 0

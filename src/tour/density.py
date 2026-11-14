@@ -36,6 +36,7 @@ from .routing import (
     envelope_radius_m,
     haversine_m,
     route_planning_budget,
+    target_dwell_seconds,
 )
 from .visit_time import stop_seconds, visit_seconds
 
@@ -149,9 +150,7 @@ class TourabilityRefusedError(Exception):
         )
 
 
-# ---------------------------------------------------------------------------
 # Public API
-# ---------------------------------------------------------------------------
 
 
 def assess(
@@ -178,10 +177,8 @@ def assess(
     duration_min = tour_input.duration_min
     round_trip = tour_input.round_trip
 
-    # THE GATE AND THE PLANNER MUST SHRINK TOGETHER.
-    # `select_route` derives this same multiplier from the same
-    # `TourInput.walking_pace` field; reading it here rather than threading a
-    # second parameter is what keeps the two readings from drifting apart.
+    # Same `TourInput.walking_pace` that `select_route` reads, so gate and planner
+    # shrink together.
     pace_multiplier = tour_input.walking_pace if tour_input.walking_pace is not None else 1.0
     walk_radius_m = envelope_radius_m(
         duration_min,
@@ -221,22 +218,16 @@ def assess(
         poi_audio_s = 0
         poi_on_lens_audio_s = 0
         for beat in active:
-            secs = _beat_spoken_seconds(beat)
+            secs = beat_spoken_seconds(beat)
             poi_audio_s += secs
             if requested_lenses and requested_lenses.intersection(
                 s.lower() for s in beat.lenses
             ):
                 poi_on_lens_audio_s += secs
-        # BOTH HALVES OF THE RATIO ARE NOW STANDING-STILL SECONDS. Until
-        # 2026-08-06 the numerator was beat seconds and the denominator became a
-        # dwell target, which would have judged a pool measured in narration
-        # against a target measured in visits — the identical drift this
-        # module's own history records, where the gate judged 1793 s against a
-        # planner aiming at 2160 s and served a thin tour as healthy.
-        #
-        # Audio here is UNCAPPED on purpose. This is a measure of what the POOL
-        # holds, not of what one route would emit, and it is the currency
-        # selection.py's delivered-thin check has always used.
+        # Both halves of the ratio are standing-still seconds: a pool measured in
+        # narration against a target measured in visits would serve a thin tour as
+        # healthy. Audio is uncapped on purpose: this measures what the pool holds,
+        # not what one route emits.
         visit_s = visit_seconds(poi, interest, snapshot)
         dwell_capacity_s += stop_seconds(visit_s, poi_audio_s)
         # "Thin for YOUR interest": a place that says nothing about the declared
@@ -247,7 +238,9 @@ def assess(
             on_lens_dwell_s += stop_seconds(visit_s, poi_on_lens_audio_s)
         reachable_beat_count += len(active)
 
-    target_dwell_s = _target_dwell_seconds(duration_min, planning_policy)
+    # The planner's own standing-still target, so the gate judges the pool against
+    # the same number selection then fills.
+    target_dwell_s = target_dwell_seconds(duration_min, planning_policy)
     fill_ratio = dwell_capacity_s / target_dwell_s if target_dwell_s > 0 else 0.0
     on_lens_fill_ratio: float | None = (
         (on_lens_dwell_s / target_dwell_s if target_dwell_s > 0 else 0.0)
@@ -340,31 +333,7 @@ def assess_snapshot(
     )
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
-
-
-def _target_dwell_seconds(duration_min: int, planning_policy: RoutePlanningPolicy) -> int:
-    """The planner's OWN standing-still target — the number selection then fills.
-
-    Derived from the planning budget rather than restated here. Until 2026-08-04 this
-    was a bare ``duration_min x 0.83 x 0.6 x 60``, which no policy could reach: after
-    the walk envelope started following the certification policy, the gate would have
-    judged a pool against 1793 s while the planner aimed at 2160 s — reading GREEN on a
-    pool holding barely half the content the tour needed, which is a thin tour served as
-    healthy, exactly what this module exists to prevent.
-
-    That history is why the numerator moved in the SAME step as this rename on
-    2026-08-06: a target measured in visits against a pool measured in narration
-    is the same defect wearing different clothes.
-    """
-    return route_planning_budget(duration_min, planning_policy).dwell_target_seconds
-
-
-def _beat_spoken_seconds(beat: BeatRef) -> int:
-    """Voiced seconds for one beat (delegates to the shared routing clock)."""
-    return beat_spoken_seconds(beat)
 
 
 def _compactness(anchors: list[POI], walk_radius_m: float) -> float:
@@ -431,13 +400,12 @@ def _status(
         and cluster_compactness <= YELLOW_CLUSTER_COMPACTNESS_MAX
         and fill_ratio >= YELLOW_FILL_RATIO_MIN
     )
-    # Monotonicity in fill (2026-07-02): a pool with
-    # MORE than enough audio (fill >= 1.0) that misses GREEN on anchors or
-    # compactness previously fell through every clause to RED — refusing as
-    # "insufficient corpus" while holding a surplus, and (worse) adding audio
-    # capacity could flip an accept into a refusal (fill 0.9 -> YELLOW but
-    # fill 1.2 with 2 anchors -> RED). Surplus fill is always at least
-    # YELLOW: generate, but warn about the spread/thin-anchor shape.
+    # Monotonicity in fill: a pool with MORE than enough audio (fill >= 1.0) that
+    # misses GREEN on anchors or compactness is at least YELLOW, never RED.
+    # Otherwise it would be refused as "insufficient corpus" while holding a
+    # surplus, and adding audio capacity could flip an accept into a refusal (fill
+    # 0.9 -> YELLOW but fill 1.2 with 2 anchors -> RED). Generate, but warn about
+    # the spread/thin-anchor shape.
     yellow_by_surplus_fill = fill_ratio >= GREEN_FILL_RATIO_MIN
     if yellow_by_fill or yellow_by_anchors or yellow_by_surplus_fill:
         return "YELLOW"

@@ -185,14 +185,12 @@ def place_day(tour_input: TourInput) -> PlacementPolicy:
     )
 
 
-# ---------------------------------------------------------------------------
 # THE CHAPTERS of a marquee stop: segments ONLY where a person placed the coordinates,
 # marquee anchors only; outdoor auto at a standstill, interior by tap, couple and
 # family all taps, never re-triggered. The reviewed anchors ride the corpus record
 # (`POI.anchors`); THE one rule here cuts a stop's STORY at them: a beat whose
 # `sub_location` an anchor names is told AT that anchor as the anchor's own piece,
 # everything else stays the arrival story, in order. Glue stays with the story.
-# ---------------------------------------------------------------------------
 
 
 class StopSegment(BaseModel):

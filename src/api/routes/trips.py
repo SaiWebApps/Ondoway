@@ -84,7 +84,6 @@ from src.tour.placement import StopSegment, place_anchors, place_day, place_stop
 from src.tour.premium_tour import (
     FULL_TELLING_DROPPED_DEGRADATION,
     PREMIUM_MODULE_VERSION,
-    EphemeralReceiptSink,
     FullTelling,
     PremiumComposeExecutor,
     PremiumRouteInfeasibleError,
@@ -1122,7 +1121,6 @@ def compose_trip(
             physical_responses = execute_premium_plan(
                 plan,
                 executor=RecipeFirstExecutor(premium_executor, recipe_uses),
-                receipt_sink=EphemeralReceiptSink(),
             )
             try:
                 premium_result = finalize_premium_tour(
@@ -1366,9 +1364,7 @@ def compose_trip(
                         )
                 if full is None:
                     full_responses = execute_premium_plan(
-                        full_plan,
-                        executor=premium_executor,
-                        receipt_sink=EphemeralReceiptSink(),
+                        full_plan, executor=premium_executor
                     )
                     full = finalize_premium_full_telling(
                         full_plan,
@@ -1912,11 +1908,7 @@ def _compose_standby_narration(
                 )
                 composed = finalize_premium_tour(
                     unit_plan,
-                    execute_premium_plan(
-                        unit_plan,
-                        executor=premium_executor,
-                        receipt_sink=EphemeralReceiptSink(),
-                    ),
+                    execute_premium_plan(unit_plan, executor=premium_executor),
                     faithfulness_checker=faithfulness_checker,
                     build_identity=build_identity,
                 ).blueprint.script

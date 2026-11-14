@@ -112,7 +112,6 @@ def test_routes_exact_mapping_to_one_purpose_specific_physical_call() -> None:
         CallPurpose.CALIBRATION,
         CallPurpose.FACT_REVIEW,
         CallPurpose.ENJOY_REVIEW,
-        CallPurpose.ADJUDICATION,
     ],
 )
 def test_every_review_purpose_uses_only_the_zero_retry_judge_boundary(purpose: CallPurpose) -> None:

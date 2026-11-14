@@ -1,6 +1,6 @@
 """Canonical physical request envelopes for bounded quality-provider calls.
 
-Both the adapters and terminal replay use these builders.  A request hash therefore
+The batch review builds every request through these builders.  A request hash therefore
 binds the model, token ceiling, policy, task, JSON schema, messages, and exact typed
 input instead of merely proving that some response happened.
 """
@@ -26,19 +26,15 @@ from .quality_certification import (
     FactPolicyCalibrationCase,
     FactPolicyCalibrationVerdict,
     FactReviewInput,
-    FactSentenceVerdict,
-    QualityAdjudicationInput,
     resolve_enjoyment_evidence_offsets,
 )
 
 FACT_MAX_OUTPUT_TOKENS = 64_000
 ENJOY_MAX_OUTPUT_TOKENS = 16_000
-MAX_REVIEW_INPUT_BYTES = 750_000
 
 #: Sonnet 5 tokenizes ~30% denser than Opus and its adaptive thinking spends more
-#: against the same ceiling: the first live Sonnet calibration burned the full 16K
-#: and truncated mid-JSON (stop_reason max_tokens, 2026-08-28) on the exact request
-#: Opus finished in 6,363 output tokens. Under zero retries a max_tokens stop is
+#: against the same ceiling: 16K truncates mid-JSON on a request Opus finishes in
+#: 6,363 output tokens. Under zero retries a max_tokens stop is
 #: paid-and-lost, so dense models get double the ceiling — a worst-case bound,
 #: never expected spend (billing is actual tokens).
 _DENSE_OUTPUT_MODELS = ("claude-sonnet-5",)
@@ -155,14 +151,6 @@ intentionally absent. Do not compute ENJOY totals or decisions. Return only the
 schema-constrained JSON.
 """
 
-ADJUDICATION_TASK = """\
-Independently review only the candidate sections present in this input. You are blind:
-the primary reviewers' verdicts and explanations are intentionally absent. FACT and
-ENJOY outputs are separate; never infer one from the other. Emit every requested FACT
-sentence and ENJOY item exactly once. Return only the schema-constrained JSON.
-"""
-
-
 class ProviderFactSentenceVerdict(BaseModel):
     """Compact physical FACT result; adaptive reasoning need not be retransmitted."""
 
@@ -172,12 +160,6 @@ class ProviderFactSentenceVerdict(BaseModel):
     sentence_sha256: str
     decision: Literal["PASS", "LICENSED_COLOR", "FAIL"]
     findings: tuple[FactFinding, ...] = ()
-
-
-class FactPayload(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    verdicts: tuple[FactSentenceVerdict, ...]
 
 
 class ProviderFactPayload(BaseModel):
@@ -233,13 +215,6 @@ class ProviderCalibrationPayload(BaseModel):
     enjoyment_assessments: tuple[ProviderEnjoymentScoredAssessment, ...]
 
 
-class ProviderAdjudicationPayload(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    fact_verdicts: tuple[FactSentenceVerdict, ...] = ()
-    enjoyment_assessments: tuple[ProviderEnjoymentScoredAssessment, ...] = ()
-
-
 def materialize_provider_enjoyment_assessments(
     assessments: tuple[ProviderEnjoymentScoredAssessment, ...],
     *,
@@ -273,26 +248,6 @@ def materialize_provider_enjoyment_assessments(
     return resolve_enjoyment_evidence_offsets(tuple(internal), items=items)
 
 
-class EnjoyPayload(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    assessments: tuple[EnjoymentScoredAssessment, ...]
-
-
-class CalibrationPayload(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    fact_verdicts: tuple[FactPolicyCalibrationVerdict, ...]
-    enjoyment_assessments: tuple[EnjoymentScoredAssessment, ...]
-
-
-class AdjudicationPayload(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    fact_verdicts: tuple[FactSentenceVerdict, ...] = ()
-    enjoyment_assessments: tuple[EnjoymentScoredAssessment, ...] = ()
-
-
 def _provider_schema(model: type[BaseModel]) -> dict[str, object]:
     """Compile Pydantic constraints to Anthropic's supported JSON Schema subset.
 
@@ -319,9 +274,6 @@ BATCH_FACT_PROMPT_SHA256 = text_sha256(SHARED_POLICY + BATCH_FACT_TASK)
 ENJOY_PROMPT_SHA256 = text_sha256(SHARED_POLICY + ENJOY_TASK)
 QUALITY_POLICY_SHA256 = text_sha256(SHARED_POLICY)
 CALIBRATION_PROMPT_SHA256 = text_sha256(SHARED_POLICY + CALIBRATION_TASK)
-ADJUDICATION_PROMPT_SHA256 = text_sha256(
-    SHARED_POLICY + FACT_TASK + ENJOY_TASK + ADJUDICATION_TASK
-)
 
 
 def _request_envelope(
@@ -350,19 +302,6 @@ def _request_envelope(
             sort_keys=True,
         ),
         sdk_request,
-    )
-
-
-def fact_request_envelope(
-    request: FactReviewInput, *, model: str
-) -> tuple[str, dict[str, object]]:
-    user = FACT_TASK + "\n\nFACT BATCH:\n" + request.model_dump_json()
-    return _request_envelope(
-        model=model,
-        max_tokens=FACT_MAX_OUTPUT_TOKENS,
-        system=SHARED_POLICY,
-        schema=_provider_schema(FactPayload),
-        user=user,
     )
 
 
@@ -445,77 +384,28 @@ def enjoyment_request_envelope(
     )
 
 
-def adjudication_request_envelope(
-    request: QualityAdjudicationInput, *, model: str
-) -> tuple[str, dict[str, object]]:
-    provider_input = {
-        "blueprint_sha256": request.blueprint_sha256,
-        "fact_request": request.fact_request.model_dump(mode="json"),
-        "enjoyment_items": [
-            item.model_dump(mode="json")
-            for item in sorted(
-                (
-                    *tuple(anchor.item for anchor in request.enjoyment_anchors),
-                    *request.enjoyment_items,
-                ),
-                key=lambda item: item.item_id,
-            )
-        ],
-    }
-    user = (
-        FACT_TASK
-        + "\n\n"
-        + ENJOY_TASK
-        + "\n\n"
-        + ADJUDICATION_TASK
-        + "\n\nBLIND ADJUDICATION INPUT:\n"
-        + json.dumps(
-            provider_input,
-            ensure_ascii=False,
-            separators=(",", ":"),
-            sort_keys=True,
-        )
-    )
-    return _request_envelope(
-        model=model,
-        max_tokens=FACT_MAX_OUTPUT_TOKENS,
-        system=SHARED_POLICY,
-        schema=_provider_schema(ProviderAdjudicationPayload),
-        user=user,
-    )
-
-
 def request_envelope_sha256(envelope: str) -> str:
     return text_sha256(envelope)
 
 
 __all__ = [
-    "ADJUDICATION_PROMPT_SHA256",
     "BATCH_FACT_PROMPT_SHA256",
     "CALIBRATION_PROMPT_SHA256",
     "ENJOY_MAX_OUTPUT_TOKENS",
     "ENJOY_PROMPT_SHA256",
     "FACT_MAX_OUTPUT_TOKENS",
     "FACT_PROMPT_SHA256",
-    "MAX_REVIEW_INPUT_BYTES",
     "QUALITY_POLICY_SHA256",
     "QUALITY_SCHEMA_TRANSFORMER_ID",
     "SHARED_POLICY",
-    "AdjudicationPayload",
-    "CalibrationPayload",
-    "EnjoyPayload",
-    "FactPayload",
-    "ProviderAdjudicationPayload",
     "ProviderCalibrationPayload",
     "ProviderEnjoyPayload",
     "ProviderEnjoymentScoredAssessment",
     "ProviderFactPayload",
     "ProviderFactSentenceVerdict",
-    "adjudication_request_envelope",
     "batch_fact_request_envelope",
     "calibration_request_envelope",
     "enjoyment_request_envelope",
-    "fact_request_envelope",
     "materialize_provider_enjoyment_assessments",
     "request_envelope_sha256",
 ]

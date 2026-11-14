@@ -18,7 +18,6 @@ from pathlib import Path
 from scripts.tour_text_candidate import (
     INPUT_USD_PER_MILLION_TOKENS,
     OUTPUT_USD_PER_MILLION_TOKENS,
-    _canonical_bytes,
     _file_sha256,
     _live_unit,
     _load_completed_receipt,
@@ -36,6 +35,7 @@ from src.tour.batch_regression_manifest import (
     load_frozen_tour_batch,
 )
 from src.tour.certification_provider import PhysicalProviderResponse
+from src.tour.corpus_places import canonical_bytes
 from src.tour.premium_tour import (
     certification_planning_policy,
     finalize_premium_composition,
@@ -135,7 +135,7 @@ def _batch_plan(
         "tours": tours,
     }
     return (
-        {**core, "batch_plan_sha256": _sha256(_canonical_bytes(core))},
+        {**core, "batch_plan_sha256": _sha256(canonical_bytes(core))},
         runtime,
     )
 
@@ -213,9 +213,9 @@ def _assemble_provider_tour(
         "thinking": tour_plan["thinking"],
         "provenance": "provider_response",
         "stops": stops,
-        "customer_text_sha256": _sha256(_canonical_bytes(ordered_text)),
+        "customer_text_sha256": _sha256(canonical_bytes(ordered_text)),
     }
-    tour = {**tour_core, "artifact_sha256": _sha256(_canonical_bytes(tour_core))}
+    tour = {**tour_core, "artifact_sha256": _sha256(canonical_bytes(tour_core))}
     json_path = output_dir / "tour.json"
     if json_path.exists():
         if json.loads(json_path.read_text(encoding="utf-8")) != tour:
@@ -323,7 +323,7 @@ def _execute_batch(
         }
         _private_write_new(
             attempt_path,
-            {**marker_core, "marker_sha256": _sha256(_canonical_bytes(marker_core))},
+            {**marker_core, "marker_sha256": _sha256(canonical_bytes(marker_core))},
         )
 
     failures: list[tuple[str, int, BaseException]] = []

@@ -410,41 +410,7 @@ def verify_claim_coverage(
     return tuple(out)
 
 
-def candidate_duplicate_pairs(
-    script: Script, *, min_overlap: float = 0.3, max_pairs: int = 30
-) -> tuple[tuple[int, str, str], ...]:
-    """High-RECALL pairs of same-stop beat sentences whose content signatures
-    overlap at ``min_overlap`` — candidates the compose LLM is TOLD may restate
-    one fact, so IT (not this threshold) makes the fuse/keep call on each.
-
-    Deliberately loose and hint-only: no threshold safely
-    DROPS at these overlaps, but a hint drops nothing, so recall beats precision.
-    Semantic repeats with near-zero lexical overlap (different framings of one
-    fact) are missed here on purpose — the compose prompt's bold-fusion mandate
-    covers those. Returns up to ``max_pairs`` ``(stop_idx, text_a, text_b)``.
-    """
-    by_stop: dict[int, list[Sentence]] = defaultdict(list)
-    for s in script.script:
-        if s.source_type == "beat":
-            by_stop[s.stop_idx].append(s)
-    pairs: list[tuple[int, str, str]] = []
-    for stop_idx in sorted(by_stop):
-        sents = by_stop[stop_idx]
-        sigs = [_signature(s.text) for s in sents]
-        for i in range(len(sents)):
-            for j in range(i + 1, len(sents)):
-                if (
-                    len(sigs[i] & sigs[j]) >= MIN_SHARED_TOKENS
-                    and _overlap(sigs[i], sigs[j]) >= min_overlap
-                ):
-                    pairs.append((stop_idx, sents[i].text, sents[j].text))
-                    if len(pairs) >= max_pairs:
-                        return tuple(pairs)
-    return tuple(pairs)
-
-
 __all__ = [
-    "candidate_duplicate_pairs",
     "claims_realized_by",
     "suppress_exact_repeats",
     "suppress_repeated_claims",

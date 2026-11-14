@@ -1,9 +1,7 @@
 """VERIFY — the merged anti-hallucination report over an authored Script.
 
-What survives of the old whole-tour gate. The recompose-once ladder
-(``compose_and_verify``/``serve_or_block``) and its whole-tour repairs died with
-``compose.py``: the one engine authors per stop, so a failure is refused (or
-repaired) at the stop that produced it, not re-run over the whole tour.
+The engine authors per stop, so a failure is refused (or repaired) at the stop
+that produced it, never re-run over the whole tour.
 
 ``build_full_verifier`` merges a caller-selected base validator with provenance,
 faithfulness, and coverage checks. The legacy lane defaults to
@@ -67,15 +65,9 @@ def build_full_verifier(
     ``expected_claim_ids`` (from ``claims_realized_by`` on the PRE-compose stitch)
     enables the content-loss / coverage check — omit it and coverage is a no-op.
 
-    FAITHFULNESS FAILS CLOSED. This line used to read ``faithfulness_checker or
-    MockFaithfulnessChecker()``, so a caller who passed nothing silently got a
-    checker that approves every sentence — and an empty ``faithfulness_failures``
-    then read exactly like "checked and clean". ``scripts/tour_build.py``, the
-    script the owner reads tours with, called it that way, so every tour he read
-    carried a report that looked verified having verified nothing. The live API
-    was never affected (``src/api/dependencies.py`` always injects the real Haiku
-    checker), which is why it survived: the lying path was the one a human read,
-    not the one under test.
+    FAITHFULNESS FAILS CLOSED. A caller that passes no checker never silently gets
+    one that approves every sentence: an empty ``faithfulness_failures`` must mean
+    'checked and clean', never 'not checked'.
 
     An offline caller may still skip the pass, but must SAY SO with
     ``allow_unverified_faithfulness=True`` — and the resulting report carries
@@ -84,13 +76,8 @@ def build_full_verifier(
     raises rather than silently picking a winner.
     """
 
-    # THE SPINE IS PART OF THE TOUR'S OWN VOCABULARY. The opener says where the
-    # walker is standing, and the neighbourhood it names is the engine's choice
-    # from the corpus — often one no seated stop belongs to, because a walk starts
-    # in one quarter and ends in another. Without it the invention scan reads
-    # "You're starting in Opera-Garnier" as glue asserting a place out of nowhere
-    # and fails a correct tour, which is worse than not checking: a report that
-    # cries wolf gets ignored.
+    # The spine area is the tour's own vocabulary: the opener names it, so the
+    # invention scan must accept it.
     #
     # An injected `base_validator` (tests, certification) is left exactly as it
     # was, so this cannot change what those callers measure.

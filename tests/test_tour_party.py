@@ -1341,8 +1341,6 @@ def test_a_surface_routed_day_finalizes_under_its_own_routing_identity():
     tests/test_trip_api.py). UNDO: stamp the default hash again -> RED here.
     """
     from src.tour.premium_tour import (
-        EphemeralReceiptSink,
-        OfflinePremiumExecutor,
         PremiumBuildIdentity,
         execute_premium_plan,
         finalize_premium_tour,
@@ -1354,6 +1352,7 @@ def test_a_surface_routed_day_finalizes_under_its_own_routing_identity():
         VALHALLA_ROUTING_CONFIG_SHA256_BY_SURFACE,
     )
     from src.tour.verify import MockFaithfulnessChecker
+    from tests.premium_doubles import OfflinePremiumExecutor
     from tests.test_tour_authoring_gates import _cross_stop_echo_fixture
     from tests.test_tour_routing_engine import _client, _valhalla_handler
 
@@ -1396,9 +1395,7 @@ def test_a_surface_routed_day_finalizes_under_its_own_routing_identity():
             routing_version="offline-test",
             policy_version="offline-test",
         )
-        responses = execute_premium_plan(
-            plan, executor=OfflinePremiumExecutor(), receipt_sink=EphemeralReceiptSink()
-        )
+        responses = execute_premium_plan(plan, executor=OfflinePremiumExecutor())
         return finalize_premium_tour(
             plan,
             responses,

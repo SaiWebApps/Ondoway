@@ -2932,6 +2932,23 @@ def _priced_poi(pid: str, *, tier: int, lng_offset_deg: float, visit_min: int,
     ).model_copy(update={"typical_duration_min": visit_min})
 
 
+def _visit_pricing(snapshot: CorpusSnapshot, tour_input: TourInput) -> dict:
+    """``price_visit`` and ``queue_visit`` for the timebox repair at the plain
+    visit arithmetic: each stop priced by ``visit_seconds`` at no clock, with no
+    queue."""
+    from src.tour.visit_time import visit_seconds
+
+    ceiling = tour_input.max_stop_minutes * 60 if tour_input.max_stop_minutes is not None else None
+
+    def price_visit(poi: POI, hour: int | None, clock=None) -> int:
+        return visit_seconds(poi, frozenset(), snapshot, party_ceiling_seconds=ceiling)
+
+    def queue_visit(poi: POI, hour: int | None) -> int:
+        return 0
+
+    return {"price_visit": price_visit, "queue_visit": queue_visit}
+
+
 def test_an_under_filled_day_is_the_most_storied_one_never_the_longest_walk():
     """The measured case: a 60-minute round trip
     standing IN a tier-5 square with the most to tell served ONE stop: a lesser
@@ -2975,6 +2992,7 @@ def test_an_under_filled_day_is_the_most_storied_one_never_the_longest_walk():
         leg_seconds_fn=None,
         planning_policy=DEFAULT_ROUTE_PLANNING_POLICY,
         planning_budget=route_planning_budget(60),
+        **_visit_pricing(snap, inp),
     )
     assert [p.id for p in out] == ["rich-square"], (
         f"the under-filled day must be the most storied one (the square the "
@@ -3002,6 +3020,7 @@ def test_an_under_filled_day_is_the_most_storied_one_never_the_longest_walk():
         leg_seconds_fn=None,
         planning_policy=DEFAULT_ROUTE_PLANNING_POLICY,
         planning_budget=route_planning_budget(60),
+        **_visit_pricing(snap2, inp),
     )
     assert "rich-square" in {p.id for p in out2}, (
         "a 2-beat place with a longer visit must not displace the 24-story square "
@@ -3044,6 +3063,7 @@ def test_an_under_filled_day_is_the_most_storied_one_never_the_longest_walk():
         leg_seconds_fn=None,
         planning_policy=DEFAULT_ROUTE_PLANNING_POLICY,
         planning_budget=route_planning_budget(60),
+        **_visit_pricing(snap3, inp),
     )
     assert {p.id for p in out3} == {"gallery-a", "gallery-b"}, (
         "two same-category places must not score BELOW one of them — the variety "
@@ -3605,10 +3625,10 @@ def test_which_stop_steps_outside_is_ranked_never_alphabetical():
     # here: the shape reads the set, the total reads the shape.
     exterior_only_ids: set[str] = set()
 
-    def shape_visit(poi: POI, hour: int | None):
+    def shape_visit(poi: POI, hour: int | None, clock=None):
         return visit_shape(poi, lens, snap, exterior_only=poi.id in exterior_only_ids)
 
-    def price_visit(poi: POI, hour: int | None) -> int:
+    def price_visit(poi: POI, hour: int | None, clock=None) -> int:
         return shape_total_seconds(shape_visit(poi, hour))
 
     # The premise, priced live: both stops go inside, `a-pin` is the one whose
@@ -3638,6 +3658,7 @@ def test_which_stop_steps_outside_is_ranked_never_alphabetical():
         planning_policy=DEFAULT_ROUTE_PLANNING_POLICY,
         planning_budget=band,
         price_visit=price_visit,
+        queue_visit=lambda poi, hour: 0,
         protected_promise_ids={a_pin.id},
         exterior_only_ids=exterior_only_ids,
         shape_visit=shape_visit,
@@ -3681,12 +3702,11 @@ def test_the_refusal_tells_one_true_story_whether_or_not_a_route_was_priced():
     policy_id = DEFAULT_ROUTE_PLANNING_POLICY.policy_id
 
     def _repair(selected: list[POI], candidates: list[POI], snapshot: CorpusSnapshot):
+        tour_input = TourInput(start=PDV, duration_min=60, city_slug="paris", round_trip=True)
         return _apply_certification_timebox_repair(
             selected,
             candidates,
-            input=TourInput(
-                start=PDV, duration_min=60, city_slug="paris", round_trip=True
-            ),
+            input=tour_input,
             snapshot=snapshot,
             spine="Le Marais",
             interest=frozenset(),
@@ -3694,6 +3714,7 @@ def test_the_refusal_tells_one_true_story_whether_or_not_a_route_was_priced():
             leg_seconds_fn=None,
             planning_policy=DEFAULT_ROUTE_PLANNING_POLICY,
             planning_budget=band,
+            **_visit_pricing(snapshot, tour_input),
         )
 
     # STATE ONE — a route WAS priced, and every one of them overran. The

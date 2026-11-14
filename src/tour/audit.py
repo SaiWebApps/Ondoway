@@ -94,12 +94,6 @@ def seine_crossing_metres(
     return inside
 
 
-# DELETED 2026-08-06: route_eta_seconds. A fifth, unused definition of "elapsed"
-# whose docstring called itself "Honest ETA" while pricing every stop by tier. It
-# had no caller in src/, tests/ or scripts/, so it could never have been honest
-# about anything. The one definition of elapsed now lives with the planner.
-
-
 def eta_error(routed_eta_seconds: int, reference_seconds: int) -> float:
     """|routed - reference| / reference; 0.0 when reference is 0."""
     if reference_seconds <= 0:

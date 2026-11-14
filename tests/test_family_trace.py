@@ -25,11 +25,11 @@ from src.api.dependencies import (
     get_premium_compose_executor,
     get_session,
 )
-from src.tour.premium_tour import OfflinePremiumExecutor
 from src.tour.verify import MockFaithfulnessChecker
 from tests.conftest import needs_neo4j
 from tests.live_graph import open_dev_driver
 from tests.persona_traces import Trace, build_trace
+from tests.premium_doubles import OfflinePremiumExecutor
 
 #: Disposable identities on the lane's dev graph (on lane 4: dev4, the seeded
 #: Paris corpus). Cleared before and after, so a crashed run leaves no residue.

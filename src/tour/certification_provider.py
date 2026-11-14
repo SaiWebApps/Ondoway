@@ -21,7 +21,6 @@ class CallPurpose(StrEnum):
     COMPOSE = "compose"
     FACT_REVIEW = "fact_review"
     ENJOY_REVIEW = "enjoy_review"
-    ADJUDICATION = "adjudication"
 
 
 @dataclass(frozen=True)
@@ -155,7 +154,6 @@ class AnthropicCertificationProvider:
             CallPurpose.COMPOSE,
             CallPurpose.FACT_REVIEW,
             CallPurpose.ENJOY_REVIEW,
-            CallPurpose.ADJUDICATION,
         }:
             raise ValueError(f"unsupported certification purpose {purpose!r}")
         client = self._client_for(purpose)

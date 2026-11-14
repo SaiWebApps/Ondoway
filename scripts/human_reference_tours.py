@@ -91,7 +91,7 @@ from src.tour.contract import (
     TourInput,
     ValidationReport,
 )
-from src.tour.generation import SPOKEN_WPM
+from src.tour.routing import SPOKEN_WPM
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 #: The two hand-composed reference tours, beside the golden fixtures they

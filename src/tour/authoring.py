@@ -45,6 +45,7 @@ from .contract import (
     Sentence,
     ValidationReport,
 )
+from .corpus_places import SHA256_PATTERN, model_sha256
 from .generation import (
     GLUE_REFLECTION,
     _nav_walk_minutes,
@@ -97,9 +98,7 @@ class ComposeRequest(BaseModel):
     # Non-empty ONLY for a stop the Route prices outside-only
     # (`visit_goes_inside` explicitly False); "" = the door is open or nobody
     # priced one, and the prompt is byte-identical to before this field.
-    # NOTE: any non-default ComposeRequest content moves compose_input_sha256
-    # and every request hash — the declared-breakage class; the frozen
-    # certification archive re-seals on its next paid run.
+    # A non-default value changes compose_input_sha256 and every request hash.
     door_state: str = ""
     # A PLACE TOLD ON ITS OWN: a stored place recipe, played later inside walks the
     # writer cannot see, so it is never the day's last stop and its close lands the
@@ -146,9 +145,9 @@ class CompletedCertificationComposeUnit(BaseModel):
     authorized_request: ComposeRequest
     authoring_request: AuthoringStopRequest
     parsed_provider_sentences: tuple[Sentence, ...] = Field(..., min_length=1)
-    request_sha256: str = Field(..., pattern=r"^[0-9a-f]{64}$")
-    response_sha256: str = Field(..., pattern=r"^[0-9a-f]{64}$")
-    parsed_payload_sha256: str = Field(..., pattern=r"^[0-9a-f]{64}$")
+    request_sha256: str = Field(..., pattern=SHA256_PATTERN)
+    response_sha256: str = Field(..., pattern=SHA256_PATTERN)
+    parsed_payload_sha256: str = Field(..., pattern=SHA256_PATTERN)
     #: The writer's threads for this stop, (from-name, text) pairs as
     #: parsed from the response — verified and kept by the finalizer.
     parsed_threads: tuple[tuple[str, str], ...] = ()
@@ -163,11 +162,6 @@ COMPOSE_MODEL = "claude-opus-4-8"
 # model-aware pricing remain, so a future cheaper model is one constant away
 # from a measured audition.
 FACT_REVIEW_MODEL = COMPOSE_MODEL
-# Streaming ceiling: adaptive-thinking tokens count against max_tokens, and a
-# full tour's rewritten sentence list is large — 16K truncated a real 45-min
-# Paris compose mid-JSON (live gate, 2026-07-02). Stream + 64K per the SDK
-# guidance; a max_tokens stop is raised as a hard error, never parsed.
-COMPOSE_MAX_OUTPUT_TOKENS = 64000
 # Per-stop ceiling tightened to 2.7x the measured max (11,797
 # output tokens across 45 stops, thinking included). A max_tokens stop under
 # zero-retry is paid-and-lost, so the margin is deliberately wide.
@@ -578,13 +572,7 @@ def _compose_user_prompt(
 def compose_input_sha256(request: ComposeRequest) -> str:
     """Canonical hash of the exact typed input before provider-envelope metadata."""
 
-    payload = json.dumps(
-        request.model_dump(mode="json"),
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
+    return model_sha256(request)
 
 
 def candidate_compose_request_envelope(
@@ -942,10 +930,9 @@ def _keep_threads(
     (``thread_dropped``), and the day ships without it — the remedy for the
     pair is silence, never glue, and the same rule as for closes
     holds: a refusal is for missing MANDATORY content (a close), a quality miss on
-    OPTIONAL enrichment ships degraded and visibly. MEASURED 2026-08-19:
-    with these as ValueError, two of three real composes of one test day died
-    whole — a 16-word thread and one unentailed line each killed a day whose every
-    SENTENCE had passed the gate. Answering a name that was never asked for is not a
+    OPTIONAL enrichment ships degraded and visibly. Raising here would kill a whole
+    day, every SENTENCE of which passed the gate, over a 16-word thread or one
+    unentailed line. Answering a name that was never asked for is not a
     quality miss but a protocol violation, and still refuses (ValueError)."""
     from .degradations import record
     from .generation import split_sentences
@@ -1452,7 +1439,6 @@ def finalize_certification_composition(
 
 __all__ = [
     "CERTIFICATION_COMPOSE_MAX_OUTPUT_TOKENS",
-    "COMPOSE_MAX_OUTPUT_TOKENS",
     "COMPOSE_MODEL",
     "FACT_REVIEW_MODEL",
     "CertificationComposition",

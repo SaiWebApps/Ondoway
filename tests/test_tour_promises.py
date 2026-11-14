@@ -552,14 +552,14 @@ def test_rests_and_the_finish_are_never_auto_cut():
     ordered = [near, marquee, bench, finish]
     snapshot = _snap(ordered)
 
-    def shape(poi, clock_hour):
+    def shape(poi, clock_hour, arrival_clock=None):
         return visit_shape(poi, frozenset(), snapshot, clock_hour=clock_hour)
 
     arrivals = _walk_arrivals(
         ordered,
         [120, 120, 60, 60],
         clock_start=None,
-        price_visit=lambda poi, hour: poi.typical_duration_min * 60,
+        price_visit=lambda poi, hour, clock=None: poi.typical_duration_min * 60,
     )
     promises = _assemble_promises(
         arrivals,

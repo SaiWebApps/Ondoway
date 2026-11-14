@@ -51,6 +51,7 @@ from rapidfuzz import fuzz
 from scripts.beat_builder import slugify
 from src import city_registry
 from src.onboard.models import CityContext, ConnectorResult, PoiCandidate
+from src.tour.routing import haversine_m
 
 logger = logging.getLogger(__name__)
 
@@ -208,16 +209,6 @@ def _norm(s: str) -> str:
     return _strip_accents(s).lower().strip()
 
 
-def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Great-circle distance between two lat/lon points, in metres."""
-    r = 6371000.0  # mean Earth radius (m)
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    dphi = math.radians(lat2 - lat1)
-    dlmb = math.radians(lon2 - lon1)
-    h = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlmb / 2) ** 2
-    return 2 * r * math.asin(math.sqrt(h))
-
-
 # ---------------------------------------------------------------------------
 # Frozen interface consumed by beat_draft / cli.
 # ---------------------------------------------------------------------------
@@ -349,7 +340,7 @@ def _geo_split_bucket(cands: list[PoiCandidate]) -> list[list[PoiCandidate]]:
         for b in range(a + 1, len(coord_idx)):
             ca, cb = cands[coord_idx[a]], cands[coord_idx[b]]
             if (
-                _haversine_m(ca.latitude, ca.longitude, cb.latitude, cb.longitude)
+                haversine_m(ca.latitude, ca.longitude, cb.latitude, cb.longitude)
                 <= _SAME_PLACE_METERS
             ):
                 uf.union(keys[a], keys[b])
@@ -425,7 +416,7 @@ def _fuzzy_union(buckets: dict[str, list[PoiCandidate]]) -> _UnionFind:
             (la, oa), (lb, ob) = coords[a], coords[b]
             if la is None or lb is None:
                 continue
-            if _haversine_m(la, oa, lb, ob) <= _FUZZ_MAX_METERS:
+            if haversine_m(la, oa, lb, ob) <= _FUZZ_MAX_METERS:
                 uf.union(a, b)
     return uf
 
@@ -594,7 +585,7 @@ def _keep_candidate(
     if (
         cand.latitude is not None
         and cand.longitude is not None
-        and _haversine_m(centre_lat, centre_lon, cand.latitude, cand.longitude)
+        and haversine_m(centre_lat, centre_lon, cand.latitude, cand.longitude)
         > _MAX_CENTRE_METERS
     ):
         drops["far_from_centre"] += 1
@@ -832,7 +823,7 @@ def assemble(
 # ---------------------------------------------------------------------------
 # write_city — the ONLY disk / registry touch.
 # ---------------------------------------------------------------------------
-def _atomic_write_text(path: Path, text: str) -> None:
+def atomic_write_text(path: Path, text: str) -> None:
     """Write ``text`` to ``path`` atomically (tmp sibling + ``os.replace``)."""
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_text(text, encoding="utf-8")
@@ -950,12 +941,12 @@ def write_city(
     wiki_dir = city_dir / "wikipedia"
     wiki_dir.mkdir(parents=True, exist_ok=True)
 
-    _atomic_write_text(
+    atomic_write_text(
         city_dir / "poi-raw.json",
         json.dumps(city.pois, indent=2, ensure_ascii=False) + "\n",
     )
-    _atomic_write_text(city_dir / "areas.json", json.dumps([], indent=2) + "\n")
-    _atomic_write_text(
+    atomic_write_text(city_dir / "areas.json", json.dumps([], indent=2) + "\n")
+    atomic_write_text(
         city_dir / "within_edges.json",
         json.dumps(
             {
@@ -975,12 +966,12 @@ def write_city(
         )
         + "\n",
     )
-    _atomic_write_text(
+    atomic_write_text(
         city_dir / "book-log.json",
         json.dumps(_book_log(city, ctx), indent=2, ensure_ascii=False) + "\n",
     )
     for poi_slug, ext in city.wiki_extracts.items():
-        _atomic_write_text(wiki_dir / f"{poi_slug}-rev-{ext.revid}.txt", ext.text)
+        atomic_write_text(wiki_dir / f"{poi_slug}-rev-{ext.revid}.txt", ext.text)
 
     _register(city, ctx, registry_path)
     return city_dir

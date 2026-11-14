@@ -30,7 +30,6 @@ from src.tour.generation import (
     GLUE_PACING,
     GLUE_REFLECTION,
     SENSORY_INVITATION,
-    SPOKEN_WPM,
     SYNTHESIZED_OPENER,
     _area_article,
     _find_directional_transit_beat,
@@ -46,6 +45,7 @@ from src.tour.generation import (
 )
 from src.tour.glue_client import NO_GLUE_SENTINEL, MockGlueClient
 from src.tour.options import build_route_option
+from src.tour.routing import SPOKEN_WPM
 from src.tour.selection import CorpusSnapshot
 
 # ---------------------------------------------------------------------------

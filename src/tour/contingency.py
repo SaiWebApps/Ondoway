@@ -378,7 +378,7 @@ def question_text(
     fabric stop shed and only the protected kept. A rest is SHORTENED, never removed:
     the second arm is a shorter sit when that fits, else "go straight on"; the safe
     arm comes first under a wall (a train to catch). Used by the precomputed set AND
-    the live path (the live path used to shed silently). Returns (None, None)
+    the live path. Returns (None, None)
     when there is nothing to ask — the two arms are the same day."""
     if keep_clock is None:
         return None, None

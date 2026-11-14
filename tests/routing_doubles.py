@@ -11,8 +11,8 @@ that imports them, so this file is the home for a double that diverges on purpos
 
 ``DivergentRoutingClient`` answers the planner's TWO questions differently, the way
 a stale or differently-costed leg pricing would: ``leg_seconds`` (what selection
-prices with) returns the plain estimate; ``route`` / ``route_with_receipt`` (what the
-final ``summarise_route`` reads) return ``factor x estimate`` WITH a polyline, so the
+prices with) returns the plain estimate; ``route_with_receipt`` (what the final
+``summarise_route`` reads) returns ``factor x estimate`` WITH a polyline, so the
 transit's ``source == "valhalla"`` and ``routing.leg_walk_seconds`` prefers the exact
 number. A certification written on ``walk_seconds`` cannot see the difference; one
 written on ``leg_walk_seconds`` can — which is the whole point of the double.
@@ -47,18 +47,14 @@ class DivergentRoutingClient:
         return int(pace_corrected_walk_seconds(haversine_m(from_lat, from_lng, to_lat, to_lng)))
 
     # -- what the FINAL route reads: the exact street number, with a polyline ------
-    def route(
-        self, from_lat: float, from_lng: float, to_lat: float, to_lng: float, **_kw
-    ) -> tuple[int, float, str]:
-        d = haversine_m(from_lat, from_lng, to_lat, to_lng)
-        self.exact_calls += 1
-        return (round(pace_corrected_walk_seconds(d) * self.factor), d, "divergent-polyline")
-
     def route_with_receipt(
         self, from_lat: float, from_lng: float, to_lat: float, to_lng: float, **_kw
     ) -> tuple[int, float, str, None]:
-        seconds, distance_m, shape = self.route(from_lat, from_lng, to_lat, to_lng)
-        return seconds, distance_m, shape, None
+        d = haversine_m(from_lat, from_lng, to_lat, to_lng)
+        self.exact_calls += 1
+        return (round(pace_corrected_walk_seconds(d) * self.factor), d, "divergent-polyline", None)
 
-    def isochrone(self, lat: float, lng: float, minutes: int) -> None:
+    def isochrone(
+        self, lat: float, lng: float, minutes: int, *, walking_speed_kmh: float | None = None
+    ) -> None:
         return None

@@ -19,6 +19,7 @@ from pathlib import Path
 import pytest
 
 from src.tour.contract import (
+    END_B_SENTINEL_PREFIX,
     POI,
     BeatRef,
     BeatSequence,
@@ -30,7 +31,7 @@ from src.tour.contract import (
     TransitSegment,
     ValidationReport,
 )
-from src.tour.generation import _END_B_SENTINEL_PREFIX, GLUE_NAV, GLUE_REFLECTION
+from src.tour.generation import GLUE_NAV, GLUE_REFLECTION
 from src.tour.narration_quality import score_narration
 from src.tour.quality_rubric import (
     BALANCE_MAX_SHARE,
@@ -40,7 +41,6 @@ from src.tour.quality_rubric import (
     OUTLIER_YEAR_DENSITY_MULTIPLE,
     STARVE_MIN_BEATS,
     STARVE_MIN_WORDS_PER_BEAT,
-    WORDS_PER_MINUTE,
     Finding,
     Severity,
     StopMaterial,
@@ -48,7 +48,7 @@ from src.tour.quality_rubric import (
     compose_fixable,
     score_tour,
 )
-from src.tour.routing import haversine_m
+from src.tour.routing import SPOKEN_WPM, haversine_m
 
 # ---------------------------------------------------------------------------
 # Helpers — house style mirrors tests/test_tour_selection.py (_poi / _snap).
@@ -543,14 +543,14 @@ def test_c6_does_not_fire_on_the_content_free_pinned_endpoint_sentinel() -> None
     """GUARDS: a false BLOCKER on the pinned-endpoint sentinel.
 
     ``selection._materialize_fixed_end_b`` materialises a user-pinned endpoint that
-    has no POI of its own as ``__end_b__<lat>_<lng>`` (generation.py's
-    ``_END_B_SENTINEL_PREFIX``). It is content-free BY DESIGN, so driving C6 off the
+    has no POI of its own as ``__end_b__<lat>_<lng>`` (the contract's
+    ``END_B_SENTINEL_PREFIX``). It is content-free BY DESIGN, so driving C6 off the
     roster must not turn every pinned-endpoint tour into a BLOCKER.
 
-    UNDO: delete the ``poi.id.startswith(_END_B_SENTINEL_PREFIX)`` skip and this
+    UNDO: delete the ``poi.id.startswith(END_B_SENTINEL_PREFIX)`` skip and this
     goes RED.
     """
-    sentinel = _spoi(f"{_END_B_SENTINEL_PREFIX}48.86_2.36", tier=3, name="Destination")
+    sentinel = _spoi(f"{END_B_SENTINEL_PREFIX}48.86_2.36", tier=3, name="Destination")
     report = score_tour(
         _script(
             [_sentence(_well_formed(40, prefix="pin"), 0)],  # nothing for the sentinel
@@ -1057,7 +1057,6 @@ def test_c8_cannot_fire_on_engine_output_and_the_unit_is_the_standing_position()
     UNDO: raise MAX_DWELL_AUDIO_SECONDS above ~340s (or drop the cap) and the
     headroom assertion goes RED, correctly reporting that C8 became reachable.
     """
-    from src.tour.generation import SPOKEN_WPM
     from src.tour.selection import MAX_DWELL_AUDIO_SECONDS
 
     assert GORGE_MAX_WORDS_PER_STOP == 850, (
@@ -1506,7 +1505,7 @@ def _certified_cases() -> list[tuple[str, Script, Route]]:
                 duration_min=duration_min,
                 city_slug=payload["tour_input"]["city_slug"],
             ),
-            total_audio_seconds=round(words / WORDS_PER_MINUTE * 60),
+            total_audio_seconds=round(words / SPOKEN_WPM * 60),
             total_walking_seconds=payload["route"]["total_walk_seconds"],
             total_walk_distance_m=payload["route"]["total_walk_distance_m"],
             total_planned_seconds=duration_min * 60,
@@ -1669,12 +1668,12 @@ def test_c3_floor_never_demands_more_words_than_c8_allows_at_any_offered_duratio
     one it replaces. A tour meeting the C3 floor needs at least
     ``floor_seconds / MAX_DWELL_AUDIO_SECONDS`` stops, because the engine caps ONE
     stop's audio at ``MAX_DWELL_AUDIO_SECONDS``. Spread over that many stops, the words
-    per stop come to ``MAX_DWELL_AUDIO_SECONDS / 60 x WORDS_PER_MINUTE`` — 675 — and
+    per stop come to ``MAX_DWELL_AUDIO_SECONDS / 60 x SPOKEN_WPM`` — 675 — and
     that is under ``GORGE_MAX_WORDS_PER_STOP`` (850) at EVERY duration, so C8 can never
     be forced to fire by C3.
 
     UNDO: raise ``MAX_DWELL_AUDIO_SECONDS`` above ``GORGE_MAX_WORDS_PER_STOP /
-    WORDS_PER_MINUTE x 60`` (= 340 s) and this goes RED at every duration — which is
+    SPOKEN_WPM x 60`` (= 340 s) and this goes RED at every duration — which is
     the real contradiction to guard now that neither side is capped by a stop count.
     """
     from src.tour.selection import MAX_DWELL_AUDIO_SECONDS
@@ -1683,7 +1682,7 @@ def test_c3_floor_never_demands_more_words_than_c8_allows_at_any_offered_duratio
         floor_s = c3_audio_floor_seconds(duration_min)
         stops_needed = math.ceil(floor_s / MAX_DWELL_AUDIO_SECONDS)
         assert stops_needed >= 1
-        words_per_stop = floor_s / stops_needed / 60 * WORDS_PER_MINUTE
+        words_per_stop = floor_s / stops_needed / 60 * SPOKEN_WPM
         assert words_per_stop <= GORGE_MAX_WORDS_PER_STOP, (
             f"{duration_min} min: meeting the C3 floor needs {words_per_stop:.0f} words "
             f"at each of {stops_needed} stops, which C8 blocks at "
@@ -2106,11 +2105,9 @@ def test_c13_point_first_warns_when_the_story_starts_late_or_the_primary_beat_la
 def test_c13_skips_stops_with_no_story_and_the_pinned_end_sentinel():
     """A rest (no beats) and the content-free pinned endpoint have no point to land;
     C13 says nothing about them (C6 owns the empty stop)."""
-    from src.tour.generation import _END_B_SENTINEL_PREFIX
-
     rest = ScriptPOI(id="bench", name="Bench", tier=1, lat=48.851, lng=2.35, beat_ids=())
     end = ScriptPOI(
-        id=f"{_END_B_SENTINEL_PREFIX}x", name="Your finish point", tier=3, lat=48.852, lng=2.35
+        id=f"{END_B_SENTINEL_PREFIX}x", name="Your finish point", tier=3, lat=48.852, lng=2.35
     )
     sents = [
         Sentence(

@@ -171,15 +171,15 @@ def stop_narration_text(script: Script, *, anchor_of: AnchorOf | None = None) ->
     NOT the walking line into it, and NOT the chapters cut out to a reviewed anchor.
 
     The text that becomes the stop's own audio file, placed at the footprint. The leg is
-    not in it: the piece used to OPEN with the walk the person had already walked. The
+    not in it — a piece never opens with the walk the person has already walked; the
     leg's sentences are `stop_leg_text`. ``anchor_of`` names
     the reviewed anchor a sentence is told AT, if any — built by THE placement rule
     (`placement.anchor_of`) — and such a sentence belongs to `stop_segment_text`, never
     here.
 
-    A CHAPTERED stop's story does not carry its GOODBYE. The close used to end the story
-    piece, so a marquee said farewell on arrival and then spoke again at the chapter. The
-    goodbye is the last thing said at the last place, or it is not said.
+    A CHAPTERED stop's story does not carry its GOODBYE: a marquee never says farewell
+    on arrival and then speaks again at the chapter. The goodbye is the last thing said
+    at the last place, or it is not said.
     The close is already its own hash-guarded artifact (`stop_close_text`), and the phone
     plays it when the last chapter has been told. A stop with NO chapters is untouched.
 
@@ -330,11 +330,9 @@ def _yellow_banner(tourability, lenses: list[str] | None = None) -> str:
 
     YELLOW fires for several distinct reasons (density.py's
     ``_status`` — low fill, thin anchor pool, or a spread-out cluster with
-    otherwise-surplus fill). The banner used to unconditionally print the
-    "below the 70-80% audio-fill bar" sentence, which is a lie when fill is
-    actually at/above target (e.g. a 100%-fill tour that missed GREEN only
-    on anchor count or compactness) — self-contradictory in the field
-    (Louvre 45-min round-trip: "100% audio fill" + "ran below ... bar").
+    otherwise-surplus fill). The "below the 70-80% audio-fill bar" sentence is
+    true only when fill is below target; a tour that missed GREEN on anchor count
+    or compactness alone must not claim low fill.
     Gate that sentence on the SAME fill threshold density.py's GREEN
     classification uses, and otherwise disclose the true limiting factor.
     """

@@ -7,9 +7,9 @@ the LIVE session endpoints by `tests/persona_traces.py` (the runner, which names
 what it extends).
 
 Live corpus, $0: the days are planned on the local dev graph (port 7687, the
-tests/test_trip_api.py precedent) and composed through the product's own
-offline executor — the money guard in tests/conftest.py hands the compose path
-`OfflinePremiumExecutor`, so no provider call is made anywhere in this file.
+tests/test_trip_api.py precedent) and composed through the offline test
+executor — the compose path is handed `OfflinePremiumExecutor` from
+tests/premium_doubles.py, so no provider call is made anywhere in this file.
 """
 
 from __future__ import annotations
@@ -26,7 +26,6 @@ from src.api.dependencies import (
     get_session,
 )
 from src.tour.contract import END_B_SENTINEL_PREFIX
-from src.tour.premium_tour import OfflinePremiumExecutor
 from src.tour.verify import MockFaithfulnessChecker
 from tests.conftest import needs_neo4j
 from tests.live_graph import open_dev_driver
@@ -41,6 +40,7 @@ from tests.persona_traces import (
     resolved_cap_minutes,
     walk_the_day,
 )
+from tests.premium_doubles import OfflinePremiumExecutor
 
 #: The eleven days are built ONCE in a module fixture (~5:20 on an idle machine,
 #: slower when the DB shard's other workers share the CPU and Valhalla), and
@@ -138,8 +138,8 @@ def client(live_neo4j, trace_identity):
     # armed. Measured 2026-08-24: the first run of this file reached
     # `AnthropicPremiumExecutor` and only stopped at the blank API key the
     # conftest scrubs. A trace says what it costs at its own call site: the
-    # product's own offline adapter, and the offline entailment stub the guard
-    # itself uses.
+    # offline test executor, and the offline entailment stub the guard itself
+    # uses.
     app.dependency_overrides[get_premium_compose_executor] = lambda: OfflinePremiumExecutor()
     app.dependency_overrides[get_faithfulness_checker] = lambda: MockFaithfulnessChecker()
 

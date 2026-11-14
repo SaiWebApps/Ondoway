@@ -56,7 +56,6 @@ from src.tour.contract import (
 )
 from src.tour.generation import GLUE_REFLECTION
 from src.tour.premium_tour import (
-    EphemeralReceiptSink,
     execute_premium_plan,
     finalize_premium_composition,
     finalize_premium_tour,
@@ -718,7 +717,7 @@ def _finalized_with(mutate, *, extra_by_stop=None, **gates):
     )
     executor = _MutatingEchoExecutor(mutate, extra_by_stop)
     responses = execute_premium_plan(
-        plan, executor=executor, receipt_sink=EphemeralReceiptSink()
+        plan, executor=executor
     )
     return finalize_premium_composition(plan, responses, **gates)
 
@@ -1052,7 +1051,7 @@ def test_a_sentence_outside_the_authored_stops_is_refused_not_shipped_unattested
 
     with pytest.raises(ValueError) as excinfo:
         responses = execute_premium_plan(
-            plan, executor=_StopMigratingExecutor(), receipt_sink=EphemeralReceiptSink()
+            plan, executor=_StopMigratingExecutor()
         )
         finalize_premium_composition(plan, responses)
 
@@ -1120,7 +1119,7 @@ def test_cross_stop_echo_is_suppressed() -> None:
 
     # --- through the fan-out (compose and the recipe build) ----------------
     phone_responses = execute_premium_plan(
-        plan, executor=executor, receipt_sink=EphemeralReceiptSink()
+        plan, executor=executor
     )
     script = finalize_premium_composition(plan, phone_responses).script
 
@@ -1242,7 +1241,7 @@ def test_every_live_surface_runs_the_same_three_gates() -> None:
     # --- through the fan-out, as compose and the recipe build run it ---------
     fanned_checker = _RejectingChecker()
     fanned_responses = execute_premium_plan(
-        plan, executor=executor, receipt_sink=EphemeralReceiptSink()
+        plan, executor=executor
     )
     finalize_premium_composition(
         plan,

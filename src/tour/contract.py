@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from src import city_registry
 from src.tour.corpus_places import (
+    SHA256_PATTERN,
     CoordinateProvenance,
     canonical_json,
     text_sha256,
@@ -54,21 +55,6 @@ def opening_doubt(closed_reports: int) -> str:
     """The clause a guessed OPENING TIME ends on ("we think it opens at 10:00,
     but ..."): the report, once made, else that we could not confirm it."""
     return f", but {REPORTED_SHUT}" if closed_reports > 0 else GUESSED_CLOSURE_DOUBT
-# GENERIC_TOUR_SIGNOFF ("Thank you for coming along with me today. When you're ready,
-# take your time to keep exploring on your own.") was DELETED: a close never says
-# "keep exploring on your own" (to someone alone it is a remark) and a thank-you is
-# not a close's job; every stop now ends on one close, the day's at the last stop
-# (generation._build_stop_close).
-NONPROPOSITIONAL_GLUE_TEMPLATES: frozenset[str] = frozenset(
-    {
-        "Settle in.",
-        "Take a moment.",
-        "Take a moment to take it in.",
-        GENERIC_OPEN_TOUR_CLOSING,
-        "And that closes the loop, back where we started.",
-        "Sit as long as you like — that's the walk.",
-    }
-)
 
 
 def normalized_lens_list(v: list[str] | None) -> list[str] | None:
@@ -96,20 +82,9 @@ class TourInput(BaseModel):
     theme_hint: str | None = None
     start_label: str | None = None
     # The party's ceiling on ANY ONE stop, in minutes. None = no ceiling.
-    #
-    # WHY A CEILING IS NEEDED AT ALL. The other two terms in a stop's length —
-    # what the place absorbs and what the visitor's interest justifies — are both
-    # MAXIMISING, so nothing in them can express a family for whom six minutes
-    # is the ceiling at a stop, not the floor. The flat five-minute tier cap was
-    # protecting that family by accident, and
-    # removing it without this would hand a family with a five-year-old a
-    # 45-minute cathedral.
-    #
-    # IT BOUNDS STANDING THERE, NOT TALKING. Generation floors a stop at
-    # max(planned_visit, planned_audio), so a ceiling below a stop's narration is
-    # overridden — narration is never truncated. The API refuses anything
-    # under 5 minutes for that reason: 300 s sits above the 270 s per-stop
-    # speaking cap, so an accepted ceiling is always one the tour can honour.
+    # It bounds standing time, not narration: generation floors a stop at
+    # max(planned_visit, planned_audio), so narration is never truncated. The API
+    # refuses values under 5 minutes, above the 270 s per-stop speaking cap.
     max_stop_minutes: int | None = Field(default=None, ge=5)
     end: tuple[float, float] | None = Field(
         default=None,
@@ -556,9 +531,6 @@ class BeatRef(BaseModel):
         return self
 
 
-_SHA256_PATTERN = r"^[0-9a-f]{64}$"
-
-
 class ValhallaLegReceipt(BaseModel):
     """Canonical request/result evidence for one successful pedestrian leg.
 
@@ -574,11 +546,11 @@ class ValhallaLegReceipt(BaseModel):
     requested_from: tuple[float, float]
     requested_to: tuple[float, float]
     request_json: str = Field(..., min_length=2)
-    request_sha256: str = Field(..., pattern=_SHA256_PATTERN)
+    request_sha256: str = Field(..., pattern=SHA256_PATTERN)
     routing_config_json: str = Field(..., min_length=2)
-    routing_config_sha256: str = Field(..., pattern=_SHA256_PATTERN)
+    routing_config_sha256: str = Field(..., pattern=SHA256_PATTERN)
     response_json: str = Field(..., min_length=2)
-    response_sha256: str = Field(..., pattern=_SHA256_PATTERN)
+    response_sha256: str = Field(..., pattern=SHA256_PATTERN)
     seconds: int = Field(..., ge=0)
     distance_m: float = Field(..., ge=0)
     polyline: str = Field(..., min_length=1)
@@ -589,7 +561,7 @@ class ValhallaLegReceipt(BaseModel):
 
     @model_validator(mode="after")
     def _canonical_payloads_match_fields(self) -> ValhallaLegReceipt:
-        parsed: dict[str, object] = {}
+        parsed: dict[str, dict[str, object]] = {}
         for name in ("request_json", "routing_config_json", "response_json"):
             raw = getattr(self, name)
             try:
@@ -608,7 +580,6 @@ class ValhallaLegReceipt(BaseModel):
             raise ValueError("response_sha256 does not match response_json")
 
         request = parsed["request_json"]
-        assert isinstance(request, dict)
         expected_locations = [
             {"lat": self.requested_from[0], "lon": self.requested_from[1]},
             {"lat": self.requested_to[0], "lon": self.requested_to[1]},
@@ -624,7 +595,6 @@ class ValhallaLegReceipt(BaseModel):
             raise ValueError("routing configuration differs from canonical request")
 
         response = parsed["response_json"]
-        assert isinstance(response, dict)
         try:
             leg = response["trip"]["legs"][0]
             response_seconds = round(leg["summary"]["time"])
@@ -702,11 +672,9 @@ class TourabilityAssessment(BaseModel):
     walk_radius_m: float
     fill_ratio: float
     # The pool's standing-still capacity, against the tour's standing-still
-    # target. Both were named "audio" until 2026-08-06, when the planner's
-    # currency moved from what a place SAYS to what a visitor SPENDS there.
-    # They are a ratio, so both halves have to be the same currency or the
-    # gate judges a pool in one unit against a target in another — the exact
-    # drift `_target_dwell_seconds`'s docstring in density.py recounts.
+    # target. They are a ratio, so both halves are in one currency — what a visitor
+    # SPENDS at a place, not what it SAYS — or the gate judges a pool in one unit
+    # against a target in another.
     dwell_capacity_seconds: int
     target_dwell_seconds: int
     reachable_poi_count: int
@@ -762,9 +730,9 @@ class ClockExclusion(BaseModel):
     in the pool at its outside price (a locked door is still a facade); False
     when there was nothing to see from the street and it left the
     pool. Two readers need the decision — the harness table marks outside-only
-    stops, and the wire writes the traveller's sentence — and both used to
-    recover it by string-matching the reason ("outside only"), which broke the
-    moment the wording was made plain. What the traveller is TOLD
+    stops, and the wire writes the traveller's sentence — and neither recovers it
+    by string-matching the reason, which breaks whenever the wording changes. What
+    the traveller is TOLD
     ("we will see it from the outside" vs "so it is not in your day") depends
     on whether the place actually ended up ON the route, which only the reader
     holding the route can know — so that sentence is composed there, never here.
@@ -1067,9 +1035,7 @@ class BeatSequence(BaseModel):
     overflow_by_poi: dict[str, tuple[str, ...]] = Field(default_factory=dict)
 
 
-# ---------------------------------------------------------------------------
 # Script (final output) + validation
-# ---------------------------------------------------------------------------
 
 
 # The fixed-end sentinel (selection._materialize_fixed_end_b): an A→B request
@@ -1081,8 +1047,7 @@ class BeatSequence(BaseModel):
 # your finish point" instead of counting a zero-minute stop
 # ("Destination: 0 min · outside" listed as stop 5 of 5, and promised as
 # `finish Destination 12:50-12:50`; a tour must never end at a nameless
-# place). ONE definition, read by selection, generation
-# and options — it used to be spelled twice.
+# place). ONE definition, read by selection, generation and options.
 END_B_SENTINEL_PREFIX: str = "__end_b__"
 END_B_SENTINEL_NAME: str = "Your finish point"
 
@@ -1271,20 +1236,13 @@ class ValidationReport(BaseModel):
     # A TUPLE of (stop_idx, counts) pairs, NOT a dict. ValidationReport is
     # frozen=True and every other field is a tuple; a dict field silently breaks
     # ``hash(ValidationReport())`` with "unhashable type: 'dict'" — and the test
-    # bar stays GREEN because nothing in it hashes the model. Use
-    # ``.correction_counts_by_stop`` for dict-style access.
+    # bar stays GREEN because nothing in it hashes the model.
     stop_correction_counts: tuple[tuple[int, StopCorrectionCounts], ...] = ()
     glue_dropped: int = 0
     affirm_reject: int = 0
     # Correction-ladder CALLS consumed against the per-tour budget (2 x stop_count).
     # 0 on the offline floor-only path or a clean tour. Telemetry only.
     corrections_spent: int = 0
-
-    @property
-    def correction_counts_by_stop(self) -> dict[int, StopCorrectionCounts]:
-        """Dict view of ``stop_correction_counts`` for callers that want lookup.
-        The stored form is a tuple so the frozen model stays hashable."""
-        return dict(self.stop_correction_counts)
 
     untraceable_sentences: tuple[Sentence, ...] = ()
     forbidden_phrase_hits: tuple[tuple[Sentence, str], ...] = ()

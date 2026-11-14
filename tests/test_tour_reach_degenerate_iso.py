@@ -30,7 +30,7 @@ class _FakeRC:
     def __init__(self, iso):
         self._iso = iso
 
-    def isochrone(self, lat, lng, minutes):
+    def isochrone(self, lat, lng, minutes, *, walking_speed_kmh=None):
         return self._iso
 
 

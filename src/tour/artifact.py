@@ -1,14 +1,13 @@
-"""Immutable blueprint and baked-asset contracts for tour certification.
+"""Immutable blueprint contracts for tour certification.
 
 Planning objects are mutable in meaning: routing can be rerun and narration can
 be recomposed.  A certification artifact freezes the resolved request, exact
-route, final served script, playback placement, and byte-bound audio evidence
-under deterministic SHA-256 fingerprints.
+route, final served script and playback placement under deterministic SHA-256
+fingerprints.
 """
 
 from __future__ import annotations
 
-import hashlib
 import json
 from collections import defaultdict
 from collections.abc import Iterable
@@ -18,7 +17,6 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    ValidationError,
     field_validator,
     model_validator,
 )
@@ -27,18 +25,19 @@ from src.audio.tts_normalize import TTS_NORMALIZATION_VERSION, normalize_for_tts
 
 from .contract import Route, Script, Sentence, TourInput
 from .corpus_places import (
+    SHA256_PATTERN,
     canonical_payload_bound_to_hash,
+    canonical_sha256,
     check_place_assessment_references,
     check_reference_lane,
+    model_sha256,
     text_sha256,
     valid_coordinates,
 )
 from .generation import is_walk_concurrent
 
-SHA256_PATTERN = r"^[0-9a-f]{64}$"
 PROBE_VERSION = "ondoway-audio-probe-v1"
 BLUEPRINT_SCHEMA_VERSION = "ondoway-tour-blueprint-v1"
-ARTIFACT_SCHEMA_VERSION = "ondoway-tour-artifact-v1"
 
 Placement = Literal["leg", "stop"]
 ObservationAction = Literal[
@@ -49,24 +48,8 @@ ObservationAction = Literal[
 ]
 
 
-def _canonical_sha256(value: BaseModel) -> str:
-    payload = json.dumps(
-        value.model_dump(mode="json"),
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
-
-
 def sentences_payload_sha256(sentences: Iterable[Sentence]) -> str:
-    payload = json.dumps(
-        [sentence.model_dump(mode="json") for sentence in sentences],
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
+    return canonical_sha256([sentence.model_dump(mode="json") for sentence in sentences])
 
 
 class NarrationChunk(BaseModel):
@@ -566,8 +549,7 @@ def remap_provider_playback_assignments(
     Nothing is read from prose.
 
     Why it is opt-in: its ONLY caller is ``finalize_premium_tour``, which finalizes
-    the tours ``POST /trips/{trip_id}/compose`` writes and keeps no receipts
-    (EphemeralReceiptSink). The certification batch runner reaches
+    the tours ``POST /trips/{trip_id}/compose`` writes. The certification batch runner reaches
     ``finalize_premium_composition`` directly and never enters this function, so the
     fail-closed default keeps certification replay strict. The composer may add a
     transition sentence the frozen source lacks; without this relaxation such a tour
@@ -809,51 +791,7 @@ class FinalTourBlueprint(BaseModel):
         return self
 
     def fingerprint(self) -> str:
-        return _canonical_sha256(self)
-
-
-class BakedAudioAsset(BaseModel):
-    """Strict probe evidence for bytes baked from exactly one narration chunk."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    asset_id: str = Field(..., min_length=1)
-    audio_url: str = Field(..., min_length=1)
-    blueprint_sha256: str = Field(..., pattern=SHA256_PATTERN)
-    cue_id: str = Field(..., min_length=1)
-    placement: Placement
-    index: int = Field(..., ge=0)
-    narration_sha256: str = Field(..., pattern=SHA256_PATTERN)
-    tts_text_sha256: str = Field(..., pattern=SHA256_PATTERN)
-    normalization_version: Literal["ondoway-tts-normalize-v1"]
-    audio_sha256: str = Field(..., pattern=SHA256_PATTERN)
-    size_bytes: int = Field(..., gt=0)
-    duration_seconds: float = Field(..., gt=0)
-    duration_source: Literal["media_probe"]
-    probe_version: Literal["ondoway-audio-probe-v1"]
-    probe_capability: Literal["structural_duration"]
-    media_container: Literal["wav", "mp3"]
-    media_codec: Literal["pcm", "mp3_layer_iii"]
-    sample_rate_hz: int = Field(..., gt=0)
-    channels: int = Field(..., gt=0)
-    frame_count: int = Field(..., gt=0)
-    provider: str = Field(..., min_length=1)
-    tts_model: str = Field(..., min_length=1)
-    tts_voice: str = Field(..., min_length=1)
-    storage: str = Field(..., min_length=1)
-
-
-class TourArtifact(BaseModel):
-    """One immutable candidate evaluated by every certification gate."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    schema_version: Literal["ondoway-tour-artifact-v1"] = ARTIFACT_SCHEMA_VERSION
-    blueprint: FinalTourBlueprint
-    audio_assets: tuple[BakedAudioAsset, ...]
-
-    def fingerprint(self) -> str:
-        return _canonical_sha256(self)
+        return model_sha256(self)
 
 
 def build_final_blueprint(
@@ -954,27 +892,13 @@ def _route_evidence_payload(*, route: Route, script: Script, sentence_index: int
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
 
 
-def validate_blueprint_integrity(blueprint: FinalTourBlueprint) -> str | None:
-    """Revalidate serialized content; never trust constructor history/model_copy."""
-    try:
-        FinalTourBlueprint.model_validate(blueprint.model_dump(mode="python"))
-    except (ValidationError, ValueError) as exc:
-        return str(exc)
-    return None
-
-
 def validate_llm_composed_blueprint(blueprint: FinalTourBlueprint) -> str | None:
     """Return why a blueprint is ineligible for quality certification.
 
     A deterministic ``Script`` remains a valid Basic Tour, but it is not an
     LLM-composed certification candidate.  Certification requires a non-empty
-    physical provider trace covering the final narration.  Revalidating first
-    prevents ``model_copy`` or deserialization tricks from reviving the retired
-    stitched-fallback derivation.
+    physical provider trace covering the final narration.
     """
-    integrity_error = validate_blueprint_integrity(blueprint)
-    if integrity_error:
-        return f"invalid final blueprint: {integrity_error}"
     if not blueprint.composition_trace:
         return "basic tour has no LLM provider composition trace"
     if any(trace.derivation != "provider_response" for trace in blueprint.composition_trace):
@@ -983,9 +907,7 @@ def validate_llm_composed_blueprint(blueprint: FinalTourBlueprint) -> str | None
 
 
 __all__ = [
-    "ARTIFACT_SCHEMA_VERSION",
     "BLUEPRINT_SCHEMA_VERSION",
-    "BakedAudioAsset",
     "BuildFingerprint",
     "CanonicalPrimaryPlaceEvidence",
     "CompositionTrace",
@@ -999,12 +921,10 @@ __all__ = [
     "PlaceReferenceEvidence",
     "PlaybackAssignment",
     "SentencePlaceAssessment",
-    "TourArtifact",
     "build_final_blueprint",
     "derive_playback_assignments",
     "partition_final_script",
     "remap_provider_playback_assignments",
     "sentences_payload_sha256",
-    "validate_blueprint_integrity",
     "validate_llm_composed_blueprint",
 ]

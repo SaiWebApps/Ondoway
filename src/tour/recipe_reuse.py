@@ -21,9 +21,9 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from .authoring import COMPOSE_MODEL
-from .batch_regression_manifest import _canonical_bytes
 from .certification_provider import PhysicalProviderResponse
 from .contract import Sentence
+from .corpus_places import canonical_bytes
 from .generation import GLUE_CLOSING, GLUE_STAGING
 from .place_recipes import (
     RECIPE_REGISTER,
@@ -172,7 +172,7 @@ def _stop_response(unit: PremiumComposeUnit, recipe: StoredRecipe) -> PhysicalPr
 def _response(sentences: list[Sentence], recipe: StoredRecipe) -> PhysicalProviderResponse:
     """Stored sentences in the shape the writer answers in, marked as the recipe's."""
 
-    body = _canonical_bytes(
+    body = canonical_bytes(
         {"sentences": [sentence.model_dump(mode="json") for sentence in sentences]}
     )
     return PhysicalProviderResponse(
