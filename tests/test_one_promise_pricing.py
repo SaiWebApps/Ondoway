@@ -126,7 +126,7 @@ def _chapelle(**overrides) -> POI:
 # ---------------------------------------------------------------------------
 
 
-def test_camille_pays_the_chapel_and_the_line_as_two_separate_numbers():
+def test_the_chapel_and_the_line_are_priced_as_two_separate_numbers():
     """The 28 + 38 split.
 
     Three numbers, not one: outside, inside, and a wait that belongs to the
@@ -282,7 +282,7 @@ def test_a_queue_the_ceiling_cannot_cover_collapses_the_stop_to_outside_only():
 
 
 @pytest.mark.parametrize("queue", ["short", "long", "unpredictable"])
-def test_marcus_refuses_any_line_under_a_wall_but_keeps_the_building(queue: str):
+def test_a_wall_refuses_any_line_but_keeps_the_building(queue: str):
     """Unpredictable stops must be refusable: a queue is not a duration, it is
     a distribution. Under a `wall` end no stop whose duration is unboundable is
     ever offered, and a queue is excluded entirely — ANY audited line, not only

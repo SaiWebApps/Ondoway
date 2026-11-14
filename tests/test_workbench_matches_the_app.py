@@ -2896,8 +2896,8 @@ def test_the_phone_and_the_workbench_name_one_planner_and_one_author() -> None:
     from src.tour import premium_tour
 
     assert not hasattr(premium_tour, "plan_premium_options"), (
-        "plan_premium_options is back in src/tour/premium_tour.py. Phase 4 "
-        "(design §8.1) deleted the K-option planner and narrowed PLAN_BLOCK to "
+        "plan_premium_options is back in src/tour/premium_tour.py. The K-option "
+        "planner was deleted and PLAN_BLOCK narrowed to "
         "the one day-planner; a second planning entry point is a second name the "
         "phone and the workbench can each pick, which is the divergence this "
         "test exists to make impossible."
@@ -3114,11 +3114,11 @@ def test_both_surfaces_plan_the_identical_tour(monkeypatch) -> None:
     # THE day, on both surfaces: a one-element list (the field stays a list
     # because stored older payloads and the opt-N route ids are list-shaped).
     assert len(workbench_options) == 1, (
-        f"the workbench planned {len(workbench_options)} options; since design "
-        f"§8.1 the plan reply carries exactly ONE day"
+        f"the workbench planned {len(workbench_options)} options; "
+        f"the plan reply carries exactly ONE day"
     )
     assert len(phone_options) == 1, (
-        f"the phone planned {len(phone_options)} options; since design §8.1 the "
+        f"the phone planned {len(phone_options)} options; the "
         f"plan reply carries exactly ONE day"
     )
 

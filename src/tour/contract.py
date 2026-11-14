@@ -116,7 +116,7 @@ class TourInput(BaseModel):
         default=None,
         description=(
             "(lat, lng) destination B; None = no fixed destination (open walk / loop). "
-            "Mutually exclusive with round_trip. B-materialization for ORDER (Steps 2.3/2.4): "
+            "Mutually exclusive with round_trip. B-materialization for ORDER: "
             "snap to the nearest in-corridor corpus POI when one is within ~150m, otherwise "
             "synthesize a sentinel POI at this exact coordinate."
         ),
@@ -1150,7 +1150,7 @@ class ScriptPOI(BaseModel):
 
 
 class RouteOptionStop(BaseModel):
-    """One ordered card inside a RouteOption (§2.8).
+    """One ordered card inside a RouteOption.
 
     THREE bands, and a card is exactly one of them:
     - ``dwell`` — a stop the tourist stands at. ``minutes`` is its dwell time.
@@ -1203,12 +1203,12 @@ class RouteOptionStop(BaseModel):
 
 
 class RouteOption(BaseModel):
-    """§2.8 output contract — one per flavour, 2-3 per request (M6).
+    """Output contract — one per flavour, 2-3 per request.
 
     Fields owned by later milestones keep honest defaults until they land:
-    ``stop_audio`` and ``why_this_works`` are M7 (COMPOSE/VERIFY);
+    ``stop_audio`` and ``why_this_works`` belong to COMPOSE/VERIFY;
     ``route_polyline``/``flow_score``/``backtrack_ratio`` pass through the
-    Route slots M3/M4 left default; ``profiles`` is §4 multi-profile;
+    Route slots left default; ``profiles`` is multi-profile;
     ``offline_package`` is the offline-replay bundle, post-MVP-core.
     """
 

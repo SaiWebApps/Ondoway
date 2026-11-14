@@ -83,7 +83,7 @@ void main() {
     return (service: service, player: player, gps: gps, clock: clock);
   }
 
-  group('S6.6 the linger rule (W6.2 R3)', () {
+  group('the linger rule', () {
     test('a linger past the tight telling OFFERS, with the cost, and plays '
         'NOTHING by itself', () async {
       final t = await atMajorStopZero();
@@ -132,7 +132,7 @@ void main() {
 }
 
 // ---------------------------------------------------------------------------
-// The tour's own voice (owner ruling 2026-08-19).
+// The tour's own voice.
 // ---------------------------------------------------------------------------
 
 ItineraryStop _voicedStop(int n, {required double lat}) => ItineraryStop(
@@ -163,7 +163,7 @@ ItineraryStop _voicedStop(int n, {required double lat}) => ItineraryStop(
 void _s68Tests() {
   const base = 48.85;
 
-  group('S6.8 the narrator finishes (owner ruling: the tour\'s own voice)', () {
+  group('the narrator finishes (the tour\'s own voice)', () {
     test('a voiced tight close plays as a FILE at the tap — the plain voice '
         'only when no file exists', () async {
       final stops = [

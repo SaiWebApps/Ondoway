@@ -564,7 +564,7 @@ def test_b8_lite_subject_tag_overlap_triggers_dedup():
     assert "short" not in ids
 
 
-def test_b8_lite_threshold_constant_matches_design_doc():
+def test_b8_lite_threshold_constant_is_pinned():
     # The duplicate rule's threshold is 0.8 — guard against silent drift.
     assert B8_JACCARD_THRESHOLD == 0.8
 
@@ -625,7 +625,7 @@ _PANTHEON_142 = (
 )
 
 
-def test_phase7_b8_lite_catches_mesme_gallet_paraphrase():
+def test_b8_lite_catches_mesme_gallet_paraphrase():
     """An earlier run's Tour 1 Stop 1 emitted both beats; dedup must collapse them."""
     poi = _poi("Hotel de Sully")
     de = _beat(
@@ -651,7 +651,7 @@ def test_phase7_b8_lite_catches_mesme_gallet_paraphrase():
     assert len(ids) == 1, f"Expected dedup; got both {ids}"
 
 
-def test_phase7_b8_lite_catches_hugo_affair_paraphrase():
+def test_b8_lite_catches_hugo_affair_paraphrase():
     """An earlier run's Tour 1 Stop 4 emitted both beats; dedup must collapse them."""
     poi = _poi("Musee Victor Hugo", tier=4)
     b41 = _beat(
@@ -675,7 +675,7 @@ def test_phase7_b8_lite_catches_hugo_affair_paraphrase():
     assert len(ids) == 1, f"Expected dedup; got both {ids}"
 
 
-def test_phase7_b8_lite_catches_pantheon_geneviève_pair():
+def test_b8_lite_catches_pantheon_geneviève_pair():
     """An earlier run's Tour 5 Stop 3 emitted both Pantheon-vow beats.
 
     Entities-Jaccard = 0.125 because supporting cast diverges
@@ -890,7 +890,7 @@ def _seq_with_final_beats(beats: tuple[BeatRef, ...]) -> BeatSequence:
     )
 
 
-def test_phase7_closing_reorder_promotes_callback_to_last():
+def test_closing_reorder_promotes_callback_to_last():
     """Callback beat at any position → moves to last; the top tier of the closing order."""
     beats = (
         _beat("c", narrative_function="callback", script_body="A wrap-up sentence."),
@@ -902,7 +902,7 @@ def test_phase7_closing_reorder_promotes_callback_to_last():
     assert tuple(b.id for b in out.poi_beats[-1].beats) == ("a", "b", "c")
 
 
-def test_phase7_closing_reorder_falls_back_to_climax_when_no_callback():
+def test_closing_reorder_falls_back_to_climax_when_no_callback():
     beats = (
         _beat("a", narrative_function="establishing", script_body="X."),
         _beat("c", narrative_function="climax", script_body="Climactic sentence."),
@@ -913,7 +913,7 @@ def test_phase7_closing_reorder_falls_back_to_climax_when_no_callback():
     assert out.poi_beats[-1].beats[-1].id == "c"
 
 
-def test_phase7_closing_reorder_falls_back_to_longest_when_no_callback_or_climax():
+def test_closing_reorder_falls_back_to_longest_when_no_callback_or_climax():
     """No callback, no climax → longest body wins. Avoids closing on factoids."""
     beats = (
         _beat("short", narrative_function="establishing", script_body="A."),
@@ -933,7 +933,7 @@ def test_phase7_closing_reorder_falls_back_to_longest_when_no_callback_or_climax
     assert out.poi_beats[-1].beats[-1].id == "long"
 
 
-def test_phase7_closing_reorder_no_op_when_already_closing_friendly():
+def test_closing_reorder_no_op_when_already_closing_friendly():
     beats = (
         _beat("a", narrative_function="establishing", script_body="X."),
         _beat("b", narrative_function="deepen", script_body="Y."),
@@ -944,7 +944,7 @@ def test_phase7_closing_reorder_no_op_when_already_closing_friendly():
     assert tuple(b.id for b in out.poi_beats[-1].beats) == ("a", "b", "c")
 
 
-def test_phase7_closing_reorder_no_op_for_short_stops():
+def test_closing_reorder_no_op_for_short_stops():
     """Stops with <2 beats are untouched."""
     beats = (_beat("only", narrative_function="establishing", script_body="X."),)
     seq = _seq_with_final_beats(beats)
@@ -952,7 +952,7 @@ def test_phase7_closing_reorder_no_op_for_short_stops():
     assert tuple(b.id for b in out.poi_beats[-1].beats) == ("only",)
 
 
-def test_phase7_closing_reorder_skips_beatless_ab_destination_sentinel():
+def test_closing_reorder_skips_beatless_ab_destination_sentinel():
     """A→B routes append a beatless synthesized-destination sentinel as the LAST
     plan. Reordering must target the last stop WITH beats (the real terminal),
     and must preserve the sentinel — otherwise the tour ends mid-fact, the exact
@@ -982,7 +982,7 @@ def test_phase7_closing_reorder_skips_beatless_ab_destination_sentinel():
     assert out.poi_beats[-1].beats == ()
 
 
-def test_phase7_b8_lite_does_not_overcollapse_complementary_pdv_addresses():
+def test_b8_lite_does_not_overcollapse_complementary_pdv_addresses():
     """Two PdV addresses with the same lens but distinct content must NOT merge.
 
     Pinning behaviour for the golden corpus: the empirical PdV walk has

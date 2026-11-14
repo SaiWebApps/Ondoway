@@ -299,7 +299,7 @@ def preview_audio(body: AudioPreviewRequest, request: Request):
     bounding what an anonymous caller can spend is the content-hash cache that
     stops a replayed payload being re-billed, plus the request model's own
     20000-character ceiling. A real bound belongs on the AUTHENTICATED user; the
-    workbench moves onto that path in Phase 2. This docstring ships in the
+    workbench moves onto that path later. This docstring ships in the
     OpenAPI schema; keep it honest.
     """
     try:
@@ -707,12 +707,12 @@ def generate_stop_audio_for_trip(
     current_user: dict = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    """Generate one composed-narration MP3 per stop (Phase 1, Step 1.4a).
+    """Generate one composed-narration MP3 per stop.
 
     Iterates the trip's ItineraryItems, voices each stop's stitched ``narration``
-    (Step 1.2) via ``generate_stop_audio``, and stores the result ON THE ITEM
+    via ``generate_stop_audio``, and stores the result ON THE ITEM
     (``audio_url``/``audio_duration_sec``), keyed by the item id. THE voicing door
-    for a trip (the per-beat ``/audio/generate-trip`` was deleted at Phase 7 S7.10).
+    for a trip (the per-beat ``/audio/generate-trip`` was deleted).
     Items with no narration are skipped; existing audio is skipped unless force.
 
     READER-SCOPED: voicing spends real provider money per stop, so the caller
@@ -861,11 +861,11 @@ def generate_stop_audio_for_trip(
 
 @router.get("/audio/stop-status/{stop_id}", response_model=StopAudioStatusResponse)
 def get_stop_audio_status(stop_id: str, session: Session = Depends(get_session)):
-    """Per-stop audio status by ItineraryItem id (Phase 1, Step 1.4b).
+    """Per-stop audio status by ItineraryItem id.
 
-    Reads the per-stop audio persisted by /audio/generate-trip-stops (Step 1.4a) so
-    mobile can poll/play per stop — the ONLY status poll since Phase 7 S7.10 deleted
-    the per-beat one. 404 if the stop doesn't exist.
+    Reads the per-stop audio persisted by /audio/generate-trip-stops so
+    mobile can poll/play per stop — the ONLY status poll since the per-beat one
+    was deleted. 404 if the stop doesn't exist.
     """
     rec = session.run(
         "MATCH (i:ItineraryItem {id: $sid}) "
@@ -895,7 +895,7 @@ def keep_exploring_stop_audio(
     body: GenerateRequest | None = None,
     session: Session = Depends(get_session),
 ):
-    """KE3: voice a stop's "keep exploring here" extra narration on demand.
+    """Voice a stop's "keep exploring here" extra narration on demand.
 
     Reads the ItineraryItem's persisted ``extra_narration`` (the deterministic
     stitch of the stop's overflow corpus beats, composed at /compose) and voices

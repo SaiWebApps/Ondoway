@@ -114,9 +114,9 @@ void main() {
     return (service: service, voice: voice, gps: gps, clock: clock);
   }
 
-  group('§4.4.1 speech queues to a natural moment (R3)', () {
+  group('speech queues to a natural moment', () {
     test('the question is on the screen at once and NEVER said on a walking '
-        'leg — audit F :282\'s C7 ("audio overlaps the walking") holds for '
+        'leg — "audio overlaps the walking" holds for '
         'stories, not for announcements; it is said once at the seam after the '
         'settling period', () async {
       // A FAMILY day: the stop's piece ARMS at the footprint
@@ -190,8 +190,8 @@ void main() {
       expect(w.voice.said.last, TourPlaybackService.kScreenOnlyLine);
     });
 
-    test('a fabric change is absorbed SILENTLY (§4.2): on the screen, never said; '
-        'and a waiting fabric line expires unsaid when the plan moves on (R3)',
+    test('a fabric change is absorbed SILENTLY: on the screen, never said; '
+        'and a waiting fabric line expires unsaid when the plan moves on',
         () async {
       final w = await walking();
       w.gps.simulatePosition(base - 25 * _degPerMeterLat, 2.35);
@@ -212,13 +212,13 @@ void main() {
       w.service.setTranscriptOpen(true);
       w.clock.tick(40);
       w.service.tick();
-      expect(w.voice.said, isEmpty, reason: 'reading the transcript (Paulo)');
+      expect(w.voice.said, isEmpty, reason: 'reading the transcript');
       w.service.setTranscriptOpen(false);
       expect(w.voice.said, [_question]);
     });
   });
 
-  group('R4 repeated pauses → screen-only, per party', () {
+  group('repeated pauses → screen-only, per party', () {
     test('family: the second pause of the day switches the session\'s voice to '
         'the screen, said once in one plain sentence; the question is still '
         'said once; one touch restores the voice', () async {

@@ -199,7 +199,7 @@ def test_a_door_is_the_plan_s_own_goes_inside_and_an_arcade_is_a_roof():
     )
     placed = place_stops(route)
     assert placed["chapelle"].door is True and placed["chapelle"].outside_seconds == 15 * 60
-    assert placed["arcade"].door is False, "a roof is not a door (R3, 11/11)"
+    assert placed["arcade"].door is False, "a roof is not a door"
     assert placed["arcade"].outside_seconds == 10 * 60
     assert placed["square"].door is False
     assert placed["facade"].door is False, "an outside-only visit never reaches the door"

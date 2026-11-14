@@ -77,7 +77,7 @@ int _secondsOfDay(String hhmm) =>
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('W5.12 SELECT and LIVE REPLAN on the simulator', (tester) async {
+  testWidgets('SELECT and LIVE REPLAN on the simulator', (tester) async {
     expect(_token.isNotEmpty && _tripFd.isNotEmpty && _tripRo.isNotEmpty, isTrue,
         reason: 'run with the dart-defines w512_setup.py prints');
     final tripService = TripService();

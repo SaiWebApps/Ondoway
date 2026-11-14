@@ -579,7 +579,7 @@ void main() {
       expect(find.byIcon(Icons.info_outline), findsNothing);
     });
 
-    group('one-day confirm (Phase 4, design §8.1)', () {
+    group('one-day confirm', () {
       // Generate response as the wire sends it now: `options` is a
       // list of EXACTLY ONE (the field stays a list because older stored
       // trips carry multi-option lists). The phone ignores it —
@@ -714,7 +714,7 @@ void main() {
 
       testWidgets(
           'confirm composes {tripId}-opt1 directly — no sheet, no pick — '
-          'rebuilds stops, audio flow hits the NEW stop ids (design §8.1)',
+          'rebuilds stops, audio flow hits the NEW stop ids',
           (tester) async {
         var composeCalls = 0;
         String? composedRouteId;
@@ -814,8 +814,8 @@ void main() {
       });
 
       testWidgets(
-          'a compose refusal shows the honest error card and stops the flow '
-          '(design §8.1)', (tester) async {
+          'a compose refusal shows the honest error card and stops the flow',
+          (tester) async {
         var composeCalls = 0;
         var perStopTriggered = false;
 
@@ -1038,7 +1038,7 @@ void main() {
       });
     });
 
-    group('keep exploring here (KE7)', () {
+    group('keep exploring here', () {
       GeneratedTrip tripWithExtras() => GeneratedTrip(
             tripId: 'trip-ke',
             tripName: 'KE Trip',

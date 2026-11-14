@@ -74,7 +74,7 @@ REVIEWED: dict[str, tuple[int, str]] = {
         430,
         "The garden runs about 900 m gate to gate and the pin sits mid-garden: at the "
         "old 100 the Concorde gate stood 325 m outside the circle, so entering there "
-        "played nothing for a five-minute walk (W7.13, Camille). 430 reaches both "
+        "played nothing for a five-minute walk. 430 reaches both "
         "terraces AND the Jardin du Carrousel at the east end — the spot the corpus "
         "voices, 415 m from the pin, whose reviewed anchor says 'right here' there; "
         "the gates themselves are the carried polygon row.",
@@ -83,37 +83,37 @@ REVIEWED: dict[str, tuple[int, str]] = {
         60,
         "A four-building block about 100 m deep between rue de Rivoli and the quay: "
         "at the old 20 the circle sat inside the store, so the piece could only start "
-        "indoors (W7.1's inverted-threshold list) and leaving the circle happened "
-        "under the roof (W7.13, Marcus). 60 from the pin covers the street doors on "
+        "indoors and leaving the circle happened "
+        "under the roof. 60 from the pin covers the street doors on "
         "all sides.",
     ),
     "Place des Vosges": (
         70,
         "A 140 m square: the arcade runs seventy metres from the central statue, and "
-        "stepping under the arcade is being there (Nadia, W7.2 R1). Her day starts, "
+        "stepping under the arcade is being there. One sample day starts, "
         "stops and finishes here, and the ten metres between this 70 and the 60 m "
-        "own-place radius are NOT what starts her clock during the fifteen minutes she "
-        "stands in the square before moving: the own-place circle is drawn round her "
-        "FIRST FIX and this one round the pin, so on a square this wide she can leave "
-        "the first while still standing inside the second. 70 kept; where the clock's "
-        "circle is centred is the carried item, not the footprint (W7.13 carry 6).",
+        "own-place radius are NOT what starts the walker's clock during the fifteen "
+        "minutes the walker stands in the square before moving: the own-place circle is "
+        "drawn round the walker's FIRST FIX and this one round the pin, so on a square "
+        "this wide a walker can leave the first while still standing inside the second. "
+        "70 kept; where the clock's circle is centred is the carried item, not the "
+        "footprint.",
     ),
     "Notre-Dame Cathedral": (
         100,
         "The pin sits in the building; the parvis where a walker stands runs about "
-        "100 m west of the facade, so the footprint reaches it (Camille's pin check: "
-        "the pin itself stays where the corpus put it — a carried data row).",
+        "100 m west of the facade, so the footprint reaches it "
+        "(the pin itself stays where the corpus put it — a carried data row).",
     ),
     "Louvre Museum": (
         120,
         "The Cour Napoleon around the pyramid is 150 m across and the Cour Carree "
-        "another 120 m east of it: a walker at the Louvre is anywhere in those courts "
-        "(Greta, Aiko).",
+        "another 120 m east of it: a walker at the Louvre is anywhere in those courts.",
     ),
     "Musee d'Orsay": (
         60,
         "The forecourt between the river quay and the door is about 60 m deep; "
-        "Rosemary's bench sits on it.",
+        "a bench sits on it.",
     ),
     "Palais-Royal": (
         300,
@@ -131,12 +131,12 @@ REVIEWED: dict[str, tuple[int, str]] = {
     ),
     "Place de la Concorde": (
         120,
-        "The square is 360 m by 210 m; Theo's three positions on it span the middle.",
+        "The square is 360 m by 210 m; a visitor's three positions on it span the middle.",
     ),
     "Pont Neuf": (
         120,
         "The bridge is 238 m long across both arms of the river: its half-length from "
-        "the Vert-Galant point is 120 m (Theo, Fiona & Dev, Sofia).",
+        "the Vert-Galant point is 120 m.",
     ),
     "Square du Vert-Galant": (
         50,
@@ -146,27 +146,27 @@ REVIEWED: dict[str, tuple[int, str]] = {
         "Pont Neuf's 120 m one — the pins are 59 m apart and the bridge passes overhead "
         "— so a walker on the point is in both footprints at once. They are at the "
         "SQUARE: the smaller circle is the more specific place, and the bridge's piece "
-        "belongs to the people on the deck above (Fiona & Dev's nested-footprint edge, "
-        "W7.13 carry 5). Pont Neuf's 120 is derived from its 238 m span and stands.",
+        "belongs to the people on the deck above. Pont Neuf's 120 is derived from its "
+        "238 m span and stands.",
     ),
     "Place Dauphine": (
         60,
         "A triangular place 120 m long from its apex at the Pont Neuf to the Palais de "
         "Justice front, with the pin in the middle: at the old 30 the circle held the "
-        "central gravel only, and Fiona & Dev spend their first twelve minutes over "
+        "central gravel only, and two visitors spend their first twelve minutes over "
         "café menus at the apex end, outside it. Sixty metres is the place's "
         "half-length, and is also the own-place radius the wire gives a start square "
         "(placement.py), so the square they set out from is ONE circle whichever of the "
         "two is read. It overlaps the Pont Neuf's footprint by geometry, not by error: "
         "the apex IS the bridge's approach, 125 m pin to pin, so stop one's piece arms "
-        "over those twelve minutes — the carried edge (W7.13 carry 5).",
+        "over those twelve minutes — the carried edge.",
     ),
     "Pere Lachaise Cemetery": (
         500,
         "Forty-four hectares inside walls; the 2026-06-16 area fix sized it at the "
-        "setting cap and Julien's wall, the columbarium and the memorials are all "
+        "setting cap and the Mur des Fédérés, the columbarium and the memorials are all "
         "inside it — kept (the walls themselves are a carried polygon row). The other "
-        "half of his ask is answered beside this number rather than in it: three "
+        "half of the question is answered beside this number rather than in it: three "
         "reviewed ANCHORS ride the record — the Mur des Fédérés first, then Edith "
         "Piaf's grave and Oscar Wilde's tomb — so the 500 m disc says which cemetery "
         "you are in and the anchor says where in it you are standing.",
@@ -184,25 +184,24 @@ REVIEWED: dict[str, tuple[int, str]] = {
     "Palais de Justice": (
         40,
         "The boulevard du Palais front is 80 m of gilded gates; standing before them "
-        "is being at the Palais (Fiona & Dev's and Sofia's days).",
+        "is being at the Palais.",
     ),
     "Bourse de Commerce — Pinault Collection": (
         40,
-        "A rotunda 60 m across with its portico and the Medici column on its flank "
-        "(Aiko's day).",
+        "A rotunda 60 m across with its portico and the Medici column on its flank.",
     ),
     "Arc de Triomphe du Carrousel": (
         30,
         "A free-standing arch in the open Place du Carrousel: within thirty metres "
-        "you are at it (Aiko's and Greta's days).",
+        "you are at it.",
     ),
     "Hotel de Ville": (
         60,
-        "The parvis in front of the facade is 80 m deep; Paulo stands on it.",
+        "The parvis in front of the facade is 80 m deep; a visitor stands on it.",
     ),
     "Musee de l'Orangerie": (
         30,
-        "A pavilion at the Tuileries' west end: the door on the terrace (Rosemary's day).",
+        "A pavilion at the Tuileries' west end: the door on the terrace.",
     ),
     "Eiffel Tower": (
         80,
@@ -273,8 +272,7 @@ REVIEWED: dict[str, tuple[int, str]] = {
     ),
     "Rue de la Paix": (
         60,
-        "A 230 m street of jewellers between the Opera and Vendome: half a block "
-        "(Theo's day).",
+        "A 230 m street of jewellers between the Opera and Vendome: half a block.",
     ),
     "Grands Boulevards": (
         75,
@@ -286,11 +284,11 @@ REVIEWED: dict[str, tuple[int, str]] = {
     ),
     "Place de la Bourse": (
         40,
-        "The open square in front of the Palais Brongniart's colonnade (Aiko's day).",
+        "The open square in front of the Palais Brongniart's colonnade.",
     ),
     "Passage des Panoramas": (
         60,
-        "A passage under glass 133 m long: you are in it from either mouth (Aiko's arcades).",
+        "A passage under glass 133 m long: you are in it from either mouth.",
     ),
     "Place de Louvois": (
         30,

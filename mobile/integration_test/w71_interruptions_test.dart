@@ -42,7 +42,7 @@ String _origin(String baseUrl) =>
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('W7.1 — the player as it is: durations, and an interruption', (tester) async {
+  testWidgets('the player as it is: durations, and an interruption', (tester) async {
     expect(_token.isNotEmpty, isTrue, reason: 'run with the dart-defines');
     expect(_trip.isNotEmpty, isTrue);
     final origin = _origin(TripService.baseUrl);

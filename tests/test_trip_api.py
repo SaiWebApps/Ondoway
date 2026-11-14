@@ -253,7 +253,7 @@ def test_generate_plans_through_the_shared_block_one(ile_response, snapshot):
         plan = plan_premium_tour(tour_input, snapshot, routing_client=rc)
 
     assert len(body["options"]) == 1, (
-        f"the endpoint published {len(body['options'])} options; Phase 4 plans ONE day"
+        f"the endpoint published {len(body['options'])} options; the planner plans ONE day"
     )
 
     beats_by_id = {ref.id: ref for refs in snapshot.beats_by_poi.values() for ref in refs}
@@ -319,7 +319,7 @@ class TestTripGenerateEngine:
         mirror assertion is dwell-scoped.
         """
         options = ile_response["options"]
-        assert len(options) == 1, "Phase 4 plans ONE day (design §8.1)"
+        assert len(options) == 1, "the planner plans ONE day"
         option = options[0]
 
         dwell_ids = [s["poi_id"] for s in option["stops"] if s["band"] == "dwell"]
@@ -1064,7 +1064,7 @@ class TestLivingSession:
         wrap_from = {
             e["trigger"]["stop_id"] for e in entries if e["trigger"]["kind"] == "wrap_up_from"
         }
-        assert planned_poi_ids <= wrap_from, "wrap-up from EVERY stop (R1.1)"
+        assert planned_poi_ids <= wrap_from, "wrap-up from EVERY stop"
         for e in entries:
             assert set(e["stop_ids"]) <= planned_poi_ids, (e["trigger"], e["stop_ids"])
             assert e["screen_text"].strip(), e["trigger"]

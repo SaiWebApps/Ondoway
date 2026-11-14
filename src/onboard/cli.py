@@ -285,7 +285,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--modes",
         required=True,
-        help="comma-separated onboarding modes (Step 4 handles: license_clean)",
+        help="comma-separated onboarding modes (license_clean)",
     )
     parser.add_argument(
         "--confirm-cost",

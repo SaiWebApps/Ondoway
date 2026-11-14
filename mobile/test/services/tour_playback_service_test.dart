@@ -168,7 +168,7 @@ void main() {
       expect(service.state, TourState.idle);
     });
 
-    test('startTour prepares the audio session before background tracking (AC1)',
+    test('startTour prepares the audio session before background tracking',
         () async {
       final log = <String>[];
       audioService.callLog = log;
@@ -562,7 +562,7 @@ void main() {
       expect(audioService.playCount, 1);
     });
 
-    test('tour-audio completion auto-advances to the next stop (KE6 control)',
+    test('tour-audio completion auto-advances to the next stop (control)',
         () async {
       // Control for the deeper-dive guard: a completed SCHEDULED per-stop tour clip
       // still advances the itinerary index.
@@ -599,7 +599,7 @@ void main() {
       expect(service.currentStopIndex, 1);
     });
 
-    test('deeper-dive completion does NOT auto-advance the tour (KE6)',
+    test('deeper-dive completion does NOT auto-advance the tour',
         () async {
       locationService.trackingWillSucceed = true;
       final stops = [
@@ -640,8 +640,8 @@ void main() {
       expect(service.state, isNot(TourState.completed));
     });
 
-    test('deeper-dive completion does not advance even when a stop is pending '
-        '(KE6)', () async {
+    test('deeper-dive completion does not advance even when a stop is pending',
+        () async {
       // Guards the FIRST advance branch (approaching + pendingStopIndex): a
       // deep dive completing mid-approach must not steal the auto-advance.
       locationService.trackingWillSucceed = true;
@@ -815,7 +815,7 @@ void main() {
   // and STARTS at arrival — the FAMILY day starts at the first standstill inside
   // it. Told once is told: re-entering never replays; a tap
   // does. A stop with no trigger has no geometry: nothing auto-plays there.
-  group('the footprint is the place (S7.3; design §5.6; W7.2 R1)', () {
+  group('the footprint is the place', () {
     const base = 48.85;
     const degPerMeterLat = 1.0 / 111320.0;
     const url = 'https://cdn.ondoway.com/piece.mp3';
@@ -838,7 +838,7 @@ void main() {
     tearDown(() => service.dispose());
 
     test('a 140 m courtyard triggers at its edge, ~130 m from the centroid — '
-        'never 10 m from the pin (Place des Vosges, Nadia)', () async {
+        'never 10 m from the pin (Place des Vosges)', () async {
       await service.startTour([
         _makeStop(sortOrder: 1, beatId: 'b1', lat: base, lng: 2.35,
             audioUrl: url, radiusM: 140),
@@ -874,7 +874,7 @@ void main() {
     });
 
     test('the family day: the piece ARMS at the footprint edge and STARTS at '
-        'the first standstill inside it (Nadia, §4.4.4); walking out before '
+        'the first standstill inside it; walking out before '
         'the standstill disarms it', () async {
       final stops = [
         _makeStop(sortOrder: 1, beatId: 'b1', lat: base, lng: 2.35,
@@ -1010,7 +1010,7 @@ void main() {
         placement: const PlacementPolicy(ownPlaceM: 60, queuePiece: 'tap'),
       ));
       gps.simulatePosition(base + 25 * degPerMeterLat, 2.35);
-      expect(audio.isPlaying, isTrue, reason: 'no line: the edge starts it (R1)');
+      expect(audio.isPlaying, isTrue, reason: 'no line: the edge starts it');
       expect(service.armedOffer, isNull);
     });
 
@@ -1064,7 +1064,7 @@ void main() {
       doorService.dispose();
     });
 
-    test('S7.6: the start of the current sentence comes off the SAME boundary '
+    test('the start of the current sentence comes off the SAME boundary '
         'table as its end', () {
       final stop = _makeStop(sortOrder: 1, beatId: 'b', lat: 0, lng: 0,
           narration: _fourSentences, audioDurationSec: 40);
@@ -1343,7 +1343,7 @@ void main() {
     // interior to keep the plan: the cut
     // stop's own planned departure (its arrival clock plus its dwell), on the
     // screen beside the keep-listening offer, never spoken.
-    test('the door shows a leave-by clock beside the transcript (R3, Marcus)', () async {
+    test('the door shows a leave-by clock beside the transcript', () async {
       final stop = _makeStop(
         sortOrder: 1, beatId: 'd1', lat: base, lng: 2.35, audioUrl: url,
         radiusM: 30, door: true, outsideSeconds: 60,
@@ -1396,9 +1396,9 @@ void main() {
       clock.tick(TourPlaybackService.kSettleSeconds + 1);
       service.tick();
       expect(audio.playedIds.where((k) => k == 'nd-seg-0').length, playsBefore,
-          reason: 'auto-play is once-only — R1(c) first half');
+          reason: 'auto-play is once-only');
       expect(service.segmentOffer, 'The west front',
-          reason: 'the tap replays — R1(c) second half');
+          reason: 'the tap replays');
       service.startSegment();
       expect(audio.playedIds.where((k) => k == 'nd-seg-0').length, playsBefore + 1);
       // Away from the anchor (still at the stop): a told chapter is NOT offered —
@@ -1515,7 +1515,7 @@ void main() {
           reason: 'standing at one chapter must not offer the other');
     });
 
-    test('a couple taps for every chapter, outdoors too (R4)', () async {
+    test('a couple taps for every chapter, outdoors too', () async {
       const westLat = base + 50 * degPerMeterLat;
       final stop = _makeStop(
         sortOrder: 1, beatId: 'nd', lat: base, lng: 2.35, audioUrl: url, radiusM: 100,

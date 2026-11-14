@@ -348,7 +348,7 @@ def upload_job(job_id: str, body: UploadRequest) -> dict:
     """Write the assembled city to ``data/{slug}/`` (+ its beats) and deploy it to
     the API's OWN active graph via ``scripts.deploy``.
 
-    Only ``target="local"`` is supported here (cloud/Aura is deferred to Step 8).
+    Only ``target="local"`` is supported here (cloud/Aura is deferred).
     The deploy subprocess inherits a COPY of this process's environment, so it
     talks to the SAME NEO4J_* the API is connected to."""
     store = get_store()

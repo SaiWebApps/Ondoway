@@ -865,7 +865,7 @@ def test_c9_cap_admits_the_owners_own_gold_text() -> None:
     measured = score_narration(gold).mean_sentence_words
     assert 18.0 <= measured < MAX_SENTENCE_WORDS, (
         f"the gold measures {measured} words/sentence, outside the [18.0, "
-        f"{MAX_SENTENCE_WORDS}) band this calibration assumes. Either §1 changed or the "
+        f"{MAX_SENTENCE_WORDS}) band this calibration assumes. Either the gold changed or the "
         "cap did. This test is only meaningful while the gold is long prose sitting just "
         "under the cap — re-derive the cap from the gold, do not widen this band to fit."
     )

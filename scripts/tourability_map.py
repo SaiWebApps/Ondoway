@@ -1,4 +1,4 @@
-"""Phase 6 — pre-compute the Paris tourability map.
+"""Pre-compute the Paris tourability map.
 
 Outputs two artifacts under ``data/{city_slug}/``:
 

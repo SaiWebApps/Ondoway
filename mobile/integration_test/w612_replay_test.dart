@@ -75,7 +75,7 @@ Widget _app(TourPlaybackService service, String tripId) {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('W6.12 — eleven personas, each on their own day', (tester) async {
+  testWidgets('each persona on their own day', (tester) async {
     expect(_token.isNotEmpty, isTrue);
     expect(_days.isNotEmpty, isTrue);
     final tripService = TripService();

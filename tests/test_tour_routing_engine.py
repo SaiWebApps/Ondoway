@@ -249,7 +249,7 @@ from src.tour.selection import select_route
 from tests.test_tour_selection import PDV, _density_fillers, _poi, _snap
 
 
-def test_transit_segment_m2_fields_round_trip_and_default():
+def test_transit_segment_routed_fields_round_trip_and_default():
     routed = TransitSegment(
         from_poi_id=None,
         to_poi_id="p1",
@@ -266,7 +266,7 @@ def test_transit_segment_m2_fields_round_trip_and_default():
     assert TransitSegment.model_validate(legacy.model_dump()) == legacy
 
 
-def test_route_m2_fields_round_trip_and_default():
+def test_route_routed_fields_round_trip_and_default():
     route = Route(
         pois=(),
         transits=(),

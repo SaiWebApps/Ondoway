@@ -968,7 +968,7 @@ def _keep_threads(
             component="authoring._keep_threads",
             cause=(
                 f"stop {stop_index}'s thread from {from_name!r} {why}: {text!r}. "
-                "R5: none rather than glue — the pair ships with silence."
+                "None rather than glue — the pair ships with silence."
             ),
             stop_index=str(stop_index),
         )
@@ -1058,8 +1058,8 @@ def _drop_corpus_leg_lines_untrue_where_they_play(
             ),
             component="authoring.finalize_certification_composition",
             cause=(
-                f"{', '.join(sorted(codes))}: {sentence.text!r}. ADR 0001 — "
-                "silence over wrongness, never refuse the day."
+                f"{', '.join(sorted(codes))}: {sentence.text!r}. "
+                "Silence over wrongness, never refuse the day."
             ),
             stop_index=str(sentence.stop_idx),
         )
@@ -1096,7 +1096,7 @@ def _require_one_close_per_stop(
         if len(closes) != 1:
             raise ValueError(
                 f"stop {stop_index} has {len(closes)} close(s); every composed stop ends on "
-                "exactly one GLUE_CLOSING sentence (design §5.3)"
+                "exactly one GLUE_CLOSING sentence"
             )
         if stop_sentences[-1] is not closes[0]:
             raise ValueError(
@@ -1105,7 +1105,7 @@ def _require_one_close_per_stop(
             )
         if len(split_sentences(closes[0].text)) != 1:
             raise ValueError(
-                f"stop {stop_index}'s close is not ONE sentence (design §4.4.4): {closes[0].text!r}"
+                f"stop {stop_index}'s close is not ONE sentence: {closes[0].text!r}"
             )
         if is_fallback_close(
             closes[0].text, stitched.inputs, poi_name=names.get(stop_index, ""), n_stops=n_stops
@@ -1120,7 +1120,7 @@ def _require_one_close_per_stop(
                 cause=(
                     "The composed stop kept the stitch's GLUE_CLOSING template verbatim; "
                     "the one writer was asked to rewrite it (THE CLOSE) and did not. It "
-                    "ships as the fallback and is never counted as authored (plan S6.4)."
+                    "ships as the fallback and is never counted as authored."
                 ),
                 stop_index=str(stop_index),
             )

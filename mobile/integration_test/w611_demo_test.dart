@@ -89,7 +89,7 @@ Widget _app(TourPlaybackService service, String tripId) {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('D7 — wrap it up at minute 14', (tester) async {
+  testWidgets('wrap it up at minute 14', (tester) async {
     expect(_token.isNotEmpty, isTrue, reason: 'run with the dart-defines');
     expect(_tripFd.isNotEmpty, isTrue);
     final tripService = TripService();
@@ -162,7 +162,7 @@ void main() {
       final spokenBefore = t.voice.said.length;
       t.clock.setHhmm(15, 16);
       await moment(t.s, t.voice, t.clock, 'ACT1', 'a minute later — then NOTHING', pause: false);
-      expect(t.voice.said.length, spokenBefore, reason: 'R8: then nothing');
+      expect(t.voice.said.length, spokenBefore, reason: 'then nothing');
       await tester.pumpWidget(const SizedBox());
       t.s.stopTour();
     }
@@ -189,7 +189,7 @@ void main() {
       }
       if (skip == null) {
         lines.add('W611 [ACT2] no skip pair carries an authored thread on this day '
-            '(none rather than glue — R5); the act shows the silent continue');
+            '(none rather than glue); the act shows the silent continue');
         skip = t.session.contingencies
             .where((e) => e.kind == 'stop_skipped')
             .firstOrNull;

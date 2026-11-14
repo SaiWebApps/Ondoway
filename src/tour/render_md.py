@@ -294,7 +294,7 @@ def _render_stop_block(
                 "> **Note:** this tour stop has no canonical "
                 "`stop_orientation` beat in the corpus; opener was "
                 "synthesized from physical_cues + pronunciation. Quality "
-                "gradient — see post-launch backlog item 4."
+                "gradient."
             )
             out.append("")
     return out
@@ -481,8 +481,7 @@ def _quality_hints(
         hints.append(
             "Cold open used SYNTHESIZED_OPENER — the first stop has no "
             "canonical `stop_orientation` beat in the corpus. Expect a "
-            "flatter cold-open feel than the Pariswalks gold standard "
-            "(see backlog item 4 for the gap-fill plan)."
+            "flatter cold-open feel than the Pariswalks gold standard."
         )
 
     # Forbidden / untraceable already surfaced in the validation summary;

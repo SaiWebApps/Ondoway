@@ -256,5 +256,5 @@ def test_an_outdoor_anchor_is_sized_to_where_people_stand(poi: dict) -> None:
     for a in outdoor:
         assert a.radius_m >= footprint / 2, (
             f"{name}/{a.label}: {a.radius_m:.0f} m round a {footprint:.0f} m place is the "
-            "doorstep, not where a person stands to look at it (W7.11, 11/11)"
+            "doorstep, not where a person stands to look at it"
         )

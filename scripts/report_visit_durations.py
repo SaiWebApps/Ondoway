@@ -183,7 +183,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  Ellipse: A->place->B costs at most {args.corridor_factor}x the direct line")
     print(f"  {len(members)} places on the corridor, {len(corridor_priced)} of them priced")
     print("-" * 78)
-    print("  THE ONE QUESTION TO ANSWER BEFORE PHASE 3 STARTS:")
+    print("  THE ONE QUESTION THIS SECTION ANSWERS:")
     print("  do these interiors carry enough time between them to fill ~2.5 hours?")
     print("-" * 78)
     for from_a, poi in members:
@@ -200,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
     print("    Roughly 2.5 hours is 9000 s. This total is NOT a planner prediction —")
     print("    no tour visits every place on a corridor. It is a ceiling: if this")
     print("    number is not comfortably above 9000 s, the capacity pass was too")
-    print("    conservative and Phase 3 will refuse exactly as today's code does.")
+    print("    conservative and the planner will refuse exactly as today's code does.")
     print("=" * 78)
     return 0
 

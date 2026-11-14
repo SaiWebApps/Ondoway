@@ -53,7 +53,7 @@ def test_the_gold_standard_passage_is_where_the_scorer_looks():
     # Not just present — still carries the North Star heading the extractor looks for.
     # A moved file that no longer carries the heading is the same outage with a
     # friendlier traceback.
-    assert extract_gold_text().strip(), "the §1 blockquote came back empty"
+    assert extract_gold_text().strip(), "the North Star blockquote came back empty"
 
 
 def test_both_judge_calibration_sets_are_where_the_bake_offs_look():

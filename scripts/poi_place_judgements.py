@@ -1,4 +1,4 @@
-"""Judge three practical affordances of every POI — the place-judgements pass (design row 6.4).
+"""Judge three practical affordances of every POI — the place-judgements pass.
 
 EXTENDS ``scripts/poi_visit_duration.py`` — same corpus file, same batched audited-AI
 shape, same round-trip write guard (``load_pois`` / ``dump_pois`` are IMPORTED from it,

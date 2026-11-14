@@ -54,7 +54,7 @@ def _create_lens(client, name: str, display_label: str) -> dict:
 
 
 @needs_neo4j
-class TestDefect1ProtectedKeys:
+class TestProtectedKeys:
     def test_update_node_rejects_id_change(self, client):
         """PUT {id: 'X'} must be rejected (422) — rewriting n.id orphans the
         node from every id-keyed query and edge."""
@@ -196,7 +196,7 @@ class TestDefect1ProtectedKeys:
 
 
 @needs_neo4j
-class TestDefect3NameCanonicalization:
+class TestNameCanonicalization:
     def test_name_casing_and_whitespace_variants_merge_to_one_node(self, client):
         """'Notre-Dame', 'notre-dame', 'Notre-Dame ' (trailing space) for the
         same city must MERGE to ONE POI node, not fork into three."""
@@ -235,7 +235,7 @@ class TestDefect3NameCanonicalization:
 
 
 @needs_neo4j
-class TestDefect4BeatMergeScope:
+class TestBeatMergeScope:
     def test_identical_script_body_two_pois_two_distinct_beats(self, client):
         """Two beats with identical script_body attached to two different POIs
         must be two DISTINCT NarrativeBeat nodes — neither overwrites the other.
@@ -290,7 +290,7 @@ class TestDefect4BeatMergeScope:
 
 
 @needs_neo4j
-class TestDefect9PartialCoordinates:
+class TestPartialCoordinates:
     def test_poi_update_latitude_only_returns_422(self, client):
         """PUT {latitude: 45.0} with no longitude must be a clean 422, not a
         500 from an empty Cypher SET clause."""

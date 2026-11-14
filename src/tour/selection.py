@@ -5880,7 +5880,7 @@ def drop_stop(
     """
     if drop.id in protected_ids:
         raise ValueError(
-            f"{drop.id!r} is a protected stop (design §4.5.2): a rest, meal, toilet, pin "
+            f"{drop.id!r} is a protected stop: a rest, meal, toilet, pin "
             "or the finish is never auto-cut — it triggers the question, not a drop"
         )
     old_legs, merged = merged_leg_seconds(

@@ -64,7 +64,7 @@ def protected_edge_keys() -> frozenset[str]:
 
 
 class NodeLabel(StrEnum):
-    """Valid node labels from Schema_v3."""
+    """Valid node labels."""
 
     User = "User"
     Profile = "Profile"

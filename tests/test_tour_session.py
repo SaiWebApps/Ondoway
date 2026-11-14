@@ -102,12 +102,12 @@ def test_replan_context_is_an_input_to_the_one_planner_and_holds_what_it_protect
     ids = [p.id for p in with_rests.pois]
     assert anchor.id in ids, f"the protected anchor was dropped to fund the rests: {ids}"
     assert with_rests.planned_visit_seconds[anchor.id] >= base.planned_visit_seconds[anchor.id], (
-        "the anchor was SHAVED to fund the rests (W4.2 locked semantics 2)"
+        "the anchor was SHAVED to fund the rests"
     )
     assert any(p.poi_role == "body" for p in with_rests.pois), f"no rest was seated: {ids}"
     assert longest_walk_minutes(with_rests.transits) <= max(base_longest, 1), (
         f"the replan lengthened the longest leg: {longest_walk_minutes(with_rests.transits)} > "
-        f"{base_longest} (locked semantics 2: never lengthen the longest leg)"
+        f"{base_longest} (never lengthen the longest leg)"
     )
 
 
@@ -264,7 +264,7 @@ def test_the_contingency_set_is_replans_of_the_planned_day_with_the_one_question
     from_first = [e for e in kinds["running_late"] if e.from_stop_index == 0]
     earliest = next(e for e in from_first if tuple(e.trigger["band_minutes"]) == (10, 20))
     assert set(earliest.stop_ids) != planned, "the late answer is the base day — no answer"
-    assert bench.id in earliest.stop_ids, "the protected rest was dropped by arithmetic (§4.5.2)"
+    assert bench.id in earliest.stop_ids, "the protected rest was dropped by arithmetic"
     asked = [e for e in from_first if e.question is not None]
     assert asked, (
         "no late band asked the one question about the rest: "
@@ -959,7 +959,7 @@ def test_a_guessed_stop_yields_a_door_closed_entry_naming_an_open_map_place():
         f"keep first: the phone reads the first arm's first word: {entry.question!r}"
     )
     assert all(":" in arm for arm in arms), (
-        f"each arm names a clock time (W5.2 R2.1): {entry.question!r}"
+        f"each arm names a clock time: {entry.question!r}"
     )
     assert standby.name in entry.question, (
         f"the question names the standby: {entry.question!r}"
@@ -1429,7 +1429,7 @@ def test_a_replan_holds_only_the_standbys_that_already_have_a_voice():
         f"only the voiced standby is held, with its item: {held.standbys}"
     )
     assert [e.contingency_id for e in held.contingencies] == ["v2-1"], (
-        "the door whose standby has no voice keeps M5's simpler answer, not a silent place"
+        "the door whose standby has no voice keeps the simpler answer, not a silent place"
     )
     dropped = [d for d in held.degradations if d.get("kind") == STANDBY_DROPPED_DEGRADATION]
     assert dropped and dropped[0].get("stop_id") == "door-b", (

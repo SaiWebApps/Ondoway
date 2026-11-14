@@ -349,7 +349,7 @@ def test_split_sentences_empty():
 # ---------------------------------------------------------------------------
 
 
-def test_c9g_overflow_surfaces_on_scriptpoi():
+def test_overflow_surfaces_on_scriptpoi():
     """BeatSequence.overflow_by_poi flows onto ScriptPOI.overflow_beat_ids so
     the governor's trimmed beats are SURFACED (keep-exploring extras), never
     silently dropped."""
@@ -503,7 +503,7 @@ def test_transit_uses_corpus_beat_when_present():
     assert not any(c[0] == GLUE_NAV for c in client.calls)
 
 
-def test_phase7_transit_rejects_wrong_direction_beat():
+def test_transit_rejects_wrong_direction_beat():
     """Transit beat at `current` whose origin doesn't match `previous` must be rejected.
 
     Mirrors a measured failure: the corpus transit
@@ -554,7 +554,7 @@ def test_phase7_transit_rejects_wrong_direction_beat():
     assert "pont alexandre iii" in nav_request
 
 
-def test_phase7_transit_accepts_directionally_consistent_beat():
+def test_transit_accepts_directionally_consistent_beat():
     """Transit beat whose origin substring matches `previous` is accepted.
 
     The body names its endpoints and no bearing: a name match says the beat describes
@@ -595,7 +595,7 @@ def test_phase7_transit_accepts_directionally_consistent_beat():
     assert not any(c[0] == GLUE_NAV for c in client.calls)
 
 
-def test_phase7_transit_falls_back_when_origin_mismatch():
+def test_transit_falls_back_when_origin_mismatch():
     """Even when the previous-POI side has a transit beat, mismatched
     direction → fall through to GLUE_NAV. Both sides must satisfy the
     direction check before a corpus transit beat is reused.
@@ -759,7 +759,7 @@ def test_transit_glue_falls_back_to_default_on_no_glue_sentinel():
 # ---------------------------------------------------------------------------
 
 
-def test_glue_label_set_matches_design_doc():
+def test_glue_label_set_matches_the_whitelist():
     # GLUE_REFLECTION is a whitelisted glue token.
     expected = {
         "GLUE_NAV",
@@ -1280,7 +1280,7 @@ def test_transit_only_stop_dropped_beat_is_not_reported_as_voiced():
     # (2) The zero-emission condition still holds (anchor filter intact).
     assert not any(s.source_type == "beat" and s.stop_idx == 1 for s in script.script), (
         "stop 1 emitted a beat sentence — the transit-class filter changed; "
-        "update this pin consciously (specs/2026-07-02-dwell-audio-reconciliation/)"
+        "update this pin consciously"
     )
     # (3) Stop 1's narration is non-empty but consists ONLY of glue.
     stop1 = [s for s in script.script if s.stop_idx == 1]
@@ -1334,7 +1334,7 @@ def test_cold_open_area_hoist_strips_donor_stop_current_contract_pin():
     # (2) The donor stop is stripped to zero beat emissions (the pinned hole).
     assert not any(s.source_type == "beat" and s.stop_idx == 1 for s in script.script), (
         "donor stop emitted a beat — the hoist/consumed contract changed; "
-        "update this pin consciously (specs/2026-07-02-dwell-audio-reconciliation/)"
+        "update this pin consciously"
     )
     # (3) No double emission: the consumed-set contract that motivated
     # consumed_beat_ids — the orientation beat is spoken exactly ONCE.

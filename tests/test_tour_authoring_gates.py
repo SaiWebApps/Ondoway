@@ -565,7 +565,7 @@ def test_the_certification_replay_keeps_its_own_gate_defaults() -> None:
 
     seam = inspect.signature(finalize_premium_composition).parameters
     for name in ("faithfulness_checker", "enforce_claim_coverage", "scan_glue_for_invention"):
-        assert name in seam, f"the Block-2 finalizer cannot pass {name} through"
+        assert name in seam, f"the premium finalizer cannot pass {name} through"
 
     # The placement floors are the FOURTH knob, same contract —
     # OFF for the sealed certification replay, hard-coded ON for the live door.
@@ -1169,7 +1169,7 @@ def test_cross_stop_echo_is_suppressed() -> None:
     )
     assert direct_texts == all_texts, (
         "the finalizer gave different output with and without the fan-out on "
-        f"identical input; AC-6 requires the same suppression on both "
+        f"identical input; the same suppression must hold on both "
         f"({direct_texts!r} vs {all_texts!r})"
     )
 

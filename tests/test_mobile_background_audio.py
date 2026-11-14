@@ -22,7 +22,7 @@ MOBILE = ROOT / "mobile"
 def test_the_app_declares_background_audio_and_location():
     plist = plistlib.loads((MOBILE / "ios" / "Runner" / "Info.plist").read_bytes())
     modes = plist.get("UIBackgroundModes") or []
-    assert "audio" in modes, "pocketed, the piece stops 26 s in (R5: background audio is mandatory)"
+    assert "audio" in modes, "pocketed, the piece stops 26 s in (background audio is mandatory)"
     assert "location" in modes, "pocketed, the next footprint is never reached"
 
 

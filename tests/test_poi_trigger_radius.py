@@ -123,7 +123,7 @@ def test_trigger_radius_for_reads_the_kind_first_and_the_name_only_without_one()
     assert trigger_radius_for("Some Building", 15)[0] == 15
 
 
-def test_the_reviewed_table_argues_every_row_and_holds_the_panel_s_places() -> None:
+def test_the_reviewed_table_argues_every_row_and_holds_the_named_places() -> None:
     """Every reviewed footprint ships with the sentence that argues it (the `*_basis`
     precedent), sits inside the bounds, and the places a review named are in it."""
     from scripts.poi_trigger_radius import REVIEWED
@@ -132,7 +132,7 @@ def test_the_reviewed_table_argues_every_row_and_holds_the_panel_s_places() -> N
         assert isinstance(metres, int) and FOOTPRINT_MIN_M <= metres <= FOOTPRINT_MAX_M, name
         assert isinstance(basis, str) and len(basis.split()) >= 6, f"{name}: no argument"
     for name, metres in PANEL_PRECEDENTS.items():
-        assert name in REVIEWED, f"the panel named {name!r}; the review does not"
+        assert name in REVIEWED, f"a review named {name!r}; the review does not"
         assert REVIEWED[name][0] == metres, (name, REVIEWED[name][0], metres)
 
 

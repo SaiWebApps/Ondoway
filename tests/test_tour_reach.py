@@ -366,5 +366,5 @@ def test_every_golden_fixture_sits_below_the_contour_clamp():
             f"{path.name} requests {duration} min "
             f"({'round trip' if round_trip else 'one way'}), whose contour "
             f"clamps from {unclamped} to {asked}. The clamp is NOT inert for this "
-            f"fixture, so Phase 1 can move this golden tour."
+            f"fixture, so the clamp can move this golden tour."
         )

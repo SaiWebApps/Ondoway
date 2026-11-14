@@ -116,7 +116,7 @@ def test_the_locked_voice_puts_the_point_first_and_saves_no_twist_for_the_end():
     """
     system = _system_text(_envelope(_one_stop_request()))
     assert "THE POINT FIRST" in system, "the rule must be in the locked voice"
-    assert "first hundred words" in system, "the panel's measure (R1) names the window"
+    assert "first hundred words" in system, "the rule names the window"
     assert "recap" in system.lower(), "the recap of an earlier stop is forbidden by name"
     for held_back in ("comes LATE", "payoff near the end", "BUILD, DON'T FLATTEN"):
         assert held_back not in system, f"the locked voice still says {held_back!r}"
@@ -955,7 +955,7 @@ def test_solo_is_byte_identical_and_warm_and_family_are_deltas_in_the_one_voice(
         assert "facts" in delta and "close" in delta.lower()
 
 
-def test_paulos_density_rules_bind_every_register_in_the_locked_voice():
+def test_density_rules_bind_every_register_in_the_locked_voice():
     """The density rules bind EVERY register — one name a sentence,
     short words, gloss hard English as well as French ("Jesuit"), no idiom. A
     reviewer counted PDV-base at 1.3-9 names a sentence and ten idioms in 4.5 minutes. These
@@ -963,5 +963,5 @@ def test_paulos_density_rules_bind_every_register_in_the_locked_voice():
     sealed policy hash moves and is declared. UNDO: drop the DENSITY rule -> RED."""
     system = _system_text(_envelope(_one_stop_request()))
     assert "one proper name" in system.lower() or "one name a sentence" in system.lower()
-    assert "Jesuit" in system, "the gloss rule names Paulo's own example"
+    assert "Jesuit" in system, "the gloss rule names its own example"
     assert "idiom" in system.lower()

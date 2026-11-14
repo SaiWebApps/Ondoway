@@ -10,7 +10,7 @@ BOTH ARE NOW RESOLVED, and in OPPOSITE directions (2026-07-27) — this script i
 settled which was which. C9's cap was retuned 15 -> 20, because C9 ranked the gold above
 34 of 38 machine stops and only its threshold was wrong. C10 was DELETED, because it was a
 regex over 18 sentence-initial verbs that rated the gold's own opener "a bare fact".
-Openers are now UNCHECKED until G1 ships — see
+Openers are now UNCHECKED — see
 tests/test_tour_quality_rubric.py::test_openers_are_unchecked_since_c10_was_deleted.
 
 There are two possible explanations demanding opposite fixes:
@@ -19,8 +19,9 @@ There are two possible explanations demanding opposite fixes:
   2. the bar sits somewhere the owner's OWN gold text cannot reach either.
 
 This settles it by running the SAME rubric over the gold text in
-``fixtures/tour-quality-standard/01-standard.md`` §1 — the passage the owner wrote
-by hand and from which S1-S10 were derived. **A check the gold fails is mis-calibrated.**
+``fixtures/tour-quality-standard/01-standard.md``, the North Star section — the passage
+the owner wrote by hand and from which S1-S10 were derived.
+**A check the gold fails is mis-calibrated.**
 
 READ THIS BEFORE QUOTING A NUMBER
 ----------------------------------
@@ -54,7 +55,7 @@ listed as NOT APPLICABLE rather than reported as passes:
 What genuinely IS measured: **C5** (verbatim repetition), **C6** (empty stop), **C8**
 (gorging) and **C9**. C10 no longer exists.
 
-The gold text is extracted STRUCTURALLY — the markdown blockquote under the §1 heading,
+The gold text is extracted STRUCTURALLY — the markdown blockquote in the North Star section,
 matched on line prefixes, never a pattern match. See ``extract_gold_text``.
 """
 
@@ -213,7 +214,7 @@ def main() -> int:
     report = score_tour(script, _minimal_route(), beats_by_poi={})
 
     print(f"\n{'=' * 78}\nTHE OWNER'S GOLD TEXT, scored by the real rubric")
-    print(f"source: {STANDARD.relative_to(REPO_ROOT)} §1")
+    print(f"source: {STANDARD.relative_to(REPO_ROOT)}, the North Star section")
     print(
         f"{len(gold.split())} words, {len(script.script)} sentences, "
         f"mean_sentence_words {nq.mean_sentence_words} (the figure C9 reads)\n"

@@ -994,7 +994,7 @@ def finalize_premium_full_telling(
                 "the stop keeps its normal telling and the tap for more still works."
             ),
             component="premium_tour.finalize_premium_full_telling",
-            cause=f"{why}. R3: never the leftover corpus, never a re-telling, "
+            cause=f"{why}. Never the leftover corpus, never a re-telling, "
             "never past the budget — the stop ships tight-only.",
         )
 

@@ -1068,7 +1068,7 @@ def test_the_repair_prefers_a_different_kind_of_place_on_a_near_tie():
     repaired_ids = {poi.id for poi in repaired}
     assert "b-church" in repaired_ids, (
         f"the repair seated {sorted(repaired_ids)} — a third museum over the "
-        "equal church; Greta's diversity rule is not reaching the ranking"
+        "equal church; the diversity rule is not reaching the ranking"
     )
     assert "a-third-museum" not in repaired_ids
 
@@ -1110,7 +1110,7 @@ def test_variety_never_beats_a_landmark():
     repaired_ids = {poi.id for poi in repaired}
     assert "a-third-museum" in repaired_ids, (
         "variety dimming overrode a two-tier landmark gap — the factor is not "
-        "bounded the way §2.4:130 requires"
+        "bounded"
     )
 
 
@@ -1264,6 +1264,6 @@ def test_select_route_wires_the_queue_closure_into_the_repair():
     )
     assert wiring is not None, (
         "select_route no longer passes the repair a queue_visit closure — the "
-        "panel's queues-are-budgeted-never-credited rule silently stopped "
+        "queues-are-budgeted-never-credited rule silently stopped "
         "reaching production"
     )

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 
 class RelType(StrEnum):
-    """Valid relationship types from Schema_v3."""
+    """Valid relationship types."""
 
     HAS_PROFILE = "HAS_PROFILE"
     IS_CAPTAIN_OF = "IS_CAPTAIN_OF"

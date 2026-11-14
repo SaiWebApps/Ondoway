@@ -339,7 +339,7 @@ def _create_itinerary_items(
         if not record["poi_found"] and not stop["poi_id"].startswith(END_B_SENTINEL_PREFIX):
             raise ValueError(
                 f"Stop {stop['poi_id']!r}: no POI with that id in the graph — the item "
-                "would have vanished silently (W7.13)"
+                "would have vanished silently"
             )
         # The mid-query MATCH silently drops absent beat ids; fail loudly
         # rather than persist an item whose stored beat_ids cite beats it
@@ -501,7 +501,7 @@ def list_trips_for_profile(
         # Get stops for each trip
         stops_query = """
             MATCH (t:Trip {id: $tid})-[:HAS_STOP]->(item:ItineraryItem)
-            // M6c: a standby is an item so it can be voiced, but it is not a
+            // A standby is an item so it can be voiced, but it is not a
             // stop of the day — the walker was only offered it. Listing it here
             // would put a place they never went into their saved itinerary.
             WHERE item.standby_for_poi_id IS NULL

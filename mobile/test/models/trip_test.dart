@@ -71,7 +71,7 @@ void main() {
       expect(ItineraryStop.fromJson(json).stopId, isNull);
     });
 
-    test('fromJson parses extra_beat_ids and extra_narration (KE5)', () {
+    test('fromJson parses extra_beat_ids and extra_narration', () {
       final json = {
         'sort_order': 1,
         'poi_id': 'poi-123',
@@ -94,7 +94,7 @@ void main() {
       expect(stop.extraNarration, 'There is even more to discover here.');
     });
 
-    test('fromJson defaults extra fields when absent (old trips) (KE5)', () {
+    test('fromJson defaults extra fields when absent (old trips)', () {
       final json = {
         'sort_order': 1,
         'poi_id': 'poi-123',
@@ -115,7 +115,7 @@ void main() {
       expect(stop.extraNarration, isNull);
     });
 
-    test('extra fields survive toJson round-trip (KE5)', () {
+    test('extra fields survive toJson round-trip', () {
       const original = ItineraryStop(
         sortOrder: 1,
         poiId: 'poi-1',
@@ -187,7 +187,7 @@ void main() {
     // The stop's placed trigger geometry
     // rides the wire and the phone READS it — the footprint is the server's
     // number, never a circle of the phone's. A legacy item carries none.
-    test('fromJson reads the placed trigger geometry (S7.3) and keeps it '
+    test('fromJson reads the placed trigger geometry and keeps it '
         'through toJson and copyWith', () {
       final json = {
         'sort_order': 1,
@@ -215,7 +215,7 @@ void main() {
     // The stop's LEG piece — its walking line,
     // voiced as its own file — rides the wire beside the story and survives the
     // round trip and copyWith.
-    test('fromJson reads the leg piece (S7.7) and keeps it through toJson and '
+    test('fromJson reads the leg piece and keeps it through toJson and '
         'copyWith', () {
       final json = {
         'sort_order': 2,
@@ -244,7 +244,7 @@ void main() {
 
     // A marquee's chapters ride the wire as a list, each with
     // its own place, radius, roof flag, text and (once voiced) file.
-    test('fromJson reads the chapters (S7.7 B); a legacy item has none', () {
+    test('fromJson reads the chapters; a legacy item has none', () {
       final json = {
         'sort_order': 1,
         'poi_id': 'nd',
@@ -286,7 +286,7 @@ void main() {
       expect(ItineraryStop.fromJson(json).segments, isEmpty);
     });
 
-    test('a legacy item without a trigger reads null — no geometry (S7.3)', () {
+    test('a legacy item without a trigger reads null — no geometry', () {
       final json = {
         'sort_order': 1,
         'poi_id': 'poi-123',
@@ -305,7 +305,7 @@ void main() {
     });
   });
 
-  group('SessionPlan placement (S7.3)', () {
+  group('SessionPlan placement', () {
     test('fromJson reads the day\'s placement policy; an older server sends none',
         () {
       final base = {
@@ -389,8 +389,8 @@ void main() {
     // trips carry multi-option lists, so the field stays a list forever).
     // The phone no longer parses or exposes it — the model has no options
     // surface at all, and an options key of ANY shape is ignored input.
-    test('fromJson accepts the one-option generate payload without reading it '
-        '(design §8.1)', () {
+    test('fromJson accepts the one-option generate payload without reading it',
+        () {
       final json = {
         'trip_id': 'trip-one',
         'trip_name': 'One Day Trip',
@@ -418,8 +418,7 @@ void main() {
       expect(trip.stops, isEmpty);
     });
 
-    test('fromJson accepts a stored pre-Phase-4 multi-option payload '
-        '(design §8.1)', () {
+    test('fromJson accepts a stored multi-option payload', () {
       // Old trips carry k options; compose must keep serving them, so the
       // parser must keep swallowing them — malformed rows included, because
       // the phone never looks inside.
@@ -442,8 +441,8 @@ void main() {
       expect(GeneratedTrip.fromJson(json).tripId, 'trip-old');
     });
 
-    test('fromJson parses a GET /trips payload with no options key '
-        '(design §8.1)', () {
+    test('fromJson parses a GET /trips payload with no options key',
+        () {
       final json = {
         'trip_id': 'trip-saved',
         'trip_name': 'Saved Trip',
@@ -458,8 +457,8 @@ void main() {
       expect(GeneratedTrip.fromJson(json).tripId, 'trip-saved');
     });
 
-    test('fromJson still hard-requires flavour_count (wire contract, '
-        'design §8.1)', () {
+    test('fromJson still hard-requires flavour_count (wire contract)',
+        () {
       // flavour_count predates flavours: it is a per-trip stop-kind stat
       // (stops minus anchors), merely mis-named. It stays REQUIRED on the
       // wire — a server that drops it breaks the phone, and this test is the

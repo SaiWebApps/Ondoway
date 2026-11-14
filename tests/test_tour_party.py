@@ -101,7 +101,7 @@ def test_couple_register_is_warm_never_romantic():
     assert resolved.max_stop_minutes is None
 
 
-def test_family_preset_matches_nadias_day():
+def test_family_preset_matches_a_family_day():
     """`family` sets the ceiling ~6 min, half pace, the rest cadence, the
     escape radius, no-stairs surface, and the family register.
 
@@ -138,8 +138,8 @@ def test_take_it_easy_slows_the_walking_never_the_talking():
     assert resolved.rest_cadence_minutes is not None
     assert resolved.narration_register is None, "slow the walking, never the talking"
     assert resolved.max_stop_minutes is None, (
-        "no ceiling: Rosemary's centrepiece is a 46-minute sit (05:36-38); "
-        "design §2.4:130: a per-stop ceiling is never set by mobility"
+        "no ceiling: a step-free visitor's centrepiece is a 46-minute sit; "
+        "a per-stop ceiling is never set by mobility"
     )
 
 
@@ -660,7 +660,7 @@ def test_escape_radius_refuses_a_far_anchor_on_family_but_seats_it_on_solo():
         "a family's escape radius must refuse a stop the exit is too far from"
     )
     assert family.clock_exclusions == (), (
-        "a too-far stop needs no disclosure — only a closed door does (plan S2.8)"
+        "a too-far stop needs no disclosure — only a closed door does"
     )
 
 
@@ -881,8 +881,8 @@ def test_a_leg_cap_that_starves_the_day_refuses_with_the_cap_named():
         )
     message = str(caught.value)
     assert "overruns" not in message, (
-        "the refusal claims the day OVERRUNS while it starved — the c-leg12 "
-        "wrong-template defect the panel named"
+        "the refusal claims the day OVERRUNS while it starved — the "
+        "wrong-template defect"
     )
     # Named in the dial's own words — "the N-minute limit on any
     # single walk" — never "walking-leg cap ... binds", which the language judge

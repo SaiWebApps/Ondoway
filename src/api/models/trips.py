@@ -178,7 +178,7 @@ class GeneratedStop(BaseModel):
     sort_order: int
     stop_id: str | None = Field(
         default=None,
-        description="ItineraryItem id — addresses this stop for per-stop narration audio (Phase 1)",
+        description="ItineraryItem id — addresses this stop for per-stop narration audio",
     )
     poi_id: str
     poi_name: str
@@ -199,7 +199,7 @@ class GeneratedStop(BaseModel):
     narration: str | None = Field(
         default=None,
         description="Stitched per-stop narration (cold-open, beats, transit, closing) voiced as "
-        "this stop's audio (Phase 1); exposed for web verification (Phase 1.5).",
+        "this stop's audio; exposed for web verification.",
     )
     audio_url: str | None = None
     audio_duration_sec: float | None = None
@@ -308,8 +308,8 @@ class TripGenerateResponse(BaseModel):
     stops: list[GeneratedStop]
     options: list[RouteOption] = Field(
         default_factory=list,
-        description="THE day, as a one-element list (Phase 4, design §8.1 deleted "
-        "pick-one-of-three). Stays a LIST because trips persisted before Phase 4 "
+        description="THE day, as a one-element list (pick-one-of-three was deleted). "
+        "Stays a LIST because trips persisted before that deletion "
         "store multi-option lists and one client parser reads both. options[0] is "
         "the persisted trip. Computed per request, not persisted.",
     )
@@ -327,7 +327,7 @@ class TripGenerateResponse(BaseModel):
 
 
 class TripComposeRequest(BaseModel):
-    """Input for POST /trips/{trip_id}/compose (Phase 4 Step 4.7)."""
+    """Input for POST /trips/{trip_id}/compose."""
 
     route_id: str = Field(
         description="The picked flavour: '<trip_id>-optN' from the generate response options"
@@ -356,7 +356,7 @@ class TripComposeResponse(BaseModel):
 
 
 class SessionPromise(BaseModel):
-    """One promise of the day as the phone reads it (design §3.1; W5.2 R1.5).
+    """One promise of the day as the phone reads it.
 
     ``protected`` is the person's own class — a pin, a rest the party or dial asked
     for, a declared finish — the only kinds a session ever asks a question about.
@@ -373,15 +373,15 @@ class SessionPromise(BaseModel):
 
 
 class SessionContingency(BaseModel):
-    """One precomputed answer (design §4.6). ``trigger`` is a MATCHER, never a policy:
+    """One precomputed answer. ``trigger`` is a MATCHER, never a policy:
     ``{"kind": "running_late", "stop_id": ..., "band_minutes": [10, 20]}``,
     ``running_early``, ``minutes_left`` (an open day), ``{"kind": "stop_skipped",
     "stop_id": ...}``, ``{"kind": "promise_at_risk", "stop_id": ...}``,
     ``{"kind": "wrap_up_from", "stop_id": ...}``. The phone matches its measured
     divergence against these, takes the FIRST in server order, and applies the
     entry — it decides nothing. ``question`` is non-null only when the entry
-    touches a protected thing (§4.2's two tiers), and ``screen_text`` is never
-    empty (§4.4.2 — everything spoken is also on screen).
+    touches a protected thing, and ``screen_text`` is never
+    empty (everything spoken is also on screen).
     """
 
     contingency_id: str
@@ -402,19 +402,19 @@ class SessionContingency(BaseModel):
     @model_validator(mode="after")
     def _etiquette(self) -> SessionContingency:
         if not self.screen_text.strip():
-            raise ValueError("screen_text is empty: everything spoken is also on screen (§4.4.2)")
+            raise ValueError("screen_text is empty: everything spoken is also on screen")
         if self.question is not None:
             if not self.question.strip():
                 raise ValueError("an empty question is not a question")
             if self.default_arm is None:
-                raise ValueError("a question names its default arm (W5.2 R2.4)")
+                raise ValueError("a question names its default arm")
             breaks = [
                 m.start()
                 for m in re.finditer(r"[.!?](?:\s|$)", self.question.strip())
             ]
             if len(breaks) != 1 or not self.question.strip().endswith("?"):
                 raise ValueError(
-                    "the question is ONE sentence ending in a question mark (§4.4.4, R2.1): "
+                    "the question is ONE sentence ending in a question mark: "
                     f"{self.question!r}"
                 )
         return self
@@ -422,7 +422,7 @@ class SessionContingency(BaseModel):
 
 class SessionPlan(BaseModel):
     """GET /trips/{id}/session and every replan reply — the day the person is
-    standing in, versioned (design §8.2), with the contingency set beside it (§4.6).
+    standing in, versioned, with the contingency set beside it.
     """
 
     trip_id: str
@@ -469,7 +469,7 @@ class SessionPlan(BaseModel):
 
 class SessionReplanRequest(BaseModel):
     """What the phone sends to POST /trips/{id}/session/replan — its observations,
-    never a decision (design §4.6): where it is, its two clocks, its two learned
+    never a decision: where it is, its two clocks, its two learned
     rates, and which planned stop it is heading to."""
 
     lat: float = Field(..., ge=-90, le=90)
@@ -584,7 +584,7 @@ class TripPreviewRequest(BaseModel):
 class TripPreviewTourability(BaseModel):
     """Density / delivery disclosure shipped alongside a generated preview.
 
-    Phase 6: YELLOW = "generate but WARN". C11a adds GREEN-but-``delivered_thin``:
+    YELLOW = "generate but WARN". Also GREEN-but-``delivered_thin``:
     a GREEN-density pool that still delivers thin (audio far under the request or
     a single dominating stop) — the engine-side answer to the 2026-07-02
     pool-vs-delivered gap. A fully-GREEN rich tour still ships tourability=null."""
@@ -605,8 +605,8 @@ class TripPreviewTourability(BaseModel):
 class TripPreviewPromise(BaseModel):
     """One promised item of the planned day, as the pre-commit surface shows it.
 
-    Phase 4 (W4.2 deviation v — ruled to land this phase): name + a COARSE
-    window (F&D: "not six minute-precision timestamps"; empty strings on a
+    Name + a COARSE
+    window (not six minute-precision timestamps; empty strings on a
     dateless plan) + which side of the door and the wait, so the person can
     judge the promise before anything is written.
     """

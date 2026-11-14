@@ -130,7 +130,7 @@ Widget _app(TourPlaybackService service, String tripId) {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('D8 — stand here', (tester) async {
+  testWidgets('stand here', (tester) async {
     expect(_token.isNotEmpty, isTrue, reason: 'run with the dart-defines');
     expect(_trip.isNotEmpty, isTrue);
     final tripService = TripService();
@@ -255,7 +255,7 @@ void main() {
       await moment(t.s, t.voice, 'ACT2',
           'stepped onto the edge — ${d.round()} m from the pin: the story STARTS');
       lines.add('W712 [ACT2] ${bigStop.poiName}: footprint ${r.round()} m; the piece '
-          'started ${d.round()} m from the pin. Before Phase 7 the phone drew one 10 m '
+          'started ${d.round()} m from the pin. Before footprints the phone drew one 10 m '
           'circle here, so nothing played until the walker stood on the pin itself.');
       await tester.pumpWidget(const SizedBox());
       t.s.stopTour();
@@ -299,7 +299,7 @@ void main() {
           'walked off for four minutes and came back — told once is told');
       final after = t.voice.playedKeys.where((k) => k == segKey).length;
       lines.add('W712 [ACT3] chapter replays on the way back: '
-          '${after > before ? "YES (defect!)" : "NO (correct — R4, 11/11)"}');
+          '${after > before ? "YES (defect!)" : "NO (correct)"}');
       await tester.pumpWidget(const SizedBox());
       t.s.stopTour();
     }
@@ -342,7 +342,7 @@ void main() {
       await moment(t.s, t.voice, 'ACT4', 'three minutes inside: nothing auto-plays');
       lines.add('W712 [ACT4] pieces started inside: '
           '${t.voice.playedKeys.length - playedBefore} '
-          '(R3: nothing auto-plays under the roof)');
+          '(nothing auto-plays under the roof)');
       await tester.pumpWidget(const SizedBox());
       t.s.stopTour();
     }
@@ -371,7 +371,7 @@ void main() {
           'START of the sentence it cut, saying nothing');
       lines.add('W712 [ACT5] resumed from ${t.voice.lastSeek?.inSeconds ?? -1}s '
           '(the piece was cut at 30s) | said anything: '
-          '${t.voice.said.length > saidBefore ? "YES (defect!)" : "NO (correct — R5, 11/11)"}');
+          '${t.voice.said.length > saidBefore ? "YES (defect!)" : "NO (correct)"}');
       await tester.pumpWidget(const SizedBox());
       t.s.stopTour();
     }

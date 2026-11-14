@@ -2520,7 +2520,7 @@ class TestDetailViewAndEditing:
             assert "About 25 minutes unplanned — yours." in panel_text, "slack not named"
             first_card = day_cards.first.text_content() or ""
             assert "20 min wait" in first_card, (
-                f"the queue price must be spelled 'N min wait' (W4.2): {first_card!r}"
+                f"the queue price must be spelled 'N min wait': {first_card!r}"
             )
             # "· inside" / "· outside" — with the separator, because "inside" is
             # a substring of "outside" and would match the wrong door side.

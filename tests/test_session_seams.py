@@ -367,7 +367,7 @@ def test_the_audio_placement_rule_has_one_definition():
     lib_text = "\n".join(p.read_text(encoding="utf-8") for p in sorted(MOBILE_LIB.rglob("*.dart")))
     assert "class StopTrigger" in model and "final StopTrigger? trigger;" in model
     assert "class PlacementPolicy" in model and "final PlacementPolicy? placement;" in model
-    assert "kStopCircleM" not in lib_text, "the one-size circle is back (plan defect 3)"
+    assert "kStopCircleM" not in lib_text, "the one-size circle is back"
     assert playback.count("bool _within(") == 1, "the distance-within-radius spelling is not one"
     assert playback.count("bool _atPlace(") == 1, "the one at-the-place predicate is not one"
     at_place = _body_of(playback, "bool _atPlace(")

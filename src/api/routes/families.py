@@ -90,8 +90,8 @@ def invite_to_family(
     session: Session = Depends(get_session),
 ) -> dict:
     """Mint the shareable invite link: a typed 7-day JWT carrying the family id
-    and the inviter's uid. Any member can invite (ADR 0005: "one person invites
-    the others"); a non-member — or a family that does not exist — is 404."""
+    and the inviter's uid. Any member can invite; a non-member — or a family
+    that does not exist — is 404."""
     if caller_profile_in_family(session, current_user["id"], body.family_id) is None:
         raise HTTPException(404, f"Family '{body.family_id}' not found")
     token = create_invite_token(body.family_id, current_user["id"])

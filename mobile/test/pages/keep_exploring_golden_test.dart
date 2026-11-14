@@ -75,7 +75,7 @@ Widget _harness(ItineraryStop stop) {
 }
 
 void main() {
-  group('KE8 keep-exploring-here golden', () {
+  group('keep-exploring-here golden', () {
     testWidgets('stop WITH extras renders the button (golden)', (tester) async {
       await tester.pumpWidget(
         _harness(

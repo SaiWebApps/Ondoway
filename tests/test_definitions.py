@@ -11,7 +11,7 @@ from src.schema.definitions import (
 
 
 class TestUniqueConstraints:
-    def test_count_matches_schema_v3(self):
+    def test_count_matches_the_schema(self):
         """Every unique constraint the schema applies: 11 in all."""
         assert len(UNIQUE_CONSTRAINTS) == 11
 

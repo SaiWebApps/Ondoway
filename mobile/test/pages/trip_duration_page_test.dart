@@ -105,7 +105,7 @@ void main() {
     });
 
     testWidgets(
-        'S6.9: the one end-time question shows in plain words, defaults to '
+        'the one end-time question shows in plain words, defaults to '
         'a hard deadline, and a tap changes it', (tester) async {
       await tester.pumpWidget(_buildTestWidget(
         initialStartTime: const TimeOfDay(hour: 9, minute: 0),

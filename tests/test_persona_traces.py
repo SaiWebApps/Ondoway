@@ -268,7 +268,7 @@ def test_no_promise_is_ever_silently_dropped(served):
             )
     assert checked, (
         "no walked step had a protected promise still ahead — this invariant "
-        "measured nothing (design §7.4.1 is fuzzed ACROSS replans)"
+        "measured nothing (it is fuzzed ACROSS replans)"
     )
 
 
@@ -342,7 +342,7 @@ def test_every_drop_rechecks_the_longest_leg_cap(served):
                 f"party cap {resolved_cap_minutes(name)}): {over}"
             )
     assert days_with_legs, (
-        "no served day has a walking leg, so §4.5.3 measured nothing — the rule "
+        "no served day has a walking leg, so the leg-cap re-check measured nothing — the rule "
         "is about two legs FUSING when the stop between them is dropped"
     )
     assert drops_checked, (
@@ -391,7 +391,7 @@ def test_protected_items_are_never_auto_cut(served):
             checked += 1
     assert checked, (
         f"no precomputed entry had a protected item ahead of it "
-        f"({empty_tails} entries seated nothing at all), so §4.5.2 measured nothing"
+        f"({empty_tails} entries seated nothing at all), so this measured nothing"
     )
 
 
@@ -426,11 +426,11 @@ def test_announcements_carry_screen_text_and_never_land_on_a_walking_leg(served)
             for entry in day.get("contingencies", []):
                 announcements += 1
                 assert entry["screen_text"].strip(), (
-                    f"{name}: {entry['trigger']} speaks with nothing on screen (§4.4.2)"
+                    f"{name}: {entry['trigger']} speaks with nothing on screen"
                 )
                 if entry.get("question"):
                     assert entry["default_arm"], (
-                        f"{name}: {entry['trigger']} asks without naming its default (R2.4)"
+                        f"{name}: {entry['trigger']} asks without naming its default"
                     )
                     assert entry["question"].strip().endswith("?"), entry["question"]
         for step in trace.walk:
@@ -439,12 +439,12 @@ def test_announcements_carry_screen_text_and_never_land_on_a_walking_leg(served)
                 for entry in step.reply.get("contingencies", []):
                     assert entry["screen_text"].strip(), (
                         f"{name} — mid-leg: {entry['trigger']} spoke with nothing on "
-                        "screen; a leg is where a sentence is lost (§4.4.1/§4.4.2)"
+                        "screen; a leg is where a sentence is lost"
                     )
                     if entry.get("question"):
                         assert entry["default_arm"], (
                             f"{name} — mid-leg: a question with no default arm leaves a "
-                            "walking listener owing an answer (W5.2 R2.4)"
+                            "walking listener owing an answer"
                         )
         for stop in trace.stops:
             if not (stop.get("narration") or "").strip():
@@ -453,11 +453,11 @@ def test_announcements_carry_screen_text_and_never_land_on_a_walking_leg(served)
             trigger = stop.get("trigger") or {}
             assert float(trigger.get("radius_m") or 0) > 0, (
                 f"{name}: {stop['poi_name']!r} has words and no footprint to play them "
-                "in — nothing places it, so nothing keeps it off the leg (S7.3)"
+                "in — nothing places it, so nothing keeps it off the leg"
             )
-    assert announcements, "no announcement was measured (§4.4.2 measured nothing)"
-    assert on_leg_steps, "no step of any walk was ON A LEG (§4.4.1 measured nothing)"
-    assert placed, "no stop carried words (§7.4.4's third clause measured nothing)"
+    assert announcements, "no announcement was measured (clause (a) measured nothing)"
+    assert on_leg_steps, "no step of any walk was ON A LEG (clause (b) measured nothing)"
+    assert placed, "no stop carried words (clause (c) measured nothing)"
 
 
 @needs_neo4j
@@ -505,10 +505,10 @@ def test_every_prefix_is_decent_and_wrap_up_ends_with_a_close(served):
                 stops_checked += 1
                 assert (stop.get("close_text") or "").strip(), (
                     f"{name} v{day['plan_version']}: {stop['poi_name']!r} has no written "
-                    "close, so wrapping up there ends on nothing (§5.3)"
+                    "close, so wrapping up there ends on nothing"
                 )
     assert versions_checked, "no version of any day was checked for its prefixes"
-    assert stops_checked, "no stop was checked for its close (§5.3 measured nothing)"
+    assert stops_checked, "no stop was checked for its close"
 
 
 def _anchor_subs_and_beat_subs(driver) -> tuple[dict[str, set[str]], dict[str, str]]:
@@ -719,7 +719,7 @@ def test_a_door_reported_shut_never_returns_to_the_day(served):
                         "reported shut"
                     )
     assert reported, (
-        "no served day reported a shut door, so rule 5 measured nothing across the "
+        "no served day reported a shut door, so the shut-door rule measured nothing across the "
         "eleven — no day the product serves has a stop the walker goes inside"
     )
 

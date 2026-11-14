@@ -60,8 +60,7 @@ def city_hours(slug: str, session: Session = Depends(get_session)) -> dict:
 def list_lenses(session: Session = Depends(get_session)) -> list[dict]:
     """Return the lens taxonomy.
 
-    P3 build (run-context.md decisions `lenses_shape`, `p1_minimal_build`):
-    each parent lens carries a nested `children` list of its child lenses
+    Each parent lens carries a nested `children` list of its child lenses
     (id, name, display_label, is_parent:false), gathered via OPTIONAL MATCH
     on IS_PARENT_OF so a childless parent yields an empty list rather than
     being dropped.
@@ -134,7 +133,7 @@ def list_profiles(
 
     GET /profile keeps its one-profile shape for the phone's existing read;
     this is the multi-profile listing beside it (a user's profiles are e.g.
-    Mom and Kid — ADR 0005 hangs family membership off exactly these). Ordered
+    Mom and Kid — family membership hangs off exactly these). Ordered
     newest first, the same created_at DESC + id ordering /profile resolves by.
     """
     records = session.run(

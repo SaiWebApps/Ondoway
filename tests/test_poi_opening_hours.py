@@ -115,7 +115,7 @@ def test_every_poi_explains_its_opening_hours() -> None:
 HEATWAVE_WORDS_RE = re.compile(r"heatwave|îlot|fraîcheur|canicule", re.IGNORECASE)
 
 #: Names the ladder left behind. Their absence from the product, the scripts,
-#: the other tests, the Makefile and the make docs is the gate; this file is
+#: the other tests and the Makefile is the gate; this file is
 #: excluded from its own grep because it names them here.
 LADDER_NAMES = (
     "opening_hours_verified",
@@ -198,11 +198,11 @@ def test_gate_no_basis_names_the_heatwave_file() -> None:
 
 
 def test_gate_the_ladder_is_gone() -> None:
-    """No product code, script, other test, make target or make doc names the
+    """No product code, script, other test or make target names the
     verification ladder or the review command."""
     roots = [REPO_ROOT / "src", REPO_ROOT / "scripts", REPO_ROOT / "tests"]
     files = [p for root in roots for p in root.rglob("*.py")]
-    files += [REPO_ROOT / "Makefile", REPO_ROOT / "Docs" / "MAKE_TARGETS.md"]
+    files += [REPO_ROOT / "Makefile"]
     this_file = Path(__file__).resolve()
     offenders = []
     for path in files:

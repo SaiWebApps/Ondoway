@@ -121,7 +121,7 @@ void main() {
     return (service: service, player: player, gps: gps, clock: clock);
   }
 
-  group('S6.4 the tap is the seam (W6.2 R8)', () {
+  group('the tap is the seam', () {
     test('mid-piece: the sentence ends, the piece does not; then the stop\'s close; '
         'the way home on screen; nothing else', () async {
       final t = await atStopZero();
@@ -156,7 +156,7 @@ void main() {
       expect(t.player.said, [stops[0].closeText]);
       expect(t.player.played.where((k) => k.endsWith('-close')), isEmpty,
           reason: 'this fixture is UNVOICED (closeAudioUrl null): the file-less '
-              'fallback speaks — S6.8\'s file door is proven in '
+              'fallback speaks — the file door is proven in '
               'session_full_telling_test.dart');
     });
 
@@ -187,11 +187,11 @@ void main() {
       expect(t.service.closeLine, isNotNull, reason: 'on screen at once');
       t.clock.tick(60);
       t.service.tick();
-      expect(t.player.said, isEmpty, reason: 'on a leg nothing is said (§4.4.1)');
+      expect(t.player.said, isEmpty, reason: 'on a leg nothing is said');
     });
   });
 
-  group('S6.4 the sentence boundary is arithmetic over the stop\'s own text', () {
+  group('the sentence boundary is arithmetic over the stop\'s own text', () {
     test('a piece of four equal sentences has its ends at quarter marks; past the '
         'last boundary the wait is zero; no text or length means no wait', () {
       final stop = stops[0];
@@ -221,7 +221,7 @@ void main() {
       expect(TourPlaybackService.secondsToSentenceEnd(long, Duration.zero),
           TourPlaybackService.kSentenceEndCapSeconds);
       expect(TourPlaybackService.kSentenceEndCapSeconds, 8,
-          reason: 'W7.2 R6: eight seconds is the whole budget (Fiona, Nadia, Marcus)');
+          reason: 'eight seconds is the whole budget');
     });
   });
 
@@ -229,7 +229,7 @@ void main() {
   // from the PLAYER's real length when the file is loaded — the wire's length is the estimate, the player's is the fact — and
   // the cap is the party's: 8 s, the family 0 (cut at once), a `wall` day 5 s.
   // An unknown length cuts at once and the close plays.
-  group('S7.8 the seam trusts the player\'s length and the party\'s cap (W7.2 R6)', () {
+  group('the seam trusts the player\'s length and the party\'s cap', () {
     test('the player\'s length wins over the wire\'s; the wire\'s is the fallback', () async {
       final t = await atStopZero();
       // The wire says 40 s; the loaded file is really 80 s long: at 25 s the
@@ -256,12 +256,12 @@ void main() {
         tripId: 'trip-1', planVersion: 1, stops: stops, retimeToleranceSeconds: 180,
         dayStartHhmm: '15:00', party: 'family',
       ));
-      expect(t.service.sentenceWaitFor(stops[0]), 0, reason: 'Nadia: cut at once');
+      expect(t.service.sentenceWaitFor(stops[0]), 0, reason: 'cut at once');
       t.service.holdSession(SessionPlan(
         tripId: 'trip-1', planVersion: 1, stops: stops, retimeToleranceSeconds: 180,
         dayStartHhmm: '15:00', endHardness: 'wall',
       ));
-      expect(t.service.sentenceWaitFor(stops[0]), 5, reason: 'Marcus: five seconds');
+      expect(t.service.sentenceWaitFor(stops[0]), 5, reason: 'five seconds');
       final mute = ItineraryStop(
         sortOrder: 9, poiId: 'p', poiName: 'P', lat: 0, lng: 0, lensName: '',
         lensDisplay: '', durationMin: 1, importanceTier: 1, startTime: '',

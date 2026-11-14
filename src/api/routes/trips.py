@@ -577,7 +577,7 @@ def generate_trip(
     -> 422) -> select_poi_beats per route POI -> generate (deterministic
     mock glue) -> route_script_to_stops -> persist Trip + ItineraryItems.
 
-    M0b scope notes:
+    Scope notes:
     - `radius_m`, `max_stops`, and `kid_friendly_only` are accepted for
       request back-compat but are inert: the engine derives its own walk
       radius and stop count from `duration_min`.
@@ -886,7 +886,7 @@ def compose_trip(
     premium_executor: PremiumComposeExecutor = Depends(get_premium_compose_executor),
     faithfulness_checker: FaithfulnessChecker | None = Depends(get_faithfulness_checker),
 ):
-    """Second step of the preview/compose split (Phase 4 Step 4.7, spec §5).
+    """Second step of the preview/compose split.
 
     Rebuilds the user's PICK from the poi ids persisted at generate time —
     NEVER re-running selection, so corpus/routing drift cannot swap the
@@ -2148,10 +2148,10 @@ def get_trip_session(
     session: Session = Depends(get_session),
 ):
     """The current version of the living session — the day as it stands and the
-    contingency set the phone selects from (design §4.6). A trip that was never
+    contingency set the phone selects from. A trip that was never
     composed has no session yet: 404 with a reason, never an empty plan.
 
-    Readable by captain OR crew: the family reads its shared day (ADR 0005)."""
+    Readable by captain OR crew: the family reads its shared day."""
     _readable_trip_or_404(session, current_user["id"], trip_id)
     inputs = get_trip_compose_inputs(session, trip_id)
     if inputs is None:
@@ -2445,13 +2445,13 @@ def replan_trip_session(
     session: Session = Depends(get_session),
     driver: Driver = Depends(get_driver),
 ):
-    """The one replan brain (design §4.6): the phone reports where it is, its two
+    """The one replan brain: the phone reports where it is, its two
     clocks and its learned rates; the server replans the REMAINDER of the day it is
     standing in — through THE planner with a `ReplanContext` (the person's protected
     set held, the pool the planned stops still ahead, a zero floor, the learned
     pace and listening rate) — and mints version N+1 over the SAME items with a
     fresh contingency set. It never hands back a different day than the one the
-    person is standing in (the plan's sabotage line): no new place, no
+    person is standing in: no new place, no
     re-authoring, the audio already made is kept.
 
     Captain-only, like compose: a replan WRITES version N+1 over the shared
@@ -2952,7 +2952,7 @@ def preview_trip(
     It is anonymous only because it spends nothing: nothing that calls a provider
     belongs on this route.
 
-    OWNER RULING 2026-07-31: "Don't just log errors. Actually show them in the workbench
+    2026-07-31: "Don't just log errors. Actually show them in the workbench
     UI. Otherwise, they're invisible." The degradation scope is opened here so a route
     built on estimated walking legs rather than measured ones is reported on the wire
     rather than in a log file nobody opens.

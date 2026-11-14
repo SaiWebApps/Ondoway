@@ -154,7 +154,7 @@ def plain(text: str) -> str:
     hit = _BANNED_RE.search(text)
     if hit is not None:
         raise ValueError(
-            f"the panel banned {hit.group(0).lower()!r} from anything spoken or shown: {text!r}"
+            f"{hit.group(0).lower()!r} is banned from anything spoken or shown: {text!r}"
         )
     return text
 
@@ -175,7 +175,7 @@ def one_sentence(text: str) -> str:
     stripped = text.strip()
     breaks = [m.start() for m in _SENTENCE_BREAK.finditer(stripped)]
     if len(breaks) > 1 or (breaks and breaks[0] != len(stripped) - 1):
-        raise ValueError(f"the panel allows ONE sentence on screen or aloud, not: {text!r}")
+        raise ValueError(f"only ONE sentence is allowed on screen or aloud, not: {text!r}")
     return text
 
 

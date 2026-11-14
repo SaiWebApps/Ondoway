@@ -86,7 +86,7 @@ void main() {
           reason: 'unanswered means a hard deadline (owner ruling 2026-08-19)');
     });
 
-    test('generateTrip sends the chosen end_hardness (S6.9)', () async {
+    test('generateTrip sends the chosen end_hardness', () async {
       Map<String, dynamic>? capturedBody;
       final client = MockClient((request) async {
         capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
@@ -658,7 +658,7 @@ void main() {
     });
 
     test('generateDeeperDiveAudio POSTs to the keep-exploring endpoint and '
-        'parses the result (KE5)', () async {
+        'parses the result', () async {
       final client = MockClient((request) async {
         expect(request.method, 'POST');
         expect(
@@ -686,7 +686,7 @@ void main() {
       expect(result.durationSec, 42.5);
     });
 
-    test('generateDeeperDiveAudio surfaces status==failed as an exception (KE5)',
+    test('generateDeeperDiveAudio surfaces status==failed as an exception',
         () async {
       // Soft TTS failure: 200 with status='failed', never a 500.
       final client = MockClient((request) async {
@@ -713,7 +713,7 @@ void main() {
       );
     });
 
-    test('generateDeeperDiveAudio throws on 404 (unknown stop) (KE5)', () async {
+    test('generateDeeperDiveAudio throws on 404 (unknown stop)', () async {
       final client = MockClient((request) async {
         return http.Response(
           jsonEncode({'detail': "Stop 'bad' not found"}),
@@ -882,7 +882,7 @@ void main() {
       );
     });
 
-    test('generateDeeperDiveAudio throws on 409 (no extras) (KE5)', () async {
+    test('generateDeeperDiveAudio throws on 409 (no extras)', () async {
       final client = MockClient((request) async {
         return http.Response(
           jsonEncode({'detail': 'no keep-exploring extras'}),

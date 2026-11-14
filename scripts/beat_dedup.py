@@ -427,7 +427,7 @@ def main(argv: list[str]) -> int:
 
     if not sys.stdin.isatty():
         print(
-            "beat-dedup: refuse to apply — stdin is not a TTY. AC-7 requires "
+            "beat-dedup: refuse to apply — stdin is not a TTY. Applying requires "
             "interactive per-pair approval. Re-run in a real terminal, or re-run "
             "with --report-only to inspect the report without applying.",
             file=sys.stderr,

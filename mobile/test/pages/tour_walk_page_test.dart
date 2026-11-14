@@ -447,7 +447,7 @@ void main() {
     expect(
       find.textContaining('this happens if you do nothing'),
       findsOneWidget,
-      reason: 'the default is named in words (R2.5)',
+      reason: 'the default is named in words',
     );
     expect(find.byKey(const Key('session-head-back')), findsOneWidget);
     // Nothing on the screen names the pause, a count or a stopwatch. The

@@ -87,7 +87,7 @@ def test_wrong_spine_and_failed_validation_dock_their_weights():
     assert g.spine_match == 0.0
     assert g.validation == 0.0
     assert not g.passed, (
-        "a failed validation must fail the grade (S8.4b hard zero), whatever the score"
+        "a failed validation must fail the grade (hard zero), whatever the score"
     )
 
 

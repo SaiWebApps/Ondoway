@@ -643,7 +643,7 @@ class TestPreVoicedSessionLines:
         for line in (CLOSE1, THREAD1, FULL_CLOSE1, CLOSE2):
             assert line in recorder.texts, f"not voiced: {line!r}"
         assert not any("Next:" in t or "Straight to" in t for t in recorder.texts), (
-            "the set's fixed lines are screen-only (R6, 8/11)"
+            "the set's fixed lines are screen-only"
         )
         with clean_driver.session(database=get_database()) as s:
             row = s.run(

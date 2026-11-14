@@ -406,7 +406,7 @@ class _Poison:
     def __init__(self, *args, **kwargs):
         raise AssertionError(
             "Block 1 constructed a paid provider client. Planning shows places, order "
-            "and walking times only (OWNER RULING 1); every word arrives in AUTHOR, "
+            "and walking times only; every word arrives in AUTHOR, "
             "after the traveller has picked one option."
         )
 
@@ -520,8 +520,8 @@ def test_block_one_plans_one_priced_free_day(monkeypatch) -> None:
     entry = inspect.getsource(premium_tour.plan_premium_tour)
     assert "select_route(" in entry, "plan_premium_tour is not the one-day planner"
     assert "select_k_routes" not in module_source, (
-        "the K-flavour selector is still referenced by premium_tour; §8.1 deleted "
-        "pick-one-of-three"
+        "the K-flavour selector is still referenced by premium_tour; pick-one-of-three "
+        "is deleted"
     )
 
     route = _one_route()

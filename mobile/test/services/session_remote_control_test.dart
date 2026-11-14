@@ -81,7 +81,7 @@ void main() {
     return (service: service, player: player, gps: gps, clock: clock);
   }
 
-  group('S8.7 the lock screen (persona 09, Fiona & Dev)', () {
+  group('the lock screen', () {
     test('a pause pressed on the LOCK SCREEN suspends the TOUR, not just the audio: '
         'the tour clock stops, the wall clock keeps spending, and the pause is '
         'counted as their own', () async {
@@ -95,14 +95,14 @@ void main() {
       expect(t.service.isPaused, isTrue,
           reason: 'THE INVARIANT: the lock screen pauses the TOUR, through the one door');
       expect(t.service.pauseCount, 1,
-          reason: "a transport button is the person asking — unlike S7.9's interruption");
+          reason: 'a transport button is the person asking — unlike an interruption');
       expect(t.service.resumeOffer, isNull, reason: 'not an interruption: no resume offer');
 
       t.clock.tick(300); // five minutes of the conversation they came for
       expect(t.service.tourElapsedSeconds, 60,
           reason: 'the tour clock is suspended: a pause is information, never lateness');
       expect(t.service.wallElapsedSeconds, 360,
-          reason: 'the wall keeps spending — the two clocks (§4.3)');
+          reason: 'the wall keeps spending — the two clocks');
     });
 
     test('play pressed on the LOCK SCREEN resumes the TOUR: the clock runs again '
@@ -139,7 +139,7 @@ void main() {
     });
 
     test('it is the SAME policy, not a copy: the couple\'s second lock-screen pause '
-        'flips the day to screen-only (S5.11 R4), exactly as an in-app pause does',
+        'flips the day to screen-only, exactly as an in-app pause does',
         () async {
       final t = await midPieceAtStopZero(party: 'couple');
       t.player.simulateRemoteCommand(AudioRemoteCommand.pause);

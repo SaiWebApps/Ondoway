@@ -637,7 +637,7 @@ def test_lens_miss_dims_but_does_not_zero_poi_score():
     )
     s_miss = poi_score(missed, None, frozenset({"hidden_history"}), snap)
     s_neutral = poi_score(missed, None, frozenset(), snap)
-    assert s_miss > 0.0, "a lens miss must DIM, not zero, the score (Step 3.5 model switch)"
+    assert s_miss > 0.0, "a lens miss must DIM, not zero, the score (model switch)"
     assert math.isclose(s_miss / s_neutral, LENS_FLOOR, rel_tol=1e-9), (
         f"a lens-miss score must be LENS_FLOOR of the no-lens score; "
         f"got ratio {s_miss / s_neutral}"
@@ -975,7 +975,7 @@ def test_zero_beat_poi_excluded_from_anchor_pool():
     assert "rich" in ids
     assert "empty" not in ids, (
         "Zero-beat POI must be excluded from the candidate pool — "
-        "this was the Phase 5 Petit Palais bug"
+        "this was the Petit Palais bug"
     )
 
 
@@ -1400,7 +1400,7 @@ def test_notre_dame_in_ile_not_latin_quarter():
 # ---------------------------------------------------------------------------
 
 
-def test_phase7_fill_pass_adds_anchors_when_below_floor():
+def test_fill_pass_adds_anchors_when_below_floor():
     """Greedy stalls below the audio floor with walk slack remaining → fill pass adds.
 
     Synthetic 180-min one-way scenario: 3 anchors clustered near start
@@ -1448,7 +1448,7 @@ def test_phase7_fill_pass_adds_anchors_when_below_floor():
     )
 
 
-def test_phase7_fill_pass_does_not_run_when_already_above_floor():
+def test_fill_pass_does_not_run_when_already_above_floor():
     """When greedy already meets the audio floor, fill pass is a no-op.
 
     The mirror image of the test above: there, the greedy stalls short of the
@@ -1733,7 +1733,7 @@ def test_fixed_end_final_exact_elapsed_guard_catches_post_order_drift(monkeypatc
         select_route(inp, snap)
 
 
-def test_phase7_fill_pass_respects_walk_budget_cap():
+def test_fill_pass_respects_walk_budget_cap():
     """Fill pass clips at FILL_PASS_WALK_BUDGET_FRAC x walk_budget."""
     from src.tour.routing import walk_budget_seconds
     from src.tour.selection import FILL_PASS_WALK_BUDGET_FRAC
@@ -1773,7 +1773,7 @@ def test_phase7_fill_pass_respects_walk_budget_cap():
     assert route.total_walk_seconds <= walk_cap
 
 
-def test_phase7_fill_pass_under_floor_rescue_adds_nearby_stop():
+def test_fill_pass_under_floor_rescue_adds_nearby_stop():
     """A 2nd nearby stop that busts walk_budget but fits total planned time
     is added while the tour is below the stop floor and the audio floor.
 
@@ -1827,7 +1827,7 @@ def test_phase7_fill_pass_under_floor_rescue_adds_nearby_stop():
     assert {p.id for p in control} == {"A"}, "no rescue -> walk cap blocks the 2nd stop"
 
 
-def test_phase7_fill_pass_rescue_rejects_far_walk_slog():
+def test_fill_pass_rescue_rejects_far_walk_slog():
     """Guard: the rescue must NOT trek to a FAR thin stop.
 
     A distant candidate whose round-trip detour exceeds RESCUE_WALK_MULTIPLE x
@@ -3170,7 +3170,7 @@ def test_a_stop_is_never_admitted_past_the_walking_worth_line():
         "(the absolute half of the worth line)"
     )
     assert "worth-it" in offered_alone(worth_it), (
-        "the 1.8:1 trade (Théo's memorial shape) must still seat"
+        "the 1.8:1 trade (the memorial shape) must still seat"
     )
 
 

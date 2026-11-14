@@ -1,4 +1,4 @@
-"""Learn each door's opening hours — data row 6.1 behind /poi-opening-hours.
+"""Learn each door's opening hours — the script behind /poi-opening-hours.
 
 WHY A SECOND SCRIPT AND NOT A FLAG ON THE CAPACITY PASS. One script answers one
 question (`scripts/poi_visit_duration.py`'s own header records the precedent):

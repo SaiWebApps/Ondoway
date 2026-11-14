@@ -96,7 +96,7 @@ REMEDY = "Run the queue pass: `make poi-queues SLUG=<city>`."
 # ---------------------------------------------------------------------------
 
 
-def test_the_vocabulary_is_closed_and_exactly_the_design_s_four() -> None:
+def test_the_vocabulary_is_closed_and_exactly_four() -> None:
     """The vocabulary is four classes; a silently widened
     vocabulary would change what a `wall` day may be offered without review.
     Order-insensitive on purpose: the tuple's ORDER is presentation, its SET is

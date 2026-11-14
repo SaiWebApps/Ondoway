@@ -17,7 +17,7 @@ class TourContextStop(BaseModel):
 class TourContext(BaseModel):
     """Structured context of a generated tour attached to workbench eval feedback.
 
-    Human-mediated loop (Track B Step B.7): this context only lands in the GitHub
+    Human-mediated loop: this context only lands in the GitHub
     issue for a human to read — it never tunes the engine automatically.
     """
 

@@ -189,7 +189,7 @@ def main() -> int:
     all_pass = True
 
     # The skill-source city check always runs
-    print("=== AC-8 (code half): no city hardcoding in skill source ===")
+    print("=== No city hardcoding in skill source ===")
     ok, errors = check_ac8_code(Path(args.skill))
     if ok:
         print("  PASS")
@@ -208,7 +208,7 @@ def main() -> int:
         beats = json.loads(beats_path.read_text())
         print(f"\n=== Beats loaded: {len(beats)} from {beats_path} ===\n")
 
-        print("=== AC-4: all required fields, Pydantic-valid ===")
+        print("=== All required fields, Pydantic-valid ===")
         ok, errors = check_ac4(beats)
         if ok:
             print(f"  PASS ({len(beats)} beats)")
@@ -218,7 +218,7 @@ def main() -> int:
             for e in errors:
                 print(f"    {e}")
 
-        print("\n=== AC-5: sensory_anchor → structured physical_cues ===")
+        print("\n=== sensory_anchor → structured physical_cues ===")
         ok, errors = check_ac5(beats)
         if ok:
             sa_count = sum(1 for b in beats if b.get("sensory_anchor"))
@@ -240,7 +240,7 @@ def main() -> int:
                 print(f"    {e}")
 
         if args.city:
-            print(f"\n=== AC-8 (fixture half): beat_id prefix '{args.city}_' ===")
+            print(f"\n=== beat_id prefix '{args.city}_' ===")
             ok, errors = check_city_prefix(beats, args.city)
             if ok:
                 print(f"  PASS (all {len(beats)} beats prefixed)")
@@ -250,7 +250,7 @@ def main() -> int:
                 for e in errors:
                     print(f"    {e}")
     else:
-        print("\n[INFO] --beats not supplied; AC-4/AC-5/AC-8-fixture skipped.")
+        print("\n[INFO] --beats not supplied; the beat checks skipped.")
         print("       Run the unified-beat-extract skill against tests/fixtures/mini_chunk.txt")
         print("       with city=test_city_xx, then re-run this script with --beats <path>.")
 

@@ -863,7 +863,7 @@ poi-place-judgements: ## Judge child/talk/dark affordances. Usage: make poi-plac
 # writes nothing — exactly the poi-visit-duration pattern, whose call door it
 # imports. Review at the standard rate with named spot checks (Louvre,
 # Sainte-Chapelle, Orsay, every `unpredictable`).
-poi-queues: ## Price POI queues (row 6.5). Usage: make poi-queues SLUG=paris [LIMIT=10].
+poi-queues: ## Price POI queues. Usage: make poi-queues SLUG=paris [LIMIT=10].
 	@$(PREFLIGHT) --label poi-queues $(PRE_PY) render-key
 	@$(RENDER_LOCAL_EXEC) uv run python scripts/poi_queues.py \
 		--slug "$(or $(SLUG),paris)"$(if $(LIMIT), --limit $(LIMIT),) $(ARGS)

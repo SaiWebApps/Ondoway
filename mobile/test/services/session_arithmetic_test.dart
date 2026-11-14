@@ -79,7 +79,7 @@ void main() {
     placement: const PlacementPolicy(ownPlaceM: 60),
   );
 
-  group('S5.10 the phone learns (design §4.1)', () {
+  group('the phone learns', () {
     test('the walking pace replaces the preset after five minutes of walking on '
         'a leg; low-accuracy fixes, standing still and wandering inside a stop '
         'train nothing', () async {
@@ -170,7 +170,7 @@ void main() {
     });
   });
 
-  group('S5.10 pause as information (design §4.3)', () {
+  group('pause as information', () {
     test('a pause suspends the TOUR clock and is never lateness; the WALL clock '
         'keeps spending and the number on screen moves with it', () async {
       final clock = _Clock(DateTime(2026, 8, 19, 9, 0));
@@ -216,9 +216,9 @@ void main() {
     });
   });
 
-  group('W5.14 the tour clock and the firm finish', () {
+  group('the tour clock and the firm finish', () {
     test('the tour clock starts at the first step off the square or the first '
-        'play, not at the tap (R1.3; Fiona & Dev)', () async {
+        'play, not at the tap', () async {
       final clock = _Clock(DateTime(2026, 8, 19, 9, 0));
       final location = MockLocationService();
       final service = TourPlaybackService(
@@ -246,7 +246,7 @@ void main() {
     });
 
     test('a FIRM finish that has moved past the tolerance earns ONE screen line; '
-        'an OPEN finish moves in silence (W5.14 Q3)', () async {
+        'an OPEN finish moves in silence', () async {
       for (final hardness in ['firm', 'open']) {
         final clock = _Clock(DateTime(2026, 8, 19, 9, 0));
         final location = MockLocationService();
@@ -296,10 +296,9 @@ void main() {
     });
   });
 
-  group('W5.13 a pause is not an ending', () {
+  group('a pause is not an ending', () {
     test('pausing the piece keeps the tour at its stop; only a piece that '
-        'COMPLETES advances it (D6 found the tour jumping a stop on Dev\'s '
-        'pause)', () async {
+        'COMPLETES advances it', () async {
       final clock = _Clock(DateTime(2026, 8, 19, 9, 0));
       final location = MockLocationService();
       final audio = MockAudioService();
@@ -325,7 +324,7 @@ void main() {
     });
   });
 
-  group('S5.10 skip and wandering', () {
+  group('skip and wandering', () {
     test('skip = unplayed AND unopened; a stop read on the screen is not a skip', () async {
       final clock = _Clock(DateTime(2026, 8, 19, 9, 0));
       final service = TourPlaybackService(
@@ -343,7 +342,7 @@ void main() {
     });
   });
 
-  group('S5.10 THE SESSION CLOCK SEAM, phone half (design §4.6)', () {
+  group('THE SESSION CLOCK SEAM, phone half', () {
     test('every held version is COMPARED with the phone\'s own re-timing; a gap '
         'beyond the tolerance is REPORTED, never corrected', () async {
       final clock = _Clock(DateTime(2026, 8, 19, 9, 0));

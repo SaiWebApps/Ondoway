@@ -667,19 +667,19 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "--party",
         choices=["solo", "couple", "family", "take-it-easy", "with-luggage"],
         default=None,
-        help="Party preset — a shortcut over the axis flags (design §2.4).",
+        help="Party preset — a shortcut over the axis flags.",
     )
     parser.add_argument(
         "--max-stop-minutes",
         type=int,
         default=None,
-        help="Ceiling on any ONE stop, minutes (Nadia's six-minute ceiling).",
+        help="Ceiling on any ONE stop, minutes.",
     )
     parser.add_argument(
         "--max-leg-minutes",
         type=int,
         default=None,
-        help="Hard cap on any single walking leg, minutes (Rosemary's twelve).",
+        help="Hard cap on any single walking leg, minutes.",
     )
     parser.add_argument(
         "--walking-pace",
@@ -704,14 +704,14 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         choices=["any", "no_stairs", "step_free"],
         default=None,
         help="What the route may be made of; no_stairs/step_free ride Valhalla "
-        "costing (W2.1-proven).",
+        "costing.",
     )
     parser.add_argument(
         "--narration-register",
         choices=["solo", "warm", "family"],
         default=None,
         help="Explicit narration register — an axis flag like the others, so "
-        "a preset PAIR (e.g. take-it-easy + solo, design §2.4) can be built "
+        "a preset PAIR (e.g. take-it-easy + solo) can be built "
         "without a party value for the pair itself.",
     )
     # PROMISES AND THE SKY (the harness speaks promises before

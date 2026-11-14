@@ -98,7 +98,7 @@ void main() {
     return (service: service, player: player, gps: gps, clock: clock);
   }
 
-  group('S6.5 the thread of the pair the session made (W6.2 R5)', () {
+  group('the thread of the pair the session made', () {
     test('a skip makes 0->2 consecutive: the thread goes on screen and is said '
         'at the standing seam, once', () async {
       final t = await atStopZero();

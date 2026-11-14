@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Backfill the canonical `name_key` dedup property onto existing POI nodes (defect 3).
+"""Backfill the canonical `name_key` dedup property onto existing POI nodes.
 
 Duplicate POIs were fixed by making POI creation MERGE on a canonical `name_key`
 (``src/api/crud/nodes.create_node`` → ``MERGE (n:POI {name_key, city_name})``,

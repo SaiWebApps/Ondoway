@@ -80,7 +80,7 @@ class EvalResponse(BaseModel):
 
 class GenerateRequest(BaseModel):
     """Request body for a voicing pass — the per-stop trip voicing and the keep-exploring
-    door (the per-beat generate routes were deleted at Phase 7 S7.10)."""
+    door (the per-beat generate routes were deleted)."""
 
     provider: str | None = None
     voice_id: str | None = None
@@ -88,7 +88,7 @@ class GenerateRequest(BaseModel):
 
 
 class StopAudioResultItem(BaseModel):
-    """Result for one stop in per-stop trip audio generation (Phase 1, Step 1.4a)."""
+    """Result for one stop in per-stop trip audio generation."""
 
     stop_id: str
     status: str = Field(description="generated | skipped | failed")
@@ -108,7 +108,7 @@ class TripStopAudioGenerateResponse(BaseModel):
 
 
 class StopAudioStatusResponse(BaseModel):
-    """Per-stop audio status by ItineraryItem id (Phase 1, Step 1.4b)."""
+    """Per-stop audio status by ItineraryItem id."""
 
     stop_id: str
     has_audio: bool
@@ -117,7 +117,7 @@ class StopAudioStatusResponse(BaseModel):
 
 
 class KeepExploringAudioResponse(BaseModel):
-    """KE3: on-demand audio for a stop's "keep exploring here" extra narration.
+    """On-demand audio for a stop's "keep exploring here" extra narration.
 
     Voiced OFF the tour budget (this is an on-demand deep-dive, not a scheduled
     stop), so it carries no duration_min / itinerary accounting. Mirrors the

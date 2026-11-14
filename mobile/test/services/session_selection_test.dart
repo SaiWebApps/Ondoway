@@ -83,7 +83,7 @@ void main() {
     contingencies: entries,
   );
 
-  group('the phone SELECTS from the held set (design §4.6)', () {
+  group('the phone SELECTS from the held set', () {
     test('a band lookup: the first entry in SERVER order whose band holds the '
         'measured minutes is selected — never a tie-break of its own', () async {
       final service = TourPlaybackService(
@@ -199,12 +199,12 @@ void main() {
       expect(
         service.pendingQuestion,
         isNull,
-        reason: 'a fabric entry asks nothing (§4.2)',
+        reason: 'a fabric entry asks nothing',
       );
     });
 
     test('the ONE question: the entry\'s default is in force until answered, '
-        'and the answer applies the arm the person chose (§4.2)', () async {
+        'and the answer applies the arm the person chose', () async {
       final service = TourPlaybackService(
         locationService: MockLocationService(),
         audioService: _RecordingAudio(),
@@ -245,8 +245,7 @@ void main() {
     });
 
     test('a band is the answer FROM a stop: with the position known, the entry '
-        'for THAT stop is selected even when an earlier stop\'s band also holds '
-        '(W5.2 R1.3; found at W5.12)', () async {
+        'for THAT stop is selected even when an earlier stop\'s band also holds', () async {
       final service = TourPlaybackService(
         locationService: MockLocationService(),
         audioService: _RecordingAudio(),
@@ -276,7 +275,7 @@ void main() {
     });
 
     test('a promise-at-risk entry keeps the day through the stop BEFORE the '
-        'promise — the server answered from there (R1.5) — and its stops '
+        'promise — the server answered from there — and its stops '
         'start after it', () async {
       final service = TourPlaybackService(
         locationService: MockLocationService(),
@@ -308,7 +307,7 @@ void main() {
     });
 
     test('a door reported SHUT selects its entry, and the door itself leaves '
-        'the day — the walker is standing at it (Docs/adr/0006 rule 5)', () async {
+        'the day — the walker is standing at it', () async {
       final service = TourPlaybackService(
         locationService: MockLocationService(),
         audioService: _RecordingAudio(),
@@ -349,7 +348,7 @@ void main() {
     });
 
     test('a standby the session HOLDS beside the day resolves and is seated — '
-        'the phone drops any id it does not hold (M6b)', () async {
+        'the phone drops any id it does not hold', () async {
       final audio = _RecordingAudio();
       final service = TourPlaybackService(
         locationService: MockLocationService(),
@@ -393,7 +392,7 @@ void main() {
     });
 
     test('a standby the walker TOOK can still say goodbye — it joins the walked '
-        'day, which the closes read directly (M6c)', () async {
+        'day, which the closes read directly', () async {
       final service = TourPlaybackService(
         locationService: MockLocationService(),
         audioService: _RecordingAudio(),
@@ -449,7 +448,7 @@ void main() {
     });
 
     test('alternates prefetch through the EXISTING audio cache door, keyed as '
-        'playback keys them (design §4.7)', () async {
+        'playback keys them', () async {
       final audio = _RecordingAudio();
       final service = TourPlaybackService(
         locationService: MockLocationService(),

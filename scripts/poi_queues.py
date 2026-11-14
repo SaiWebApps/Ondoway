@@ -1,4 +1,4 @@
-"""Price the QUEUE at every POI — the queue pass (redesign data row 6.5, plan W3.1).
+"""Price the QUEUE at every POI — the queue pass.
 
 EXTENDS ``scripts/poi_visit_duration.py`` — same corpus file, same batched audited-AI
 shape, same round-trip write guard (``load_pois`` / ``dump_pois`` are IMPORTED from it,

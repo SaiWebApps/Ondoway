@@ -93,7 +93,7 @@ void main() {
     return (service: service, player: player, gps: gps, clock: clock);
   }
 
-  group('S7.9 interruptions (W7.2 R5)', () {
+  group('interruptions', () {
     test('a call pauses the piece — not the person\'s pause — and, still inside the '
         'footprint when it ends, the piece resumes from the START of the cut '
         'sentence, saying nothing', () async {
@@ -112,11 +112,12 @@ void main() {
       expect(t.service.resumeOffer, isNull);
     });
 
-    test('the couple resumes by their tap (F&D), never by itself', () async {
+    test('the couple resumes by their tap, never by itself', () async {
       final t = await midPieceAtStopZero(party: 'couple');
       t.player.simulateInterruption(AudioInterruptionKind.pauseBegin);
       t.player.simulateInterruption(AudioInterruptionKind.ended);
-      expect(t.player.isPlaying, isFalse, reason: 'F&D: "we restart when the conversation pauses"');
+      expect(t.player.isPlaying, isFalse,
+          reason: 'the couple: "we restart when the conversation pauses"');
       expect(t.service.resumeOffer, 'Stop 0');
       t.service.resumeInterrupted();
       expect(t.player.isPlaying, isTrue);

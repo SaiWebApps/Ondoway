@@ -1,4 +1,4 @@
-"""Assign each POI a place category — data row 6.7, behind /poi-place-category.
+"""Assign each POI a place category — the script behind /poi-place-category.
 
 WHY A THIRD SCRIPT. One script answers one question (the header rule in
 `scripts/poi_visit_duration.py`): the capacity pass prices time, the hours pass

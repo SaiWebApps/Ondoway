@@ -715,7 +715,7 @@ class FinalTourBlueprint(BaseModel):
                 )
             if item.evidence_kind != "route_snapshot":
                 raise ValueError(
-                    "corpus-backed derived narration evidence is unsupported until M3 "
+                    "corpus-backed derived narration evidence is unsupported until a later stage "
                     "can bind it to verified source identities"
                 )
             expected_payload = _route_evidence_payload(

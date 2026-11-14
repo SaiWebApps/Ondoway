@@ -95,7 +95,7 @@ class _Trace {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('D6 — the walk that noticed', (tester) async {
+  testWidgets('the walk that noticed', (tester) async {
     expect(_token.isNotEmpty, isTrue, reason: 'run with the dart-defines');
     final tripService = TripService();
 
