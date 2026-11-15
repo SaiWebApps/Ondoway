@@ -121,7 +121,7 @@ def _trips_route_source() -> str:
     from pathlib import Path
 
     return (
-        Path(__file__).resolve().parent.parent / "src" / "api" / "routes" / "trips.py"
+        Path(__file__).resolve().parent.parent / "src" / "api" / "routes" / "app" / "trips.py"
     ).read_text()
 
 
@@ -139,7 +139,7 @@ def test_the_request_sites_thread_the_clock_and_the_restorer_forwards_every_pers
     """
     import ast
 
-    from src.api.routes.trips import _restore_tour_input
+    from src.api.routes.app.trips import _restore_tour_input
 
     tree = ast.parse(_trips_route_source())
     call_sites = [
@@ -195,7 +195,7 @@ def test_generate_persists_the_clock_and_the_restorer_reads_it_fail_open():
     exactly as it always did (a direct key access would 500 every legacy
     trip).
     """
-    from src.api.routes.trips import _restore_tour_input
+    from src.api.routes.app.trips import _restore_tour_input
 
     source = _trips_route_source()
     assert '"start_datetime": tour_input.start_datetime' in source, (

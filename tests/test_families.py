@@ -325,7 +325,7 @@ class TestFamilyFlow:
 #
 # The matrix: crew-read 200, crew-replan (and crew-compose) a
 # typed 403 "captain_only", stranger 404 (never 403 — the no-confirmation rule
-# at src/api/routes/trips.py holds for crew exactly as it does for owners).
+# at src/api/routes/app/trips.py holds for crew exactly as it does for owners).
 
 STRANGER_USER_ID = "p10-families-test-user-stranger"
 STRANGER_EMAIL = "p10-families-stranger@example.test"

@@ -2318,7 +2318,7 @@ def _revoice_replanned_legs(driver: Driver, item_ids: list[str]) -> None:
     pass, so the corrected words have their file before the walker reaches the leg
     when the machine is quick, and the leg stays silent rather than wrong when it
     is not."""
-    from src.api.routes.audio import _voice_session_lines  # circular at module load
+    from src.api.routes.app.audio import _voice_session_lines  # circular at module load
 
     with driver.session() as session:
         rows = session.run(

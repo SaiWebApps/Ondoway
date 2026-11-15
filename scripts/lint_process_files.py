@@ -59,7 +59,7 @@ TOP_DIRS = (
     "docs",
     "data",
     "mobile",
-    "frontend",
+    "web",
     "config",
     "Books",
     ".claude",

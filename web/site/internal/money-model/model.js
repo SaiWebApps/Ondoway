@@ -1,10 +1,10 @@
 // Ondoway money model: every input with its evidence, and the math.
-// It models the MVP being built, not today's code. The page (ondoway-financial-model.html) loads
+// It models the MVP being built, not today's code. The page (index.html) loads
 // this file; nothing else holds a copy of the math. No DOM access here.
 "use strict";
 
 const CHECKED = "checked 9 Oct 2026";
-const MEASURE = "Docs/business/tour-cost-measurement.json";
+const MEASURE = "web/site/internal/money-model/tour-cost-measurement.json";
 
 // Evidence kinds, in the order the page lists them.
 const TAGS = {
@@ -21,7 +21,7 @@ const INPUTS = [
   // Price
   {g:"Price",id:"model",label:"How we charge",type:"select",tag:"choice",base:"party",
    options:[["party","A pass per party"],["person","A pass per person"],["tour","Pay per tour"]],
-   src:"A party shares one trip, and the app stores audio per trip stop (src/api/routes/audio.py), so one family listens to one set of audio. That makes per-party passes cost the same to serve as per-person ones."},
+   src:"A party shares one trip, and the app stores audio per trip stop (src/api/routes/app/audio.py), so one family listens to one set of audio. That makes per-party passes cost the same to serve as per-person ones."},
   {g:"Price",id:"priceSolo",label:"Solo pass",min:4.99,max:99.99,step:1,base:19.99,fmt:"usd2",tag:"choice",main:true,showIf:p=>p.model==="party",
    src:"The deck's price list. Competitors: Routes 7-day $12.99, Autio 14-day $14.99, VoiceMap Tour Pass $24.99 (App Store, "+CHECKED+")."},
   {g:"Price",id:"priceCouple",label:"Couple pass",min:4.99,max:149.99,step:1,base:29.99,fmt:"usd2",tag:"choice",main:true,showIf:p=>p.model==="party",

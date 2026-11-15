@@ -1,12 +1,12 @@
 """Real-browser regression guards for workbench data-loss and false-success defects.
 
-Every case here drives the REAL frontend/review.html in headless Chromium with
+Every case here drives the REAL web/workbench/review.html in headless Chromium with
 the API stubbed at the network layer (``page.route``), so each test reproduces a
 confirmed data-loss / false-success defect deterministically and at zero cost:
 no Neo4j, no API server, no paid TTS. Each test was written RED against the
 pre-fix file and only passes with the fix in place.
 
-Covered defects (all in frontend/review.html):
+Covered defects (all in web/workbench/review.html):
   1  "Same place" upload demoted an existing POI's importance_tier to 1.
   2  "Same place" replaced name_variations instead of appending to it.
   3  Merge "Skip" orphaned the source beat after the source POI was deleted.
@@ -40,7 +40,7 @@ sync_playwright = playwright_api.sync_playwright
 
 from tests.browser_launch import chromium_launch_options
 
-REVIEW_HTML = (Path(__file__).parent.parent / "frontend" / "review.html").resolve()
+REVIEW_HTML = (Path(__file__).parent.parent / "web" / "workbench" / "review.html").resolve()
 REVIEW_URL = REVIEW_HTML.as_uri()
 
 # Records every addEventListener registration together with its AbortSignal, so

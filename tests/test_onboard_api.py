@@ -1,4 +1,4 @@
-"""Onboarding API router (src/api/routes/onboard.py) — TestClient bar.
+"""Onboarding API router (src/api/routes/workbench/onboard.py) — TestClient bar.
 
 Hermetic: ``ONBOARD_PROVIDER=mock`` (conftest) + fixture-mode HTTP + a patched
 deploy seam, so nothing here spends an Anthropic credit or touches the network /
@@ -20,7 +20,7 @@ from typing import ClassVar
 import pytest
 from fastapi.testclient import TestClient
 
-import src.api.routes.onboard as onboard_mod
+import src.api.routes.workbench.onboard as onboard_mod
 from src import city_registry
 from src.api.app import create_app
 from src.onboard.beat_draft import estimate_cost, planned_beat_count

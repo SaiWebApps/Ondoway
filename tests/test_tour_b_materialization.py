@@ -547,7 +547,7 @@ def test_compose_corpus_check_rebuilds_the_end_sentinel():
     _resolve_persisted_pick -> the first call raises 409 corpus_changed."""
     from fastapi import HTTPException
 
-    from src.api.routes.trips import _resolve_persisted_pick
+    from src.api.routes.app.trips import _resolve_persisted_pick
     from src.tour.selection import end_b_sentinel_poi
 
     real = POI(id="p-real", name="Real stop", tier=1, poi_role="stop", lat=48.86, lng=2.35)

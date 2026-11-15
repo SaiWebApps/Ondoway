@@ -3,7 +3,7 @@
 THREE MEASURED DEFECTS, all of which made "tour preview" look broken to a human
 pressing the button:
 
-1. ``city_slug`` was never sent by ``generateTourPreview`` (``frontend/review.html``),
+1. ``city_slug`` was never sent by ``generateTourPreview`` (``web/workbench/review.html``),
    so ``TripPreviewRequest``'s default of "paris" applied to EVERY preview. A
    London or New York workbench session previewed the PARIS corpus from a
    London/NY start, found nothing reachable, and 422'd.
@@ -46,7 +46,7 @@ from src.api.models.trips import TripPreviewRequest
 from src.schema.definitions import TAGGABLE_LENSES
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
-REVIEW_HTML = REPO / "frontend" / "review.html"
+REVIEW_HTML = REPO / "web" / "workbench" / "review.html"
 
 
 # --------------------------------------------------------------------------
@@ -206,7 +206,7 @@ def test_openai_is_a_real_registered_tts_provider() -> None:
     )
 
 
-ONBOARD_HTML = REPO / "frontend" / "onboard.html"
+ONBOARD_HTML = REPO / "web" / "workbench" / "onboard.html"
 
 
 def _js_function_body_after_params(html: str, declaration: str) -> str:

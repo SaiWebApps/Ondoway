@@ -1,6 +1,6 @@
 """Shared onboarding flow — the connector resolution + per-source consult +
 Wikipedia-extract build that BOTH the CLI (``src/onboard/cli.py``) and the API
-router (``src/api/routes/onboard.py``) drive.
+router (``src/api/routes/workbench/onboard.py``) drive.
 
 These are the PURE flow primitives, decoupled from any CLI concern (no argparse,
 no printing): given a ``JobStore`` + ``job_id`` they emit the SAME live progress

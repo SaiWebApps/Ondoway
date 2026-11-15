@@ -84,8 +84,8 @@ def _charter() -> dict:
                 "owned_rules": ["route selection", "tour planning"],
                 "consumers": ["mobile", "workbench"],
                 "adapters": [
-                    "src.api.routes.trips:generate_trip",
-                    "src.api.routes.trips:preview_trip",
+                    "src.api.routes.app.trips:generate_trip",
+                    "src.api.routes.app.trips:preview_trip",
                 ],
                 "status": "ACTIVE",
             }

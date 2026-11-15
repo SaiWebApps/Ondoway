@@ -20,13 +20,13 @@ import time
 import traceback
 from pathlib import Path
 
-REPO = Path("/Users/sairambkrishnan/git/ondoway")
+REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 os.chdir(REPO)
 
 import anthropic.resources.messages.messages as _am  # noqa: E402
 
-import src.api.routes.trips as trips_routes  # noqa: E402
+import src.api.routes.app.trips as trips_routes  # noqa: E402
 import src.audio.provider as audio_provider  # noqa: E402
 from src.audio.pipeline import _get_duration  # noqa: E402
 

@@ -18,7 +18,8 @@ specs/
 docs/
 Docs/
 audio_store/
+scripts/business/
 *.md
-!frontend/**
+!web/site/public/**
 docker-compose*.yml
 node_modules/

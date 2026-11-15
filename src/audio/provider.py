@@ -16,7 +16,7 @@ SYNTHESIZE SPEECH.
 
 That single fact is what makes the workbench honest. The editorial workbench
 builds its provider dropdown from ``GET /audio/providers`` -> ``list_providers()``
-(``frontend/review.html``'s ``loadTtsProviders`` wipes the static markup and
+(``web/workbench/review.html``'s ``loadTtsProviders`` wipes the static markup and
 repopulates it), so anything in this registry is one click away from a human who
 is trying to judge what a TOURIST will hear. The workbench never offers a fake:
 a silent WAV there passes for narration in front of that human — and hiding it

@@ -718,7 +718,7 @@ def generate_stop_audio_for_trip(
     # Imported at call time: routes/trips.py lazily imports this module
     # (_revoice_replanned_legs), so a module-level import back would be the
     # circular pair's second half.
-    from src.api.routes.trips import _readable_trip_or_404
+    from src.api.routes.app.trips import _readable_trip_or_404
 
     _readable_trip_or_404(session, current_user["id"], trip_id)
 

@@ -25,7 +25,7 @@ TOUR_DIR = REPO / "src" / "tour"
 #: EVERY directory that may construct an Anthropic client, not just src/tour.
 #:
 #: Clients are constructed outside ``src/tour`` too:
-#: ``src/api/routes/feedback.py`` (a live, request-blocking user route) and
+#: ``src/api/routes/app/feedback.py`` (a live, request-blocking user route) and
 #: ``src/onboard/beat_draft.py`` (bulk city onboarding) carry the same 30-minute
 #: exposure. A guard whose scope is narrower than the code that can construct a
 #: client is a false assurance, so this sweeps all of ``src/``.
@@ -66,7 +66,7 @@ def test_no_bare_anthropic_client_anywhere_in_src() -> None:
     onboarding path construct clients too, with the same 30-minute exposure.
 
     UNDO TEST: revert any one call site (e.g. src/tour/verify.py:117,
-    src/api/routes/feedback.py, src/onboard/beat_draft.py) to
+    src/api/routes/app/feedback.py, src/onboard/beat_draft.py) to
     ``anthropic.Anthropic()`` and this goes RED, naming the file and line.
     """
     offenders: dict[str, list[int]] = {}
@@ -92,7 +92,7 @@ def test_the_guard_actually_sweeps_beyond_src_tour() -> None:
     reach the two client-constructing modules outside src/tour.
     """
     swept = {str(p.relative_to(REPO)) for p in SRC_DIR.rglob("*.py")}
-    for required in ("src/api/routes/feedback.py", "src/onboard/beat_draft.py"):
+    for required in ("src/api/routes/app/feedback.py", "src/onboard/beat_draft.py"):
         assert required in swept, (
             f"{required} is not covered by the guard's sweep — it was a real "
             "offender once and must stay in scope"

@@ -425,7 +425,7 @@ regenerates the script" — conflates two different questions:
 
    **As of 2026-07-19 nothing enforces this, and the gap is deliberate to record
    rather than paper over.** The only production caller is
-   `src/api/routes/trips.py` (`preview_trip`), which serialises `rubric.passed`
+   `src/api/routes/app/trips.py` (`preview_trip`), which serialises `rubric.passed`
    and the finding lists into the response payload and returns 200. It does not
    raise, refuse, or regenerate; `src/api/dependencies.py` says so in as many
    words. `POST /trips/{id}/compose` — the path that actually persists to Neo4j —
@@ -451,7 +451,7 @@ regenerates the script" — conflates two different questions:
    `tests/test_trip_api.py::test_a_day_failing_the_rubric_floor_is_refused_and_the_trip_untouched`.
    (The `src/api/dependencies.py` comment this section used to cite had already
    been removed; the gap it described is now closed in
-   `src/api/routes/trips.py::compose_trip`.)
+   `src/api/routes/app/trips.py::compose_trip`.)
 2. **Is looping the compose step, for one stop, worth the spend?** This is the
    separate question `src/tour/quality_rubric.py::compose_fixable(finding,
    material)` answers. A BLOCKER whose defect is upstream of compose — selection

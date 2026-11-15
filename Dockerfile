@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # scripts.deploy` at runtime) — test_docker_image_contents.py guards this.
 COPY src/ src/
 COPY scripts/ scripts/
-COPY frontend/ frontend/
+COPY web/site/public/ web/site/public/
 
 # Expose port
 EXPOSE 8000

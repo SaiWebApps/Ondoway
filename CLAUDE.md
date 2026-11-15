@@ -1,7 +1,7 @@
 # Ondoway — coding rules for the whole project
 
 These are coding rules, not a process. They bind every file under `src/`, `mobile/lib/`,
-`frontend/`, `scripts/` and `tests/`, and every session or agent that edits them.
+`web/`, `scripts/` and `tests/`, and every session or agent that edits them.
 
 ## Product invariants
 

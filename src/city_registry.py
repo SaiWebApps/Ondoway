@@ -6,7 +6,7 @@ city list (such as ``CITY_BBOX`` in ``scripts/upload_paris.py``) derives from
 this module.
 
 Why ``src/cities.json`` (not ``data/``): the production Dockerfile ships ``src/``
-and ``frontend/`` only — never ``data/`` — so the registry file must live under
+and ``web/site/public/`` only — never ``data/`` — so the registry file must live under
 ``src/`` to be importable in prod.
 
 Prod cloud-filter: a city can be onboarded + uploaded LOCALLY (visible to the

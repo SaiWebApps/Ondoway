@@ -29,8 +29,8 @@ from src.api.app import create_app
 from src.api.auth.tokens import create_access_token
 from src.api.dependencies import get_driver, get_session
 from src.api.models.trips import GeneratedStop
-from src.api.routes import trips
-from src.api.routes.trips import _releg_kept_stops
+from src.api.routes.app import trips
+from src.api.routes.app.trips import _releg_kept_stops
 from src.tour.authoring import COMPOSE_MODEL
 from src.tour.certification_provider import PhysicalProviderResponse
 from src.tour.contract import TourInput
@@ -957,7 +957,7 @@ class TestLivingSession:
         import inspect
 
         from src.api import crud
-        from src.api.routes import trips as trips_routes
+        from src.api.routes.app import trips as trips_routes
 
         trip_id = cutover_trip["trip_id"]
         first = _compose(client, trip_id, _MarkerAuthoringExecutor())

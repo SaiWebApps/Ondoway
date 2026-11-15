@@ -58,7 +58,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 
 PHONE_SOURCES = sorted((REPO / "mobile" / "lib" / "services").glob("*.dart"))
-WORKBENCH_SOURCES = sorted((REPO / "frontend").glob("*.html"))
+WORKBENCH_SOURCES = sorted((REPO / "web" / "workbench").glob("*.html"))
 ROUTES_DIR = REPO / "src" / "api" / "routes"
 
 OWNERSHIP = json.loads((REPO / ".agents" / "team" / "ownership.json").read_text())
@@ -236,7 +236,7 @@ def survey():
                 continue
             defined_in.setdefault(node.name, relative)
             calls[node.name] |= _plain_calls(node)
-            if path.parent == ROUTES_DIR:
+            if ROUTES_DIR in path.parents:
                 for route in _route_paths(node):
                     handlers[_blank_params(route)] = node.name
     return calls, defined_in, handlers

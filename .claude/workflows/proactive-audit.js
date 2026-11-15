@@ -12,11 +12,11 @@ export const meta = {
 // Surfaces to attack. Each finder is blind to the others; loop-until-dry catches the tail.
 const ALL_SURFACES = [
   { key: 'security', brief: 'Auth/authorization, injection (Cypher/SQL/shell/path-traversal), secret leakage, unauthenticated write/DoS surfaces, CORS, SSRF. src/api/, src/**.' },
-  { key: 'data-integrity', brief: 'Node/edge MERGE keys, dedup/merge/upload flows, silent data loss/overwrite, orphaning, casing/whitespace forks, migrations. src/api/crud/, src/seed/, scripts/upload*.py, frontend/review.html merge logic.' },
+  { key: 'data-integrity', brief: 'Node/edge MERGE keys, dedup/merge/upload flows, silent data loss/overwrite, orphaning, casing/whitespace forks, migrations. src/api/crud/, src/seed/, scripts/upload*.py, web/workbench/review.html merge logic.' },
   { key: 'api-robustness', brief: 'FastAPI routes: unhandled exceptions -> 500, missing validation, wrong status codes, contract violations, resource leaks, uncaught provider/DB errors. src/api/routes/.' },
   { key: 'tour-engine', brief: 'The tour algorithm correctness: selection/beat_select/generation/density/verify/claim_dedup — wrong outputs, edge cases, off-by-one, ordering, cap/governor bugs. src/tour/.' },
-  { key: 'audio', brief: 'TTS/audio pipeline + endpoints: cost/DoS (uncached paid calls), unbounded input, provider errors, artifact authz/leakage, soft-fail contract. src/audio/, src/api/routes/audio.py.' },
-  { key: 'frontend', brief: 'The workbench UI (frontend/review.html): XSS/HTML-injection sinks, unchecked fetches -> false success, broken/locked states, race conditions, DB-down handling.' },
+  { key: 'audio', brief: 'TTS/audio pipeline + endpoints: cost/DoS (uncached paid calls), unbounded input, provider errors, artifact authz/leakage, soft-fail contract. src/audio/, src/api/routes/app/audio.py.' },
+  { key: 'frontend', brief: 'The workbench UI (web/workbench/review.html): XSS/HTML-injection sinks, unchecked fetches -> false success, broken/locked states, race conditions, DB-down handling.' },
   { key: 'config-deploy', brief: 'Config/env resolution, .env layering, Makefile targets that could hit prod, deploy/startup hooks, destructive-op guards, the auto-resume. Makefile, src/connection.py, src/api/app.py, render.yaml.' },
 ]
 

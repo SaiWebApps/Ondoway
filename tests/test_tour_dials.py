@@ -334,7 +334,7 @@ def test_a_kind_exclusion_note_describes_the_day_not_the_request():
     UNDO TEST: restore `notes.append(f"Left out today, as asked: {kinds}.")`
     and the first arm asserts a sentence that claims an action -> RED.
     """
-    from src.api.routes.trips import _preview_day_notes
+    from src.api.routes.app.trips import _preview_day_notes
 
     church = _categorised(_poi("Saint-Paul", lat=PDV[0], lng=PDV[1] + 0.001), "church")
     square = _poi("Place des Vosges", lat=PDV[0] + 0.001, lng=PDV[1])
@@ -361,7 +361,7 @@ def test_the_queue_note_names_the_longest_wait_that_remains():
     UNDO TEST: restore "Places with long waits were left out, as asked." ->
     the residual-wait sentence is gone -> RED.
     """
-    from src.api.routes.trips import _preview_day_notes
+    from src.api.routes.app.trips import _preview_day_notes
     from src.tour.selection import AVOID_QUEUES_EXCLUDE_PEAK_MINUTES
 
     a = _poi("Hotel de Sully", lat=PDV[0], lng=PDV[1] + 0.001)
@@ -395,7 +395,7 @@ def test_a_closure_note_names_only_the_doors_the_day_actually_reaches():
     UNDO TEST: restore the off-route arms ("and it is not in this day" /
     "so it is not in your day") -> the no-off-route-note assertions go RED.
     """
-    from src.api.routes.trips import _preview_day_notes
+    from src.api.routes.app.trips import _preview_day_notes
     from src.tour.contract import ClockExclusion
 
     market = _poi("Marche Bastille", lat=PDV[0], lng=PDV[1] + 0.001)
@@ -443,7 +443,7 @@ def test_the_could_not_confirm_note_keys_on_the_hours_source():
     UNDO TEST: key the list on `opening_hours is not None` alone -> the map
     stop is named as doubted -> RED.
     """
-    from src.api.routes.trips import _preview_day_notes
+    from src.api.routes.app.trips import _preview_day_notes
 
     hours = "Mo-Su 09:00-18:00"
     from_map = _poi("Musee du Plan", lat=PDV[0], lng=PDV[1] + 0.001).model_copy(
@@ -489,7 +489,7 @@ def test_a_doubted_door_is_doubted_once_on_the_notes_channel():
     The skip keys on the exclusion's `kept_outside` FIELD, never on the
     reason's words. A doubted door with no exclusion stays listed —
     the list is its only doubt."""
-    from src.api.routes.trips import _preview_day_notes
+    from src.api.routes.app.trips import _preview_day_notes
     from src.tour.contract import ClockExclusion
 
     hours = "Mo-Su 09:00-18:00"
@@ -524,7 +524,7 @@ def test_a_door_with_no_hours_on_record_is_named_not_silent():
 
     UNDO TEST: key the note on `opening_hours is not None` -> Notre-Dame
     vanishes from every note -> RED."""
-    from src.api.routes.trips import _preview_day_notes
+    from src.api.routes.app.trips import _preview_day_notes
 
     cathedral = _poi("Notre-Dame Cathedral", lat=PDV[0], lng=PDV[1] + 0.001).model_copy(
         update={"gated": True}
@@ -551,7 +551,7 @@ def test_the_api_resolves_presets_and_the_more_dial_exactly_as_the_harness_does(
     UNDO TEST: make `_build_tour_input` return `TourInput(**kwargs)` bare -> RED
     on both arms.
     """
-    from src.api.routes.trips import _build_tour_input
+    from src.api.routes.app.trips import _build_tour_input
 
     more = _build_tour_input(
         start=PDV, duration_min=180, city_slug="paris", round_trip=True, stop_density="more"
@@ -585,7 +585,7 @@ def test_promise_windows_are_coarse_on_the_wire_and_contain_the_planned_minute()
     UNDO TEST: make `_preview_promises` copy `promise.arrives_hhmm` verbatim ->
     "11:32" reaches the wire -> RED.
     """
-    from src.api.routes.trips import _coarse_window
+    from src.api.routes.app.trips import _coarse_window
 
     assert _coarse_window("11:32", "12:02") == ("11:30", "12:05")
     assert _coarse_window("10:18", "10:58") == ("10:15", "11:00")
@@ -599,7 +599,7 @@ def test_promise_windows_are_coarse_on_the_wire_and_contain_the_planned_minute()
 def test_the_wire_promise_carries_the_coarse_window_not_the_planners_minute():
     """The rounding is applied where the person reads it. UNDO TEST: make
     `_preview_promises` copy the planner's minute verbatim -> RED."""
-    from src.api.routes.trips import _preview_promises
+    from src.api.routes.app.trips import _preview_promises
     from src.tour.contract import Promise, PromiseShape
 
     square = _poi("Place des Vosges", lat=PDV[0], lng=PDV[1])

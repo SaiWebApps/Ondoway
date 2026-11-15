@@ -502,7 +502,7 @@ class TestTripPreviewSpotlightFields:
         TourabilityAssessment onto the wire model — and passes None (GREEN)
         through untouched. This is the exact line that was missing when
         thin-area single-stop tours shipped with no warning."""
-        from src.api.routes.trips import _tourability_payload
+        from src.api.routes.app.trips import _tourability_payload
         from src.tour.contract import TourabilityAssessment
 
         assert _tourability_payload(None) is None
@@ -545,7 +545,7 @@ class TestTripPreviewSpotlightFields:
         simply stops appearing on every trip saved before the rename. A test
         is the only thing that can see it.
         """
-        from src.api.routes.trips import _restored_tourability, _tourability_payload
+        from src.api.routes.app.trips import _restored_tourability, _tourability_payload
 
         stored_before_the_rename = {
             "status": "YELLOW",

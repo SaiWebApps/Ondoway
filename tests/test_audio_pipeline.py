@@ -57,7 +57,7 @@ class TestStorageConstructionSoftFails:
 
     StorageError/ValueError are not PipelineError, so outside that block an
     unknown or broken storage backend would escape the `except PipelineError`
-    handlers in src/api/routes/audio.py as an uncaught HTTP 500. A TTS failure
+    handlers in src/api/routes/app/audio.py as an uncaught HTTP 500. A TTS failure
     returns 200 with status=failed, never a 500.
     """
 

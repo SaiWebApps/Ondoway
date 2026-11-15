@@ -56,8 +56,8 @@ from src.onboard.models import CityContext
 
 router = APIRouter(prefix="/onboard", tags=["onboard"])
 
-# Repo root: src/api/routes/onboard.py -> src/api/routes -> src/api -> src -> root.
-REPO_ROOT = Path(__file__).resolve().parents[3]
+# Repo root: onboard.py -> workbench -> routes -> api -> src -> root.
+REPO_ROOT = Path(__file__).resolve().parents[4]
 
 # The lifecycle statuses at which an SSE stream is done (the worker will append
 # no further events once it reaches one of these).

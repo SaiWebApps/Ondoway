@@ -28,7 +28,7 @@ import pytest
 playwright_sync = pytest.importorskip("playwright.sync_api")
 sync_playwright = playwright_sync.sync_playwright
 
-REVIEW_HTML = (Path(__file__).parent.parent / "frontend" / "review.html").resolve()
+REVIEW_HTML = (Path(__file__).parent.parent / "web" / "workbench" / "review.html").resolve()
 
 
 from tests.browser_launch import chromium_launch_options, find_chromium

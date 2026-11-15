@@ -6,7 +6,7 @@
 <title>Ondoway — Onboard a New City</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  /* Tokens mirror frontend/review.html's :root so the two panels read as one app. */
+  /* Tokens mirror web/workbench/review.html's :root so the two panels read as one app. */
   :root {
     --bg: #0c0f14;
     --surface: #141820;
@@ -296,7 +296,7 @@
 // ── API base URL ──
 // Port-configurable via ?apiPort= (default 8000) so the panel can point at a
 // test-DB API (e.g. 8001) without colliding with a dev `make api` on 8000.
-// Copied VERBATIM from frontend/review.html.
+// Copied VERBATIM from web/workbench/review.html.
 const API_BASE = (() => {
   const raw = new URLSearchParams(location.search).get('apiPort');
   const port = raw && /^\d{2,5}$/.test(raw) ? raw : '8000';

@@ -87,7 +87,7 @@ def test_public_render_deploy_gates_workbench_crud_off():
 # render.yaml pins TTS_PROVIDER=openai but declared no OPENAI_API_KEY, so a
 # blueprint-provisioned service has no TTS credential at all: every synthesis
 # raises TTSError and surfaces as HTTP 502 "TTS generation failed (openai)"
-# (src/api/routes/audio.py:150-152). The mapping below mirrors
+# (src/api/routes/app/audio.py:150-152). The mapping below mirrors
 # audio._provider_available (audio.py:110-116) — whatever a provider needs to
 # be *available* at runtime is exactly what the manifest must declare.
 

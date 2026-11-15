@@ -652,10 +652,10 @@ dashboard: ## Start the local dashboard with the validated dev profile.
 	@$(LOCAL_EXEC) env DASHBOARD_PORT=$(DASHBOARD_PORT) uv run python -m src.server
 
 # The page loads model.js as a second file, so it needs a server, not a file:// open.
-money-model: ## Open the money model simulator in the browser (Docs/business).
+money-model: ## Open the money model simulator in the browser (web/site/internal).
 	@$(PREFLIGHT) --label money-model uv
-	@(sleep 1 && open http://localhost:8765/ondoway-financial-model.html) &
-	python3 -m http.server 8765 --bind 127.0.0.1 --directory Docs/business
+	@(sleep 1 && open http://localhost:8765/money-model/) &
+	python3 -m http.server 8765 --bind 127.0.0.1 --directory web/site/internal
 
 flutter-web: ## Run the Flutter web app on its lane's web port.
 	@$(PREFLIGHT) --label flutter-web $(PRE_FLUTTER) port-$(FLUTTER_WEB_PORT)

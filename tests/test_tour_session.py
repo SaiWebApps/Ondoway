@@ -586,7 +586,7 @@ def test_the_finish_is_named_as_the_place_when_the_person_named_one():
     "your finish" / "your start" only when the day ends somewhere unnamed. The
     route's own places decide, not the request's words.
     UNDO: return the generic words regardless of the route -> RED."""
-    from src.api.routes.trips import _finish_name
+    from src.api.routes.app.trips import _finish_name
     from src.tour.selection import select_route
 
     museum = _stand(_at(PDV, 0.0, 0.0, "museum", tier=5, beat_count=5), 40)
@@ -1097,7 +1097,7 @@ def test_the_standby_leaves_the_set_as_a_held_stop_beside_the_day():
     UNDO: return [] from `_standby_stops` -> RED.
     """
     from src.api.models.trips import GeneratedStop
-    from src.api.routes.trips import _standby_stops
+    from src.api.routes.app.trips import _standby_stops
     from src.tour.contingency import build_contingency_set
     from src.tour.contract import ReplanContext
 
@@ -1139,7 +1139,7 @@ def test_a_carried_forward_door_entry_counts_its_standby_as_still_ahead():
     UNDO: drop `new_day.standbys` from the ahead set -> RED.
     """
     from src.api.models.trips import GeneratedStop, SessionContingency, SessionPlan
-    from src.api.routes.trips import _carry_forward_entries
+    from src.api.routes.app.trips import _carry_forward_entries
 
     def stop(pid: str) -> GeneratedStop:
         return GeneratedStop(
@@ -1400,7 +1400,7 @@ def test_a_replan_holds_only_the_standbys_that_already_have_a_voice():
     UNDO: return `full` unchanged from `_hold_only_voiced_standbys` -> RED.
     """
     from src.api.models.trips import SessionPlan
-    from src.api.routes.trips import STANDBY_DROPPED_DEGRADATION, _hold_only_voiced_standbys
+    from src.api.routes.app.trips import STANDBY_DROPPED_DEGRADATION, _hold_only_voiced_standbys
 
     previous = SessionPlan(
         trip_id="t",
@@ -1443,7 +1443,7 @@ def test_the_live_replan_reply_carries_the_standbys_the_walker_still_holds():
     UNDO: stop passing `standbys` into the deferred reply -> RED.
     """
     from src.api.models.trips import SessionPlan
-    from src.api.routes.trips import _standbys_still_held
+    from src.api.routes.app.trips import _standbys_still_held
 
     previous = SessionPlan(
         trip_id="t",
@@ -1470,7 +1470,7 @@ def test_the_walkers_answer_at_a_shut_door_is_the_remainder_the_server_replans()
     from fastapi import HTTPException
 
     from src.api.models.trips import SessionPlan
-    from src.api.routes.trips import _kept_by_the_walker
+    from src.api.routes.app.trips import _kept_by_the_walker
 
     current = SessionPlan(
         trip_id="t",

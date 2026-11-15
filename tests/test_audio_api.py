@@ -241,7 +241,7 @@ class TestEvalRegeneratesOnDegradedAudio:
     provider (deterministically silent) is evaluated once, never looped."""
 
     def test_retries_past_a_degraded_generation(self, client, monkeypatch):
-        from src.api.routes import audio as audio_routes
+        from src.api.routes.app import audio as audio_routes
         from src.audio.eval import EvalResult
 
         class _FakeOpenAI:
@@ -280,7 +280,7 @@ class TestEvalRegeneratesOnDegradedAudio:
         """If EVERY generation is degraded (a real bad voice), the retries
         exhaust and the FAIL verdict still surfaces — resilience never masks a
         genuine quality failure."""
-        from src.api.routes import audio as audio_routes
+        from src.api.routes.app import audio as audio_routes
         from src.audio.eval import EvalResult
 
         class _FakeOpenAI:
@@ -315,7 +315,7 @@ class TestEvalRegeneratesOnDegradedAudio:
         captured, high WER so the loop retries); attempt 2's generate raises a
         transient TTSError. The endpoint must return 200 with the best result so
         far, NOT a 502 that throws the earlier good transcription away."""
-        from src.api.routes import audio as audio_routes
+        from src.api.routes.app import audio as audio_routes
         from src.audio.eval import EvalResult
         from src.audio.provider import TTSError
 
@@ -353,7 +353,7 @@ class TestEvalRegeneratesOnDegradedAudio:
     def test_transient_ttserror_with_no_result_still_502s(self, client, monkeypatch):
         """The 502 path is preserved when NO successful attempt exists: if the
         very first generate raises, there is nothing to fall back to."""
-        from src.api.routes import audio as audio_routes
+        from src.api.routes.app import audio as audio_routes
         from src.audio.provider import TTSError
 
         class _DeadOpenAI:

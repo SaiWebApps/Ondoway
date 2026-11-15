@@ -85,12 +85,14 @@ def test_workbench_crud_gated_off_by_default(monkeypatch):
     paths = {getattr(r, "path", None) for r in create_app().routes}
     assert "/api/v1/cities" not in paths, "graph router must NOT mount when unset"
     assert "/api/v1/nodes/{label}" not in paths, "nodes write surface must NOT mount when unset"
+    assert "/editor" not in paths, "the graph editor page belongs to the workbench"
     assert "/api/v1/healthz" in paths, "mobile-facing routes stay mounted"
     # Explicit truthy => opt-in, workbench routes PRESENT.
     monkeypatch.setenv("WORKBENCH_API_ENABLED", "true")
     enabled = {getattr(r, "path", None) for r in create_app().routes}
     assert "/api/v1/cities" in enabled, "graph router mounts when explicitly enabled"
     assert "/api/v1/nodes/{label}" in enabled, "nodes write surface mounts when explicitly enabled"
+    assert "/editor" in enabled, "the graph editor page mounts with the workbench"
 
 
 @pytest.mark.parametrize("value", ["true", "1", "yes", "on", "TRUE", "On", "yes "])

@@ -190,15 +190,24 @@ src/
     ├── auth/                  # Sign-in (Apple, Google, email) and tokens
     ├── models/                # Pydantic models
     ├── crud/                  # Cypher operations, schema introspection, trip generation
-    └── routes/                # API endpoint handlers
-frontend/
-├── index.html                 # Neo4j Schema Dashboard (read-only)
-├── editor/index.html          # Interactive graph editor
-├── review.html                # Editorial review workbench
-├── onboard.html               # Onboard a new city
-├── viewer.html                # Content viewer
-├── auth.html                  # Sign in
-└── join-family.html           # Join a family group
+    └── routes/
+        ├── app/               # What the app calls: trips, audio, families, feedback, lenses
+        └── workbench/         # Workbench only, off in production: graph editing, new cities
+web/
+├── workbench/                 # Editorial workbench, local only
+│   ├── index.html             # Neo4j Schema Dashboard (read-only)
+│   ├── editor/index.html      # Interactive graph editor
+│   ├── review.html            # Editorial review workbench
+│   ├── onboard.html           # Onboard a new city
+│   └── viewer.html            # Content viewer
+└── site/                      # ondoway.com
+    ├── public/                # Served in production
+    │   ├── auth.html          # Sign in
+    │   └── join-family.html   # Join a family group
+    └── internal/              # Business pages, local only (`make money-model`)
+        ├── money-model/       # Money model simulator and the measured tour cost
+        └── deck/              # Pitch deck
+scripts/business/              # Tools that measure what a tour costs to run
 mobile/                        # The Flutter app (design system in mobile/design/)
 tests/                         # The Python suite — see the Test Strategy doc
 ```

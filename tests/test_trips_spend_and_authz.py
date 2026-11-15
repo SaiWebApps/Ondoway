@@ -1,4 +1,4 @@
-"""Spend and authorization guards on ``src/api/routes/trips.py``.
+"""Spend and authorization guards on ``src/api/routes/app/trips.py``.
 
 1. The non-live suite's product authoring factory hands back the offline executor,
    so no test in it can bill a provider.
@@ -31,7 +31,7 @@ from src.api.dependencies import (
     get_premium_compose_executor,
     get_session,
 )
-from src.api.routes import trips as trips_route
+from src.api.routes.app import trips as trips_route
 from src.tour.premium_tour import AnthropicPremiumExecutor
 from tests.premium_doubles import OfflinePremiumExecutor
 

@@ -802,7 +802,7 @@ def test_the_full_telling_rides_the_wire_and_the_more_tap_never_serves_the_dump(
     import inspect
 
     from src.api.models.trips import GeneratedStop
-    from src.api.routes import audio as audio_routes
+    from src.api.routes.app import audio as audio_routes
 
     wire = GeneratedStop(
         sort_order=2, poi_id="p1", poi_name="Stop 1", lat=48.86, lng=2.36, duration_min=5,

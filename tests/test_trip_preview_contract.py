@@ -21,7 +21,7 @@ Plumbing (all in-process):
   lifespan (init_driver -> create_driver), which would attempt a real Neo4j
   connection. Plain requests work without it, and /trips/preview depends
   only on ``get_driver``.
-- ``src.api.routes.trips.RoutingClient`` is monkeypatched with a
+- ``src.api.routes.app.trips.RoutingClient`` is monkeypatched with a
   deterministic fake (mirrors test_tour_b_materialization.py's
   _DeterministicRoutingClient, plus the context-manager protocol trips.py
   uses via ``with RoutingClient() as ...``). ``isochrone()`` returns None so
@@ -293,9 +293,9 @@ def make_client(monkeypatch):
         records_by_kind: dict[str, list[dict]],
         routing_client: type = _FakeRoutingClient,
     ) -> TestClient:
-        monkeypatch.setattr("src.api.routes.trips.RoutingClient", routing_client)
+        monkeypatch.setattr("src.api.routes.app.trips.RoutingClient", routing_client)
         monkeypatch.setattr(
-            "src.api.routes.trips.resolve_build_identity",
+            "src.api.routes.app.trips.resolve_build_identity",
             lambda: PremiumBuildIdentity(commit_sha="1" * 40),
         )
         app = create_app()
@@ -533,7 +533,7 @@ def test_preview_returns_the_plan_and_spends_nothing(make_client, monkeypatch):
     """
     for authoring_call in ("execute_premium_plan", "finalize_premium_tour"):
         monkeypatch.setattr(
-            "src.api.routes.trips." + authoring_call,
+            "src.api.routes.app.trips." + authoring_call,
             lambda *_a, **_k: pytest.fail("the plan-only preview authored a tour"),
             raising=False,
         )
@@ -841,7 +841,7 @@ def test_a_band_refusal_reaches_both_surfaces_with_alternatives() -> None:
     import ast
     from pathlib import Path
 
-    from src.api.routes.trips import _refusal_detail
+    from src.api.routes.app.trips import _refusal_detail
     from src.tour.contract import TourInput
     from src.tour.density import FeasibilityAlternative, TourabilityRefusedError
     from src.tour.routing import DEFAULT_ROUTE_PLANNING_POLICY
@@ -889,7 +889,8 @@ def test_a_band_refusal_reaches_both_surfaces_with_alternatives() -> None:
     #    and it says so: generate_trip persists a trip on success, so no hermetic
     #    call can reach its refusal branch through the fake driver; the shape of
     #    its except clauses is the honest hermetic proxy for "a 422, not a 500".
-    trips_path = Path(__file__).resolve().parent.parent / "src" / "api" / "routes" / "trips.py"
+    routes = Path(__file__).resolve().parent.parent / "src" / "api" / "routes"
+    trips_path = routes / "app" / "trips.py"
     tree = ast.parse(trips_path.read_text(encoding="utf-8"), filename=str(trips_path))
     generate = next(
         n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "generate_trip"

@@ -182,7 +182,7 @@ def test_the_session_clock_is_checked_against_the_server():
     src_dir = ROOT / "src"
     py = {p: p.read_text(encoding="utf-8") for p in sorted(src_dir.rglob("*.py"))}
     contingency = src_dir / "tour" / "contingency.py"
-    routes = src_dir / "api" / "routes" / "trips.py"
+    routes = src_dir / "api" / "routes" / "app" / "trips.py"
     crud = src_dir / "api" / "crud" / "trips.py"
     for must in (contingency, routes, crud):
         assert must.exists(), f"{must} vanished"
@@ -267,7 +267,7 @@ def test_the_audio_placement_rule_has_one_definition():
     py = {p: p.read_text(encoding="utf-8") for p in sorted(src_dir.rglob("*.py"))}
     placement = src_dir / "tour" / "placement.py"
     contingency = src_dir / "tour" / "contingency.py"
-    routes = src_dir / "api" / "routes" / "trips.py"
+    routes = src_dir / "api" / "routes" / "app" / "trips.py"
     crud = src_dir / "api" / "crud" / "trips.py"
     for must in (placement, contingency, routes, crud):
         assert must.exists(), f"{must} vanished"
@@ -337,7 +337,7 @@ def test_the_audio_placement_rule_has_one_definition():
     assert "leg_narration" in _body_of(py[crud], "def _create_itinerary_items(")
     assert "leg_audio_url" in _body_of(py[crud], "def list_trips_for_profile(")
     assert "leg_audio_url" in _body_of(py[routes], "def _with_live_audio(")
-    audio_routes = py[src_dir / "api" / "routes" / "audio.py"]
+    audio_routes = py[src_dir / "api" / "routes" / "app" / "audio.py"]
     voicing = _body_of(audio_routes, "def _voice_session_lines(")
     assert '"leg_narration"' in voicing and '"leg_audio_url"' in voicing, (
         "the leg piece is not voiced through the one session-line table"

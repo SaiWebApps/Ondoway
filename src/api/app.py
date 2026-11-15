@@ -14,18 +14,10 @@ from neo4j.exceptions import ServiceUnavailable
 
 from src.api.auth.routes import router as auth_router
 from src.api.dependencies import close_driver, get_resume_coordinator, init_driver
-from src.api.routes import (
-    audio,
-    edges,
-    families,
-    feedback,
-    graph,
-    nodes,
-    onboard,
-    product,
-    schema,
-    trips,
-)
+from src.api.routes.app import audio, families, feedback, product, trips
+from src.api.routes.workbench import edges, graph, nodes, onboard, schema
+
+_WEB_DIR = Path(__file__).resolve().parents[2] / "web"
 
 
 def _workbench_api_enabled() -> bool:
@@ -89,9 +81,9 @@ def create_app() -> FastAPI:
             headers={"Retry-After": "30"},
         )
 
-    _frontend_dir = Path(__file__).resolve().parents[2] / "frontend"
-    _auth_html = _frontend_dir / "auth.html"
-    _join_family_html = _frontend_dir / "join-family.html"
+    _public_dir = _WEB_DIR / "site" / "public"
+    _auth_html = _public_dir / "auth.html"
+    _join_family_html = _public_dir / "join-family.html"
 
     @app.get("/auth")
     async def auth_redirect():
@@ -212,15 +204,11 @@ def create_app() -> FastAPI:
         # MUST stay behind the same gate as the workbench CRUD surface (prod
         # WORKBENCH_API_ENABLED=false => never mounted).
         app.include_router(onboard.router, prefix="/api/v1")
-
-    # Serve the graph editor frontend
-    editor_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-        "frontend",
-        "editor",
-    )
-    if os.path.isdir(editor_dir):
-        app.mount("/editor", StaticFiles(directory=editor_dir, html=True), name="editor")
+        # The graph editor page belongs to the workbench, so it is served only where
+        # the workbench is on.
+        editor_dir = _WEB_DIR / "workbench" / "editor"
+        if editor_dir.is_dir():
+            app.mount("/editor", StaticFiles(directory=editor_dir, html=True), name="editor")
 
     return app
 

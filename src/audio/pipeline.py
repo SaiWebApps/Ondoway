@@ -1,7 +1,7 @@
 """Audio pipeline — TTS generation and storage for ONE STOP's narration.
 
 Pipeline: a stop's stitched narration → TTS Provider → Storage → the caller persists
-the url and the MEASURED duration on the ItineraryItem (src/api/routes/audio.py).
+the url and the MEASURED duration on the ItineraryItem (src/api/routes/app/audio.py).
 
 The per-beat library — ``generate_beat_audio`` / ``generate_batch`` / ``check_audio_status``
 over ``NarrativeBeat.audio_url`` — was DELETED: the per-stop

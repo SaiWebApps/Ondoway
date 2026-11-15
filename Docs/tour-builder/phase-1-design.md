@@ -422,4 +422,4 @@ A failed glue call falls back to the template line and records the fallback. A s
 from a stored place telling skips the writer, so it costs a small part of a written one.
 
 The measured cost of a tour, and of building a city's stored tellings, is in
-`Docs/business/tour-cost-measurement.md`.
+`web/site/internal/money-model/tour-cost-measurement.md`.

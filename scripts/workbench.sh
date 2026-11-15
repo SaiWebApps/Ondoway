@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run the editorial workbench: start the graph API on this lane's DEV graph,
-# wait for /api/v1/healthz, then open frontend/review.html pointed at it.
+# wait for /api/v1/healthz, then open web/workbench/review.html pointed at it.
 #
 # review.html reads ?apiPort= (default 8000) and builds
 # http://localhost:<port>/api/v1 — so a plain file:// open works. We open it
@@ -13,7 +13,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # a reuse probe on this port can only ever find this lane's server.
 PORT="${ONDOWAY_API_PORT:-8000}"
 HEALTH="http://localhost:${PORT}/api/v1/healthz"
-PAGE="file://${ROOT}/frontend/review.html?apiPort=${PORT}"
+PAGE="file://${ROOT}/web/workbench/review.html?apiPort=${PORT}"
 LOG="/tmp/ondoway-workbench-api-${PORT}.log"
 
 # Same NO_PROXY prefix as `make api` — keep in sync.
@@ -55,7 +55,7 @@ else
   # get_drafter() (src/onboard/beat_draft.py) fails closed on an unset value, and
   # this is the pin that makes the workbench's Draft Beats button real. It
   # SPENDS: one Opus call per drafted beat, and there is no cost dialog
-  # (frontend/onboard.html), so a click drafts a whole city's beats immediately.
+  # (web/workbench/onboard.html), so a click drafts a whole city's beats immediately.
   # TTS_FALLBACK: the SAME rule again. render.yaml gives production an understudy
   # for the tourist's audio, so the workbench must resolve the same chain —
   # otherwise an editor judging a tour during an OpenAI outage sees the stop

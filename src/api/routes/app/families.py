@@ -31,7 +31,7 @@ from src.api.crud.families import (
     latest_profile_id,
 )
 from src.api.dependencies import get_session
-from src.api.routes.trips import _owned_profile_id
+from src.api.routes.app.trips import _owned_profile_id
 
 router = APIRouter(prefix="/families", tags=["families"])
 

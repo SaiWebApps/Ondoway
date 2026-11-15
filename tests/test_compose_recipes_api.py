@@ -17,7 +17,7 @@ import pytest
 
 from src.api.auth.tokens import create_access_token
 from src.api.dependencies import get_premium_compose_executor
-from src.api.routes import trips as trips_route
+from src.api.routes.app import trips as trips_route
 from src.connection import get_database
 from src.tour.generation import GLUE_CLOSING
 from src.tour.premium_tour import PremiumBuildIdentity, exact_snapshot_sha256

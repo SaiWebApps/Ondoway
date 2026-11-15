@@ -1,4 +1,4 @@
-"""Turn Docs/business/cost-runs.json into Docs/business/tour-cost-measurement.{json,md}.
+"""Turn the money model's cost-runs.json into its tour-cost-measurement.{json,md}.
 
 The report answers one question: if the app launches as built, what does it cost? It
 reads the latest measured tour and recipe build and writes the cost structure.
@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parents[1]
+HERE = Path(__file__).resolve().parents[2] / "web" / "site" / "internal" / "money-model"
 runs = json.loads((HERE / "cost-runs.json").read_text())
 tour, build = runs["tour"], runs["recipe_build"]
 

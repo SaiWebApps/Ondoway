@@ -30,8 +30,8 @@ class TestFeedbackEndpoint:
         resp = client.post("/api/v1/feedback", json={"transcript": ""})
         assert resp.status_code == 422
 
-    @patch("src.api.routes.feedback._create_github_issue")
-    @patch("src.api.routes.feedback._structure_feedback")
+    @patch("src.api.routes.app.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._structure_feedback")
     def test_success_flow(self, mock_structure, mock_github, client):
         mock_structure.return_value = {
             "title": "[Bug] Map doesn't load",
@@ -66,8 +66,8 @@ class TestFeedbackEndpoint:
         call_kwargs = mock_github.call_args.kwargs
         assert "beta-feedback" in call_kwargs["labels"]
 
-    @patch("src.api.routes.feedback._create_github_issue")
-    @patch("src.api.routes.feedback._structure_feedback")
+    @patch("src.api.routes.app.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._structure_feedback")
     def test_metadata_appended_to_body(self, mock_structure, mock_github, client):
         mock_structure.return_value = {
             "title": "[UX] Colors are weird",
@@ -96,8 +96,8 @@ class TestFeedbackEndpoint:
         assert "/profile" in issue_body
         assert "Android" in issue_body
 
-    @patch("src.api.routes.feedback._create_github_issue")
-    @patch("src.api.routes.feedback._structure_feedback")
+    @patch("src.api.routes.app.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._structure_feedback")
     def test_beta_feedback_label_always_added(
         self, mock_structure, mock_github, client
     ):
@@ -122,7 +122,7 @@ class TestFeedbackEndpoint:
         assert "beta-feedback" in labels
         assert "enhancement" in labels
 
-    @patch("src.api.routes.feedback._structure_feedback")
+    @patch("src.api.routes.app.feedback._structure_feedback")
     def test_github_token_missing_returns_500(self, mock_structure, client, monkeypatch):
         mock_structure.return_value = {
             "title": "[Bug] Test",
@@ -137,8 +137,8 @@ class TestFeedbackEndpoint:
         )
         assert resp.status_code == 500
 
-    @patch("src.api.routes.feedback._create_github_issue")
-    @patch("src.api.routes.feedback._structure_feedback")
+    @patch("src.api.routes.app.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._structure_feedback")
     def test_no_auth_required(self, mock_structure, mock_github, client):
         """The feedback endpoint must work without an Authorization header."""
         mock_structure.return_value = {
@@ -174,8 +174,8 @@ class TestTourContext:
         "labels": ["ux", "tour"],
     }
 
-    @patch("src.api.routes.feedback._create_github_issue")
-    @patch("src.api.routes.feedback._structure_feedback")
+    @patch("src.api.routes.app.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._structure_feedback")
     def test_tour_context_rendered_into_issue_body(self, mock_structure, mock_github, client):
         mock_structure.return_value = self._STRUCTURED
         mock_github.return_value = self._GITHUB_RESULT
@@ -213,8 +213,8 @@ class TestTourContext:
         assert "2. Fontaine du Palmier (vignette)" in issue_body
         assert "**Note:** Too much walking between stops." in issue_body
 
-    @patch("src.api.routes.feedback._create_github_issue")
-    @patch("src.api.routes.feedback._structure_feedback")
+    @patch("src.api.routes.app.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._structure_feedback")
     def test_tour_context_end_verdict_up_and_empty_lenses(
         self, mock_structure, mock_github, client
     ):
@@ -244,8 +244,8 @@ class TestTourContext:
         assert "**Lenses:** —" in issue_body
         assert "**Note:**" not in issue_body
 
-    @patch("src.api.routes.feedback._create_github_issue")
-    @patch("src.api.routes.feedback._structure_feedback")
+    @patch("src.api.routes.app.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._structure_feedback")
     def test_absent_tour_context_leaves_body_unchanged(
         self, mock_structure, mock_github, client
     ):
@@ -264,8 +264,8 @@ class TestTourContext:
         assert issue_body == self._STRUCTURED["body"]
         assert "Tour Context" not in issue_body
 
-    @patch("src.api.routes.feedback._create_github_issue")
-    @patch("src.api.routes.feedback._structure_feedback")
+    @patch("src.api.routes.app.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._structure_feedback")
     def test_bad_verdict_rejected_422(self, mock_structure, mock_github, client):
         """Validation rejects a verdict outside 'up'/'down' before any LLM/GitHub call."""
         resp = client.post(
@@ -283,8 +283,8 @@ class TestTourContext:
         mock_structure.assert_not_called()
         mock_github.assert_not_called()
 
-    @patch("src.api.routes.feedback._create_github_issue")
-    @patch("src.api.routes.feedback._structure_feedback")
+    @patch("src.api.routes.app.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._structure_feedback")
     def test_bad_start_rejected_422(self, mock_structure, mock_github, client):
         """start must be exactly [lat, lng]."""
         resp = client.post(
@@ -314,7 +314,7 @@ class TestRateLimit:
 class TestMalformedLLMOutput:
     """Untrusted LLM output must never surface as a 500."""
 
-    @patch("src.api.routes.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._create_github_issue")
     def test_prose_wrapped_response_still_creates_issue(self, mock_github, client):
         """The LLM returns prose around an unclosed fence -> the report
         must still land as a 201 issue (deterministic fallback), not a 500."""
@@ -340,7 +340,7 @@ class TestMalformedLLMOutput:
         # Fallback used the transcript, not a crash.
         assert mock_github.call_args.kwargs["body"] == "audio cuts out mid tour"
 
-    @patch("src.api.routes.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._create_github_issue")
     def test_embedded_object_in_prose_is_extracted(self, mock_github, client):
         """The brace-matching scan pulls a bare JSON object out of prose (no fence)."""
         mock_github.return_value = {
@@ -359,8 +359,8 @@ class TestMalformedLLMOutput:
         assert mock_github.call_args.kwargs["title"] == "[Bug] parsed"
         assert mock_github.call_args.kwargs["body"] == "it works"
 
-    @patch("src.api.routes.feedback._create_github_issue")
-    @patch("src.api.routes.feedback._structure_feedback")
+    @patch("src.api.routes.app.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._structure_feedback")
     def test_labels_non_list_does_not_500(self, mock_structure, mock_github, client):
         """Labels returned as a bare string must not AttributeError -> 500."""
         mock_structure.return_value = {"title": "t", "body": "b", "labels": "bug"}
@@ -371,8 +371,8 @@ class TestMalformedLLMOutput:
         # The bare string is dropped; only beta-feedback remains.
         assert mock_github.call_args.kwargs["labels"] == ["beta-feedback"]
 
-    @patch("src.api.routes.feedback._create_github_issue")
-    @patch("src.api.routes.feedback._structure_feedback")
+    @patch("src.api.routes.app.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._structure_feedback")
     def test_labels_list_of_non_strings_are_filtered(
         self, mock_structure, mock_github, client
     ):
@@ -389,7 +389,7 @@ class TestMalformedLLMOutput:
         labels = mock_github.call_args.kwargs["labels"]
         assert labels == ["bug", "ux", "beta-feedback"]
 
-    @patch("src.api.routes.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._create_github_issue")
     def test_empty_content_list_falls_back_to_transcript(self, mock_github, client):
         """An empty LLM content list (content=[]) must not IndexError -> 500.
         It should degrade to the deterministic transcript fallback (201)."""
@@ -410,7 +410,7 @@ class TestMalformedLLMOutput:
         assert resp.status_code == 201
         assert mock_github.call_args.kwargs["body"] == "empty content body"
 
-    @patch("src.api.routes.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._create_github_issue")
     def test_non_text_first_block_falls_back_to_transcript(self, mock_github, client):
         """A first content block with no `.text` attribute (e.g. a
         tool_use block) must not AttributeError -> 500; it degrades to the
@@ -438,8 +438,8 @@ class TestMalformedLLMOutput:
         assert resp.status_code == 201
         assert mock_github.call_args.kwargs["body"] == "non text block body"
 
-    @patch("src.api.routes.feedback._create_github_issue")
-    @patch("src.api.routes.feedback._structure_feedback")
+    @patch("src.api.routes.app.feedback._create_github_issue")
+    @patch("src.api.routes.app.feedback._structure_feedback")
     def test_top_level_non_dict_does_not_500(self, mock_structure, mock_github, client):
         """A top-level JSON list (not an object) must not crash the route."""
         mock_structure.return_value = ["not", "a", "dict"]
@@ -498,7 +498,7 @@ class TestGitHubTransportErrors:
         factory.return_value.__enter__.return_value = instance
         return factory
 
-    @patch("src.api.routes.feedback._structure_feedback")
+    @patch("src.api.routes.app.feedback._structure_feedback")
     def test_github_timeout_returns_503_with_retry_after(
         self, mock_structure, client, monkeypatch
     ):
@@ -506,7 +506,7 @@ class TestGitHubTransportErrors:
         monkeypatch.setenv("GITHUB_TOKEN", "ghp_fake")
 
         with patch(
-            "src.api.routes.feedback.httpx.Client",
+            "src.api.routes.app.feedback.httpx.Client",
             self._client_raising(httpx.TimeoutException("timed out")),
         ):
             resp = client.post("/api/v1/feedback", json={"transcript": "gh down"})
@@ -514,13 +514,13 @@ class TestGitHubTransportErrors:
         assert resp.status_code == 503
         assert resp.headers.get("Retry-After") == "30"
 
-    @patch("src.api.routes.feedback._structure_feedback")
+    @patch("src.api.routes.app.feedback._structure_feedback")
     def test_github_connect_error_returns_502(self, mock_structure, client, monkeypatch):
         mock_structure.return_value = {"title": "[Bug] t", "body": "b", "labels": ["bug"]}
         monkeypatch.setenv("GITHUB_TOKEN", "ghp_fake")
 
         with patch(
-            "src.api.routes.feedback.httpx.Client",
+            "src.api.routes.app.feedback.httpx.Client",
             self._client_raising(httpx.ConnectError("connection refused")),
         ):
             resp = client.post("/api/v1/feedback", json={"transcript": "gh unreachable"})

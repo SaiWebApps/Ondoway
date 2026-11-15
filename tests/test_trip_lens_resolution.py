@@ -10,7 +10,7 @@ the profile's PREFERS_LENS names, sorted for determinism; else None.
 from __future__ import annotations
 
 from src.api.models.trips import TripGenerateRequest
-from src.api.routes.trips import _resolve_lenses
+from src.api.routes.app.trips import _resolve_lenses
 
 
 class _FakeSession:

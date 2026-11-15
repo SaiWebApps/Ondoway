@@ -74,7 +74,7 @@ lying:
    new anchor ever vanishes too.
 2. **Changed contracts.** If the removal changes a surviving function's
    signature or calling convention, enumerate that symbol's callers across
-   the WHOLE repo — `src/`, `scripts/`, `tests/`, `mobile/`, `frontend/` —
+   the WHOLE repo — `src/`, `scripts/`, `tests/`, `mobile/`, `web/` —
    never just the file being edited.
 3. **Fail-open consumers.** Code that quietly no-ops when the thing is
    absent: `.get(...)` with a default, matchers that match nothing,

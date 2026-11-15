@@ -240,7 +240,7 @@ def me(current_user: dict = Depends(get_current_user)):
 # and no token to verify; it mints its session directly. That makes it a real
 # credential-issuing route, so it is GATED by the same fail-closed flag that already
 # protects the workbench CRUD routers (src/api/app.py) and the audio spend surface
-# (src/api/routes/audio.py): production pins WORKBENCH_API_ENABLED="false"
+# (src/api/routes/app/audio.py): production pins WORKBENCH_API_ENABLED="false"
 # (render.yaml), where this answers 404 — indistinguishable from a route that was never
 # mounted. The check runs per-REQUEST rather than at import for the reason audio.py
 # gives: this module is imported once but create_app() may run many times (tests) with

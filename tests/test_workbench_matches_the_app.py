@@ -120,7 +120,7 @@ from urllib.parse import urlparse
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 SRC = REPO / "src"
-REVIEW_HTML = REPO / "frontend" / "review.html"
+REVIEW_HTML = REPO / "web" / "workbench" / "review.html"
 RENDER_YAML = REPO / "render.yaml"
 WORKBENCH_SH = REPO / "scripts" / "workbench.sh"
 MAKEFILE = REPO / "Makefile"
@@ -975,7 +975,7 @@ def test_every_provider_the_workbench_can_select_really_calls_out() -> None:
         f"a real service, whatever it is named. The workbench exists so the owner "
         f"can judge what a tourist actually gets; serving a canned response "
         f"through it makes that judgement worthless. Remove the option from "
-        f"frontend/review.html; do NOT relax this test."
+        f"web/workbench/review.html; do NOT relax this test."
     )
 
 
@@ -1268,8 +1268,8 @@ print("<<<ondoway-probe>>>" + json.dumps(result))
 #:
 #: - ``trips._RENAMED_TOURABILITY_FIELDS`` — stored-schema field renames, so a
 #:   tourability disclosure saved before a rename is translated instead of
-#:   silently dropped (see its comment in src/api/routes/trips.py).
-_BOOT_TIME_LITERAL_TABLES = frozenset({"src.api.routes.trips._RENAMED_TOURABILITY_FIELDS"})
+#:   silently dropped (see its comment in src/api/routes/app/trips.py).
+_BOOT_TIME_LITERAL_TABLES = frozenset({"src.api.routes.app.trips._RENAMED_TOURABILITY_FIELDS"})
 
 
 def test_no_response_cache_is_pre_seeded_before_the_first_request() -> None:
@@ -1305,7 +1305,7 @@ def test_no_response_cache_is_pre_seeded_before_the_first_request() -> None:
 
     request: dict[str, list[str]] = {}
     declared_literals: dict[str, object] = {}
-    for path in sorted(routes_dir.glob("*.py")):
+    for path in sorted(routes_dir.rglob("*.py")):
         tree = ast.parse(path.read_text())
         module_name = ".".join(path.relative_to(REPO).with_suffix("").parts)
         names: list[str] = []
@@ -1707,7 +1707,7 @@ def test_no_request_handler_lets_anything_but_the_request_choose_the_response() 
     routes_dir = SRC / "api" / "routes"
     handlers: list[tuple[str, ast.FunctionDef, ast.Module]] = []
     dependency_calls: list[tuple[str, str]] = []
-    for path in sorted(routes_dir.glob("*.py")):
+    for path in sorted(routes_dir.rglob("*.py")):
         tree = ast.parse(path.read_text())
         module_name = ".".join(path.relative_to(REPO).with_suffix("").parts)
         for node in tree.body:
@@ -2388,7 +2388,7 @@ def test_a_flag_allowed_to_differ_never_steers_the_request_path() -> None:
 
     routes_dir = SRC / "api" / "routes"
     offenders: list[str] = []
-    for path in sorted(routes_dir.glob("*.py")):
+    for path in sorted(routes_dir.rglob("*.py")):
         tree = ast.parse(path.read_text())
         module_name = ".".join(path.relative_to(REPO).with_suffix("").parts)
         for node in tree.body:
@@ -2433,8 +2433,8 @@ def test_a_flag_allowed_to_differ_never_steers_the_request_path() -> None:
 #
 # Two client programs in two languages — the phone is Dart
 # (``mobile/lib/services/trip_service.dart``), the workbench is JavaScript
-# (``frontend/review.html``) — and both cross into Python at
-# ``src/api/routes/trips.py``. So the claim reduces to a single question that can be
+# (``web/workbench/review.html``) — and both cross into Python at
+# ``src/api/routes/app/trips.py``. So the claim reduces to a single question that can be
 # answered by running something: DO THOSE HANDLERS EXECUTE THE SAME FUNCTIONS?
 #
 # WHY NOT A TRACER. The obvious instrument — ``sys.settrace``, record every code
@@ -2574,7 +2574,7 @@ def _assert_bindings_are_usable(bindings: tuple[tuple[str, str], ...], names) ->
         f"{ENGINE_MODULE} does not define {sorted(names)} any more; the convergence "
         f"point moved and these tests are watching the wrong thing"
     )
-    assert "src.api.routes.trips" in modules, (
+    assert "src.api.routes.app.trips" in modules, (
         f"no route module binds {sorted(names)}, so neither client can be reaching "
         f"them — either the handlers moved or the import sweep is broken"
     )
@@ -2768,7 +2768,7 @@ def _proof_client(monkeypatch, graph: _StubGraph):
     from src.api.app import create_app
     from src.api.auth.dependencies import get_current_user
     from src.api.dependencies import get_driver, get_session
-    from src.api.routes import trips
+    from src.api.routes.app import trips
 
     monkeypatch.setenv("ONDOWAY_ALLOW_INSECURE_AUTH_SECRETS", "1")
     snapshot = _dense_snap()
@@ -2844,7 +2844,7 @@ def test_the_phone_and_the_workbench_name_one_planner_and_one_author() -> None:
     This test says nothing about whether the handlers CALL these objects — that is
     tests 17 and 18, which break them and watch the requests that use them fail.
 
-    UNDO TEST: in ``src/api/routes/trips.py``, replace the
+    UNDO TEST: in ``src/api/routes/app/trips.py``, replace the
     ``from src.tour.premium_tour import plan_premium_tour`` binding with a local
     copy of the function (however faithful) -> RED on the PLAN block; do the same for
     ``execute_premium_plan`` -> RED on the AUTHOR block.

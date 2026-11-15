@@ -129,12 +129,12 @@ WORKBENCH_NEO4J_URI = f"bolt://localhost:{WORKBENCH_NEO4J_PORT}"
 WORKBENCH_NEO4J_AUTH = ("neo4j", "ondoway_workbench_2026")
 WORKBENCH_NEO4J_DATABASE = "neo4j"
 WORKBENCH_URL = (
-    f"{(Path(__file__).parent.parent / 'frontend' / 'review.html').resolve().as_uri()}"
+    f"{(Path(__file__).parent.parent / 'web' / 'workbench' / 'review.html').resolve().as_uri()}"
     f"?apiPort={WORKBENCH_API_PORT}"
 )
 # New-city onboarding panel. Same file:// + ?apiPort= pattern as review.html.
 ONBOARD_URL = (
-    f"{(Path(__file__).parent.parent / 'frontend' / 'onboard.html').resolve().as_uri()}"
+    f"{(Path(__file__).parent.parent / 'web' / 'workbench' / 'onboard.html').resolve().as_uri()}"
     f"?apiPort={WORKBENCH_API_PORT}"
 )
 # London bbox as the panel's text field expects it: "min_lat, max_lat, min_lon, max_lon".
@@ -4887,7 +4887,7 @@ def _committed_tree_snapshot() -> dict[str, bytes]:
 
 
 class TestOnboardPanel:
-    """Real-browser proof of the new-city onboarding panel (frontend/onboard.html).
+    """Real-browser proof of the new-city onboarding panel (web/workbench/onboard.html).
 
     Drives the LIVE onboard API on :8001 (fixture + mock mode, so $0 and no
     network) through the whole London flow in a real Chromium page: the live
@@ -5280,7 +5280,7 @@ class TestFailuresAreShown:
         shape ``degradations.collapse`` sends: a counted row.
 
         UNDO TEST: delete the buildDegradationPanel(...) call from
-        frontend/review.html's renderTourDay -> RED (no panel).
+        web/workbench/review.html's renderTourDay -> RED (no panel).
         """
         page, _seed, _reporter = browser_page
         self._open_paris(page)

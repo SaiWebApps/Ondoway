@@ -4,7 +4,7 @@ into the Docker image.
 2026-07-18 deploy dep-d9e0ls3bc2fs73fo4gh0 crashed at import time with
 `ModuleNotFoundError: No module named 'scripts'`: src/onboard/assemble.py (and
 flow/extract/beat_draft) import `scripts.beat_builder`, but the Dockerfile only
-copied src/ and frontend/. This walks every module under src/, collects the
+copied src/ and the public web pages. This walks every module under src/, collects the
 top-level packages it imports (module-level AND lazy, since both must resolve
 inside the container), keeps the first-party ones (those that exist in the repo
 root), and asserts each is both COPY'd by the Dockerfile and not excluded by
@@ -91,3 +91,22 @@ def test_guard_actually_sees_the_known_dependencies() -> None:
     found = _first_party_imports()
     assert "scripts" in found, "scanner no longer sees src/onboard's scripts imports"
     assert "src" in found, "scanner no longer sees src's own absolute imports"
+
+
+def test_image_ships_only_the_public_web_pages() -> None:
+    """The workbench and the internal business pages never reach production.
+
+    The workbench edits the story database without a sign-in, and the internal pages
+    hold prices and costs. So the image copies the public site and nothing else
+    from web/, and leaves out the business cost tools under scripts/.
+    """
+    web_sources = [
+        source.strip("./").rstrip("/")
+        for line in DOCKERFILE.read_text().splitlines()
+        if (parts := line.strip().split()) and parts[0] == "COPY"
+        for source in parts[1:-1]
+        if source.strip("./").startswith("web")
+    ]
+    assert web_sources == ["web/site/public"], web_sources
+    ignored = {line.strip() for line in DOCKERIGNORE.read_text().splitlines()}
+    assert "scripts/business/" in ignored, "the business cost tools would ship in the image"

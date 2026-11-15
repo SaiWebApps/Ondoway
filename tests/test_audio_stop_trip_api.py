@@ -672,7 +672,7 @@ class TestSessionCarriesLiveAudio:
 
     def test_the_overlay_reads_the_items_current_files(self, client, clean_driver):
         from src.api.models.trips import GeneratedStop, SessionPlan
-        from src.api.routes.trips import _with_live_audio
+        from src.api.routes.app.trips import _with_live_audio
 
         _seed(clean_driver)
         item1 = f"{TRIP_ID}-item1"

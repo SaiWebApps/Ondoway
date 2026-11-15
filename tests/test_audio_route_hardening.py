@@ -24,7 +24,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api.app import create_app
-from src.api.routes import audio as audio_routes
+from src.api.routes.app import audio as audio_routes
 
 
 @pytest.fixture(autouse=True)

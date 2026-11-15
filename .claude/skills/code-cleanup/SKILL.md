@@ -1,7 +1,7 @@
 ---
 name: code-cleanup
 description: Find cleanup work across one area of the codebase and apply the safe part of it. Seed scans map the area, then read-only finder agents each hunt one concern — history told as comments (dates, commit hashes, plan codenames, document citations), verification theatre (hashes, seals and fingerprints that guard against nothing a user or caller does), comment noise, dead code, duplicate copies, legacy paths, defensive cruft and weak types. Writer agents that each own a set of files apply the safe findings; the owner decides the rest. Use when asked to map, audit, sweep or clean up the codebase, or to find leftover AI residue. To remove one named thing completely, use /cleanup instead.
-argument-hint: "<area: src/tour | src/api | mobile/lib | frontend | scripts | a tests/ slice> [lens ids]"
+argument-hint: "<area: src/tour | src/api | mobile/lib | web | scripts | a tests/ slice> [lens ids]"
 ---
 
 # /code-cleanup: scan, find by concern, write by file

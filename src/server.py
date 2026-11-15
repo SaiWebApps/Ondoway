@@ -1,6 +1,6 @@
 """Lightweight HTTP API for the Ondoway Neo4j dashboard.
 
-Serves graph data as JSON and hosts the static frontend.
+Serves graph data as JSON and hosts the workbench pages.
 No framework dependencies — uses stdlib http.server + json.
 """
 
@@ -15,7 +15,7 @@ from src.connection import create_driver, get_database
 from src.verify.counts import count_nodes_by_label, count_relationships_by_type, total_counts
 from src.verify.traversals import run_all_traversals
 
-FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
+WORKBENCH_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "workbench")
 PORT = int(os.getenv("DASHBOARD_PORT", "8080"))
 
 
@@ -79,12 +79,12 @@ def _build_api_response(driver) -> dict[str, Any]:
 
 
 class DashboardHandler(SimpleHTTPRequestHandler):
-    """Handle API routes and serve static files from frontend/."""
+    """Handle API routes and serve static files from web/workbench/."""
 
     driver = None
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=FRONTEND_DIR, **kwargs)
+        super().__init__(*args, directory=WORKBENCH_DIR, **kwargs)
 
     def do_GET(self):
         if self.path == "/api/status":
