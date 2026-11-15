@@ -21,7 +21,7 @@ import src.ingest.llm as llm
 import src.ingest.merge as merge
 import src.ingest.narrate as narrate
 import src.ingest.prompts as prompts
-from src.ingest import decompose, group, judge_claims, model
+from src.ingest import decompose, gates, group, judge_claims, model
 from src.ingest import unit as unit_mod
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -96,7 +96,11 @@ HOURS_2024: dict = {
 
 
 def _source(item: dict, source_id: str, chunk: str, as_of: int, stated_value=None) -> dict:
-    return {
+    """A source dict as it sits on disk: a {byte_span, sha256} pointer into the
+    real chunk, minted from the item's verbatim span. The span is kept here so
+    the claim's verdict still binds over it, exactly as a fresh JudgedClaim's
+    does; the committed corpus keeps only the pointer (`run.beat_record`)."""
+    out: dict = {
         "source_id": source_id,
         "chunk": chunk,
         "span": item["span"],
@@ -104,6 +108,17 @@ def _source(item: dict, source_id: str, chunk: str, as_of: int, stated_value=Non
         "rights_basis": "owned_copy",
         "stated_value": stated_value,
     }
+    # A real, verbatim span gets its pointer into the real chunk; a synthetic
+    # span used only where the beat is never grounded stays span-only (no
+    # pointer), exactly as a pre-pointer record would read back.
+    chunk_path = BOOKS_ROOT / source_id / f"{chunk}.txt"
+    if chunk_path.is_file():
+        raw = gates.locate_raw_span(item["span"], chunk_path.read_text())
+        if raw is not None:
+            byte_span, sha = model.span_pointer(chunk_path.read_text(), raw[0], raw[1])
+            out["byte_span"] = list(byte_span)
+            out["sha256"] = sha
+    return out
 
 
 def _lp_claim(claim_id: str, item: dict) -> dict:

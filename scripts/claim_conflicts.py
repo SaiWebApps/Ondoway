@@ -137,13 +137,25 @@ def format_report(conflicts: Sequence[Conflict]) -> str:
     return "\n".join(lines)
 
 
-def _contest(claim: dict, value: str, other_sources: Sequence[Mapping], other_value: str) -> None:
+def _source_key(source: Mapping) -> tuple:
+    """A source's identity for dedup: its chunk and byte-span pointer — the
+    exact bytes it cites, independent of whether the verbatim span is stored."""
+    return (source["source_id"], source["chunk"], tuple(source.get("byte_span") or ()))
+
+
+def _contest(
+    claim: dict,
+    value: str,
+    other_sources: Sequence[Mapping],
+    other_value: str,
+    chunks_root: Path,
+) -> None:
     for source in claim["sources"]:
         if source["stated_value"] is None:
             source["stated_value"] = value
-    own = {(s["source_id"], s["chunk"], s["span"]) for s in claim["sources"]}
+    own = {_source_key(s) for s in claim["sources"]}
     for source in other_sources:
-        if (source["source_id"], source["chunk"], source["span"]) in own:
+        if _source_key(source) in own:
             continue
         stated = source["stated_value"] if source["stated_value"] is not None else other_value
         # Its judgments judged the OTHER claim; carried here they would join
@@ -152,17 +164,21 @@ def _contest(claim: dict, value: str, other_sources: Sequence[Mapping], other_va
     claim["status"] = "contested"
     claim["resolved_value"] = None
     claim["resolution"] = None
+    # The committed span is a pointer: recover each source's verbatim text from
+    # its chunk to re-bind the verdict over the exact value it was bound at.
     claim["verdict"]["bound_to"] = model.bind(
-        claim["text"], "\n".join(s["span"] for s in claim["sources"])
+        claim["text"],
+        "\n".join(model.recovered_span(s, chunks_root) for s in claim["sources"]),
     )
 
 
 def apply_conflicts(
-    records: Sequence[Mapping], conflicts: Sequence[Conflict]
+    records: Sequence[Mapping], conflicts: Sequence[Conflict], chunks_root: Path
 ) -> tuple[list[dict], list[str]]:
     """Both claims of every conflict contested (see the module docstring).
     Returns the new records — the caller's are never mutated — and the
-    changed beat ids in file order, whose narrations are now stale."""
+    changed beat ids in file order, whose narrations are now stale.
+    `chunks_root` recovers each source's verbatim span to re-bind the verdict."""
     out = [deepcopy(record) for record in records]
     index = {
         (record["beat_id"], claim["claim_id"]): claim
@@ -176,8 +192,8 @@ def apply_conflicts(
         b = index[(conflict.beat_b, conflict.claim_b)]
         a_sources = deepcopy(a["sources"])
         b_sources = deepcopy(b["sources"])
-        _contest(a, conflict.values_a, b_sources, conflict.values_b)
-        _contest(b, conflict.values_b, a_sources, conflict.values_a)
+        _contest(a, conflict.values_a, b_sources, conflict.values_b, chunks_root)
+        _contest(b, conflict.values_b, a_sources, conflict.values_a, chunks_root)
         changed.update((conflict.beat_a, conflict.beat_b))
     rerun = [r["beat_id"] for r in out if is_new_shape(r) and r["beat_id"] in changed]
     return out, rerun
@@ -215,7 +231,7 @@ def main(argv: list[str] | None = None) -> int:
         print("nothing to apply")
         return 0
 
-    applied, rerun = apply_conflicts(records, conflicts)
+    applied, rerun = apply_conflicts(records, conflicts, args.books_root / args.city)
     errors = model.validate(
         [r for r in applied if is_new_shape(r)], chunks_root=args.books_root / args.city
     )

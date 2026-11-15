@@ -21,10 +21,14 @@
           {
             "source_id": "lonely-planet-new-york-city",
             "chunk": "chunk-07-upper-east-side",
-            "span": "1071 Fifth Ave, at E 89th St",
             "as_of": 2023,
             "rights_basis": "owned_copy",
-            "stated_value": "1071 Fifth Ave"
+            "stated_value": "1071 Fifth Ave",
+            "byte_span": [
+              4506,
+              4534
+            ],
+            "sha256": "9dc889d7e78569c47b6976a7779cafda537ef255025d74f321dea712369a2c01"
           }
         ],
         "resolved_value": null,
@@ -91,10 +95,14 @@
           {
             "source_id": "lonely-planet-new-york-city",
             "chunk": "chunk-07-upper-east-side",
-            "span": "The Guggenheim came out of the collection of Solomon R Guggenheim, a New York mining magnate who began acquiring abstract art in his 60s at the behest of his art adviser, an eccentric German baroness named Hilla Rebay.",
             "as_of": 2023,
             "rights_basis": "owned_copy",
-            "stated_value": null
+            "stated_value": null,
+            "byte_span": [
+              4700,
+              4918
+            ],
+            "sha256": "6223ac48e516f2b91b3dccd1b271ed1fb4c0d624dd75372f8b526dea030661cf"
           }
         ],
         "resolved_value": null,
@@ -118,10 +126,14 @@
           {
             "source_id": "lonely-planet-new-york-city",
             "chunk": "chunk-07-upper-east-side",
-            "span": "In 1939, with Rebay serving as director, Guggenheim opened a temporary museum on 54th St titled the Museum of Non-Objective Painting.",
             "as_of": 2023,
             "rights_basis": "owned_copy",
-            "stated_value": "1939"
+            "stated_value": "1939",
+            "byte_span": [
+              4919,
+              5052
+            ],
+            "sha256": "330366e9d9fb6b23456e69659ec7131cb4796a952bff5be288c0e8da0219d306"
           }
         ],
         "resolved_value": null,
@@ -145,18 +157,26 @@
           {
             "source_id": "lonely-planet-new-york-city",
             "chunk": "chunk-07-upper-east-side",
-            "span": "Construction was finally completed in 1959 – after both Wright and Guggenheim had passed away.",
             "as_of": 2023,
             "rights_basis": "owned_copy",
-            "stated_value": "1959"
+            "stated_value": "1959",
+            "byte_span": [
+              5525,
+              5621
+            ],
+            "sha256": "bcc50b14ab4098a6a90b5c78d83f3722352c869af47acaf771a1f529b3a0d90c"
           },
           {
             "source_id": "frommers-nyc-2024",
             "chunk": "chunk-05-ch05-uptown",
-            "span": "Visiting this 1959 masterpiece",
             "as_of": 2024,
             "rights_basis": "owned_copy",
-            "stated_value": "1959"
+            "stated_value": "1959",
+            "byte_span": [
+              16889,
+              16919
+            ],
+            "sha256": "01ca7384dde8083724aa6fe726e027d720268a73db086f88498a4255eb190a6e"
           }
         ],
         "resolved_value": null,
@@ -224,10 +244,14 @@
           {
             "source_id": "lonely-planet-new-york-city",
             "chunk": "chunk-07-upper-east-side",
-            "span": "When the Guggenheim opened its doors in October 1959, the ticket price was 50¢",
             "as_of": 2023,
             "rights_basis": "owned_copy",
-            "stated_value": "50 cents"
+            "stated_value": "50 cents",
+            "byte_span": [
+              5644,
+              5723
+            ],
+            "sha256": "f999b72c4ba3e116e17a8248e5ff275ebcfad7b9eab39411362bcac0abb26f4b"
           }
         ],
         "resolved_value": null,
@@ -251,10 +275,14 @@
           {
             "source_id": "lonely-planet-new-york-city",
             "chunk": "chunk-07-upper-east-side",
-            "span": "The structure was savaged by the New York Times, but others quickly celebrated it as one of the country’s most beautiful buildings.",
             "as_of": 2023,
             "rights_basis": "owned_copy",
-            "stated_value": null
+            "stated_value": null,
+            "byte_span": [
+              5864,
+              5997
+            ],
+            "sha256": "243f2f76944fc0653093669f550d7dcf3b7e950d4af725092fd7891ebdb19747"
           }
         ],
         "resolved_value": null,
@@ -278,10 +306,14 @@
           {
             "source_id": "frommers-nyc-2024",
             "chunk": "chunk-05-ch05-uptown",
-            "span": "Early critics dismissed the museum",
             "as_of": 2024,
             "rights_basis": "owned_copy",
-            "stated_value": null
+            "stated_value": null,
+            "byte_span": [
+              17104,
+              17138
+            ],
+            "sha256": "029db6dc8af7741de495fc990f837b87041a24808e7f2f2c33323618a9d1dff2"
           }
         ],
         "resolved_value": null,
@@ -348,10 +380,14 @@
           {
             "source_id": "lonely-planet-new-york-city",
             "chunk": "chunk-07-upper-east-side",
-            "span": "the inverted ziggurat structure was derided by some critics but hailed by others, who welcomed it as a beloved architectural icon.",
             "as_of": 2023,
             "rights_basis": "owned_copy",
-            "stated_value": null
+            "stated_value": null,
+            "byte_span": [
+              4087,
+              4217
+            ],
+            "sha256": "49663914dfc7264d5e1595e824de2e073925b89170bb2bedc66dfa03c1dbf386"
           }
         ],
         "resolved_value": null,
@@ -375,10 +411,14 @@
           {
             "source_id": "frommers-nyc-2024",
             "chunk": "chunk-05-ch05-uptown",
-            "span": "delirious spiral of a museum sits among the towers of Fifth Avenue like a steroidal peacock among guinea hens.",
             "as_of": 2024,
             "rights_basis": "owned_copy",
-            "stated_value": null
+            "stated_value": null,
+            "byte_span": [
+              16507,
+              16617
+            ],
+            "sha256": "dd53a0cf2c4ba9ed6758e3ed7164f9c131d5c0e4824a13430c7285556a8c04b7"
           }
         ],
         "resolved_value": null,
@@ -402,10 +442,14 @@
           {
             "source_id": "lonely-planet-new-york-city",
             "chunk": "chunk-07-upper-east-side",
-            "span": "Though Wright intended visitors to go to the top and wind their way down, the cramped single elevator makes this difficult. Exhibitions, therefore, are installed from bottom to top.",
             "as_of": 2023,
             "rights_basis": "owned_copy",
-            "stated_value": null
+            "stated_value": null,
+            "byte_span": [
+              6809,
+              6990
+            ],
+            "sha256": "73072d2c2cdc6cb63f7e58d96555490fb8eb8d65c062f28e31ea66c815c2fe26"
           }
         ],
         "resolved_value": null,

@@ -21,6 +21,7 @@ import pytest
 
 from src.ingest import (
     decompose,
+    gates,
     group,
     jobs,
     judge_claims,
@@ -115,10 +116,18 @@ def test_job_runs_p0_to_p7_on_the_mock_and_commits_a_valid_file(tmp_path):
     assert [c["text"] for c in beat["claims"]] == [c["text"] for c in script_mod.CLAIMS]
     assert [c["claim_id"] for c in beat["claims"]] == ["c01", "c02", "c03"]
     assert all(c["status"] == "resolved" for c in beat["claims"])
-    assert [(s["source_id"], s["chunk"], s["span"], s["as_of"], s["rights_basis"])
-            for c in beat["claims"] for s in c["sources"]] == [
-        (script_mod.LP_SOURCE, script_mod.LP_CHUNK, c["span"], 2023, "owned_copy")
-        for c in script_mod.CLAIMS
+    sources = [s for c in beat["claims"] for s in c["sources"]]
+    assert [(s["source_id"], s["chunk"], s["as_of"], s["rights_basis"]) for s in sources] == [
+        (script_mod.LP_SOURCE, script_mod.LP_CHUNK, 2023, "owned_copy") for _ in script_mod.CLAIMS
+    ]
+    # The committed source is a {byte_span, sha256} pointer carrying NO verbatim
+    # span — the whole point of the change. The commit above ran the grounding
+    # gate, so each pointer resolves; it recovers the quoted passage from the
+    # real chunk.
+    assert all("span" not in s for s in sources)
+    assert all(isinstance(s["byte_span"], list) and len(s["byte_span"]) == 2 for s in sources)
+    assert [model.recovered_span(s, chunks.parent) for s in sources] == [
+        gates.normalize_ws(c["span"]) for c in script_mod.CLAIMS
     ]
     assert {c["verdict"]["judge_model"] for c in beat["claims"]} == {
         script_mod.RESPONSE_JUDGE_MODEL
@@ -1084,7 +1093,11 @@ def test_a_new_storys_beat_holds_only_its_unmatched_claims_renarrated(tmp_path):
     ]
     assert records[0] == script_mod.folding_records()[0]
     completion = records[1]["claims"][0]
-    assert [s["span"] for s in completion["sources"]] == [script_mod.COMPLETED["span"]] * 2
+    # The re-committed beat carries pointers, not verbatim spans; both resolve
+    # to the completed-claim passage.
+    assert [model.recovered_span(s, chunks.parent) for s in completion["sources"]] == [
+        gates.normalize_ws(script_mod.COMPLETED["span"])
+    ] * 2
     new = records[2]
     assert [(c["claim_id"], c["text"]) for c in new["claims"]] == [
         ("c01", script_mod.COLLECTING["text"]), ("c02", script_mod.OPENED_1939["text"])

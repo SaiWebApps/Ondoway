@@ -502,6 +502,21 @@ def claim_record(judged: JudgedClaim) -> dict[str, Any]:
     }
 
 
+#: Exclude path for `beat_record`: every source's in-process `span` text,
+#: across every claim. The committed corpus carries only the `{byte_span,
+#: sha256}` pointer; the verbatim span is recovered from the local chunk on
+#: demand (`model.Source.recover`).
+_COMMIT_EXCLUDE = {"claims": {"__all__": {"sources": {"__all__": {"span"}}}}}
+
+
+def beat_record(beat: model.Beat) -> dict[str, Any]:
+    """A beat as it is WRITTEN to the corpus: its JSON dump with every source's
+    verbatim `span` dropped, so beats.json holds only the pointer. The one
+    Beat -> committed-dict boundary; `_dump` keeps `span` for the job-local
+    phase checkpoints and queue files, which are not the corpus."""
+    return beat.model_dump(mode="json", exclude=_COMMIT_EXCLUDE)
+
+
 def assemble_record(
     city: str,
     story: Story,
@@ -543,16 +558,37 @@ def story_of_beat(beat: model.Beat) -> Story:
     )
 
 
-def judged_of_beat(beat: model.Beat) -> list[JudgedClaim]:
-    """A beat's RESOLVED claims as the JudgedClaims P4/P5 read (texts,
-    spans and judgments). A claim with several sources carries every span,
-    newline-joined, so the lift gate sees all of them, and the judgments
-    its sources make that its text does not carry (ADR-0004)."""
+def _rerun_span(source: model.Source, chunks_root: Path | None) -> str:
+    """The span text a P4/P5 rerun reads for `source`: its in-process `span`
+    when the record still carries one, else the verbatim passage recovered from
+    the local chunk through the pointer (whitespace-normalized to the bound
+    form). "" when neither is available — the rerun's lift gate reads the chunk
+    directly, so an unrecoverable span only loses this secondary measure."""
+    if source.span:
+        return source.span
+    if chunks_root is None:
+        return ""
+    chunk_path = chunks_root / source.source_id / f"{source.chunk}.txt"
+    if not chunk_path.is_file():
+        return ""
+    try:
+        return " ".join(source.recover(chunk_path.read_text(encoding="utf-8")).split())
+    except ValueError:
+        return ""
+
+
+def judged_of_beat(beat: model.Beat, chunks_root: Path | None = None) -> list[JudgedClaim]:
+    """A beat's RESOLVED claims as the JudgedClaims P4/P5 read (texts, spans and
+    judgments). A claim with several sources carries every span, newline-joined,
+    so the lift gate sees all of them, and the judgments its sources make that
+    its text does not carry (ADR-0004). A record read back from the corpus
+    carries no verbatim span, so each source's span is recovered from the chunk
+    through its pointer (`chunks_root`, `_rerun_span`)."""
     out: list[JudgedClaim] = []
     for claim in beat.claims:
         if claim.status != "resolved":
             continue
-        spans = "\n".join(s.span for s in claim.sources)
+        spans = "\n".join(_rerun_span(s, chunks_root) for s in claim.sources)
         source = claim.sources[0].model_copy(update={"span": spans})
         out.append(
             JudgedClaim(
@@ -1154,7 +1190,7 @@ class _Run:
         old narration has a stale claims_hash and P7's validator would refuse
         the whole file — and queues the stories whose merges it dropped."""
         story = story_of_beat(beat)
-        claims = judged_of_beat(beat)
+        claims = judged_of_beat(beat, self.chunks_root)
         # Every source of every resolved claim: a folded claim cites two books,
         # and judged_of_beat keeps only its first source's chapter.
         passages = self._passages(
@@ -1444,8 +1480,11 @@ class _Run:
         changed_ids.update(rerun)
         changed_ids -= reverted
         records = [
-            *(_dump(b) if b.beat_id in changed_ids else raw_by_id[b.beat_id] for b in existing),
-            *(_dump(b) for b in new_records),
+            *(
+                beat_record(b) if b.beat_id in changed_ids else raw_by_id[b.beat_id]
+                for b in existing
+            ),
+            *(beat_record(b) for b in new_records),
         ]
         self.done(
             "P6",

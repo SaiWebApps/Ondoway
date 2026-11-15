@@ -28,7 +28,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
-from src.ingest import model
+from src.ingest import gates, model
 
 _VALID_CUSTOM_ID_ATTEMPTS = (1, 2)
 _CUSTOM_ID_KEY_CAP = 60
@@ -76,11 +76,38 @@ class Unit(BaseModel):
         return f"{self.key[:_CUSTOM_ID_KEY_CAP]}-a{attempt}"
 
     def source(self, span: str) -> model.Source:
-        """Build a model.Source over `span`, carrying the unit's own fields."""
+        """Build a model.Source over `span`, carrying the unit's own fields and
+        a `{byte_span, sha256}` pointer into this unit's text.
+
+        `span` is a grounded citation (`gates.ground_span`): it is located in
+        the unit's raw text (`gates.locate_raw_span`) to mint the pointer, and
+        the span stored is the located passage whitespace-normalized, so it
+        matches what `recover()` yields through the pointer. The verbatim text
+        is kept in-process only — `run.beat_record` strips it from the
+        committed record, which carries just the pointer.
+
+        A span that cannot be located — a restate that wrote literal escapes or
+        garbage into the citation (judge_claims' restate fallback), a judge's
+        paraphrase — gets a pointerless Source carrying the span unchanged: the
+        span gate still refuses it in the unit, the restate fallback still swaps
+        it for the original's grounded source, and the commit gate still refuses
+        any pointerless source. A pointer is only ever minted onto real bytes."""
+        raw = gates.locate_raw_span(span, self.text)
+        if raw is None:
+            return model.Source(
+                source_id=self.source_id,
+                chunk=self.chunk,
+                span=span,
+                as_of=self.as_of,
+                rights_basis=self.rights_basis,
+            )
+        byte_span, sha = model.span_pointer(self.text, raw[0], raw[1])
         return model.Source(
             source_id=self.source_id,
             chunk=self.chunk,
-            span=span,
+            byte_span=byte_span,
+            sha256=sha,
+            span=gates.normalize_ws(self.text[raw[0] : raw[1]]),
             as_of=self.as_of,
             rights_basis=self.rights_basis,
         )

@@ -46,9 +46,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from src.ingest import model
 from src.ingest.model import STRUCTURAL_BEAT_TYPES, bind, claims_hash, validate
 
-from .ingest_helpers import minimal_beat, stamp
+from .ingest_helpers import minimal_beat, recovered_span, stamp, with_pointer
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LEGACY_FIXTURE = REPO_ROOT / "tests" / "fixtures" / "beats_multi_chunk.json"
@@ -288,14 +289,18 @@ def test_cc_by_sa_requires_attribution_fields(tmp_path):
         source.update(overrides)
         return source
 
+    chunk_text = (wiki_dir / "rev-1.txt").read_text()
+
     def _beat_with_source(source: dict[str, Any]) -> dict[str, Any]:
         # Single structural claim (stop_orientation is arc-exempt) so this
         # rule's own chunks_root=tmp_path doesn't also have to ground the
         # unrelated second claim minimal_beat() carries — step 4 added span
-        # grounding for every claim once chunks_root is passed.
+        # grounding for every claim once chunks_root is passed. The source
+        # carries a byte-span pointer into the written chunk so grounding
+        # passes and only the CC-BY-SA rule can speak.
         beat = minimal_beat(beat_type="stop_orientation")
         beat["claims"] = [beat["claims"][0]]
-        beat["claims"][0]["sources"] = [source]
+        beat["claims"][0]["sources"] = [with_pointer(source, chunk_text)]
         return stamp(beat)
 
     def _validate(records: list[dict[str, Any]]) -> list[str]:
@@ -446,8 +451,10 @@ def test_span_not_verbatim_is_refused():
     assert claim["claim_id"] == "c01"
     source = claim["sources"][0]
     assert source["source_id"] == LP_SOURCE
-    # Alter one word of an otherwise-verbatim span.
-    source["span"] = source["span"].replace("German baroness", "Austrian baroness")
+    # A committed span is a {byte_span, sha256} pointer. Tamper the hash and the
+    # bytes the chunk still holds no longer match it — the grounding gate
+    # catches a drifted or edited span exactly as it caught a non-verbatim one.
+    source["sha256"] = "0" * 64
 
     errors = validate(mutated, chunks_root=CHUNKS_ROOT)
 
@@ -458,37 +465,88 @@ def test_span_not_verbatim_is_refused():
     assert source["source_id"] in errors[0]
 
 
+def test_a_drifted_chunk_is_refused_at_commit(tmp_path):
+    """The committed span is a {byte_span, sha256} pointer and the verbatim text
+    is recovered from the local chunk on demand. A faithful chunk grounds; a
+    chunk that drifts by even one byte at the pointed-at span no longer hashes
+    to the recorded sha256, so grounding refuses the beat rather than recover a
+    different passage than the one that was judged (the undo mutation)."""
+    sid, chunk = "owned-book", "chunk-01"
+    (tmp_path / sid).mkdir(parents=True)
+    chunk_path = tmp_path / sid / f"{chunk}.txt"
+    text = "The hall was finished in 1891 and still stands on the avenue today."
+    chunk_path.write_text(text)
+
+    beat = minimal_beat(beat_type="stop_orientation")
+    beat["claims"] = [beat["claims"][0]]
+    beat["claims"][0]["sources"] = [
+        with_pointer(
+            {
+                "source_id": sid,
+                "chunk": chunk,
+                "span": "The hall was finished in 1891",
+                "as_of": 2020,
+                "rights_basis": "owned_copy",
+                "stated_value": None,
+            },
+            text,
+        )
+    ]
+    beat = stamp(beat)
+
+    # The faithful chunk grounds the pointer clean.
+    assert validate([beat], chunks_root=tmp_path) == []
+
+    # Flip one byte inside the pointed-at span: the recovered bytes no longer
+    # hash to sha256, and grounding refuses it.
+    start, _ = beat["claims"][0]["sources"][0]["byte_span"]
+    data = bytearray(text.encode("utf-8"))
+    data[start] ^= 0x20
+    chunk_path.write_bytes(bytes(data))
+
+    errors = validate([beat], chunks_root=tmp_path)
+    assert len(errors) == 1
+    assert errors[0].startswith("SPAN_NOT_VERBATIM")
+    assert sid in errors[0]
+
+
 def test_span_matches_across_line_wrap_only():
     span_with_en_dash = (
         "Construction was finally completed in 1959 – after both Wright and "  # noqa: RUF001
         "Guggenheim had passed away."
     )
 
+    chunk_text = (CHUNKS_ROOT / LP_SOURCE / f"{LP_CHUNK}.txt").read_text()
+
     def _beat(span: str) -> dict[str, Any]:
         beat = minimal_beat(beat_type="stop_orientation")
         beat["claims"] = [beat["claims"][0]]
         beat["claims"][0]["sources"] = [
-            {
-                "source_id": LP_SOURCE,
-                "chunk": LP_CHUNK,
-                "span": span,
-                "as_of": 2023,
-                "rights_basis": "owned_copy",
-                "stated_value": None,
-            }
+            with_pointer(
+                {
+                    "source_id": LP_SOURCE,
+                    "chunk": LP_CHUNK,
+                    "span": span,
+                    "as_of": 2023,
+                    "rights_basis": "owned_copy",
+                    "stated_value": None,
+                },
+                chunk_text,
+            )
         ]
         return stamp(beat)
 
-    # The real chunk line-wraps this span; whitespace normalization alone
-    # (not the en dash) is what makes it match.
-    assert validate([_beat(span_with_en_dash)], chunks_root=CHUNKS_ROOT) == []
-
-    # The same span with the en dash replaced by a hyphen is refused — only
-    # whitespace is normalized, not punctuation.
-    hyphenated = span_with_en_dash.replace("–", "-")  # noqa: RUF001
-    errors = validate([_beat(hyphenated)], chunks_root=CHUNKS_ROOT)
-    assert len(errors) == 1
-    assert errors[0].startswith("SPAN_NOT_VERBATIM")
+    # The real chunk line-wraps this span; the byte-span pointer the mint
+    # locates (through the fold) crosses that wrap and grounds, and the bytes
+    # it points at carry the line break the author's citation had flattened.
+    beat = _beat(span_with_en_dash)
+    assert validate([beat], chunks_root=CHUNKS_ROOT) == []
+    source = beat["claims"][0]["sources"][0]
+    raw_recovered = model.Source.model_validate(source).recover(chunk_text)
+    assert "\n" in raw_recovered
+    # A committed span is the chunk's own bytes, sha-proven: the real en dash,
+    # not the author's hyphen, is what grounds.
+    assert "–" in raw_recovered  # noqa: RUF001
 
 
 def test_a_span_grounded_across_a_page_number_passes_the_validator():
@@ -506,24 +564,31 @@ def test_a_span_grounded_across_a_page_number_passes_the_validator():
         beat = minimal_beat(beat_type="stop_orientation")
         beat["claims"] = [beat["claims"][0]]
         beat["claims"][0]["sources"] = [
-            {
-                "source_id": "moon-nyc-walks",
-                "chunk": chunk,
-                "span": span,
-                "as_of": 2020,
-                "rights_basis": "owned_copy",
-                "stated_value": None,
-            }
+            with_pointer(
+                {
+                    "source_id": "moon-nyc-walks",
+                    "chunk": chunk,
+                    "span": span,
+                    "as_of": 2020,
+                    "rights_basis": "owned_copy",
+                    "stated_value": None,
+                },
+                chunk_text,
+            )
         ]
         return stamp(beat)
 
     grounded = ground_span(cited, chunk_text)
     assert grounded == "The building was erected in 1902 by 14 the Singer Manufacturing Company"
-    assert validate([_beat(grounded)], chunks_root=CHUNKS_ROOT) == []
-    # The citation as the author wrote it is not the passage's text.
-    errors = validate([_beat(cited)], chunks_root=CHUNKS_ROOT)
-    assert len(errors) == 1
-    assert errors[0].startswith("SPAN_NOT_VERBATIM")
+    beat = _beat(grounded)
+    assert validate([beat], chunks_root=CHUNKS_ROOT) == []
+    # The pointer the mint locates reads through the lone page-number line, so
+    # it lands on the chunk's real bytes — the page number among them — and
+    # grounds there. The author's citation with the page number left out
+    # resolves to the very same passage.
+    source = beat["claims"][0]["sources"][0]
+    assert "14" in model.Source.model_validate(source).recover(chunk_text)
+    assert _beat(cited)["claims"][0]["sources"][0]["byte_span"] == source["byte_span"]
 
 
 def test_missing_chunk_is_refused_not_skipped(tmp_path):
@@ -658,14 +723,15 @@ def test_fixture_validates_clean():
             for source in claim["sources"]:
                 chunk_path = CHUNKS_ROOT / source["source_id"] / f"{source['chunk']}.txt"
                 assert chunk_path.exists(), f"missing chunk file {chunk_path}"
-                haystack = _normalized(chunk_path.read_text())
-                # A bare `in` assertion would dump the whole chunk into the
-                # failure report; assert the boolean and name the span instead.
-                found = _normalized(source["span"]) in haystack
-                assert found, (
+                # The fixture commits a {byte_span, sha256} pointer, no verbatim
+                # span. It is grounded when the pointer resolves (the bytes
+                # still hash to sha256); altering one fixture span — the step's
+                # named undo mutation — breaks that and turns this node red.
+                recovered = recovered_span(source, CHUNKS_ROOT)
+                assert recovered in _normalized(chunk_path.read_text()), (
                     f"{record['beat_id']} / {claim['claim_id']} / "
-                    f"{source['source_id']}: span is not verbatim in "
-                    f"{source['chunk']}: {source['span']!r}"
+                    f"{source['source_id']}: pointer does not resolve in "
+                    f"{source['chunk']}"
                 )
 
 
@@ -704,10 +770,12 @@ def test_fixture_structure():
     assert all_sources
     assert all(s["rights_basis"] == "owned_copy" for s in all_sources)
 
-    # Every hash field equals a fresh recomputation — no placeholders.
+    # Every hash field equals a fresh recomputation — no placeholders. The
+    # verdict binds over the spans the pointers resolve to (recovered from the
+    # chunks), exactly as the validator recomputes it.
     for record in records:
         for claim in record["claims"]:
-            span = "\n".join(s["span"] for s in claim["sources"])
+            span = "\n".join(recovered_span(s, CHUNKS_ROOT) for s in claim["sources"])
             assert claim["verdict"]["bound_to"] == bind(claim["text"], span)
         narration = record["narration"]
         assert narration["claims_hash"] == claims_hash(record["claims"])
@@ -831,20 +899,24 @@ def test_the_commit_validator_reads_the_chunk_past_a_span_that_stops_short():
     chunks, it reads the chunk as the P4 gate does; without them it still
     measures the spans."""
     chunk = "chunk-03-walk3-times-square-union-square"
+    chunk_text = (CHUNKS_ROOT / "moon-nyc-walks" / f"{chunk}.txt").read_text()
     span = "The world-famous Museum of Modern Art (MoMA) has an extensive"
-    assert span in (CHUNKS_ROOT / "moon-nyc-walks" / f"{chunk}.txt").read_text()
+    assert span in chunk_text
 
     beat = minimal_beat(beat_type="stop_orientation")
     beat["claims"] = [beat["claims"][0]]
     beat["claims"][0]["sources"] = [
-        {
-            "source_id": "moon-nyc-walks",
-            "chunk": chunk,
-            "span": span,
-            "as_of": 2020,
-            "rights_basis": "owned_copy",
-            "stated_value": None,
-        }
+        with_pointer(
+            {
+                "source_id": "moon-nyc-walks",
+                "chunk": chunk,
+                "span": span,
+                "as_of": 2020,
+                "rights_basis": "owned_copy",
+                "stated_value": None,
+            },
+            chunk_text,
+        )
     ]
     beat["narration"]["text"] = (
         "Step inside. It has an extensive and unique collection of contemporary and "

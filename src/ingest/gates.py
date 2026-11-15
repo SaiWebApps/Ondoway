@@ -172,6 +172,36 @@ def _fold_for_locating(text: str) -> tuple[str, list[int]]:
     return "".join(out), origin
 
 
+def locate_raw_span(span: str, unit_text: str) -> tuple[int, int] | None:
+    """The RAW `[start, end)` CHARACTER offsets of a citation in `unit_text`,
+    or None when no fold finds it (a paraphrase, or an empty citation).
+
+    `span` is whitespace- and typography-normalized; the unit on disk is raw,
+    line-wrapped PDF text. This folds both (typography to ASCII, whitespace
+    runs to one space, a word-hyphen line break away) and keeps the RAW
+    offsets `origin[start]..origin[last] + 1` — so a span crossing a line
+    break, a doubled space or a lone page-number line still lands on the exact
+    chunk characters the byte-span pointer and the commit gate re-resolve.
+    First match wins (a span that legitimately repeats points at its first
+    occurrence). The sole raw-offset locator: `locate_span` and `Unit.source`'s
+    pointer minting both read it, so they cannot disagree.
+    """
+    folded_span, _ = _fold_for_locating(span)
+    folded_span = folded_span.strip()
+    if not folded_span:
+        return None
+    # Blanking a page-number line with as many spaces keeps every index, so
+    # `origin` still points into the unit's own text.
+    page_blanked = _PAGE_NUMBER_LINE.sub(lambda line: " " * len(line.group()), unit_text)
+    for text in (unit_text, page_blanked):
+        folded_unit, origin = _fold_for_locating(text)
+        start = folded_unit.find(folded_span)
+        if start >= 0:
+            last = start + len(folded_span) - 1
+            return origin[start], origin[last] + 1
+    return None
+
+
 def locate_span(span: str, unit_text: str) -> str | None:
     """Find a judge's or author's citation (see `ground_span`) in the unit
     even when the model straightened the passage's quotes or dashes, and
@@ -189,20 +219,10 @@ def locate_span(span: str, unit_text: str) -> str | None:
     (Moon pilot, 2026-10-01: refused on every chunk, the Roosevelt House claim
     dropped).
     """
-    folded_span, _ = _fold_for_locating(span)
-    folded_span = folded_span.strip()
-    if not folded_span:
+    raw = locate_raw_span(span, unit_text)
+    if raw is None:
         return None
-    # Blanking a page-number line with as many spaces keeps every index, so
-    # `origin` still points into the unit's own text.
-    page_blanked = _PAGE_NUMBER_LINE.sub(lambda line: " " * len(line.group()), unit_text)
-    for text in (unit_text, page_blanked):
-        folded_unit, origin = _fold_for_locating(text)
-        start = folded_unit.find(folded_span)
-        if start >= 0:
-            last = start + len(folded_span) - 1
-            return normalize_ws(unit_text[origin[start] : origin[last] + 1])
-    return None
+    return normalize_ws(unit_text[raw[0] : raw[1]])
 
 
 def ground_span(span: str, unit_text: str) -> str:
