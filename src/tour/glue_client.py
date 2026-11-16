@@ -26,11 +26,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
+from src.model_registry import model_for
+
 NO_GLUE_SENTINEL = "<<NO_GLUE>>"
 
 GLUE_MAX_OUTPUT_TOKENS = 150
 
-DEFAULT_HAIKU_MODEL = "claude-haiku-4-5-20251001"
+DEFAULT_HAIKU_MODEL = model_for("glue")
 
 
 def load_glue_prompt() -> str:

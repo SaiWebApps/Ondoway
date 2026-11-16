@@ -57,6 +57,7 @@ try:  # run directly as `python scripts/poi_place_judgements.py` — scripts/ is
         DEFAULT_BATCH_SIZE,
         DEFAULT_MODEL,
         dump_pois,
+        judgement_request,
         load_pois,
         records_for_batch,
     )
@@ -65,6 +66,7 @@ except ModuleNotFoundError:  # imported as `scripts.poi_place_judgements` (pytes
         DEFAULT_BATCH_SIZE,
         DEFAULT_MODEL,
         dump_pois,
+        judgement_request,
         load_pois,
         records_for_batch,
     )
@@ -194,11 +196,7 @@ def validate(record: dict[str, Any], *, name: str) -> str | None:
 def judge_batch(client: Any, model: str, batch: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """One model call for one batch. Returns the parsed records, unvalidated."""
     prompt = PROMPT_HEADER + "\n".join(describe(p) for p in batch)
-    response = client.messages.create(
-        model=model,
-        max_tokens=8000,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    response = client.messages.create(**judgement_request(model, prompt))
     text = "".join(block.text for block in response.content if block.type == "text").strip()
     return records_for_batch(text, batch)
 

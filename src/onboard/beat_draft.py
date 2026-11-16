@@ -42,22 +42,25 @@ from datetime import UTC, datetime
 from typing import Any
 
 from scripts.beat_builder import hash_body, slugify
+from src.model_registry import effort_for, model_for, price_per_mtok
 from src.onboard.assemble import WikiExtract
 
-MODEL = "claude-opus-4-8"
+MODEL = model_for("beat_draft")
+EFFORT = effort_for("beat_draft")
 
 # Provider selection. There is NO default — get_drafter() fails closed on an
 # unset or unknown value. "anthropic" opts into paid drafting (still gated
 # behind confirm=True in draft_all); "mock" must be selected EXPLICITLY.
 ONBOARD_PROVIDER = os.getenv("ONBOARD_PROVIDER")
 
-# Cost model for claude-opus-4-8: $5 / 1M input tokens, $25 / 1M output tokens.
-# Per BEAT (a POI now yields ~3 beats), so draft_all's confirm gate estimates the
-# full drafted-beat count, not the POI count.
+# Cost model: tokens per BEAT (a POI yields ~3 beats) at MODEL's registered list
+# price, so draft_all's confirm gate estimates the full drafted-beat count, not the
+# POI count.
 _INPUT_TOKENS_PER_BEAT = 1200
 _OUTPUT_TOKENS_PER_BEAT = 350
-_INPUT_USD_PER_TOKEN = 5.0 / 1e6
-_OUTPUT_USD_PER_TOKEN = 25.0 / 1e6
+# The model thinks before it writes, and thinking counts against max_tokens, so the
+# ceiling leaves room for thinking on top of the ~100-token passage.
+_MAX_OUTPUT_TOKENS = 4096
 
 # A landmark POI needs ≥ this many beats to clear the tour engine's anchor gate
 # (density.ANCHOR_CANDIDATE_BEAT_COUNT_MIN); we never emit fewer while the lead
@@ -282,11 +285,7 @@ class AnthropicBeatDrafter:
         beats: list[dict] = []
         for i, span in enumerate(_span_texts(extract.text)):
             narrative_function, beat_type = _arc(i)
-            message = self._get_client().messages.create(
-                model=MODEL,
-                max_tokens=512,
-                messages=[{"role": "user", "content": _draft_prompt(poi_name, span)}],
-            )
+            message = self._get_client().messages.create(**_draft_request(poi_name, span))
             script_body = _response_text(message) or _first_sentence(span)
             beats.append(
                 _build_beat(
@@ -301,6 +300,18 @@ class AnthropicBeatDrafter:
                 )
             )
         return beats
+
+
+def _draft_request(poi_name: str, source_span: str) -> dict[str, Any]:
+    """The paid request for one span's narration."""
+    request: dict[str, Any] = {
+        "model": MODEL,
+        "max_tokens": _MAX_OUTPUT_TOKENS,
+        "messages": [{"role": "user", "content": _draft_prompt(poi_name, source_span)}],
+    }
+    if EFFORT is not None:
+        request["output_config"] = {"effort": EFFORT}
+    return request
 
 
 def _draft_prompt(poi_name: str, source_span: str) -> str:
@@ -386,13 +397,14 @@ def planned_beat_count(pois: list[dict], extracts_by_slug: dict[str, WikiExtract
 
 
 def estimate_cost(n: int) -> dict:
-    """Dollar estimate for drafting ``n`` beats on claude-opus-4-8, assuming
-    ~1200 input + ~350 output tokens per beat. ``n`` is a BEAT count (a POI now
-    yields several beats)."""
+    """Dollar estimate for drafting ``n`` beats on MODEL, assuming ~1200 input +
+    ~350 output tokens per beat. ``n`` is a BEAT count (a POI yields several
+    beats)."""
+    usd_per_mtok_input, usd_per_mtok_output = price_per_mtok(MODEL)
     est_usd = n * (
-        _INPUT_TOKENS_PER_BEAT * _INPUT_USD_PER_TOKEN
-        + _OUTPUT_TOKENS_PER_BEAT * _OUTPUT_USD_PER_TOKEN
-    )
+        _INPUT_TOKENS_PER_BEAT * usd_per_mtok_input
+        + _OUTPUT_TOKENS_PER_BEAT * usd_per_mtok_output
+    ) / 1e6
     return {
         "model": MODEL,
         "beats": n,

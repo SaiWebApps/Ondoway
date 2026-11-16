@@ -67,3 +67,9 @@ These are coding rules, not a process. They bind every file under `src/`, `mobil
    enforces it. Never give a document path, a section number, a decision-record number, a
    persona or a plan codename as the reason. Write `# A refund never exceeds the amount paid.`
    beside the check, not `# see the refunds design, section 4.2`.
+
+11. **Never hard-code a setting.** A value a person may want to change — a model id, a price,
+   a provider, a threshold — lives in one shared setting that every caller reads. Model ids
+   and prices live in `src/models.json`, read through `src/model_registry.py`. Changing a
+   setting is one edit in one place; adding a model or a provider is a new entry, not an edit
+   to each caller.

@@ -74,6 +74,7 @@ try:  # run directly as `python scripts/poi_queues.py` — scripts/ is sys.path[
         DEFAULT_BATCH_SIZE,
         DEFAULT_MODEL,
         dump_pois,
+        judgement_request,
         load_pois,
         records_for_batch,
     )
@@ -83,6 +84,7 @@ except ModuleNotFoundError:  # imported as `scripts.poi_queues` (pytest)
         DEFAULT_BATCH_SIZE,
         DEFAULT_MODEL,
         dump_pois,
+        judgement_request,
         load_pois,
         records_for_batch,
     )
@@ -318,11 +320,7 @@ def price_batch(client: Any, model: str, batch: list[dict[str, Any]]) -> list[di
     response = None
     for attempt in (1, 2):
         try:
-            response = client.messages.create(
-                model=model,
-                max_tokens=8000,
-                messages=[{"role": "user", "content": prompt}],
-            )
+            response = client.messages.create(**judgement_request(model, prompt))
             break
         except (APITimeoutError, APIConnectionError) as exc:
             if attempt == 2:

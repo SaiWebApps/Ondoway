@@ -17,7 +17,13 @@ from pydantic import BaseModel
 from scripts.tour_batch_candidate import DEFAULT_OUTPUT_ROOT, MANIFEST_PATH, _batch_plan
 from scripts.tour_text_candidate import _private_write_new
 from src.connection import create_driver
-from src.tour.authoring import COMPOSE_MODEL, FACT_REVIEW_MODEL, _sentences_from_json
+from src.tour.authoring import (
+    COMPOSE_EFFORT,
+    COMPOSE_MODEL,
+    FACT_REVIEW_EFFORT,
+    FACT_REVIEW_MODEL,
+    _sentences_from_json,
+)
 from src.tour.batch_regression_manifest import load_frozen_tour_batch
 from src.tour.certification_provider import (
     AnthropicCertificationProvider,
@@ -508,6 +514,7 @@ def build_batch_review_runtime(
         calibration_inputs.fact_cases,
         calibration_inputs.enjoyment_anchors,
         model=COMPOSE_MODEL,
+        effort=COMPOSE_EFFORT,
     )
     runtime["calibration"] = ReviewRuntimeUnit(
         unit_id="calibration",
@@ -521,6 +528,7 @@ def build_batch_review_runtime(
         calibration_inputs.fact_cases,
         calibration_inputs.enjoyment_anchors,
         model=FACT_REVIEW_MODEL,
+        effort=FACT_REVIEW_EFFORT,
     )
     runtime["calibration-fact"] = ReviewRuntimeUnit(
         unit_id="calibration-fact",
@@ -534,6 +542,7 @@ def build_batch_review_runtime(
         envelope, sdk_request = batch_fact_request_envelope(
             material.fact_inputs[case_id],
             model=FACT_REVIEW_MODEL,
+            effort=FACT_REVIEW_EFFORT,
         )
         unit_id = f"fact:{case_id}"
         runtime[unit_id] = ReviewRuntimeUnit(
@@ -554,6 +563,7 @@ def build_batch_review_runtime(
             enjoy_candidates,
             calibration_inputs.enjoyment_anchors,
             model=COMPOSE_MODEL,
+            effort=COMPOSE_EFFORT,
         )
         unit_id = f"enjoy:{case_id}"
         runtime[unit_id] = ReviewRuntimeUnit(

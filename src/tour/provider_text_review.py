@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from src.model_registry import price_per_mtok
+
 from .authoring import COMPOSE_MODEL, ComposeRequest
 from .contract import Sentence
 from .corpus_places import bytes_sha256, canonical_json, canonical_sha256
@@ -39,13 +41,6 @@ from .quality_requests import (
 
 if TYPE_CHECKING:
     from .premium_tour import RouteSummary
-
-# US dollars per million input and output tokens. Every model a stored review receipt
-# names has a price here; a receipt naming any other model is refused.
-_MODEL_PRICING: dict[str, tuple[int, int]] = {
-    "claude-opus-4-8": (5, 25),
-    "claude-sonnet-5": (3, 15),
-}
 
 
 def candidate_narration_sha256(
@@ -200,8 +195,9 @@ def review_usage(receipt: dict[str, object]) -> ReviewUsage:
     input_tokens = int(receipt["input_tokens"])
     output_tokens = int(receipt["output_tokens"])
     model = str(receipt["model"])
+    # A receipt naming a model with no registered price is refused.
     try:
-        input_rate, output_rate = _MODEL_PRICING[model]
+        input_rate, output_rate = price_per_mtok(model)
     except KeyError:
         raise ValueError(f"no price for model {model!r}") from None
     return ReviewUsage(
@@ -305,7 +301,7 @@ def validate_fact(
             )
         )
     batch = FactReviewBatch(
-        reviewer_model=COMPOSE_MODEL,
+        reviewer_model=str(receipt["model"]),
         policy_sha256=QUALITY_POLICY_SHA256,
         prompt_sha256=BATCH_FACT_PROMPT_SHA256,
         provider_response_sha256=receipt["response_sha256"],
@@ -330,7 +326,7 @@ def validate_enjoyment(
     )
     batch = EnjoymentScoredReviewBatch(
         review_slot="first",
-        reviewer_model=COMPOSE_MODEL,
+        reviewer_model=str(receipt["model"]),
         policy_sha256=QUALITY_POLICY_SHA256,
         prompt_sha256=ENJOY_PROMPT_SHA256,
         provider_response_sha256=receipt["response_sha256"],

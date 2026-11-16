@@ -40,6 +40,7 @@ from .authoring import (
     _COMPOSE_OUTPUT_SCHEMA,
     _COMPOSE_SYSTEM,
     CERTIFICATION_COMPOSE_MAX_OUTPUT_TOKENS,
+    COMPOSE_EFFORT,
     COMPOSE_MODEL,
     CertificationComposition,
     CompletedCertificationComposeUnit,
@@ -114,6 +115,7 @@ def premium_authoring_policy_sha256() -> str:
     return canonical_sha256(
         {
             "model": COMPOSE_MODEL,
+            "effort": COMPOSE_EFFORT,
             "max_tokens": CERTIFICATION_COMPOSE_MAX_OUTPUT_TOKENS,
             "thinking": {"type": "adaptive"},
             "system": _COMPOSE_SYSTEM,
@@ -350,7 +352,7 @@ def plan_premium_authoring(
     for stop_request in authoring.stop_requests:
         stop_index = stop_request.stop_index
         envelope, sdk_request = candidate_compose_request_envelope(
-            requests[stop_index], stop_request, model=COMPOSE_MODEL
+            requests[stop_index], stop_request, model=COMPOSE_MODEL, effort=COMPOSE_EFFORT
         )
         encoded = envelope.encode("utf-8")
         units.append(
@@ -1103,6 +1105,7 @@ def finalize_premium_composition(
         standalone_place=plan.standalone_place,
         completed_units=tuple(completed),
         model=COMPOSE_MODEL,
+        effort=COMPOSE_EFFORT,
         faithfulness_checker=faithfulness_checker,
         enforce_claim_coverage=enforce_claim_coverage,
         scan_glue_for_invention=scan_glue_for_invention,

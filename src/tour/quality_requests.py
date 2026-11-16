@@ -14,6 +14,8 @@ import anthropic
 from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.model_registry import output_ceiling_multiplier
+
 from .corpus_places import text_sha256
 from .quality_certification import (
     ENJOY_AXIS_NAMES,
@@ -33,16 +35,16 @@ from .quality_certification import (
 FACT_MAX_OUTPUT_TOKENS = 64_000
 ENJOY_MAX_OUTPUT_TOKENS = 16_000
 
-#: Sonnet 5 tokenizes ~30% denser than Opus and its adaptive thinking spends more
-#: against the same ceiling: 16K truncates mid-JSON on a request Opus finishes in
-#: 6,363 output tokens. Under zero retries a max_tokens stop is
-#: paid-and-lost, so dense models get double the ceiling — a worst-case bound,
-#: never expected spend (billing is actual tokens).
-_DENSE_OUTPUT_MODELS = ("claude-sonnet-5",)
-
 
 def _output_ceiling(model: str, base: int) -> int:
-    return base * 2 if model in _DENSE_OUTPUT_MODELS else base
+    """The output-token ceiling for one model: the base times the model's registered
+    multiplier. A model that spends more output tokens on the same request (a denser
+    tokenizer, longer adaptive thinking) gets a higher ceiling, because under zero
+    retries a max_tokens stop is paid and lost. It is a worst-case bound, never
+    expected spend: billing is actual tokens."""
+    return base * output_ceiling_multiplier(model)
+
+
 QUALITY_SCHEMA_TRANSFORMER_ID = "anthropic-python-transform-schema-0.97.0"
 _PINNED_ANTHROPIC_SDK_VERSION = "0.97.0"
 
@@ -284,15 +286,19 @@ def _request_envelope(
     system: str,
     schema: dict[str, object],
     user: str,
+    effort: str | None,
 ) -> tuple[str, MessageCreateParamsNonStreaming]:
+    """One request envelope. ``effort`` is sent as ``output_config.effort`` when set;
+    ``None`` leaves the key out."""
+    output_config: dict[str, object] = {"format": {"type": "json_schema", "schema": schema}}
+    if effort is not None:
+        output_config["effort"] = effort
     sdk_request: MessageCreateParamsNonStreaming = {
         "model": model,
         "max_tokens": max_tokens,
         "thinking": {"type": "adaptive"},
         "system": system,
-        "output_config": {
-            "format": {"type": "json_schema", "schema": schema}
-        },
+        "output_config": output_config,
         "messages": [{"role": "user", "content": user}],
     }
     return (
@@ -307,7 +313,7 @@ def _request_envelope(
 
 
 def batch_fact_request_envelope(
-    request: FactReviewInput, *, model: str
+    request: FactReviewInput, *, model: str, effort: str | None
 ) -> tuple[str, MessageCreateParamsNonStreaming]:
     user = BATCH_FACT_TASK + "\n\nFACT BATCH:\n" + request.model_dump_json()
     return _request_envelope(
@@ -316,6 +322,7 @@ def batch_fact_request_envelope(
         system=SHARED_POLICY,
         schema=_provider_schema(ProviderFactPayload),
         user=user,
+        effort=effort,
     )
 
 
@@ -324,6 +331,7 @@ def calibration_request_envelope(
     enjoyment_anchors: tuple[EnjoymentCalibrationAnchor, ...],
     *,
     model: str,
+    effort: str | None,
 ) -> tuple[str, MessageCreateParamsNonStreaming]:
     payload = {
         "fact_policy_cases": [
@@ -351,6 +359,7 @@ def calibration_request_envelope(
         system=SHARED_POLICY,
         schema=_provider_schema(ProviderCalibrationPayload),
         user=user,
+        effort=effort,
     )
 
 
@@ -359,6 +368,7 @@ def enjoyment_request_envelope(
     anchors: tuple[EnjoymentCalibrationAnchor, ...],
     *,
     model: str,
+    effort: str | None,
 ) -> tuple[str, MessageCreateParamsNonStreaming]:
     neutral_items = tuple(sorted(
         (*tuple(anchor.item for anchor in anchors), *items),
@@ -382,6 +392,7 @@ def enjoyment_request_envelope(
         system=SHARED_POLICY,
         schema=_provider_schema(ProviderEnjoyPayload),
         user=user,
+        effort=effort,
     )
 
 

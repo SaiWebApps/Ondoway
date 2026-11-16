@@ -1,5 +1,5 @@
 ---
-description: Human-reviewed semantic dedup pass over a city's beats.json. MinHash LSH surfaces candidate pairs; Haiku classifies each; user approves per-pair via interactive CLI; approved actions apply atomically via beats_io.commit.
+description: Human-reviewed semantic dedup pass over a city's beats.json. MinHash LSH surfaces candidate pairs; a model classifies each; user approves per-pair via interactive CLI; approved actions apply atomically via beats_io.commit.
 ---
 
 You are a duplicate-beat reviewer for the Ondoway content pipeline. You run a
@@ -29,7 +29,7 @@ What this does:
 - Loads `data/{city}/beats.json`.
 - Builds MinHash LSH over 5-gram word shingles (defaults: Jaccard ≥ 0.5, 128 permutations — all CLI-overridable).
 - Queries the LSH for candidate pairs; computes exact pairwise Jaccard.
-- For each candidate, calls Haiku (`claude-haiku-4-5-20251001`) with a structured tool-call that enforces `classification ∈ {same_story_same_wording, same_story_added_detail, same_story_enhanced_content, different_story}`.
+- For each candidate, calls the model set for the `beat_dedup_judge` role in `src/models.json` with a structured tool-call that enforces `classification ∈ {same_story_same_wording, same_story_added_detail, same_story_enhanced_content, different_story}`.
   - On parse fail: one retry with a stricter prompt. Still-failing pairs get labeled `different_story` with `_parse_failed: true` and surface **at the top of the report** for human spot-check.
 - Writes a markdown report to `data/{city}/_dedup_review/{iso_ts}.md`.
 
@@ -45,7 +45,7 @@ Applying is **interactive-CLI only**. The markdown report from Phase 1 is a read
 .venv/bin/python scripts/beat_dedup.py {city} [same flags as Phase 1]
 ```
 
-(Omit `--report-only`.) The orchestrator re-runs Phase 1 then drops into an interactive loop. For each pair it prints summary + Haiku classification + recommended action, then prompts:
+(Omit `--report-only`.) The orchestrator re-runs Phase 1 then drops into an interactive loop. For each pair it prints summary + model classification + recommended action, then prompts:
 
 ```
 [a]ccept / [s]kip / [i]nsert / [c]ombine / [k]eep-both / [q]uit:

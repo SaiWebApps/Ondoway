@@ -7,19 +7,46 @@ reads the latest measured tour and recipe build and writes the cost structure.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parents[2] / "web" / "site" / "internal" / "money-model"
+REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+
+from src.model_registry import (  # noqa: E402
+    cache_multipliers,
+    input_price_per_mtok,
+    price_per_audio_minute,
+    price_per_mtok,
+    prices_checked,
+)
+
+HERE = REPO / "web" / "site" / "internal" / "money-model"
 runs = json.loads((HERE / "cost-runs.json").read_text())
 tour, build = runs["tour"], runs["recipe_build"]
 
+# The prices are the registry's prices for the models the measurement itself used.
+writer = runs["models"]["tour_compose"]
+fact_checker = runs["models"]["faithfulness"]
+voice = runs["models"]["text_to_speech"]
+cache_write_x, cache_read_x = cache_multipliers(writer)
+voice_usd_per_min = price_per_audio_minute(voice)
+voice_text_usd_per_mtok = input_price_per_mtok(voice)
+
+
+def _token_price(model: str) -> str:
+    usd_in, usd_out = price_per_mtok(model)
+    return f"{model}: ${usd_in:g} per million tokens in, ${usd_out:g} out"
+
+
 PRICES = {
-    "checked": "2026-10-09",
-    "opus": "Claude Opus 4.8: $5 per million tokens in, $25 out",
-    "haiku": "Claude Haiku 4.5: $1 per million tokens in, $5 out",
-    "cache": "Cached input: 1.25 times the input price to write, 0.1 times to read",
-    "voice": "OpenAI gpt-4o-mini-tts, voice nova: $0.015 per minute of audio, plus $0.60 per "
-    "million text tokens (characters divided by 4)",
+    "checked": prices_checked(),
+    "opus": _token_price(writer),
+    "haiku": _token_price(fact_checker),
+    "cache": f"Cached input: {cache_write_x:g} times the input price to write, "
+    f"{cache_read_x:g} times to read",
+    "voice": f"{voice}: ${voice_usd_per_min:g} per minute of audio, plus "
+    f"${voice_text_usd_per_mtok:g} per million text tokens (characters divided by 4)",
 }
 
 # ── a stop's cost, from the measured tour ──
@@ -34,7 +61,11 @@ shared = (
 # A stop written fresh is voiced whole; a recipe stop voices only its opening line, the
 # rest is stored. The longest stop voice call is the fresh stop's.
 stop_voice = sorted(
-    (c["audio_seconds"] / 60 * 0.015 + c["chars"] / 4 * 0.6 / 1e6, c["chars"])
+    (
+        c["audio_seconds"] / 60 * voice_usd_per_min
+        + c["chars"] / 4 * voice_text_usd_per_mtok / 1e6,
+        c["chars"],
+    )
     for c in tour["voice_calls"]
     if c["tag"] == "tts_stop_narration"
 )

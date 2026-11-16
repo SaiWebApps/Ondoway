@@ -42,6 +42,7 @@ import httpx
 
 from src.audio._http import TRANSIENT_NETWORK_EXC, post_with_retry
 from src.audio.tts_normalize import normalize_for_tts
+from src.model_registry import default_voice, model_for, voice_settings
 
 
 class TTSError(Exception):
@@ -190,8 +191,8 @@ class MockTTSProvider:
 class OpenAITTSProvider:
     """OpenAI TTS API — good quality, cheap, no SDK required.
 
-    Requires OPENAI_API_KEY env var.
-    Default voice: "nova". 13 voices are available on the default model.
+    Requires OPENAI_API_KEY env var. The model and its default voice come from the
+    model registry; OPENAI_VOICE overrides the voice.
 
     WHY NOT ``tts-1-hd``
     --------------------
@@ -216,8 +217,8 @@ class OpenAITTSProvider:
     """
 
     API_URL = "https://api.openai.com/v1/audio/speech"
-    DEFAULT_VOICE = "nova"
-    DEFAULT_MODEL = "gpt-4o-mini-tts"
+    DEFAULT_MODEL = model_for("text_to_speech")
+    DEFAULT_VOICE = default_voice(DEFAULT_MODEL)
 
     @property
     def name(self) -> str:
@@ -260,7 +261,7 @@ class ElevenLabsTTSProvider:
     """
 
     API_BASE = "https://api.elevenlabs.io/v1"
-    DEFAULT_MODEL = "eleven_multilingual_v2"
+    DEFAULT_MODEL = model_for("text_to_speech_elevenlabs")
 
     @property
     def name(self) -> str:
@@ -289,10 +290,7 @@ class ElevenLabsTTSProvider:
                 json={
                     "text": chunk,
                     "model_id": self.DEFAULT_MODEL,
-                    "voice_settings": {
-                        "stability": 0.5,
-                        "similarity_boost": 0.75,
-                    },
+                    "voice_settings": voice_settings(self.DEFAULT_MODEL),
                 },
             )
             if resp.status_code != 200:
@@ -320,7 +318,7 @@ class FailoverTTSProvider:
     chain — a bad request or an empty script fails everywhere and must surface.
 
     ``voice_id`` is deliberately passed to the PRIMARY ALONE. A voice name
-    belongs to one vendor ("nova" is OpenAI's; ElevenLabs wants its own id), so
+    belongs to one vendor (an OpenAI voice name; ElevenLabs wants its own id), so
     forwarding it would ask the understudy for a voice it has never heard of.
     Each fallback uses its own configured default instead.
 

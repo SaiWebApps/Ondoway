@@ -11,8 +11,11 @@ import anthropic
 from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
 from anthropic.types.messages.batch_create_params import Request
 
+from src.model_registry import effort_for, model_for, price_per_mtok
+
 PROBE_CUSTOM_ID = "probe-batch-api-v1"
-PROBE_MODEL = "claude-opus-4-8"
+PROBE_MODEL = model_for("batch_probe")
+PROBE_EFFORT = effort_for("batch_probe")
 PROBE_MAX_TOKENS = 64000
 PROBE_SYSTEM_PROMPT = "You are a walking-tour narrator. Respond only with schema-constrained JSON."
 PROBE_USER_MESSAGE = (
@@ -21,8 +24,6 @@ PROBE_USER_MESSAGE = (
 )
 POLL_INTERVAL_SECONDS = 5
 POLL_MAX_ITERATIONS = 120
-OPUS_4_8_INPUT_USD_PER_MILLION_TOKENS = 5.0
-OPUS_4_8_OUTPUT_USD_PER_MILLION_TOKENS = 25.0
 BATCH_RATE_MULTIPLIER = 0.5
 
 PROBE_SCHEMA = {
@@ -54,7 +55,10 @@ def main() -> int:
         model=PROBE_MODEL,
         max_tokens=PROBE_MAX_TOKENS,
         thinking={"type": "adaptive"},
-        output_config={"format": {"type": "json_schema", "schema": PROBE_SCHEMA}},
+        output_config={
+            "format": {"type": "json_schema", "schema": PROBE_SCHEMA},
+            **({"effort": PROBE_EFFORT} if PROBE_EFFORT is not None else {}),
+        },
         system=[
             {
                 "type": "text",
@@ -121,8 +125,9 @@ def main() -> int:
         assert sentence.get("source_type") in ("beat", "glue"), sentence
         assert isinstance(sentence.get("stop_idx"), int), sentence
 
-    input_cost_usd = usage.input_tokens * OPUS_4_8_INPUT_USD_PER_MILLION_TOKENS / 1_000_000
-    output_cost_usd = usage.output_tokens * OPUS_4_8_OUTPUT_USD_PER_MILLION_TOKENS / 1_000_000
+    usd_per_mtok_input, usd_per_mtok_output = price_per_mtok(PROBE_MODEL)
+    input_cost_usd = usage.input_tokens * usd_per_mtok_input / 1_000_000
+    output_cost_usd = usage.output_tokens * usd_per_mtok_output / 1_000_000
     batch_cost_usd = (input_cost_usd + output_cost_usd) * BATCH_RATE_MULTIPLIER
 
     print(f"provider_request_id: {message.id}")

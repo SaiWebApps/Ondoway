@@ -60,7 +60,8 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.tour.anthropic_client import judge_client
+from src.model_registry import effort_for, model_for
+from src.tour.anthropic_client import compose_client, judge_client
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -76,10 +77,15 @@ CACHE_PATH = REPO_ROOT / ".claude" / "dedup-inventory.json"
 #: Reading a whole module and judging what it is for is the expensive half of this
 #: job, and a small model reads badly. The full pass runs at close, not in a loop.
 #: Cost is not a constraint here.
-FULL_MODEL = "claude-opus-4-8"
+FULL_MODEL = model_for("dedup_review_full")
+FULL_EFFORT = effort_for("dedup_review_full")
+#: The model thinks before it answers and thinking counts against max_tokens, so the
+#: full pass's ceiling leaves room for thinking on top of the JSON answer.
+FULL_MAX_TOKENS = 16_000
 #: The after-every-edit pass asks a much narrower question — does this one function
 #: match anything on a list — and has to answer while somebody is waiting.
-CHANGED_MODEL = "claude-haiku-4-5-20251001"
+CHANGED_MODEL = model_for("dedup_review_changed")
+CHANGED_EFFORT = effort_for("dedup_review_changed")
 
 #: A function shorter than this is plumbing — a property, a one-line delegation —
 #: and two of them looking alike is not the defect this hunts.
@@ -127,14 +133,17 @@ def _definitions(path: Path) -> list[Definition]:
     return out
 
 
-def _ask(client: Any, prompt: str, *, model: str, max_tokens: int) -> str:
+def _ask(
+    client: Any, prompt: str, *, model: str, effort: str | None, max_tokens: int
+) -> str:
     """One judge call.
 
     ``temperature=0`` where the model still takes it, so a borderline verdict does
     not flake between runs and a gate that just passed cannot fail on a re-run.
     The newer reasoning models reject the parameter outright (400,
     "`temperature` is deprecated for this model"), so it is sent only where it is
-    accepted rather than guessed at.
+    accepted rather than guessed at. ``effort`` is sent as ``output_config.effort``
+    when set.
     """
     kwargs: dict[str, Any] = {
         "model": model,
@@ -143,6 +152,8 @@ def _ask(client: Any, prompt: str, *, model: str, max_tokens: int) -> str:
     }
     if model == CHANGED_MODEL:
         kwargs["temperature"] = 0
+    if effort is not None:
+        kwargs["output_config"] = {"effort": effort}
     response = client.messages.create(**kwargs)
     return "".join(
         getattr(block, "text", "") for block in (getattr(response, "content", []) or [])
@@ -291,7 +302,8 @@ def _refresh_inventory(client: Any, files: list[Path], cache: dict[str, Any],
                 module=module, source="\n\n".join(d.source for d in definitions)
             ),
             model=FULL_MODEL,
-            max_tokens=4096,
+            effort=FULL_EFFORT,
+            max_tokens=FULL_MAX_TOKENS,
         )
         answers = {
             str(e.get("name", "")): str(e.get("answers", ""))
@@ -349,6 +361,7 @@ def _run_changed(client: Any, files: list[Path], cache: dict[str, Any]) -> int:
                 source="\n\n".join(d.source for d in definitions),
             ),
             model=CHANGED_MODEL,
+            effort=CHANGED_EFFORT,
             max_tokens=2048,
         )
         for hit in _json_block(reply) or []:
@@ -386,7 +399,7 @@ def _run_full(client: Any, files: list[Path], cache: dict[str, Any]) -> int:
           f"functions...", flush=True)
     groups = _json_block(
         _ask(client, _GROUPING_PROMPT.format(inventory="\n".join(inventory)),
-             model=FULL_MODEL, max_tokens=4096)
+             model=FULL_MODEL, effort=FULL_EFFORT, max_tokens=FULL_MAX_TOKENS)
     ) or []
     if not groups:
         print("\nNo duplicated responsibility found.")
@@ -406,7 +419,7 @@ def _run_full(client: Any, files: list[Path], cache: dict[str, Any]) -> int:
         ruling = _json_block(
             _ask(client,
                  _RULING_PROMPT.format(question=group.get("question", ""), bodies=bodies),
-                 model=FULL_MODEL, max_tokens=2048)
+                 model=FULL_MODEL, effort=FULL_EFFORT, max_tokens=FULL_MAX_TOKENS)
         )
         if not isinstance(ruling, dict) or "verdict" not in ruling:
             unreviewable.append(", ".join(members))
@@ -454,7 +467,9 @@ def main() -> int:
         print("No Python files to review.", file=sys.stderr)
         return 2
 
-    client = judge_client()
+    # The full pass's thinking model needs the longer compose bound; the changed pass
+    # is a quick judge call.
+    client = judge_client() if args.changed else compose_client()
     cache = _load_cache()
     if args.changed:
         return _run_changed(client, files, cache)

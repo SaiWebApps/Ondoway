@@ -30,6 +30,7 @@ from scripts import validate_beats
 from scripts.beat_builder import hash_body, slugify
 from src.onboard.assemble import WikiExtract
 from src.onboard.beat_draft import (
+    MODEL,
     AnthropicBeatDrafter,
     CostNotConfirmed,
     MockBeatDrafter,
@@ -390,7 +391,7 @@ def test_live_provider_with_confirm_drafts_each_span(tmp_path: Path) -> None:
     beats = draft_all(pois, _by_slug(extracts), confirm=True, drafter=drafter)
     # One API call per span (per beat), not per POI.
     assert fake.messages.calls == expected_beats
-    assert fake.messages.models == ["claude-opus-4-8"] * expected_beats
+    assert fake.messages.models == [MODEL] * expected_beats
     assert len(beats) == expected_beats
     # Even the paid path grounds source_passage in the pinned text (never memory).
     beats_path = _write_corpus(tmp_path, "testville", extracts, beats)
@@ -405,7 +406,7 @@ def test_live_provider_with_confirm_drafts_each_span(tmp_path: Path) -> None:
 def test_estimate_cost_scales_and_is_positive() -> None:
     one = estimate_cost(1)
     two = estimate_cost(2)
-    assert one["model"] == "claude-opus-4-8"
+    assert one["model"] == MODEL
     assert one["est_usd"] > 0
     assert one["est_input_tokens"] == 1200
     assert one["est_output_tokens"] == 350
@@ -459,3 +460,15 @@ def test_get_drafter_fails_closed_when_no_provider_is_pinned(monkeypatch) -> Non
     assert isinstance(beat_draft.get_drafter(), MockBeatDrafter)
     monkeypatch.setenv("ONBOARD_PROVIDER", "anthropic")
     assert isinstance(beat_draft.get_drafter(), AnthropicBeatDrafter)
+
+
+def test_the_paid_request_carries_the_roles_effort() -> None:
+    """The drafter's request sends its role's effort level and leaves room for the
+    model's thinking above the passage itself."""
+    from src.model_registry import effort_for
+    from src.onboard.beat_draft import _draft_request
+
+    request = _draft_request("Bryant Park", "Bryant Park is a public park.")
+    assert request["model"] == MODEL
+    assert request.get("output_config", {}).get("effort") == effort_for("beat_draft")
+    assert request["max_tokens"] >= 4096

@@ -28,6 +28,8 @@ from typing import Protocol
 
 from rapidfuzz import fuzz
 
+from src.model_registry import model_for
+
 from .contract import BeatRef, BeatSequence, Script, Sentence
 from .generation import GLUE_CLOSING, GLUE_REFLECTION, is_fallback_close, split_sentences
 
@@ -85,7 +87,7 @@ class MockFaithfulnessChecker:
         return True
 
 
-FAITHFULNESS_MODEL = "claude-haiku-4-5-20251001"
+FAITHFULNESS_MODEL = model_for("faithfulness")
 # Concurrency for the per-sentence entailment checks (independent Haiku calls).
 _FAITHFULNESS_MAX_WORKERS = 8
 _ENTAILMENT_PROMPT = (

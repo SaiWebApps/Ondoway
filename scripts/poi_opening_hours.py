@@ -63,6 +63,7 @@ from typing import Any
 from scripts.poi_visit_duration import (
     DEFAULT_MODEL,
     dump_pois,
+    judgement_request,
     load_pois,
     records_for_batch,
 )
@@ -359,11 +360,7 @@ def validate(record: dict[str, Any], *, name: str, gated_only: bool = False) -> 
 def price_batch(client: Any, model: str, batch: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """One model call for one batch. Returns the parsed records, unvalidated."""
     prompt = PROMPT_HEADER + "\n".join(describe(p) for p in batch)
-    response = client.messages.create(
-        model=model,
-        max_tokens=8000,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    response = client.messages.create(**judgement_request(model, prompt))
     text = "".join(block.text for block in response.content if block.type == "text").strip()
     return records_for_batch(text, batch)
 

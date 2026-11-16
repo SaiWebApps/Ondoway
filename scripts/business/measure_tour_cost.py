@@ -29,37 +29,36 @@ import anthropic.resources.messages.messages as _am  # noqa: E402
 import src.api.routes.app.trips as trips_routes  # noqa: E402
 import src.audio.provider as audio_provider  # noqa: E402
 from src.audio.pipeline import _get_duration  # noqa: E402
+from src.model_registry import (  # noqa: E402
+    cache_multipliers,
+    input_price_per_mtok,
+    model_for,
+    price_per_audio_minute,
+    price_per_mtok,
+)
 
-# ── pricing basis (USD per million tokens), checked 2026-10-09 ──
-PRICES = {
-    "claude-opus-4-8": {"in": 5.0, "out": 25.0},
-    "claude-haiku-4-5": {"in": 1.0, "out": 5.0},
-}
-CACHE_WRITE_X, CACHE_READ_X = 1.25, 0.10
-TTS_USD_PER_MIN = 0.015  # OpenAI's published estimate for gpt-4o-mini-tts
-TTS_TEXT_USD_PER_MTOK = 0.60  # text input; chars/4 as the token estimate
+# Every price comes from the model registry; this script only counts usage.
 SPEND_CEILING_USD = 23.0
 
 
-def price_of(model: str) -> dict[str, float]:
-    for prefix, p in PRICES.items():
-        if model.startswith(prefix):
-            return p
-    raise KeyError(model)
-
-
 def anthropic_usd(c: dict) -> float:
-    p = price_of(c["model"])
+    usd_in, usd_out = price_per_mtok(c["model"])
+    write_x, read_x = cache_multipliers(c["model"])
     return (
-        c["input_tokens"] * p["in"]
-        + c["cache_creation_input_tokens"] * p["in"] * CACHE_WRITE_X
-        + c["cache_read_input_tokens"] * p["in"] * CACHE_READ_X
-        + c["output_tokens"] * p["out"]
+        c["input_tokens"] * usd_in
+        + c["cache_creation_input_tokens"] * usd_in * write_x
+        + c["cache_read_input_tokens"] * usd_in * read_x
+        + c["output_tokens"] * usd_out
     ) / 1e6
 
 
 def tts_usd(c: dict) -> float:
-    return c["audio_seconds"] / 60 * TTS_USD_PER_MIN + c["chars"] / 4 * TTS_TEXT_USD_PER_MTOK / 1e6
+    # Text input is estimated at four characters per token.
+    model = c["model"]
+    return (
+        c["audio_seconds"] / 60 * price_per_audio_minute(model)
+        + c["chars"] / 4 * input_price_per_mtok(model) / 1e6
+    )
 
 
 # ── recorders ──
@@ -80,7 +79,7 @@ def _stack_names() -> tuple[set[str], set[str]]:
 
 def _tag_anthropic(model: str) -> str:
     files, funcs = _stack_names()
-    if model.startswith("claude-opus"):
+    if model == model_for("tour_compose"):
         if "_reroll_stops" in funcs:
             return "opus_reroll"
         return f"opus_{_opus_phase.get() or 'unlabelled'}"

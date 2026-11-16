@@ -10,7 +10,7 @@ FALSE-POSITIVE rate on real drops (says YES when the fact is absent; this would 
 hallucination-adjacent miss).
 
 Usage: ONDOWAY_DEMO_APPROVE=1 uv run python scripts/coverage_calibrate.py \
-    --candidates <candidates.json> [--model claude-haiku-4-5-20251001] --live
+    --candidates <candidates.json> [--model <model id>] --live
 Dry run (no --live) prints the plan + call count only.
 """
 
@@ -24,6 +24,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+from src.model_registry import model_for
 
 load_dotenv()
 
@@ -76,7 +78,7 @@ def _score(name, tmpl, items, client, model):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--candidates", default="", help="JSON {name: {system, user}}; empty = baseline only")
-    ap.add_argument("--model", default="claude-haiku-4-5-20251001")
+    ap.add_argument("--model", default=model_for("coverage_calibration"))
     ap.add_argument("--live", action="store_true")
     args = ap.parse_args()
 

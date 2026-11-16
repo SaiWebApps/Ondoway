@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.tour.glue_client import NO_GLUE_SENTINEL, HaikuGlueClient
+from src.tour.glue_client import DEFAULT_HAIKU_MODEL, NO_GLUE_SENTINEL, HaikuGlueClient
 
 
 class _RaisingMessages:
@@ -44,7 +44,7 @@ class _RaisingClient:
 def _client_with(exc: Exception) -> HaikuGlueClient:
     """A HaikuGlueClient whose SDK call raises, without touching the real SDK."""
     client = HaikuGlueClient.__new__(HaikuGlueClient)
-    client.model = "claude-haiku-4-5-20251001"
+    client.model = DEFAULT_HAIKU_MODEL
     client.max_output_tokens = 256
     client.input_tokens = 0
     client.output_tokens = 0

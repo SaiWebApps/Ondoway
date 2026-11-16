@@ -11,6 +11,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 
 from src.api.models.feedback import FeedbackRequest, FeedbackResponse, TourContext
+from src.model_registry import model_for
 
 router = APIRouter(tags=["feedback"])
 
@@ -91,7 +92,7 @@ def _structure_feedback(transcript: str) -> dict:
     client = judge_client()
     try:
         message = client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model=model_for("feedback"),
             max_tokens=500,
             system=_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": transcript}],

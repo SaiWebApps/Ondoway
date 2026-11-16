@@ -24,6 +24,8 @@ from collections.abc import Mapping
 
 from pydantic import BaseModel, ConfigDict, Field, model_serializer
 
+from src.model_registry import effort_for, model_for
+
 from .artifact import CompositionTrace, sentences_payload_sha256
 from .candidate_authoring import (
     AuthoringStopRequest,
@@ -153,15 +155,15 @@ class CompletedCertificationComposeUnit(BaseModel):
     parsed_threads: tuple[tuple[str, str], ...] = ()
 
 
-COMPOSE_MODEL = "claude-opus-4-8"
-# FACT review stays on Opus. The frozen calibration refuses the cheaper
-# claude-sonnet-5: even with a ceiling that lets it finish, it judges two
-# human-labeled PASS paraphrase cases FAIL (fact-policy-4, fact-policy-6) — it
-# polices licensed colour as factual defect, which would fail true tours at the
-# release gate. Accuracy outranks the saving. The calibration-fact unit and
-# model-aware pricing remain, so a future cheaper model is one constant away
-# from a measured audition.
-FACT_REVIEW_MODEL = COMPOSE_MODEL
+COMPOSE_MODEL = model_for("tour_compose")
+COMPOSE_EFFORT = effort_for("tour_compose")
+# FACT review uses the same model as compose unless the frozen calibration accepts a
+# cheaper one: a reviewer that judges a human-labeled PASS paraphrase case FAIL polices
+# licensed colour as factual defect and would fail true tours at the release gate.
+# Accuracy outranks the saving. The calibration-fact unit and model-aware pricing let
+# a cheaper model be auditioned by changing the fact_review role alone.
+FACT_REVIEW_MODEL = model_for("fact_review")
+FACT_REVIEW_EFFORT = effort_for("fact_review")
 # Per-stop ceiling tightened to 2.7x the measured max (11,797
 # output tokens across 45 stops, thinking included). A max_tokens stop under
 # zero-retry is paid-and-lost, so the margin is deliberately wide.
@@ -580,8 +582,12 @@ def candidate_compose_request_envelope(
     authoring_request: AuthoringStopRequest,
     *,
     model: str = COMPOSE_MODEL,
+    effort: str | None = COMPOSE_EFFORT,
 ) -> tuple[str, dict[str, object]]:
-    """Build one adaptive, 64K, candidate-bound physical authoring request."""
+    """Build one adaptive, candidate-bound physical authoring request.
+
+    ``effort`` is sent as ``output_config.effort`` when set; ``None`` leaves the key
+    out, so a request recorded without one rebuilds to its recorded bytes."""
 
     stops = {sentence.stop_idx for sentence in request.stitched.script}
     if stops != {authoring_request.stop_index}:
@@ -597,6 +603,11 @@ def candidate_compose_request_envelope(
         sort_keys=True,
     )
     user = _compose_user_prompt(request, 1, None) + "\n\nAUTHORING BINDING:\n" + binding
+    output_config: dict[str, object] = {
+        "format": {"type": "json_schema", "schema": _COMPOSE_OUTPUT_SCHEMA}
+    }
+    if effort is not None:
+        output_config["effort"] = effort
     sdk_request: dict[str, object] = {
         "model": model,
         "max_tokens": CERTIFICATION_COMPOSE_MAX_OUTPUT_TOKENS,
@@ -608,7 +619,7 @@ def candidate_compose_request_envelope(
                 "cache_control": {"type": "ephemeral"},
             }
         ],
-        "output_config": {"format": {"type": "json_schema", "schema": _COMPOSE_OUTPUT_SCHEMA}},
+        "output_config": output_config,
         "messages": [{"role": "user", "content": user}],
     }
     return (
@@ -1114,6 +1125,7 @@ def finalize_certification_composition(
     *,
     completed_units: tuple[CompletedCertificationComposeUnit, ...],
     model: str = COMPOSE_MODEL,
+    effort: str | None = COMPOSE_EFFORT,
     chunk_text_by_slug: dict[str, str] | None = None,
     faithfulness_checker: FaithfulnessChecker | None = None,
     enforce_claim_coverage: bool = False,
@@ -1199,6 +1211,7 @@ def finalize_certification_composition(
             unit.authorized_request,
             unit.authoring_request,
             model=model,
+            effort=effort,
         )
         expected_request_sha256 = hashlib.sha256(envelope.encode("utf-8")).hexdigest()
         if unit.request_sha256 != expected_request_sha256:
@@ -1439,7 +1452,9 @@ def finalize_certification_composition(
 
 __all__ = [
     "CERTIFICATION_COMPOSE_MAX_OUTPUT_TOKENS",
+    "COMPOSE_EFFORT",
     "COMPOSE_MODEL",
+    "FACT_REVIEW_EFFORT",
     "FACT_REVIEW_MODEL",
     "CertificationComposition",
     "CompletedCertificationComposeUnit",

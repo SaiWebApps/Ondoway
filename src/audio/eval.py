@@ -13,6 +13,7 @@ import unicodedata
 from dataclasses import dataclass
 
 from src.audio._http import post_with_retry
+from src.model_registry import model_for
 
 
 class EvalError(Exception):
@@ -112,7 +113,7 @@ def transcribe(audio_bytes: bytes, *, filename: str = "audio.mp3") -> str:
     resp = post_with_retry(
         "https://api.openai.com/v1/audio/transcriptions",
         headers={"Authorization": f"Bearer {api_key}"},
-        data={"model": "whisper-1"},
+        data={"model": model_for("speech_to_text")},
         files={"file": (filename, audio_bytes)},
         timeout=120.0,
     )

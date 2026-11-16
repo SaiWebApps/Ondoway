@@ -1,11 +1,11 @@
 {
   "measured_on": "2026-11-11",
   "prices": {
-    "checked": "2026-10-09",
-    "opus": "Claude Opus 4.8: $5 per million tokens in, $25 out",
-    "haiku": "Claude Haiku 4.5: $1 per million tokens in, $5 out",
+    "checked": "2026-11-15",
+    "opus": "claude-opus-4-8: $5 per million tokens in, $25 out",
+    "haiku": "claude-haiku-4-5-20251001: $1 per million tokens in, $5 out",
     "cache": "Cached input: 1.25 times the input price to write, 0.1 times to read",
-    "voice": "OpenAI gpt-4o-mini-tts, voice nova: $0.015 per minute of audio, plus $0.60 per million text tokens (characters divided by 4)"
+    "voice": "gpt-4o-mini-tts: $0.015 per minute of audio, plus $0.6 per million text tokens (characters divided by 4)"
   },
   "structure": {
     "recipe_usd": 0.369,

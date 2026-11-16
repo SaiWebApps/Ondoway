@@ -51,13 +51,21 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from src.model_registry import effort_for, model_for
+
 ROOT = Path(__file__).resolve().parent.parent
 
-#: The model that does the pricing. ``claude-opus-4-8`` is what this repo already
-#: uses for corpus-generating work (``src/onboard/beat_draft.py:47``); the judge
-#: model is deliberately not reused, because this is a judgement call about a place
-#: rather than a yes/no verdict on a sentence. Overridable with ``--model``.
-DEFAULT_MODEL: str = "claude-opus-4-8"
+#: The model that does the pricing: the corpus-generating model, not the judge
+#: model, because this is a judgement call about a place rather than a yes/no
+#: verdict on a sentence. Overridable with ``--model``.
+DEFAULT_MODEL: str = model_for("visit_duration")
+#: The effort level the default model is asked for. An overriding ``--model`` is
+#: sent no effort, since not every model accepts one.
+DEFAULT_EFFORT: str | None = effort_for("visit_duration")
+
+#: The model thinks before it answers and thinking counts against max_tokens, so the
+#: ceiling leaves room for thinking on top of a batch's JSON records.
+JUDGEMENT_MAX_TOKENS: int = 16_000
 
 #: POIs per model call. Small enough that one bad batch is cheap to re-run and the
 #: model keeps every place in view; large enough that a full pass is ~25 calls.
@@ -296,14 +304,22 @@ def records_for_batch(text: str, batch: list[dict[str, Any]]) -> list[dict[str, 
     return records
 
 
+def judgement_request(model: str, prompt: str) -> dict[str, Any]:
+    """The one request shape every corpus-judgement pass sends for a batch prompt."""
+    request: dict[str, Any] = {
+        "model": model,
+        "max_tokens": JUDGEMENT_MAX_TOKENS,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    if model == DEFAULT_MODEL and DEFAULT_EFFORT is not None:
+        request["output_config"] = {"effort": DEFAULT_EFFORT}
+    return request
+
+
 def price_batch(client: Any, model: str, batch: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """One model call for one batch. Returns the parsed records, unvalidated."""
     prompt = PROMPT_HEADER + "\n".join(describe(p) for p in batch)
-    response = client.messages.create(
-        model=model,
-        max_tokens=8000,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    response = client.messages.create(**judgement_request(model, prompt))
     text = "".join(block.text for block in response.content if block.type == "text").strip()
     return records_for_batch(text, batch)
 

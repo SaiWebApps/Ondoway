@@ -16,12 +16,14 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from src.model_registry import model_for
+
 try:
     from anthropic import Anthropic
 except ImportError:  # pragma: no cover
     Anthropic = None  # type: ignore[assignment]
 
-MODEL = "claude-haiku-4-5-20251001"
+MODEL = model_for("beat_dedup_judge")
 CLASSIFICATIONS = (
     "same_story_same_wording",
     "same_story_added_detail",

@@ -27,6 +27,7 @@ from src.audio.provider import (
     get_provider_with_fallback,
     list_providers,
 )
+from src.model_registry import model_for
 
 
 class _Resp:
@@ -286,7 +287,8 @@ class TestOpenAIModelChoice:
     """
 
     def test_the_default_model_is_the_one_that_reads_the_occupation_beat(self):
-        assert OpenAITTSProvider.DEFAULT_MODEL == "gpt-4o-mini-tts", (
+        assert model_for("text_to_speech") == OpenAITTSProvider.DEFAULT_MODEL
+        assert OpenAITTSProvider.DEFAULT_MODEL != "tts-1-hd", (
             "tts-1-hd 500s on ordinary WWII history; it must not be the default"
         )
 

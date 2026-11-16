@@ -45,10 +45,10 @@ A 150-minute solo walk from Bethesda Terrace, Central Park, with no lens. It has
 - Building the recipes for Bethesda Terrace and Grand Army Plaza (Manhattan) cost $0.74, so $0.37 each. Only the first has a longer telling; a place gets one when it has more to tell than its short telling holds.
 - A city needs one recipe per place, plus one per lens its beats carry. New York has 396 places and needs 1,455 recipes.
 - Prices:
-  - Claude Opus 4.8: $5 per million tokens in, $25 out.
-  - Claude Haiku 4.5: $1 per million tokens in, $5 out.
+  - claude-opus-4-8: $5 per million tokens in, $25 out.
+  - claude-haiku-4-5-20251001: $1 per million tokens in, $5 out.
   - Cached input: 1.25 times the input price to write, 0.1 times to read.
-  - OpenAI gpt-4o-mini-tts, voice nova: $0.015 per minute of audio, plus $0.60 per million text tokens (characters divided by 4).
+  - gpt-4o-mini-tts: $0.015 per minute of audio, plus $0.6 per million text tokens (characters divided by 4).
 
 ## Not counted
 

@@ -1,5 +1,10 @@
 {
   "measured_on": "2026-11-11",
+  "models": {
+    "tour_compose": "claude-opus-4-8",
+    "faithfulness": "claude-haiku-4-5-20251001",
+    "text_to_speech": "gpt-4o-mini-tts"
+  },
   "city": "new_york",
   "tour": {
     "start": "Bethesda Terrace, Central Park",
