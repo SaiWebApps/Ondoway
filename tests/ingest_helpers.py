@@ -16,9 +16,39 @@ when that check arrives.
 from __future__ import annotations
 
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
+from src.ingest import gates, model
 from src.ingest.model import bind, claims_hash
+
+
+def with_pointer(source: dict[str, Any], chunk_text: str) -> dict[str, Any]:
+    """Mint a `{byte_span, sha256}` pointer for a source dict by locating its
+    `span` in `chunk_text`, returning a new dict that carries BOTH the pointer
+    and the (whitespace-normalized) span.
+
+    A test fixture carries both — the committed corpus keeps only the pointer
+    (`run.beat_record`), but a test beat is built and stamped in memory, where
+    `stamp` binds the verdict over the embedded span. The span stored is the
+    located passage normalized, so it equals what `Source.recover` yields."""
+    raw = gates.locate_raw_span(source["span"], chunk_text)
+    if raw is None:
+        raise ValueError(f"span cannot be located in the chunk: {source['span']!r}")
+    byte_span, sha = model.span_pointer(chunk_text, raw[0], raw[1])
+    out = dict(source)
+    out["byte_span"] = list(byte_span)
+    out["sha256"] = sha
+    out["span"] = gates.normalize_ws(chunk_text[raw[0] : raw[1]])
+    return out
+
+
+def recovered_span(source: dict[str, Any], chunks_root: Path) -> str:
+    """The verbatim span a source's pointer resolves to, through the real
+    chunk under `chunks_root`, whitespace-normalized — what the validator binds
+    and grounds against once the span is no longer committed."""
+    chunk_text = (chunks_root / source["source_id"] / f"{source['chunk']}.txt").read_text()
+    return gates.normalize_ws(model.Source.model_validate(source).recover(chunk_text))
 
 
 def stamp(beat: dict[str, Any]) -> dict[str, Any]:

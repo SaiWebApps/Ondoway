@@ -15,7 +15,7 @@ from copy import deepcopy
 from pathlib import Path
 
 from scripts.claim_conflicts import apply_conflicts, find_conflicts, format_report, main
-from src.ingest import model
+from src.ingest import gates, model
 
 CITY = "new_york"
 JUDGE = "claude-haiku-4-5-20251001"
@@ -40,19 +40,30 @@ def _claim(claim_id: str, text: str, kind: str, source_id: str, chunk: str, span
         "text": text,
         "kind": kind,
         "status": "resolved",
-        "sources": [
-            {
-                "source_id": source_id,
-                "chunk": chunk,
-                "span": span,
-                "as_of": as_of,
-                "rights_basis": "owned_copy",
-                "stated_value": None,
-            }
-        ],
+        "sources": [_pointer_source(source_id, chunk, span, as_of)],
         "resolved_value": None,
         "resolution": None,
         "verdict": {"judge_model": JUDGE, "entailed": True, "bound_to": model.bind(text, span)},
+    }
+
+
+def _pointer_source(source_id: str, chunk: str, span: str, as_of: int) -> dict:
+    """A source as it sits on disk: a {byte_span, sha256} pointer into the
+    chunk, minted from the verbatim span, with the span kept so the verdict
+    still binds over it."""
+    chunk_text = CHUNKS[(source_id, chunk)]
+    raw = gates.locate_raw_span(span, chunk_text)
+    assert raw is not None, f"span not in {chunk}: {span!r}"
+    byte_span, sha = model.span_pointer(chunk_text, raw[0], raw[1])
+    return {
+        "source_id": source_id,
+        "chunk": chunk,
+        "byte_span": list(byte_span),
+        "sha256": sha,
+        "span": span,
+        "as_of": as_of,
+        "rights_basis": "owned_copy",
+        "stated_value": None,
     }
 
 
@@ -169,7 +180,7 @@ def test_same_fact_with_different_values_across_beats_makes_both_claims_conteste
     assert GUGGENHEIM_ID in format_report(conflicts)
 
     before = deepcopy(records)
-    applied, rerun = apply_conflicts(records, conflicts)
+    applied, rerun = apply_conflicts(records, conflicts, books_root / CITY)
 
     assert records == before  # pure
     assert rerun == [GUGGENHEIM_ID, MILE_ID]
@@ -244,9 +255,11 @@ def test_report_mode_writes_nothing_and_apply_rewrites_only_a_valid_file(tmp_pat
     assert "0 conflicts" in capsys.readouterr().out
     assert beats_path.read_text() == after_apply
 
-    # A change that would break validation is refused before any write.
+    # A change that would break validation is refused before any write. The
+    # span is a {byte_span, sha256} pointer; tampering the hash is how a span
+    # that no longer matches the chunk's bytes shows up.
     broken = _records()
-    broken[1]["claims"][1]["sources"][0]["span"] = "not in the chunk"
+    broken[1]["claims"][1]["sources"][0]["sha256"] = "0" * 64
     beats_path.write_text(json.dumps(broken, indent=2) + "\n")
     untouched = beats_path.read_text()
     assert main([*argv, "--apply"]) == 1
@@ -293,7 +306,7 @@ def test_no_live_client_in_this_file():
                 )
 
 
-def test_a_copied_source_arrives_without_the_other_claims_judgments():
+def test_a_copied_source_arrives_without_the_other_claims_judgments(tmp_path):
     """ADR-0004: a source's judgments judge the claim it came from. Copied
     onto the other side of a contest, they would join this claim's
     narration line once the contest is resolved. Mutant: the copy keeping
@@ -302,7 +315,9 @@ def test_a_copied_source_arrives_without_the_other_claims_judgments():
     records[1]["claims"][1]["sources"][0]["judgments"] = ["1960"]
     conflicts = find_conflicts(records)
 
-    applied, _rerun = apply_conflicts(records, conflicts)
+    # The in-memory records still carry their span, so re-binding needs no
+    # chunk; tmp_path is an unused recover root.
+    applied, _rerun = apply_conflicts(records, conflicts, tmp_path)
 
     g_sources = applied[0]["claims"][0]["sources"]
     assert [s.get("judgments", []) for s in g_sources] == [[], []]

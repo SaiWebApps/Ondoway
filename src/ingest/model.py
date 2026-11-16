@@ -410,6 +410,24 @@ def _normalize_ws(text: str) -> str:
     return " ".join(text.split())
 
 
+def recovered_span(source: dict[str, Any], chunks_root: str | Path) -> str:
+    """The whitespace-normalized verbatim span a committed source dict points
+    at, recovered through its chunk under `chunks_root` — for the offline tools
+    (claim_conflicts, lift_report, merge_offline, rejudge) and the run-time
+    rerun that read beats.json back, where the span is no longer stored. A dict
+    that still carries a non-empty `span` (an in-process record) is taken as-is.
+
+    The value equals what the verdict was bound over at judge time
+    (`unit.source` stores `normalize_ws` of the same bytes), so a tool re-binding
+    a claim reproduces the exact hash."""
+    if source.get("span"):
+        return source["span"]
+    chunk_text = (
+        Path(chunks_root) / source["source_id"] / f"{source['chunk']}.txt"
+    ).read_text(encoding="utf-8")
+    return _normalize_ws(Source.model_validate(source).recover(chunk_text))
+
+
 def _validate_as_of(value: Any) -> Any:
     if isinstance(value, bool) or not isinstance(value, int | str):
         raise ValueError("as_of must be an int year or an ISO date string")
@@ -424,17 +442,41 @@ def _validate_as_of(value: Any) -> Any:
     return value
 
 
+def span_pointer(chunk_text: str, char_start: int, char_end: int) -> tuple[tuple[int, int], str]:
+    """The `(byte_span, sha256)` pointer for `chunk_text[char_start:char_end]`.
+
+    Byte offsets over the chunk's UTF-8 bytes, NOT char offsets: the corpus is
+    full of multi-byte accents (Café, Sévigné) and the sha is over bytes, so a
+    char slice would split an accent and corrupt the span. The sha is of those
+    raw bytes.
+    """
+    region_bytes = chunk_text[char_start:char_end].encode("utf-8")
+    byte_start = len(chunk_text[:char_start].encode("utf-8"))
+    byte_span = (byte_start, byte_start + len(region_bytes))
+    return byte_span, hashlib.sha256(region_bytes).hexdigest()
+
+
 class Source(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     source_id: str
     chunk: str
-    span: str
+    #: Pointer into the chunk's UTF-8 bytes, `[start, end)`. The verbatim
+    #: source text is NEVER committed to the corpus — `recover()` reconstructs
+    #: it from the local chunk on demand and the sha proves the bytes are
+    #: unchanged (the grounding gate's provenance check).
+    byte_span: tuple[int, int] | None = None
+    sha256: str | None = None
+    #: The recovered span text, carried IN-PROCESS and in phase checkpoints
+    #: only. `run.beat_record` excludes it from the committed record, so a
+    #: Source read back from the corpus carries "" here until `validate()`
+    #: recovers it from the chunk through the pointer.
+    span: str = ""
     as_of: int | str
     rights_basis: Literal["owned_copy", "cc_by_sa", "public_domain", "own_work", "permission"]
     stated_value: str | int | float | None = None
     #: This source's own judgment words, verbatim (ADR-0004); each a
-    #: whole word of `span` (JUDGMENT_NOT_IN_SPAN).
+    #: whole word of its span (JUDGMENT_NOT_IN_SPAN).
     judgments: list[str] = []
     # cc_by_sa attribution fields (Rights and licensing in the spec); their
     # presence/absence rule (CC_BY_SA_FIELDS_MISSING) is a later step's check.
@@ -448,6 +490,43 @@ class Source(BaseModel):
     @classmethod
     def _check_as_of(cls, v: Any) -> Any:
         return _validate_as_of(v)
+
+    @field_validator("byte_span")
+    @classmethod
+    def _check_byte_span(cls, v: tuple[int, int] | None) -> tuple[int, int] | None:
+        if v is None:
+            return v
+        start, end = v
+        if start < 0 or end <= start:
+            raise ValueError(f"byte_span must be ordered and non-empty, got {v!r}")
+        return v
+
+    @field_validator("sha256")
+    @classmethod
+    def _check_sha256(cls, v: str | None) -> str | None:
+        if v is not None and re.fullmatch(r"[0-9a-f]{64}", v) is None:
+            raise ValueError("sha256 must be 64 lowercase hex characters")
+        return v
+
+    def recover(self, chunk_text: str) -> str:
+        """The verbatim span this source points at, proven unchanged.
+
+        Slices the chunk's UTF-8 bytes at `byte_span`, verifies the sha, and
+        decodes. Raises ValueError when there is no pointer, the span runs past
+        the chunk, or the bytes no longer hash to `sha256` (a drifted chunk or
+        a tampered span)."""
+        if self.byte_span is None or self.sha256 is None:
+            raise ValueError("source has no byte_span/sha256 pointer to recover from")
+        data = chunk_text.encode("utf-8")
+        start, end = self.byte_span
+        if end > len(data):
+            raise ValueError(
+                f"byte_span {self.byte_span} is out of bounds for a {len(data)}-byte chunk"
+            )
+        region = data[start:end]
+        if hashlib.sha256(region).hexdigest() != self.sha256:
+            raise ValueError("chunk span sha256 mismatch — the chunk drifted or the span is wrong")
+        return region.decode("utf-8")
 
 
 class Verdict(BaseModel):
@@ -704,7 +783,11 @@ def _identity_and_arc_errors(
         for source in claim.sources:
             errors.extend(_cc_by_sa_errors(label, claim.claim_id, source))
             for word in source.judgments:
-                if not whole_word(word, source.span):
+                # `source.span` is "" only when it could not be recovered (no
+                # chunks_root, or a grounding failure already reported) — the
+                # verbatim text is then unavailable, so this check is skipped
+                # rather than run against an empty string.
+                if source.span and not whole_word(word, source.span):
                     errors.append(
                         f"JUDGMENT_NOT_IN_SPAN {label}: claim {claim.claim_id} source "
                         f"{source.source_id}: judgment {word!r} is not a whole word of its span"
@@ -801,17 +884,27 @@ def _narration_lift_errors(label: str, beat: Beat, chunks_root: Path | None) -> 
 
 
 def _span_errors(chunks_root: Path, label: str, beat: Beat) -> tuple[list[str], set[str]]:
-    """Span grounding for every source of every claim in a schema-valid
-    beat, against `chunks_root/{source_id}/{chunk}.txt` (decisions.
-    chunks_root — uniform lookup, no per-book directory mapping). A missing
-    chunk file is SPAN_CHUNK_MISSING, never a silent pass; a span that
-    isn't a whitespace-normalized substring of the chunk text is
-    SPAN_NOT_VERBATIM. Both name the beat, claim_id and source_id (AC-13).
+    """Span grounding for every source of every claim in a schema-valid beat,
+    against `chunks_root/{source_id}/{chunk}.txt` (decisions.chunks_root —
+    uniform lookup, no per-book directory mapping).
 
-    Returns `(errors, flagged_claim_ids)` — the claim_ids of every claim
-    with at least one grounding failure, so `_hash_and_verdict_errors` can
-    skip VERDICT_UNBOUND for a claim whose bound_to is computed over span
-    content already reported as unverified.
+    The record commits no verbatim text, only a `{byte_span, sha256}` pointer
+    into the chunk. Grounding slices the chunk's bytes at `byte_span`, hashes
+    them, and compares to the stored `sha256` (`Source.recover`): equality IS
+    grounding — stricter than the old whitespace-folded substring. A missing
+    chunk file is SPAN_CHUNK_MISSING, never a silent pass; a missing pointer,
+    an out-of-bounds span or a sha mismatch is SPAN_NOT_VERBATIM. Both name
+    the beat, claim_id and source_id (AC-13).
+
+    On a grounded source whose in-memory `span` is still empty (a record read
+    back from the corpus), the recovered text is normalized and stored on the
+    source, so the downstream JUDGMENT/VERDICT/lift checks read the verbatim
+    passage the pointer proves — never an empty string.
+
+    Returns `(errors, flagged_claim_ids)` — the claim_ids of every claim with
+    at least one grounding failure, so `_hash_and_verdict_errors` can skip
+    VERDICT_UNBOUND for a claim whose bound_to is computed over span content
+    already reported as unverified.
     """
     errors: list[str] = []
     flagged_claim_ids: set[str] = set()
@@ -826,12 +919,17 @@ def _span_errors(chunks_root: Path, label: str, beat: Beat) -> tuple[list[str], 
                 flagged_claim_ids.add(claim.claim_id)
                 continue
             chunk_text = chunk_path.read_text(encoding="utf-8")
-            if _normalize_ws(source.span) not in _normalize_ws(chunk_text):
+            try:
+                recovered = source.recover(chunk_text)
+            except ValueError as exc:
                 errors.append(
                     f"SPAN_NOT_VERBATIM {label}: claim {claim.claim_id} source "
-                    f"{source.source_id}: span not verbatim in {source.chunk}"
+                    f"{source.source_id}: {exc}"
                 )
                 flagged_claim_ids.add(claim.claim_id)
+                continue
+            if not source.span:
+                source.span = _normalize_ws(recovered)
     return errors, flagged_claim_ids
 
 
@@ -855,6 +953,12 @@ def _hash_and_verdict_errors(
 
     for claim in beat.claims:
         if claim.claim_id in skip_claim_ids:
+            continue
+        # The verdict binds `hash(text + spans)`. When a span could not be
+        # recovered (no chunks_root, or a grounding failure already reported),
+        # its text is unavailable, so the bind cannot be recomputed and this
+        # check is skipped — never run against an empty span.
+        if not all(source.span for source in claim.sources):
             continue
         expected_bound_to = bind(claim.text, "\n".join(source.span for source in claim.sources))
         if claim.verdict.bound_to != expected_bound_to:
@@ -909,14 +1013,17 @@ def validate(records: list[dict[str, Any]], chunks_root: str | Path | None = Non
                 detail = err.get("msg", "invalid")
                 errors.append(f"{code} {label}: {detail}")
             continue
-        errors.extend(_identity_and_arc_errors(label, beat, seen_beat_ids))
-        errors.extend(_judge_independence_errors(label, beat))
-        errors.extend(_verdict_entailed_errors(label, beat))
-        errors.extend(_narration_lift_errors(label, beat, root))
+        # Grounding runs first: it verifies each source's pointer against the
+        # chunk and recovers the verbatim span onto the (otherwise empty)
+        # Source, so the identity/lift/verdict checks below read real text.
         span_errs: list[str] = []
         span_flagged_claim_ids: set[str] = set()
         if root is not None:
             span_errs, span_flagged_claim_ids = _span_errors(root, label, beat)
+        errors.extend(_identity_and_arc_errors(label, beat, seen_beat_ids))
+        errors.extend(_judge_independence_errors(label, beat))
+        errors.extend(_verdict_entailed_errors(label, beat))
+        errors.extend(_narration_lift_errors(label, beat, root))
         errors.extend(_hash_and_verdict_errors(label, beat, skip_claim_ids=span_flagged_claim_ids))
         errors.extend(span_errs)
     return errors

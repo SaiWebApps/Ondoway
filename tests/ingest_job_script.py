@@ -21,7 +21,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from src.ingest import judge_claims, judge_narration, llm, model, narrate
+from src.ingest import gates, judge_claims, judge_narration, llm, model, narrate
 from src.ingest import unit as unit_mod
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -147,6 +147,27 @@ ENRICHMENT: dict = {
 }
 
 
+def _pointer_source(source_id: str, chunk: str, span: str, as_of: int, **extra: Any) -> dict:
+    """A source as it sits on disk: a {byte_span, sha256} pointer into the real
+    chunk, minted from the verbatim span, the span kept so the verdict binds
+    over it (the committed corpus keeps only the pointer, `run.beat_record`)."""
+    chunk_text = (REPO_ROOT / "Books" / CITY / source_id / f"{chunk}.txt").read_text()
+    raw = gates.locate_raw_span(span, chunk_text)
+    assert raw is not None, f"span is not verbatim in {chunk}: {span!r}"
+    byte_span, sha = model.span_pointer(chunk_text, raw[0], raw[1])
+    return {
+        "source_id": source_id,
+        "chunk": chunk,
+        "byte_span": list(byte_span),
+        "sha256": sha,
+        "span": span,
+        "as_of": as_of,
+        "rights_basis": "owned_copy",
+        "stated_value": None,
+        **extra,
+    }
+
+
 def _lp_claim(claim_id: str, item: dict) -> dict:
     """A resolved, single-source Lonely Planet claim as it sits on disk."""
     return {
@@ -154,16 +175,7 @@ def _lp_claim(claim_id: str, item: dict) -> dict:
         "text": item["text"],
         "kind": item["kind"],
         "status": "resolved",
-        "sources": [
-            {
-                "source_id": LP_SOURCE,
-                "chunk": LP_CHUNK,
-                "span": item["span"],
-                "as_of": 2023,
-                "rights_basis": "owned_copy",
-                "stated_value": None,
-            }
-        ],
+        "sources": [_pointer_source(LP_SOURCE, LP_CHUNK, item["span"], 2023)],
         "resolved_value": None,
         "resolution": None,
         "verdict": {
@@ -234,11 +246,10 @@ def merged_beat_with_judgment() -> dict:
     `judgments: ["masterpiece"]`, which c02's text lacks. Valid on disk:
     its narration hash is recomputed over the judged line."""
     completed = _lp_claim("c02", COMPLETED)
-    frommers = {
-        "source_id": "frommers-nyc-2024", "chunk": "chunk-05-ch05-uptown",
-        "span": "Visiting this 1959 masterpiece", "as_of": 2024,
-        "rights_basis": "owned_copy", "stated_value": None, "judgments": ["masterpiece"],
-    }
+    frommers = _pointer_source(
+        "frommers-nyc-2024", "chunk-05-ch05-uptown",
+        "Visiting this 1959 masterpiece", 2024, judgments=["masterpiece"],
+    )
     completed["sources"].append(frommers)
     completed["resolution"] = {"by": "corroborated"}
     completed["verdict"]["bound_to"] = model.bind(
