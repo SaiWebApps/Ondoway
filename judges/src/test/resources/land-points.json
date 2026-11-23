@@ -1,0 +1,139 @@
+{
+  "about": "Land points for the tool probes. Every point is one row of the answer to the single Wikidata query recorded under \"query\". The query's own filter, ordering and limit decide which points are listed, and in which order.",
+  "query": {
+    "endpoint": "https://query.wikidata.org/sparql",
+    "rule": "For each city: the three metro stations in use that lie nearest to the position Wikidata records for the city itself, nearest first. Ties break on the item address.",
+    "sparql": [
+      "SELECT ?city ?item ?itemLabel ?lat ?lon ?distanceKm WHERE {",
+      "  {",
+      "    SELECT ?city ?item ?coord ?distanceKm WHERE {",
+      "      BIND(\"paris\" AS ?city)",
+      "      wd:Q90 wdt:P625 ?centre .",
+      "      SERVICE wikibase:around {",
+      "        ?item wdt:P625 ?coord .",
+      "        bd:serviceParam wikibase:center ?centre ;",
+      "                        wikibase:radius \"1\" ;",
+      "                        wikibase:distance ?distanceKm .",
+      "      }",
+      "      ?item wdt:P31 wd:Q928830 .",
+      "      FILTER EXISTS { ?item wdt:P5817 wd:Q55654238 . }",
+      "    }",
+      "    ORDER BY ?distanceKm ?item",
+      "    LIMIT 3",
+      "  }",
+      "  UNION",
+      "  {",
+      "    SELECT ?city ?item ?coord ?distanceKm WHERE {",
+      "      BIND(\"new-york\" AS ?city)",
+      "      wd:Q60 wdt:P625 ?centre .",
+      "      SERVICE wikibase:around {",
+      "        ?item wdt:P625 ?coord .",
+      "        bd:serviceParam wikibase:center ?centre ;",
+      "                        wikibase:radius \"1\" ;",
+      "                        wikibase:distance ?distanceKm .",
+      "      }",
+      "      ?item wdt:P31 wd:Q928830 .",
+      "      FILTER EXISTS { ?item wdt:P5817 wd:Q55654238 . }",
+      "    }",
+      "    ORDER BY ?distanceKm ?item",
+      "    LIMIT 3",
+      "  }",
+      "  BIND(geof:latitude(?coord) AS ?lat)",
+      "  BIND(geof:longitude(?coord) AS ?lon)",
+      "  SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\" . }",
+      "}",
+      "ORDER BY DESC(?city) ?distanceKm ?item"
+    ],
+    "answer_fetched": "2026-11-22",
+    "answer": [
+      {
+        "city": "paris",
+        "item": "http://www.wikidata.org/entity/Q968939",
+        "itemLabel": "Hôtel de Ville",
+        "lat": 48.8575899,
+        "lon": 2.3515852,
+        "distanceKm": 0.113
+      },
+      {
+        "city": "paris",
+        "item": "http://www.wikidata.org/entity/Q1094294",
+        "itemLabel": "Cité",
+        "lat": 48.855294444,
+        "lon": 2.34755,
+        "distanceKm": 0.374
+      },
+      {
+        "city": "paris",
+        "item": "http://www.wikidata.org/entity/Q601484",
+        "itemLabel": "Châtelet",
+        "lat": 48.858519522,
+        "lon": 2.347119401,
+        "distanceKm": 0.426
+      },
+      {
+        "city": "new-york",
+        "item": "http://www.wikidata.org/entity/Q660492",
+        "itemLabel": "City Hall",
+        "lat": 40.7132,
+        "lon": -74.0071,
+        "distanceKm": 0.096
+      },
+      {
+        "city": "new-york",
+        "item": "http://www.wikidata.org/entity/Q2612593",
+        "itemLabel": "Brooklyn Bridge – City Hall / Chambers Street",
+        "lat": 40.71288,
+        "lon": -74.0043,
+        "distanceKm": 0.153
+      },
+      {
+        "city": "new-york",
+        "item": "http://www.wikidata.org/entity/Q11680426",
+        "itemLabel": "Chambers Street",
+        "lat": 40.713037,
+        "lon": -74.003858,
+        "distanceKm": 0.192
+      }
+    ]
+  },
+  "paris": [
+    {
+      "name": "Hôtel de Ville",
+      "lat": 48.8575899,
+      "lon": 2.3515852,
+      "source": "http://www.wikidata.org/entity/Q968939"
+    },
+    {
+      "name": "Cité",
+      "lat": 48.855294444,
+      "lon": 2.34755,
+      "source": "http://www.wikidata.org/entity/Q1094294"
+    },
+    {
+      "name": "Châtelet",
+      "lat": 48.858519522,
+      "lon": 2.347119401,
+      "source": "http://www.wikidata.org/entity/Q601484"
+    }
+  ],
+  "new-york": [
+    {
+      "name": "City Hall",
+      "lat": 40.7132,
+      "lon": -74.0071,
+      "source": "http://www.wikidata.org/entity/Q660492"
+    },
+    {
+      "name": "Brooklyn Bridge – City Hall / Chambers Street",
+      "lat": 40.71288,
+      "lon": -74.0043,
+      "source": "http://www.wikidata.org/entity/Q2612593"
+    },
+    {
+      "name": "Chambers Street",
+      "lat": 40.713037,
+      "lon": -74.003858,
+      "source": "http://www.wikidata.org/entity/Q11680426"
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+plugins {
+    id 'java'
+}
+
+group = 'ondoway.judges'
+
+java {
+    // GraphHopper 11 needs Java 25 or newer.
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.graphhopper:graphhopper-core:11.1'
+    implementation 'com.google.ortools:ortools-java:9.15.6755'
+
+    testImplementation platform('org.junit:junit-bom:6.1.3')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// Each probe compiles once the code it probes exists. Until then its test class
+// stays out of the build, so its proof command finds no test and fails red, and
+// one milestone's proof never waits on a later milestone's code.
+def probeSubjects = [
+    'RouterProbeTest': 'ondoway/judges/route/FootRouter.java',
+    'SnapProbeTest'  : 'ondoway/judges/route/FootRouter.java',
+    'StepsProbeTest' : 'ondoway/judges/route/FootRouter.java',
+    'SolverProbeTest': 'ondoway/judges/verdict/WalkSolver.java',
+    'HereProbeTest'  : 'ondoway/judges/route/HereRouter.java',
+]
+sourceSets {
+    test {
+        java {
+            probeSubjects.each { probe, subject ->
+                if (!file("src/main/java/${subject}").exists()) {
+                    exclude "**/${probe}.java"
+                }
+            }
+        }
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    // Building a city's routing graph from its map takes minutes and gigabytes.
+    maxHeapSize = '8g'
+    testLogging {
+        events 'passed', 'failed', 'skipped'
+        exceptionFormat 'full'
+        showStandardStreams = true
+    }
+}

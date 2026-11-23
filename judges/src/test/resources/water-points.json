@@ -1,0 +1,183 @@
+{
+  "about": "Water points for the snap probe. Each point is derived from the shape of one water area, not placed by eye. Each point records the Overpass query that proves it lies inside that water area, and that query's answer.",
+  "derivation": {
+    "rule": "The water area is the union of the OpenStreetMap water relations listed for the city, cut to the map extract's boundary. Every highway, railway, bridge, pier, breakwater, groyne and ferry way that Overpass returns inside that area counts as an obstacle. The point is the centre of the largest circle that fits inside the water and touches no bank, no obstacle and no extract edge. Shapely's polylabel finds that centre to within 0.5 m, on a local flat projection in metres.",
+    "water_relations": {
+      "paris": {
+        "relations": [
+          2191006,
+          3238606,
+          10837211
+        ],
+        "why": "The three relations named La Seine that touch the City of Paris, listed by one Overpass query over the City of Paris area (area 3600007444)."
+      },
+      "new-york": {
+        "relations": [
+          2389632
+        ],
+        "why": "Upper New York Bay, the bay inside New York City's area (area 3600175905) that holds the lead point 40.6900, -74.0350."
+      }
+    },
+    "obstacle_query": {
+      "paris": [
+        "[out:json][timeout:180];",
+        "rel(id:2191006,3238606,10837211)->.w;",
+        ".w out geom;",
+        ".w map_to_area->.a;",
+        "(way[highway](area.a); way[railway](area.a); way[man_made~\"^(pier|bridge|breakwater|groyne)$\"](area.a); way[bridge](area.a););",
+        "out geom;"
+      ],
+      "new-york": [
+        "[out:json][timeout:180];",
+        "rel(id:2389632)->.w;",
+        ".w out geom;",
+        ".w map_to_area->.a;",
+        "(way[highway](area.a); way[railway](area.a); way[man_made~\"^(pier|bridge|breakwater|groyne)$\"](area.a); way[bridge](area.a); way[route=ferry](area.a););",
+        "out geom;"
+      ]
+    },
+    "note": "Distances are to the water's edge, the coastline and the obstacle ways, not to the router's nearest path. The snap probe itself measures the router's snap distance."
+  },
+  "paris": [
+    {
+      "name": "La Seine at Boulogne-Billancourt, between the Passerelle de l'Avre and the Autoroute de Normandie bridge",
+      "lat": 48.849234,
+      "lon": 2.225479,
+      "source": "https://www.openstreetmap.org/relation/3238606",
+      "proof": {
+        "endpoint": "https://overpass-api.de/api/interpreter",
+        "query": [
+          "[out:json][timeout:60];",
+          "is_in(48.849234,2.225479)->.a;",
+          "area.a[natural~\"^(water|bay|strait)$\"];",
+          "out tags;"
+        ],
+        "answer": [
+          {
+            "type": "area",
+            "id": 3603238606,
+            "tags": {
+              "intermittent": "no",
+              "name": "La Seine",
+              "natural": "water",
+              "tidal": "no",
+              "type": "multipolygon",
+              "water": "river"
+            }
+          }
+        ],
+        "osm_data_as_of": "2026-11-22T20:52:33Z"
+      },
+      "derived_from": {
+        "metres_to_nearest_bank": 99.8,
+        "bank": "The outer edge of the union of the three Seine relations, so an edge shared between two of them is not counted.",
+        "metres_to_nearest_obstacle_way": 108.3,
+        "obstacle_ways_considered": 620,
+        "nearest_named_bridges": [
+          {
+            "way": "https://www.openstreetmap.org/way/13975361",
+            "name": "Autoroute de Normandie",
+            "metres": 113,
+            "side": "south"
+          },
+          {
+            "way": "https://www.openstreetmap.org/way/1434635505",
+            "name": "Passerelle de l'Avre",
+            "metres": 416,
+            "side": "north"
+          }
+        ]
+      },
+      "extract_check": {
+        "extract": "https://download.geofabrik.de/europe/france/ile-de-france/ile-de-france-260101.osm.pbf",
+        "boundary": "https://download.geofabrik.de/europe/france/ile-de-france/ile-de-france.poly",
+        "boundary_md5": "2fce9124349ca08c10362e84be66a705",
+        "inside": true,
+        "metres_to_boundary": 33577.4,
+        "note": "The boundary file is the one Geofabrik publishes today. Whether the dated map file was cut with the same boundary is unchecked."
+      },
+      "administrative_areas": {
+        "query": [
+          "[out:json][timeout:60];",
+          "is_in(48.849234,2.225479)->.a;",
+          "area.a[boundary=administrative][admin_level~\"^(4|6|8)$\"];",
+          "out tags;"
+        ],
+        "answer_names": [
+          "Hauts-de-Seine",
+          "Île-de-France",
+          "Boulogne-Billancourt"
+        ]
+      }
+    }
+  ],
+  "new-york": [
+    {
+      "name": "Upper New York Bay north of the Narrows",
+      "lat": 40.649348,
+      "lon": -74.050998,
+      "source": "https://www.openstreetmap.org/relation/2389632",
+      "proof": {
+        "endpoint": "https://overpass-api.de/api/interpreter",
+        "query": [
+          "[out:json][timeout:60];",
+          "is_in(40.649348,-74.050998)->.a;",
+          "area.a[natural~\"^(water|bay|strait)$\"];",
+          "out tags;"
+        ],
+        "answer": [
+          {
+            "type": "area",
+            "id": 3602389632,
+            "tags": {
+              "gnis:feature_id": "881377",
+              "name": "Upper New York Bay",
+              "name:en": "Upper New York Bay",
+              "name:es": "Bahía de Nueva York Alto",
+              "name:ru": "бухта Аппер-Нью-Йорк-Бей",
+              "natural": "bay",
+              "type": "multipolygon",
+              "water": "river",
+              "wikidata": "Q1064776"
+            }
+          }
+        ],
+        "osm_data_as_of": "2026-11-22T20:44:21Z"
+      },
+      "derived_from": {
+        "metres_to_nearest_coastline": 1475.2,
+        "coastline_way": "https://www.openstreetmap.org/way/1132098060",
+        "coastline_query": [
+          "[out:json][timeout:90];",
+          "way[natural=coastline](around:3000,40.649348,-74.050998);",
+          "out geom;"
+        ],
+        "metres_to_nearest_obstacle_way": 657.6,
+        "nearest_obstacle_way": "https://www.openstreetmap.org/way/29185504 (route=ferry, Staten Island Ferry)",
+        "metres_to_nearest_non_ferry_way": 1502.3,
+        "nearest_non_ferry_way": "https://www.openstreetmap.org/way/992337499 (man_made=pier)",
+        "obstacle_ways_considered": 278
+      },
+      "extract_check": {
+        "extract": "https://download.geofabrik.de/north-america/us/new-york/new-york-260101.osm.pbf",
+        "boundary": "https://download.geofabrik.de/north-america/us/new-york/new-york.poly",
+        "boundary_md5": "b4732cbba5ae6a525d61d3b2184203be",
+        "inside": true,
+        "metres_to_boundary": 658.5,
+        "note": "The boundary file is the one Geofabrik publishes today. Whether the dated map file was cut with the same boundary is unchecked."
+      },
+      "administrative_areas": {
+        "query": [
+          "[out:json][timeout:60];",
+          "is_in(40.649348,-74.050998)->.a;",
+          "area.a[boundary=administrative][admin_level~\"^(4|6|8)$\"];",
+          "out tags;"
+        ],
+        "answer_names": [
+          "New York",
+          "Kings County"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+// The route judges: a separate Java program that reads a stop list and answers
+// YES or NO. It shares no code with the Python engine under src/, so it cannot
+// import the engine's routing, settings or tags.
+rootProject.name = 'ondoway-judges'

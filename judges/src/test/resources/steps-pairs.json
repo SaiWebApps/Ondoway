@@ -1,0 +1,479 @@
+{
+  "about": "Stair pairs for the steps probe. Each pair is chosen by the rule under \"derivation\", run on the router's own walking graph, and is not placed by eye. Each pair names the OpenStreetMap stair that proves it, and records the dated Overpass query that names that stair and its answer.",
+  "derivation": {
+    "graph": "The foot router's walking graph for the city, built from the map file and checksum that cities.json pins: ile-de-france-260101.osm.pbf (MD5 eece6bc5629942cd0813391a8f607f9c) for Paris and new-york-260101.osm.pbf (MD5 51138fb8050e6bea50fc77c4335539a2) for New York.",
+    "anchor": "The first point of the city in land-points.json, which carries its own Wikidata source: Hôtel de Ville (48.8575899, 2.3515852) for Paris and City Hall (40.7132, -74.0071) for New York.",
+    "groups": "An edge is step-free when the router's step-free walk may use it in at least one direction. The step-free edges split the graph's nodes into connected groups. The main group is the group with the most nodes.",
+    "stair_length": "Both rules take only stair edges (road class STEPS) at least 10 m long, so each stair is a flight and not a single step.",
+    "detour_rule": "Take every stair edge whose two ends both lie in the main group. Order them by the straight-line distance from the anchor to the nearer end. In both cities the first stair edge is one whole OpenStreetMap stair way: from is that way's first node and to is its last node.",
+    "stairs_only_rule": "Take every stair edge with one end in the main group and the other end in a smaller group whose step-free edges add up to at least 50 m, so the group is a place and not a landing between two flights. Order them by the straight-line distance from the anchor to the main-group end. For the first stair edge, from is its main-group end and to is the midpoint of the longest step-free edge in the smaller group. The midpoint lies on a path inside the group, so the nearest path to it is inside the group and not a stair end.",
+    "ties": "In each list, the first candidate is nearer the anchor than the second, so no tie decides a pair. A tie would break on the OpenStreetMap way number of the stair, because edge numbers belong to one graph build.",
+    "naming": "The source of each pair is the OpenStreetMap stair way that passes within 1 m of both ends of the chosen stair edge. Each proof query asks Overpass for the data as of 2026-01-01T00:00:00Z, the date of the map files, and every element it returns carries a version and a timestamp from before that date.",
+    "neighbour_trace": "For each stair_only pair, the trace query starts from the path under the to point. It adds every highway way, railway platform and public transport platform that shares a node with a way already found, except stairs, until nothing new is added. It then lists every stair way that touches the result. In both cities every way that touches the result is a stair. In New York the result also holds the Cortlandt Street subway platform, an area that shares a node with the passage. The router's groups remain the deciding check, because the router reads access tags that the trace does not.",
+    "router_check": "Each pair's router_check holds what FootRouter.walk returns for it on the graph above, once with stepFree false and once with stepFree true."
+  },
+  "paris": {
+    "detour": {
+      "from": {
+        "lat": 48.8566591,
+        "lon": 2.3487057
+      },
+      "to": {
+        "lat": 48.8567067,
+        "lon": 2.3485181
+      },
+      "source": "https://www.openstreetmap.org/way/628563837",
+      "derived_from": {
+        "stair_edge_metres": 14.7,
+        "metres_from_anchor": 235
+      },
+      "proof": {
+        "endpoint": "https://overpass-api.de/api/interpreter",
+        "query": [
+          "[out:json][timeout:60][date:\"2026-01-01T00:00:00Z\"];",
+          "way[highway=steps](around:1,48.8566591,2.3487057)(around:1,48.8567067,2.3485181);out meta geom;"
+        ],
+        "answer": [
+          {
+            "type": "way",
+            "id": 628563837,
+            "version": 11,
+            "timestamp": "2024-10-08T13:47:39Z",
+            "tags": {
+              "handrail": "no",
+              "highway": "steps",
+              "incline": "down",
+              "lit": "yes",
+              "ramp": "no",
+              "step_count": "38",
+              "surface": "paving_stones",
+              "tactile_paving": "partial"
+            },
+            "geometry": [
+              {
+                "lat": 48.8566591,
+                "lon": 2.3487057
+              },
+              {
+                "lat": 48.8567067,
+                "lon": 2.3485181
+              }
+            ]
+          }
+        ]
+      },
+      "router_check": {
+        "ordinary": {
+          "found": true,
+          "metres": 14.7,
+          "road_classes": [
+            "STEPS"
+          ]
+        },
+        "step_free": {
+          "found": true,
+          "metres": 650.8,
+          "road_classes": [
+            "FOOTWAY",
+            "SERVICE"
+          ]
+        }
+      }
+    },
+    "stairs_only": {
+      "from": {
+        "lat": 48.8533833,
+        "lon": 2.3472205
+      },
+      "to": {
+        "lat": 48.8531057,
+        "lon": 2.3478103
+      },
+      "source": "https://www.openstreetmap.org/way/53610262",
+      "derived_from": {
+        "stair_edge_metres": 12.6,
+        "metres_from_anchor": 566,
+        "group_nodes": 2,
+        "group_step_free_metres": 80.9,
+        "longest_edge_metres": 80.9,
+        "longest_edge_way": "https://www.openstreetmap.org/way/53610263",
+        "note": "From is the first node of stair way 53610262. To is the midpoint of way 53610263, the Promenade Maurice Carême, a footway with a stair way at each end: 53610262 and 53610261."
+      },
+      "proof": {
+        "endpoint": "https://overpass-api.de/api/interpreter",
+        "query": [
+          "[out:json][timeout:60][date:\"2026-01-01T00:00:00Z\"];",
+          "way[highway=steps](around:1,48.8533833,2.3472205)(around:1,48.8533152,2.3473584);out meta geom;way[highway](around:0.5,48.8531057,2.3478103);out meta geom;"
+        ],
+        "answer": [
+          {
+            "type": "way",
+            "id": 53610262,
+            "version": 10,
+            "timestamp": "2025-12-04T22:17:58Z",
+            "tags": {
+              "handrail": "yes",
+              "highway": "steps",
+              "incline": "down",
+              "ramp": "no",
+              "step_count": "38",
+              "surface": "paving_stones",
+              "tactile_paving": "no"
+            },
+            "geometry": [
+              {
+                "lat": 48.8533833,
+                "lon": 2.3472205
+              },
+              {
+                "lat": 48.8533152,
+                "lon": 2.3473584
+              }
+            ]
+          },
+          {
+            "type": "way",
+            "id": 53610263,
+            "version": 10,
+            "timestamp": "2025-12-04T22:17:58Z",
+            "tags": {
+              "highway": "footway",
+              "name": "Promenade Maurice Carême",
+              "name:etymology:wikidata": "Q1395991",
+              "surface": "sett"
+            },
+            "geometry": [
+              {
+                "lat": 48.8533152,
+                "lon": 2.3473584
+              },
+              {
+                "lat": 48.8528962,
+                "lon": 2.3482621
+              }
+            ]
+          }
+        ]
+      },
+      "neighbour_trace": {
+        "endpoint": "https://overpass-api.de/api/interpreter",
+        "query": [
+          "[out:json][timeout:180][date:\"2026-01-01T00:00:00Z\"];",
+          "way(id:53610263);",
+          "complete(500) { node(w)->.n; (way(bn.n)[highway][highway!=steps]; way(bn.n)[railway=platform]; way(bn.n)[public_transport=platform];); }",
+          "(._;)->.island;",
+          ".island out ids tags;",
+          "node(w.island)->.n;",
+          "way(bn.n)[highway=steps]->.links;",
+          ".links out ids tags geom;"
+        ],
+        "answer": [
+          {
+            "type": "way",
+            "id": 53610263,
+            "highway": "footway",
+            "name": "Promenade Maurice Carême"
+          },
+          {
+            "type": "way",
+            "id": 53610261,
+            "highway": "steps",
+            "name": "Promenade Maurice Carême",
+            "ends": [
+              {
+                "lat": 48.8528962,
+                "lon": 2.3482621
+              },
+              {
+                "lat": 48.8528522,
+                "lon": 2.3483606
+              }
+            ]
+          },
+          {
+            "type": "way",
+            "id": 53610262,
+            "highway": "steps",
+            "ends": [
+              {
+                "lat": 48.8533833,
+                "lon": 2.3472205
+              },
+              {
+                "lat": 48.8533152,
+                "lon": 2.3473584
+              }
+            ]
+          }
+        ]
+      },
+      "router_check": {
+        "ordinary": {
+          "found": true,
+          "metres": 53.1,
+          "road_classes": [
+            "FOOTWAY",
+            "STEPS"
+          ]
+        },
+        "step_free": {
+          "found": false
+        }
+      }
+    }
+  },
+  "new-york": {
+    "detour": {
+      "from": {
+        "lat": 40.710143,
+        "lon": -74.0129352
+      },
+      "to": {
+        "lat": 40.710201,
+        "lon": -74.0130775
+      },
+      "source": "https://www.openstreetmap.org/way/623674436",
+      "derived_from": {
+        "stair_edge_metres": 13.6,
+        "metres_from_anchor": 598
+      },
+      "proof": {
+        "endpoint": "https://overpass-api.de/api/interpreter",
+        "query": [
+          "[out:json][timeout:60][date:\"2026-01-01T00:00:00Z\"];",
+          "way[highway=steps](around:1,40.710143,-74.0129352)(around:1,40.710201,-74.0130775);out meta geom;"
+        ],
+        "answer": [
+          {
+            "type": "way",
+            "id": 623674436,
+            "version": 6,
+            "timestamp": "2024-01-04T20:14:27Z",
+            "tags": {
+              "surface": "paving_stones",
+              "handrail": "yes",
+              "highway": "steps",
+              "incline": "up",
+              "lit": "yes",
+              "ramp": "no",
+              "step_count": "29"
+            },
+            "geometry": [
+              {
+                "lat": 40.710143,
+                "lon": -74.0129352
+              },
+              {
+                "lat": 40.710201,
+                "lon": -74.0130775
+              }
+            ]
+          }
+        ]
+      },
+      "router_check": {
+        "ordinary": {
+          "found": true,
+          "metres": 13.6,
+          "road_classes": [
+            "STEPS"
+          ]
+        },
+        "step_free": {
+          "found": true,
+          "metres": 183.7,
+          "road_classes": [
+            "FOOTWAY",
+            "PEDESTRIAN"
+          ]
+        }
+      }
+    },
+    "stairs_only": {
+      "from": {
+        "lat": 40.7103824,
+        "lon": -74.0096753
+      },
+      "to": {
+        "lat": 40.7107627,
+        "lon": -74.0102089
+      },
+      "source": "https://www.openstreetmap.org/way/512131353",
+      "derived_from": {
+        "stair_edge_metres": 15.7,
+        "metres_from_anchor": 381,
+        "group_nodes": 6,
+        "group_step_free_metres": 167.2,
+        "longest_edge_metres": 98.9,
+        "longest_edge_way": "https://www.openstreetmap.org/way/1126410076",
+        "note": "From is the first node of stair way 512131353, an underground stair. To is the midpoint of the last segment of way 1126410076, the Dey Street Passageway; that segment is the group's longest edge. The passage is tagged wheelchair=yes, but the dated map links it to the rest of the map only by stair ways, one of them an escalator (conveying=yes)."
+      },
+      "proof": {
+        "endpoint": "https://overpass-api.de/api/interpreter",
+        "query": [
+          "[out:json][timeout:60][date:\"2026-01-01T00:00:00Z\"];",
+          "way[highway=steps](around:1,40.7103824,-74.0096753)(around:1,40.7104713,-74.0097542);out meta geom;way[highway](around:0.5,40.7107627,-74.0102089);out meta geom;"
+        ],
+        "answer": [
+          {
+            "type": "way",
+            "id": 512131353,
+            "version": 6,
+            "timestamp": "2023-09-07T23:36:31Z",
+            "tags": {
+              "access": "yes",
+              "handrail": "yes",
+              "highway": "steps",
+              "incline": "down",
+              "indoor": "yes",
+              "layer": "-1",
+              "level": "-1;0",
+              "location": "underground",
+              "surface": "paved",
+              "tactile_paving": "no",
+              "tunnel": "yes"
+            },
+            "geometry": [
+              {
+                "lat": 40.7103824,
+                "lon": -74.0096753
+              },
+              {
+                "lat": 40.7104326,
+                "lon": -74.0097842
+              },
+              {
+                "lat": 40.7104713,
+                "lon": -74.0097542
+              }
+            ]
+          },
+          {
+            "type": "way",
+            "id": 1126410076,
+            "version": 1,
+            "timestamp": "2023-01-02T05:15:20Z",
+            "tags": {
+              "bicycle": "no",
+              "foot": "yes",
+              "highway": "footway",
+              "horse": "no",
+              "indoor": "yes",
+              "layer": "-1",
+              "name": "Dey Street Passageway",
+              "surface": "paving_stones",
+              "tunnel": "passage",
+              "wheelchair": "yes",
+              "wikidata": "Q5268514",
+              "wikipedia": "en:Dey Street Passageway"
+            },
+            "geometry": [
+              {
+                "lat": 40.7104493,
+                "lon": -74.0091662
+              },
+              {
+                "lat": 40.7104199,
+                "lon": -74.0094626
+              },
+              {
+                "lat": 40.7105161,
+                "lon": -74.0096721
+              },
+              {
+                "lat": 40.7105322,
+                "lon": -74.009707
+              },
+              {
+                "lat": 40.7109931,
+                "lon": -74.0107107
+              }
+            ]
+          }
+        ]
+      },
+      "neighbour_trace": {
+        "endpoint": "https://overpass-api.de/api/interpreter",
+        "query": [
+          "[out:json][timeout:180][date:\"2026-01-01T00:00:00Z\"];",
+          "way(id:1126410076);",
+          "complete(500) { node(w)->.n; (way(bn.n)[highway][highway!=steps]; way(bn.n)[railway=platform]; way(bn.n)[public_transport=platform];); }",
+          "(._;)->.island;",
+          ".island out ids tags;",
+          "node(w.island)->.n;",
+          "way(bn.n)[highway=steps]->.links;",
+          ".links out ids tags geom;"
+        ],
+        "answer": [
+          {
+            "type": "way",
+            "id": 907577404,
+            "railway": "platform",
+            "public_transport": "platform",
+            "name": "Cortlandt Street"
+          },
+          {
+            "type": "way",
+            "id": 1126410076,
+            "highway": "footway",
+            "name": "Dey Street Passageway"
+          },
+          {
+            "type": "way",
+            "id": 1126410077,
+            "highway": "footway"
+          },
+          {
+            "type": "way",
+            "id": 1126410078,
+            "highway": "footway"
+          },
+          {
+            "type": "way",
+            "id": 512131353,
+            "highway": "steps",
+            "ends": [
+              {
+                "lat": 40.7103824,
+                "lon": -74.0096753
+              },
+              {
+                "lat": 40.7104713,
+                "lon": -74.0097542
+              }
+            ]
+          },
+          {
+            "type": "way",
+            "id": 512380295,
+            "highway": "steps",
+            "conveying": "yes",
+            "ends": [
+              {
+                "lat": 40.7104666,
+                "lon": -74.0090186
+              },
+              {
+                "lat": 40.7104493,
+                "lon": -74.0091662
+              }
+            ]
+          }
+        ]
+      },
+      "router_check": {
+        "ordinary": {
+          "found": true,
+          "metres": 73.1,
+          "road_classes": [
+            "FOOTWAY",
+            "STEPS"
+          ]
+        },
+        "step_free": {
+          "found": false
+        }
+      }
+    }
+  }
+}

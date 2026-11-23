@@ -1,0 +1,12 @@
+{
+  "paris": {
+    "map_url": "https://download.geofabrik.de/europe/france/ile-de-france/ile-de-france-260101.osm.pbf",
+    "map_file": "ile-de-france-260101.osm.pbf",
+    "map_md5": "eece6bc5629942cd0813391a8f607f9c"
+  },
+  "new-york": {
+    "map_url": "https://download.geofabrik.de/north-america/us/new-york/new-york-260101.osm.pbf",
+    "map_file": "new-york-260101.osm.pbf",
+    "map_md5": "51138fb8050e6bea50fc77c4335539a2"
+  }
+}

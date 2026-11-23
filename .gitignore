@@ -376,3 +376,11 @@ graphify-out/
 # tracked anyway. They are resume markers and one-off reports, never input: a
 # fresh clone runs the pipeline identically without them.
 data/*/.*
+
+# The route judges' downloaded street maps, the routing graphs built from them,
+# Gradle's build output and the judges' API keys. The maps run to hundreds of
+# megabytes, past GitHub's 100 MiB file limit, and a key never enters history.
+/judges/data/
+/judges/build/
+/judges/.gradle/
+/judges/.env.local
